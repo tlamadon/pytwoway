@@ -1,0 +1,38 @@
+2020-09-03 14:58:49,292 - cre - INFO - loading the data
+2020-09-03 14:58:49,300 - cre - INFO - data movers=19741 stayers=641
+2020-09-03 14:58:49,326 - cre - INFO - total variance: 4.2656
+2020-09-03 14:58:49,328 - cre - INFO - data nf:203.0 nw:10000 nn:40123 nc:5
+2020-09-03 14:58:49,505 - cre - INFO - [cre] VAR bw=0.937339 wt=0.058521 tot=0.995859
+2020-09-03 14:58:49,505 - cre - INFO - [cre] COV bw=0.716609 wt=0.037181 tot=0.753790
+2020-09-03 15:04:48,156 - cre - INFO - loading the data
+2020-09-03 15:04:48,160 - cre - INFO - data movers=19924 stayers=614
+2020-09-03 15:04:48,180 - cre - INFO - total variance: 4.2802
+2020-09-03 15:04:48,183 - cre - INFO - data nf:204 nw:10000 nn:40462 nc:5
+2020-09-03 15:04:48,362 - cre - INFO - [cre] VAR bw=0.914766 wt=0.054480 tot=0.969246
+2020-09-03 15:04:48,362 - cre - INFO - [cre] COV bw=0.721587 wt=0.040479 tot=0.762066
+2020-09-03 15:04:48,371 - cre - INFO - prepare linear solver
+2020-09-03 15:04:48,384 - cre - INFO - saved results to res_cre.json
+2020-09-03 15:18:50,076 - cre - INFO - loading the data
+2020-09-03 15:18:50,288 - cre - INFO - data movers=1507537 stayers=672747
+2020-09-03 15:18:57,546 - cre - INFO - total variance: 1.0488
+2020-09-03 15:18:57,678 - cre - INFO - data nf:263715 nw:1506327 nn:3687821 nc:5
+2020-09-03 15:19:03,965 - cre - INFO - [cre] VAR bw=0.140730 wt=0.013040 tot=0.153770
+2020-09-03 15:19:03,965 - cre - INFO - [cre] COV bw=0.082168 wt=0.006415 tot=0.088583
+2020-09-03 15:19:04,550 - cre - INFO - prepare linear solver
+2020-09-03 15:19:06,498 - cre - INFO - saved results to res_cre.json
+2020-09-03 15:34:32,032 - cre - INFO - loading the data
+2020-09-03 15:34:32,038 - cre - INFO - data movers=19619 stayers=666
+2020-09-03 15:34:32,065 - cre - INFO - total variance: 4.3237
+2020-09-03 15:34:32,068 - cre - INFO - data nf:203 nw:10000 nn:39904 nc:5
+2020-09-03 15:34:32,225 - cre - INFO - [cre] VAR bw=0.903379 wt=0.063418 tot=0.966797
+2020-09-03 15:34:32,225 - cre - INFO - [cre] COV bw=0.733760 wt=0.033065 tot=0.766826
+2020-09-03 15:34:32,235 - cre - INFO - prepare linear solver
+2020-09-03 15:34:32,246 - cre - INFO - saved results to res_cre.json
+2020-09-03 15:35:23,055 - cre - INFO - loading the data
+2020-09-03 15:35:23,062 - cre - INFO - data movers=19876 stayers=637
+2020-09-03 15:35:23,087 - cre - INFO - total variance: 4.2686
+2020-09-03 15:35:23,090 - cre - INFO - data nf:204 nw:10000 nn:40389 nc:5
+2020-09-03 15:35:23,254 - cre - INFO - [cre] VAR bw=0.855440 wt=0.051177 tot=0.906616
+2020-09-03 15:35:23,254 - cre - INFO - [cre] COV bw=0.726794 wt=0.035403 tot=0.762197
+2020-09-03 15:35:23,264 - cre - INFO - prepare linear solver
+2020-09-03 15:35:23,277 - cre - INFO - saved results to res_cre.json

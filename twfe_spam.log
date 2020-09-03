@@ -1,0 +1,256 @@
+2020-09-03 14:55:16,183 - twfe - INFO - initializing twfe_network object
+2020-09-03 14:55:18,345 - twfe - INFO - --- checking columns ---
+2020-09-03 14:55:18,345 - twfe - INFO - columns correct:True
+2020-09-03 14:55:19,616 - twfe - INFO - --- checking worker-year observations ---
+2020-09-03 14:55:25,976 - twfe - INFO - max number of worker-year observations (should be 1):1
+2020-09-03 14:55:25,976 - twfe - INFO - --- checking nan data ---
+2020-09-03 14:55:26,932 - twfe - INFO - data nan rows (should be 0):0
+2020-09-03 14:55:26,932 - twfe - INFO - --- checking connected set ---
+2020-09-03 14:55:47,555 - twfe - INFO - observations outside connected set (should be 0):92947
+2020-09-03 14:55:47,555 - twfe - INFO - Overall success:False
+2020-09-03 14:56:34,646 - twfe - INFO - --- checking columns ---
+2020-09-03 14:56:34,647 - twfe - INFO - columns correct:True
+2020-09-03 14:56:35,132 - twfe - INFO - --- checking worker-year observations ---
+2020-09-03 14:56:40,964 - twfe - INFO - max number of worker-year observations (should be 1):1
+2020-09-03 14:56:40,964 - twfe - INFO - --- checking nan data ---
+2020-09-03 14:56:41,865 - twfe - INFO - data nan rows (should be 0):0
+2020-09-03 14:56:41,865 - twfe - INFO - --- checking connected set ---
+2020-09-03 14:56:59,622 - twfe - INFO - observations outside connected set (should be 0):0
+2020-09-03 14:56:59,622 - twfe - INFO - Overall success:True
+2020-09-03 14:57:15,945 - twfe - INFO - data sorted by wid and year
+2020-09-03 14:57:16,126 - twfe - INFO - lagged fid introduced
+2020-09-03 14:57:16,709 - twfe - INFO - spell ids generated
+2020-09-03 14:57:19,068 - twfe - INFO - data aggregated at the spell level
+2020-09-03 14:57:21,786 - twfe - INFO - workers split by spell count
+2020-09-03 14:57:24,083 - twfe - INFO - columns updated
+2020-09-03 14:57:24,116 - twfe - INFO - data reformatted as event study
+2020-09-03 14:57:35,609 - twfe - INFO - firm cdfs computed
+2020-09-03 14:57:36,565 - twfe - INFO - firm clusters computed
+2020-09-03 14:57:36,567 - twfe - INFO - dataframes linked fids to clusters generated
+2020-09-03 14:57:37,595 - twfe - INFO - clusters merged into event study data
+2020-09-03 14:58:36,110 - twfe - INFO - initializing twfe_network object
+2020-09-03 14:58:39,605 - twfe - INFO - data sorted by wid and year
+2020-09-03 14:58:39,608 - twfe - INFO - lagged fid introduced
+2020-09-03 14:58:39,610 - twfe - INFO - spell ids generated
+2020-09-03 14:58:39,629 - twfe - INFO - data aggregated at the spell level
+2020-09-03 14:58:39,634 - twfe - INFO - workers split by spell count
+2020-09-03 14:58:39,645 - twfe - INFO - columns updated
+2020-09-03 14:58:39,646 - twfe - INFO - data reformatted as event study
+2020-09-03 14:58:42,981 - twfe - INFO - --- checking columns ---
+2020-09-03 14:58:42,982 - twfe - INFO - columns correct:True
+2020-09-03 14:58:42,987 - twfe - INFO - --- checking rows ---
+2020-09-03 14:58:42,991 - twfe - INFO - stayers nan rows (should be 0):0
+2020-09-03 14:58:42,992 - twfe - INFO - movers nan rows (should be 0):0
+2020-09-03 14:58:42,992 - twfe - INFO - --- checking firms ---
+2020-09-03 14:58:42,995 - twfe - INFO - stayers with different firms (should be 0):0
+2020-09-03 14:58:42,995 - twfe - INFO - movers with same firm (should be 0):0
+2020-09-03 14:58:42,995 - twfe - INFO - --- checking income ---
+2020-09-03 14:58:42,995 - twfe - INFO - stayers with different income (should be 0):0
+2020-09-03 14:58:42,995 - twfe - INFO - --- checking connected set ---
+2020-09-03 14:58:43,023 - twfe - INFO - stayers outside connected set (should be 0):0
+2020-09-03 14:58:43,023 - twfe - INFO - movers outside connected set (should be 0):0
+2020-09-03 14:58:43,023 - twfe - INFO - Overall success for stayers:True
+2020-09-03 14:58:43,023 - twfe - INFO - Overall success for movers:True
+2020-09-03 14:58:45,963 - twfe - INFO - firm cdfs computed
+2020-09-03 14:58:45,997 - twfe - INFO - firm clusters computed
+2020-09-03 14:58:45,998 - twfe - INFO - dataframes linked fids to clusters generated
+2020-09-03 14:58:46,006 - twfe - INFO - clusters merged into event study data
+2020-09-03 15:00:31,166 - twfe - INFO - initializing twfe_network object
+2020-09-03 15:00:31,166 - twfe - INFO - initializing twfe_network object
+2020-09-03 15:00:34,950 - twfe - INFO - data sorted by wid and year
+2020-09-03 15:00:34,950 - twfe - INFO - data sorted by wid and year
+2020-09-03 15:00:34,952 - twfe - INFO - lagged fid introduced
+2020-09-03 15:00:34,952 - twfe - INFO - lagged fid introduced
+2020-09-03 15:00:34,954 - twfe - INFO - spell ids generated
+2020-09-03 15:00:34,954 - twfe - INFO - spell ids generated
+2020-09-03 15:00:34,972 - twfe - INFO - data aggregated at the spell level
+2020-09-03 15:00:34,972 - twfe - INFO - data aggregated at the spell level
+2020-09-03 15:00:34,977 - twfe - INFO - workers split by spell count
+2020-09-03 15:00:34,977 - twfe - INFO - workers split by spell count
+2020-09-03 15:00:34,988 - twfe - INFO - columns updated
+2020-09-03 15:00:34,988 - twfe - INFO - columns updated
+2020-09-03 15:00:58,897 - twfe - INFO - initializing twfe_network object
+2020-09-03 15:00:58,897 - twfe - INFO - initializing twfe_network object
+2020-09-03 15:00:58,897 - twfe - INFO - initializing twfe_network object
+2020-09-03 15:01:04,151 - twfe - INFO - data sorted by wid and year
+2020-09-03 15:01:04,151 - twfe - INFO - data sorted by wid and year
+2020-09-03 15:01:04,151 - twfe - INFO - data sorted by wid and year
+2020-09-03 15:01:04,153 - twfe - INFO - lagged fid introduced
+2020-09-03 15:01:04,153 - twfe - INFO - lagged fid introduced
+2020-09-03 15:01:04,153 - twfe - INFO - lagged fid introduced
+2020-09-03 15:01:04,155 - twfe - INFO - spell ids generated
+2020-09-03 15:01:04,155 - twfe - INFO - spell ids generated
+2020-09-03 15:01:04,155 - twfe - INFO - spell ids generated
+2020-09-03 15:01:04,172 - twfe - INFO - data aggregated at the spell level
+2020-09-03 15:01:04,172 - twfe - INFO - data aggregated at the spell level
+2020-09-03 15:01:04,172 - twfe - INFO - data aggregated at the spell level
+2020-09-03 15:01:04,177 - twfe - INFO - workers split by spell count
+2020-09-03 15:01:04,177 - twfe - INFO - workers split by spell count
+2020-09-03 15:01:04,177 - twfe - INFO - workers split by spell count
+2020-09-03 15:01:04,192 - twfe - INFO - columns updated
+2020-09-03 15:01:04,192 - twfe - INFO - columns updated
+2020-09-03 15:01:04,192 - twfe - INFO - columns updated
+2020-09-03 15:01:04,195 - twfe - INFO - data reformatted as event study
+2020-09-03 15:01:04,195 - twfe - INFO - data reformatted as event study
+2020-09-03 15:01:04,195 - twfe - INFO - data reformatted as event study
+2020-09-03 15:01:42,131 - twfe - INFO - initializing twfe_network object
+2020-09-03 15:01:42,131 - twfe - INFO - initializing twfe_network object
+2020-09-03 15:01:42,131 - twfe - INFO - initializing twfe_network object
+2020-09-03 15:01:42,131 - twfe - INFO - initializing twfe_network object
+2020-09-03 15:01:45,424 - twfe - INFO - data sorted by wid and year
+2020-09-03 15:01:45,424 - twfe - INFO - data sorted by wid and year
+2020-09-03 15:01:45,424 - twfe - INFO - data sorted by wid and year
+2020-09-03 15:01:45,424 - twfe - INFO - data sorted by wid and year
+2020-09-03 15:01:45,425 - twfe - INFO - lagged fid introduced
+2020-09-03 15:01:45,425 - twfe - INFO - lagged fid introduced
+2020-09-03 15:01:45,425 - twfe - INFO - lagged fid introduced
+2020-09-03 15:01:45,425 - twfe - INFO - lagged fid introduced
+2020-09-03 15:01:45,426 - twfe - INFO - spell ids generated
+2020-09-03 15:01:45,426 - twfe - INFO - spell ids generated
+2020-09-03 15:01:45,426 - twfe - INFO - spell ids generated
+2020-09-03 15:01:45,426 - twfe - INFO - spell ids generated
+2020-09-03 15:01:45,443 - twfe - INFO - data aggregated at the spell level
+2020-09-03 15:01:45,443 - twfe - INFO - data aggregated at the spell level
+2020-09-03 15:01:45,443 - twfe - INFO - data aggregated at the spell level
+2020-09-03 15:01:45,443 - twfe - INFO - data aggregated at the spell level
+2020-09-03 15:01:45,448 - twfe - INFO - workers split by spell count
+2020-09-03 15:01:45,448 - twfe - INFO - workers split by spell count
+2020-09-03 15:01:45,448 - twfe - INFO - workers split by spell count
+2020-09-03 15:01:45,448 - twfe - INFO - workers split by spell count
+2020-09-03 15:01:45,462 - twfe - INFO - columns updated
+2020-09-03 15:01:45,462 - twfe - INFO - columns updated
+2020-09-03 15:01:45,462 - twfe - INFO - columns updated
+2020-09-03 15:01:45,462 - twfe - INFO - columns updated
+2020-09-03 15:01:45,463 - twfe - INFO - data reformatted as event study
+2020-09-03 15:01:45,463 - twfe - INFO - data reformatted as event study
+2020-09-03 15:01:45,463 - twfe - INFO - data reformatted as event study
+2020-09-03 15:01:45,463 - twfe - INFO - data reformatted as event study
+2020-09-03 15:02:16,870 - twfe - INFO - firm cdfs computed
+2020-09-03 15:02:16,870 - twfe - INFO - firm cdfs computed
+2020-09-03 15:02:16,870 - twfe - INFO - firm cdfs computed
+2020-09-03 15:02:16,870 - twfe - INFO - firm cdfs computed
+2020-09-03 15:02:16,895 - twfe - INFO - firm clusters computed
+2020-09-03 15:02:16,895 - twfe - INFO - firm clusters computed
+2020-09-03 15:02:16,895 - twfe - INFO - firm clusters computed
+2020-09-03 15:02:16,895 - twfe - INFO - firm clusters computed
+2020-09-03 15:02:16,895 - twfe - INFO - dataframes linked fids to clusters generated
+2020-09-03 15:02:16,895 - twfe - INFO - dataframes linked fids to clusters generated
+2020-09-03 15:02:16,895 - twfe - INFO - dataframes linked fids to clusters generated
+2020-09-03 15:02:16,895 - twfe - INFO - dataframes linked fids to clusters generated
+2020-09-03 15:02:16,904 - twfe - INFO - clusters merged into event study data
+2020-09-03 15:02:16,904 - twfe - INFO - clusters merged into event study data
+2020-09-03 15:02:16,904 - twfe - INFO - clusters merged into event study data
+2020-09-03 15:02:16,904 - twfe - INFO - clusters merged into event study data
+2020-09-03 15:03:32,078 - twfe - INFO - initializing twfe_network object
+2020-09-03 15:03:35,500 - twfe - INFO - data sorted by wid and year
+2020-09-03 15:03:35,502 - twfe - INFO - lagged fid introduced
+2020-09-03 15:03:35,503 - twfe - INFO - spell ids generated
+2020-09-03 15:03:35,522 - twfe - INFO - data aggregated at the spell level
+2020-09-03 15:03:35,526 - twfe - INFO - workers split by spell count
+2020-09-03 15:03:35,539 - twfe - INFO - columns updated
+2020-09-03 15:03:35,540 - twfe - INFO - data reformatted as event study
+2020-09-03 15:03:38,116 - twfe - INFO - firm cdfs computed
+2020-09-03 15:03:38,142 - twfe - INFO - firm clusters computed
+2020-09-03 15:03:38,143 - twfe - INFO - dataframes linked fids to clusters generated
+2020-09-03 15:03:38,151 - twfe - INFO - clusters merged into event study data
+2020-09-03 15:03:38,154 - twfe - INFO - datatypes of clusters corrected
+2020-09-03 15:16:28,146 - twfe - INFO - initializing twfe_network object
+2020-09-03 15:16:30,253 - twfe - INFO - --- checking columns ---
+2020-09-03 15:16:30,253 - twfe - INFO - columns correct:True
+2020-09-03 15:16:31,536 - twfe - INFO - --- checking worker-year observations ---
+2020-09-03 15:16:37,532 - twfe - INFO - max number of worker-year observations (should be 1):1
+2020-09-03 15:16:37,532 - twfe - INFO - --- checking nan data ---
+2020-09-03 15:16:38,422 - twfe - INFO - data nan rows (should be 0):0
+2020-09-03 15:16:38,422 - twfe - INFO - --- checking connected set ---
+2020-09-03 15:16:59,509 - twfe - INFO - observations outside connected set (should be 0):92947
+2020-09-03 15:16:59,509 - twfe - INFO - Overall success:False
+2020-09-03 15:17:45,887 - twfe - INFO - --- checking columns ---
+2020-09-03 15:17:45,887 - twfe - INFO - columns correct:True
+2020-09-03 15:17:46,372 - twfe - INFO - --- checking worker-year observations ---
+2020-09-03 15:17:52,203 - twfe - INFO - max number of worker-year observations (should be 1):1
+2020-09-03 15:17:52,203 - twfe - INFO - --- checking nan data ---
+2020-09-03 15:17:53,082 - twfe - INFO - data nan rows (should be 0):0
+2020-09-03 15:17:53,082 - twfe - INFO - --- checking connected set ---
+2020-09-03 15:18:13,059 - twfe - INFO - observations outside connected set (should be 0):0
+2020-09-03 15:18:13,059 - twfe - INFO - Overall success:True
+2020-09-03 15:18:26,394 - twfe - INFO - data sorted by wid and year
+2020-09-03 15:18:26,607 - twfe - INFO - lagged fid introduced
+2020-09-03 15:18:27,305 - twfe - INFO - spell ids generated
+2020-09-03 15:18:30,131 - twfe - INFO - data aggregated at the spell level
+2020-09-03 15:18:33,460 - twfe - INFO - workers split by spell count
+2020-09-03 15:18:36,400 - twfe - INFO - columns updated
+2020-09-03 15:18:36,435 - twfe - INFO - data reformatted as event study
+2020-09-03 15:18:43,970 - twfe - INFO - firm cdfs computed
+2020-09-03 15:18:45,075 - twfe - INFO - firm clusters computed
+2020-09-03 15:18:45,077 - twfe - INFO - dataframes linked fids to clusters generated
+2020-09-03 15:18:46,452 - twfe - INFO - clusters merged into event study data
+2020-09-03 15:18:46,601 - twfe - INFO - datatypes of clusters corrected
+2020-09-03 15:33:09,712 - twfe - INFO - initializing twfe_network object
+2020-09-03 15:33:13,583 - twfe - INFO - data sorted by wid and year
+2020-09-03 15:33:13,584 - twfe - INFO - lagged fid introduced
+2020-09-03 15:33:13,587 - twfe - INFO - spell ids generated
+2020-09-03 15:33:13,605 - twfe - INFO - data aggregated at the spell level
+2020-09-03 15:33:13,609 - twfe - INFO - workers split by spell count
+2020-09-03 15:33:13,622 - twfe - INFO - columns updated
+2020-09-03 15:33:13,623 - twfe - INFO - data reformatted as event study
+2020-09-03 15:33:17,385 - twfe - INFO - --- checking columns ---
+2020-09-03 15:33:17,385 - twfe - INFO - columns correct:True
+2020-09-03 15:33:17,388 - twfe - INFO - --- checking rows ---
+2020-09-03 15:33:17,392 - twfe - INFO - stayers nan rows (should be 0):0
+2020-09-03 15:33:17,392 - twfe - INFO - movers nan rows (should be 0):0
+2020-09-03 15:33:17,392 - twfe - INFO - --- checking firms ---
+2020-09-03 15:33:17,393 - twfe - INFO - stayers with different firms (should be 0):0
+2020-09-03 15:33:17,393 - twfe - INFO - movers with same firm (should be 0):0
+2020-09-03 15:33:17,393 - twfe - INFO - --- checking income ---
+2020-09-03 15:33:17,393 - twfe - INFO - stayers with different income (should be 0):0
+2020-09-03 15:33:17,393 - twfe - INFO - --- checking connected set ---
+2020-09-03 15:33:17,418 - twfe - INFO - stayers outside connected set (should be 0):0
+2020-09-03 15:33:17,418 - twfe - INFO - movers outside connected set (should be 0):0
+2020-09-03 15:33:17,418 - twfe - INFO - Overall success for stayers:True
+2020-09-03 15:33:17,418 - twfe - INFO - Overall success for movers:True
+2020-09-03 15:33:20,504 - twfe - INFO - firm cdfs computed
+2020-09-03 15:33:20,530 - twfe - INFO - firm clusters computed
+2020-09-03 15:33:20,531 - twfe - INFO - dataframes linked fids to clusters generated
+2020-09-03 15:33:20,540 - twfe - INFO - clusters merged into event study data
+2020-09-03 15:33:20,542 - twfe - INFO - datatypes of clusters corrected
+2020-09-03 15:34:18,789 - twfe - INFO - initializing twfe_network object
+2020-09-03 15:34:22,310 - twfe - INFO - data sorted by wid and year
+2020-09-03 15:34:22,312 - twfe - INFO - lagged fid introduced
+2020-09-03 15:34:22,313 - twfe - INFO - spell ids generated
+2020-09-03 15:34:22,329 - twfe - INFO - data aggregated at the spell level
+2020-09-03 15:34:22,335 - twfe - INFO - workers split by spell count
+2020-09-03 15:34:22,347 - twfe - INFO - columns updated
+2020-09-03 15:34:22,348 - twfe - INFO - data reformatted as event study
+2020-09-03 15:34:25,428 - twfe - INFO - firm cdfs computed
+2020-09-03 15:34:25,461 - twfe - INFO - firm clusters computed
+2020-09-03 15:34:25,463 - twfe - INFO - dataframes linked fids to clusters generated
+2020-09-03 15:34:25,471 - twfe - INFO - clusters merged into event study data
+2020-09-03 15:34:25,474 - twfe - INFO - datatypes of clusters corrected
+2020-09-03 15:34:58,948 - twfe - INFO - initializing twfe_network object
+2020-09-03 15:35:06,142 - twfe - INFO - data sorted by wid and year
+2020-09-03 15:35:06,144 - twfe - INFO - lagged fid introduced
+2020-09-03 15:35:06,146 - twfe - INFO - spell ids generated
+2020-09-03 15:35:06,165 - twfe - INFO - data aggregated at the spell level
+2020-09-03 15:35:06,170 - twfe - INFO - workers split by spell count
+2020-09-03 15:35:06,183 - twfe - INFO - columns updated
+2020-09-03 15:35:06,184 - twfe - INFO - data reformatted as event study
+2020-09-03 15:35:10,220 - twfe - INFO - --- checking columns ---
+2020-09-03 15:35:10,220 - twfe - INFO - columns correct:True
+2020-09-03 15:35:10,226 - twfe - INFO - --- checking rows ---
+2020-09-03 15:35:10,232 - twfe - INFO - stayers nan rows (should be 0):0
+2020-09-03 15:35:10,232 - twfe - INFO - movers nan rows (should be 0):0
+2020-09-03 15:35:10,232 - twfe - INFO - --- checking firms ---
+2020-09-03 15:35:10,233 - twfe - INFO - stayers with different firms (should be 0):0
+2020-09-03 15:35:10,234 - twfe - INFO - movers with same firm (should be 0):0
+2020-09-03 15:35:10,234 - twfe - INFO - --- checking income ---
+2020-09-03 15:35:10,234 - twfe - INFO - stayers with different income (should be 0):0
+2020-09-03 15:35:10,234 - twfe - INFO - --- checking connected set ---
+2020-09-03 15:35:10,262 - twfe - INFO - stayers outside connected set (should be 0):0
+2020-09-03 15:35:10,262 - twfe - INFO - movers outside connected set (should be 0):0
+2020-09-03 15:35:10,262 - twfe - INFO - Overall success for stayers:True
+2020-09-03 15:35:10,263 - twfe - INFO - Overall success for movers:True
+2020-09-03 15:35:13,744 - twfe - INFO - firm cdfs computed
+2020-09-03 15:35:13,770 - twfe - INFO - firm clusters computed
+2020-09-03 15:35:13,771 - twfe - INFO - dataframes linked fids to clusters generated
+2020-09-03 15:35:13,779 - twfe - INFO - clusters merged into event study data
+2020-09-03 15:35:13,783 - twfe - INFO - datatypes of clusters corrected
