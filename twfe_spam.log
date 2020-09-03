@@ -254,3 +254,29 @@
 2020-09-03 15:35:13,771 - twfe - INFO - dataframes linked fids to clusters generated
 2020-09-03 15:35:13,779 - twfe - INFO - clusters merged into event study data
 2020-09-03 15:35:13,783 - twfe - INFO - datatypes of clusters corrected
+2020-09-03 15:47:45,870 - twfe - INFO - initializing twfe_network object
+2020-09-03 15:47:49,320 - twfe - INFO - data sorted by wid and year
+2020-09-03 15:47:49,322 - twfe - INFO - lagged fid introduced
+2020-09-03 15:47:49,323 - twfe - INFO - spell ids generated
+2020-09-03 15:47:49,342 - twfe - INFO - data aggregated at the spell level
+2020-09-03 15:47:49,347 - twfe - INFO - workers split by spell count
+2020-09-03 15:47:49,360 - twfe - INFO - columns updated
+2020-09-03 15:47:49,361 - twfe - INFO - data reformatted as event study
+2020-09-03 15:47:52,272 - twfe - INFO - firm cdfs computed
+2020-09-03 15:47:52,305 - twfe - INFO - firm clusters computed
+2020-09-03 15:47:52,305 - twfe - INFO - dataframes linked fids to clusters generated
+2020-09-03 15:47:52,315 - twfe - INFO - clusters merged into event study data
+2020-09-03 15:47:52,317 - twfe - INFO - datatypes of clusters corrected
+2020-09-03 15:50:10,198 - twfe - INFO - initializing twfe_network object
+2020-09-03 15:50:14,200 - twfe - INFO - data sorted by wid and year
+2020-09-03 15:50:14,201 - twfe - INFO - lagged fid introduced
+2020-09-03 15:50:14,202 - twfe - INFO - spell ids generated
+2020-09-03 15:50:14,222 - twfe - INFO - data aggregated at the spell level
+2020-09-03 15:50:14,226 - twfe - INFO - workers split by spell count
+2020-09-03 15:50:14,239 - twfe - INFO - columns updated
+2020-09-03 15:50:14,240 - twfe - INFO - data reformatted as event study
+2020-09-03 15:50:16,922 - twfe - INFO - firm cdfs computed
+2020-09-03 15:50:16,951 - twfe - INFO - firm clusters computed
+2020-09-03 15:50:16,951 - twfe - INFO - dataframes linked fids to clusters generated
+2020-09-03 15:50:16,960 - twfe - INFO - clusters merged into event study data
+2020-09-03 15:50:16,962 - twfe - INFO - datatypes of clusters corrected

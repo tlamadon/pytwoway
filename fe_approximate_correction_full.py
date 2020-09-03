@@ -60,7 +60,7 @@ class FEsolver:
         nf = adata.f1i.max()
         nw = adata.wid.max()
         nn = len(adata)
-        logging.info("data nf:{} nw:{} nn:{}".format(nf, nw, nn))
+        logger.info("data nf:{} nw:{} nn:{}".format(nf, nw, nn))
 
         # Matrices for the cross-section
         J = csc_matrix((np.ones(nn), (adata.index, adata.f1i - 1)), shape=(nn, nf))
@@ -69,7 +69,7 @@ class FEsolver:
         Dw = diags((W.transpose() * W).diagonal())
         Dwinv = diags(1.0 / ((W.transpose() * W).diagonal()))
 
-        logging.info("prepare linear solver")
+        logger.info("prepare linear solver")
         # finally we create M
         M = J.transpose() * J - J.transpose() * W * Dwinv * W.transpose() * J
         self.ml = pyamg.ruge_stuben_solver(M)
@@ -201,7 +201,7 @@ def weighted_quantile(values, quantiles, sample_weight=None,
 # simple wrapper to call the leverage function
 def leverage_approx_func(fes,ndraw_pii): 
     res = fes.leverage_approx(ndraw_pii)
-    logging.info("done with batch")
+    logger.info("done with batch")
     return res
 
 
@@ -220,7 +220,7 @@ def main(args):
 
     # ----------------- LOADING AND PREPARING DATA -----------------
     # import sdata/jdata
-    logging.info("loading the data")
+    logger.info("loading the data")
 
     for i in range(0,30):
         try:
@@ -228,12 +228,12 @@ def main(args):
             sdata = data[data['m'] == 0].reset_index(drop=True)
             jdata = data[data['m'] == 1].reset_index(drop=True)
         except pyreadr.custom_errors.LibrdataError:
-            logging.info("can't read file, waiting 30s and trying again {}/30".format(i+1))
+            logger.info("can't read file, waiting 30s and trying again {}/30".format(i+1))
             time.sleep(30)
             continue
         break
 
-    logging.info("data movers={} stayers={}".format(len(jdata),len(sdata)))
+    logger.info("data movers={} stayers={}".format(len(jdata),len(sdata)))
     res['nm'] = len(jdata)
     res['ns'] = len(sdata)
     res['n_firms']=len(np.unique(pd.concat([jdata['f1i'],jdata['f2i'],sdata['f1i']], ignore_index=True)))
@@ -270,9 +270,9 @@ def main(args):
     #res['woodcock_var_psi']   = ds.query('nsj  > 1').pipe(pipe_qcov, 'y1', 'y1s_lo')
     #res['woodcock_var_alpha'] = np.minimum( jdata.pipe(pipe_qcov, 'y1','y2'), adata.query('cs==1')['y1'].var() - res['woodcock_var_psi'] )
     #res['woodcock_var_eps'] = adata.query('cs==1')['y1'].var() - res['woodcock_var_alpha'] - res['woodcock_var_psi']
-    #logging.info("[woodcock] var psi = {}", res['woodcock_var_psi'])
-    #logging.info("[woodcock] var alpha = {}", res['woodcock_var_alpha'])
-    #logging.info("[woodcock] var eps = {}", res['woodcock_var_eps'])
+    #logger.info("[woodcock] var psi = {}", res['woodcock_var_psi'])
+    #logger.info("[woodcock] var alpha = {}", res['woodcock_var_alpha'])
+    #logger.info("[woodcock] var eps = {}", res['woodcock_var_eps'])
 
     del(sdata)
     del(jdata)
@@ -280,9 +280,9 @@ def main(args):
     if args['statsonly']:
         with open(args['out'],'w') as outfile:
             json.dump(res,outfile)
-        logging.info("saved results to {}".format(args['out']))
-        logging.info(" --statsonly was passed as argument, so we skip all estimation.")
-        logging.info("------ DONE -------")
+        logger.info("saved results to {}".format(args['out']))
+        logger.info(" --statsonly was passed as argument, so we skip all estimation.")
+        logger.info("------ DONE -------")
         sys.exit()
  
 
@@ -294,24 +294,24 @@ def main(args):
     # try to pickle the object to see its size
     # fes.save("tmp.pkl")
 
-    logging.info("extract firm effects")
+    logger.info("extract firm effects")
     psi_hat, alpha_hat = fes.solve(Y)
-    logging.info("solver time {:2.4f} seconds".format(fes.last_invert_time))
-    logging.info("expected total time {:2.4f} minutes".format( (ndraw_trace * (1 + compute_hetero) + ndraw_pii * compute_hetero ) *  fes.last_invert_time / 60    ))
+    logger.info("solver time {:2.4f} seconds".format(fes.last_invert_time))
+    logger.info("expected total time {:2.4f} minutes".format( (ndraw_trace * (1 + compute_hetero) + ndraw_pii * compute_hetero ) *  fes.last_invert_time / 60    ))
     E = Y - fes.mult_A(psi_hat  , alpha_hat)
 
     res["solver_time"] = fes.last_invert_time
 
     fe_rsq = 1 - np.power(E, 2).mean() / np.power(Y, 2).mean()
-    logging.info("Fixed effect R-square {:2.4f}".format(fe_rsq))
+    logger.info("Fixed effect R-square {:2.4f}".format(fe_rsq))
 
     var_fe = np.var( fes.Jq * psi_hat)
     cov_fe = np.cov( fes.Jq * psi_hat, fes.Wq * alpha_hat)[0][1]
     tot_var  = np.var(Y)
-    logging.info("[fe] var_psi={:2.4f} cov={:2.4f} tot={:2.4f}".format(var_fe,cov_fe,np.var(Y)))
+    logger.info("[fe] var_psi={:2.4f} cov={:2.4f} tot={:2.4f}".format(var_fe,cov_fe,np.var(Y)))
 
     var_e = fes.nn/(fes.nn - fes.nw - fes.nf + 1 ) * np.power(E ,2).mean()
-    logging.info("[ho] variance of residuals {:2.4f}".format(var_e))
+    logger.info("[ho] variance of residuals {:2.4f}".format(var_e))
 
     # -------- COMPUTING leverages Pii ---------
     # we start by computing the sigma_i
@@ -320,10 +320,10 @@ def main(args):
     if compute_hetero:
 
         if (len(args['levfile'])>1):
-            logging.info("[he] starting heteroskedastic correction, loading precomputed files")
+            logger.info("[he] starting heteroskedastic correction, loading precomputed files")
 
             files = glob.glob("{}*".format(args['levfile'])) 
-            logging.info("[he] found {} files to get leverages from".format(len(files)))
+            logger.info("[he] found {} files to get leverages from".format(len(files)))
             res['lev_file_count']=len(files)
             assert len(files)>0, "didn't find any leverage files!"
 
@@ -333,7 +333,7 @@ def main(args):
                 Pii += pp/len(files)
 
         elif (ncore>1):
-            logging.info("[he] starting heteroskedastic correction p2={}, using {} cores, batch size {}".format(ndraw_pii,ncore,args['batch']))
+            logger.info("[he] starting heteroskedastic correction p2={}, using {} cores, batch size {}".format(ndraw_pii,ncore,args['batch']))
             set_start_method("spawn")
             with Pool(processes=ncore) as pool:
                 Pii_all =  pool.starmap( leverage_approx_func, [ (fes,args['batch']) for _ in range( ndraw_pii // args['batch'] )] )
@@ -352,7 +352,7 @@ def main(args):
 
         # we attach the computed Pii to the data.frame
         adata["Pii"] = Pii
-        logging.info("[he] Leverage range {:2.4f} to {:2.4f}".format(adata.query('m==1').Pii.min(),adata.query('m==1').Pii.max()))
+        logger.info("[he] Leverage range {:2.4f} to {:2.4f}".format(adata.query('m==1').Pii.min(),adata.query('m==1').Pii.max()))
 
         # we give stayers the variance estimate at the firm level
         adata["Sii"] = Y * E / (1 - Pii)
@@ -362,10 +362,10 @@ def main(args):
         adata['Sii'] = np.where(adata['m']==1, adata['Sii'], adata['Sii_j'])
         Sii = adata['Sii']
 
-        logging.info("[he] variance of residuals in heteroskedastic case: {:2.4f}".format(Sii.mean()))
+        logger.info("[he] variance of residuals in heteroskedastic case: {:2.4f}".format(Sii.mean()))
 
     # ------ computing trace approximation ------
-    logging.info("starting trace correction ndraws={}, using {} cores".format(ndraw_trace,ncore))
+    logger.info("starting trace correction ndraws={}, using {} cores".format(ndraw_trace,ncore))
     tr_var_ho_all = np.zeros(ndraw_trace)
     tr_cov_ho_all = np.zeros(ndraw_trace)
     tr_var_he_all = np.zeros(ndraw_trace)
@@ -394,7 +394,7 @@ def main(args):
             tr_var_he_all[r] = np.cov(R2_psi,R3_psi)[0][1]
             tr_cov_he_all[r] = np.cov(R2_alpha,R3_psi)[0][1]
 
-        logging.debug("[traces] step {}/{} done.".format(r, ndraw_trace))
+        logger.debug("[traces] step {}/{} done.".format(r, ndraw_trace))
 
 
     end_time = time.time()
@@ -407,8 +407,8 @@ def main(args):
     res['tr_cov_ho'] = np.mean(tr_cov_ho_all)
     res['tr_var_he'] = np.mean(tr_var_he_all)
     res['tr_cov_he'] = np.mean(tr_cov_he_all)
-    logging.info("[ho] VAR tr={:2.4f} (sd={:2.4e})".format(res['tr_var_ho'], np.std(tr_var_ho_all)))
-    logging.info("[ho] COV tr={:2.4f} (sd={:2.4e})".format(res['tr_cov_ho'], np.std(tr_cov_ho_all)))
+    logger.info("[ho] VAR tr={:2.4f} (sd={:2.4e})".format(res['tr_var_ho'], np.std(tr_var_ho_all)))
+    logger.info("[ho] COV tr={:2.4f} (sd={:2.4e})".format(res['tr_cov_ho'], np.std(tr_cov_ho_all)))
     if compute_hetero:
         res['eps_var_he'] = Sii.mean()
         res['min_lev'] = adata.query('m==1').Pii.min()
@@ -417,15 +417,15 @@ def main(args):
         res['tr_cov_ho_sd'] = np.std(tr_cov_ho_all)
         res['tr_var_he_sd'] = np.std(tr_var_he_all)
         res['tr_cov_he_sd'] = np.std(tr_cov_he_all)
-        logging.info("[he] VAR tr={:2.4f} (sd={:2.4e})".format(res['tr_var_he'], np.std(tr_var_he_all)))
-        logging.info("[he] COV tr={:2.4f} (sd={:2.4e})".format(res['tr_cov_he'], np.std(tr_cov_he_all)))
+        logger.info("[he] VAR tr={:2.4f} (sd={:2.4e})".format(res['tr_var_he'], np.std(tr_var_he_all)))
+        logger.info("[he] COV tr={:2.4f} (sd={:2.4e})".format(res['tr_cov_he'], np.std(tr_cov_he_all)))
 
     # # ----- FINAL ------
-    logging.info("[ho] VAR fe={:2.4f} bc={:2.4f}".format(var_fe, var_fe - var_e * res['tr_var_ho'] ))
-    logging.info("[ho] COV fe={:2.4f} bc={:2.4f}".format(cov_fe, cov_fe - var_e * res['tr_cov_ho'] ))
+    logger.info("[ho] VAR fe={:2.4f} bc={:2.4f}".format(var_fe, var_fe - var_e * res['tr_var_ho'] ))
+    logger.info("[ho] COV fe={:2.4f} bc={:2.4f}".format(cov_fe, cov_fe - var_e * res['tr_cov_ho'] ))
     if compute_hetero:
-        logging.info("[he] VAR fe={:2.4f} bc={:2.4f}".format(var_fe, var_fe - res['tr_var_he']))
-        logging.info("[he] COV fe={:2.4f} bc={:2.4f}".format(cov_fe, cov_fe - res['tr_cov_he']))
+        logger.info("[he] VAR fe={:2.4f} bc={:2.4f}".format(var_fe, var_fe - res['tr_var_he']))
+        logger.info("[he] COV fe={:2.4f} bc={:2.4f}".format(cov_fe, cov_fe - res['tr_cov_he']))
 
     res['var_y']  = np.var(fes.Yq)
     res['var_fe'] = var_fe
@@ -441,6 +441,23 @@ def main(args):
     # Saving to file
     with open(args['out'],'w') as outfile:
         json.dump(res,outfile)
-    logging.info("saved results to {}".format(args['out']))
+    logger.info("saved results to {}".format(args['out']))
 
-    logging.info("------ DONE -------")
+    logger.info("------ DONE -------")
+
+# Begin logging
+logger = logging.getLogger('akm')
+logger.setLevel(logging.DEBUG)
+# create file handler which logs even debug messages
+fh = logging.FileHandler('akm_spam.log')
+fh.setLevel(logging.DEBUG)
+# create console handler with a higher log level
+ch = logging.StreamHandler()
+ch.setLevel(logging.ERROR)
+# create formatter and add it to the handlers
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+fh.setFormatter(formatter)
+ch.setFormatter(formatter)
+# add the handlers to the logger
+logger.addHandler(fh)
+logger.addHandler(ch)
