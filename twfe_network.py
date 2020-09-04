@@ -36,20 +36,20 @@ import cre
 # d_net.refactor_es()
 # cdfs_2 = d_net.approx_cdfs()
 
-from matplotlib import pyplot as plt
-true_psi_var, true_psi_alpha_cov, akm_psi_var, akm_psi_alpha_cov, cre_psi_var, cre_psi_alpha_cov = twfe_monte_carlo(N=100, ncore=4)
-akm_psi_diff = sorted(akm_psi_var - true_psi_var)
-akm_psi_alpha_diff = sorted(akm_psi_alpha_cov - true_psi_alpha_cov)
-cre_psi_diff = sorted(cre_psi_var - true_psi_var)
-cre_psi_alpha_diff = sorted(cre_psi_alpha_cov - true_psi_alpha_cov)
-plt.hist(akm_psi_diff, label='AKM var(psi)')
-plt.hist(cre_psi_diff, label='CRE var(psi)')
-plt.legend()
-plt.show()
-plt.hist(akm_psi_alpha_diff, label='AKM cov(psi, alpha)')
-plt.hist(cre_psi_alpha_diff, label='CRE cov(psi, alpha)')
-plt.legend()
-plt.show()
+# from matplotlib import pyplot as plt
+# true_psi_var, true_psi_alpha_cov, akm_psi_var, akm_psi_alpha_cov, cre_psi_var, cre_psi_alpha_cov = twfe_monte_carlo(N=100, ncore=4)
+# akm_psi_diff = sorted(akm_psi_var - true_psi_var)
+# akm_psi_alpha_diff = sorted(akm_psi_alpha_cov - true_psi_alpha_cov)
+# cre_psi_diff = sorted(cre_psi_var - true_psi_var)
+# cre_psi_alpha_diff = sorted(cre_psi_alpha_cov - true_psi_alpha_cov)
+# plt.hist(akm_psi_diff, label='AKM var(psi)')
+# plt.hist(cre_psi_diff, label='CRE var(psi)')
+# plt.legend()
+# plt.show()
+# plt.hist(akm_psi_alpha_diff, label='AKM cov(psi, alpha)')
+# plt.hist(cre_psi_alpha_diff, label='CRE cov(psi, alpha)')
+# plt.legend()
+# plt.show()
 
 def twfe_monte_carlo_interior(params={'num_ind': 10000, 'num_time': 5, 'firm_size': 50, 'nk': 200, 'nl': 50, 'alpha_sig': 1, 'psi_sig': 1, 'w_sig': 1, 'csort': 1, 'cnetw': 1, 'csig': 1, 'p_move': 0.5}):
     '''
