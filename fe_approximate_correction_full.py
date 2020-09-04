@@ -445,6 +445,8 @@ def main(args):
 
     logger.info("------ DONE -------")
 
+    return res
+
 # Begin logging
 logger = logging.getLogger('akm')
 logger.setLevel(logging.DEBUG)

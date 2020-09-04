@@ -3,6 +3,7 @@ Class for a two-way fixed effect network
 '''
 
 import logging
+from multiprocessing import Pool
 from tqdm.auto import tqdm
 import numpy as np
 from numpy import matlib
@@ -27,13 +28,128 @@ import cre
 # d_net.refactor_es()
 # d_net.data_validity()
 # d_net.cluster()
-# d_net.run_akm_corrected()
-# d_net.run_cre()
+# akm_res = d_net.run_akm_corrected()
+# cre_res = d_net.run_cre()
 
 # d_net = twfe_network()
 # cdfs_1 = d_net.approx_cdfs()
 # d_net.refactor_es()
 # cdfs_2 = d_net.approx_cdfs()
+
+from matplotlib import pyplot as plt
+true_psi_var, true_psi_alpha_cov, akm_psi_var, akm_psi_alpha_cov, cre_psi_var, cre_psi_alpha_cov = twfe_monte_carlo(N=100, ncore=4)
+akm_psi_diff = sorted(akm_psi_var - true_psi_var)
+akm_psi_alpha_diff = sorted(akm_psi_alpha_cov - true_psi_alpha_cov)
+cre_psi_diff = sorted(cre_psi_var - true_psi_var)
+cre_psi_alpha_diff = sorted(cre_psi_alpha_cov - true_psi_alpha_cov)
+plt.hist(akm_psi_diff, label='AKM var(psi)')
+plt.hist(cre_psi_diff, label='CRE var(psi)')
+plt.legend()
+plt.show()
+plt.hist(akm_psi_alpha_diff, label='AKM cov(psi, alpha)')
+plt.hist(cre_psi_alpha_diff, label='CRE cov(psi, alpha)')
+plt.legend()
+plt.show()
+
+def twfe_monte_carlo_interior(params={'num_ind': 10000, 'num_time': 5, 'firm_size': 50, 'nk': 200, 'nl': 50, 'alpha_sig': 1, 'psi_sig': 1, 'w_sig': 1, 'csort': 1, 'cnetw': 1, 'csig': 1, 'p_move': 0.5}):
+    '''
+    Purpose:
+        Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to twfe_monte_carlo
+
+    Inputs:
+        params (dictionary): parameters for simulated data
+            Dictionary parameters:
+                num_ind: number of workers
+                num_time: time length of panel
+                firm_size: max number of individuals per firm
+                nk: number of firm types
+                nl: number of worker types
+                alpha_sig: standard error of individual fixed effect (volatility of worker effects)
+                psi_sig: standard error of firm fixed effect (volatility of firm effects)
+                w_sig: standard error of residual in AKM wage equation (volatility of wage shocks)
+                csort: sorting effect
+                cnetw: network effect
+                csig: standard error of sorting/network effects
+                p_move: probability a worker moves firms in any period
+
+    Returns:
+        true_psi_var (float): true simulated sample variance of psi
+        true_psi_alpha_cov (float): true simulated sample covariance of psi and alpha
+        akm_psi_var (float): bias-corrected AKM estimate of variance of psi
+        akm_psi_alpha_cov (float): bias-corrected AKM estimate of covariance of psi and alpha
+        cre_psi_var (float): CRE estimate of variance of psi
+        cre_psi_alpha_cov (float): CRE estimate of covariance of psi and alpha
+    '''
+    # Simulate network
+    nw = twfe_network(data=params)
+    # Compute true sample variance of psi and covariance of psi and alpha
+    psi_var = np.var(nw.data['psi'])
+    psi_alpha_cov = np.cov(nw.data['psi'], nw.data['alpha'])[0, 1]
+    # Convert into event study
+    nw.refactor_es()
+    # Estimate bias-corrected AKM model
+    akm_res = nw.run_akm_corrected()
+    # Cluster for CRE model
+    nw.cluster()
+    # Estimate CRE model
+    cre_res = nw.run_cre()
+
+    return psi_var, psi_alpha_cov, akm_res['var_ho'], akm_res['cov_ho'], cre_res['var_bw'], cre_res['cov_bw']
+    
+
+def twfe_monte_carlo(params={'num_ind': 10000, 'num_time': 5, 'firm_size': 50, 'nk': 200, 'nl': 50, 'alpha_sig': 1, 'psi_sig': 1, 'w_sig': 1, 'csort': 1, 'cnetw': 1, 'csig': 1, 'p_move': 0.5}, N=500, ncore=1):
+    '''
+    Purpose:
+        Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha
+
+    Inputs:
+        params (dictionary): parameters for simulated data
+            Dictionary parameters:
+                num_ind: number of workers
+                num_time: time length of panel
+                firm_size: max number of individuals per firm
+                nk: number of firm types
+                nl: number of worker types
+                alpha_sig: standard error of individual fixed effect (volatility of worker effects)
+                psi_sig: standard error of firm fixed effect (volatility of firm effects)
+                w_sig: standard error of residual in AKM wage equation (volatility of wage shocks)
+                csort: sorting effect
+                cnetw: network effect
+                csig: standard error of sorting/network effects
+                p_move: probability a worker moves firms in any period
+        N (int): number of simulations
+        ncore (int): how many cores to use
+
+    Returns:
+        true_psi_var (NumPy array): true simulated sample variance of psi
+        true_psi_alpha_cov (NumPy array): true simulated sample covariance of psi and alpha
+        akm_psi_var (NumPy array): bias-corrected AKM estimate of variance of psi
+        akm_psi_alpha_cov (NumPy array): bias-corrected AKM estimate of covariance of psi and alpha
+        cre_psi_var (NumPy array): CRE estimate of variance of psi
+        cre_psi_alpha_cov (NumPy array): CRE estimate of covariance of psi and alpha
+    '''
+    # Initialize NumPy arrays to store results
+    true_psi_var = np.zeros(N)
+    true_psi_alpha_cov = np.zeros(N)
+    akm_psi_var = np.zeros(N)
+    akm_psi_alpha_cov = np.zeros(N)
+    cre_psi_var = np.zeros(N)
+    cre_psi_alpha_cov = np.zeros(N)
+
+    # Use multi-processing
+    if ncore > 1:
+        V = []
+        # Simulate networks
+        with Pool(processes=ncore) as pool:
+            V = pool.starmap(twfe_monte_carlo_interior, [[params] for _ in range(N)])
+        for i, res in enumerate(V):
+            true_psi_var[i], true_psi_alpha_cov[i], akm_psi_var[i], akm_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = res
+    else:
+        for i in range(N):
+            # Simulate a network
+            true_psi_var[i], true_psi_alpha_cov[i], akm_psi_var[i], akm_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = twfe_monte_carlo_interior(params)
+
+    return true_psi_var, true_psi_alpha_cov, akm_psi_var, akm_psi_alpha_cov, cre_psi_var, cre_psi_alpha_cov
 
 class twfe_network:
     '''
@@ -324,7 +440,8 @@ class twfe_network:
         prev_workers = self.n_workers()
         if self.formatting == 'long':
             # Add max firm id per worker to serve as a central node for the worker
-            self.data['fid_max'] = self.data.groupby(['wid'])['fid'].transform(max) # FIXME - this is undirected
+            # self.data['fid_f1'] = self.data.groupby('wid')['fid'].transform(lambda a: a.shift(-1)) # FIXME - this is directed but is much slower
+            self.data['fid_max'] = self.data.groupby(['wid'])['fid'].transform(max) # FIXME - this is undirected but is much faster
 
             # Find largest connected set
             # Source: https://networkx.github.io/documentation/stable/reference/algorithms/generated/networkx.algorithms.components.connected_components.html
@@ -614,14 +731,16 @@ class twfe_network:
                 statsonly (bool): save data statistics only
 
         Returns:
-            Nothing
+            akm_res (dictionary): dictionary of results
         '''
         default_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_akm.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'data': self.data}
 
         for key, val in params.items():
             default_params[key] = val
         
-        feacf.main(default_params)
+        akm_res = feacf.main(default_params)
+
+        return akm_res
 
     def run_cre(self, params={}):
         '''
@@ -638,14 +757,16 @@ class twfe_network:
                 wobtw (bool): sets between variation to 0, pure RE
 
         Returns:
-            Nothing
+            cre_res (dictionary): dictionary of results
         '''
         default_params = {'ncore': 1, 'ndraw_tr': 5, 'ndp': 50, 'out': 'res_cre.json', 'posterior': False, 'wobtw': False, 'data': self.data}
 
         for key, val in params.items():
             default_params[key] = val
         
-        cre.main(default_params)
+        cre_res = cre.main(default_params)
+
+        return cre_res
 
     def sim_network_gen_fe(self, params):
         '''

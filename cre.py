@@ -402,6 +402,10 @@ def main(args):
         json.dump(res,outfile)
     logger.info("saved results to {}".format(args['out']))
 
+    logger.info("------ DONE -------")
+
+    return res
+
 # Begin logging
 logger = logging.getLogger('cre')
 logger.setLevel(logging.DEBUG)
