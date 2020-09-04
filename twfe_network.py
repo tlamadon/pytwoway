@@ -36,17 +36,22 @@ import cre
 # d_net.refactor_es()
 # cdfs_2 = d_net.approx_cdfs()
 
+###### BELOW IS THE CODE TO SIMULATE MONTE CARLO AND GENERATE THE GRAPHS ######
 # from matplotlib import pyplot as plt
-# true_psi_var, true_psi_alpha_cov, akm_psi_var, akm_psi_alpha_cov, cre_psi_var, cre_psi_alpha_cov = twfe_monte_carlo(N=100, ncore=4)
+# true_psi_var, true_psi_alpha_cov, akm_psi_var, akm_psi_alpha_cov, akm_corr_psi_var, akm_corr_psi_alpha_cov, cre_psi_var, cre_psi_alpha_cov = twfe_monte_carlo(N=10, ncore=4)
 # akm_psi_diff = sorted(akm_psi_var - true_psi_var)
 # akm_psi_alpha_diff = sorted(akm_psi_alpha_cov - true_psi_alpha_cov)
+# akm_corr_psi_diff = sorted(akm_corr_psi_var - true_psi_var)
+# akm_corr_psi_alpha_diff = sorted(akm_corr_psi_alpha_cov - true_psi_alpha_cov)
 # cre_psi_diff = sorted(cre_psi_var - true_psi_var)
 # cre_psi_alpha_diff = sorted(cre_psi_alpha_cov - true_psi_alpha_cov)
 # plt.hist(akm_psi_diff, label='AKM var(psi)')
+# plt.hist(akm_corr_psi_diff, label='Bias-corrected AKM var(psi)')
 # plt.hist(cre_psi_diff, label='CRE var(psi)')
 # plt.legend()
 # plt.show()
 # plt.hist(akm_psi_alpha_diff, label='AKM cov(psi, alpha)')
+# plt.hist(akm_corr_psi_alpha_diff, label='Bias-corrected AKM cov(psi, alpha)')
 # plt.hist(cre_psi_alpha_diff, label='CRE cov(psi, alpha)')
 # plt.legend()
 # plt.show()
@@ -75,8 +80,10 @@ def twfe_monte_carlo_interior(params={'num_ind': 10000, 'num_time': 5, 'firm_siz
     Returns:
         true_psi_var (float): true simulated sample variance of psi
         true_psi_alpha_cov (float): true simulated sample covariance of psi and alpha
-        akm_psi_var (float): bias-corrected AKM estimate of variance of psi
-        akm_psi_alpha_cov (float): bias-corrected AKM estimate of covariance of psi and alpha
+        akm_psi_var (float): AKM estimate of variance of psi
+        akm_psi_alpha_cov (float): AKM estimate of covariance of psi and alpha
+        akm_corr_psi_var (float): bias-corrected AKM estimate of variance of psi
+        akm_corr_psi_alpha_cov (float): bias-corrected AKM estimate of covariance of psi and alpha
         cre_psi_var (float): CRE estimate of variance of psi
         cre_psi_alpha_cov (float): CRE estimate of covariance of psi and alpha
     '''
@@ -87,14 +94,17 @@ def twfe_monte_carlo_interior(params={'num_ind': 10000, 'num_time': 5, 'firm_siz
     psi_alpha_cov = np.cov(nw.data['psi'], nw.data['alpha'])[0, 1]
     # Convert into event study
     nw.refactor_es()
-    # Estimate bias-corrected AKM model
+    # Estimate AKM model
     akm_res = nw.run_akm_corrected()
     # Cluster for CRE model
-    nw.cluster()
+    nw.cluster(n_clusters=50, n_init=500)
     # Estimate CRE model
     cre_res = nw.run_cre()
 
-    return psi_var, psi_alpha_cov, akm_res['var_ho'], akm_res['cov_ho'], cre_res['var_bw'], cre_res['cov_bw']
+    return psi_var, psi_alpha_cov, \
+            akm_res['var_fe'], akm_res['cov_fe'], \
+            akm_res['var_ho'], akm_res['cov_ho'], \
+            cre_res['var_wt'] + cre_res['var_bw'], cre_res['cov_wt'] + cre_res['cov_bw']
     
 
 def twfe_monte_carlo(params={'num_ind': 10000, 'num_time': 5, 'firm_size': 50, 'nk': 200, 'nl': 50, 'alpha_sig': 1, 'psi_sig': 1, 'w_sig': 1, 'csort': 1, 'cnetw': 1, 'csig': 1, 'p_move': 0.5}, N=500, ncore=1):
@@ -123,8 +133,10 @@ def twfe_monte_carlo(params={'num_ind': 10000, 'num_time': 5, 'firm_size': 50, '
     Returns:
         true_psi_var (NumPy array): true simulated sample variance of psi
         true_psi_alpha_cov (NumPy array): true simulated sample covariance of psi and alpha
-        akm_psi_var (NumPy array): bias-corrected AKM estimate of variance of psi
-        akm_psi_alpha_cov (NumPy array): bias-corrected AKM estimate of covariance of psi and alpha
+        akm_psi_var (NumPy array): AKM estimate of variance of psi
+        akm_psi_alpha_cov (NumPy array): AKM estimate of covariance of psi and alpha
+        akm_corr_psi_var (NumPy array): bias-corrected AKM estimate of variance of psi
+        akm_corr_psi_alpha_cov (NumPy array): bias-corrected AKM estimate of covariance of psi and alpha
         cre_psi_var (NumPy array): CRE estimate of variance of psi
         cre_psi_alpha_cov (NumPy array): CRE estimate of covariance of psi and alpha
     '''
@@ -133,6 +145,8 @@ def twfe_monte_carlo(params={'num_ind': 10000, 'num_time': 5, 'firm_size': 50, '
     true_psi_alpha_cov = np.zeros(N)
     akm_psi_var = np.zeros(N)
     akm_psi_alpha_cov = np.zeros(N)
+    akm_corr_psi_var = np.zeros(N)
+    akm_corr_psi_alpha_cov = np.zeros(N)
     cre_psi_var = np.zeros(N)
     cre_psi_alpha_cov = np.zeros(N)
 
@@ -143,13 +157,13 @@ def twfe_monte_carlo(params={'num_ind': 10000, 'num_time': 5, 'firm_size': 50, '
         with Pool(processes=ncore) as pool:
             V = pool.starmap(twfe_monte_carlo_interior, [[params] for _ in range(N)])
         for i, res in enumerate(V):
-            true_psi_var[i], true_psi_alpha_cov[i], akm_psi_var[i], akm_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = res
+            true_psi_var[i], true_psi_alpha_cov[i], akm_psi_var[i], akm_psi_alpha_cov[i], akm_corr_psi_var[i], akm_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = res
     else:
         for i in range(N):
             # Simulate a network
-            true_psi_var[i], true_psi_alpha_cov[i], akm_psi_var[i], akm_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = twfe_monte_carlo_interior(params)
+            true_psi_var[i], true_psi_alpha_cov[i], akm_psi_var[i], akm_psi_alpha_cov[i], akm_corr_psi_var[i], akm_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = twfe_monte_carlo_interior(params)
 
-    return true_psi_var, true_psi_alpha_cov, akm_psi_var, akm_psi_alpha_cov, cre_psi_var, cre_psi_alpha_cov
+    return true_psi_var, true_psi_alpha_cov, akm_psi_var, akm_psi_alpha_cov, akm_corr_psi_var, akm_corr_psi_alpha_cov, cre_psi_var, cre_psi_alpha_cov
 
 class twfe_network:
     '''
@@ -670,13 +684,14 @@ class twfe_network:
 
         return cdfs
 
-    def cluster(self, n_clusters=5, cdf_resolution=10, grouping='quantile_all', year=None):
+    def cluster(self, n_clusters=5, n_init=500, cdf_resolution=10, grouping='quantile_all', year=None):
         '''
         Purpose:
             Cluster data and assign a new column giving the cluster for each firm
 
         Inputs:
             n_clusters (int): how many clusters to consider
+            n_init (int): how many starting values to consider
             cdf_resolution (int): how many values to use to approximate the cdf
             grouping (string): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
             year (int): if None, uses entire dataset; if int, gives year of data to consider
@@ -690,7 +705,7 @@ class twfe_network:
             logger.info('firm cdfs computed')
 
             # Compute firm clusters
-            clusters = KMeans(n_clusters=n_clusters, random_state=0).fit(cdfs).labels_ + 1 # Need +1 because need > 0
+            clusters = KMeans(n_clusters=n_clusters, n_init=n_init).fit(cdfs).labels_ + 1 # Need +1 because need > 0
             logger.info('firm clusters computed')
 
             # Create Pandas dataframe linking fid to firm cluster

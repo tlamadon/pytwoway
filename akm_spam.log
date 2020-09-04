@@ -7632,3 +7632,663 @@
 2020-09-03 21:06:40,754 - akm - INFO - [ho] COV fe=0.7586 bc=0.7650
 2020-09-03 21:06:40,761 - akm - INFO - saved results to res_akm.json
 2020-09-03 21:06:40,761 - akm - INFO - ------ DONE -------
+2020-09-04 16:25:13,739 - akm - INFO - loading the data
+2020-09-04 16:25:13,744 - akm - INFO - data movers=19668 stayers=668
+2020-09-04 16:25:13,758 - akm - INFO - loading the data
+2020-09-04 16:25:13,761 - akm - INFO - data movers=19654 stayers=680
+2020-09-04 16:25:13,775 - akm - INFO - data nf:204 nw:20336 nn:40004
+2020-09-04 16:25:13,780 - akm - INFO - prepare linear solver
+2020-09-04 16:25:13,790 - akm - INFO - data nf:203 nw:20334 nn:39988
+2020-09-04 16:25:13,797 - akm - INFO - prepare linear solver
+2020-09-04 16:25:13,800 - akm - INFO - extract firm effects
+2020-09-04 16:25:13,807 - akm - INFO - solver time 0.0057 seconds
+2020-09-04 16:25:13,808 - akm - INFO - expected total time 0.0005 minutes
+2020-09-04 16:25:13,810 - akm - INFO - Fixed effect R-square 0.9096
+2020-09-04 16:25:13,812 - akm - INFO - [fe] var_psi=1.2618 cov=0.7010 tot=4.1985
+2020-09-04 16:25:13,813 - akm - INFO - [ho] variance of residuals 0.7816
+2020-09-04 16:25:13,813 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:25:13,817 - akm - INFO - extract firm effects
+2020-09-04 16:25:13,822 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:25:13,824 - akm - INFO - solver time 0.0056 seconds
+2020-09-04 16:25:13,825 - akm - INFO - expected total time 0.0005 minutes
+2020-09-04 16:25:13,829 - akm - INFO - Fixed effect R-square 0.9091
+2020-09-04 16:25:13,830 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:25:13,831 - akm - INFO - [fe] var_psi=1.2806 cov=0.7075 tot=4.2202
+2020-09-04 16:25:13,832 - akm - INFO - [ho] variance of residuals 0.7907
+2020-09-04 16:25:13,832 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:25:13,836 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:25:13,838 - akm - INFO - loading the data
+2020-09-04 16:25:13,842 - akm - INFO - data movers=19645 stayers=680
+2020-09-04 16:25:13,843 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:25:13,843 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:25:13,850 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:25:13,850 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:25:13,852 - akm - INFO - [ho] VAR tr=0.0077 (sd=4.4386e-03)
+2020-09-04 16:25:13,853 - akm - INFO - [ho] COV tr=-0.0030 (sd=3.7931e-03)
+2020-09-04 16:25:13,853 - akm - INFO - [ho] VAR fe=1.2618 bc=1.2558
+2020-09-04 16:25:13,854 - akm - INFO - [ho] COV fe=0.7010 bc=0.7033
+2020-09-04 16:25:13,855 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:25:13,856 - akm - INFO - ------ DONE -------
+2020-09-04 16:25:13,856 - akm - INFO - loading the data
+2020-09-04 16:25:13,857 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:25:13,859 - akm - INFO - data movers=19663 stayers=673
+2020-09-04 16:25:13,864 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:25:13,871 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:25:13,873 - akm - INFO - [ho] VAR tr=0.0069 (sd=4.2297e-03)
+2020-09-04 16:25:13,874 - akm - INFO - [ho] COV tr=-0.0024 (sd=5.9775e-03)
+2020-09-04 16:25:13,874 - akm - INFO - [ho] VAR fe=1.2806 bc=1.2751
+2020-09-04 16:25:13,874 - akm - INFO - [ho] COV fe=0.7075 bc=0.7094
+2020-09-04 16:25:13,875 - akm - INFO - data nf:203 nw:20325 nn:39970
+2020-09-04 16:25:13,877 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:25:13,878 - akm - INFO - ------ DONE -------
+2020-09-04 16:25:13,884 - akm - INFO - prepare linear solver
+2020-09-04 16:25:13,893 - akm - INFO - data nf:202 nw:20336 nn:39999
+2020-09-04 16:25:13,900 - akm - INFO - prepare linear solver
+2020-09-04 16:25:13,905 - akm - INFO - extract firm effects
+2020-09-04 16:25:13,913 - akm - INFO - solver time 0.0064 seconds
+2020-09-04 16:25:13,914 - akm - INFO - expected total time 0.0005 minutes
+2020-09-04 16:25:13,918 - akm - INFO - Fixed effect R-square 0.9082
+2020-09-04 16:25:13,920 - akm - INFO - [fe] var_psi=1.2747 cov=0.6867 tot=4.1774
+2020-09-04 16:25:13,921 - akm - INFO - [ho] variance of residuals 0.7899
+2020-09-04 16:25:13,922 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:25:13,924 - akm - INFO - extract firm effects
+2020-09-04 16:25:13,933 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:25:13,941 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:25:13,949 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:25:13,955 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:25:13,961 - akm - INFO - solver time 0.0351 seconds
+2020-09-04 16:25:13,962 - akm - INFO - expected total time 0.0029 minutes
+2020-09-04 16:25:13,962 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:25:13,964 - akm - INFO - Fixed effect R-square 0.9093
+2020-09-04 16:25:13,964 - akm - INFO - [ho] VAR tr=0.0134 (sd=5.6731e-03)
+2020-09-04 16:25:13,965 - akm - INFO - [ho] COV tr=-0.0078 (sd=5.2114e-03)
+2020-09-04 16:25:13,965 - akm - INFO - [ho] VAR fe=1.2747 bc=1.2641
+2020-09-04 16:25:13,966 - akm - INFO - [ho] COV fe=0.6867 bc=0.6929
+2020-09-04 16:25:13,966 - akm - INFO - [fe] var_psi=1.2934 cov=0.6937 tot=4.2194
+2020-09-04 16:25:13,967 - akm - INFO - [ho] variance of residuals 0.7888
+2020-09-04 16:25:13,967 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:25:13,967 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:25:13,967 - akm - INFO - ------ DONE -------
+2020-09-04 16:25:14,005 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:25:14,041 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:25:14,076 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:25:14,112 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:25:14,149 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:25:14,150 - akm - INFO - [ho] VAR tr=0.0188 (sd=7.6768e-03)
+2020-09-04 16:25:14,151 - akm - INFO - [ho] COV tr=-0.0146 (sd=7.7656e-03)
+2020-09-04 16:25:14,152 - akm - INFO - [ho] VAR fe=1.2934 bc=1.2786
+2020-09-04 16:25:14,152 - akm - INFO - [ho] COV fe=0.6937 bc=0.7052
+2020-09-04 16:25:14,154 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:25:14,154 - akm - INFO - ------ DONE -------
+2020-09-04 16:25:18,983 - akm - INFO - loading the data
+2020-09-04 16:25:18,985 - akm - INFO - data movers=19653 stayers=650
+2020-09-04 16:25:19,015 - akm - INFO - data nf:204 nw:20303 nn:39956
+2020-09-04 16:25:19,020 - akm - INFO - prepare linear solver
+2020-09-04 16:25:19,041 - akm - INFO - extract firm effects
+2020-09-04 16:25:19,061 - akm - INFO - loading the data
+2020-09-04 16:25:19,064 - akm - INFO - data movers=19636 stayers=646
+2020-09-04 16:25:19,071 - akm - INFO - solver time 0.0284 seconds
+2020-09-04 16:25:19,072 - akm - INFO - expected total time 0.0024 minutes
+2020-09-04 16:25:19,074 - akm - INFO - Fixed effect R-square 0.9115
+2020-09-04 16:25:19,076 - akm - INFO - [fe] var_psi=1.2963 cov=0.7016 tot=4.2215
+2020-09-04 16:25:19,075 - akm - INFO - loading the data
+2020-09-04 16:25:19,076 - akm - INFO - [ho] variance of residuals 0.7684
+2020-09-04 16:25:19,077 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:25:19,078 - akm - INFO - data movers=19781 stayers=633
+2020-09-04 16:25:19,095 - akm - INFO - data nf:204 nw:20282 nn:39918
+2020-09-04 16:25:19,100 - akm - INFO - prepare linear solver
+2020-09-04 16:25:19,109 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:25:19,110 - akm - INFO - data nf:203 nw:20414 nn:40195
+2020-09-04 16:25:19,114 - akm - INFO - prepare linear solver
+2020-09-04 16:25:19,119 - akm - INFO - loading the data
+2020-09-04 16:25:19,121 - akm - INFO - extract firm effects
+2020-09-04 16:25:19,122 - akm - INFO - data movers=19692 stayers=661
+2020-09-04 16:25:19,127 - akm - INFO - solver time 0.0047 seconds
+2020-09-04 16:25:19,128 - akm - INFO - expected total time 0.0004 minutes
+2020-09-04 16:25:19,129 - akm - INFO - Fixed effect R-square 0.9140
+2020-09-04 16:25:19,131 - akm - INFO - [fe] var_psi=1.3219 cov=0.7333 tot=4.3211
+2020-09-04 16:25:19,132 - akm - INFO - [ho] variance of residuals 0.7653
+2020-09-04 16:25:19,133 - akm - INFO - extract firm effects
+2020-09-04 16:25:19,133 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:25:19,142 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:25:19,142 - akm - INFO - solver time 0.0075 seconds
+2020-09-04 16:25:19,143 - akm - INFO - expected total time 0.0006 minutes
+2020-09-04 16:25:19,144 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:25:19,145 - akm - INFO - Fixed effect R-square 0.9108
+2020-09-04 16:25:19,147 - akm - INFO - [fe] var_psi=1.2798 cov=0.7017 tot=4.2283
+2020-09-04 16:25:19,148 - akm - INFO - [ho] variance of residuals 0.7761
+2020-09-04 16:25:19,149 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:25:19,149 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:25:19,151 - akm - INFO - data nf:204 nw:20353 nn:40045
+2020-09-04 16:25:19,156 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:25:19,157 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:25:19,159 - akm - INFO - prepare linear solver
+2020-09-04 16:25:19,163 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:25:19,165 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:25:19,170 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:25:19,171 - akm - INFO - [ho] VAR tr=0.0120 (sd=4.3396e-03)
+2020-09-04 16:25:19,172 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:25:19,172 - akm - INFO - [ho] COV tr=-0.0082 (sd=5.4555e-03)
+2020-09-04 16:25:19,172 - akm - INFO - [ho] VAR fe=1.3219 bc=1.3127
+2020-09-04 16:25:19,173 - akm - INFO - [ho] COV fe=0.7333 bc=0.7396
+2020-09-04 16:25:19,174 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:25:19,175 - akm - INFO - ------ DONE -------
+2020-09-04 16:25:19,175 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:25:19,178 - akm - INFO - extract firm effects
+2020-09-04 16:25:19,179 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:25:19,186 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:25:19,188 - akm - INFO - [ho] VAR tr=0.0114 (sd=6.7037e-03)
+2020-09-04 16:25:19,189 - akm - INFO - [ho] COV tr=-0.0079 (sd=7.8321e-03)
+2020-09-04 16:25:19,189 - akm - INFO - [ho] VAR fe=1.2798 bc=1.2710
+2020-09-04 16:25:19,190 - akm - INFO - [ho] COV fe=0.7017 bc=0.7079
+2020-09-04 16:25:19,191 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:25:19,191 - akm - INFO - ------ DONE -------
+2020-09-04 16:25:19,213 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:25:19,216 - akm - INFO - solver time 0.0366 seconds
+2020-09-04 16:25:19,217 - akm - INFO - expected total time 0.0031 minutes
+2020-09-04 16:25:19,219 - akm - INFO - Fixed effect R-square 0.9109
+2020-09-04 16:25:19,221 - akm - INFO - [fe] var_psi=1.3026 cov=0.7122 tot=4.2516
+2020-09-04 16:25:19,222 - akm - INFO - [ho] variance of residuals 0.7796
+2020-09-04 16:25:19,223 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:25:19,249 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:25:19,253 - akm - INFO - [ho] VAR tr=0.0119 (sd=3.2754e-03)
+2020-09-04 16:25:19,254 - akm - INFO - [ho] COV tr=-0.0075 (sd=4.7377e-03)
+2020-09-04 16:25:19,254 - akm - INFO - [ho] VAR fe=1.2963 bc=1.2872
+2020-09-04 16:25:19,255 - akm - INFO - [ho] COV fe=0.7016 bc=0.7074
+2020-09-04 16:25:19,257 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:25:19,257 - akm - INFO - ------ DONE -------
+2020-09-04 16:25:19,268 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:25:19,311 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:25:19,348 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:25:19,384 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:25:19,423 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:25:19,425 - akm - INFO - [ho] VAR tr=0.0104 (sd=8.8611e-03)
+2020-09-04 16:25:19,426 - akm - INFO - [ho] COV tr=-0.0043 (sd=8.1112e-03)
+2020-09-04 16:25:19,426 - akm - INFO - [ho] VAR fe=1.3026 bc=1.2946
+2020-09-04 16:25:19,427 - akm - INFO - [ho] COV fe=0.7122 bc=0.7155
+2020-09-04 16:25:19,428 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:25:19,429 - akm - INFO - ------ DONE -------
+2020-09-04 16:25:22,405 - akm - INFO - loading the data
+2020-09-04 16:25:22,408 - akm - INFO - data movers=19690 stayers=623
+2020-09-04 16:25:22,411 - akm - INFO - loading the data
+2020-09-04 16:25:22,413 - akm - INFO - data movers=19904 stayers=636
+2020-09-04 16:25:22,430 - akm - INFO - data nf:204 nw:20313 nn:40003
+2020-09-04 16:25:22,435 - akm - INFO - prepare linear solver
+2020-09-04 16:25:22,437 - akm - INFO - data nf:203 nw:20540 nn:40444
+2020-09-04 16:25:22,441 - akm - INFO - prepare linear solver
+2020-09-04 16:25:22,451 - akm - INFO - extract firm effects
+2020-09-04 16:25:22,456 - akm - INFO - solver time 0.0038 seconds
+2020-09-04 16:25:22,456 - akm - INFO - expected total time 0.0003 minutes
+2020-09-04 16:25:22,457 - akm - INFO - extract firm effects
+2020-09-04 16:25:22,458 - akm - INFO - Fixed effect R-square 0.9081
+2020-09-04 16:25:22,459 - akm - INFO - [fe] var_psi=1.2516 cov=0.7193 tot=4.2964
+2020-09-04 16:25:22,460 - akm - INFO - [ho] variance of residuals 0.8113
+2020-09-04 16:25:22,461 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:25:22,462 - akm - INFO - solver time 0.0038 seconds
+2020-09-04 16:25:22,463 - akm - INFO - expected total time 0.0003 minutes
+2020-09-04 16:25:22,465 - akm - INFO - Fixed effect R-square 0.9114
+2020-09-04 16:25:22,466 - akm - INFO - [fe] var_psi=1.3204 cov=0.7151 tot=4.2812
+2020-09-04 16:25:22,468 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:25:22,469 - akm - INFO - [ho] variance of residuals 0.7790
+2020-09-04 16:25:22,469 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:25:22,475 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:25:22,476 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:25:22,481 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:25:22,483 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:25:22,488 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:25:22,488 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:25:22,495 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:25:22,495 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:25:22,497 - akm - INFO - [ho] VAR tr=0.0111 (sd=5.5375e-03)
+2020-09-04 16:25:22,498 - akm - INFO - [ho] COV tr=-0.0060 (sd=8.6002e-03)
+2020-09-04 16:25:22,498 - akm - INFO - [ho] VAR fe=1.2516 bc=1.2426
+2020-09-04 16:25:22,499 - akm - INFO - [ho] COV fe=0.7193 bc=0.7242
+2020-09-04 16:25:22,500 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:25:22,500 - akm - INFO - ------ DONE -------
+2020-09-04 16:25:22,501 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:25:22,503 - akm - INFO - [ho] VAR tr=0.0075 (sd=4.0841e-03)
+2020-09-04 16:25:22,504 - akm - INFO - [ho] COV tr=-0.0026 (sd=5.4731e-03)
+2020-09-04 16:25:22,504 - akm - INFO - [ho] VAR fe=1.3204 bc=1.3146
+2020-09-04 16:25:22,504 - akm - INFO - [ho] COV fe=0.7151 bc=0.7171
+2020-09-04 16:25:22,505 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:25:22,506 - akm - INFO - ------ DONE -------
+2020-09-04 16:36:52,475 - akm - INFO - loading the data
+2020-09-04 16:36:52,477 - akm - INFO - data movers=19835 stayers=658
+2020-09-04 16:36:52,485 - akm - INFO - loading the data
+2020-09-04 16:36:52,487 - akm - INFO - data movers=19816 stayers=661
+2020-09-04 16:36:52,496 - akm - INFO - loading the data
+2020-09-04 16:36:52,497 - akm - INFO - loading the data
+2020-09-04 16:36:52,498 - akm - INFO - data movers=19826 stayers=654
+2020-09-04 16:36:52,499 - akm - INFO - data movers=19818 stayers=656
+2020-09-04 16:36:52,506 - akm - INFO - data nf:203 nw:20493 nn:40328
+2020-09-04 16:36:52,512 - akm - INFO - prepare linear solver
+2020-09-04 16:36:52,516 - akm - INFO - data nf:204 nw:20477 nn:40293
+2020-09-04 16:36:52,522 - akm - INFO - prepare linear solver
+2020-09-04 16:36:52,525 - akm - INFO - data nf:203 nw:20474 nn:40292
+2020-09-04 16:36:52,526 - akm - INFO - data nf:204 nw:20480 nn:40306
+2020-09-04 16:36:52,531 - akm - INFO - extract firm effects
+2020-09-04 16:36:52,531 - akm - INFO - prepare linear solver
+2020-09-04 16:36:52,533 - akm - INFO - prepare linear solver
+2020-09-04 16:36:52,538 - akm - INFO - solver time 0.0057 seconds
+2020-09-04 16:36:52,538 - akm - INFO - extract firm effects
+2020-09-04 16:36:52,539 - akm - INFO - expected total time 0.0005 minutes
+2020-09-04 16:36:52,541 - akm - INFO - Fixed effect R-square 0.9087
+2020-09-04 16:36:52,542 - akm - INFO - [fe] var_psi=1.2588 cov=0.7202 tot=4.2777
+2020-09-04 16:36:52,543 - akm - INFO - [ho] variance of residuals 0.8037
+2020-09-04 16:36:52,544 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:36:52,545 - akm - INFO - solver time 0.0048 seconds
+2020-09-04 16:36:52,545 - akm - INFO - expected total time 0.0004 minutes
+2020-09-04 16:36:52,547 - akm - INFO - Fixed effect R-square 0.9109
+2020-09-04 16:36:52,549 - akm - INFO - [fe] var_psi=1.3572 cov=0.7244 tot=4.3497
+2020-09-04 16:36:52,549 - akm - INFO - extract firm effects
+2020-09-04 16:36:52,550 - akm - INFO - [ho] variance of residuals 0.7979
+2020-09-04 16:36:52,551 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:36:52,551 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:36:52,551 - akm - INFO - extract firm effects
+2020-09-04 16:36:52,558 - akm - INFO - solver time 0.0069 seconds
+2020-09-04 16:36:52,558 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:36:52,559 - akm - INFO - expected total time 0.0006 minutes
+2020-09-04 16:36:52,560 - akm - INFO - solver time 0.0071 seconds
+2020-09-04 16:36:52,561 - akm - INFO - expected total time 0.0006 minutes
+2020-09-04 16:36:52,561 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:36:52,561 - akm - INFO - Fixed effect R-square 0.9113
+2020-09-04 16:36:52,563 - akm - INFO - [fe] var_psi=1.3254 cov=0.7064 tot=4.2927
+2020-09-04 16:36:52,563 - akm - INFO - Fixed effect R-square 0.9105
+2020-09-04 16:36:52,564 - akm - INFO - [ho] variance of residuals 0.7835
+2020-09-04 16:36:52,564 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:36:52,564 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:36:52,565 - akm - INFO - [fe] var_psi=1.2965 cov=0.7174 tot=4.2995
+2020-09-04 16:36:52,566 - akm - INFO - [ho] variance of residuals 0.7923
+2020-09-04 16:36:52,566 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:36:52,567 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:36:52,570 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:36:52,573 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:36:52,574 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:36:52,575 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:36:52,577 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:36:52,578 - akm - INFO - [ho] VAR tr=0.0083 (sd=9.7624e-03)
+2020-09-04 16:36:52,579 - akm - INFO - [ho] COV tr=-0.0018 (sd=1.0166e-02)
+2020-09-04 16:36:52,579 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:36:52,579 - akm - INFO - [ho] VAR fe=1.2588 bc=1.2521
+2020-09-04 16:36:52,580 - akm - INFO - [ho] COV fe=0.7202 bc=0.7217
+2020-09-04 16:36:52,581 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:36:52,581 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:36:52,581 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:36:52,581 - akm - INFO - ------ DONE -------
+2020-09-04 16:36:52,586 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:36:52,588 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:36:52,588 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:36:52,590 - akm - INFO - [ho] VAR tr=0.0142 (sd=8.5570e-03)
+2020-09-04 16:36:52,590 - akm - INFO - [ho] COV tr=-0.0095 (sd=8.2415e-03)
+2020-09-04 16:36:52,590 - akm - INFO - [ho] VAR fe=1.3572 bc=1.3458
+2020-09-04 16:36:52,591 - akm - INFO - [ho] COV fe=0.7244 bc=0.7320
+2020-09-04 16:36:52,592 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:36:52,593 - akm - INFO - ------ DONE -------
+2020-09-04 16:36:52,593 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:36:52,595 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:36:52,600 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:36:52,603 - akm - INFO - [ho] VAR tr=0.0140 (sd=3.6850e-03)
+2020-09-04 16:36:52,603 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:36:52,604 - akm - INFO - [ho] COV tr=-0.0078 (sd=5.2358e-03)
+2020-09-04 16:36:52,604 - akm - INFO - [ho] VAR fe=1.3254 bc=1.3144
+2020-09-04 16:36:52,605 - akm - INFO - [ho] COV fe=0.7064 bc=0.7126
+2020-09-04 16:36:52,605 - akm - INFO - [ho] VAR tr=0.0171 (sd=9.2952e-03)
+2020-09-04 16:36:52,606 - akm - INFO - [ho] COV tr=-0.0110 (sd=7.9553e-03)
+2020-09-04 16:36:52,606 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:36:52,606 - akm - INFO - [ho] VAR fe=1.2965 bc=1.2829
+2020-09-04 16:36:52,606 - akm - INFO - ------ DONE -------
+2020-09-04 16:36:52,606 - akm - INFO - [ho] COV fe=0.7174 bc=0.7261
+2020-09-04 16:36:52,608 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:36:52,608 - akm - INFO - ------ DONE -------
+2020-09-04 16:36:57,469 - akm - INFO - loading the data
+2020-09-04 16:36:57,471 - akm - INFO - data movers=19717 stayers=650
+2020-09-04 16:36:57,496 - akm - INFO - data nf:202 nw:20367 nn:40084
+2020-09-04 16:36:57,500 - akm - INFO - prepare linear solver
+2020-09-04 16:36:57,507 - akm - INFO - loading the data
+2020-09-04 16:36:57,510 - akm - INFO - data movers=19754 stayers=614
+2020-09-04 16:36:57,517 - akm - INFO - extract firm effects
+2020-09-04 16:36:57,522 - akm - INFO - solver time 0.0038 seconds
+2020-09-04 16:36:57,522 - akm - INFO - expected total time 0.0003 minutes
+2020-09-04 16:36:57,524 - akm - INFO - Fixed effect R-square 0.9092
+2020-09-04 16:36:57,525 - akm - INFO - [fe] var_psi=1.3335 cov=0.7116 tot=4.2795
+2020-09-04 16:36:57,526 - akm - INFO - [ho] variance of residuals 0.7987
+2020-09-04 16:36:57,527 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:36:57,534 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:36:57,537 - akm - INFO - data nf:204 nw:20368 nn:40122
+2020-09-04 16:36:57,541 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:36:57,542 - akm - INFO - prepare linear solver
+2020-09-04 16:36:57,546 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:36:57,552 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:36:57,558 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:36:57,560 - akm - INFO - [ho] VAR tr=0.0108 (sd=5.8483e-03)
+2020-09-04 16:36:57,560 - akm - INFO - extract firm effects
+2020-09-04 16:36:57,560 - akm - INFO - [ho] COV tr=-0.0067 (sd=5.5296e-03)
+2020-09-04 16:36:57,560 - akm - INFO - [ho] VAR fe=1.3335 bc=1.3249
+2020-09-04 16:36:57,561 - akm - INFO - [ho] COV fe=0.7116 bc=0.7169
+2020-09-04 16:36:57,562 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:36:57,562 - akm - INFO - ------ DONE -------
+2020-09-04 16:36:57,568 - akm - INFO - loading the data
+2020-09-04 16:36:57,570 - akm - INFO - data movers=19718 stayers=649
+2020-09-04 16:36:57,581 - akm - INFO - solver time 0.0194 seconds
+2020-09-04 16:36:57,581 - akm - INFO - expected total time 0.0016 minutes
+2020-09-04 16:36:57,583 - akm - INFO - Fixed effect R-square 0.9091
+2020-09-04 16:36:57,585 - akm - INFO - [fe] var_psi=1.3347 cov=0.6802 tot=4.1809
+2020-09-04 16:36:57,586 - akm - INFO - [ho] variance of residuals 0.7818
+2020-09-04 16:36:57,587 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:36:57,600 - akm - INFO - data nf:204 nw:20367 nn:40085
+2020-09-04 16:36:57,606 - akm - INFO - prepare linear solver
+2020-09-04 16:36:57,612 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:36:57,626 - akm - INFO - extract firm effects
+2020-09-04 16:36:57,633 - akm - INFO - solver time 0.0047 seconds
+2020-09-04 16:36:57,633 - akm - INFO - expected total time 0.0004 minutes
+2020-09-04 16:36:57,635 - akm - INFO - Fixed effect R-square 0.9107
+2020-09-04 16:36:57,635 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:36:57,636 - akm - INFO - [fe] var_psi=1.3025 cov=0.7082 tot=4.2760
+2020-09-04 16:36:57,637 - akm - INFO - [ho] variance of residuals 0.7857
+2020-09-04 16:36:57,638 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:36:57,640 - akm - INFO - loading the data
+2020-09-04 16:36:57,644 - akm - INFO - data movers=19721 stayers=674
+2020-09-04 16:36:57,646 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:36:57,652 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:36:57,657 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:36:57,658 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:36:57,662 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:36:57,668 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:36:57,669 - akm - INFO - [ho] VAR tr=0.0122 (sd=3.1343e-03)
+2020-09-04 16:36:57,670 - akm - INFO - [ho] COV tr=-0.0055 (sd=4.4955e-03)
+2020-09-04 16:36:57,670 - akm - INFO - [ho] VAR fe=1.3025 bc=1.2929
+2020-09-04 16:36:57,671 - akm - INFO - [ho] COV fe=0.7082 bc=0.7125
+2020-09-04 16:36:57,671 - akm - INFO - data nf:205 nw:20395 nn:40116
+2020-09-04 16:36:57,672 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:36:57,672 - akm - INFO - ------ DONE -------
+2020-09-04 16:36:57,675 - akm - INFO - prepare linear solver
+2020-09-04 16:36:57,681 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:36:57,693 - akm - INFO - extract firm effects
+2020-09-04 16:36:57,699 - akm - INFO - solver time 0.0050 seconds
+2020-09-04 16:36:57,700 - akm - INFO - expected total time 0.0004 minutes
+2020-09-04 16:36:57,702 - akm - INFO - Fixed effect R-square 0.9123
+2020-09-04 16:36:57,704 - akm - INFO - [fe] var_psi=1.3526 cov=0.7119 tot=4.3008
+2020-09-04 16:36:57,704 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:36:57,705 - akm - INFO - [ho] variance of residuals 0.7770
+2020-09-04 16:36:57,705 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:36:57,706 - akm - INFO - [ho] VAR tr=0.0105 (sd=7.5237e-03)
+2020-09-04 16:36:57,706 - akm - INFO - [ho] COV tr=-0.0047 (sd=6.2659e-03)
+2020-09-04 16:36:57,706 - akm - INFO - [ho] VAR fe=1.3347 bc=1.3265
+2020-09-04 16:36:57,707 - akm - INFO - [ho] COV fe=0.6802 bc=0.6839
+2020-09-04 16:36:57,708 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:36:57,708 - akm - INFO - ------ DONE -------
+2020-09-04 16:36:57,719 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:36:57,726 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:36:57,733 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:36:57,740 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:36:57,748 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:36:57,749 - akm - INFO - [ho] VAR tr=0.0093 (sd=4.3921e-03)
+2020-09-04 16:36:57,750 - akm - INFO - [ho] COV tr=-0.0053 (sd=3.4345e-03)
+2020-09-04 16:36:57,750 - akm - INFO - [ho] VAR fe=1.3526 bc=1.3454
+2020-09-04 16:36:57,751 - akm - INFO - [ho] COV fe=0.7119 bc=0.7159
+2020-09-04 16:36:57,752 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:36:57,753 - akm - INFO - ------ DONE -------
+2020-09-04 16:37:01,649 - akm - INFO - loading the data
+2020-09-04 16:37:01,651 - akm - INFO - data movers=19727 stayers=679
+2020-09-04 16:37:01,673 - akm - INFO - data nf:203 nw:20406 nn:40133
+2020-09-04 16:37:01,676 - akm - INFO - loading the data
+2020-09-04 16:37:01,678 - akm - INFO - prepare linear solver
+2020-09-04 16:37:01,678 - akm - INFO - data movers=19784 stayers=683
+2020-09-04 16:37:01,693 - akm - INFO - extract firm effects
+2020-09-04 16:37:01,697 - akm - INFO - solver time 0.0032 seconds
+2020-09-04 16:37:01,698 - akm - INFO - expected total time 0.0003 minutes
+2020-09-04 16:37:01,699 - akm - INFO - Fixed effect R-square 0.9114
+2020-09-04 16:37:01,700 - akm - INFO - data nf:204 nw:20467 nn:40251
+2020-09-04 16:37:01,701 - akm - INFO - [fe] var_psi=1.2615 cov=0.7280 tot=4.3028
+2020-09-04 16:37:01,702 - akm - INFO - [ho] variance of residuals 0.7845
+2020-09-04 16:37:01,702 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:37:01,705 - akm - INFO - prepare linear solver
+2020-09-04 16:37:01,708 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:37:01,714 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:37:01,720 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:37:01,723 - akm - INFO - extract firm effects
+2020-09-04 16:37:01,725 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:37:01,729 - akm - INFO - solver time 0.0047 seconds
+2020-09-04 16:37:01,730 - akm - INFO - expected total time 0.0004 minutes
+2020-09-04 16:37:01,731 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:37:01,732 - akm - INFO - Fixed effect R-square 0.9113
+2020-09-04 16:37:01,733 - akm - INFO - [ho] VAR tr=0.0089 (sd=5.7150e-03)
+2020-09-04 16:37:01,733 - akm - INFO - [fe] var_psi=1.3562 cov=0.7061 tot=4.2985
+2020-09-04 16:37:01,733 - akm - INFO - [ho] COV tr=-0.0039 (sd=7.2586e-03)
+2020-09-04 16:37:01,734 - akm - INFO - [ho] VAR fe=1.2615 bc=1.2545
+2020-09-04 16:37:01,734 - akm - INFO - [ho] variance of residuals 0.7847
+2020-09-04 16:37:01,734 - akm - INFO - [ho] COV fe=0.7280 bc=0.7310
+2020-09-04 16:37:01,734 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:37:01,735 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:37:01,735 - akm - INFO - ------ DONE -------
+2020-09-04 16:37:01,740 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:37:01,746 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:37:01,752 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:37:01,759 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:37:01,766 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:37:01,768 - akm - INFO - [ho] VAR tr=0.0075 (sd=4.5025e-03)
+2020-09-04 16:37:01,770 - akm - INFO - [ho] COV tr=-0.0032 (sd=4.8634e-03)
+2020-09-04 16:37:01,770 - akm - INFO - [ho] VAR fe=1.3562 bc=1.3503
+2020-09-04 16:37:01,771 - akm - INFO - [ho] COV fe=0.7061 bc=0.7086
+2020-09-04 16:37:01,772 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:37:01,773 - akm - INFO - ------ DONE -------
+2020-09-04 16:47:36,573 - akm - INFO - loading the data
+2020-09-04 16:47:36,575 - akm - INFO - data movers=19670 stayers=716
+2020-09-04 16:47:36,584 - akm - INFO - loading the data
+2020-09-04 16:47:36,587 - akm - INFO - data movers=19675 stayers=710
+2020-09-04 16:47:36,605 - akm - INFO - data nf:202 nw:20386 nn:40056
+2020-09-04 16:47:36,607 - akm - INFO - loading the data
+2020-09-04 16:47:36,610 - akm - INFO - data movers=19654 stayers=720
+2020-09-04 16:47:36,611 - akm - INFO - prepare linear solver
+2020-09-04 16:47:36,618 - akm - INFO - data nf:203 nw:20385 nn:40060
+2020-09-04 16:47:36,624 - akm - INFO - prepare linear solver
+2020-09-04 16:47:36,631 - akm - INFO - extract firm effects
+2020-09-04 16:47:36,638 - akm - INFO - solver time 0.0053 seconds
+2020-09-04 16:47:36,639 - akm - INFO - expected total time 0.0004 minutes
+2020-09-04 16:47:36,640 - akm - INFO - Fixed effect R-square 0.9109
+2020-09-04 16:47:36,640 - akm - INFO - data nf:203 nw:20374 nn:40028
+2020-09-04 16:47:36,642 - akm - INFO - [fe] var_psi=1.2716 cov=0.7259 tot=4.3087
+2020-09-04 16:47:36,643 - akm - INFO - [ho] variance of residuals 0.7929
+2020-09-04 16:47:36,643 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:47:36,645 - akm - INFO - extract firm effects
+2020-09-04 16:47:36,647 - akm - INFO - prepare linear solver
+2020-09-04 16:47:36,651 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:47:36,652 - akm - INFO - solver time 0.0053 seconds
+2020-09-04 16:47:36,652 - akm - INFO - expected total time 0.0004 minutes
+2020-09-04 16:47:36,657 - akm - INFO - Fixed effect R-square 0.9104
+2020-09-04 16:47:36,659 - akm - INFO - [fe] var_psi=1.3198 cov=0.7165 tot=4.3053
+2020-09-04 16:47:36,660 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:47:36,660 - akm - INFO - [ho] variance of residuals 0.7959
+2020-09-04 16:47:36,661 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:47:36,666 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:47:36,667 - akm - INFO - loading the data
+2020-09-04 16:47:36,669 - akm - INFO - extract firm effects
+2020-09-04 16:47:36,669 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:47:36,670 - akm - INFO - data movers=19638 stayers=724
+2020-09-04 16:47:36,673 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:47:36,677 - akm - INFO - solver time 0.0060 seconds
+2020-09-04 16:47:36,677 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:47:36,677 - akm - INFO - expected total time 0.0005 minutes
+2020-09-04 16:47:36,679 - akm - INFO - Fixed effect R-square 0.9114
+2020-09-04 16:47:36,681 - akm - INFO - [fe] var_psi=1.2519 cov=0.7402 tot=4.3384
+2020-09-04 16:47:36,681 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:47:36,682 - akm - INFO - [ho] variance of residuals 0.7937
+2020-09-04 16:47:36,682 - akm - INFO - [ho] VAR tr=0.0113 (sd=8.1694e-03)
+2020-09-04 16:47:36,683 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:47:36,683 - akm - INFO - [ho] COV tr=-0.0075 (sd=8.0279e-03)
+2020-09-04 16:47:36,683 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:47:36,683 - akm - INFO - [ho] VAR fe=1.2716 bc=1.2626
+2020-09-04 16:47:36,684 - akm - INFO - [ho] COV fe=0.7259 bc=0.7319
+2020-09-04 16:47:36,685 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:47:36,686 - akm - INFO - ------ DONE -------
+2020-09-04 16:47:36,690 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:47:36,692 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:47:36,697 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:47:36,699 - akm - INFO - [ho] VAR tr=0.0119 (sd=4.3566e-03)
+2020-09-04 16:47:36,699 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:47:36,700 - akm - INFO - [ho] COV tr=-0.0090 (sd=6.1966e-03)
+2020-09-04 16:47:36,700 - akm - INFO - [ho] VAR fe=1.3198 bc=1.3103
+2020-09-04 16:47:36,700 - akm - INFO - [ho] COV fe=0.7165 bc=0.7236
+2020-09-04 16:47:36,702 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:47:36,705 - akm - INFO - data nf:203 nw:20362 nn:40000
+2020-09-04 16:47:36,707 - akm - INFO - ------ DONE -------
+2020-09-04 16:47:36,708 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:47:36,713 - akm - INFO - prepare linear solver
+2020-09-04 16:47:36,715 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:47:36,724 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:47:36,727 - akm - INFO - [ho] VAR tr=0.0089 (sd=4.9487e-03)
+2020-09-04 16:47:36,727 - akm - INFO - [ho] COV tr=-0.0045 (sd=6.2157e-03)
+2020-09-04 16:47:36,728 - akm - INFO - [ho] VAR fe=1.2519 bc=1.2448
+2020-09-04 16:47:36,729 - akm - INFO - [ho] COV fe=0.7402 bc=0.7437
+2020-09-04 16:47:36,732 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:47:36,732 - akm - INFO - ------ DONE -------
+2020-09-04 16:47:36,741 - akm - INFO - extract firm effects
+2020-09-04 16:47:36,749 - akm - INFO - solver time 0.0061 seconds
+2020-09-04 16:47:36,750 - akm - INFO - expected total time 0.0005 minutes
+2020-09-04 16:47:36,752 - akm - INFO - Fixed effect R-square 0.9109
+2020-09-04 16:47:36,754 - akm - INFO - [fe] var_psi=1.2942 cov=0.7249 tot=4.3045
+2020-09-04 16:47:36,755 - akm - INFO - [ho] variance of residuals 0.7925
+2020-09-04 16:47:36,755 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:47:36,766 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:47:36,772 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:47:36,780 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:47:36,787 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:47:36,794 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:47:36,796 - akm - INFO - [ho] VAR tr=0.0096 (sd=5.0343e-03)
+2020-09-04 16:47:36,797 - akm - INFO - [ho] COV tr=-0.0070 (sd=6.3207e-03)
+2020-09-04 16:47:36,797 - akm - INFO - [ho] VAR fe=1.2942 bc=1.2865
+2020-09-04 16:47:36,798 - akm - INFO - [ho] COV fe=0.7249 bc=0.7304
+2020-09-04 16:47:36,799 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:47:36,799 - akm - INFO - ------ DONE -------
+2020-09-04 16:47:47,096 - akm - INFO - loading the data
+2020-09-04 16:47:47,098 - akm - INFO - data movers=19813 stayers=645
+2020-09-04 16:47:47,122 - akm - INFO - data nf:202 nw:20458 nn:40271
+2020-09-04 16:47:47,127 - akm - INFO - prepare linear solver
+2020-09-04 16:47:47,147 - akm - INFO - extract firm effects
+2020-09-04 16:47:47,153 - akm - INFO - solver time 0.0045 seconds
+2020-09-04 16:47:47,153 - akm - INFO - expected total time 0.0004 minutes
+2020-09-04 16:47:47,154 - akm - INFO - Fixed effect R-square 0.9114
+2020-09-04 16:47:47,156 - akm - INFO - [fe] var_psi=1.3365 cov=0.7161 tot=4.2903
+2020-09-04 16:47:47,157 - akm - INFO - [ho] variance of residuals 0.7816
+2020-09-04 16:47:47,157 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:47:47,165 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:47:47,172 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:47:47,178 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:47:47,184 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:47:47,189 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:47:47,191 - akm - INFO - [ho] VAR tr=0.0085 (sd=3.7664e-03)
+2020-09-04 16:47:47,192 - akm - INFO - [ho] COV tr=-0.0016 (sd=4.9009e-03)
+2020-09-04 16:47:47,192 - akm - INFO - [ho] VAR fe=1.3365 bc=1.3299
+2020-09-04 16:47:47,193 - akm - INFO - [ho] COV fe=0.7161 bc=0.7174
+2020-09-04 16:47:47,194 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:47:47,194 - akm - INFO - ------ DONE -------
+2020-09-04 16:47:47,291 - akm - INFO - loading the data
+2020-09-04 16:47:47,294 - akm - INFO - data movers=19588 stayers=686
+2020-09-04 16:47:47,315 - akm - INFO - loading the data
+2020-09-04 16:47:47,318 - akm - INFO - data movers=19814 stayers=655
+2020-09-04 16:47:47,319 - akm - INFO - data nf:204 nw:20274 nn:39862
+2020-09-04 16:47:47,324 - akm - INFO - prepare linear solver
+2020-09-04 16:47:47,342 - akm - INFO - extract firm effects
+2020-09-04 16:47:47,343 - akm - INFO - data nf:203 nw:20469 nn:40283
+2020-09-04 16:47:47,348 - akm - INFO - prepare linear solver
+2020-09-04 16:47:47,348 - akm - INFO - solver time 0.0048 seconds
+2020-09-04 16:47:47,349 - akm - INFO - expected total time 0.0004 minutes
+2020-09-04 16:47:47,351 - akm - INFO - Fixed effect R-square 0.9127
+2020-09-04 16:47:47,353 - akm - INFO - [fe] var_psi=1.2748 cov=0.7291 tot=4.2805
+2020-09-04 16:47:47,354 - akm - INFO - [ho] variance of residuals 0.7697
+2020-09-04 16:47:47,355 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:47:47,361 - akm - INFO - loading the data
+2020-09-04 16:47:47,362 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:47:47,365 - akm - INFO - data movers=19833 stayers=627
+2020-09-04 16:47:47,368 - akm - INFO - extract firm effects
+2020-09-04 16:47:47,369 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:47:47,373 - akm - INFO - solver time 0.0041 seconds
+2020-09-04 16:47:47,374 - akm - INFO - expected total time 0.0003 minutes
+2020-09-04 16:47:47,376 - akm - INFO - Fixed effect R-square 0.9111
+2020-09-04 16:47:47,376 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:47:47,377 - akm - INFO - [fe] var_psi=1.3577 cov=0.7044 tot=4.2591
+2020-09-04 16:47:47,378 - akm - INFO - [ho] variance of residuals 0.7785
+2020-09-04 16:47:47,379 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:47:47,384 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:47:47,387 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:47:47,390 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:47:47,392 - akm - INFO - [ho] VAR tr=0.0128 (sd=5.7435e-03)
+2020-09-04 16:47:47,392 - akm - INFO - [ho] COV tr=-0.0065 (sd=8.5830e-03)
+2020-09-04 16:47:47,393 - akm - INFO - [ho] VAR fe=1.2748 bc=1.2650
+2020-09-04 16:47:47,393 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:47:47,393 - akm - INFO - [ho] COV fe=0.7291 bc=0.7342
+2020-09-04 16:47:47,394 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:47:47,395 - akm - INFO - ------ DONE -------
+2020-09-04 16:47:47,395 - akm - INFO - data nf:203 nw:20460 nn:40293
+2020-09-04 16:47:47,400 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:47:47,401 - akm - INFO - prepare linear solver
+2020-09-04 16:47:47,406 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:47:47,413 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:47:47,415 - akm - INFO - [ho] VAR tr=0.0147 (sd=8.5311e-03)
+2020-09-04 16:47:47,415 - akm - INFO - [ho] COV tr=-0.0088 (sd=1.0456e-02)
+2020-09-04 16:47:47,415 - akm - INFO - [ho] VAR fe=1.3577 bc=1.3462
+2020-09-04 16:47:47,416 - akm - INFO - [ho] COV fe=0.7044 bc=0.7113
+2020-09-04 16:47:47,417 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:47:47,417 - akm - INFO - ------ DONE -------
+2020-09-04 16:47:47,422 - akm - INFO - extract firm effects
+2020-09-04 16:47:47,429 - akm - INFO - solver time 0.0052 seconds
+2020-09-04 16:47:47,430 - akm - INFO - expected total time 0.0004 minutes
+2020-09-04 16:47:47,432 - akm - INFO - Fixed effect R-square 0.9111
+2020-09-04 16:47:47,434 - akm - INFO - [fe] var_psi=1.3361 cov=0.7088 tot=4.2551
+2020-09-04 16:47:47,435 - akm - INFO - [ho] variance of residuals 0.7768
+2020-09-04 16:47:47,435 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:47:47,444 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:47:47,451 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:47:47,459 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:47:47,466 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:47:47,475 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:47:47,477 - akm - INFO - [ho] VAR tr=0.0100 (sd=4.5415e-03)
+2020-09-04 16:47:47,477 - akm - INFO - [ho] COV tr=-0.0045 (sd=5.0872e-03)
+2020-09-04 16:47:47,478 - akm - INFO - [ho] VAR fe=1.3361 bc=1.3283
+2020-09-04 16:47:47,478 - akm - INFO - [ho] COV fe=0.7088 bc=0.7123
+2020-09-04 16:47:47,480 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:47:47,480 - akm - INFO - ------ DONE -------
+2020-09-04 16:47:55,753 - akm - INFO - loading the data
+2020-09-04 16:47:55,755 - akm - INFO - data movers=19630 stayers=664
+2020-09-04 16:47:55,775 - akm - INFO - data nf:204 nw:20294 nn:39924
+2020-09-04 16:47:55,780 - akm - INFO - prepare linear solver
+2020-09-04 16:47:55,795 - akm - INFO - extract firm effects
+2020-09-04 16:47:55,818 - akm - INFO - solver time 0.0220 seconds
+2020-09-04 16:47:55,819 - akm - INFO - expected total time 0.0018 minutes
+2020-09-04 16:47:55,820 - akm - INFO - Fixed effect R-square 0.9126
+2020-09-04 16:47:55,822 - akm - INFO - [fe] var_psi=1.2921 cov=0.7426 tot=4.3498
+2020-09-04 16:47:55,823 - akm - INFO - [ho] variance of residuals 0.7834
+2020-09-04 16:47:55,823 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:47:55,829 - akm - INFO - loading the data
+2020-09-04 16:47:55,831 - akm - INFO - data movers=19639 stayers=688
+2020-09-04 16:47:55,851 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:47:55,858 - akm - INFO - data nf:204 nw:20327 nn:39966
+2020-09-04 16:47:55,863 - akm - INFO - prepare linear solver
+2020-09-04 16:47:55,879 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:47:55,881 - akm - INFO - extract firm effects
+2020-09-04 16:47:55,886 - akm - INFO - solver time 0.0040 seconds
+2020-09-04 16:47:55,887 - akm - INFO - expected total time 0.0003 minutes
+2020-09-04 16:47:55,888 - akm - INFO - Fixed effect R-square 0.9119
+2020-09-04 16:47:55,890 - akm - INFO - [fe] var_psi=1.3065 cov=0.7205 tot=4.2680
+2020-09-04 16:47:55,891 - akm - INFO - [ho] variance of residuals 0.7747
+2020-09-04 16:47:55,891 - akm - INFO - starting trace correction ndraws=5, using 1 cores
+2020-09-04 16:47:55,899 - akm - DEBUG - [traces] step 0/5 done.
+2020-09-04 16:47:55,906 - akm - DEBUG - [traces] step 1/5 done.
+2020-09-04 16:47:55,909 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:47:55,912 - akm - DEBUG - [traces] step 2/5 done.
+2020-09-04 16:47:55,917 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:47:55,924 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:47:55,925 - akm - INFO - [ho] VAR tr=0.0061 (sd=6.3495e-03)
+2020-09-04 16:47:55,925 - akm - INFO - [ho] COV tr=0.0011 (sd=7.0110e-03)
+2020-09-04 16:47:55,926 - akm - INFO - [ho] VAR fe=1.3065 bc=1.3018
+2020-09-04 16:47:55,926 - akm - INFO - [ho] COV fe=0.7205 bc=0.7197
+2020-09-04 16:47:55,927 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:47:55,927 - akm - INFO - ------ DONE -------
+2020-09-04 16:47:55,934 - akm - DEBUG - [traces] step 3/5 done.
+2020-09-04 16:47:55,962 - akm - DEBUG - [traces] step 4/5 done.
+2020-09-04 16:47:55,963 - akm - INFO - [ho] VAR tr=0.0059 (sd=6.9238e-03)
+2020-09-04 16:47:55,964 - akm - INFO - [ho] COV tr=0.0006 (sd=8.9860e-03)
+2020-09-04 16:47:55,964 - akm - INFO - [ho] VAR fe=1.2921 bc=1.2875
+2020-09-04 16:47:55,965 - akm - INFO - [ho] COV fe=0.7426 bc=0.7421
+2020-09-04 16:47:55,966 - akm - INFO - saved results to res_akm.json
+2020-09-04 16:47:55,966 - akm - INFO - ------ DONE -------
