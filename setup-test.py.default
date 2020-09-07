@@ -1,0 +1,41 @@
+import setuptools
+import os
+
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+    
+os.system("rm -R dist; rm -R build; rm -R *.egg-info")
+
+print(setuptools.find_packages())  
+packages = setuptools.find_packages()
+
+setuptools.setup(
+    name="pytwoway-test-__user__",
+    version="0.0.6",
+    author="Thibaut Lamandon, Adam Alexander Oppenheimer",
+    author_email="thibaut.lamadon@gmail.com",
+    description="Two way fixed effect models in python",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="https://github.com/tlamadon/pytwoway",
+    packages=packages,
+	classifiers=[
+	    "Intended Audience :: Science/Research",
+	    "Topic :: Scientific/Engineering :: Mathematics",
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: Apache Software License",
+        "Operating System :: OS Independent",
+    ],
+    python_requires='>=3.6',
+    install_requires=[
+        'numpy',
+        'pandas',
+        'networkx>=2.3',
+        'sklearn',
+        'scipy',
+        'pyamg',
+        'pyreadr',
+        'tqdm',
+        'decorator'
+   ]
+)

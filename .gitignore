@@ -1,1 +1,9 @@
 *.log
+./__pycache__/
+.DS_Store
+*.egg-info/
+dist
+build
+setup-test.py
+tests/*.json
+tests/*.log

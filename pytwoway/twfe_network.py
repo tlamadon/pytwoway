@@ -17,8 +17,8 @@ from scipy.stats import mode, norm
 from scipy.linalg import eig
 inv, ax, randint = np.linalg.inv, np.newaxis, np.random.randint
 repmat, rand = np.matlib.repmat, np.random.rand
-import fe_approximate_correction_full as feacf
-import cre
+from pytwoway import fe_approximate_correction_full as feacf
+from pytwoway import cre
 
 # Testing
 # data = pd.read_feather('../../Google Drive File Stream/.shortcut-targets-by-id/1iN9LApqNxHmVCOV4IUISMwPS7KeZcRhz/ra-adam/data/English/worker_cleaned.ftr')
