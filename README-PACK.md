@@ -61,7 +61,7 @@ PIP directions from the [Packaging Python page](https://packaging.python.org/tut
   ```
   use `__token__` for username and your token for password (including the `pypi-` prefix)
   
-### Installing distribution
+### Installing pytwoway distribution
 
   ```bash
   pip install pytwoway
@@ -83,10 +83,6 @@ You can use the `meta.yaml` file provided or generate it using skeleton.
 
 We will simply use the PIP package and convert it using skeleton.
 
-- install conda-build:
-  ```bash
-  conda install conda-build
-	
 - go to working directory to avoid name conflicts
   ```bash
   cd recipe4conda
@@ -99,15 +95,42 @@ We will simply use the PIP package and convert it using skeleton.
   ```
 	
 ### Building using conda-build:
+
+- install conda-build:
+  ```bash
+  conda install conda-build
 	
 - build the conda package based on the provided yaml or the one written with skeleton.
-  we need to look for *pyreadr* module through conda-forge or a *conda.exceptions.ResolvePackageNotFound* will be thrown:
-  ```bash
-  conda build -c conda-forge recipe4conda 
-  ```
-  
-  or using the recipe made with skeleton:
-  
-  ```bash
-  conda build -c conda-forge recipe4conda/pytwoway 
-  ```
+  we need to look for *pyreadr* module through conda-forge or a *conda.exceptions.ResolvePackageNotFound* will be thrown.
+  - using provided recipe
+    ```bash
+    rm -rf recipe4conda/pytwoway
+    conda build -c main -c conda-forge recipe4conda 
+    ```
+    you can build for different version of python:
+    ```bash
+    conda build --python 2.7 -c main -c conda-forge recipe4conda 
+    ```
+    
+  - using the recipe made with skeleton:
+    ```bash
+    conda build -c main -c conda-forge recipe4conda/pytwoway 
+    ```
+    
+
+- look for the output file path in `conda-build` output
+    
+- upload the conda package to anaconda.org:
+  - create an anaconda login at [Anaconda.org](https://anaconda.org/)
+  - install anaconda client
+    ```bash
+    conda install anaconda-client
+    ```
+  - login into anaconda
+    ```bash
+    anaconda login
+    ```
+  - upload to anaconda
+    ```bash
+    anaconda upload PATH_FROM_CONDA-BUILD_OUTPUT
+    ```

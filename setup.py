@@ -15,7 +15,6 @@ setuptools.setup(
     version="0.0.1",
     maintainer="Thibaut Lamadon",
     author="Thibaut Lamadon, Adam Alexander Oppenheimer",
-#    author_email="thibaut.lamadon@gmail.com",
     license="Apache Software License ",
     keywords="sparse,two way fixed effects",
     description="Two way fixed effect models in python",
