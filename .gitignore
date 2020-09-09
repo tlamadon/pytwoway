@@ -8,3 +8,4 @@ build
 setup-test.py
 tests/*.json
 tests/*.log
+recipe4conda/*/

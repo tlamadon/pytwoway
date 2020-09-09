@@ -4,14 +4,14 @@ import os
 with open("README.md", "r") as fh:
     long_description = fh.read()
     
-print("setup-test.py: Cleaning distribution and build directories")
+print("setup.py: Cleaning distribution and build directories")
 os.system("rm -R dist; rm -R build; rm -R *.egg-info")
 
 print(setuptools.find_packages())  
 packages = ['pytwoway'] # setuptools.find_packages()
 
 setuptools.setup(
-    name="pytwoway-test-__user__",
+    name="pytwoway",
     version="0.0.1",
     maintainer="Thibaut Lamadon",
     author="Thibaut Lamadon, Adam Alexander Oppenheimer",
@@ -45,7 +45,7 @@ setuptools.setup(
         'numpy',
         'pandas',
         'networkx>=2.3',
-        'scikit-learn', 
+        'scikit-learn',
         'scipy',
         'pyamg',
         'pyreadr',

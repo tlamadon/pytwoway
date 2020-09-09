@@ -1,0 +1,59 @@
+{% set name = "pytwoway" %}
+{% set version = "0.0.1" %}
+
+package:
+  name: "{{ name|lower }}"
+  version: "{{ version }}"
+
+source:
+  url: "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz"
+  sha256: 9cfaad3534d35055c38c8cdeae74ceaf90e9ce5548d11472e05a84050025f9a9
+
+build:
+  noarch: python
+  number: 0
+  script: "{{ PYTHON }} -m pip install . -vv"
+
+requirements:
+  build:
+    - python >=3
+    - pip
+  host:
+    - decorator
+    - networkx >=2.3
+    - numpy
+    - pandas
+    - pip
+    - pyamg
+    - pyreadr
+    - python
+    - scipy
+    - scikit-learn
+    - tqdm
+  run:
+    - decorator
+    - networkx >=2.3
+    - numpy
+    - pandas
+    - pyamg
+    - pyreadr
+    - python
+    - scipy
+    - scikit-learn
+    - tqdm
+
+test:
+  imports:
+    - pytwoway
+
+about:
+  home: "https://github.com/tlamadon/pytwoway"
+  license: Apache-2.0
+  license_file: ../LICENSE
+  summary: "Two way fixed effect models in python"
+
+extra:
+  recipe-maintainers:
+    - tlamadon
+    - adamoppenheimer
+    - benbenz
