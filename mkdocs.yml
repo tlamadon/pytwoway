@@ -1,8 +1,8 @@
 # mkdocs.yml
 site_name: PyTwoWay Documentation
 
-# theme:
-#   name: "material"
+theme:
+  name: "material"
 
 plugins:
   - search
