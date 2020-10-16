@@ -1,0 +1,14 @@
+# mkdocs.yml
+site_name: PyTwoWay Documentation
+
+# theme:
+#   name: "material"
+
+plugins:
+  - search
+  - mkdocstrings
+
+nav:
+  - Home: index.md
+  - twfe_network: twfe_network-reference.md
+  - fe_approximate_correction_full: fe-reference.md

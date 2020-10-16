@@ -20,10 +20,10 @@ repmat, rand = np.matlib.repmat, np.random.rand
 import fe_approximate_correction_full as feacf
 import cre
 
-# Testing
+# # Testing
 # data = pd.read_feather('../../Google Drive File Stream/.shortcut-targets-by-id/1iN9LApqNxHmVCOV4IUISMwPS7KeZcRhz/ra-adam/data/English/worker_cleaned.ftr')
 # col_dict = {'fid': 'codf', 'wid': 'codf_w', 'year': 'year', 'comp': 'comp_current'}
-# d_net for data_network
+# # d_net for data_network
 # d_net = twfe_network(data=data, formatting='long', col_dict=col_dict)
 # d_net.refactor_es()
 # d_net.data_validity()
@@ -31,6 +31,8 @@ import cre
 # akm_res = d_net.run_akm_corrected()
 # cre_res = d_net.run_cre()
 
+# # Simulate data
+# sim_params = 
 # d_net = twfe_network()
 # cdfs_1 = d_net.approx_cdfs()
 # d_net.refactor_es()
@@ -38,31 +40,31 @@ import cre
 
 ###### BELOW IS THE CODE TO SIMULATE MONTE CARLO AND GENERATE THE GRAPHS ######
 # from matplotlib import pyplot as plt
-# true_psi_var, true_psi_alpha_cov, akm_psi_var, akm_psi_alpha_cov, akm_corr_psi_var, akm_corr_psi_alpha_cov, cre_psi_var, cre_psi_alpha_cov = twfe_monte_carlo(N=10, ncore=4)
+# true_psi_var, true_psi_alpha_cov, akm_psi_var, akm_psi_alpha_cov, akm_corr_psi_var, akm_corr_psi_alpha_cov, cre_psi_var, cre_psi_alpha_cov = twfe_monte_carlo(N=100, ncore=4)
 # akm_psi_diff = sorted(akm_psi_var - true_psi_var)
 # akm_psi_alpha_diff = sorted(akm_psi_alpha_cov - true_psi_alpha_cov)
 # akm_corr_psi_diff = sorted(akm_corr_psi_var - true_psi_var)
 # akm_corr_psi_alpha_diff = sorted(akm_corr_psi_alpha_cov - true_psi_alpha_cov)
 # cre_psi_diff = sorted(cre_psi_var - true_psi_var)
 # cre_psi_alpha_diff = sorted(cre_psi_alpha_cov - true_psi_alpha_cov)
-# plt.hist(akm_psi_diff, label='AKM var(psi)')
-# plt.hist(akm_corr_psi_diff, label='Bias-corrected AKM var(psi)')
-# plt.hist(cre_psi_diff, label='CRE var(psi)')
+# plt.hist(akm_psi_diff, bins=50, label='AKM var(psi)')
+# plt.hist(akm_corr_psi_diff, bins=50, label='Bias-corrected AKM var(psi)')
+# plt.hist(cre_psi_diff, bins=50, label='CRE var(psi)')
 # plt.legend()
 # plt.show()
-# plt.hist(akm_psi_alpha_diff, label='AKM cov(psi, alpha)')
-# plt.hist(akm_corr_psi_alpha_diff, label='Bias-corrected AKM cov(psi, alpha)')
-# plt.hist(cre_psi_alpha_diff, label='CRE cov(psi, alpha)')
+# plt.hist(akm_psi_alpha_diff, bins=50, label='AKM cov(psi, alpha)')
+# plt.hist(akm_corr_psi_alpha_diff, bins=50, label='Bias-corrected AKM cov(psi, alpha)')
+# plt.hist(cre_psi_alpha_diff, bins=50, label='CRE cov(psi, alpha)')
 # plt.legend()
 # plt.show()
 
-def twfe_monte_carlo_interior(params={'num_ind': 10000, 'num_time': 5, 'firm_size': 50, 'nk': 200, 'nl': 50, 'alpha_sig': 1, 'psi_sig': 1, 'w_sig': 1, 'csort': 1, 'cnetw': 1, 'csig': 1, 'p_move': 0.5}):
+def twfe_monte_carlo_interior(data_params={}, akm_params={}, cre_params={}, cdf_resolution=10, grouping='quantile_all', year=None, KMeans_params={}):
     '''
     Purpose:
         Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to twfe_monte_carlo
 
-    Inputs:
-        params (dictionary): parameters for simulated data
+    Arguments:
+        data_params (dictionary): parameters for simulated data
             Dictionary parameters:
                 num_ind: number of workers
                 num_time: time length of panel
@@ -76,6 +78,32 @@ def twfe_monte_carlo_interior(params={'num_ind': 10000, 'num_time': 5, 'firm_siz
                 cnetw: network effect
                 csig: standard error of sorting/network effects
                 p_move: probability a worker moves firms in any period
+        akm_params (dictionary): dictionary of parameters for bias-corrected AKM estimation
+            Dictionary parameters:
+                ncore (int): number of cores to use
+                batch (int): batch size to send in parallel
+                ndraw_pii (int): number of draw to use in approximation for leverages
+                ndraw_tr (int): number of draws to use in approximation for traces
+                check (bool): whether to compute the non-approximated estimates as well
+                hetero (bool): whether to compute the heteroskedastic estimates
+                out (string): outputfile
+                con (string): computes the smallest eigen values, this is the filepath where these results are saved
+                logfile (string): log output to a logfile
+                levfile (string): file to load precomputed leverages
+                statsonly (bool): save data statistics only
+        cre_params (dictionary): dictionary of parameters for CRE estimation
+            Dictionary parameters:
+                ncore (int): number of cores to use
+                ndraw_tr (int): number of draws to use in approximation for traces
+                ndp (int): number of draw to use in approximation for leverages
+                out (string): outputfile
+                posterior (bool): compute posterior variance
+                wobtw (bool): sets between variation to 0, pure RE
+        Used for clustering:
+            cdf_resolution (int): how many values to use to approximate the cdf
+            grouping (string): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
+            year (int): if None, uses entire dataset; if int, gives year of data to consider
+            KMeans_params (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
 
     Returns:
         true_psi_var (float): true simulated sample variance of psi
@@ -88,18 +116,18 @@ def twfe_monte_carlo_interior(params={'num_ind': 10000, 'num_time': 5, 'firm_siz
         cre_psi_alpha_cov (float): CRE estimate of covariance of psi and alpha
     '''
     # Simulate network
-    nw = twfe_network(data=params)
+    nw = twfe_network(data=data_params)
     # Compute true sample variance of psi and covariance of psi and alpha
     psi_var = np.var(nw.data['psi'])
     psi_alpha_cov = np.cov(nw.data['psi'], nw.data['alpha'])[0, 1]
     # Convert into event study
     nw.refactor_es()
     # Estimate AKM model
-    akm_res = nw.run_akm_corrected()
+    akm_res = nw.run_akm_corrected(user_akm=akm_params)
     # Cluster for CRE model
-    nw.cluster(n_clusters=50, n_init=500)
+    nw.cluster(cdf_resolution=cdf_resolution, grouping=grouping, year=year, user_KMeans=KMeans_params)
     # Estimate CRE model
-    cre_res = nw.run_cre()
+    cre_res = nw.run_cre(user_cre=cre_params)
 
     return psi_var, psi_alpha_cov, \
             akm_res['var_fe'], akm_res['cov_fe'], \
@@ -107,28 +135,15 @@ def twfe_monte_carlo_interior(params={'num_ind': 10000, 'num_time': 5, 'firm_siz
             cre_res['var_wt'] + cre_res['var_bw'], cre_res['cov_wt'] + cre_res['cov_bw']
     
 
-def twfe_monte_carlo(params={'num_ind': 10000, 'num_time': 5, 'firm_size': 50, 'nk': 200, 'nl': 50, 'alpha_sig': 1, 'psi_sig': 1, 'w_sig': 1, 'csort': 1, 'cnetw': 1, 'csig': 1, 'p_move': 0.5}, N=500, ncore=1):
+def twfe_monte_carlo(N=500, ncore=1, data_params={}, akm_params={}, cre_params={}, cdf_resolution=10, grouping='quantile_all', year=None, KMeans_params={}):
     '''
     Purpose:
         Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha
 
-    Inputs:
-        params (dictionary): parameters for simulated data
-            Dictionary parameters:
-                num_ind: number of workers
-                num_time: time length of panel
-                firm_size: max number of individuals per firm
-                nk: number of firm types
-                nl: number of worker types
-                alpha_sig: standard error of individual fixed effect (volatility of worker effects)
-                psi_sig: standard error of firm fixed effect (volatility of firm effects)
-                w_sig: standard error of residual in AKM wage equation (volatility of wage shocks)
-                csort: sorting effect
-                cnetw: network effect
-                csig: standard error of sorting/network effects
-                p_move: probability a worker moves firms in any period
+    Arguments:
         N (int): number of simulations
         ncore (int): how many cores to use
+        Other parameters: see twfe_monte_carlo_interior()
 
     Returns:
         true_psi_var (NumPy array): true simulated sample variance of psi
@@ -155,13 +170,13 @@ def twfe_monte_carlo(params={'num_ind': 10000, 'num_time': 5, 'firm_size': 50, '
         V = []
         # Simulate networks
         with Pool(processes=ncore) as pool:
-            V = pool.starmap(twfe_monte_carlo_interior, [[params] for _ in range(N)])
+            V = pool.starmap(twfe_monte_carlo_interior, [[data_params, akm_params, cre_params, cdf_resolution, grouping, year, KMeans_params] for _ in range(N)])
         for i, res in enumerate(V):
             true_psi_var[i], true_psi_alpha_cov[i], akm_psi_var[i], akm_psi_alpha_cov[i], akm_corr_psi_var[i], akm_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = res
     else:
         for i in range(N):
             # Simulate a network
-            true_psi_var[i], true_psi_alpha_cov[i], akm_psi_var[i], akm_psi_alpha_cov[i], akm_corr_psi_var[i], akm_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = twfe_monte_carlo_interior(params)
+            true_psi_var[i], true_psi_alpha_cov[i], akm_psi_var[i], akm_psi_alpha_cov[i], akm_corr_psi_var[i], akm_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = twfe_monte_carlo_interior(data_params=data_params, akm_params=akm_params, cre_params=cre_params, cdf_resolution=cdf_resolution, grouping=grouping, year=year, KMeans_params=KMeans_params)
 
     return true_psi_var, true_psi_alpha_cov, akm_psi_var, akm_psi_alpha_cov, akm_corr_psi_var, akm_corr_psi_alpha_cov, cre_psi_var, cre_psi_alpha_cov
 
@@ -169,6 +184,7 @@ class twfe_network:
     '''
     Class of twfe_network, where twfe_network gives a network of firms and workers. This class has the following functions:
         __init__(): initialize
+        update_dict(): update values in parameter dictionaries (this function is similar to, but different from dict.update())
         update_cols(): rename columns and keep only relevant columns
         n_workers(): get the number of unique workers
         n_firms(): get the number of unique firms
@@ -185,12 +201,12 @@ class twfe_network:
         sim_network(): simulate panel data corresponding to the calibrated model (only for simulated data)
     '''
 
-    def __init__(self, data={'num_ind': 10000, 'num_time': 5, 'firm_size': 50, 'nk': 200, 'nl': 50, 'alpha_sig': 1, 'psi_sig': 1, 'w_sig': 1, 'csort': 1, 'cnetw': 1, 'csig': 1, 'p_move': 0.5}, formatting='long', col_dict=False):
+    def __init__(self, data={}, formatting='long', col_dict=False):
         '''
         Purpose:
             Initialize twfe_network object
 
-        Inputs:
+        Arguments:
             data (dict or Pandas DataFrame): if dict, simulate network of firms and workers using parameter values in dictionary; if Pandas DataFrame, then real data giving firms and workers
                 Dictionary parameters:
                     num_ind: number of workers
@@ -206,10 +222,10 @@ class twfe_network:
                     csig: standard error of sorting/network effects
                     p_move: probability a worker moves firms in any period
             formatting (string): if 'long', then data in long format; if 'es', then data in event study format. If simulating data, keep default value of 'long'
-            col_dict (dictionary): make data columns readable (requires: wid (worker id), comp (compensation), fid (firm id), year if long; wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m(0 if stayer, 1 if mover) if event study)
+            col_dict (dictionary): make data columns readable (requires: wid (worker id), comp (compensation), fid (firm id), year if long; wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover) if event study)
 
         Returns:
-            Nothing
+            Object of type twfe_network
         '''
         logger.info('initializing twfe_network object')
 
@@ -218,9 +234,19 @@ class twfe_network:
         self.contiguous = False
         self.formatting = formatting
         self.col_dict = col_dict
+        
+        # Define default parameter dictionaries
+        self.default_data = {'num_ind': 10000, 'num_time': 5, 'firm_size': 50, 'nk': 10, 'nl': 5, 'alpha_sig': 1, 'psi_sig': 1, 'w_sig': 1, 'csort': 1, 'cnetw': 1, 'csig': 1, 'p_move': 0.5}
+
+        self.default_KMeans = {'n_clusters': 10, 'init': 'k-means++', 'n_init': 500, 'max_iter': 300, 'tol': 0.0001, 'precompute_distances': 'deprecated', 'verbose': 0, 'random_state': None, 'copy_x': True, 'n_jobs': 'deprecated', 'algorithm': 'auto'}
+
+        self.default_akm = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_akm.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False} # Do not define 'data' because will be updated later
+
+        self.default_cre = {'ncore': 1, 'ndraw_tr': 5, 'ndp': 50, 'out': 'res_cre.json', 'posterior': False, 'wobtw': False} # Do not define 'data' because will be updated later
 
         # Simulate data
         if isinstance(data, dict):
+            data = self.update_dict(self.default_data, data)
             self.data = self.sim_network(data)
         # Use given data
         else:
@@ -244,12 +270,30 @@ class twfe_network:
         if isinstance(col_dict, dict):
             self.data_validity()
 
+    def update_dict(self, default_params, user_params):
+        '''
+        Purpose:
+            Replace entries in default_params with values in user_params. This function allows user_params to include only a subset of the required parameters in the dictionary
+
+        Arguments:
+            default_params (dict): default parameter values
+            user_params (dict): user selected parameter values
+
+        Returns:
+            params (dict): default_params updated with parameter values in user_params
+        '''
+        params = default_params.copy()
+
+        params.update(user_params)
+
+        return params
+
     def update_cols(self):
         '''
         Purpose:
             Rename columns and keep only relevant columns
 
-        Inputs:
+        Arguments:
             Nothing
 
         Returns:
@@ -270,7 +314,7 @@ class twfe_network:
         Purpose:
             Get the number of unique workers
 
-        Inputs:
+        Arguments:
             Nothing
 
         Returns:
@@ -283,7 +327,7 @@ class twfe_network:
         Purpose:
             Get the number of unique firms
 
-        Inputs:
+        Arguments:
             Nothing
 
         Returns:
@@ -299,7 +343,7 @@ class twfe_network:
         Purpose:
             Check that data is formatted correctly. Results are logged
 
-        Inputs:
+        Arguments:
             Nothing
 
         Returns:
@@ -445,7 +489,7 @@ class twfe_network:
         Purpose:
             Update data to include only the largest connected set of movers, and if firm ids are contiguous, also return the NetworkX Graph
 
-        Inputs:
+        Arguments:
             Nothing
 
         Returns:
@@ -495,7 +539,7 @@ class twfe_network:
         Purpose:
             Make firm ids contiguous
 
-        Inputs:
+        Arguments:
             Nothing
 
         Returns:
@@ -536,7 +580,7 @@ class twfe_network:
         Purpose:
             Refactor long form data into event study data
 
-        Inputs:
+        Arguments:
             Nothing
 
         Returns:
@@ -615,7 +659,7 @@ class twfe_network:
         Purpose:
             Generate cdfs of compensation for firms
 
-        Inputs:
+        Arguments:
             cdf_resolution (int): how many values to use to approximate the cdf
             grouping (string): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
             year (int): if None, uses entire dataset; if int, gives year of data to consider
@@ -684,17 +728,16 @@ class twfe_network:
 
         return cdfs
 
-    def cluster(self, n_clusters=5, n_init=500, cdf_resolution=10, grouping='quantile_all', year=None):
+    def cluster(self, cdf_resolution=10, grouping='quantile_all', year=None, user_KMeans={}):
         '''
         Purpose:
             Cluster data and assign a new column giving the cluster for each firm
 
-        Inputs:
-            n_clusters (int): how many clusters to consider
-            n_init (int): how many starting values to consider
+        Arguments:
             cdf_resolution (int): how many values to use to approximate the cdf
             grouping (string): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
             year (int): if None, uses entire dataset; if int, gives year of data to consider
+            user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
 
         Returns:
             Nothing
@@ -705,7 +748,8 @@ class twfe_network:
             logger.info('firm cdfs computed')
 
             # Compute firm clusters
-            clusters = KMeans(n_clusters=n_clusters, n_init=n_init).fit(cdfs).labels_ + 1 # Need +1 because need > 0
+            KMeans_params = self.update_dict(self.default_KMeans, user_KMeans)
+            clusters = KMeans(n_clusters=KMeans_params['n_clusters'], init=KMeans_params['init'], n_init=KMeans_params['n_init'], max_iter=KMeans_params['max_iter'], tol=KMeans_params['tol'], precompute_distances=KMeans_params['precompute_distances'], verbose=KMeans_params['verbose'], random_state=KMeans_params['random_state'], copy_x=KMeans_params['copy_x'], n_jobs=KMeans_params['n_jobs'], algorithm=KMeans_params['algorithm']).fit(cdfs).labels_ + 1 # Need +1 because need > 0
             logger.info('firm clusters computed')
 
             # Create Pandas dataframe linking fid to firm cluster
@@ -726,60 +770,60 @@ class twfe_network:
             self.data[['f1i', 'f2i', 'm']] = self.data[['f1i', 'f2i', 'm']].astype(int)
             logger.info('datatypes of clusters corrected')
 
-    def run_akm_corrected(self, params={}):
+    def run_akm_corrected(self, user_akm={}):
         '''
         Purpose:
             Run bias-corrected AKM estimator
 
-        Inputs:
-            params (dictionary): dictionary of parameters
-                ncore (int): number of cores to use
-                batch (int): batch size to send in parallel
-                ndraw_pii (int): number of draw to use in approximation for leverages
-                ndraw_tr (int): number of draws to use in approximation for traces
-                check (bool): whether to compute the non-approximated estimates as well
-                hetero (bool): whether to compute the heteroskedastic estimates
-                out (string): outputfile
-                con (string): computes the smallest eigen values, this is the filepath where these results are saved
-                logfile (string): log output to a logfile
-                levfile (string): file to load precomputed leverages
-                statsonly (bool): save data statistics only
+        Arguments:
+            user_akm (dictionary): dictionary of parameters for bias-corrected AKM estimation
+                Dictionary parameters:
+                    ncore (int): number of cores to use
+                    batch (int): batch size to send in parallel
+                    ndraw_pii (int): number of draw to use in approximation for leverages
+                    ndraw_tr (int): number of draws to use in approximation for traces
+                    check (bool): whether to compute the non-approximated estimates as well
+                    hetero (bool): whether to compute the heteroskedastic estimates
+                    out (string): outputfile
+                    con (string): computes the smallest eigen values, this is the filepath where these results are saved
+                    logfile (string): log output to a logfile
+                    levfile (string): file to load precomputed leverages
+                    statsonly (bool): save data statistics only
 
         Returns:
             akm_res (dictionary): dictionary of results
         '''
-        default_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_akm.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'data': self.data}
+        akm_params = self.update_dict(self.default_akm, user_akm)
 
-        for key, val in params.items():
-            default_params[key] = val
-        
-        akm_res = feacf.main(default_params)
+        akm_params['data'] = self.data # Make sure to use up-to-date data
+
+        akm_res = feacf.FEsolver(akm_params).res # feacf.main(akm_params) # FIXME corrected for new feacf file using class structure
 
         return akm_res
 
-    def run_cre(self, params={}):
+    def run_cre(self, user_cre={}):
         '''
         Purpose:
             Run CRE estimator
 
-        Inputs:
-            params (dictionary): dictionary of parameters
-                ncore (int): number of cores to use
-                ndraw_tr (int): number of draws to use in approximation for traces
-                ndp (int): number of draw to use in approximation for leverages
-                out (string): outputfile
-                posterior (bool): compute posterior variance
-                wobtw (bool): sets between variation to 0, pure RE
+        Arguments:
+            user_cre (dictionary): dictionary of parameters for CRE estimation
+                Dictionary parameters:
+                    ncore (int): number of cores to use
+                    ndraw_tr (int): number of draws to use in approximation for traces
+                    ndp (int): number of draw to use in approximation for leverages
+                    out (string): outputfile
+                    posterior (bool): compute posterior variance
+                    wobtw (bool): sets between variation to 0, pure RE
 
         Returns:
             cre_res (dictionary): dictionary of results
         '''
-        default_params = {'ncore': 1, 'ndraw_tr': 5, 'ndp': 50, 'out': 'res_cre.json', 'posterior': False, 'wobtw': False, 'data': self.data}
+        cre_params = self.update_dict(self.default_cre, user_cre)
 
-        for key, val in params.items():
-            default_params[key] = val
-        
-        cre_res = cre.main(default_params)
+        cre_params['data'] = self.data # Make sure to use up-to-date data
+
+        cre_res = cre.main(cre_params)
 
         return cre_res
 
@@ -788,7 +832,7 @@ class twfe_network:
         Purpose:
             Generate fixed effects values for simulated panel data corresponding to the calibrated model
 
-        Inputs:
+        Arguments:
             params (dictionary): dictionary linking parameters to values
                 Dictionary parameters:
                     num_ind: number of workers
@@ -841,7 +885,7 @@ class twfe_network:
         Purpose:
             Draw firm ids for individual, given data that is grouped by worker id, spell id, and firm type
 
-        Inputs:
+        Arguments:
             freq (NumPy array): size of groups (groups by worker id, spell id, and firm type)
             num_time (int): time length of panel
             firm_size (int): max number of individuals per firm
@@ -857,7 +901,7 @@ class twfe_network:
         Purpose:
             Simulate panel data corresponding to the calibrated model
 
-        Inputs:
+        Arguments:
             params (dictionary): dictionary linking parameters to values
                 Dictionary parameters:
                     num_ind: number of workers
