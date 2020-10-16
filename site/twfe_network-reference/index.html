@@ -1,0 +1,2154 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="IE=edge" http-equiv="X-UA-Compatible"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="../img/favicon.ico" rel="shortcut icon"/>
+<title>twfe_network - PyTwoWay Documentation</title>
+<link href="../css/bootstrap.min.css" rel="stylesheet"/>
+<link href="../css/font-awesome.min.css" rel="stylesheet"/>
+<link href="../css/base.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet"/>
+<script defer="" src="../js/jquery-1.10.2.min.js"></script>
+<script defer="" src="../js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+</head>
+<body>
+<div class="navbar fixed-top navbar-expand-lg navbar-dark bg-primary">
+<div class="container">
+<a class="navbar-brand" href="..">PyTwoWay Documentation</a>
+<!-- Expander button -->
+<button class="navbar-toggler" data-target="#navbar-collapse" data-toggle="collapse" type="button">
+<span class="navbar-toggler-icon"></span>
+</button>
+<!-- Expanded navigation -->
+<div class="navbar-collapse collapse" id="navbar-collapse">
+<!-- Main navigation -->
+<ul class="nav navbar-nav">
+<li class="navitem">
+<a class="nav-link" href="..">Home</a>
+</li>
+<li class="navitem active">
+<a class="nav-link" href="./">twfe_network</a>
+</li>
+<li class="navitem">
+<a class="nav-link" href="../fe-reference/">fe_approximate_correction_full</a>
+</li>
+</ul>
+<ul class="nav navbar-nav ml-auto">
+<li class="nav-item">
+<a class="nav-link" data-target="#mkdocs_search_modal" data-toggle="modal" href="#">
+<i class="fa fa-search"></i> Search
+                            </a>
+</li>
+<li class="nav-item">
+<a class="nav-link" href=".." rel="prev">
+<i class="fa fa-arrow-left"></i> Previous
+                                </a>
+</li>
+<li class="nav-item">
+<a class="nav-link" href="../fe-reference/" rel="next">
+                                    Next <i class="fa fa-arrow-right"></i>
+</a>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div class="container">
+<div class="row">
+<div class="col-md-3"><div class="navbar-light navbar-expand-md bs-sidebar hidden-print affix" role="complementary">
+<div class="navbar-header">
+<button class="navbar-toggler collapsed" data-target="#toc-collapse" data-toggle="collapse" title="Table of Contents" type="button">
+<span class="fa fa-angle-down"></span>
+</button>
+</div>
+<div class="navbar-collapse collapse card bg-secondary" id="toc-collapse">
+<ul class="nav flex-column">
+<li class="nav-item" data-level="1"><a class="nav-link" href="#twfe_network-module">twfe_network module</a>
+<ul class="nav flex-column">
+<li class="nav-item" data-level="2"><a class="nav-link" href="#twfe_network">twfe_network</a>
+<ul class="nav flex-column">
+</ul>
+</li>
+<li class="nav-item" data-level="2"><a class="nav-link" href="#twfe_network.twfe_network">twfe_network</a>
+<ul class="nav flex-column">
+</ul>
+</li>
+<li class="nav-item" data-level="2"><a class="nav-link" href="#twfe_network.twfe_monte_carlo">twfe_monte_carlo()</a>
+<ul class="nav flex-column">
+</ul>
+</li>
+<li class="nav-item" data-level="2"><a class="nav-link" href="#twfe_network.twfe_monte_carlo_interior">twfe_monte_carlo_interior()</a>
+<ul class="nav flex-column">
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div></div>
+<div class="col-md-9" role="main">
+<h1 id="twfe_network-module">twfe_network module</h1>
+<div class="doc doc-object doc-module">
+<h2 class="hidden-toc" href="#twfe_network" id="twfe_network" style="visibility: hidden; position: absolute;">
+</h2>
+<div class="doc doc-contents first">
+<p>Class for a two-way fixed effect network</p>
+<div class="doc doc-children">
+<div class="doc doc-object doc-class">
+<h2 class="doc doc-heading" id="twfe_network.twfe_network">
+<code>twfe_network</code>
+</h2>
+<div class="doc doc-contents">
+<p>Class of twfe_network, where twfe_network gives a network of firms and workers. This class has the following functions:
+    <strong>init</strong>(): initialize
+    update_dict(): update values in parameter dictionaries (this function is similar to, but different from dict.update())
+    update_cols(): rename columns and keep only relevant columns
+    n_workers(): get the number of unique workers
+    n_firms(): get the number of unique firms
+    data_validity(): check that data is formatted correctly
+    conset(): update data to include only the largest connected set of movers, and if firm ids are contiguous, also return the NetworkX Graph
+    contiguous_fids(): make firm ids contiguous
+    refactor_es(): refactor long form data into event study data
+    approx_cdfs(): generate cdfs of compensation for firms
+    cluster(): cluster data and assign a new column giving the cluster for each firm
+    run_akm_corrected(): run bias-corrected AKM estimator
+    run_cre(): run CRE estimator
+    sim_network_gen_fe(): generate fixed effects values for simulated panel data corresponding to the calibrated model (only for simulated data)
+    sim_network_draw_fids(): draw firm ids for individual, given data that is grouped by worker id, spell id, and firm type (only for simulated data)
+    sim_network(): simulate panel data corresponding to the calibrated model (only for simulated data)</p>
+<div class="doc doc-children">
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="twfe_network.twfe_network.__init__">
+<code class="highlight language-python">
+__init__<span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">{},</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">'long'</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> </code>
+<span class="doc doc-properties">
+<small class="doc doc-property doc-property-special"><code>special</code></small>
+</span>
+</h3>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Initialize twfe_network object</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data</code></td>
+<td><code>dict or Pandas DataFrame</code></td>
+<td>
+<p>if dict, simulate network of firms and workers using parameter values in dictionary; if Pandas DataFrame, then real data giving firms and workers
+Dictionary parameters:
+    num_ind: number of workers
+    num_time: time length of panel
+    firm_size: max number of individuals per firm
+    nk: number of firm types
+    nl: number of worker types
+    alpha_sig: standard error of individual fixed effect (volatility of worker effects)
+    psi_sig: standard error of firm fixed effect (volatility of firm effects)
+    w_sig: standard error of residual in AKM wage equation (volatility of wage shocks)
+    csort: sorting effect
+    cnetw: network effect
+    csig: standard error of sorting/network effects
+    p_move: probability a worker moves firms in any period</p>
+</td>
+<td><code>{}</code></td>
+</tr>
+<tr>
+<td><code>formatting</code></td>
+<td><code>string</code></td>
+<td>
+<p>if 'long', then data in long format; if 'es', then data in event study format. If simulating data, keep default value of 'long'</p>
+</td>
+<td><code>'long'</code></td>
+</tr>
+<tr>
+<td><code>col_dict</code></td>
+<td><code>dictionary</code></td>
+<td>
+<p>make data columns readable (requires: wid (worker id), comp (compensation), fid (firm id), year if long; wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover) if event study)</p>
+</td>
+<td><code>False</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code></code></td>
+<td>
+<p>Object of type twfe_network</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="p">{},</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">'long'</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Initialize twfe_network object</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        data (dict or Pandas DataFrame): if dict, simulate network of firms and workers using parameter values in dictionary; if Pandas DataFrame, then real data giving firms and workers</span>
+<span class="sd">            Dictionary parameters:</span>
+<span class="sd">                num_ind: number of workers</span>
+<span class="sd">                num_time: time length of panel</span>
+<span class="sd">                firm_size: max number of individuals per firm</span>
+<span class="sd">                nk: number of firm types</span>
+<span class="sd">                nl: number of worker types</span>
+<span class="sd">                alpha_sig: standard error of individual fixed effect (volatility of worker effects)</span>
+<span class="sd">                psi_sig: standard error of firm fixed effect (volatility of firm effects)</span>
+<span class="sd">                w_sig: standard error of residual in AKM wage equation (volatility of wage shocks)</span>
+<span class="sd">                csort: sorting effect</span>
+<span class="sd">                cnetw: network effect</span>
+<span class="sd">                csig: standard error of sorting/network effects</span>
+<span class="sd">                p_move: probability a worker moves firms in any period</span>
+<span class="sd">        formatting (string): if 'long', then data in long format; if 'es', then data in event study format. If simulating data, keep default value of 'long'</span>
+<span class="sd">        col_dict (dictionary): make data columns readable (requires: wid (worker id), comp (compensation), fid (firm id), year if long; wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover) if event study)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Object of type twfe_network</span>
+<span class="sd">    '''</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'initializing twfe_network object'</span><span class="p">)</span>
+
+    <span class="c1"># Define some variables</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">connected</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">contiguous</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">=</span> <span class="n">formatting</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span> <span class="o">=</span> <span class="n">col_dict</span>
+
+    <span class="c1"># Define default parameter dictionaries</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">default_data</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'num_ind'</span><span class="p">:</span> <span class="mi">10000</span><span class="p">,</span> <span class="s1">'num_time'</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">'firm_size'</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">'nk'</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">'nl'</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">'alpha_sig'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">'psi_sig'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">'w_sig'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">'csort'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">'cnetw'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">'csig'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">'p_move'</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">}</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">default_KMeans</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'n_clusters'</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">'init'</span><span class="p">:</span> <span class="s1">'k-means++'</span><span class="p">,</span> <span class="s1">'n_init'</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span> <span class="s1">'max_iter'</span><span class="p">:</span> <span class="mi">300</span><span class="p">,</span> <span class="s1">'tol'</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span> <span class="s1">'precompute_distances'</span><span class="p">:</span> <span class="s1">'deprecated'</span><span class="p">,</span> <span class="s1">'verbose'</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">'random_state'</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">'copy_x'</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">'n_jobs'</span><span class="p">:</span> <span class="s1">'deprecated'</span><span class="p">,</span> <span class="s1">'algorithm'</span><span class="p">:</span> <span class="s1">'auto'</span><span class="p">}</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">default_akm</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'ncore'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">'batch'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">'ndraw_pii'</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">'ndraw_tr'</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">'check'</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">'hetero'</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">'out'</span><span class="p">:</span> <span class="s1">'res_akm.json'</span><span class="p">,</span> <span class="s1">'con'</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">'logfile'</span><span class="p">:</span> <span class="s1">''</span><span class="p">,</span> <span class="s1">'levfile'</span><span class="p">:</span> <span class="s1">''</span><span class="p">,</span> <span class="s1">'statsonly'</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span> <span class="c1"># Do not define 'data' because will be updated later</span>
+
+    <span class="bp">self</span><span class="o">.</span><span class="n">default_cre</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'ncore'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">'ndraw_tr'</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">'ndp'</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">'out'</span><span class="p">:</span> <span class="s1">'res_cre.json'</span><span class="p">,</span> <span class="s1">'posterior'</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">'wobtw'</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span> <span class="c1"># Do not define 'data' because will be updated later</span>
+
+    <span class="c1"># Simulate data</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">update_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">default_data</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sim_network</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="c1"># Use given data</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+        <span class="c1"># Make sure data is valid</span>
+        <span class="c1"># Note that column names are corrected in this function if all columns are in the data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_validity</span><span class="p">()</span>
+        <span class="c1"># Drop na values</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+
+    <span class="c1"># Generate largest connected set</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">conset</span><span class="p">()</span>
+
+    <span class="c1"># Make firm ids contiguous</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">contiguous_fids</span><span class="p">()</span>
+
+    <span class="c1"># Using contiguous fids, get NetworkX Graph of largest connected set</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">G</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conset</span><span class="p">()</span>
+
+    <span class="c1"># Check data validity after initial cleaning</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">col_dict</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_validity</span><span class="p">()</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="twfe_network.twfe_network.approx_cdfs">
+<code class="highlight language-python">
+approx_cdfs<span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cdf_resolution</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">grouping</span><span class="o">=</span><span class="s1">'quantile_all'</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span> </code>
+</h3>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Generate cdfs of compensation for firms</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cdf_resolution</code></td>
+<td><code>int</code></td>
+<td>
+<p>how many values to use to approximate the cdf</p>
+</td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td><code>grouping</code></td>
+<td><code>string</code></td>
+<td>
+<p>how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)</p>
+</td>
+<td><code>'quantile_all'</code></td>
+</tr>
+<tr>
+<td><code>year</code></td>
+<td><code>int</code></td>
+<td>
+<p>if None, uses entire dataset; if int, gives year of data to consider</p>
+</td>
+<td><code>None</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cdf_df (numpy array)</code></td>
+<td>
+<p>numpy array of firm cdfs</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">approx_cdfs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cdf_resolution</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">grouping</span><span class="o">=</span><span class="s1">'quantile_all'</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Generate cdfs of compensation for firms</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        cdf_resolution (int): how many values to use to approximate the cdf</span>
+<span class="sd">        grouping (string): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)</span>
+<span class="sd">        year (int): if None, uses entire dataset; if int, gives year of data to consider</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        cdf_df (numpy array): numpy array of firm cdfs</span>
+<span class="sd">    '''</span>
+    <span class="c1"># If year-level, then only use data for that particular year</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">year</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">==</span> <span class="s1">'long'</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">data</span><span class="p">[</span><span class="s1">'year'</span><span class="p">]</span> <span class="o">==</span> <span class="n">year</span><span class="p">]</span>
+
+    <span class="c1"># Create empty numpy array to fill with the cdfs</span>
+    <span class="n">n_firms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_firms</span><span class="p">()</span>
+    <span class="n">cdfs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">([</span><span class="n">n_firms</span><span class="p">,</span> <span class="n">cdf_resolution</span><span class="p">])</span>
+
+    <span class="c1"># Create quantiles of interest</span>
+    <span class="n">quantiles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">cdf_resolution</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">cdf_resolution</span><span class="p">)</span>
+
+    <span class="c1"># Re-arrange event study data to be in long format (temporarily)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">==</span> <span class="s1">'es'</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s1">'f1i'</span><span class="p">:</span> <span class="s1">'fid'</span><span class="p">,</span> <span class="s1">'y1'</span><span class="p">:</span> <span class="s1">'comp'</span><span class="p">},</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[[</span><span class="s1">'f2i'</span><span class="p">,</span> <span class="s1">'y2'</span><span class="p">]]</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s1">'f2i'</span><span class="p">:</span> <span class="s1">'fid'</span><span class="p">,</span> <span class="s1">'y2'</span><span class="p">:</span> <span class="s1">'comp'</span><span class="p">},</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">grouping</span> <span class="o">==</span> <span class="s1">'quantile_all'</span><span class="p">:</span>
+        <span class="c1"># Get quantiles from all data</span>
+        <span class="n">quantile_groups</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'comp'</span><span class="p">]</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">quantiles</span><span class="p">)</span>
+
+        <span class="c1"># Generate firm-level cdfs</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">quant</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">quantile_groups</span><span class="p">):</span>
+            <span class="n">cdfs</span><span class="p">[:,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">firm_quant</span><span class="o">=</span><span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">d</span><span class="p">[</span><span class="s1">'comp'</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">quant</span><span class="p">)</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">'fid'</span><span class="p">)[</span><span class="s1">'firm_quant'</span><span class="p">]</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="nb">sum</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+
+        <span class="c1"># Normalize by firm size (convert to cdf)</span>
+        <span class="n">fsize</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">'fid'</span><span class="p">)</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="n">cdfs</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">fsize</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">elif</span> <span class="n">grouping</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">'quantile_firm_small'</span><span class="p">,</span> <span class="s1">'quantile_firm_large'</span><span class="p">]:</span>
+        <span class="c1"># Sort data by compensation (do this once now, so that don't need to do it again later) (also note it is faster to sort then manually compute quantiles than to use built-in quantile functions)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s1">'comp'</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">grouping</span> <span class="o">==</span> <span class="s1">'quantile_firm_small'</span><span class="p">:</span>
+            <span class="c1"># Convert pandas dataframe into a dictionary to access data faster</span>
+            <span class="c1"># Source for idea: https://stackoverflow.com/questions/57208997/looking-for-the-fastest-way-to-slice-a-row-in-a-huge-pandas-dataframe</span>
+            <span class="c1"># Source for how to actually format data correctly: https://stackoverflow.com/questions/56064677/pandas-series-to-dict-with-repeated-indices-make-dict-with-list-values</span>
+            <span class="n">data_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'comp'</span><span class="p">]</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+
+        <span class="c1"># Generate the cdfs</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n_firms</span><span class="p">)):</span>
+            <span class="n">fid</span> <span class="o">=</span> <span class="n">row</span> <span class="o">+</span> <span class="mi">1</span> <span class="c1"># fids start at 1</span>
+            <span class="c1"># Get the firm-level compensation data (don't need to sort because already sorted)</span>
+            <span class="k">if</span> <span class="n">grouping</span> <span class="o">==</span> <span class="s1">'quantile_firm_small'</span><span class="p">:</span>
+                <span class="n">comp</span> <span class="o">=</span> <span class="n">data_dict</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="n">grouping</span> <span class="o">==</span> <span class="s1">'quantile_firm_large'</span><span class="p">:</span>
+                <span class="n">comp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'fid'</span><span class="p">]</span> <span class="o">==</span> <span class="n">fid</span><span class="p">,</span> <span class="s1">'comp'</span><span class="p">]</span>
+            <span class="c1"># Generate the firm-level cdf</span>
+            <span class="c1"># Note: update numpy array element by element</span>
+            <span class="c1"># Source: https://stackoverflow.com/questions/30012362/faster-way-to-convert-list-of-objects-to-numpy-array/30012403</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">cdf_resolution</span><span class="p">):</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">comp</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="n">cdf_resolution</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="c1"># Don't want negative index</span>
+                <span class="c1"># Update cdfs with the firm-level cdf</span>
+                <span class="n">cdfs</span><span class="p">[</span><span class="n">row</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">comp</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+
+    <span class="c1"># Drop rows that were appended earlier and rename columns</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">==</span> <span class="s1">'es'</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s1">'fid'</span><span class="p">:</span> <span class="s1">'f1i'</span><span class="p">,</span> <span class="s1">'comp'</span><span class="p">:</span> <span class="s1">'y1'</span><span class="p">},</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">cdfs</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="twfe_network.twfe_network.cluster">
+<code class="highlight language-python">
+cluster<span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cdf_resolution</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">grouping</span><span class="o">=</span><span class="s1">'quantile_all'</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">user_KMeans</span><span class="o">=</span><span class="p">{})</span> </code>
+</h3>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Cluster data and assign a new column giving the cluster for each firm</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cdf_resolution</code></td>
+<td><code>int</code></td>
+<td>
+<p>how many values to use to approximate the cdf</p>
+</td>
+<td><code>10</code></td>
+</tr>
+<tr>
+<td><code>grouping</code></td>
+<td><code>string</code></td>
+<td>
+<p>how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)</p>
+</td>
+<td><code>'quantile_all'</code></td>
+</tr>
+<tr>
+<td><code>year</code></td>
+<td><code>int</code></td>
+<td>
+<p>if None, uses entire dataset; if int, gives year of data to consider</p>
+</td>
+<td><code>None</code></td>
+</tr>
+<tr>
+<td><code>user_KMeans</code></td>
+<td><code>dict</code></td>
+<td>
+<p>use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified</p>
+</td>
+<td><code>{}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code></code></td>
+<td>
+<p>Nothing</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">cluster</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cdf_resolution</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">grouping</span><span class="o">=</span><span class="s1">'quantile_all'</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">user_KMeans</span><span class="o">=</span><span class="p">{}):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Cluster data and assign a new column giving the cluster for each firm</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        cdf_resolution (int): how many values to use to approximate the cdf</span>
+<span class="sd">        grouping (string): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)</span>
+<span class="sd">        year (int): if None, uses entire dataset; if int, gives year of data to consider</span>
+<span class="sd">        user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Nothing</span>
+<span class="sd">    '''</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">==</span> <span class="s1">'es'</span><span class="p">:</span>
+        <span class="c1"># Compute cdfs</span>
+        <span class="n">cdfs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">approx_cdfs</span><span class="p">(</span><span class="n">cdf_resolution</span><span class="o">=</span><span class="n">cdf_resolution</span><span class="p">,</span> <span class="n">grouping</span><span class="o">=</span><span class="n">grouping</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="n">year</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'firm cdfs computed'</span><span class="p">)</span>
+
+        <span class="c1"># Compute firm clusters</span>
+        <span class="n">KMeans_params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">update_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">default_KMeans</span><span class="p">,</span> <span class="n">user_KMeans</span><span class="p">)</span>
+        <span class="n">clusters</span> <span class="o">=</span> <span class="n">KMeans</span><span class="p">(</span><span class="n">n_clusters</span><span class="o">=</span><span class="n">KMeans_params</span><span class="p">[</span><span class="s1">'n_clusters'</span><span class="p">],</span> <span class="n">init</span><span class="o">=</span><span class="n">KMeans_params</span><span class="p">[</span><span class="s1">'init'</span><span class="p">],</span> <span class="n">n_init</span><span class="o">=</span><span class="n">KMeans_params</span><span class="p">[</span><span class="s1">'n_init'</span><span class="p">],</span> <span class="n">max_iter</span><span class="o">=</span><span class="n">KMeans_params</span><span class="p">[</span><span class="s1">'max_iter'</span><span class="p">],</span> <span class="n">tol</span><span class="o">=</span><span class="n">KMeans_params</span><span class="p">[</span><span class="s1">'tol'</span><span class="p">],</span> <span class="n">precompute_distances</span><span class="o">=</span><span class="n">KMeans_params</span><span class="p">[</span><span class="s1">'precompute_distances'</span><span class="p">],</span> <span class="n">verbose</span><span class="o">=</span><span class="n">KMeans_params</span><span class="p">[</span><span class="s1">'verbose'</span><span class="p">],</span> <span class="n">random_state</span><span class="o">=</span><span class="n">KMeans_params</span><span class="p">[</span><span class="s1">'random_state'</span><span class="p">],</span> <span class="n">copy_x</span><span class="o">=</span><span class="n">KMeans_params</span><span class="p">[</span><span class="s1">'copy_x'</span><span class="p">],</span> <span class="n">n_jobs</span><span class="o">=</span><span class="n">KMeans_params</span><span class="p">[</span><span class="s1">'n_jobs'</span><span class="p">],</span> <span class="n">algorithm</span><span class="o">=</span><span class="n">KMeans_params</span><span class="p">[</span><span class="s1">'algorithm'</span><span class="p">])</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">cdfs</span><span class="p">)</span><span class="o">.</span><span class="n">labels_</span> <span class="o">+</span> <span class="mi">1</span> <span class="c1"># Need +1 because need &gt; 0</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'firm clusters computed'</span><span class="p">)</span>
+
+        <span class="c1"># Create Pandas dataframe linking fid to firm cluster</span>
+        <span class="n">n_firms</span> <span class="o">=</span> <span class="n">cdfs</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">fids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_firms</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">n_firms</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">clusters_dict_1</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'f1i'</span><span class="p">:</span> <span class="n">fids</span><span class="p">,</span> <span class="s1">'j1'</span><span class="p">:</span> <span class="n">clusters</span><span class="p">}</span>
+        <span class="n">clusters_dict_2</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'f2i'</span><span class="p">:</span> <span class="n">fids</span><span class="p">,</span> <span class="s1">'j2'</span><span class="p">:</span> <span class="n">clusters</span><span class="p">}</span>
+        <span class="n">clusters_df_1</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">clusters_dict_1</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">fids</span><span class="p">)</span>
+        <span class="n">clusters_df_2</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">clusters_dict_2</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">fids</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'dataframes linked fids to clusters generated'</span><span class="p">)</span>
+
+        <span class="c1"># Merge into event study data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">clusters_df_1</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">'left'</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s1">'f1i'</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">clusters_df_2</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">'left'</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="s1">'f2i'</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'clusters merged into event study data'</span><span class="p">)</span>
+
+        <span class="c1"># Correct datatypes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[[</span><span class="s1">'f1i'</span><span class="p">,</span> <span class="s1">'f2i'</span><span class="p">,</span> <span class="s1">'m'</span><span class="p">]]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[[</span><span class="s1">'f1i'</span><span class="p">,</span> <span class="s1">'f2i'</span><span class="p">,</span> <span class="s1">'m'</span><span class="p">]]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'datatypes of clusters corrected'</span><span class="p">)</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="twfe_network.twfe_network.conset">
+<code class="highlight language-python">
+conset<span class="p">(</span><span class="bp">self</span><span class="p">)</span> </code>
+</h3>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Update data to include only the largest connected set of movers, and if firm ids are contiguous, also return the NetworkX Graph</p>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>G (NetworkX Graph)</code></td>
+<td>
+<p>largest connected set of movers (only returns if firm ids are contiguous, otherwise returns None)</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">conset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Update data to include only the largest connected set of movers, and if firm ids are contiguous, also return the NetworkX Graph</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        Nothing</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        G (NetworkX Graph): largest connected set of movers (only returns if firm ids are contiguous, otherwise returns None)</span>
+<span class="sd">    '''</span>
+    <span class="n">prev_workers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_workers</span><span class="p">()</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">==</span> <span class="s1">'long'</span><span class="p">:</span>
+        <span class="c1"># Add max firm id per worker to serve as a central node for the worker</span>
+        <span class="c1"># self.data['fid_f1'] = self.data.groupby('wid')['fid'].transform(lambda a: a.shift(-1)) # FIXME - this is directed but is much slower</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'fid_max'</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">'wid'</span><span class="p">])[</span><span class="s1">'fid'</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="nb">max</span><span class="p">)</span> <span class="c1"># FIXME - this is undirected but is much faster</span>
+
+        <span class="c1"># Find largest connected set</span>
+        <span class="c1"># Source: https://networkx.github.io/documentation/stable/reference/algorithms/generated/networkx.algorithms.components.connected_components.html</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">from_pandas_edgelist</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="s1">'fid'</span><span class="p">,</span> <span class="s1">'fid_max'</span><span class="p">)</span>
+        <span class="c1"># Drop fid_max</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s1">'fid_max'</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># Update data if not connected</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">connected</span><span class="p">:</span>
+            <span class="n">largest_cc</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">connected_components</span><span class="p">(</span><span class="n">G</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="nb">len</span><span class="p">)</span>
+            <span class="c1"># Keep largest connected set of firms</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'fid'</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">largest_cc</span><span class="p">)]</span>
+    <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">==</span> <span class="s1">'es'</span><span class="p">:</span>
+        <span class="c1"># Find largest connected set</span>
+        <span class="c1"># Source: https://networkx.github.io/documentation/stable/reference/algorithms/generated/networkx.algorithms.components.connected_components.html</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">from_pandas_edgelist</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="s1">'f1i'</span><span class="p">,</span> <span class="s1">'f2i'</span><span class="p">)</span>
+        <span class="c1"># Update data if not connected</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">connected</span><span class="p">:</span>
+            <span class="n">largest_cc</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">connected_components</span><span class="p">(</span><span class="n">G</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="nb">len</span><span class="p">)</span>
+            <span class="c1"># Keep largest connected set of firms</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'f1i'</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">largest_cc</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'f2i'</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">largest_cc</span><span class="p">))]</span>
+
+    <span class="c1"># Data is now connected</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">connected</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="c1"># If connected data != full data, set contiguous to False</span>
+    <span class="k">if</span> <span class="n">prev_workers</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_workers</span><span class="p">():</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">contiguous</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="c1"># Return G if firm ids are contiguous (if they're not contiguous, they have to be updated first)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">contiguous</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">G</span>
+
+    <span class="k">return</span> <span class="kc">None</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="twfe_network.twfe_network.contiguous_fids">
+<code class="highlight language-python">
+contiguous_fids<span class="p">(</span><span class="bp">self</span><span class="p">)</span> </code>
+</h3>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Make firm ids contiguous</p>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code></code></td>
+<td>
+<p>Nothing</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">contiguous_fids</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Make firm ids contiguous</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        Nothing</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Nothing</span>
+<span class="sd">    '''</span>
+    <span class="c1"># Generate fid_list (note that all columns listed in fid_list are included in the set of firm ids, and all columns are adjusted to have the new, contiguous firm ids)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">==</span> <span class="s1">'long'</span><span class="p">:</span>
+        <span class="n">fid_list</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'fid'</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">==</span> <span class="s1">'es'</span><span class="p">:</span>
+        <span class="n">fid_list</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'f1i'</span><span class="p">,</span> <span class="s1">'f2i'</span><span class="p">]</span>
+    <span class="c1"># Create sorted set of unique fids</span>
+    <span class="n">fids</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="n">fid_list</span><span class="p">:</span>
+        <span class="n">fids</span> <span class="o">+=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">fid</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+    <span class="n">fids</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">fids</span><span class="p">)))</span>
+
+    <span class="c1"># Create list of adjusted fids</span>
+    <span class="n">adjusted_fids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">fids</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">fids</span><span class="p">))</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="c1"># Update each fid one at a time</span>
+    <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="n">fid_list</span><span class="p">:</span>
+        <span class="c1"># Create dictionary linking current to new fids, then convert into a dataframe for merging</span>
+        <span class="n">fids_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">fid</span><span class="p">:</span> <span class="n">fids</span><span class="p">,</span> <span class="s1">'adj_'</span> <span class="o">+</span> <span class="n">fid</span><span class="p">:</span> <span class="n">adjusted_fids</span><span class="p">}</span>
+        <span class="n">fids_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">fids_dict</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">adjusted_fids</span><span class="p">)</span>
+
+        <span class="c1"># Merge new, contiguous fids into event study data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">fids_df</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">'left'</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="n">fid</span><span class="p">)</span>
+
+        <span class="c1"># Drop old fid column and rename contiguous fid column</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="n">fid</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s1">'adj_'</span> <span class="o">+</span> <span class="n">fid</span><span class="p">:</span> <span class="n">fid</span><span class="p">},</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Firm ids are now contiguous</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">contiguous</span> <span class="o">=</span> <span class="kc">True</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="twfe_network.twfe_network.data_validity">
+<code class="highlight language-python">
+data_validity<span class="p">(</span><span class="bp">self</span><span class="p">)</span> </code>
+</h3>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Check that data is formatted correctly. Results are logged</p>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code></code></td>
+<td>
+<p>Nothing</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">data_validity</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Check that data is formatted correctly. Results are logged</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        Nothing</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Nothing</span>
+<span class="sd">    '''</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">==</span> <span class="s1">'long'</span><span class="p">:</span>
+        <span class="n">success</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'--- checking columns ---'</span><span class="p">)</span>
+        <span class="n">cols</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">'wid'</span><span class="p">,</span> <span class="s1">'comp'</span><span class="p">,</span> <span class="s1">'fid'</span><span class="p">,</span> <span class="s1">'year'</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="s1">'missing from data'</span><span class="p">)</span>
+                <span class="n">cols</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">col</span> <span class="o">==</span> <span class="s1">'year'</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="n">col</span><span class="p">]]</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="s1">'int'</span><span class="p">:</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="n">col</span><span class="p">],</span> <span class="s1">'has wrong dtype, should be int but is'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="n">col</span><span class="p">]]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                        <span class="n">cols</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">elif</span> <span class="n">col</span> <span class="o">==</span> <span class="s1">'comp'</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="n">col</span><span class="p">]]</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="s1">'float64'</span><span class="p">:</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="n">col</span><span class="p">],</span> <span class="s1">'has wrong dtype, should be float64 but is'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="n">col</span><span class="p">]]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                        <span class="n">cols</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'columns correct:'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">cols</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">cols</span><span class="p">:</span>
+            <span class="n">success</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'Your data does not include the correct columns. The twfe_network object cannot be generated with your data.'</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Correct column names</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_cols</span><span class="p">()</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'--- checking worker-year observations ---'</span><span class="p">)</span>
+
+        <span class="n">max_obs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">'wid'</span><span class="p">,</span> <span class="s1">'year'</span><span class="p">])</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'max number of worker-year observations (should be 1):'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">max_obs</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">max_obs</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">success</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'--- checking nan data ---'</span><span class="p">)</span>
+
+        <span class="n">nan</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'data nan rows (should be 0):'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">nan</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">nan</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">success</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'--- checking connected set ---'</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'fid_max'</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">'wid'</span><span class="p">])[</span><span class="s1">'fid'</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="nb">max</span><span class="p">)</span>
+        <span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">from_pandas_edgelist</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="s1">'fid'</span><span class="p">,</span> <span class="s1">'fid_max'</span><span class="p">)</span>
+        <span class="n">largest_cc</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">connected_components</span><span class="p">(</span><span class="n">G</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="nb">len</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s1">'fid_max'</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">outside_cc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[(</span><span class="o">~</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'fid'</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">largest_cc</span><span class="p">))]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'observations outside connected set (should be 0):'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">outside_cc</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">outside_cc</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">success</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'Overall success:'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">success</span><span class="p">))</span>
+
+    <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">==</span> <span class="s1">'es'</span><span class="p">:</span>
+            <span class="n">success_stayers</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">success_movers</span> <span class="o">=</span> <span class="kc">True</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'--- checking columns ---'</span><span class="p">)</span>
+            <span class="n">cols</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">'wid'</span><span class="p">,</span> <span class="s1">'y1'</span><span class="p">,</span> <span class="s1">'y2'</span><span class="p">,</span> <span class="s1">'f1i'</span><span class="p">,</span> <span class="s1">'f2i'</span><span class="p">,</span> <span class="s1">'m'</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="s1">'missing from stayers'</span><span class="p">)</span>
+                    <span class="n">cols</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">'y1'</span><span class="p">,</span> <span class="s1">'y2'</span><span class="p">]:</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="n">col</span><span class="p">]]</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="s1">'float64'</span><span class="p">:</span>
+                            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="s1">'has wrong dtype, should be float64 but is'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="n">col</span><span class="p">]]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                            <span class="n">cols</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="k">elif</span> <span class="n">col</span> <span class="o">==</span> <span class="s1">'m'</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="n">col</span><span class="p">]]</span><span class="o">.</span><span class="n">dtype</span> <span class="o">!=</span> <span class="s1">'int'</span><span class="p">:</span>
+                            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="s1">'has wrong dtype, should be int but is'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="n">col</span><span class="p">]]</span><span class="o">.</span><span class="n">dtype</span><span class="p">)</span>
+                            <span class="n">cols</span> <span class="o">=</span> <span class="kc">False</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'columns correct:'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">cols</span><span class="p">))</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">cols</span><span class="p">:</span>
+                <span class="n">success_stayers</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="n">success_movers</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">'Your data does not include the correct columns. The twfe_network object cannot be generated with your data.'</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Correct column names</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">update_cols</span><span class="p">()</span>
+
+            <span class="n">stayers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'m'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span>
+            <span class="n">movers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'m'</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'--- checking rows ---'</span><span class="p">)</span>
+            <span class="n">na_stayers</span> <span class="o">=</span> <span class="n">stayers</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">stayers</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">na_movers</span> <span class="o">=</span> <span class="n">movers</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">movers</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'stayers nan rows (should be 0):'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">na_stayers</span><span class="p">))</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'movers nan rows (should be 0):'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">na_movers</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">na_stayers</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">success_stayers</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="n">na_movers</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">success_movers</span> <span class="o">=</span> <span class="kc">False</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'--- checking firms ---'</span><span class="p">)</span>
+            <span class="n">firms_stayers</span> <span class="o">=</span> <span class="p">(</span><span class="n">stayers</span><span class="p">[</span><span class="s1">'f1i'</span><span class="p">]</span> <span class="o">!=</span> <span class="n">stayers</span><span class="p">[</span><span class="s1">'f2i'</span><span class="p">])</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            <span class="n">firms_movers</span> <span class="o">=</span> <span class="p">(</span><span class="n">movers</span><span class="p">[</span><span class="s1">'f1i'</span><span class="p">]</span> <span class="o">==</span> <span class="n">movers</span><span class="p">[</span><span class="s1">'f2i'</span><span class="p">])</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'stayers with different firms (should be 0):'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">firms_stayers</span><span class="p">))</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'movers with same firm (should be 0):'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">firms_movers</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">firms_stayers</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">success_stayers</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="n">firms_movers</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">success_movers</span> <span class="o">=</span> <span class="kc">False</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'--- checking income ---'</span><span class="p">)</span>
+            <span class="n">income_stayers</span> <span class="o">=</span> <span class="p">(</span><span class="n">stayers</span><span class="p">[</span><span class="s1">'y1'</span><span class="p">]</span> <span class="o">!=</span> <span class="n">stayers</span><span class="p">[</span><span class="s1">'y2'</span><span class="p">])</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'stayers with different income (should be 0):'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">income_stayers</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">income_stayers</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">success_stayers</span> <span class="o">=</span> <span class="kc">False</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'--- checking connected set ---'</span><span class="p">)</span>
+            <span class="n">G</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">from_pandas_edgelist</span><span class="p">(</span><span class="n">movers</span><span class="p">,</span> <span class="s1">'f1i'</span><span class="p">,</span> <span class="s1">'f2i'</span><span class="p">)</span>
+            <span class="n">largest_cc</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">connected_components</span><span class="p">(</span><span class="n">G</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="nb">len</span><span class="p">)</span>
+
+            <span class="n">cc_stayers</span> <span class="o">=</span> <span class="n">stayers</span><span class="p">[(</span><span class="o">~</span><span class="n">stayers</span><span class="p">[</span><span class="s1">'f1i'</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">largest_cc</span><span class="p">))</span> <span class="o">|</span> <span class="p">(</span><span class="o">~</span><span class="n">stayers</span><span class="p">[</span><span class="s1">'f2i'</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">largest_cc</span><span class="p">))]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">cc_movers</span> <span class="o">=</span> <span class="n">movers</span><span class="p">[(</span><span class="o">~</span><span class="n">movers</span><span class="p">[</span><span class="s1">'f1i'</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">largest_cc</span><span class="p">))</span> <span class="o">|</span> <span class="p">(</span><span class="o">~</span><span class="n">movers</span><span class="p">[</span><span class="s1">'f2i'</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">largest_cc</span><span class="p">))]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'stayers outside connected set (should be 0):'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">cc_stayers</span><span class="p">))</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'movers outside connected set (should be 0):'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">cc_movers</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">cc_stayers</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">success_stayers</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="n">cc_movers</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">success_movers</span> <span class="o">=</span> <span class="kc">False</span>
+
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'Overall success for stayers:'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">success_stayers</span><span class="p">))</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'Overall success for movers:'</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">success_movers</span><span class="p">))</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="twfe_network.twfe_network.n_firms">
+<code class="highlight language-python">
+n_firms<span class="p">(</span><span class="bp">self</span><span class="p">)</span> </code>
+</h3>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Get the number of unique firms</p>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>(int)</code></td>
+<td>
+<p>number of unique firms</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">n_firms</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Get the number of unique firms</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        Nothing</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (int): number of unique firms</span>
+<span class="sd">    '''</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">==</span> <span class="s1">'long'</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'fid'</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+    <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">==</span> <span class="s1">'es'</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'f1i'</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'f2i'</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())))</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="twfe_network.twfe_network.n_workers">
+<code class="highlight language-python">
+n_workers<span class="p">(</span><span class="bp">self</span><span class="p">)</span> </code>
+</h3>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Get the number of unique workers</p>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>(int)</code></td>
+<td>
+<p>number of unique workers</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">n_workers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Get the number of unique workers</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        Nothing</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (int): number of unique workers</span>
+<span class="sd">    '''</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'wid'</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="twfe_network.twfe_network.refactor_es">
+<code class="highlight language-python">
+refactor_es<span class="p">(</span><span class="bp">self</span><span class="p">)</span> </code>
+</h3>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Refactor long form data into event study data</p>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code></code></td>
+<td>
+<p>Nothing</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">refactor_es</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Refactor long form data into event study data</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        Nothing</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Nothing</span>
+<span class="sd">    '''</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">==</span> <span class="s1">'long'</span><span class="p">:</span>
+        <span class="c1"># Sort data by wid and year</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s1">'wid'</span><span class="p">,</span> <span class="s1">'year'</span><span class="p">])</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'data sorted by wid and year'</span><span class="p">)</span>
+
+        <span class="c1"># Introduce lagged fid and wid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'fid_l1'</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'fid'</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">periods</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'wid_l1'</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'wid'</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">periods</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'lagged fid introduced'</span><span class="p">)</span>
+
+        <span class="c1"># Generate spell ids</span>
+        <span class="c1"># Source: https://stackoverflow.com/questions/59778744/pandas-grouping-and-aggregating-consecutive-rows-with-same-value-in-column</span>
+        <span class="n">new_spell</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'fid'</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'fid_l1'</span><span class="p">])</span> <span class="o">|</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'wid'</span><span class="p">]</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'wid_l1'</span><span class="p">])</span> <span class="c1"># Allow for wid != wid_l1 to ensure that consecutive workers at the same firm get counted as different spells</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'spell_id'</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_spell</span><span class="o">.</span><span class="n">cumsum</span><span class="p">()</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'spell ids generated'</span><span class="p">)</span>
+
+        <span class="c1"># Aggregate at the spell level</span>
+        <span class="n">spell</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">'spell_id'</span><span class="p">])</span>
+        <span class="n">data_spell</span> <span class="o">=</span> <span class="n">spell</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span>
+            <span class="n">fid</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">NamedAgg</span><span class="p">(</span><span class="n">column</span><span class="o">=</span><span class="s1">'fid'</span><span class="p">,</span> <span class="n">aggfunc</span><span class="o">=</span><span class="s1">'first'</span><span class="p">),</span>
+            <span class="n">wid</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">NamedAgg</span><span class="p">(</span><span class="n">column</span><span class="o">=</span><span class="s1">'wid'</span><span class="p">,</span> <span class="n">aggfunc</span><span class="o">=</span><span class="s1">'first'</span><span class="p">),</span>
+            <span class="n">comp</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">NamedAgg</span><span class="p">(</span><span class="n">column</span><span class="o">=</span><span class="s1">'comp'</span><span class="p">,</span> <span class="n">aggfunc</span><span class="o">=</span><span class="s1">'mean'</span><span class="p">),</span>
+            <span class="n">year_start</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">NamedAgg</span><span class="p">(</span><span class="n">column</span><span class="o">=</span><span class="s1">'year'</span><span class="p">,</span> <span class="n">aggfunc</span><span class="o">=</span><span class="s1">'min'</span><span class="p">),</span>
+            <span class="n">year_end</span><span class="o">=</span><span class="n">pd</span><span class="o">.</span><span class="n">NamedAgg</span><span class="p">(</span><span class="n">column</span><span class="o">=</span><span class="s1">'fid'</span><span class="p">,</span> <span class="n">aggfunc</span><span class="o">=</span><span class="s1">'max'</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'data aggregated at the spell level'</span><span class="p">)</span>
+
+        <span class="c1">## Format as event study ##</span>
+        <span class="c1"># Split workers by spell count</span>
+        <span class="n">spell_count</span> <span class="o">=</span> <span class="n">data_spell</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">'wid'</span><span class="p">])</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+        <span class="n">single_spell</span> <span class="o">=</span> <span class="n">spell_count</span><span class="p">[</span><span class="n">spell_count</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">index</span>
+        <span class="n">stayers</span> <span class="o">=</span> <span class="n">data_spell</span><span class="p">[</span><span class="n">data_spell</span><span class="p">[</span><span class="s1">'wid'</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">single_spell</span><span class="p">)]</span>
+        <span class="n">mult_spell</span> <span class="o">=</span> <span class="n">spell_count</span><span class="p">[</span><span class="n">spell_count</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">index</span>
+        <span class="n">movers</span> <span class="o">=</span> <span class="n">data_spell</span><span class="p">[</span><span class="n">data_spell</span><span class="p">[</span><span class="s1">'wid'</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">mult_spell</span><span class="p">)]</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'workers split by spell count'</span><span class="p">)</span>
+
+        <span class="c1"># Add lagged values</span>
+        <span class="n">movers</span> <span class="o">=</span> <span class="n">movers</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s1">'wid'</span><span class="p">,</span> <span class="s1">'year_start'</span><span class="p">])</span>
+        <span class="n">movers</span><span class="p">[</span><span class="s1">'fid_l1'</span><span class="p">]</span> <span class="o">=</span> <span class="n">movers</span><span class="p">[</span><span class="s1">'fid'</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">periods</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">movers</span><span class="p">[</span><span class="s1">'wid_l1'</span><span class="p">]</span> <span class="o">=</span> <span class="n">movers</span><span class="p">[</span><span class="s1">'wid'</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">periods</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">movers</span><span class="p">[</span><span class="s1">'comp_l1'</span><span class="p">]</span> <span class="o">=</span> <span class="n">movers</span><span class="p">[</span><span class="s1">'comp'</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">periods</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">movers</span> <span class="o">=</span> <span class="n">movers</span><span class="p">[</span><span class="n">movers</span><span class="p">[</span><span class="s1">'wid'</span><span class="p">]</span> <span class="o">==</span> <span class="n">movers</span><span class="p">[</span><span class="s1">'wid_l1'</span><span class="p">]]</span>
+
+        <span class="c1"># Update columns</span>
+        <span class="n">stayers</span> <span class="o">=</span> <span class="n">stayers</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s1">'fid'</span><span class="p">:</span> <span class="s1">'f1i'</span><span class="p">,</span> <span class="s1">'comp'</span><span class="p">:</span> <span class="s1">'y1'</span><span class="p">},</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">stayers</span><span class="p">[</span><span class="s1">'f2i'</span><span class="p">]</span> <span class="o">=</span> <span class="n">stayers</span><span class="p">[</span><span class="s1">'f1i'</span><span class="p">]</span>
+        <span class="n">stayers</span><span class="p">[</span><span class="s1">'y2'</span><span class="p">]</span> <span class="o">=</span> <span class="n">stayers</span><span class="p">[</span><span class="s1">'y1'</span><span class="p">]</span>
+        <span class="n">stayers</span><span class="p">[</span><span class="s1">'m'</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">movers</span> <span class="o">=</span> <span class="n">movers</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s1">'fid_l1'</span><span class="p">:</span> <span class="s1">'f1i'</span><span class="p">,</span> <span class="s1">'fid'</span><span class="p">:</span> <span class="s1">'f2i'</span><span class="p">,</span> <span class="s1">'comp_l1'</span><span class="p">:</span> <span class="s1">'y1'</span><span class="p">,</span> <span class="s1">'comp'</span><span class="p">:</span> <span class="s1">'y2'</span><span class="p">},</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">movers</span><span class="p">[</span><span class="s1">'f1i'</span><span class="p">]</span> <span class="o">=</span> <span class="n">movers</span><span class="p">[</span><span class="s1">'f1i'</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">movers</span><span class="p">[</span><span class="s1">'m'</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="c1"># Keep only relevant columns</span>
+        <span class="n">stayers</span> <span class="o">=</span> <span class="n">stayers</span><span class="p">[[</span><span class="s1">'wid'</span><span class="p">,</span> <span class="s1">'y1'</span><span class="p">,</span> <span class="s1">'y2'</span><span class="p">,</span> <span class="s1">'f1i'</span><span class="p">,</span> <span class="s1">'f2i'</span><span class="p">,</span> <span class="s1">'m'</span><span class="p">]]</span>
+        <span class="n">movers</span> <span class="o">=</span> <span class="n">movers</span><span class="p">[[</span><span class="s1">'wid'</span><span class="p">,</span> <span class="s1">'y1'</span><span class="p">,</span> <span class="s1">'y2'</span><span class="p">,</span> <span class="s1">'f1i'</span><span class="p">,</span> <span class="s1">'f2i'</span><span class="p">,</span> <span class="s1">'m'</span><span class="p">]]</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'columns updated'</span><span class="p">)</span>
+
+        <span class="c1"># Merge stayers and movers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">stayers</span><span class="p">,</span> <span class="n">movers</span><span class="p">])</span>
+
+        <span class="c1"># Update col_dict</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'wid'</span><span class="p">:</span> <span class="s1">'wid'</span><span class="p">,</span> <span class="s1">'y1'</span><span class="p">:</span> <span class="s1">'y1'</span><span class="p">,</span> <span class="s1">'y2'</span><span class="p">:</span> <span class="s1">'y2'</span><span class="p">,</span> <span class="s1">'f1i'</span><span class="p">:</span> <span class="s1">'f1i'</span><span class="p">,</span> <span class="s1">'f2i'</span><span class="p">:</span> <span class="s1">'f2i'</span><span class="p">,</span> <span class="s1">'m'</span><span class="p">:</span> <span class="s1">'m'</span><span class="p">}</span>
+
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">'data reformatted as event study'</span><span class="p">)</span>
+
+        <span class="c1"># Data is now formatted as event study</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">=</span> <span class="s1">'es'</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="twfe_network.twfe_network.run_akm_corrected">
+<code class="highlight language-python">
+run_akm_corrected<span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_akm</span><span class="o">=</span><span class="p">{})</span> </code>
+</h3>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Run bias-corrected AKM estimator</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>user_akm</code></td>
+<td><code>dictionary</code></td>
+<td>
+<p>dictionary of parameters for bias-corrected AKM estimation
+Dictionary parameters:
+    ncore (int): number of cores to use
+    batch (int): batch size to send in parallel
+    ndraw_pii (int): number of draw to use in approximation for leverages
+    ndraw_tr (int): number of draws to use in approximation for traces
+    check (bool): whether to compute the non-approximated estimates as well
+    hetero (bool): whether to compute the heteroskedastic estimates
+    out (string): outputfile
+    con (string): computes the smallest eigen values, this is the filepath where these results are saved
+    logfile (string): log output to a logfile
+    levfile (string): file to load precomputed leverages
+    statsonly (bool): save data statistics only</p>
+</td>
+<td><code>{}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>akm_res (dictionary)</code></td>
+<td>
+<p>dictionary of results</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">run_akm_corrected</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_akm</span><span class="o">=</span><span class="p">{}):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Run bias-corrected AKM estimator</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        user_akm (dictionary): dictionary of parameters for bias-corrected AKM estimation</span>
+<span class="sd">            Dictionary parameters:</span>
+<span class="sd">                ncore (int): number of cores to use</span>
+<span class="sd">                batch (int): batch size to send in parallel</span>
+<span class="sd">                ndraw_pii (int): number of draw to use in approximation for leverages</span>
+<span class="sd">                ndraw_tr (int): number of draws to use in approximation for traces</span>
+<span class="sd">                check (bool): whether to compute the non-approximated estimates as well</span>
+<span class="sd">                hetero (bool): whether to compute the heteroskedastic estimates</span>
+<span class="sd">                out (string): outputfile</span>
+<span class="sd">                con (string): computes the smallest eigen values, this is the filepath where these results are saved</span>
+<span class="sd">                logfile (string): log output to a logfile</span>
+<span class="sd">                levfile (string): file to load precomputed leverages</span>
+<span class="sd">                statsonly (bool): save data statistics only</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        akm_res (dictionary): dictionary of results</span>
+<span class="sd">    '''</span>
+    <span class="n">akm_params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">update_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">default_akm</span><span class="p">,</span> <span class="n">user_akm</span><span class="p">)</span>
+
+    <span class="n">akm_params</span><span class="p">[</span><span class="s1">'data'</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="c1"># Make sure to use up-to-date data</span>
+
+    <span class="n">akm_res</span> <span class="o">=</span> <span class="n">feacf</span><span class="o">.</span><span class="n">FEsolver</span><span class="p">(</span><span class="n">akm_params</span><span class="p">)</span><span class="o">.</span><span class="n">res</span> <span class="c1"># feacf.main(akm_params) # FIXME corrected for new feacf file using class structure</span>
+
+    <span class="k">return</span> <span class="n">akm_res</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="twfe_network.twfe_network.run_cre">
+<code class="highlight language-python">
+run_cre<span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_cre</span><span class="o">=</span><span class="p">{})</span> </code>
+</h3>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Run CRE estimator</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>user_cre</code></td>
+<td><code>dictionary</code></td>
+<td>
+<p>dictionary of parameters for CRE estimation
+Dictionary parameters:
+    ncore (int): number of cores to use
+    ndraw_tr (int): number of draws to use in approximation for traces
+    ndp (int): number of draw to use in approximation for leverages
+    out (string): outputfile
+    posterior (bool): compute posterior variance
+    wobtw (bool): sets between variation to 0, pure RE</p>
+</td>
+<td><code>{}</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cre_res (dictionary)</code></td>
+<td>
+<p>dictionary of results</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">run_cre</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">user_cre</span><span class="o">=</span><span class="p">{}):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Run CRE estimator</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        user_cre (dictionary): dictionary of parameters for CRE estimation</span>
+<span class="sd">            Dictionary parameters:</span>
+<span class="sd">                ncore (int): number of cores to use</span>
+<span class="sd">                ndraw_tr (int): number of draws to use in approximation for traces</span>
+<span class="sd">                ndp (int): number of draw to use in approximation for leverages</span>
+<span class="sd">                out (string): outputfile</span>
+<span class="sd">                posterior (bool): compute posterior variance</span>
+<span class="sd">                wobtw (bool): sets between variation to 0, pure RE</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        cre_res (dictionary): dictionary of results</span>
+<span class="sd">    '''</span>
+    <span class="n">cre_params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">update_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">default_cre</span><span class="p">,</span> <span class="n">user_cre</span><span class="p">)</span>
+
+    <span class="n">cre_params</span><span class="p">[</span><span class="s1">'data'</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="c1"># Make sure to use up-to-date data</span>
+
+    <span class="n">cre_res</span> <span class="o">=</span> <span class="n">cre</span><span class="o">.</span><span class="n">main</span><span class="p">(</span><span class="n">cre_params</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">cre_res</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="twfe_network.twfe_network.sim_network">
+<code class="highlight language-python">
+sim_network<span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span> </code>
+</h3>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Simulate panel data corresponding to the calibrated model</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>params</code></td>
+<td><code>dictionary</code></td>
+<td>
+<p>dictionary linking parameters to values
+Dictionary parameters:
+    num_ind: number of workers
+    num_time: time length of panel
+    firm_size: max number of individuals per firm
+    nk: number of firm types
+    nl: number of worker types
+    alpha_sig: standard error of individual fixed effect (volatility of worker effects)
+    psi_sig: standard error of firm fixed effect (volatility of firm effects)
+    w_sig: standard error of residual in AKM wage equation (volatility of wage shocks)
+    csort: sorting effect
+    cnetw: network effect
+    csig: standard error of sorting/network effects
+    p_move: probability a worker moves firms in any period</p>
+</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data (Pandas DataFrame)</code></td>
+<td>
+<p>simulated network</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">sim_network</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Simulate panel data corresponding to the calibrated model</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        params (dictionary): dictionary linking parameters to values</span>
+<span class="sd">            Dictionary parameters:</span>
+<span class="sd">                num_ind: number of workers</span>
+<span class="sd">                num_time: time length of panel</span>
+<span class="sd">                firm_size: max number of individuals per firm</span>
+<span class="sd">                nk: number of firm types</span>
+<span class="sd">                nl: number of worker types</span>
+<span class="sd">                alpha_sig: standard error of individual fixed effect (volatility of worker effects)</span>
+<span class="sd">                psi_sig: standard error of firm fixed effect (volatility of firm effects)</span>
+<span class="sd">                w_sig: standard error of residual in AKM wage equation (volatility of wage shocks)</span>
+<span class="sd">                csort: sorting effect</span>
+<span class="sd">                cnetw: network effect</span>
+<span class="sd">                csig: standard error of sorting/network effects</span>
+<span class="sd">                p_move: probability a worker moves firms in any period</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        data (Pandas DataFrame): simulated network</span>
+<span class="sd">    '''</span>
+    <span class="c1"># Generate fixed effects</span>
+    <span class="n">psi</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">G</span><span class="p">,</span> <span class="n">H</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sim_network_gen_fe</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+    <span class="c1"># Extract parameters</span>
+    <span class="n">num_ind</span><span class="p">,</span> <span class="n">num_time</span><span class="p">,</span> <span class="n">firm_size</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">'num_ind'</span><span class="p">],</span> <span class="n">params</span><span class="p">[</span><span class="s1">'num_time'</span><span class="p">],</span> <span class="n">params</span><span class="p">[</span><span class="s1">'firm_size'</span><span class="p">]</span>
+    <span class="n">nk</span><span class="p">,</span> <span class="n">nl</span><span class="p">,</span> <span class="n">w_sig</span><span class="p">,</span> <span class="n">p_move</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">'nk'</span><span class="p">],</span> <span class="n">params</span><span class="p">[</span><span class="s1">'nl'</span><span class="p">],</span> <span class="n">params</span><span class="p">[</span><span class="s1">'w_sig'</span><span class="p">],</span> <span class="n">params</span><span class="p">[</span><span class="s1">'p_move'</span><span class="p">]</span>
+
+    <span class="c1"># Generate empty NumPy arrays</span>
+    <span class="n">network</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">num_ind</span><span class="p">,</span> <span class="n">num_time</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">spellcount</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">num_ind</span><span class="p">,</span> <span class="n">num_time</span><span class="p">))</span>
+
+    <span class="c1"># Random draws of worker types for all individuals in panel</span>
+    <span class="n">sim_worker_types</span> <span class="o">=</span> <span class="n">randint</span><span class="p">(</span><span class="n">low</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">high</span><span class="o">=</span><span class="n">nl</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">num_ind</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_ind</span><span class="p">):</span>
+        <span class="n">l</span> <span class="o">=</span> <span class="n">sim_worker_types</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="c1"># At time 1, we draw from H for initial firm</span>
+        <span class="n">network</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">choices</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">nk</span><span class="p">),</span> <span class="n">H</span><span class="p">[</span><span class="n">l</span><span class="p">,</span> <span class="p">:])[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_time</span><span class="p">):</span>
+            <span class="c1"># Hit moving shock</span>
+            <span class="k">if</span> <span class="n">rand</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">p_move</span><span class="p">:</span>
+                <span class="n">network</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">choices</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">nk</span><span class="p">),</span> <span class="n">G</span><span class="p">[</span><span class="n">l</span><span class="p">,</span> <span class="n">network</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span> <span class="o">-</span> <span class="mi">1</span><span class="p">],</span> <span class="p">:])[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">spellcount</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">spellcount</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">network</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">network</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+                <span class="n">spellcount</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span><span class="p">]</span> <span class="o">=</span> <span class="n">spellcount</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">t</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1"># Compiling IDs and timestamps</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_ind</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_time</span><span class="p">)),</span> <span class="p">(</span><span class="n">num_time</span> <span class="o">*</span> <span class="n">num_ind</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">ids</span> <span class="o">=</span> <span class="n">ids</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)[:,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">repmat</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">num_time</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">num_ind</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="n">num_time</span> <span class="o">*</span> <span class="n">num_ind</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">ts</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)[:,</span> <span class="mi">0</span><span class="p">]</span>
+
+    <span class="c1"># Compiling worker types</span>
+    <span class="n">types</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">sim_worker_types</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_time</span><span class="p">)),</span> <span class="p">(</span><span class="n">num_time</span> <span class="o">*</span> <span class="n">num_ind</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">alpha_data</span> <span class="o">=</span> <span class="n">alpha</span><span class="p">[</span><span class="n">types</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)][:,</span> <span class="mi">0</span><span class="p">]</span>
+
+    <span class="c1"># Compiling firm types</span>
+    <span class="n">psi_data</span> <span class="o">=</span> <span class="n">psi</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">network</span><span class="p">,</span> <span class="p">(</span><span class="n">num_time</span> <span class="o">*</span> <span class="n">num_ind</span><span class="p">,</span> <span class="mi">1</span><span class="p">))][:,</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="n">k_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">network</span><span class="p">,</span> <span class="p">(</span><span class="n">num_time</span> <span class="o">*</span> <span class="n">num_ind</span><span class="p">,</span> <span class="mi">1</span><span class="p">))[:,</span> <span class="mi">0</span><span class="p">]</span>
+
+    <span class="c1"># Compiling spell data</span>
+    <span class="n">spell_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">spellcount</span><span class="p">,</span> <span class="p">(</span><span class="n">num_time</span> <span class="o">*</span> <span class="n">num_ind</span><span class="p">,</span> <span class="mi">1</span><span class="p">))[:,</span> <span class="mi">0</span><span class="p">]</span>
+
+    <span class="c1"># Merging all columns into a dataframe</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s1">'wid'</span><span class="p">:</span> <span class="n">ids</span><span class="p">,</span> <span class="s1">'year'</span><span class="p">:</span> <span class="n">ts</span><span class="p">,</span> <span class="s1">'k'</span><span class="p">:</span> <span class="n">k_data</span><span class="p">,</span>
+                            <span class="s1">'alpha'</span><span class="p">:</span> <span class="n">alpha_data</span><span class="p">,</span> <span class="s1">'psi'</span><span class="p">:</span> <span class="n">psi_data</span><span class="p">,</span>
+                            <span class="s1">'spell'</span><span class="p">:</span> <span class="n">spell_data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)})</span>
+
+    <span class="c1"># Generate size of spells</span>
+    <span class="n">dspell</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">'wid'</span><span class="p">,</span> <span class="s1">'spell'</span><span class="p">,</span> <span class="s1">'k'</span><span class="p">])</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="o">.</span><span class="n">to_frame</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">'freq'</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+    <span class="c1"># Draw firm ids</span>
+    <span class="n">dspell</span><span class="p">[</span><span class="s1">'fid'</span><span class="p">]</span> <span class="o">=</span> <span class="n">dspell</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">'k'</span><span class="p">])[</span><span class="s1">'freq'</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_network_draw_fids</span><span class="p">,</span> <span class="o">*</span><span class="p">[</span><span class="n">num_time</span><span class="p">,</span> <span class="n">firm_size</span><span class="p">])</span>
+    <span class="c1"># Make firm ids contiguous (and have them start at 1)</span>
+    <span class="n">dspell</span><span class="p">[</span><span class="s1">'fid'</span><span class="p">]</span> <span class="o">=</span> <span class="n">dspell</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s1">'k'</span><span class="p">,</span> <span class="s1">'fid'</span><span class="p">])[</span><span class="s1">'freq'</span><span class="p">]</span><span class="o">.</span><span class="n">ngroup</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span>
+
+    <span class="c1"># Merge spells into panel</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">dspell</span><span class="p">,</span> <span class="n">on</span><span class="o">=</span><span class="p">[</span><span class="s1">'wid'</span><span class="p">,</span> <span class="s1">'spell'</span><span class="p">,</span> <span class="s1">'k'</span><span class="p">])</span>
+
+    <span class="n">data</span><span class="p">[</span><span class="s1">'move'</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">'fid'</span><span class="p">]</span> <span class="o">!=</span> <span class="n">data</span><span class="p">[</span><span class="s1">'fid'</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">'wid'</span><span class="p">]</span> <span class="o">==</span> <span class="n">data</span><span class="p">[</span><span class="s1">'wid'</span><span class="p">]</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+
+    <span class="c1"># Compute wages through the AKM formula</span>
+    <span class="n">data</span><span class="p">[</span><span class="s1">'comp'</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s1">'alpha'</span><span class="p">]</span> <span class="o">+</span> <span class="n">data</span><span class="p">[</span><span class="s1">'psi'</span><span class="p">]</span> <span class="o">+</span> <span class="n">w_sig</span> <span class="o">*</span> <span class="n">norm</span><span class="o">.</span><span class="n">rvs</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="n">num_ind</span> <span class="o">*</span> <span class="n">num_time</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">data</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="twfe_network.twfe_network.sim_network_draw_fids">
+<code class="highlight language-python">
+sim_network_draw_fids<span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">num_time</span><span class="p">,</span> <span class="n">firm_size</span><span class="p">)</span> </code>
+</h3>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Draw firm ids for individual, given data that is grouped by worker id, spell id, and firm type</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>freq</code></td>
+<td><code>NumPy array</code></td>
+<td>
+<p>size of groups (groups by worker id, spell id, and firm type)</p>
+</td>
+<td><em>required</em></td>
+</tr>
+<tr>
+<td><code>num_time</code></td>
+<td><code>int</code></td>
+<td>
+<p>time length of panel</p>
+</td>
+<td><em>required</em></td>
+</tr>
+<tr>
+<td><code>firm_size</code></td>
+<td><code>int</code></td>
+<td>
+<p>max number of individuals per firm</p>
+</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>(NumPy array)</code></td>
+<td>
+<p>random firms for each group</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">sim_network_draw_fids</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">num_time</span><span class="p">,</span> <span class="n">firm_size</span><span class="p">):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Draw firm ids for individual, given data that is grouped by worker id, spell id, and firm type</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        freq (NumPy array): size of groups (groups by worker id, spell id, and firm type)</span>
+<span class="sd">        num_time (int): time length of panel</span>
+<span class="sd">        firm_size (int): max number of individuals per firm</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (NumPy array): random firms for each group</span>
+<span class="sd">    '''</span>
+    <span class="n">max_int</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">freq</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">/</span> <span class="p">(</span><span class="n">firm_size</span> <span class="o">*</span> <span class="n">num_time</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">max_int</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">freq</span><span class="o">.</span><span class="n">count</span><span class="p">())</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="twfe_network.twfe_network.sim_network_gen_fe">
+<code class="highlight language-python">
+sim_network_gen_fe<span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">)</span> </code>
+</h3>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Generate fixed effects values for simulated panel data corresponding to the calibrated model</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>params</code></td>
+<td><code>dictionary</code></td>
+<td>
+<p>dictionary linking parameters to values
+Dictionary parameters:
+    num_ind: number of workers
+    num_time: time length of panel
+    firm_size: max number of individuals per firm
+    nk: number of firm types
+    nl: number of worker types
+    alpha_sig: standard error of individual fixed effect (volatility of worker effects)
+    psi_sig: standard error of firm fixed effect (volatility of firm effects)
+    w_sig: standard error of residual in AKM wage equation (volatility of wage shocks)
+    csort: sorting effect
+    cnetw: network effect
+    csig: standard error of sorting/network effects
+    p_move: probability a worker moves firms in any period</p>
+</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>psi (NumPy array)</code></td>
+<td>
+<p>array of firm fixed effects
+alpha (NumPy array): array of individual fixed effects
+G (NumPy array): transition matrices
+H (NumPy array): stationary distribution</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">sim_network_gen_fe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Generate fixed effects values for simulated panel data corresponding to the calibrated model</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        params (dictionary): dictionary linking parameters to values</span>
+<span class="sd">            Dictionary parameters:</span>
+<span class="sd">                num_ind: number of workers</span>
+<span class="sd">                num_time: time length of panel</span>
+<span class="sd">                firm_size: max number of individuals per firm</span>
+<span class="sd">                nk: number of firm types</span>
+<span class="sd">                nl: number of worker types</span>
+<span class="sd">                alpha_sig: standard error of individual fixed effect (volatility of worker effects)</span>
+<span class="sd">                psi_sig: standard error of firm fixed effect (volatility of firm effects)</span>
+<span class="sd">                w_sig: standard error of residual in AKM wage equation (volatility of wage shocks)</span>
+<span class="sd">                csort: sorting effect</span>
+<span class="sd">                cnetw: network effect</span>
+<span class="sd">                csig: standard error of sorting/network effects</span>
+<span class="sd">                p_move: probability a worker moves firms in any period</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        psi (NumPy array): array of firm fixed effects</span>
+<span class="sd">        alpha (NumPy array): array of individual fixed effects</span>
+<span class="sd">        G (NumPy array): transition matrices</span>
+<span class="sd">        H (NumPy array): stationary distribution</span>
+<span class="sd">    '''</span>
+    <span class="c1"># Extract parameters</span>
+    <span class="n">nk</span><span class="p">,</span> <span class="n">nl</span><span class="p">,</span> <span class="n">alpha_sig</span><span class="p">,</span> <span class="n">psi_sig</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">'nk'</span><span class="p">],</span> <span class="n">params</span><span class="p">[</span><span class="s1">'nl'</span><span class="p">],</span> <span class="n">params</span><span class="p">[</span><span class="s1">'alpha_sig'</span><span class="p">],</span> <span class="n">params</span><span class="p">[</span><span class="s1">'psi_sig'</span><span class="p">]</span>
+    <span class="n">csort</span><span class="p">,</span> <span class="n">cnetw</span><span class="p">,</span> <span class="n">csig</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="s1">'csort'</span><span class="p">],</span> <span class="n">params</span><span class="p">[</span><span class="s1">'cnetw'</span><span class="p">],</span> <span class="n">params</span><span class="p">[</span><span class="s1">'csig'</span><span class="p">]</span>
+
+    <span class="c1"># Draw fixed effects</span>
+    <span class="n">psi</span> <span class="o">=</span> <span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">nk</span><span class="p">,</span> <span class="n">nk</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">nk</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span> <span class="o">*</span> <span class="n">psi_sig</span>
+    <span class="n">alpha</span> <span class="o">=</span> <span class="n">norm</span><span class="o">.</span><span class="n">ppf</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">nl</span><span class="p">,</span> <span class="n">nl</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">nl</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span> <span class="o">*</span> <span class="n">alpha_sig</span>
+
+    <span class="c1"># Generate transition matrices</span>
+    <span class="n">G</span> <span class="o">=</span> <span class="n">norm</span><span class="o">.</span><span class="n">pdf</span><span class="p">((</span><span class="n">psi</span><span class="p">[</span><span class="n">ax</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">cnetw</span> <span class="o">*</span> <span class="n">psi</span><span class="p">[</span><span class="n">ax</span><span class="p">,</span> <span class="p">:,</span> <span class="n">ax</span><span class="p">]</span> <span class="o">-</span> <span class="n">csort</span> <span class="o">*</span> <span class="n">alpha</span><span class="p">[:,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">ax</span><span class="p">])</span> <span class="o">/</span> <span class="n">csig</span><span class="p">)</span>
+    <span class="n">G</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">G</span><span class="p">,</span> <span class="n">G</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">2</span><span class="p">)[:,</span> <span class="p">:,</span> <span class="n">ax</span><span class="p">])</span>
+
+    <span class="c1"># Generate empty stationary distributions</span>
+    <span class="n">H</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">nl</span><span class="p">,</span> <span class="n">nk</span><span class="p">))</span> <span class="o">/</span> <span class="n">nl</span>
+
+    <span class="c1"># Solve stationary distributions</span>
+    <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">nl</span><span class="p">):</span>
+        <span class="c1"># Solve eigenvectors</span>
+        <span class="c1"># Source: https://stackoverflow.com/questions/31791728/python-code-explanation-for-stationary-distribution-of-a-markov-chain</span>
+        <span class="n">S</span><span class="p">,</span> <span class="n">U</span> <span class="o">=</span> <span class="n">eig</span><span class="p">(</span><span class="n">G</span><span class="p">[</span><span class="n">l</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        <span class="n">stationary</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">U</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">S</span><span class="o">-</span><span class="mf">1.</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-8</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]]</span><span class="o">.</span><span class="n">flat</span><span class="p">)</span>
+        <span class="n">stationary</span> <span class="o">=</span> <span class="n">stationary</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">stationary</span><span class="p">)</span>
+        <span class="n">H</span><span class="p">[</span><span class="n">l</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">stationary</span>
+
+    <span class="k">return</span> <span class="n">psi</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">G</span><span class="p">,</span> <span class="n">H</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="twfe_network.twfe_network.update_cols">
+<code class="highlight language-python">
+update_cols<span class="p">(</span><span class="bp">self</span><span class="p">)</span> </code>
+</h3>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Rename columns and keep only relevant columns</p>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code></code></td>
+<td>
+<p>Nothing</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">update_cols</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Rename columns and keep only relevant columns</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        Nothing</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Nothing</span>
+<span class="sd">    '''</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">==</span> <span class="s1">'long'</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="s1">'wid'</span><span class="p">]:</span> <span class="s1">'wid'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="s1">'comp'</span><span class="p">]:</span> <span class="s1">'comp'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="s1">'fid'</span><span class="p">]:</span> <span class="s1">'fid'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="s1">'year'</span><span class="p">]:</span> <span class="s1">'year'</span><span class="p">},</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[[</span><span class="s1">'wid'</span><span class="p">,</span> <span class="s1">'comp'</span><span class="p">,</span> <span class="s1">'fid'</span><span class="p">,</span> <span class="s1">'year'</span><span class="p">]]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'wid'</span><span class="p">:</span> <span class="s1">'wid'</span><span class="p">,</span> <span class="s1">'comp'</span><span class="p">:</span> <span class="s1">'comp'</span><span class="p">,</span> <span class="s1">'fid'</span><span class="p">:</span> <span class="s1">'fid'</span><span class="p">,</span> <span class="s1">'year'</span><span class="p">:</span> <span class="s1">'year'</span><span class="p">}</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatting</span> <span class="o">==</span> <span class="s1">'es'</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="s1">'wid'</span><span class="p">]:</span> <span class="s1">'wid'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="s1">'y1'</span><span class="p">]:</span> <span class="s1">'y1'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="s1">'y2'</span><span class="p">]:</span> <span class="s1">'y2'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="s1">'f1i'</span><span class="p">]:</span> <span class="s1">'f1i'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="s1">'f2i'</span><span class="p">]:</span> <span class="s1">'f2i'</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span><span class="p">[</span><span class="s1">'m'</span><span class="p">]:</span> <span class="s1">'m'</span><span class="p">},</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[[</span><span class="s1">'wid'</span><span class="p">,</span> <span class="s1">'y1'</span><span class="p">,</span> <span class="s1">'y2'</span><span class="p">,</span> <span class="s1">'f1i'</span><span class="p">,</span> <span class="s1">'f2i'</span><span class="p">,</span> <span class="s1">'m'</span><span class="p">]]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">col_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'wid'</span><span class="p">:</span> <span class="s1">'wid'</span><span class="p">,</span> <span class="s1">'y1'</span><span class="p">:</span> <span class="s1">'y1'</span><span class="p">,</span> <span class="s1">'y2'</span><span class="p">:</span> <span class="s1">'y2'</span><span class="p">,</span> <span class="s1">'f1i'</span><span class="p">:</span> <span class="s1">'f1i'</span><span class="p">,</span> <span class="s1">'f2i'</span><span class="p">:</span> <span class="s1">'f2i'</span><span class="p">,</span> <span class="s1">'m'</span><span class="p">:</span> <span class="s1">'m'</span><span class="p">}</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-method">
+<h3 class="doc doc-heading" id="twfe_network.twfe_network.update_dict">
+<code class="highlight language-python">
+update_dict<span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">default_params</span><span class="p">,</span> <span class="n">user_params</span><span class="p">)</span> </code>
+</h3>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Replace entries in default_params with values in user_params. This function allows user_params to include only a subset of the required parameters in the dictionary</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>default_params</code></td>
+<td><code>dict</code></td>
+<td>
+<p>default parameter values</p>
+</td>
+<td><em>required</em></td>
+</tr>
+<tr>
+<td><code>user_params</code></td>
+<td><code>dict</code></td>
+<td>
+<p>user selected parameter values</p>
+</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>params (dict)</code></td>
+<td>
+<p>default_params updated with parameter values in user_params</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">update_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">default_params</span><span class="p">,</span> <span class="n">user_params</span><span class="p">):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Replace entries in default_params with values in user_params. This function allows user_params to include only a subset of the required parameters in the dictionary</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        default_params (dict): default parameter values</span>
+<span class="sd">        user_params (dict): user selected parameter values</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        params (dict): default_params updated with parameter values in user_params</span>
+<span class="sd">    '''</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">default_params</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+    <span class="n">params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">user_params</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">params</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="doc doc-object doc-function">
+<h2 class="doc doc-heading" id="twfe_network.twfe_monte_carlo">
+<code class="highlight language-python">
+twfe_monte_carlo<span class="p">(</span><span class="n">N</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">ncore</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">data_params</span><span class="o">=</span><span class="p">{},</span> <span class="n">akm_params</span><span class="o">=</span><span class="p">{},</span> <span class="n">cre_params</span><span class="o">=</span><span class="p">{},</span> <span class="n">cdf_resolution</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">grouping</span><span class="o">=</span><span class="s1">'quantile_all'</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">KMeans_params</span><span class="o">=</span><span class="p">{})</span> </code>
+</h2>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>N</code></td>
+<td><code>int</code></td>
+<td>
+<p>number of simulations</p>
+</td>
+<td><code>500</code></td>
+</tr>
+<tr>
+<td><code>ncore</code></td>
+<td><code>int</code></td>
+<td>
+<p>how many cores to use</p>
+</td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td><code>Other</code></td>
+<td><code>parameters</code></td>
+<td>
+<p>see twfe_monte_carlo_interior()</p>
+</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>true_psi_var (NumPy array)</code></td>
+<td>
+<p>true simulated sample variance of psi
+true_psi_alpha_cov (NumPy array): true simulated sample covariance of psi and alpha
+akm_psi_var (NumPy array): AKM estimate of variance of psi
+akm_psi_alpha_cov (NumPy array): AKM estimate of covariance of psi and alpha
+akm_corr_psi_var (NumPy array): bias-corrected AKM estimate of variance of psi
+akm_corr_psi_alpha_cov (NumPy array): bias-corrected AKM estimate of covariance of psi and alpha
+cre_psi_var (NumPy array): CRE estimate of variance of psi
+cre_psi_alpha_cov (NumPy array): CRE estimate of covariance of psi and alpha</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">twfe_monte_carlo</span><span class="p">(</span><span class="n">N</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">ncore</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">data_params</span><span class="o">=</span><span class="p">{},</span> <span class="n">akm_params</span><span class="o">=</span><span class="p">{},</span> <span class="n">cre_params</span><span class="o">=</span><span class="p">{},</span> <span class="n">cdf_resolution</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">grouping</span><span class="o">=</span><span class="s1">'quantile_all'</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">KMeans_params</span><span class="o">=</span><span class="p">{}):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        N (int): number of simulations</span>
+<span class="sd">        ncore (int): how many cores to use</span>
+<span class="sd">        Other parameters: see twfe_monte_carlo_interior()</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        true_psi_var (NumPy array): true simulated sample variance of psi</span>
+<span class="sd">        true_psi_alpha_cov (NumPy array): true simulated sample covariance of psi and alpha</span>
+<span class="sd">        akm_psi_var (NumPy array): AKM estimate of variance of psi</span>
+<span class="sd">        akm_psi_alpha_cov (NumPy array): AKM estimate of covariance of psi and alpha</span>
+<span class="sd">        akm_corr_psi_var (NumPy array): bias-corrected AKM estimate of variance of psi</span>
+<span class="sd">        akm_corr_psi_alpha_cov (NumPy array): bias-corrected AKM estimate of covariance of psi and alpha</span>
+<span class="sd">        cre_psi_var (NumPy array): CRE estimate of variance of psi</span>
+<span class="sd">        cre_psi_alpha_cov (NumPy array): CRE estimate of covariance of psi and alpha</span>
+<span class="sd">    '''</span>
+    <span class="c1"># Initialize NumPy arrays to store results</span>
+    <span class="n">true_psi_var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+    <span class="n">true_psi_alpha_cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+    <span class="n">akm_psi_var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+    <span class="n">akm_psi_alpha_cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+    <span class="n">akm_corr_psi_var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+    <span class="n">akm_corr_psi_alpha_cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+    <span class="n">cre_psi_var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+    <span class="n">cre_psi_alpha_cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+
+    <span class="c1"># Use multi-processing</span>
+    <span class="k">if</span> <span class="n">ncore</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">V</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># Simulate networks</span>
+        <span class="k">with</span> <span class="n">Pool</span><span class="p">(</span><span class="n">processes</span><span class="o">=</span><span class="n">ncore</span><span class="p">)</span> <span class="k">as</span> <span class="n">pool</span><span class="p">:</span>
+            <span class="n">V</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">starmap</span><span class="p">(</span><span class="n">twfe_monte_carlo_interior</span><span class="p">,</span> <span class="p">[[</span><span class="n">data_params</span><span class="p">,</span> <span class="n">akm_params</span><span class="p">,</span> <span class="n">cre_params</span><span class="p">,</span> <span class="n">cdf_resolution</span><span class="p">,</span> <span class="n">grouping</span><span class="p">,</span> <span class="n">year</span><span class="p">,</span> <span class="n">KMeans_params</span><span class="p">]</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">)])</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">res</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">V</span><span class="p">):</span>
+            <span class="n">true_psi_var</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">true_psi_alpha_cov</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">akm_psi_var</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">akm_psi_alpha_cov</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">akm_corr_psi_var</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">akm_corr_psi_alpha_cov</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">cre_psi_var</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">cre_psi_alpha_cov</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">res</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+            <span class="c1"># Simulate a network</span>
+            <span class="n">true_psi_var</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">true_psi_alpha_cov</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">akm_psi_var</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">akm_psi_alpha_cov</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">akm_corr_psi_var</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">akm_corr_psi_alpha_cov</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">cre_psi_var</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">cre_psi_alpha_cov</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">twfe_monte_carlo_interior</span><span class="p">(</span><span class="n">data_params</span><span class="o">=</span><span class="n">data_params</span><span class="p">,</span> <span class="n">akm_params</span><span class="o">=</span><span class="n">akm_params</span><span class="p">,</span> <span class="n">cre_params</span><span class="o">=</span><span class="n">cre_params</span><span class="p">,</span> <span class="n">cdf_resolution</span><span class="o">=</span><span class="n">cdf_resolution</span><span class="p">,</span> <span class="n">grouping</span><span class="o">=</span><span class="n">grouping</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="n">year</span><span class="p">,</span> <span class="n">KMeans_params</span><span class="o">=</span><span class="n">KMeans_params</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">true_psi_var</span><span class="p">,</span> <span class="n">true_psi_alpha_cov</span><span class="p">,</span> <span class="n">akm_psi_var</span><span class="p">,</span> <span class="n">akm_psi_alpha_cov</span><span class="p">,</span> <span class="n">akm_corr_psi_var</span><span class="p">,</span> <span class="n">akm_corr_psi_alpha_cov</span><span class="p">,</span> <span class="n">cre_psi_var</span><span class="p">,</span> <span class="n">cre_psi_alpha_cov</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+<div class="doc doc-object doc-function">
+<h2 class="doc doc-heading" id="twfe_network.twfe_monte_carlo_interior">
+<code class="highlight language-python">
+twfe_monte_carlo_interior<span class="p">(</span><span class="n">data_params</span><span class="o">=</span><span class="p">{},</span> <span class="n">akm_params</span><span class="o">=</span><span class="p">{},</span> <span class="n">cre_params</span><span class="o">=</span><span class="p">{},</span> <span class="n">cdf_resolution</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">grouping</span><span class="o">=</span><span class="s1">'quantile_all'</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">KMeans_params</span><span class="o">=</span><span class="p">{})</span> </code>
+</h2>
+<div class="doc doc-contents">
+<p>!!! purpose
+    Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to twfe_monte_carlo</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data_params</code></td>
+<td><code>dictionary</code></td>
+<td>
+<p>parameters for simulated data
+Dictionary parameters:
+    num_ind: number of workers
+    num_time: time length of panel
+    firm_size: max number of individuals per firm
+    nk: number of firm types
+    nl: number of worker types
+    alpha_sig: standard error of individual fixed effect (volatility of worker effects)
+    psi_sig: standard error of firm fixed effect (volatility of firm effects)
+    w_sig: standard error of residual in AKM wage equation (volatility of wage shocks)
+    csort: sorting effect
+    cnetw: network effect
+    csig: standard error of sorting/network effects
+    p_move: probability a worker moves firms in any period</p>
+</td>
+<td><code>{}</code></td>
+</tr>
+<tr>
+<td><code>akm_params</code></td>
+<td><code>dictionary</code></td>
+<td>
+<p>dictionary of parameters for bias-corrected AKM estimation
+Dictionary parameters:
+    ncore (int): number of cores to use
+    batch (int): batch size to send in parallel
+    ndraw_pii (int): number of draw to use in approximation for leverages
+    ndraw_tr (int): number of draws to use in approximation for traces
+    check (bool): whether to compute the non-approximated estimates as well
+    hetero (bool): whether to compute the heteroskedastic estimates
+    out (string): outputfile
+    con (string): computes the smallest eigen values, this is the filepath where these results are saved
+    logfile (string): log output to a logfile
+    levfile (string): file to load precomputed leverages
+    statsonly (bool): save data statistics only</p>
+</td>
+<td><code>{}</code></td>
+</tr>
+<tr>
+<td><code>cre_params</code></td>
+<td><code>dictionary</code></td>
+<td>
+<p>dictionary of parameters for CRE estimation
+Dictionary parameters:
+    ncore (int): number of cores to use
+    ndraw_tr (int): number of draws to use in approximation for traces
+    ndp (int): number of draw to use in approximation for leverages
+    out (string): outputfile
+    posterior (bool): compute posterior variance
+    wobtw (bool): sets between variation to 0, pure RE</p>
+</td>
+<td><code>{}</code></td>
+</tr>
+<tr>
+<td><code>Used</code></td>
+<td><code>for clustering</code></td>
+<td>
+<p>cdf_resolution (int): how many values to use to approximate the cdf
+grouping (string): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
+year (int): if None, uses entire dataset; if int, gives year of data to consider
+KMeans_params (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified</p>
+</td>
+<td><em>required</em></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>true_psi_var (float)</code></td>
+<td>
+<p>true simulated sample variance of psi
+true_psi_alpha_cov (float): true simulated sample covariance of psi and alpha
+akm_psi_var (float): AKM estimate of variance of psi
+akm_psi_alpha_cov (float): AKM estimate of covariance of psi and alpha
+akm_corr_psi_var (float): bias-corrected AKM estimate of variance of psi
+akm_corr_psi_alpha_cov (float): bias-corrected AKM estimate of covariance of psi and alpha
+cre_psi_var (float): CRE estimate of variance of psi
+cre_psi_alpha_cov (float): CRE estimate of covariance of psi and alpha</p>
+</td>
+</tr>
+</tbody>
+</table>
+<details class="quote">
+<summary>Source code in <code>pytwoway/twfe_network.py</code></summary>
+<div class="highlight">
+<pre><span></span><code><span class="k">def</span> <span class="nf">twfe_monte_carlo_interior</span><span class="p">(</span><span class="n">data_params</span><span class="o">=</span><span class="p">{},</span> <span class="n">akm_params</span><span class="o">=</span><span class="p">{},</span> <span class="n">cre_params</span><span class="o">=</span><span class="p">{},</span> <span class="n">cdf_resolution</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">grouping</span><span class="o">=</span><span class="s1">'quantile_all'</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">KMeans_params</span><span class="o">=</span><span class="p">{}):</span>
+    <span class="sd">'''</span>
+<span class="sd">    Purpose:</span>
+<span class="sd">        Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to twfe_monte_carlo</span>
+
+<span class="sd">    Arguments:</span>
+<span class="sd">        data_params (dictionary): parameters for simulated data</span>
+<span class="sd">            Dictionary parameters:</span>
+<span class="sd">                num_ind: number of workers</span>
+<span class="sd">                num_time: time length of panel</span>
+<span class="sd">                firm_size: max number of individuals per firm</span>
+<span class="sd">                nk: number of firm types</span>
+<span class="sd">                nl: number of worker types</span>
+<span class="sd">                alpha_sig: standard error of individual fixed effect (volatility of worker effects)</span>
+<span class="sd">                psi_sig: standard error of firm fixed effect (volatility of firm effects)</span>
+<span class="sd">                w_sig: standard error of residual in AKM wage equation (volatility of wage shocks)</span>
+<span class="sd">                csort: sorting effect</span>
+<span class="sd">                cnetw: network effect</span>
+<span class="sd">                csig: standard error of sorting/network effects</span>
+<span class="sd">                p_move: probability a worker moves firms in any period</span>
+<span class="sd">        akm_params (dictionary): dictionary of parameters for bias-corrected AKM estimation</span>
+<span class="sd">            Dictionary parameters:</span>
+<span class="sd">                ncore (int): number of cores to use</span>
+<span class="sd">                batch (int): batch size to send in parallel</span>
+<span class="sd">                ndraw_pii (int): number of draw to use in approximation for leverages</span>
+<span class="sd">                ndraw_tr (int): number of draws to use in approximation for traces</span>
+<span class="sd">                check (bool): whether to compute the non-approximated estimates as well</span>
+<span class="sd">                hetero (bool): whether to compute the heteroskedastic estimates</span>
+<span class="sd">                out (string): outputfile</span>
+<span class="sd">                con (string): computes the smallest eigen values, this is the filepath where these results are saved</span>
+<span class="sd">                logfile (string): log output to a logfile</span>
+<span class="sd">                levfile (string): file to load precomputed leverages</span>
+<span class="sd">                statsonly (bool): save data statistics only</span>
+<span class="sd">        cre_params (dictionary): dictionary of parameters for CRE estimation</span>
+<span class="sd">            Dictionary parameters:</span>
+<span class="sd">                ncore (int): number of cores to use</span>
+<span class="sd">                ndraw_tr (int): number of draws to use in approximation for traces</span>
+<span class="sd">                ndp (int): number of draw to use in approximation for leverages</span>
+<span class="sd">                out (string): outputfile</span>
+<span class="sd">                posterior (bool): compute posterior variance</span>
+<span class="sd">                wobtw (bool): sets between variation to 0, pure RE</span>
+<span class="sd">        Used for clustering:</span>
+<span class="sd">            cdf_resolution (int): how many values to use to approximate the cdf</span>
+<span class="sd">            grouping (string): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)</span>
+<span class="sd">            year (int): if None, uses entire dataset; if int, gives year of data to consider</span>
+<span class="sd">            KMeans_params (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        true_psi_var (float): true simulated sample variance of psi</span>
+<span class="sd">        true_psi_alpha_cov (float): true simulated sample covariance of psi and alpha</span>
+<span class="sd">        akm_psi_var (float): AKM estimate of variance of psi</span>
+<span class="sd">        akm_psi_alpha_cov (float): AKM estimate of covariance of psi and alpha</span>
+<span class="sd">        akm_corr_psi_var (float): bias-corrected AKM estimate of variance of psi</span>
+<span class="sd">        akm_corr_psi_alpha_cov (float): bias-corrected AKM estimate of covariance of psi and alpha</span>
+<span class="sd">        cre_psi_var (float): CRE estimate of variance of psi</span>
+<span class="sd">        cre_psi_alpha_cov (float): CRE estimate of covariance of psi and alpha</span>
+<span class="sd">    '''</span>
+    <span class="c1"># Simulate network</span>
+    <span class="n">nw</span> <span class="o">=</span> <span class="n">twfe_network</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data_params</span><span class="p">)</span>
+    <span class="c1"># Compute true sample variance of psi and covariance of psi and alpha</span>
+    <span class="n">psi_var</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">var</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'psi'</span><span class="p">])</span>
+    <span class="n">psi_alpha_cov</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cov</span><span class="p">(</span><span class="n">nw</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'psi'</span><span class="p">],</span> <span class="n">nw</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s1">'alpha'</span><span class="p">])[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="c1"># Convert into event study</span>
+    <span class="n">nw</span><span class="o">.</span><span class="n">refactor_es</span><span class="p">()</span>
+    <span class="c1"># Estimate AKM model</span>
+    <span class="n">akm_res</span> <span class="o">=</span> <span class="n">nw</span><span class="o">.</span><span class="n">run_akm_corrected</span><span class="p">(</span><span class="n">user_akm</span><span class="o">=</span><span class="n">akm_params</span><span class="p">)</span>
+    <span class="c1"># Cluster for CRE model</span>
+    <span class="n">nw</span><span class="o">.</span><span class="n">cluster</span><span class="p">(</span><span class="n">cdf_resolution</span><span class="o">=</span><span class="n">cdf_resolution</span><span class="p">,</span> <span class="n">grouping</span><span class="o">=</span><span class="n">grouping</span><span class="p">,</span> <span class="n">year</span><span class="o">=</span><span class="n">year</span><span class="p">,</span> <span class="n">user_KMeans</span><span class="o">=</span><span class="n">KMeans_params</span><span class="p">)</span>
+    <span class="c1"># Estimate CRE model</span>
+    <span class="n">cre_res</span> <span class="o">=</span> <span class="n">nw</span><span class="o">.</span><span class="n">run_cre</span><span class="p">(</span><span class="n">user_cre</span><span class="o">=</span><span class="n">cre_params</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">psi_var</span><span class="p">,</span> <span class="n">psi_alpha_cov</span><span class="p">,</span> \
+            <span class="n">akm_res</span><span class="p">[</span><span class="s1">'var_fe'</span><span class="p">],</span> <span class="n">akm_res</span><span class="p">[</span><span class="s1">'cov_fe'</span><span class="p">],</span> \
+            <span class="n">akm_res</span><span class="p">[</span><span class="s1">'var_ho'</span><span class="p">],</span> <span class="n">akm_res</span><span class="p">[</span><span class="s1">'cov_ho'</span><span class="p">],</span> \
+            <span class="n">cre_res</span><span class="p">[</span><span class="s1">'var_wt'</span><span class="p">]</span> <span class="o">+</span> <span class="n">cre_res</span><span class="p">[</span><span class="s1">'var_bw'</span><span class="p">],</span> <span class="n">cre_res</span><span class="p">[</span><span class="s1">'cov_wt'</span><span class="p">]</span> <span class="o">+</span> <span class="n">cre_res</span><span class="p">[</span><span class="s1">'cov_bw'</span><span class="p">]</span>
+</code></pre>
+</div>
+</details>
+</div>
+</div>
+</div>
+</div>
+</div></div>
+</div>
+</div>
+<footer class="col-md-12">
+<hr/>
+<p>Documentation built with <a href="https://www.mkdocs.org/">MkDocs</a>.</p>
+</footer>
+<script>
+            var base_url = "..",
+                shortcuts = {"help": 191, "next": 78, "previous": 80, "search": 83};
+        </script>
+<script defer="" src="../js/base.js"></script>
+<script defer="" src="../search/main.js"></script>
+<div aria-hidden="true" aria-labelledby="searchModalLabel" class="modal" id="mkdocs_search_modal" role="dialog" tabindex="-1">
+<div class="modal-dialog modal-lg">
+<div class="modal-content">
+<div class="modal-header">
+<h4 class="modal-title" id="searchModalLabel">Search</h4>
+<button class="close" data-dismiss="modal" type="button"><span aria-hidden="true">×</span><span class="sr-only">Close</span></button>
+</div>
+<div class="modal-body">
+<p>
+                    From here you can search these documents. Enter
+                    your search terms below.
+                </p>
+<form>
+<div class="form-group">
+<input class="form-control" id="mkdocs-search-query" placeholder="Search..." title="Type search term here" type="search"/>
+</div>
+</form>
+<div id="mkdocs-search-results"></div>
+</div>
+<div class="modal-footer">
+</div>
+</div>
+</div>
+</div><div aria-hidden="true" aria-labelledby="keyboardModalLabel" class="modal" id="mkdocs_keyboard_modal" role="dialog" tabindex="-1">
+<div class="modal-dialog">
+<div class="modal-content">
+<div class="modal-header">
+<h4 class="modal-title" id="keyboardModalLabel">Keyboard Shortcuts</h4>
+<button class="close" data-dismiss="modal" type="button"><span aria-hidden="true">×</span><span class="sr-only">Close</span></button>
+</div>
+<div class="modal-body">
+<table class="table">
+<thead>
+<tr>
+<th style="width: 20%;">Keys</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="help shortcut"><kbd>?</kbd></td>
+<td>Open this help</td>
+</tr>
+<tr>
+<td class="next shortcut"><kbd>n</kbd></td>
+<td>Next page</td>
+</tr>
+<tr>
+<td class="prev shortcut"><kbd>p</kbd></td>
+<td>Previous page</td>
+</tr>
+<tr>
+<td class="search shortcut"><kbd>s</kbd></td>
+<td>Search</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="modal-footer">
+</div>
+</div>
+</div>
+</div>
+</body>
+</html>
