@@ -1,0 +1,15 @@
+name: twfe-env
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python   # or 2.7 if you are feeling nostalgic
+  - numpy
+  - matplotlib
+  - pandas
+  - seaborn
+  - pylint
+  - pyamg
+  - pyreadr
+  - tqdm
+  - bioconda::snakemake-minimal
