@@ -12,4 +12,13 @@ dependencies:
   - pyamg
   - pyreadr
   - tqdm
-  - bioconda::snakemake-minimal
+  - networkx
+  - scikit-learn
+  - mkdocs-material
+  - pip
+  - pip:
+      - mkdocstrings
+      - mkdocs-material-extensions
+
+# conda env create --file environment.yml
+# conda env remove --name twfe-env
