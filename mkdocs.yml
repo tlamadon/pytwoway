@@ -8,6 +8,11 @@ plugins:
   - search
   - mkdocstrings
 
+markdown_extensions:
+  - admonition
+  - pymdownx.arithmatex
+  - pymdownx.mark
+
 nav:
   - Home: index.md
   - twfe_network: twfe_network-reference.md
