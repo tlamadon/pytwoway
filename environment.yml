@@ -19,6 +19,9 @@ dependencies:
   - pip:
       - mkdocstrings
       - mkdocs-material-extensions
+      # - mknotebooks
+      # - Pygments # Required for mknotebooks syntax highlighting
+      - mkdocs-jupyter
 
 # conda env create --file environment.yml
 # conda env remove --name twfe-env

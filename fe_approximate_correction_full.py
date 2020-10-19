@@ -29,7 +29,7 @@ try:
 except ImportError:
     trange = range
 
-# def pipe_qcov(df, e1, e2): @ FIXME I moved this from above, also this is used only in commented out code
+# def pipe_qcov(df, e1, e2): # FIXME I moved this from above, also this is used only in commented out code
 #     v1 = df.eval(e1)
 #     v2 = df.eval(e2)
 #     return np.cov(v1, v2)[0][1]
@@ -67,7 +67,7 @@ class FEsolver:
                 hetero (bool): if True, compute heteroskedastic correction
                 statsonly (bool): if True, return only basic statistics
                 out (string): if statsonly is True, this is the file where the statistics will be saved
-                batch (): #FIXME I don't know what this is
+                batch (): @ FIXME I don't know what this is
 
         Returns:
             Object of type FEsolver
@@ -208,7 +208,7 @@ class FEsolver:
 
         # Combine the 2 data-sets
         self.adata = pd.concat([sdata[['wid', 'f1i', 'y1']].assign(cs=1, m=0), jdata[['wid', 'f1i', 'y1']].assign(cs=1, m=1), jdata[['wid', 'f2i', 'y2']].rename(columns={'f2i': 'f1i', 'y2': 'y1'}).assign(cs=0, m=1)])
-        self.adata = self.adata.reset_index(drop=True) @ FIXME changed from set_index(pd.Series(range(len(self.adata))))
+        self.adata = self.adata.reset_index(drop=True) # FIXME changed from set_index(pd.Series(range(len(self.adata))))
         self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1
 
     def init_prepped_adata(self):
@@ -242,14 +242,14 @@ class FEsolver:
         self.J = J
         W = csc_matrix((np.ones(nn), (self.adata.index, self.adata.wid - 1)), shape=(nn, nw)) # Workers
         self.W = W
-        # Dw = diags((W.T * W).diagonal()) @ FIXME changed from .transpose() to .T ALSO commented this out since it's not used
-        Dwinv = diags(1.0 / ((W.T * W).diagonal())) @ FIXME changed from .transpose() to .T
+        # Dw = diags((W.T * W).diagonal()) # FIXME changed from .transpose() to .T ALSO commented this out since it's not used
+        Dwinv = diags(1.0 / ((W.T * W).diagonal())) # FIXME changed from .transpose() to .T
         self.Dwinv = Dwinv
 
         logger.info('Prepare linear solver')
 
         # Finally create M
-        M = J.T * J - J.T * W * Dwinv * W.T * J @ FIXME changed from .transpose() to .T
+        M = J.T * J - J.T * W * Dwinv * W.T * J # FIXME changed from .transpose() to .T
         self.M = M
         self.ml = pyamg.ruge_stuben_solver(M)
 
@@ -258,8 +258,8 @@ class FEsolver:
 
         # Create cross-section matrices
         # cs == 1 ==> looking at y1 for movers (cs = cross section)
-        mdata = self.adata[self.adata['cs'] == 1] @ FIXME changed from adata.query('cs==1') (I ran %timeit and slicing is faster)
-        mdata = mdata.reset_index(drop=True) @ FIXME changed from set_index(pd.Series(range(len(mdata))))
+        mdata = self.adata[self.adata['cs'] == 1] # FIXME changed from adata.query('cs==1') (I ran %timeit and slicing is faster)
+        mdata = mdata.reset_index(drop=True) # FIXME changed from set_index(pd.Series(range(len(mdata))))
 
         nnq = len(mdata) # Number of observations
         self.nnq = nnq
@@ -271,7 +271,7 @@ class FEsolver:
         # Save time variable
         self.last_invert_time = 0
 
-    def weighted_quantile(self, values, quantiles, sample_weight=None, values_sorted=False, old_style=False): @ FIXME was formerly a function outside the class
+    def weighted_quantile(self, values, quantiles, sample_weight=None, values_sorted=False, old_style=False): # FIXME was formerly a function outside the class
         '''
         Purpose:
             Very close to numpy.percentile, but supports weights.
@@ -310,7 +310,7 @@ class FEsolver:
 
         return np.interp(quantiles, weighted_quantiles, values)
 
-    def weighted_var(self, v, w): @ FIXME was formerly a function outside the class
+    def weighted_var(self, v, w): # FIXME was formerly a function outside the class
         '''
         Purpose:
             Compute weighted variance @ FIXME I don't know what this function really does
@@ -342,7 +342,7 @@ class FEsolver:
         self.res['mover_quantiles'] = self.weighted_quantile(fdata['m'], np.linspace(0, 1, 11), fdata['wid']).tolist()
         self.res['size_quantiles'] = self.weighted_quantile(fdata['wid'], np.linspace(0, 1, 11), fdata['wid']).tolist()
         self.res['between_firm_var'] = self.weighted_var(fdata['y1'], fdata['wid'])
-        self.res['var_y'] = self.adata[self.adata['cs'] == 1]['y1'].var() @ FIXME changed from adata.query('cs==1') (I ran %timeit and slicing is faster)
+        self.res['var_y'] = self.adata[self.adata['cs'] == 1]['y1'].var() # FIXME changed from adata.query('cs==1') (I ran %timeit and slicing is faster)
 
         # extract woodcock moments using sdata and jdata
         # get averages by firms for stayers
@@ -372,7 +372,7 @@ class FEsolver:
         logger.info('saved results to {}'.format(self.params['out']))
         logger.info('--statsonly was passed as argument, so we skip all estimation.')
         logger.info('------ DONE -------')
-        # sys.exit() @ FIXME I don't think this is necessary (does it even work?) since this is now a class object
+        # sys.exit() # FIXME I don't think this is necessary (does it even work?) since this is now a class object
 
     def create_fe_solver(self):
         '''
@@ -388,7 +388,7 @@ class FEsolver:
         self.Y = self.adata.y1
 
         # try to pickle the object to see its size
-        # self.save('tmp.pkl') @ FIXME should we delete these 2 lines?
+        # self.save('tmp.pkl') # FIXME should we delete these 2 lines?
 
         logger.info('Extract firm effects')
 
@@ -645,8 +645,8 @@ class FEsolver:
             J_transpose_V (CSC Matrix): firms * v
             W_transpose_V (CSC Matrix): workers * v
         '''
-        # J_transpose_V = self.J.T * v @ FIXME changed from .transpose() to .T
-        # W_transpose_V = self.W.T * v @ FIXME changed from .transpose() to .T
+        # J_transpose_V = self.J.T * v # FIXME changed from .transpose() to .T
+        # W_transpose_V = self.W.T * v # FIXME changed from .transpose() to .T
 
         return self.J.T * v, self.W.T * v # J_transpose_V, W_transpose_V
 
@@ -668,14 +668,14 @@ class FEsolver:
         # psi_out = inter1 - inter2
 
         start = timer()
-        psi_out = self.ml.solve(psi - self.J.T * (self.W * (self.Dwinv * alpha)), tol=1e-10) @ FIXME changed from .transpose() to .T
+        psi_out = self.ml.solve(psi - self.J.T * (self.W * (self.Dwinv * alpha)), tol=1e-10) # FIXME changed from .transpose() to .T
         self.last_invert_time = timer() - start
 
-        alpha_out = - self.Dwinv * (self.W.T * (self.J * psi_out)) + self.Dwinv * alpha @ FIXME changed from .transpose() to .T
+        alpha_out = - self.Dwinv * (self.W.T * (self.J * psi_out)) + self.Dwinv * alpha # FIXME changed from .transpose() to .T
 
         return psi_out, alpha_out
 
-    def proj(self, y): @ FIXME should this y be Y?
+    def proj(self, y): # FIXME should this y be Y?
         '''
         Purpose:
             Solve y, then project onto X space of data stored in the object
