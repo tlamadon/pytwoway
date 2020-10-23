@@ -68,11 +68,8 @@ class FEsolver:
                 statsonly (bool): if True, return only basic statistics
                 out (string): if statsonly is True, this is the file where the statistics will be saved
                 batch (): @ FIXME I don't know what this is
-
-        Returns:
-            Object of type FEsolver
         '''
-        start_time = time.time()
+        logger.info('initializing FEsolver object')
         self.params = params
         self.res = {} # Results dictionary
 
@@ -86,6 +83,63 @@ class FEsolver:
         self.res['cores'] = self.ncore
         self.res['ndp'] = self.ndraw_pii
         self.res['ndt'] = self.ndraw_trace
+
+        logger.info('FEsolver object initialized')
+
+    def __getstate__(self):
+        '''
+        Purpose:
+            Defines how the model is pickled.
+        '''
+        odict = {k: self.__dict__[k] for k in self.__dict__.keys() - {'ml'}}
+        return odict
+
+    def __setstate__(self, d):
+        '''
+        Purpose:
+            Defines how the model is unpickled.
+
+        Arguments:
+            d (dictionary): attribute dictionary
+        '''
+        # Need to recreate the simple model and the search representation
+        self.__dict__ = d # Make d the attribute dictionary
+        self.ml = pyamg.ruge_stuben_solver(self.M)
+
+    @staticmethod
+    def load(filename):
+        '''
+        Purpose:
+            Load files for heteroskedastic correction.
+
+        Arguments:
+            filename (string): file to load
+
+        Returns:
+            fes: loaded file
+        '''
+        fes = None
+        with open(filename, 'rb') as infile:
+            fes = pickle.load(infile)
+        return fes
+
+    def save(self, filename):
+        '''
+        Purpose:
+            Save FEsolver class to filename as pickle.
+
+        Arguments:
+            filename (string): filename to save to
+        '''
+        with open(filename, 'wb') as outfile:
+            pickle.dump(self, outfile)
+
+    def run(self):
+        '''
+        Purpose:
+            Run FE solver.
+        '''
+        start_time = time.time()
 
         # Begin cleaning and analysis
         self.prep_data() # Prepare data
@@ -114,76 +168,10 @@ class FEsolver:
 
         logger.info('------ DONE -------')
 
-    def __getstate__(self):
-        '''
-        Purpose:
-            Defines how the model is pickled
-
-        Arguments:
-            Nothing
-
-        Returns:
-            Nothing
-        '''
-        odict = {k: self.__dict__[k] for k in self.__dict__.keys() - {'ml'}}
-        return odict
-
-    def __setstate__(self, d):
-        '''
-        Purpose:
-            Defines how the model is unpickled
-
-        Arguments:
-            d (dictionary): attribute dictionary
-
-        Returns:
-            Nothing
-        '''
-        # Need to recreate the simple model and the search representation
-        self.__dict__ = d # Make d the attribute dictionary
-        self.ml = pyamg.ruge_stuben_solver(self.M)
-
-    @staticmethod
-    def load(filename):
-        '''
-        Purpose:
-            Load files for heteroskedastic correction
-
-        Arguments:
-            filename (string): file to load
-
-        Returns:
-            fes: loaded file
-        '''
-        fes = None
-        with open(filename, 'rb') as infile:
-            fes = pickle.load(infile)
-        return fes
-
-    def save(self, filename):
-        '''
-        Purpose:
-            Save FEsolver class to filename as pickle
-
-        Arguments:
-            filename (string): filename to save to
-
-        Returns:
-            Nothing
-        '''
-        with open(filename, 'wb') as outfile:
-            pickle.dump(self, outfile)
-
     def prep_data(self):
         '''
         Purpose:
-            Do some initial data cleaning
-
-        Arguments:
-            Nothing
-
-        Returns:
-            Nothing
+            Do some initial data cleaning.
         '''
         logger.info('Preparing the data')
 
@@ -214,7 +202,7 @@ class FEsolver:
     def init_prepped_adata(self):
         '''
         Purpose:
-            Use prepped adata to initialize class attributes
+            Use prepped adata to initialize class attributes.
 
         Arguments:
             adata (Pandas DataFrame): labor data. Contains the following columns:
@@ -224,9 +212,6 @@ class FEsolver:
                 f1i (firm id 1)
                 f2i (firm id 2)
                 m (0 if stayer, 1 if mover)
-
-        Returns:
-            Nothing
         '''
         nf = self.adata.f1i.max() # Number of firms
         nw = self.adata.wid.max() # Number of workers
@@ -330,13 +315,7 @@ class FEsolver:
     def compute_early_stats(self):
         '''
         Purpose:
-            Compute some early statistics
-
-        Arguments:
-            Nothing
-
-        Returns:
-            Nothing
+            Compute some early statistics.
         '''
         fdata = self.adata.groupby('f1i').agg({'m':'sum', 'y1':'mean', 'wid':'count' })
         self.res['mover_quantiles'] = self.weighted_quantile(fdata['m'], np.linspace(0, 1, 11), fdata['wid']).tolist()
@@ -359,13 +338,7 @@ class FEsolver:
     def save_early_stats(self):
         '''
         Purpose:
-            Save the early statistics computed in compute_early_stats()
-
-        Arguments:
-            Nothing
-
-        Returns:
-            Nothing
+            Save the early statistics computed in compute_early_stats().
         '''
         with open(self.params['out'], 'w') as outfile:
             json.dump(self.res, outfile)
@@ -377,13 +350,7 @@ class FEsolver:
     def create_fe_solver(self):
         '''
         Purpose:
-            Solve FE model
-
-        Arguments:
-            Nothing
-
-        Returns:
-            Nothing
+            Solve FE model.
         '''
         self.Y = self.adata.y1
 
@@ -392,20 +359,20 @@ class FEsolver:
 
         logger.info('Extract firm effects')
 
-        psi_hat, alpha_hat = self.solve(self.Y)
+        self.psi_hat, self.alpha_hat = self.solve(self.Y)
 
         logger.info('Solver time {:2.4f} seconds'.format(self.last_invert_time))
         logger.info('Expected total time {:2.4f} minutes'.format( (self.ndraw_trace * (1 + self.compute_hetero) + self.ndraw_pii * self.compute_hetero) * self.last_invert_time / 60))
 
-        self.E = self.Y - self.mult_A(psi_hat, alpha_hat)
+        self.E = self.Y - self.mult_A(self.psi_hat, self.alpha_hat)
 
         self.res['solver_time'] = self.last_invert_time
 
         fe_rsq = 1 - np.power(self.E, 2).mean() / np.power(self.Y, 2).mean()
         logger.info('Fixed effect R-square {:2.4f}'.format(fe_rsq))
 
-        self.var_fe = np.var(self.Jq * psi_hat)
-        self.cov_fe = np.cov(self.Jq * psi_hat, self.Wq * alpha_hat)[0][1]
+        self.var_fe = np.var(self.Jq * self.psi_hat)
+        self.cov_fe = np.cov(self.Jq * self.psi_hat, self.Wq * self.alpha_hat)[0][1]
         self.tot_var  = np.var(self.Y)
         logger.info('[fe] var_psi={:2.4f} cov={:2.4f} tot={:2.4f}'.format(self.var_fe, self.cov_fe, self.tot_var))
 
@@ -415,13 +382,7 @@ class FEsolver:
     def compute_leverages_Pii(self):
         '''
         Purpose:
-            Compute leverages for heteroskedastic correction
-
-        Arguments:
-            Nothing
-
-        Returns:
-            Nothing
+            Compute leverages for heteroskedastic correction.
         '''
         self.Pii = np.zeros(self.nn)
         self.Sii = np.zeros(self.nn)
@@ -473,13 +434,7 @@ class FEsolver:
     def compute_trace_approximation_fe(self):
         '''
         Purpose:
-            Compute FE trace approximation
-
-        Arguments:
-            Nothing
-
-        Returns:
-            Nothing
+            Compute FE trace approximation.
         '''
         logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
         self.tr_var_ho_all = np.zeros(self.ndraw_trace)
@@ -504,13 +459,7 @@ class FEsolver:
     def compute_trace_approximation_he(self):
         '''
         Purpose:
-            Compute heteroskedastic trace approximation
-
-        Arguments:
-            Nothing
-
-        Returns:
-            Nothing
+            Compute heteroskedastic trace approximation.
         '''
         logger.info('Starting he trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
         self.tr_var_he_all = np.zeros(self.ndraw_trace)
@@ -536,13 +485,7 @@ class FEsolver:
     def collect_res(self):
         '''
         Purpose:
-            Collect all results
-
-        Arguments:
-            Nothing
-
-        Returns:
-            Nothing
+            Collect all results.
         '''
         self.res['tot_var'] = self.tot_var
         self.res['eps_var_ho'] = self.var_e
@@ -586,23 +529,33 @@ class FEsolver:
     def save_res(self):
         '''
         Purpose:
-            Save results as json
-
-        Arguments:
-            Nothing
-
-        Returns:
-            Nothing
+            Save results as json.
         '''
         with open(self.params['out'], 'w') as outfile:
             json.dump(self.res, outfile)
 
         logger.info('Saved results to {}'.format(self.params['out']))
 
+    def get_akm_estimates(self):
+        '''
+        Purpose:
+            Return estimated psi_hats linked to firm ids and alpha_hats linked to worker ids
+
+        Returns:
+            alpha_hat_dict (dict): dictionary linking firm ids to estimated firm fixed effects
+            alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed effects
+        '''
+        fids = np.arange(self.adata.f1i.max()) + 1
+        wids = np.arange(self.adata.wid.max()) + 1
+        psi_hat_dict = dict(zip(fids, np.concatenate([self.psi_hat, np.array([0])]))) # Add 0 for normalized firm
+        alpha_hat_dict = dict(zip(wids, self.alpha_hat))
+
+        return psi_hat_dict, alpha_hat_dict
+
     def solve(self, Y):
         '''
         Purpose:
-            Compute (A'A)^-1 A'Y, the least squares estimate of A [psi_hat, alpha_hat] = Y
+            Compute (A'A)^-1 A'Y, the least squares estimate of A [psi_hat, alpha_hat] = Y.
 
         Arguments:
             Y (Pandas DataFrame): labor data
@@ -619,7 +572,7 @@ class FEsolver:
     def mult_A(self, psi, alpha):
         '''
         Purpose:
-            Multiplies A = [J W] stored in the object by psi and alpha (used, for example, to compute estimated outcomes and sample errors)
+            Multiplies A = [J W] stored in the object by psi and alpha (used, for example, to compute estimated outcomes and sample errors).
 
         Arguments:
             psi: firm fixed effects @ FIXME correct datatype
@@ -636,7 +589,7 @@ class FEsolver:
     def mult_Atranspose(self, v):
         '''
         Purpose:
-            Multiplies the transpose of A = [J W] stored in the object by v
+            Multiplies the transpose of A = [J W] stored in the object by v.
 
         Arguments:
             v: what to multiply by @ FIXME correct datatype
@@ -653,7 +606,7 @@ class FEsolver:
     def mult_AAinv(self, psi, alpha):
         '''
         Purpose:
-            Multiplies gamma = [psi;alpha] by (A'A)^(-1) where A = [J W] stored in the object
+            Multiplies gamma = [psi;alpha] by (A'A)^(-1) where A = [J W] stored in the object.
 
         Arguments:
             psi: firm fixed effects @ FIXME correct datatype
@@ -661,7 +614,7 @@ class FEsolver:
 
         Returns:
             psi_out: estimated firm fixed effects @ FIXME correct datatype
-            alpha_out : estimated worker fixed effects @ FIXME correct datatype
+            alpha_out: estimated worker fixed effects @ FIXME correct datatype
         '''
         # inter1 = self.ml.solve( psi , tol=1e-10 )
         # inter2 = self.ml.solve(  , tol=1e-10 )
@@ -678,7 +631,7 @@ class FEsolver:
     def proj(self, y): # FIXME should this y be Y?
         '''
         Purpose:
-            Solve y, then project onto X space of data stored in the object
+            Solve y, then project onto X space of data stored in the object.
 
         Arguments:
             y (Pandas DataFrame): labor data
@@ -691,7 +644,7 @@ class FEsolver:
     def leverage_approx(self, ndraw_pii):
         '''
         Purpose:
-            Compute an approximate leverage using ndraw_pii
+            Compute an approximate leverage using ndraw_pii.
 
         Arguments:
             ndraw_pii (int): number of draws

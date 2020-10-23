@@ -27805,3 +27805,109 @@
 2020-10-19 16:58:07,648 - twfe - INFO - datatypes of clusters corrected
 2020-10-19 16:58:07,648 - twfe - INFO - datatypes of clusters corrected
 2020-10-19 16:58:07,648 - twfe - INFO - datatypes of clusters corrected
+2020-10-23 17:24:59,512 - twfe - INFO - initializing twfe_network object
+2020-10-23 17:24:59,514 - twfe - INFO - twfe_network object initialized
+2020-10-23 17:25:40,744 - twfe - INFO - initializing twfe_network object
+2020-10-23 17:25:40,744 - twfe - INFO - twfe_network object initialized
+2020-10-23 17:25:40,744 - twfe - INFO - beginning data cleaning
+2020-10-23 17:25:40,744 - twfe - INFO - checking quality of data
+2020-10-23 17:25:40,744 - twfe - INFO - --- checking columns ---
+2020-10-23 17:25:40,744 - twfe - INFO - columns correct:True
+2020-10-23 17:25:40,744 - twfe - INFO - correcting column names
+2020-10-23 17:25:40,746 - twfe - INFO - --- checking worker-year observations ---
+2020-10-23 17:25:40,747 - twfe - INFO - max number of worker-year observations (should be 1):1
+2020-10-23 17:25:40,747 - twfe - INFO - --- checking nan data ---
+2020-10-23 17:25:40,750 - twfe - INFO - data nan rows (should be 0):0
+2020-10-23 17:25:40,750 - twfe - INFO - --- checking connected set ---
+2020-10-23 17:25:40,753 - twfe - INFO - observations outside connected set (should be 0):0
+2020-10-23 17:25:40,753 - twfe - INFO - --- checking contiguous firm ids ---
+2020-10-23 17:25:40,753 - twfe - INFO - contiguous firm ids (should be True):False
+2020-10-23 17:25:40,753 - twfe - INFO - Overall success:False
+2020-10-23 17:25:40,753 - twfe - INFO - making firm ids contiguous
+2020-10-23 17:25:40,758 - twfe - INFO - generating NetworkX Graph of largest connected set
+2020-10-23 17:25:40,761 - twfe - INFO - data cleaning complete
+2020-10-23 17:25:40,763 - twfe - INFO - data sorted by wid and year
+2020-10-23 17:25:40,764 - twfe - INFO - lagged fid introduced
+2020-10-23 17:25:40,765 - twfe - INFO - spell ids generated
+2020-10-23 17:25:40,774 - twfe - INFO - data aggregated at the spell level
+2020-10-23 17:25:40,776 - twfe - INFO - workers split by spell count
+2020-10-23 17:25:40,782 - twfe - INFO - columns updated
+2020-10-23 17:25:40,783 - twfe - INFO - data reformatted as event study
+2020-10-23 17:30:05,934 - twfe - INFO - initializing twfe_network object
+2020-10-23 17:30:05,935 - twfe - INFO - twfe_network object initialized
+2020-10-23 17:30:05,935 - twfe - INFO - beginning data cleaning
+2020-10-23 17:30:05,935 - twfe - INFO - checking quality of data
+2020-10-23 17:30:05,935 - twfe - INFO - --- checking columns ---
+2020-10-23 17:30:05,936 - twfe - INFO - columns correct:True
+2020-10-23 17:30:05,936 - twfe - INFO - correcting column names
+2020-10-23 17:30:05,937 - twfe - INFO - --- checking worker-year observations ---
+2020-10-23 17:30:05,938 - twfe - INFO - max number of worker-year observations (should be 1):1
+2020-10-23 17:30:05,939 - twfe - INFO - --- checking nan data ---
+2020-10-23 17:30:05,941 - twfe - INFO - data nan rows (should be 0):0
+2020-10-23 17:30:05,941 - twfe - INFO - --- checking connected set ---
+2020-10-23 17:30:05,943 - twfe - INFO - observations outside connected set (should be 0):0
+2020-10-23 17:30:05,943 - twfe - INFO - --- checking contiguous firm ids ---
+2020-10-23 17:30:05,944 - twfe - INFO - contiguous firm ids (should be True):False
+2020-10-23 17:30:05,944 - twfe - INFO - Overall success:False
+2020-10-23 17:30:05,944 - twfe - INFO - making firm ids contiguous
+2020-10-23 17:30:05,947 - twfe - INFO - generating NetworkX Graph of largest connected set
+2020-10-23 17:30:05,950 - twfe - INFO - data cleaning complete
+2020-10-23 17:30:05,951 - twfe - INFO - data sorted by wid and year
+2020-10-23 17:30:05,952 - twfe - INFO - lagged fid introduced
+2020-10-23 17:30:05,953 - twfe - INFO - spell ids generated
+2020-10-23 17:30:05,962 - twfe - INFO - data aggregated at the spell level
+2020-10-23 17:30:05,963 - twfe - INFO - workers split by spell count
+2020-10-23 17:30:05,970 - twfe - INFO - columns updated
+2020-10-23 17:30:05,970 - twfe - INFO - data reformatted as event study
+2020-10-23 17:30:55,395 - twfe - INFO - initializing twfe_network object
+2020-10-23 17:30:55,395 - twfe - INFO - twfe_network object initialized
+2020-10-23 17:30:55,395 - twfe - INFO - beginning data cleaning
+2020-10-23 17:30:55,396 - twfe - INFO - checking quality of data
+2020-10-23 17:30:55,396 - twfe - INFO - --- checking columns ---
+2020-10-23 17:30:55,396 - twfe - INFO - columns correct:True
+2020-10-23 17:30:55,396 - twfe - INFO - correcting column names
+2020-10-23 17:30:55,398 - twfe - INFO - --- checking worker-year observations ---
+2020-10-23 17:30:55,399 - twfe - INFO - max number of worker-year observations (should be 1):1
+2020-10-23 17:30:55,399 - twfe - INFO - --- checking nan data ---
+2020-10-23 17:30:55,402 - twfe - INFO - data nan rows (should be 0):0
+2020-10-23 17:30:55,402 - twfe - INFO - --- checking connected set ---
+2020-10-23 17:30:55,404 - twfe - INFO - observations outside connected set (should be 0):0
+2020-10-23 17:30:55,404 - twfe - INFO - --- checking contiguous firm ids ---
+2020-10-23 17:30:55,404 - twfe - INFO - contiguous firm ids (should be True):False
+2020-10-23 17:30:55,404 - twfe - INFO - Overall success:False
+2020-10-23 17:30:55,404 - twfe - INFO - making firm ids contiguous
+2020-10-23 17:30:55,407 - twfe - INFO - generating NetworkX Graph of largest connected set
+2020-10-23 17:30:55,410 - twfe - INFO - data cleaning complete
+2020-10-23 17:30:55,411 - twfe - INFO - data sorted by wid and year
+2020-10-23 17:30:55,411 - twfe - INFO - lagged fid introduced
+2020-10-23 17:30:55,412 - twfe - INFO - spell ids generated
+2020-10-23 17:30:55,421 - twfe - INFO - data aggregated at the spell level
+2020-10-23 17:30:55,423 - twfe - INFO - workers split by spell count
+2020-10-23 17:30:55,428 - twfe - INFO - columns updated
+2020-10-23 17:30:55,429 - twfe - INFO - data reformatted as event study
+2020-10-23 17:34:48,311 - twfe - INFO - initializing twfe_network object
+2020-10-23 17:34:48,311 - twfe - INFO - twfe_network object initialized
+2020-10-23 17:34:48,311 - twfe - INFO - beginning data cleaning
+2020-10-23 17:34:48,311 - twfe - INFO - checking quality of data
+2020-10-23 17:34:48,311 - twfe - INFO - --- checking columns ---
+2020-10-23 17:34:48,312 - twfe - INFO - columns correct:True
+2020-10-23 17:34:48,312 - twfe - INFO - correcting column names
+2020-10-23 17:34:48,313 - twfe - INFO - --- checking worker-year observations ---
+2020-10-23 17:34:48,314 - twfe - INFO - max number of worker-year observations (should be 1):1
+2020-10-23 17:34:48,314 - twfe - INFO - --- checking nan data ---
+2020-10-23 17:34:48,316 - twfe - INFO - data nan rows (should be 0):0
+2020-10-23 17:34:48,316 - twfe - INFO - --- checking connected set ---
+2020-10-23 17:34:48,319 - twfe - INFO - observations outside connected set (should be 0):0
+2020-10-23 17:34:48,319 - twfe - INFO - --- checking contiguous firm ids ---
+2020-10-23 17:34:48,319 - twfe - INFO - contiguous firm ids (should be True):False
+2020-10-23 17:34:48,319 - twfe - INFO - Overall success:False
+2020-10-23 17:34:48,319 - twfe - INFO - making firm ids contiguous
+2020-10-23 17:34:48,325 - twfe - INFO - generating NetworkX Graph of largest connected set
+2020-10-23 17:34:48,327 - twfe - INFO - data cleaning complete
+2020-10-23 17:34:48,328 - twfe - INFO - data sorted by wid and year
+2020-10-23 17:34:48,329 - twfe - INFO - lagged fid introduced
+2020-10-23 17:34:48,330 - twfe - INFO - spell ids generated
+2020-10-23 17:34:48,339 - twfe - INFO - data aggregated at the spell level
+2020-10-23 17:34:48,342 - twfe - INFO - workers split by spell count
+2020-10-23 17:34:48,347 - twfe - INFO - columns updated
+2020-10-23 17:34:48,348 - twfe - INFO - data reformatted as event study

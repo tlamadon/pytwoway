@@ -19,6 +19,7 @@ import cre
 # col_dict = {'fid': 'codf', 'wid': 'codf_w', 'year': 'year', 'comp': 'comp_current'}
 # # d_net for data_network
 # d_net = twfe_network(data=data, formatting='long', col_dict=col_dict)
+# d_net.clean_data()
 # d_net.refactor_es()
 # d_net.data_validity()
 # d_net.cluster()
@@ -40,6 +41,7 @@ class twfe_network:
         update_cols(): rename columns and keep only relevant columns<br/>
         n_workers(): get the number of unique workers<br/>
         n_firms(): get the number of unique firms<br/>
+        clean_data(): clean data<br/>
         data_validity(): check that data is formatted correctly<br/>
         conset(): update data to include only the largest connected set of movers, and if firm ids are contiguous, also return the NetworkX Graph<br/>
         contiguous_fids(): make firm ids contiguous<br/>
@@ -63,9 +65,11 @@ class twfe_network:
         logger.info('initializing twfe_network object')
 
         # Define some attributes
-        self.connected = False
-        self.contiguous = False
+        self.data = data
         self.formatting = formatting
+        self.connected = False # If True, all firms are connected by movers
+        self.contiguous = False # If True, firm ids are contiguous
+        self.no_na = False # If True, no NaN observations in the data
 
         if isinstance(col_dict, bool): # If columns already correct
             self.col_dict = {'fid': 'fid', 'wid': 'wid', 'year': 'year', 'comp': 'comp'}
@@ -80,26 +84,6 @@ class twfe_network:
         self.default_akm = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_akm.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False} # Do not define 'data' because will be updated later
 
         self.default_cre = {'ncore': 1, 'ndraw_tr': 5, 'ndp': 50, 'out': 'res_cre.json', 'posterior': False, 'wobtw': False} # Do not define 'data' because will be updated later
-
-        self.data = data.dropna()
-        # Make sure data is valid
-        # Note that column names are corrected in this function if all columns are in the data
-        self.data_validity()
-        # Drop na values
-        self.data = self.data.dropna()
-
-        # Generate largest connected set
-        self.conset()
-
-        # Make firm ids contiguous
-        self.contiguous_fids()
-
-        # Using contiguous fids, get NetworkX Graph of largest connected set
-        self.G = self.conset()
-
-        # Check data validity after initial cleaning
-        if isinstance(col_dict, dict):
-            self.data_validity()
 
         logger.info('twfe_network object initialized')
 
@@ -158,10 +142,46 @@ class twfe_network:
         elif self.formatting == 'es':
             return len(set(list(self.data['f1i'].unique()) + list(self.data['f2i'].unique())))
 
+    def clean_data(self):
+        '''
+        Purpose:
+            Clean data to make sure there are no NaN observations, firms are connected by movers and firm ids are contiguous.
+        '''
+        logger.info('beginning data cleaning')
+        logger.info('checking quality of data')
+        # Make sure data is valid - computes no_na, connected, and contiguous, along with other checks (note that column names are corrected in data_validity() if all columns are in the data)
+        self.data_validity()
+
+        # Next, drop NaN observations
+        if not self.no_na:
+            logger.info('dropping NaN observations')
+            self.data = self.data.dropna()
+
+            # Update no_na
+            self.no_na = True
+
+        # Next, find largest set of firms connected by movers
+        if not self.connected:
+            # Generate largest connected set
+            logger.info('generating largest connected set')
+            self.conset()
+
+        # Next, make firm ids contiguous
+        if not self.contiguous:
+            # Make firm ids contiguous
+            logger.info('making firm ids contiguous')
+            self.contiguous_fids()
+
+        # Using contiguous fids, get NetworkX Graph of largest connected set (note that this must be done even if firms already connected and contiguous)
+        logger.info('generating NetworkX Graph of largest connected set')
+        self.G = self.conset()
+
+        logger.info('data cleaning complete')
+
     def data_validity(self):
         '''
         Purpose:
-            Check that data is formatted correctly. Results are logged.
+            Checks that data is formatted correctly and updates relevant attributes.
         '''
         if self.formatting == 'long':
             success = True
@@ -178,8 +198,8 @@ class twfe_network:
                             logger.info(self.col_dict[col], 'has wrong dtype, should be int but is', self.data[self.col_dict[col]].dtype)
                             cols = False
                     elif col == 'comp':
-                        if self.data[self.col_dict[col]].dtype != 'float64':
-                            logger.info(self.col_dict[col], 'has wrong dtype, should be float64 but is', self.data[self.col_dict[col]].dtype)
+                        if self.data[self.col_dict[col]].dtype not in ['float', 'float16', 'float32', 'float64', 'float128', 'int', 'int16', 'int32', 'int64']:
+                            logger.info(self.col_dict[col], 'has wrong dtype, should be float or int but is', self.data[self.col_dict[col]].dtype)
                             cols = False
 
             logger.info('columns correct:' + str(cols))
@@ -188,6 +208,7 @@ class twfe_network:
                 raise ValueError('Your data does not include the correct columns. The twfe_network object cannot be generated with your data.')
             else:
                 # Correct column names
+                logger.info('correcting column names')
                 self.update_cols()
 
             logger.info('--- checking worker-year observations ---')
@@ -205,6 +226,8 @@ class twfe_network:
             logger.info('data nan rows (should be 0):' + str(nan))
             if nan > 0:
                 success = False
+            else:
+                self.no_na = True
 
             logger.info('--- checking connected set ---')
             self.data['fid_max'] = self.data.groupby(['wid'])['fid'].transform(max)
@@ -217,6 +240,20 @@ class twfe_network:
             logger.info('observations outside connected set (should be 0):' + str(outside_cc))
             if outside_cc > 0:
                 success = False
+            else:
+                self.connected = True
+
+            logger.info('--- checking contiguous firm ids ---')
+            fid_max = self.data['fid'].max()
+            n_firms = self.n_firms()
+
+            contig = (fid_max == n_firms)
+
+            logger.info('contiguous firm ids (should be True):' + str(contig))
+            if not contig:
+                success = False
+            else:
+                self.contiguous = True
 
             logger.info('Overall success:' + str(success))
 
@@ -232,8 +269,8 @@ class twfe_network:
                         cols = False
                     else:
                         if col in ['y1', 'y2']:
-                            if self.data[self.col_dict[col]].dtype != 'float64':
-                                logger.info(col, 'has wrong dtype, should be float64 but is', self.data[self.col_dict[col]].dtype)
+                            if self.data[self.col_dict[col]].dtype not in ['float', 'float16', 'float32', 'float64', 'float128', 'int', 'int16', 'int32', 'int64']:
+                                logger.info(col, 'has wrong dtype, should be float or int but is', self.data[self.col_dict[col]].dtype)
                                 cols = False
                         elif col == 'm':
                             if self.data[self.col_dict[col]].dtype != 'int':
@@ -247,6 +284,7 @@ class twfe_network:
                     raise ValueError('Your data does not include the correct columns. The twfe_network object cannot be generated with your data.')
                 else:
                     # Correct column names
+                    logger.info('correcting column names')
                     self.update_cols()
 
                 stayers = self.data[self.data['m'] == 0]
@@ -262,6 +300,8 @@ class twfe_network:
                     success_stayers = False
                 if na_movers > 0:
                     success_movers = False
+                if (na_stayers == 0) and (na_movers == 0):
+                    self.no_na = True
 
                 logger.info('--- checking firms ---')
                 firms_stayers = (stayers['f1i'] != stayers['f2i']).sum()
@@ -294,6 +334,18 @@ class twfe_network:
                     success_stayers = False
                 if cc_movers > 0:
                     success_movers = False
+                if (cc_stayers == 0) and (cc_movers == 0):
+                    self.connected = True
+
+                logger.info('--- checking contiguous firm ids ---')
+                fid_max = max(stayers['f1i'].max(), max(movers['f1i'].max(), movers['f2i'].max()))
+                n_firms = self.n_firms()
+
+                contig = (fid_max == n_firms)
+                if not contig:
+                    success = False
+                else:
+                    self.contiguous = True
 
                 logger.info('Overall success for stayers:' + str(success_stayers))
                 logger.info('Overall success for movers:' + str(success_movers))
@@ -570,7 +622,7 @@ class twfe_network:
             clusters_dict_2 = {'f2i': fids, 'j2': clusters}
             clusters_df_1 = pd.DataFrame(clusters_dict_1, index=fids)
             clusters_df_2 = pd.DataFrame(clusters_dict_2, index=fids)
-            logger.info('dataframes linked fids to clusters generated')
+            logger.info('dataframes linking fids to clusters generated')
 
             # Merge into event study data
             self.data = self.data.merge(clusters_df_1, how='left', on='f1i')
@@ -612,7 +664,9 @@ class twfe_network:
 
         akm_params['data'] = self.data # Make sure to use up-to-date data
 
-        akm_res = feacf.FEsolver(akm_params).res # feacf.main(akm_params) # FIXME corrected for new feacf file using class structure
+        akm_solver = feacf.FEsolver(akm_params)
+        akm_solver.run()
+        akm_res = akm_solver.res
 
         return akm_res
 

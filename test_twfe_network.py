@@ -25,6 +25,7 @@ def test_twfe_refactor_1():
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
     d_net = tn.twfe_network(data=df, col_dict=col_dict)
+    d_net.clean_data()
     d_net.refactor_es()
 
     df_ES = d_net.data
@@ -61,6 +62,7 @@ def test_twfe_refactor_2():
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
     d_net = tn.twfe_network(data=df, col_dict=col_dict)
+    d_net.clean_data()
     d_net.refactor_es()
 
     df_ES = d_net.data
@@ -95,6 +97,7 @@ def test_twfe_refactor_3():
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
     d_net = tn.twfe_network(data=df, col_dict=col_dict)
+    d_net.clean_data()
     d_net.refactor_es()
 
     df_ES = d_net.data
@@ -136,6 +139,7 @@ def test_twfe_refactor_4():
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
     d_net = tn.twfe_network(data=df, col_dict=col_dict)
+    d_net.clean_data()
     d_net.refactor_es()
 
     df_ES = d_net.data
@@ -183,6 +187,7 @@ def test_twfe_refactor_5():
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
     d_net = tn.twfe_network(data=df, col_dict=col_dict)
+    d_net.clean_data()
     d_net.refactor_es()
 
     df_ES = d_net.data
@@ -231,6 +236,7 @@ def test_twfe_refactor_6():
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
     d_net = tn.twfe_network(data=df, col_dict=col_dict)
+    d_net.clean_data()
     d_net.refactor_es()
 
     df_ES = d_net.data
@@ -279,6 +285,7 @@ def test_twfe_refactor_7():
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
     d_net = tn.twfe_network(data=df, col_dict=col_dict)
+    d_net.clean_data()
     d_net.refactor_es()
 
     df_ES = d_net.data
@@ -327,6 +334,7 @@ def test_twfe_refactor_8():
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
     d_net = tn.twfe_network(data=df, col_dict=col_dict)
+    d_net.clean_data()
     d_net.refactor_es()
 
     df_ES = d_net.data
@@ -375,6 +383,7 @@ def test_twfe_refactor_9():
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
     d_net = tn.twfe_network(data=df, col_dict=col_dict)
+    d_net.clean_data()
     d_net.refactor_es()
 
     df_ES = d_net.data
@@ -421,6 +430,7 @@ def test_twfe_refactor_10():
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
     d_net = tn.twfe_network(data=df, col_dict=col_dict)
+    d_net.clean_data()
     d_net.refactor_es()
 
     df_ES = d_net.data
@@ -461,6 +471,7 @@ def test_twfe_refactor_11():
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
     d_net = tn.twfe_network(data=df, col_dict=col_dict)
+    d_net.clean_data()
     d_net.refactor_es()
 
     df_ES = d_net.data
@@ -503,16 +514,18 @@ def test_akm_ho_1():
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
     d_net = tn.twfe_network(data=df, col_dict=col_dict)
+    d_net.clean_data()
     d_net.refactor_es()
 
     akm_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_akm.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'data': d_net.data} # Do not define 'data' because will be updated later
 
     fe = feacf.FEsolver(akm_params)
+    fe.run()
 
-    psi_hat, alpha_hat = fe.solve(fe.Y)
+    psi_hat, alpha_hat = fe.get_akm_estimates()
 
-    assert psi_hat[0] == 1
-    assert psi_hat[1] == -1
-    assert alpha_hat[0] == 7
-    assert alpha_hat[1] == 6
-    assert alpha_hat[2] == 8
+    assert abs(psi_hat[1] - 1) < 1e-5
+    assert abs(psi_hat[2] + 1) < 1e-5
+    assert abs(alpha_hat[1] - 7) < 1e-5
+    assert abs(alpha_hat[2] - 6) < 1e-5
+    assert abs(alpha_hat[3] - 8) < 1e-5
