@@ -68,6 +68,9 @@ class FEsolver:
                 statsonly (bool): if True, return only basic statistics
                 out (string): if statsonly is True, this is the file where the statistics will be saved
                 batch (): @ FIXME I don't know what this is
+                Jq (NumPy Array): Jq matrix
+                Wq (NumPy Array): Wq matrix
+                Yq (NumPy Array): Yq matrix
         '''
         logger.info('initializing FEsolver object')
         self.params = params
@@ -248,10 +251,16 @@ class FEsolver:
 
         nnq = len(mdata) # Number of observations
         self.nnq = nnq
-        Jq = csc_matrix((np.ones(nnq), (mdata.index, mdata.f1i - 1)), shape=(nnq, nf))
-        self.Jq = Jq[:, range(nf - 1)]  # normalizing one firm to 0
-        self.Wq = csc_matrix((np.ones(nnq), (mdata.index, mdata.wid - 1)), shape=(nnq, nw))
-        self.Yq = mdata['y1']
+        # Create Q matrix
+        try:
+            self.Jq = self.params['Jq']
+            self.Wq = self.params['Wq']
+            self.Yq = self.params['Yq']
+        except KeyError: # If variables not already set, revert to defaults
+            Jq = csc_matrix((np.ones(nnq), (mdata.index, mdata.f1i - 1)), shape=(nnq, nf))
+            self.Jq = Jq[:, range(nf - 1)]  # Normalizing one firm to 0
+            self.Wq = csc_matrix((np.ones(nnq), (mdata.index, mdata.wid - 1)), shape=(nnq, nw))
+            self.Yq = mdata['y1']
 
         # Save time variable
         self.last_invert_time = 0
