@@ -398,8 +398,12 @@ def main(args):
         res['var_posterior'] = fes.posterior_var
 
     # Saving to file
+    # Convert results into strings to prevent JSON errors
+    for key, val in res.items():
+            res[key] = str(val)
+
     with open(args['out'],'w') as outfile:
-        json.dump(res,outfile)
+        json.dump(res, outfile)
     logger.info("saved results to {}".format(args['out']))
 
     logger.info("------ DONE -------")

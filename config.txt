@@ -1,0 +1,3 @@
+# Settings for run_twfe.py
+data = ../../Google Drive File Stream/.shortcut-targets-by-id/1iN9LApqNxHmVCOV4IUISMwPS7KeZcRhz/ra-adam/data/English/worker_cleaned.ftr
+col_dict = "{'fid': 'codf', 'wid': 'codf_w', 'year': 'year', 'comp': 'comp_current'}"

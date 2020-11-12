@@ -52,7 +52,7 @@ class twfe_network:
         run_cre(): run CRE estimator
     '''
 
-    def __init__(self, data, formatting='long', col_dict=False):
+    def __init__(self, data, formatting='long', col_dict=None):
         '''
         Purpose:
             Initialize twfe_network object.
@@ -60,7 +60,7 @@ class twfe_network:
         Arguments:
             data (Pandas DataFrame): data giving firms, workers, and compensation
             formatting (str): if 'long', then data in long format; if 'es', then data in event study format. If simulating data, keep default value of 'long'
-            col_dict (dict): make data columns readable (requires: wid (worker id), comp (compensation), fid (firm id), year if long; wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover) if event study). Keep False if column names already correct
+            col_dict (dict): make data columns readable (requires: wid (worker id), comp (compensation), fid (firm id), year if long; wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover) if event study). Keep None if column names already correct
         '''
         logger.info('initializing twfe_network object')
 
@@ -71,7 +71,7 @@ class twfe_network:
         self.contiguous = False # If True, firm ids are contiguous
         self.no_na = False # If True, no NaN observations in the data
 
-        if isinstance(col_dict, bool): # If columns already correct
+        if col_dict is None: # If columns already correct
             self.col_dict = {'fid': 'fid', 'wid': 'wid', 'year': 'year', 'comp': 'comp'}
         else:
             self.col_dict = col_dict
@@ -81,7 +81,7 @@ class twfe_network:
 
         self.default_cluster = {'cdf_resolution': 10, 'grouping': 'quantile_all', 'year': None, 'user_KMeans': self.default_KMeans}
 
-        self.default_akm = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_akm.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False} # Do not define 'data' because will be updated later
+        self.default_akm = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_akm.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)'} # Do not define 'data' because will be updated later
 
         self.default_cre = {'ncore': 1, 'ndraw_tr': 5, 'ndp': 50, 'out': 'res_cre.json', 'posterior': False, 'wobtw': False} # Do not define 'data' because will be updated later
 
@@ -612,7 +612,7 @@ class twfe_network:
 
             # Compute firm clusters
             KMeans_params = self.update_dict(self.default_KMeans, user_KMeans)
-            clusters = KMeans(n_clusters=KMeans_params['n_clusters'], init=KMeans_params['init'], n_init=KMeans_params['n_init'], max_iter=KMeans_params['max_iter'], tol=KMeans_params['tol'], precompute_distances=KMeans_params['precompute_distances'], verbose=KMeans_params['verbose'], random_state=KMeans_params['random_state'], copy_x=KMeans_params['copy_x'], n_jobs=KMeans_params['n_jobs'], algorithm=KMeans_params['algorithm']).fit(cdfs).labels_ + 1 # Need +1 because need > 0
+            clusters = KMeans(**KMeans_params).fit(cdfs).labels_ + 1 # Need +1 because need > 0
             logger.info('firm clusters computed')
 
             # Create Pandas dataframe linking fid to firm cluster
@@ -654,6 +654,7 @@ class twfe_network:
                     <li>logfile (str): log output to a logfile</li>
                     <li>levfile (str): file to load precomputed leverages</li>
                     <li>statsonly (bool): save data statistics only</li>
+                    <li>Q (str): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'</li>
                     </ul></ul>
                 </ul>
 
@@ -665,7 +666,10 @@ class twfe_network:
         akm_params['data'] = self.data # Make sure to use up-to-date data
 
         akm_solver = feacf.FEsolver(akm_params)
-        akm_solver.run()
+        akm_solver.run_1()
+        akm_solver.construct_Q() # Comment out this line and manually create Q if you want a custom Q matrix
+        akm_solver.run_2()
+
         akm_res = akm_solver.res
 
         return akm_res

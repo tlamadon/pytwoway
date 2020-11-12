@@ -15433,3 +15433,10 @@
 2020-10-19 16:58:07,841 - cre - INFO - prepare linear solver
 2020-10-19 16:58:07,852 - cre - INFO - saved results to res_cre.json
 2020-10-19 16:58:07,852 - cre - INFO - ------ DONE -------
+2020-11-11 18:08:32,385 - cre - INFO - loading the data
+2020-11-11 18:08:32,656 - cre - INFO - data movers=1560761 stayers=668581
+2020-11-11 18:08:39,804 - cre - INFO - total variance: 1.1357
+2020-11-11 18:08:39,895 - cre - INFO - data nf:273499 nw:1520463 nn:3790103 nc:10
+2020-11-11 18:08:46,306 - cre - INFO - [cre] VAR bw=0.148201 wt=0.014631 tot=0.162832
+2020-11-11 18:08:46,306 - cre - INFO - [cre] COV bw=0.085741 wt=-0.000401 tot=0.085340
+2020-11-11 18:08:46,945 - cre - INFO - prepare linear solver

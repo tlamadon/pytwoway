@@ -9,7 +9,7 @@ Does this through class FEsolver
 import pyamg
 import numpy as np
 import pandas as pd
-from scipy.sparse import csc_matrix,coo_matrix,diags,linalg
+from scipy.sparse import csc_matrix, coo_matrix, diags, linalg
 import time
 import pyreadr
 import os
@@ -68,9 +68,7 @@ class FEsolver:
                 statsonly (bool): if True, return only basic statistics
                 out (string): if statsonly is True, this is the file where the statistics will be saved
                 batch (): @ FIXME I don't know what this is
-                Jq (NumPy Array): Jq matrix
-                Wq (NumPy Array): Wq matrix
-                Yq (NumPy Array): Yq matrix
+                Q (str): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
         '''
         logger.info('initializing FEsolver object')
         self.params = params
@@ -137,18 +135,23 @@ class FEsolver:
         with open(filename, 'wb') as outfile:
             pickle.dump(self, outfile)
 
-    def run(self):
+    def run_1(self):
         '''
         Purpose:
-            Run FE solver.
+            Run FE solver, part 1. Before run_2(), modify adata to allow creation of Q matrix.
         '''
-        start_time = time.time()
+        self.start_time = time.time()
 
         # Begin cleaning and analysis
         self.prep_data() # Prepare data
         self.init_prepped_adata() # Use cleaned adata to generate some attributes
         self.compute_early_stats() # Use cleaned data to compute some statistics
 
+    def run_2(self):
+        '''
+        Purpose:
+            Run FE solver, part 2.
+        '''
         if self.params['statsonly']: # If only returning early statistics
             self.save_early_stats()
 
@@ -165,7 +168,8 @@ class FEsolver:
 
         end_time = time.time()
 
-        self.res['total_time'] = end_time - start_time
+        self.res['total_time'] = end_time - self.start_time
+        del self.start_time
 
         self.save_res() # Save results to json
 
@@ -198,7 +202,8 @@ class FEsolver:
         sdata['wid'] = np.arange(self.res['ns']) + 1 + self.res['nm']
 
         # Combine the 2 data-sets
-        self.adata = pd.concat([sdata[['wid', 'f1i', 'y1']].assign(cs=1, m=0), jdata[['wid', 'f1i', 'y1']].assign(cs=1, m=1), jdata[['wid', 'f2i', 'y2']].rename(columns={'f2i': 'f1i', 'y2': 'y1'}).assign(cs=0, m=1)])
+        # self.adata = pd.concat([sdata[['wid', 'f1i', 'y1']].assign(cs=1, m=0), jdata[['wid', 'f1i', 'y1']].assign(cs=1, m=1), jdata[['wid', 'f2i', 'y2']].rename(columns={'f2i': 'f1i', 'y2': 'y1'}).assign(cs=0, m=1)]) # FIXME updated below
+        self.adata = pd.concat([sdata[['wid', 'f1i', 'f2i', 'y1']].assign(cs=1, m=0), jdata[['wid', 'f1i', 'f2i', 'y1']].assign(cs=1, m=1), jdata[['wid', 'f1i', 'f2i', 'y2']].rename({'f1i': 'f2i', 'f2i': 'f1i'}, axis=1).assign(cs=0, m=1)])
         self.adata = self.adata.reset_index(drop=True) # FIXME changed from set_index(pd.Series(range(len(self.adata))))
         self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1
 
@@ -244,23 +249,33 @@ class FEsolver:
         # L = diags(fes.M.diagonal()) - fes.M
         # r = linalg.eigsh(L,k=2,which='LM')
 
-        # Create cross-section matrices
-        # cs == 1 ==> looking at y1 for movers (cs = cross section)
-        mdata = self.adata[self.adata['cs'] == 1] # FIXME changed from adata.query('cs==1') (I ran %timeit and slicing is faster)
-        mdata = mdata.reset_index(drop=True) # FIXME changed from set_index(pd.Series(range(len(mdata))))
+        # # Create cross-section matrices
+        # # cs == 1 ==> looking at y1 for movers (cs = cross section)
+        # # Create Q matrix
+        # if self.params['Q'] == 'cov(alpha, psi)': # Default
+        #     mdata = self.adata[self.adata['cs'] == 1] # FIXME changed from adata.query('cs==1') (I ran %timeit and slicing is faster)
+        #     mdata = mdata.reset_index(drop=True) # FIXME changed from set_index(pd.Series(range(len(mdata))))
 
-        nnq = len(mdata) # Number of observations
-        self.nnq = nnq
-        # Create Q matrix
-        try:
-            self.Jq = self.params['Jq']
-            self.Wq = self.params['Wq']
-            self.Yq = self.params['Yq']
-        except KeyError: # If variables not already set, revert to defaults
-            Jq = csc_matrix((np.ones(nnq), (mdata.index, mdata.f1i - 1)), shape=(nnq, nf))
-            self.Jq = Jq[:, range(nf - 1)]  # Normalizing one firm to 0
-            self.Wq = csc_matrix((np.ones(nnq), (mdata.index, mdata.wid - 1)), shape=(nnq, nw))
-            self.Yq = mdata['y1']
+        #     nnq = len(mdata) # Number of observations
+        #     self.nnq = nnq
+        #     Jq = csc_matrix((np.ones(nnq), (mdata.index, mdata.f1i - 1)), shape=(nnq, nf))
+        #     self.Jq = Jq[:, range(nf - 1)]  # Normalizing one firm to 0
+        #     self.Wq = csc_matrix((np.ones(nnq), (mdata.index, mdata.wid - 1)), shape=(nnq, nw))
+        #     self.Yq = mdata['y1']
+        # elif self.params['Q'] == 'cov(psi_t, psi_{t+1})':
+        #     mdata = self.adata[self.adata['m'] == 1] # FIXME changed from adata.query('cs==1') (I ran %timeit and slicing is faster)
+        #     mdata = mdata.reset_index(drop=True) # FIXME changed from set_index(pd.Series(range(len(mdata))))
+        #     mdata_1 = mdata[mdata['cs'] == 1].reset_index(drop=True) # Firm 1 for movers
+        #     mdata_2 = mdata[mdata['cs'] == 0].reset_index(drop=True) # Firm 2 for movers
+
+        #     nnq = len(mdata_1) # Number of observations
+        #     nm = len(mdata_1['wid'].unique()) # Number of movers
+        #     self.nnq = nnq
+        #     J1 = csc_matrix((np.ones(nnq), (mdata_1.index, mdata_1.f1i - 1)), shape=(nnq, nf))
+        #     self.J1 = J1[:, range(nf - 1)]  # Normalizing one firm to 0
+        #     J2 = csc_matrix((np.ones(nnq), (mdata_2.index, mdata_2.f1i - 1)), shape=(nnq, nf))
+        #     self.J2 = J2[:, range(nf - 1)]  # Normalizing one firm to 0
+        #     self.Yq = mdata_1['y1']
 
         # Save time variable
         self.last_invert_time = 0
@@ -356,6 +371,39 @@ class FEsolver:
         logger.info('------ DONE -------')
         # sys.exit() # FIXME I don't think this is necessary (does it even work?) since this is now a class object
 
+    def construct_Q(self):
+        '''
+        Purpose:
+            Generate columns in adata necessary to construct Q.
+        '''
+        if self.params['Q'] == 'cov(alpha, psi)':
+            # Which rows to select
+            self.adata['Jq'] = self.adata['cs'] == 1
+            # Rows for csc_matrix
+            self.adata['Jq_row'] = self.adata['Jq'].cumsum() - 1
+            # Columns for csc_matrix
+            self.adata['Jq_col'] = self.adata['f1i'] - 1
+            self.adata['Wq'] = self.adata['cs'] == 1
+            self.adata['Wq_row'] = self.adata['Wq'].cumsum() - 1
+            self.adata['Wq_col'] = self.adata['wid'] - 1
+
+        elif self.params['Q'] == 'cov(psi_t, psi_{t+1})':
+            self.adata['Jq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 1)
+            self.adata['Jq_row'] = self.adata['Jq'].cumsum() - 1
+            self.adata['Jq_col'] = self.adata['f1i'] - 1
+            self.adata['Wq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 0)
+            self.adata['Wq_row'] = self.adata['Wq'].cumsum() - 1
+            self.adata['Wq_col'] = self.adata['f1i'] - 1 # Recall f1i, f2i swapped for m==1 and cs==0
+
+        elif self.params['Q'] == 'cov(psi_i, psi_j)':
+            self.adata['Jq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 1)
+            self.adata['Jq_row'] = self.adata['f1i'] - 1
+            self.adata['Jq_col'] = self.adata['f1i'] - 1
+            self.adata['Wq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 0)
+            # Recall f1i, f2i swapped for m==1 and cs==0
+            self.adata['Wq_row'] = self.adata['f2i'] - 1
+            self.adata['Wq_col'] = self.adata['f1i'] - 1
+
     def create_fe_solver(self):
         '''
         Purpose:
@@ -380,10 +428,13 @@ class FEsolver:
         fe_rsq = 1 - np.power(self.E, 2).mean() / np.power(self.Y, 2).mean()
         logger.info('Fixed effect R-square {:2.4f}'.format(fe_rsq))
 
-        self.var_fe = np.var(self.Jq * self.psi_hat)
-        self.cov_fe = np.cov(self.Jq * self.psi_hat, self.Wq * self.alpha_hat)[0][1]
-        self.tot_var  = np.var(self.Y)
-        logger.info('[fe] var_psi={:2.4f} cov={:2.4f} tot={:2.4f}'.format(self.var_fe, self.cov_fe, self.tot_var))
+        # FIXME This section moved into compute_trace_approximation_fe()
+        # # FIXME Need to figure out when this section can be run
+        # self.tot_var = np.var(self.Y)
+        # self.var_fe = np.var(self.Jq * self.psi_hat)
+        # self.cov_fe = np.cov(self.Jq * self.psi_hat, self.Wq * self.alpha_hat)[0][1]
+        # logger.info('[fe] var_psi={:2.4f} cov={:2.4f} tot={:2.4f}'.format(self.var_fe, self.cov_fe, self.tot_var))
+        # # FIXME Section ends here
 
         self.var_e = self.nn / (self.nn - self.nw - self.nf + 1) * np.power(self.E, 2).mean()
         logger.info('[ho] variance of residuals {:2.4f}'.format(self.var_e))
@@ -443,9 +494,45 @@ class FEsolver:
     def compute_trace_approximation_fe(self):
         '''
         Purpose:
-            Compute FE trace approximation.
+            Compute FE trace approximation for arbitrary Q.
         '''
         logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
+
+        # Construct Jq, Wq matrices
+        Jq = self.adata[self.adata['Jq'] == 1].reset_index(drop=True)
+        self.Yq = Jq['y1']
+        nJ = len(Jq)
+        nJ_row = Jq['Jq_row'].max() + 1 # FIXME len(Jq['Jq_row'].unique())
+        nJ_col = Jq['Jq_col'].max() + 1 # FIXME len(Jq['Jq_col'].unique())
+        Jq = csc_matrix((np.ones(nJ), (Jq['Jq_row'], Jq['Jq_col'])), shape=(nJ_row, nJ_col))
+        if nJ_col == self.nf: # If looking at firms, normalize one to 0
+            Jq = Jq[:, range(self.nf - 1)]
+
+        Wq = self.adata[self.adata['Wq'] == 1].reset_index(drop=True)
+        nW = len(Wq)
+        nW_row = Wq['Wq_row'].max() + 1 # FIXME len(Wq['Wq_row'].unique())
+        nW_col = Wq['Wq_col'].max() + 1 # FIXME len(Wq['Wq_col'].unique())
+        Wq = csc_matrix((np.ones(nW), (Wq['Wq_row'], Wq['Wq_col'])), shape=(nW_row, nW_col)) # FIXME Should we use nJ because require Jq, Wq to have the same size?
+        if nW_col == self.nf: # If looking at firms, normalize one to 0
+            Wq = Wq[:, range(self.nf - 1)]
+
+        # Compute some stats
+        # FIXME Need to figure out when this section can be run
+        self.tot_var = np.var(self.Y)
+        logger.info('[fe]')
+        try:
+            self.var_fe = np.var(Jq * self.psi_hat)
+            logger.info('var_psi={:2.4f}'.format(self.var_fe))
+        except ValueError: # If dimension mismatch
+            pass
+        try:
+            self.cov_fe = np.cov(Jq * self.psi_hat, Wq * self.alpha_hat)[0][1]
+            logger.info('cov={:2.4f} tot={:2.4f}'.format(self.cov_fe, self.tot_var))
+        except ValueError: # If dimension mismatch
+            pass
+        # FIXME Section ends here
+
+        # Begin trace approximation
         self.tr_var_ho_all = np.zeros(self.ndraw_trace)
         self.tr_cov_ho_all = np.zeros(self.ndraw_trace)
 
@@ -454,16 +541,74 @@ class FEsolver:
             Zpsi = 2 * np.random.binomial(1, 0.5, self.nf - 1) - 1
             Zalpha = 2 * np.random.binomial(1, 0.5, self.nw) - 1
 
-            R1 = self.Jq * Zpsi
+            R1 = Jq * Zpsi
             psi1, alpha1 = self.mult_AAinv(Zpsi, Zalpha)
-            R2_psi = self.Jq * psi1
-            R2_alpha = self.Wq * alpha1
-
-            # Trace corrections
-            self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
-            self.tr_cov_ho_all[r] = np.cov(R1, R2_alpha)[0][1]
+            try:
+                R2_psi = Jq * psi1
+                # Trace correction
+                self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
+            except ValueError: # If dimension mismatch
+                try:
+                    del self.tr_var_ho_all
+                except AttributeError: # Once deleted
+                    pass
+            try:
+                R2_alpha = Wq * alpha1
+                # Trace correction
+                self.tr_cov_ho_all[r] = np.cov(R1, R2_alpha)[0][1]
+            except ValueError: # If dimension mismatch
+                try:
+                    del self.tr_cov_ho_all
+                except AttributeError: # Once deleted
+                    pass
 
             logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
+
+    # def compute_trace_approximation_fe(self):
+    #     '''
+    #     Purpose:
+    #         Compute FE trace approximation.
+    #     '''
+    #     logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
+    #     self.tr_var_ho_all = np.zeros(self.ndraw_trace)
+    #     self.tr_cov_ho_all = np.zeros(self.ndraw_trace)
+
+    #     for r in trange(self.ndraw_trace):
+    #         # Generate -1 or 1
+    #         Zpsi = 2 * np.random.binomial(1, 0.5, self.nf - 1) - 1
+    #         Zalpha = 2 * np.random.binomial(1, 0.5, self.nw) - 1
+
+    #         R1 = self.Jq * Zpsi
+    #         psi1, alpha1 = self.mult_AAinv(Zpsi, Zalpha)
+    #         R2_psi = self.Jq * psi1
+    #         R2_alpha = self.Wq * alpha1
+
+    #         # Trace corrections
+    #         self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
+    #         self.tr_cov_ho_all[r] = np.cov(R1, R2_alpha)[0][1]
+
+    #         logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
+
+    # def compute_trace_approximation_j1j2(self):
+    #     '''
+    #     Purpose:
+    #         covariance between psi before and after the move among movers
+    #     '''
+    #     logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
+    #     self.tr_var_ho_all = np.zeros(self.ndraw_trace)
+
+    #     for r in trange(self.ndraw_trace):
+    #         # Generate -1 or 1
+    #         Zpsi = 2 * np.random.binomial(1, 0.5, self.nf - 1) - 1
+    #         Zalpha = 2 * np.random.binomial(1, 0.5, self.nw) - 1
+
+    #         R1 = self.J1 * Zpsi
+    #         psi1, _ = self.mult_AAinv(Zpsi, Zalpha)
+    #         R2_psi = self.J2 * psi1
+
+    #         # Trace corrections
+    #         self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
+    #         logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
     def compute_trace_approximation_he(self):
         '''
@@ -500,9 +645,15 @@ class FEsolver:
         self.res['eps_var_ho'] = self.var_e
         self.res['eps_var_fe'] = np.var(self.E)
         self.res['tr_var_ho'] = np.mean(self.tr_var_ho_all)
-        self.res['tr_cov_ho'] = np.mean(self.tr_cov_ho_all)
         logger.info('[ho] VAR tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_var_ho'], np.std(self.tr_var_ho_all)))
-        logger.info('[ho] COV tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_cov_ho'], np.std(self.tr_cov_ho_all)))
+
+        # FIXME Need to figure out when this section can be run
+        try:
+            self.res['tr_cov_ho'] = np.mean(self.tr_cov_ho_all)
+            logger.info('[ho] COV tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_cov_ho'], np.std(self.tr_cov_ho_all)))
+        except AttributeError: # If no cov
+            pass
+        # FIXME Section ends here
 
         if self.compute_hetero:
             self.res['eps_var_he'] = self.Sii.mean()
@@ -518,18 +669,48 @@ class FEsolver:
             logger.info('[he] COV tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_cov_he'], np.std(self.tr_cov_he_all)))
 
         # ----- FINAL ------
-        logger.info('[ho] VAR fe={:2.4f} bc={:2.4f}'.format(self.var_fe, self.var_fe - self.var_e * self.res['tr_var_ho']))
-        logger.info('[ho] COV fe={:2.4f} bc={:2.4f}'.format(self.cov_fe, self.cov_fe - self.var_e * self.res['tr_cov_ho']))
+        # FIXME Need to figure out when this section can be run
+        try:
+            logger.info('[ho] VAR fe={:2.4f}'.format(self.var_fe))
+        except AttributeError: # If no var fe
+            pass
+        try:
+            logger.info('[ho] VAR bc={:2.4f}'.format(self.var_fe - self.var_e * self.res['tr_var_ho']))
+        except AttributeError: # If no var bc
+            pass
+        try:
+            logger.info('[ho] COV fe={:2.4f}'.format(self.cov_fe))
+        except AttributeError: # If no cov fe
+            pass
+        try:
+            logger.info('[ho] COV bc={:2.4f}'.format(self.cov_fe - self.var_e * self.res['tr_cov_ho']))
+        except AttributeError: # If no cov bc
+            pass
+        # FIXME Section ends here
 
         if self.compute_hetero:
             logger.info('[he] VAR fe={:2.4f} bc={:2.4f}'.format(self.var_fe, self.var_fe - self.res['tr_var_he']))
             logger.info('[he] COV fe={:2.4f} bc={:2.4f}'.format(self.cov_fe, self.cov_fe - self.res['tr_cov_he']))
 
         self.res['var_y'] = np.var(self.Yq)
-        self.res['var_fe'] = self.var_fe
-        self.res['cov_fe'] = self.cov_fe
-        self.res['var_ho'] = self.var_fe - self.var_e * self.res['tr_var_ho']
-        self.res['cov_ho'] = self.cov_fe - self.var_e * self.res['tr_cov_ho']
+        # FIXME Need to figure out when this section can be run
+        try:
+            self.res['var_fe'] = self.var_fe
+        except AttributeError:
+            pass
+        try:
+            self.res['cov_fe'] = self.cov_fe
+        except AttributeError:
+            pass
+        try:
+            self.res['var_ho'] = self.var_fe - self.var_e * self.res['tr_var_ho']
+        except AttributeError:
+            pass
+        try:
+            self.res['cov_ho'] = self.cov_fe - self.var_e * self.res['tr_cov_ho']
+        except AttributeError:
+            pass
+        # FIXME Section ends here
 
         if self.compute_hetero:
             self.res['var_he'] = self.var_fe - self.res['tr_var_he']
@@ -540,6 +721,10 @@ class FEsolver:
         Purpose:
             Save results as json.
         '''
+        # Convert results into strings to prevent JSON errors
+        for key, val in self.res.items():
+            self.res[key] = str(val)
+
         with open(self.params['out'], 'w') as outfile:
             json.dump(self.res, outfile)
 
