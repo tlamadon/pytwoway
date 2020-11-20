@@ -15440,3 +15440,12 @@
 2020-11-11 18:08:46,306 - cre - INFO - [cre] VAR bw=0.148201 wt=0.014631 tot=0.162832
 2020-11-11 18:08:46,306 - cre - INFO - [cre] COV bw=0.085741 wt=-0.000401 tot=0.085340
 2020-11-11 18:08:46,945 - cre - INFO - prepare linear solver
+2020-11-11 18:20:20,632 - cre - INFO - loading the data
+2020-11-11 18:20:20,868 - cre - INFO - data movers=1560761 stayers=668581
+2020-11-11 18:20:27,177 - cre - INFO - total variance: 1.1357
+2020-11-11 18:20:27,261 - cre - INFO - data nf:273499 nw:1520463 nn:3790103 nc:10
+2020-11-11 18:20:33,339 - cre - INFO - [cre] VAR bw=0.148203 wt=0.014627 tot=0.162830
+2020-11-11 18:20:33,339 - cre - INFO - [cre] COV bw=0.085742 wt=-0.000401 tot=0.085341
+2020-11-11 18:20:33,942 - cre - INFO - prepare linear solver
+2020-11-11 18:20:35,890 - cre - INFO - saved results to res_cre.json
+2020-11-11 18:20:35,890 - cre - INFO - ------ DONE -------

@@ -43363,3 +43363,31 @@
 2020-11-11 18:05:13,001 - akm - INFO - [ho] COV bc=nan
 2020-11-11 18:05:13,014 - akm - INFO - Saved results to res_akm.json
 2020-11-11 18:05:13,014 - akm - INFO - ------ DONE -------
+2020-11-11 18:15:51,275 - akm - INFO - initializing FEsolver object
+2020-11-11 18:15:51,275 - akm - INFO - FEsolver object initialized
+2020-11-11 18:15:51,275 - akm - INFO - Preparing the data
+2020-11-11 18:15:51,426 - akm - INFO - Data movers=1560761 stayers=668581
+2020-11-11 18:15:56,294 - akm - INFO - data nf:273499 nw:2229342 nn:3790103
+2020-11-11 18:15:56,631 - akm - INFO - Prepare linear solver
+2020-11-11 18:16:00,939 - akm - INFO - Extract firm effects
+2020-11-11 18:16:01,094 - akm - INFO - Solver time 0.0549 seconds
+2020-11-11 18:16:01,094 - akm - INFO - Expected total time 0.0046 minutes
+2020-11-11 18:16:01,206 - akm - INFO - Fixed effect R-square 1.0000
+2020-11-11 18:16:01,234 - akm - INFO - [ho] variance of residuals 0.0000
+2020-11-11 18:16:01,234 - akm - INFO - Starting FE trace correction ndraws=5, using 1 cores
+2020-11-11 18:16:02,122 - akm - INFO - [fe]
+2020-11-11 18:16:02,147 - akm - INFO - var_psi=0.0000
+2020-11-11 18:16:02,203 - akm - INFO - cov=nan tot=1.1356
+2020-11-11 18:16:14,791 - akm - DEBUG - FE [traces] step 0/5 done.
+2020-11-11 18:16:28,717 - akm - DEBUG - FE [traces] step 1/5 done.
+2020-11-11 18:16:41,800 - akm - DEBUG - FE [traces] step 2/5 done.
+2020-11-11 18:16:54,883 - akm - DEBUG - FE [traces] step 3/5 done.
+2020-11-11 18:17:07,945 - akm - DEBUG - FE [traces] step 4/5 done.
+2020-11-11 18:17:08,002 - akm - INFO - [ho] VAR tr=0.2000 (sd=1.7730e-03)
+2020-11-11 18:17:08,002 - akm - INFO - [ho] COV tr=-0.1320 (sd=1.7493e-03)
+2020-11-11 18:17:08,002 - akm - INFO - [ho] VAR fe=0.0000
+2020-11-11 18:17:08,002 - akm - INFO - [ho] VAR bc=0.0000
+2020-11-11 18:17:08,002 - akm - INFO - [ho] COV fe=nan
+2020-11-11 18:17:08,002 - akm - INFO - [ho] COV bc=nan
+2020-11-11 18:17:08,014 - akm - INFO - Saved results to res_akm.json
+2020-11-11 18:17:08,014 - akm - INFO - ------ DONE -------

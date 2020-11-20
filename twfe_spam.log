@@ -29504,3 +29504,36 @@
 2020-11-11 18:08:30,948 - twfe - INFO - dataframes linking fids to clusters generated
 2020-11-11 18:08:32,330 - twfe - INFO - clusters merged into event study data
 2020-11-11 18:08:32,382 - twfe - INFO - datatypes of clusters corrected
+2020-11-11 18:14:12,788 - twfe - INFO - initializing twfe_network object
+2020-11-11 18:14:12,788 - twfe - INFO - twfe_network object initialized
+2020-11-11 18:14:12,789 - twfe - INFO - beginning data cleaning
+2020-11-11 18:14:12,789 - twfe - INFO - checking quality of data
+2020-11-11 18:14:12,789 - twfe - INFO - --- checking columns ---
+2020-11-11 18:14:12,789 - twfe - INFO - columns correct:True
+2020-11-11 18:14:12,789 - twfe - INFO - correcting column names
+2020-11-11 18:14:13,684 - twfe - INFO - --- checking worker-year observations ---
+2020-11-11 18:14:20,616 - twfe - INFO - max number of worker-year observations (should be 1):1
+2020-11-11 18:14:20,616 - twfe - INFO - --- checking nan data ---
+2020-11-11 18:14:21,750 - twfe - INFO - data nan rows (should be 0):132563
+2020-11-11 18:14:21,750 - twfe - INFO - --- checking connected set ---
+2020-11-11 18:14:44,051 - twfe - INFO - observations outside connected set (should be 0):93748
+2020-11-11 18:14:44,052 - twfe - INFO - --- checking contiguous firm ids ---
+2020-11-11 18:14:44,213 - twfe - INFO - contiguous firm ids (should be True):False
+2020-11-11 18:14:44,213 - twfe - INFO - Overall success:False
+2020-11-11 18:14:44,452 - twfe - INFO - dropping NaN observations
+2020-11-11 18:14:45,619 - twfe - INFO - generating largest connected set
+2020-11-11 18:15:09,831 - twfe - INFO - making firm ids contiguous
+2020-11-11 18:15:13,633 - twfe - INFO - generating NetworkX Graph of largest connected set
+2020-11-11 18:15:34,557 - twfe - INFO - data cleaning complete
+2020-11-11 18:15:41,907 - twfe - INFO - data sorted by wid and year
+2020-11-11 18:15:42,091 - twfe - INFO - lagged fid introduced
+2020-11-11 18:15:42,948 - twfe - INFO - spell ids generated
+2020-11-11 18:15:45,555 - twfe - INFO - data aggregated at the spell level
+2020-11-11 18:15:48,452 - twfe - INFO - workers split by spell count
+2020-11-11 18:15:50,971 - twfe - INFO - columns updated
+2020-11-11 18:15:51,005 - twfe - INFO - data reformatted as event study
+2020-11-11 18:17:11,931 - twfe - INFO - firm cdfs computed
+2020-11-11 18:20:19,366 - twfe - INFO - firm clusters computed
+2020-11-11 18:20:19,369 - twfe - INFO - dataframes linking fids to clusters generated
+2020-11-11 18:20:20,582 - twfe - INFO - clusters merged into event study data
+2020-11-11 18:20:20,629 - twfe - INFO - datatypes of clusters corrected

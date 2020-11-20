@@ -1,4 +1,4 @@
 {
-    "python.pythonPath": "/Users/adamalexanderoppenheimer/opt/anaconda3/envs/twfe-env/bin/python",
+    "python.pythonPath": "C:\\Users\\thiba\\miniconda3\\python.exe",
     "workbench.editor.enablePreview": false // When opening files, they open in a new tab. Default is they override the previously open file
 }
