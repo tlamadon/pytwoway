@@ -1,0 +1,592 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="lang:clipboard.copy" content="Copy to clipboard">
+  <meta name="lang:clipboard.copied" content="Copied to clipboard">
+  <meta name="lang:search.language" content="en">
+  <meta name="lang:search.pipeline.stopwords" content="True">
+  <meta name="lang:search.pipeline.trimmer" content="True">
+  <meta name="lang:search.result.none" content="No matching documents">
+  <meta name="lang:search.result.one" content="1 matching document">
+  <meta name="lang:search.result.other" content="# matching documents">
+  <meta name="lang:search.tokenizer" content="[\s\-]+">
+
+  
+    <link href="https://fonts.gstatic.com/" rel="preconnect" crossorigin>
+    <link href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,500,700|Roboto:300,400,400i,700&display=fallback" rel="stylesheet">
+
+    <style>
+      body,
+      input {
+        font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif
+      }
+
+      code,
+      kbd,
+      pre {
+        font-family: "Roboto Mono", "Courier New", Courier, monospace
+      }
+    </style>
+  
+
+  <link rel="stylesheet" href="_static/stylesheets/application.css"/>
+  <link rel="stylesheet" href="_static/stylesheets/application-palette.css"/>
+  <link rel="stylesheet" href="_static/stylesheets/application-fixes.css"/>
+  
+  <link rel="stylesheet" href="_static/fonts/material-icons.css"/>
+  
+  <meta name="theme-color" content="#3f51b5">
+  <script src="_static/javascripts/modernizr.js"></script>
+  
+  
+  
+    <title>pytwoway &#8212; pytwoway</title>
+    <link rel="stylesheet" href="_static/material.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="cre module" href="cre.html" />
+  
+   
+
+  </head>
+  <body dir=ltr
+        data-md-color-primary=indigo data-md-color-accent=blue>
+  
+  <svg class="md-svg">
+    <defs data-children-count="0">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" width="416" height="448" viewBox="0 0 416 448" id="__github"><path fill="currentColor" d="M160 304q0 10-3.125 20.5t-10.75 19T128 352t-18.125-8.5-10.75-19T96 304t3.125-20.5 10.75-19T128 256t18.125 8.5 10.75 19T160 304zm160 0q0 10-3.125 20.5t-10.75 19T288 352t-18.125-8.5-10.75-19T256 304t3.125-20.5 10.75-19T288 256t18.125 8.5 10.75 19T320 304zm40 0q0-30-17.25-51T296 232q-10.25 0-48.75 5.25Q229.5 240 208 240t-39.25-2.75Q130.75 232 120 232q-29.5 0-46.75 21T56 304q0 22 8 38.375t20.25 25.75 30.5 15 35 7.375 37.25 1.75h42q20.5 0 37.25-1.75t35-7.375 30.5-15 20.25-25.75T360 304zm56-44q0 51.75-15.25 82.75-9.5 19.25-26.375 33.25t-35.25 21.5-42.5 11.875-42.875 5.5T212 416q-19.5 0-35.5-.75t-36.875-3.125-38.125-7.5-34.25-12.875T37 371.5t-21.5-28.75Q0 312 0 260q0-59.25 34-99-6.75-20.5-6.75-42.5 0-29 12.75-54.5 27 0 47.5 9.875t47.25 30.875Q171.5 96 212 96q37 0 70 8 26.25-20.5 46.75-30.25T376 64q12.75 25.5 12.75 54.5 0 21.75-6.75 42 34 40 34 99.5z"/></svg>
+      
+    </defs>
+  </svg>
+  
+  <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer">
+  <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search">
+  <label class="md-overlay" data-md-component="overlay" for="__drawer"></label>
+  <a href="#index" tabindex="1" class="md-skip"> Skip to content </a>
+  <header class="md-header" data-md-component="header">
+  <nav class="md-header-nav md-grid">
+    <div class="md-flex navheader">
+      <div class="md-flex__cell md-flex__cell--shrink">
+        <a href="#" title="pytwoway"
+           class="md-header-nav__button md-logo">
+          
+            &nbsp;
+          
+        </a>
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        <label class="md-icon md-icon--menu md-header-nav__button" for="__drawer"></label>
+      </div>
+      <div class="md-flex__cell md-flex__cell--stretch">
+        <div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
+          <span class="md-header-nav__topic">pytwoway v0.0.1</span>
+          <span class="md-header-nav__topic"> pytwoway </span>
+        </div>
+      </div>
+      <div class="md-flex__cell md-flex__cell--shrink">
+        <label class="md-icon md-icon--search md-header-nav__button" for="__search"></label>
+        
+<div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" action="search.html" method="GET" name="search">
+      <input type="text" class="md-search__input" name="q" placeholder="Search"
+             autocapitalize="off" autocomplete="off" spellcheck="false"
+             data-md-component="query" data-md-state="active">
+      <label class="md-icon md-search__icon" for="__search"></label>
+      <button type="reset" class="md-icon md-search__icon" data-md-component="reset" tabindex="-1">
+        &#xE5CD;
+      </button>
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="result">
+          <div class="md-search-result__meta">
+            Type to start searching
+          </div>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+      </div>
+      
+        <div class="md-flex__cell md-flex__cell--shrink">
+          <div class="md-header-nav__source">
+            <a href="https://github.com/tlamadon/pytwoway" title="Go to repository" class="md-source" data-md-source="github">
+
+    <div class="md-source__icon">
+      <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24" width="28" height="28">
+        <use xlink:href="#__github" width="24" height="24"></use>
+      </svg>
+    </div>
+  
+  <div class="md-source__repository">
+    tlamadon
+  </div>
+</a>
+          </div>
+        </div>
+      
+      
+  
+  <script src="_static/javascripts/version_dropdown.js"></script>
+  <script>
+    var json_loc = ""versions.json"",
+        target_loc = "../",
+        text = "Versions";
+    $( document ).ready( add_version_dropdown(json_loc, target_loc, text));
+  </script>
+  
+
+    </div>
+  </nav>
+</header>
+
+  
+  <div class="md-container">
+    
+    
+    
+    <main class="md-main">
+      <div class="md-main__inner md-grid" data-md-component="container">
+        
+          <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
+            <div class="md-sidebar__scrollwrap">
+              <div class="md-sidebar__inner">
+                <nav class="md-nav md-nav--primary" data-md-level="0">
+  <label class="md-nav__title md-nav__title--site" for="__drawer">
+    <a href="#" title="pytwoway" class="md-nav__button md-logo">
+      
+        <img src="_static/" alt=" logo" width="48" height="48">
+      
+    </a>
+    <a href="#"
+       title="pytwoway">pytwoway v0.0.1</a>
+  </label>
+    <div class="md-nav__source">
+      <a href="https://github.com/tlamadon/pytwoway" title="Go to repository" class="md-source" data-md-source="github">
+
+    <div class="md-source__icon">
+      <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24" width="28" height="28">
+        <use xlink:href="#__github" width="24" height="24"></use>
+      </svg>
+    </div>
+  
+  <div class="md-source__repository">
+    tlamadon
+  </div>
+</a>
+    </div>
+  
+  
+
+  
+  <ul class="md-nav__list">
+    <li class="md-nav__item">
+    
+    
+      <a href="cre.html" class="md-nav__link">cre module</a>
+      
+    
+    </li>
+    <li class="md-nav__item">
+    
+    
+      <a href="fe_approximate_correction_full.html" class="md-nav__link">fe_approximate_correction_full module</a>
+      
+    
+    </li>
+    <li class="md-nav__item">
+    
+    
+      <a href="twfe_network.html" class="md-nav__link">twfe_network module</a>
+      
+    
+    </li>
+    <li class="md-nav__item">
+    
+    
+      <a href="sim_twfe_network.html" class="md-nav__link">sim_twfe_network module</a>
+      
+    
+    </li>
+    <li class="md-nav__item">
+    
+    
+      <a href="notebooks/pytwoway_example.html" class="md-nav__link">pytwoway example</a>
+      
+    
+    </li>
+    <li class="md-nav__item">
+    
+    
+      <a href="notebooks/monte_carlo_example.html" class="md-nav__link">Monte Carlo example</a>
+      
+    
+    </li>
+  </ul>
+  
+
+</nav>
+              </div>
+            </div>
+          </div>
+          <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
+            <div class="md-sidebar__scrollwrap">
+              <div class="md-sidebar__inner">
+                
+<nav class="md-nav md-nav--secondary">
+    <label class="md-nav__title" for="__toc">Contents</label>
+  <ul class="md-nav__list" data-md-scrollfix="">
+        <li class="md-nav__item"><a href="#index--page-root" class="md-nav__link">pytwoway</a><nav class="md-nav">
+              <ul class="md-nav__list">
+        <li class="md-nav__item"><a href="#pytoway-cre" class="md-nav__link"><code class="docutils literal notranslate"><span class="pre">pytoway.cre</span></code></a>
+        </li>
+        <li class="md-nav__item"><a href="#pytwoway-fe-approximate-correction-full" class="md-nav__link"><code class="docutils literal notranslate"><span class="pre">pytwoway.fe_approximate_correction_full</span></code></a>
+        </li>
+        <li class="md-nav__item"><a href="#pytwoway-twfe-network" class="md-nav__link"><code class="docutils literal notranslate"><span class="pre">pytwoway.twfe_network</span></code></a>
+        </li>
+        <li class="md-nav__item"><a href="#pytwoway-sim-twfe-network" class="md-nav__link"><code class="docutils literal notranslate"><span class="pre">pytwoway.sim_twfe_network</span></code></a><nav class="md-nav">
+              <ul class="md-nav__list">
+        <li class="md-nav__item"><a href="#citation" class="md-nav__link">Citation</a>
+        </li></ul>
+            </nav>
+        </li></ul>
+            </nav>
+        </li>
+    
+<li class="md-nav__item"><a class="md-nav__extra_link" href="_sources/index.rst.txt">Show Source</a> </li>
+
+<li id="searchbox" class="md-nav__item"></li>
+
+  </ul>
+</nav>
+              </div>
+            </div>
+          </div>
+        
+        <div class="md-content">
+          <article class="md-content__inner md-typeset" role="main">
+            
+  
+<h1 id="index--page-root">pytwoway<a class="headerlink" href="#index--page-root" title="Permalink to this headline">¶</a></h1>
+<p>pytwoway is a Python module that provides classes and functions for the estimation
+of two way fixed effect models. It includes AKM, homoskedastic- and heteroskedastic-corrected AKM, and CRE estimators,
+as well as simulation tools. Estimators are tested against simulations to ensure they are correct.
+The online documentation is hosted at <a class="reference external" href="https://github.com/tlamadon/pytwoway/">github.com/tlamadon/pytwoway</a>.</p>
+<p>The main pytwoway API is split into four modules:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pytoway.cre</span></code>: CRE estimator. Canonically imported
+using <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">statsmodels.api</span> <span class="pre">as</span> <span class="pre">sm</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytoway.fe_approximate_correction_full.FEsolver</span></code>: FE esimators. Canonically imported
+using <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">pytoway.fe_approximate_correction_full.FEsolver</span> <span class="pre">as</span> <span class="pre">fe</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytoway.path_cov</span></code>: covariance estimators. Canonically imported
+using <code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">pytoway.path_cov</span> <span class="pre">as</span> <span class="pre">pc</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.twfe_network.twfe_network</span></code>: Class to format labor data. Canonically imported using
+<code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">pytwoway.twfe_network.twfe_network</span> <span class="pre">as</span> <span class="pre">tn</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.sim_twfe_network.sim_twfe_network</span></code>: Class to format labor data. Canonically imported using
+<code class="docutils literal notranslate"><span class="pre">import</span> <span class="pre">pytwoway.sim_twfe_network.sim_twfe_network</span> <span class="pre">as</span> <span class="pre">sn</span></code>.</p></li>
+</ul>
+
+<h2 id="pytoway-cre"><code class="docutils literal notranslate"><span class="pre">pytoway.cre</span></code><a class="headerlink" href="#pytoway-cre" title="Permalink to this headline">¶</a></h2>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%"/>
+<col style="width: 90%"/>
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CREsolver" title="pytwoway.cre.CREsolver"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CREsolver</span></code></a>(adata, sdata, jdata[, wo_btw])</p></td>
+<td><p>Uses multigrid and partialing out to solve two way Fixed Effect model</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CREsolver.compute_posterior_var" title="pytwoway.cre.CREsolver.compute_posterior_var"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_posterior_var</span></code></a>(ndraw_trace)</p></td>
+<td><p>compute the posterior variance of the CRE model :return:</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CREsolver.estimate_between_cluster" title="pytwoway.cre.CREsolver.estimate_between_cluster"><code class="xref py py-obj docutils literal notranslate"><span class="pre">estimate_between_cluster</span></code></a>(sdata, jdata[, wo_btw])</p></td>
+<td><p>Takes sdata and jdata and extracts cluster levels means of firm effects and average value of worker effects :param sdata: :param jdata: :return:</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CREsolver.estimate_within_cluster" title="pytwoway.cre.CREsolver.estimate_within_cluster"><code class="xref py py-obj docutils literal notranslate"><span class="pre">estimate_within_cluster</span></code></a>(sdata, jdata)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CREsolver.estimate_within_parameters" title="pytwoway.cre.CREsolver.estimate_within_parameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">estimate_within_parameters</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.expand_grid" title="pytwoway.cre.expand_grid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">expand_grid</span></code></a>(data_dict)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.main" title="pytwoway.cre.main"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main</span></code></a>(args)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.pd_to_np" title="pytwoway.cre.pd_to_np"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pd_to_np</span></code></a>(df, colr, colc, colv, nr, nc)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.pipe_qcov" title="pytwoway.cre.pipe_qcov"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pipe_qcov</span></code></a>(df, e1, e2)</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+
+
+<h2 id="pytwoway-fe-approximate-correction-full"><code class="docutils literal notranslate"><span class="pre">pytwoway.fe_approximate_correction_full</span></code><a class="headerlink" href="#pytwoway-fe-approximate-correction-full" title="Permalink to this headline">¶</a></h2>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%"/>
+<col style="width: 90%"/>
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver" title="pytwoway.fe_approximate_correction_full.FEsolver"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FEsolver</span></code></a>(params)</p></td>
+<td><p>Uses multigrid and partialing out to solve two way Fixed Effect model</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.collect_res" title="pytwoway.fe_approximate_correction_full.FEsolver.collect_res"><code class="xref py py-obj docutils literal notranslate"><span class="pre">collect_res</span></code></a>()</p></td>
+<td><p>Collect all results.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.compute_early_stats" title="pytwoway.fe_approximate_correction_full.FEsolver.compute_early_stats"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_early_stats</span></code></a>()</p></td>
+<td><p>Compute some early statistics.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.compute_leverages_Pii" title="pytwoway.fe_approximate_correction_full.FEsolver.compute_leverages_Pii"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_leverages_Pii</span></code></a>()</p></td>
+<td><p>Compute leverages for heteroskedastic correction.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.compute_trace_approximation_fe" title="pytwoway.fe_approximate_correction_full.FEsolver.compute_trace_approximation_fe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_trace_approximation_fe</span></code></a>()</p></td>
+<td><p>Compute FE trace approximation for arbitrary Q.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.compute_trace_approximation_he" title="pytwoway.fe_approximate_correction_full.FEsolver.compute_trace_approximation_he"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_trace_approximation_he</span></code></a>()</p></td>
+<td><p>Compute heteroskedastic trace approximation.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.construct_Q" title="pytwoway.fe_approximate_correction_full.FEsolver.construct_Q"><code class="xref py py-obj docutils literal notranslate"><span class="pre">construct_Q</span></code></a>()</p></td>
+<td><p>Generate columns in adata necessary to construct Q.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.create_fe_solver" title="pytwoway.fe_approximate_correction_full.FEsolver.create_fe_solver"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_fe_solver</span></code></a>()</p></td>
+<td><p>Solve FE model.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.get_akm_estimates" title="pytwoway.fe_approximate_correction_full.FEsolver.get_akm_estimates"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_akm_estimates</span></code></a>()</p></td>
+<td><p>Return estimated psi_hats linked to firm ids and alpha_hats linked to worker ids.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.init_prepped_adata" title="pytwoway.fe_approximate_correction_full.FEsolver.init_prepped_adata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_prepped_adata</span></code></a>()</p></td>
+<td><p>Use prepped adata to initialize class attributes.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.leverage_approx" title="pytwoway.fe_approximate_correction_full.FEsolver.leverage_approx"><code class="xref py py-obj docutils literal notranslate"><span class="pre">leverage_approx</span></code></a>(ndraw_pii)</p></td>
+<td><p>Compute an approximate leverage using ndraw_pii.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.load" title="pytwoway.fe_approximate_correction_full.FEsolver.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>(filename)</p></td>
+<td><p>Load files for heteroskedastic correction.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.mult_A" title="pytwoway.fe_approximate_correction_full.FEsolver.mult_A"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mult_A</span></code></a>(psi, alpha)</p></td>
+<td><p>Multiplies A = [J W] stored in the object by psi and alpha (used, for example, to compute estimated outcomes and sample errors).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.mult_AAinv" title="pytwoway.fe_approximate_correction_full.FEsolver.mult_AAinv"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mult_AAinv</span></code></a>(psi, alpha)</p></td>
+<td><p>Multiplies gamma = [psi alpha] by (A’A)^(-1) where A = [J W] stored in the object.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.mult_Atranspose" title="pytwoway.fe_approximate_correction_full.FEsolver.mult_Atranspose"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mult_Atranspose</span></code></a>(v)</p></td>
+<td><p>Multiplies the transpose of A = [J W] stored in the object by v.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.prep_data" title="pytwoway.fe_approximate_correction_full.FEsolver.prep_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prep_data</span></code></a>()</p></td>
+<td><p>Do some initial data cleaning.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.proj" title="pytwoway.fe_approximate_correction_full.FEsolver.proj"><code class="xref py py-obj docutils literal notranslate"><span class="pre">proj</span></code></a>(y)</p></td>
+<td><p>Solve y, then project onto X space of data stored in the object.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.run_1" title="pytwoway.fe_approximate_correction_full.FEsolver.run_1"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_1</span></code></a>()</p></td>
+<td><p>Run FE solver, part 1.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.run_2" title="pytwoway.fe_approximate_correction_full.FEsolver.run_2"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_2</span></code></a>()</p></td>
+<td><p>Run FE solver, part 2.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.save" title="pytwoway.fe_approximate_correction_full.FEsolver.save"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code></a>(filename)</p></td>
+<td><p>Save FEsolver class to filename as pickle.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.save_early_stats" title="pytwoway.fe_approximate_correction_full.FEsolver.save_early_stats"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save_early_stats</span></code></a>()</p></td>
+<td><p>Save the early statistics computed in compute_early_stats().</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.save_res" title="pytwoway.fe_approximate_correction_full.FEsolver.save_res"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save_res</span></code></a>()</p></td>
+<td><p>Save results as json.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.solve" title="pytwoway.fe_approximate_correction_full.FEsolver.solve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">solve</span></code></a>(Y)</p></td>
+<td><p>Compute (A’A)^-1 A’Y, the least squares estimate of A [psi_hat, alpha_hat] = Y.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.weighted_quantile" title="pytwoway.fe_approximate_correction_full.FEsolver.weighted_quantile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">weighted_quantile</span></code></a>(values, quantiles[, …])</p></td>
+<td><p>Very close to numpy.percentile, but supports weights.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.weighted_var" title="pytwoway.fe_approximate_correction_full.FEsolver.weighted_var"><code class="xref py py-obj docutils literal notranslate"><span class="pre">weighted_var</span></code></a>(v, w)</p></td>
+<td><p>Compute weighted variance @ FIXME I don’t know what this function really does</p></td>
+</tr>
+</tbody>
+</table>
+
+
+<h2 id="pytwoway-twfe-network"><code class="docutils literal notranslate"><span class="pre">pytwoway.twfe_network</span></code><a class="headerlink" href="#pytwoway-twfe-network" title="Permalink to this headline">¶</a></h2>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%"/>
+<col style="width: 90%"/>
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network" title="pytwoway.twfe_network.twfe_network"><code class="xref py py-obj docutils literal notranslate"><span class="pre">twfe_network</span></code></a>(data[, formatting, col_dict])</p></td>
+<td><p>Class of twfe_network, where twfe_network gives a network of firms and workers. This class has the following functions:&lt;br/&gt;</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.approx_cdfs" title="pytwoway.twfe_network.twfe_network.approx_cdfs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">approx_cdfs</span></code></a>([cdf_resolution, grouping, year])</p></td>
+<td><p>Generate cdfs of compensation for firms.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.clean_data" title="pytwoway.twfe_network.twfe_network.clean_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">clean_data</span></code></a>()</p></td>
+<td><p>Clean data to make sure there are no NaN observations, firms are connected by movers and firm ids are contiguous.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.cluster" title="pytwoway.twfe_network.twfe_network.cluster"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cluster</span></code></a>([user_cluster])</p></td>
+<td><p>Cluster data and assign a new column giving the cluster for each firm.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.conset" title="pytwoway.twfe_network.twfe_network.conset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">conset</span></code></a>()</p></td>
+<td><p>Update data to include only the largest connected set of movers, and if firm ids are contiguous, also return the NetworkX Graph.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.contiguous_fids" title="pytwoway.twfe_network.twfe_network.contiguous_fids"><code class="xref py py-obj docutils literal notranslate"><span class="pre">contiguous_fids</span></code></a>()</p></td>
+<td><p>Make firm ids contiguous.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.data_validity" title="pytwoway.twfe_network.twfe_network.data_validity"><code class="xref py py-obj docutils literal notranslate"><span class="pre">data_validity</span></code></a>()</p></td>
+<td><p>Checks that data is formatted correctly and updates relevant attributes.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.n_firms" title="pytwoway.twfe_network.twfe_network.n_firms"><code class="xref py py-obj docutils literal notranslate"><span class="pre">n_firms</span></code></a>()</p></td>
+<td><p>Get the number of unique firms.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.n_workers" title="pytwoway.twfe_network.twfe_network.n_workers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">n_workers</span></code></a>()</p></td>
+<td><p>Get the number of unique workers.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.refactor_es" title="pytwoway.twfe_network.twfe_network.refactor_es"><code class="xref py py-obj docutils literal notranslate"><span class="pre">refactor_es</span></code></a>()</p></td>
+<td><p>Refactor long form data into event study data.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.run_akm_corrected" title="pytwoway.twfe_network.twfe_network.run_akm_corrected"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_akm_corrected</span></code></a>([user_akm])</p></td>
+<td><p>Run bias-corrected AKM estimator.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.run_cre" title="pytwoway.twfe_network.twfe_network.run_cre"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_cre</span></code></a>([user_cre])</p></td>
+<td><p>Run CRE estimator.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.update_cols" title="pytwoway.twfe_network.twfe_network.update_cols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_cols</span></code></a>()</p></td>
+<td><p>Rename columns and keep only relevant columns.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.update_dict" title="pytwoway.twfe_network.twfe_network.update_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_dict</span></code></a>(default_params, user_params)</p></td>
+<td><p>Replace entries in default_params with values in user_params.</p></td>
+</tr>
+</tbody>
+</table>
+
+
+<h2 id="pytwoway-sim-twfe-network"><code class="docutils literal notranslate"><span class="pre">pytwoway.sim_twfe_network</span></code><a class="headerlink" href="#pytwoway-sim-twfe-network" title="Permalink to this headline">¶</a></h2>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%"/>
+<col style="width: 90%"/>
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.rand" title="pytwoway.sim_twfe_network.rand"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rand</span></code></a>(d0, d1, …, dn)</p></td>
+<td><p>Random values in a given shape.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.randint" title="pytwoway.sim_twfe_network.randint"><code class="xref py py-obj docutils literal notranslate"><span class="pre">randint</span></code></a>(low[, high, size, dtype])</p></td>
+<td><p>Return random integers from <cite>low</cite> (inclusive) to <cite>high</cite> (exclusive).</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.sim_twfe_network" title="pytwoway.sim_twfe_network.sim_twfe_network"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sim_twfe_network</span></code></a>([sim_params])</p></td>
+<td><p>Class of sim_twfe_network, where sim_twfe_network simulates a network of firms and workers. This class has the following functions:</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.sim_twfe_network.plot_monte_carlo" title="pytwoway.sim_twfe_network.sim_twfe_network.plot_monte_carlo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_monte_carlo</span></code></a>()</p></td>
+<td><p>Plot results from Monte Carlo simulations.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.sim_twfe_network.sim_network" title="pytwoway.sim_twfe_network.sim_twfe_network.sim_network"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sim_network</span></code></a>()</p></td>
+<td><p>Simulate panel data corresponding to the calibrated model.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.sim_twfe_network.sim_network_draw_fids" title="pytwoway.sim_twfe_network.sim_twfe_network.sim_network_draw_fids"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sim_network_draw_fids</span></code></a>(freq, num_time, firm_size)</p></td>
+<td><p>Draw firm ids for individual, given data that is grouped by worker id, spell id, and firm type.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.sim_twfe_network.sim_network_gen_fe" title="pytwoway.sim_twfe_network.sim_twfe_network.sim_network_gen_fe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sim_network_gen_fe</span></code></a>(sim_params)</p></td>
+<td><p>Generate fixed effects values for simulated panel data corresponding to the calibrated model.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.sim_twfe_network.twfe_monte_carlo" title="pytwoway.sim_twfe_network.sim_twfe_network.twfe_monte_carlo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">twfe_monte_carlo</span></code></a>([N, ncore, akm_params, …])</p></td>
+<td><p>Purpose:</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.sim_twfe_network.twfe_monte_carlo_interior" title="pytwoway.sim_twfe_network.sim_twfe_network.twfe_monte_carlo_interior"><code class="xref py py-obj docutils literal notranslate"><span class="pre">twfe_monte_carlo_interior</span></code></a>([akm_params, …])</p></td>
+<td><p>Run Monte Carlo simulations of twfe_network to see the distribution of the true vs.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.sim_twfe_network.update_dict" title="pytwoway.sim_twfe_network.sim_twfe_network.update_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_dict</span></code></a>(default_params, user_params)</p></td>
+<td><p>Replace entries in default_params with values in user_params.</p></td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="citation">Citation<a class="headerlink" href="#citation" title="Permalink to this headline">¶</a></h3>
+<p>Please use following citation to cite pytwoway in academic publications:</p>
+<p>Lamadon, Thibaut. “<a class="reference external" href="https://github.com/tlamadon/pytwoway">pytwoway: two way fixed effect estimation with
+python.</a>” <em>No title.</em> 2020.</p>
+<p>Bibtex entry:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nd">@inproceedings</span><span class="p">{</span><span class="n">lamadon2020pytwoway</span><span class="p">,</span>
+  <span class="n">title</span><span class="o">=</span><span class="p">{</span><span class="n">pytwoway</span><span class="p">:</span> <span class="n">two</span> <span class="n">way</span> <span class="n">fixed</span> <span class="n">effect</span> <span class="n">estimation</span> <span class="k">with</span> <span class="n">python</span><span class="p">},</span>
+  <span class="n">author</span><span class="o">=</span><span class="p">{</span><span class="n">Lamadon</span><span class="p">,</span> <span class="n">Thibaut</span><span class="p">},</span>
+  <span class="n">booktitle</span><span class="o">=</span><span class="p">{</span><span class="n">No</span> <span class="n">title</span><span class="p">},</span>
+  <span class="n">year</span><span class="o">=</span><span class="p">{</span><span class="mi">2020</span><span class="p">},</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<div class="toctree-wrapper compound">
+</div>
+
+
+
+
+
+          </article>
+        </div>
+      </div>
+    </main>
+  </div>
+  <footer class="md-footer">
+    <div class="md-footer-nav">
+      <nav class="md-footer-nav__inner md-grid">
+          
+          
+            <a href="cre.html" title="cre module"
+               class="md-flex md-footer-nav__link md-footer-nav__link--next"
+               rel="next">
+            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title"><span
+                class="md-flex__ellipsis"> <span
+                class="md-footer-nav__direction"> Next </span> cre module </span>
+            </div>
+            <div class="md-flex__cell md-flex__cell--shrink"><i
+                class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
+            </div>
+          
+        </a>
+        
+      </nav>
+    </div>
+    <div class="md-footer-meta md-typeset">
+      <div class="md-footer-meta__inner md-grid">
+        <div class="md-footer-copyright">
+          <div class="md-footer-copyright__highlight">
+              &#169; Copyright 2020, Thibaut Lamadon.
+              
+          </div>
+            Last updated on
+              Dec 20, 2020.
+            <br/>
+            Created using
+            <a href="http://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
+             and
+            <a href="https://github.com/bashtage/sphinx-material/">Material for
+              Sphinx</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+  <script src="_static/javascripts/application.js"></script>
+  <script>app.initialize({version: "1.0.4", url: {base: ".."}})</script>
+  </body>
+</html>

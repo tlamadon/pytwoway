@@ -17,11 +17,12 @@ dependencies:
   - mkdocs-material
   - pip
   - pip:
-      - mkdocstrings
-      - mkdocs-material-extensions
+      # - mkdocstrings
+      # - mkdocs-material-extensions
       # - mknotebooks
       # - Pygments # Required for mknotebooks syntax highlighting
-      - mkdocs-jupyter
+      # - mkdocs-jupyter
+      - nbsphinx # For Jupyter in Sphinx
 
 # conda env create --file environment.yml
 # conda env remove --name twfe-env
