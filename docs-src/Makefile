@@ -22,3 +22,4 @@ help:
 copy:
 	rm *.log
 	cp -r build/html/** ../docs
+	cp .nojekyll ../docs
