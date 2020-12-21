@@ -9,7 +9,7 @@ pytwoway
 pytwoway is a Python module that provides classes and functions for the estimation
 of two way fixed effect models. It includes AKM, homoskedastic- and heteroskedastic-corrected AKM, and CRE estimators,
 as well as simulation tools. Estimators are tested against simulations to ensure they are correct.
-The online documentation is hosted at `github.com/tlamadon/pytwoway <https://github.com/tlamadon/pytwoway/>`__.
+The online documentation is hosted at `https://tlamadon.github.io/pytwoway/ <https://tlamadon.github.io/pytwoway/>`_.
 
 .. :ref:`statsmodels <about:About statsmodels>` is a Python module that provides classes and functions for the estimation
 .. of many different statistical models, as well as for conducting statistical tests, and statistical
@@ -20,14 +20,34 @@ The online documentation is hosted at `github.com/tlamadon/pytwoway <https://git
 
 The main pytwoway API is split into four modules:
 
-* ``pytoway.cre``: CRE estimator. Canonically imported
-  using ``from pytwoway import cre``.
-* ``pytoway.fe_approximate_correction_full.FEsolver``: FE esimators. Canonically imported
-  using ``from pytoway import fe_approximate_correction_full --> fe = fe_approximate_correction_full.FEsolver``.
+* ``pytwoway.cre``: CRE estimator. Canonically imported
+  using
+
+  .. code-block:: python
+
+    from python import cre
+
+* ``pytwoway.fe_approximate_correction_full.FEsolver``: FE esimators. Canonically imported
+  using
+
+  .. code-block:: python
+
+    from python import fe_approximate_correction_full
+    fe = fe_approximate_correction_full.FEsolver
+
 * ``pytwoway.twfe_network.twfe_network``: Class to format labor data. Canonically imported using
-  ``from pytwoway import twfe_network --> tn = twfe_network.twfe_network``.
-* ``pytwoway.sim_twfe_network.sim_twfe_network``: Class to format labor data. Canonically imported using
-  ``from pytwoway import sim_twfe_network --> sn = sim_twfe_network.sim_twfe_network``.
+
+  .. code-block:: python
+
+    from pytwoway import twfe_network
+    tn = twfe_network.twfe_network
+
+* ``pytwoway.sim_twfe_network.sim_twfe_network``: Class to simulate labor data and run Monte Carlo simulations. Canonically imported using
+
+  .. code-block:: python
+
+    from pytwoway import sim_twfe_network
+    sn = sim_twfe_network.sim_twfe_network
 
 .. The API focuses on models and the most frequently used statistical test, and tools.
 .. :ref:`api-structure:Import Paths and Structure` explains the design of the two API modules and how
@@ -35,8 +55,72 @@ The main pytwoway API is split into four modules:
 .. model is defined. See the detailed topic pages in the :ref:`user-guide:User Guide` for a complete
 .. list of available models, statistics, and tools.
 
-``pytoway.cre``
----------------
+===========
+Quick Start
+===========
+
+To install from pip, run::
+
+  pip install pytwoway
+
+To run using command line interface::
+
+  python3 run_twfe.py --my-config config.txt --filetype csv --akm --cre
+
+Example config.txt::
+
+    data = file.csv
+    col_dict = "{'fid': 'your_firmid_col', 'wid': 'your_workerid_col', 'year': 'your_year_col', 'comp': 'your_compensation_col'}"
+
+To run in Python:
+
+- If you have data
+
+.. code-block:: python
+
+    from pytwoway import twfe_network
+    tn = twfe_network.twfe_network
+    # Create twfe object
+    tw_net = tn.twfe_network(data, formatting, col_dict)
+    # Convert long data into event study data (not necessary if the data is already in event study format):
+    tw_net.refactor_es()
+    # Run the bias-corrected AKM estimator:
+    tw_net.run_akm_corrected(user_akm)
+    # Cluster firms based on their wage CDFs (required for the CRE estimator)
+    tw_net.cluster(user_cluster)
+    # Run the CRE estimator
+    tw_net.run_cre(user_cre)
+
+- If you want to simulate data
+
+.. code-block:: python
+
+    from pytwoway import sim_twfe_network
+    sn = sim_twfe_network.sim_twfe_network
+    # Create simulated twfe object
+    stw_net = sn(sim_params)
+    # Generate data
+    sim_data = stw_net.sim_network()
+
+- If you want to run Monte Carlo on simulated data
+
+.. code-block:: python
+
+    from pytwoway import sim_twfe_network
+    sn = sim_twfe_network.sim_twfe_network
+    # Create simulated twfe object
+    stw_net = sn(sim_params)
+    # Run Monte Carlo
+    stw_net.twfe_monte_carlo(N, ncore, akm_params, cre_params, cluster_params)
+    # Plot results
+    stw_net.plot_monte_carlo()
+
+===================
+Modules and Methods
+===================
+
+``pytwoway.cre``
+----------------
 .. autosummary::
 
    ~pytwoway.cre.CREsolver
@@ -111,8 +195,6 @@ The main pytwoway API is split into four modules:
 ---------------------------------------------
 .. autosummary::
 
-   ~pytwoway.sim_twfe_network.rand
-   ~pytwoway.sim_twfe_network.randint
    ~pytwoway.sim_twfe_network.sim_twfe_network
    ~pytwoway.sim_twfe_network.sim_twfe_network.plot_monte_carlo
    ~pytwoway.sim_twfe_network.sim_twfe_network.sim_network
@@ -128,27 +210,26 @@ Citation
 
 Please use following citation to cite pytwoway in academic publications:
 
-
-Lamadon, Thibaut. "`pytwoway: two way fixed effect estimation with
-python. <https://github.com/tlamadon/pytwoway>`_" *No title.* 2020.
+Bonhomme, Stéphane, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler. "`How Much Should we Trust Estimates of Firm Effects and Worker Sorting?. <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" No. w27368. National Bureau of Economic Research, 2020.
 
 Bibtex entry::
 
-  @inproceedings{lamadon2020pytwoway,
-    title={pytwoway: two way fixed effect estimation with python},
-    author={Lamadon, Thibaut},
-    booktitle={No title},
+  @techreport{bonhomme2020much,
+    title={How Much Should We Trust Estimates of Firm Effects and Worker Sorting?},
+    author={Bonhomme, St{\'e}phane and Holzheu, Kerstin and Lamadon, Thibaut and Manresa, Elena and Mogstad, Magne and Setzler, Bradley},
     year={2020},
+    institution={National Bureau of Economic Research}
   }
 
 .. toctree::
-   :maxdepth: 0
+   :maxdepth: 1
    :hidden:
+   :titlesonly:
 
+   notebooks/pytwoway_example
+   notebooks/monte_carlo_example
    cre
    fe_approximate_correction_full
    path_cov
    twfe_network
    sim_twfe_network
-   notebooks/pytwoway_example
-   notebooks/monte_carlo_example

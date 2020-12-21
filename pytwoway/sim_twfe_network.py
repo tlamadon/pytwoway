@@ -10,8 +10,7 @@ import pandas as pd
 from random import choices
 from scipy.stats import mode, norm
 from scipy.linalg import eig
-inv, ax, randint = np.linalg.inv, np.newaxis, np.random.randint
-repmat, rand = np.matlib.repmat, np.random.rand
+ax = np.newaxis
 from matplotlib import pyplot as plt
 from pytwoway import twfe_network
 tn = twfe_network.twfe_network
@@ -163,7 +162,7 @@ class sim_twfe_network:
         spellcount = np.ones((num_ind, num_time))
 
         # Random draws of worker types for all individuals in panel
-        sim_worker_types = randint(low=1, high=nl, size=num_ind)
+        sim_worker_types = np.random.randint(low=1, high=nl, size=num_ind)
 
         for i in range(0, num_ind):
             l = sim_worker_types[i]
@@ -172,7 +171,7 @@ class sim_twfe_network:
 
             for t in range(1, num_time):
                 # Hit moving shock
-                if rand() < p_move:
+                if np.random.rand() < p_move:
                     network[i, t] = choices(range(0, nk), G[l, network[i, t - 1], :])[0]
                     spellcount[i, t] = spellcount[i, t - 1] + 1
                 else:
@@ -182,7 +181,7 @@ class sim_twfe_network:
         # Compiling IDs and timestamps
         ids = np.reshape(np.outer(range(1, num_ind + 1), np.ones(num_time)), (num_time * num_ind, 1))
         ids = ids.astype(int)[:, 0]
-        ts = np.reshape(repmat(range(1, num_time + 1), num_ind, 1), (num_time * num_ind, 1))
+        ts = np.reshape(np.matlib.repmat(range(1, num_time + 1), num_ind, 1), (num_time * num_ind, 1))
         ts = ts.astype(int)[:, 0]
 
         # Compiling worker types

@@ -57,7 +57,6 @@
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="pytwoway example" href="notebooks/pytwoway_example.html" />
     <link rel="prev" title="twfe_network module" href="twfe_network.html" />
   
    
@@ -203,6 +202,20 @@
     <li class="md-nav__item">
     
     
+      <a href="notebooks/pytwoway_example.html" class="md-nav__link">pytwoway example</a>
+      
+    
+    </li>
+    <li class="md-nav__item">
+    
+    
+      <a href="notebooks/monte_carlo_example.html" class="md-nav__link">Monte Carlo example</a>
+      
+    
+    </li>
+    <li class="md-nav__item">
+    
+    
       <a href="cre.html" class="md-nav__link">cre module</a>
       
     
@@ -240,20 +253,6 @@
       
     
     </li>
-    <li class="md-nav__item">
-    
-    
-      <a href="notebooks/pytwoway_example.html" class="md-nav__link">pytwoway example</a>
-      
-    
-    </li>
-    <li class="md-nav__item">
-    
-    
-      <a href="notebooks/monte_carlo_example.html" class="md-nav__link">Monte Carlo example</a>
-      
-    
-    </li>
   </ul>
   
 
@@ -284,123 +283,6 @@
   
 <span id="sim-twfe-network-module"></span><h1 id="sim-twfe-network--page-root">sim_twfe_network module<a class="headerlink" href="#sim-twfe-network--page-root" title="Permalink to this headline">¶</a></h1>
 <p>Class for a simulated two-way fixed effect network</p>
-<dl class="py function">
-<dt id="pytwoway.sim_twfe_network.rand">
-<code class="sig-prename descclassname">pytwoway.sim_twfe_network.</code><code class="sig-name descname">rand</code><span class="sig-paren">(</span><em class="sig-param">d0</em>, <em class="sig-param">d1</em>, <em class="sig-param">...</em>, <em class="sig-param">dn</em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.rand" title="Permalink to this definition">¶</a></dt>
-<dd><p>Random values in a given shape.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>This is a convenience function for users porting code from Matlab,
-and wraps <cite>random_sample</cite>. That function takes a
-tuple to specify the size of the output, which is consistent with
-other NumPy functions like <cite>numpy.zeros</cite> and <cite>numpy.ones</cite>.</p>
-</div>
-<p>Create an array of the given shape and populate it with
-random samples from a uniform distribution
-over <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">1)</span></code>.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>d1</strong><strong>, </strong><strong>..</strong><strong>, </strong><strong>dn</strong> (<em>d0</em><em>,</em>) – The dimensions of the returned array, must be non-negative.
-If no argument is given a single Python float is returned.</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p><strong>out</strong> – Random values.</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>ndarray, shape <code class="docutils literal notranslate"><span class="pre">(d0,</span> <span class="pre">d1,</span> <span class="pre">...,</span> <span class="pre">dn)</span></code></p>
-</dd>
-</dl>
-<div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<p><code class="xref py py-func docutils literal notranslate"><span class="pre">random()</span></code></p>
-</div>
-<p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
-<span class="go">array([[ 0.14022471,  0.96360618],  #random</span>
-<span class="go">       [ 0.37601032,  0.25528411],  #random</span>
-<span class="go">       [ 0.49313049,  0.94909878]]) #random</span>
-</pre></div>
-</div>
-</dd></dl>
-<dl class="py function">
-<dt id="pytwoway.sim_twfe_network.randint">
-<code class="sig-prename descclassname">pytwoway.sim_twfe_network.</code><code class="sig-name descname">randint</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">low</span></em>, <em class="sig-param"><span class="n">high</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">size</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">dtype</span><span class="o">=</span><span class="default_value">int</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.randint" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return random integers from <cite>low</cite> (inclusive) to <cite>high</cite> (exclusive).</p>
-<p>Return random integers from the “discrete uniform” distribution of
-the specified dtype in the “half-open” interval [<cite>low</cite>, <cite>high</cite>). If
-<cite>high</cite> is None (the default), then results are from [0, <cite>low</cite>).</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>New code should use the <code class="docutils literal notranslate"><span class="pre">integers</span></code> method of a <code class="docutils literal notranslate"><span class="pre">default_rng()</span></code>
-instance instead; see <cite>random-quick-start</cite>.</p>
-</div>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>low</strong> (<em>int</em><em> or </em><em>array-like of ints</em>) – Lowest (signed) integers to be drawn from the distribution (unless
-<code class="docutils literal notranslate"><span class="pre">high=None</span></code>, in which case this parameter is one above the
-<em>highest</em> such integer).</p></li>
-<li><p><strong>high</strong> (<em>int</em><em> or </em><em>array-like of ints</em><em>, </em><em>optional</em>) – If provided, one above the largest (signed) integer to be drawn
-from the distribution (see above for behavior if <code class="docutils literal notranslate"><span class="pre">high=None</span></code>).
-If array-like, must contain integer values</p></li>
-<li><p><strong>size</strong> (<em>int</em><em> or </em><em>tuple of ints</em><em>, </em><em>optional</em>) – Output shape.  If the given shape is, e.g., <code class="docutils literal notranslate"><span class="pre">(m,</span> <span class="pre">n,</span> <span class="pre">k)</span></code>, then
-<code class="docutils literal notranslate"><span class="pre">m</span> <span class="pre">*</span> <span class="pre">n</span> <span class="pre">*</span> <span class="pre">k</span></code> samples are drawn.  Default is None, in which case a
-single value is returned.</p></li>
-<li><p><strong>dtype</strong> (<em>dtype</em><em>, </em><em>optional</em>) – <p>Desired dtype of the result. Byteorder must be native.
-The default value is int.</p>
-<div class="versionadded">
-<p><span class="versionmodified added">New in version 1.11.0.</span></p>
-</div>
-</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p><strong>out</strong> – <cite>size</cite>-shaped array of random integers from the appropriate
-distribution, or a single such random int if <cite>size</cite> not provided.</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>int or ndarray of ints</p>
-</dd>
-</dl>
-<div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<dl class="simple">
-<dt><code class="xref py py-func docutils literal notranslate"><span class="pre">random_integers()</span></code></dt><dd><p>similar to <cite>randint</cite>, only for the closed interval [<cite>low</cite>, <cite>high</cite>], and 1 is the lowest value if <cite>high</cite> is omitted.</p>
-</dd>
-<dt><code class="xref py py-func docutils literal notranslate"><span class="pre">Generator.integers()</span></code></dt><dd><p>which should be used for new code.</p>
-</dd>
-</dl>
-</div>
-<p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-<span class="go">array([1, 0, 0, 0, 1, 1, 0, 0, 1, 0]) # random</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-<span class="go">array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0])</span>
-</pre></div>
-</div>
-<p>Generate a 2 x 4 array of ints between 0 and 4, inclusive:</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
-<span class="go">array([[4, 0, 2, 1], # random</span>
-<span class="go">       [3, 2, 2, 0]])</span>
-</pre></div>
-</div>
-<p>Generate a 1 x 3 array with 3 different upper bounds</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">])</span>
-<span class="go">array([2, 2, 9]) # random</span>
-</pre></div>
-</div>
-<p>Generate a 1 by 3 array with 3 different lower bounds</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">],</span> <span class="mi">10</span><span class="p">)</span>
-<span class="go">array([9, 8, 7]) # random</span>
-</pre></div>
-</div>
-<p>Generate a 2 by 4 array using broadcasting with dtype of uint8</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">],</span> <span class="p">[[</span><span class="mi">10</span><span class="p">],</span> <span class="p">[</span><span class="mi">20</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">uint8</span><span class="p">)</span>
-<span class="go">array([[ 8,  6,  9,  7], # random</span>
-<span class="go">       [ 1, 16,  9, 12]], dtype=uint8)</span>
-</pre></div>
-</div>
-</dd></dl>
 <dl class="py class">
 <dt id="pytwoway.sim_twfe_network.sim_twfe_network">
 <em class="property">class </em><code class="sig-prename descclassname">pytwoway.sim_twfe_network.</code><code class="sig-name descname">sim_twfe_network</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sim_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.sim_twfe_network" title="Permalink to this definition">¶</a></dt>
@@ -656,17 +538,6 @@ cre_psi_alpha_cov (float): CRE estimate of covariance of psi and alpha</p>
               </div>
             </a>
           
-          
-            <a href="notebooks/pytwoway_example.html" title="pytwoway example"
-               class="md-flex md-footer-nav__link md-footer-nav__link--next"
-               rel="next">
-            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title"><span
-                class="md-flex__ellipsis"> <span
-                class="md-footer-nav__direction"> Next </span> pytwoway example </span>
-            </div>
-            <div class="md-flex__cell md-flex__cell--shrink"><i
-                class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
-            </div>
           
         </a>
         
