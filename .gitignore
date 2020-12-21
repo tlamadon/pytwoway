@@ -5,6 +5,7 @@ docs-src/build/
 pytwoway/__pycache__/
 .pytest_cache/
 tests/__pycache__/
+pytwoway/config.txt
 
 # Compiled source #
 ###################
