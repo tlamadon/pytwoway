@@ -20,4 +20,5 @@ help:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 copy:
+	rm *.log
 	cp -r build/html/** ../docs
