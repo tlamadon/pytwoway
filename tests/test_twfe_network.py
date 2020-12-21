@@ -3,11 +3,15 @@ Tests for twfe_network.py
 
 DATE: October 2020
 '''
-
 import pytest
 import networkx as nx
 import pandas as pd
-import twfe_network as tn
+
+import os
+# Navigate to parent folder for import
+os.chdir('..')
+
+from twfe_network import twfe_network as tn
 import fe_approximate_correction_full as feacf
 
 def test_twfe_refactor_1():
@@ -24,11 +28,11 @@ def test_twfe_refactor_1():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    d_net = tn.twfe_network(data=df, col_dict=col_dict)
-    d_net.clean_data()
-    d_net.refactor_es()
+    tw_net = tn.twfe_network(data=df, col_dict=col_dict)
+    tw_net.clean_data()
+    tw_net.refactor_es()
 
-    df_ES = d_net.data
+    df_ES = tw_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -61,11 +65,11 @@ def test_twfe_refactor_2():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    d_net = tn.twfe_network(data=df, col_dict=col_dict)
-    d_net.clean_data()
-    d_net.refactor_es()
+    tw_net = tn.twfe_network(data=df, col_dict=col_dict)
+    tw_net.clean_data()
+    tw_net.refactor_es()
 
-    df_ES = d_net.data
+    df_ES = tw_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -96,11 +100,11 @@ def test_twfe_refactor_3():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    d_net = tn.twfe_network(data=df, col_dict=col_dict)
-    d_net.clean_data()
-    d_net.refactor_es()
+    tw_net = tn.twfe_network(data=df, col_dict=col_dict)
+    tw_net.clean_data()
+    tw_net.refactor_es()
 
-    df_ES = d_net.data
+    df_ES = tw_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -138,11 +142,11 @@ def test_twfe_refactor_4():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    d_net = tn.twfe_network(data=df, col_dict=col_dict)
-    d_net.clean_data()
-    d_net.refactor_es()
+    tw_net = tn.twfe_network(data=df, col_dict=col_dict)
+    tw_net.clean_data()
+    tw_net.refactor_es()
 
-    df_ES = d_net.data
+    df_ES = tw_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -186,11 +190,11 @@ def test_twfe_refactor_5():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    d_net = tn.twfe_network(data=df, col_dict=col_dict)
-    d_net.clean_data()
-    d_net.refactor_es()
+    tw_net = tn.twfe_network(data=df, col_dict=col_dict)
+    tw_net.clean_data()
+    tw_net.refactor_es()
 
-    df_ES = d_net.data
+    df_ES = tw_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -235,11 +239,11 @@ def test_twfe_refactor_6():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    d_net = tn.twfe_network(data=df, col_dict=col_dict)
-    d_net.clean_data()
-    d_net.refactor_es()
+    tw_net = tn.twfe_network(data=df, col_dict=col_dict)
+    tw_net.clean_data()
+    tw_net.refactor_es()
 
-    df_ES = d_net.data
+    df_ES = tw_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -284,11 +288,11 @@ def test_twfe_refactor_7():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    d_net = tn.twfe_network(data=df, col_dict=col_dict)
-    d_net.clean_data()
-    d_net.refactor_es()
+    tw_net = tn.twfe_network(data=df, col_dict=col_dict)
+    tw_net.clean_data()
+    tw_net.refactor_es()
 
-    df_ES = d_net.data
+    df_ES = tw_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -333,11 +337,11 @@ def test_twfe_refactor_8():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    d_net = tn.twfe_network(data=df, col_dict=col_dict)
-    d_net.clean_data()
-    d_net.refactor_es()
+    tw_net = tn.twfe_network(data=df, col_dict=col_dict)
+    tw_net.clean_data()
+    tw_net.refactor_es()
 
-    df_ES = d_net.data
+    df_ES = tw_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -382,11 +386,11 @@ def test_twfe_refactor_9():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    d_net = tn.twfe_network(data=df, col_dict=col_dict)
-    d_net.clean_data()
-    d_net.refactor_es()
+    tw_net = tn.twfe_network(data=df, col_dict=col_dict)
+    tw_net.clean_data()
+    tw_net.refactor_es()
 
-    df_ES = d_net.data
+    df_ES = tw_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -429,11 +433,11 @@ def test_twfe_refactor_10():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    d_net = tn.twfe_network(data=df, col_dict=col_dict)
-    d_net.clean_data()
-    d_net.refactor_es()
+    tw_net = tn.twfe_network(data=df, col_dict=col_dict)
+    tw_net.clean_data()
+    tw_net.refactor_es()
 
-    df_ES = d_net.data
+    df_ES = tw_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -470,11 +474,11 @@ def test_twfe_refactor_11():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    d_net = tn.twfe_network(data=df, col_dict=col_dict)
-    d_net.clean_data()
-    d_net.refactor_es()
+    tw_net = tn.twfe_network(data=df, col_dict=col_dict)
+    tw_net.clean_data()
+    tw_net.refactor_es()
 
-    df_ES = d_net.data
+    df_ES = tw_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -513,11 +517,11 @@ def test_akm_ho_1():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    d_net = tn.twfe_network(data=df, col_dict=col_dict)
-    d_net.clean_data()
-    d_net.refactor_es()
+    tw_net = tn.twfe_network(data=df, col_dict=col_dict)
+    tw_net.clean_data()
+    tw_net.refactor_es()
 
-    akm_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_akm.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'data': d_net.data} # Do not define 'data' because will be updated later
+    akm_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_akm.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'data': tw_net.data} # Do not define 'data' because will be updated later
 
     fe = feacf.FEsolver(akm_params)
     fe.run()

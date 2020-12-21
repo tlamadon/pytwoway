@@ -3,6 +3,8 @@
 .vscode/
 docs-src/build/
 pytwoway/__pycache__/
+.pytest_cache/
+tests/__pycache__/
 
 # Compiled source #
 ###################
