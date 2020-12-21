@@ -21,13 +21,13 @@ The online documentation is hosted at `github.com/tlamadon/pytwoway <https://git
 The main pytwoway API is split into four modules:
 
 * ``pytoway.cre``: CRE estimator. Canonically imported
-  using ``import statsmodels.api as sm``.
+  using ``from pytwoway import cre``.
 * ``pytoway.fe_approximate_correction_full.FEsolver``: FE esimators. Canonically imported
-  using ``import pytoway.fe_approximate_correction_full.FEsolver as fe``.
+  using ``from pytoway import fe_approximate_correction_full --> fe = fe_approximate_correction_full.FEsolver``.
 * ``pytwoway.twfe_network.twfe_network``: Class to format labor data. Canonically imported using
-  ``import pytwoway.twfe_network.twfe_network as tn``.
+  ``from pytwoway import twfe_network --> tn = twfe_network.twfe_network``.
 * ``pytwoway.sim_twfe_network.sim_twfe_network``: Class to format labor data. Canonically imported using
-  ``import pytwoway.sim_twfe_network.sim_twfe_network as sn``.
+  ``from pytwoway import sim_twfe_network --> sn = sim_twfe_network.sim_twfe_network``.
 
 .. The API focuses on models and the most frequently used statistical test, and tools.
 .. :ref:`api-structure:Import Paths and Structure` explains the design of the two API modules and how

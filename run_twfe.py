@@ -2,7 +2,7 @@
 Script to run twfe_network through the command line
 
 Usage example:
-python3 run_twfe.py --my-config config.txt --akm --cre
+python3 run_twfe.py --my-config config.txt --filetype csv --akm --cre
 '''
 import configargparse
 import ast
@@ -30,6 +30,9 @@ def clear_dict(d):
 p = configargparse.ArgParser()
 p.add('-c', '--my-config', required=False, is_config_file=True, help='config file path')
 
+# Options to select filetype
+p.add('--filetype', required=False, help='file format of data')
+
 # Options to run AKM or CRE
 p.add('--akm', action='store_true', help='run AKM estimation') # this option can be set in a config file because it starts with '--'
 p.add('--cre', action='store_true', help='run CRE estimation')
@@ -41,7 +44,7 @@ p.add('--col_dict', required=False, help='dictionary to correct column names')
 ##### twfe_network end #####
 
 ##### KMeans start #####
-p.add('--n_clusters', required=False)
+p.add('--n_clusters', required=False, help='number of clusters for KMeans algorithm')
 p.add('--init', required=False)
 p.add('--n_init', required=False)
 p.add('--max_iter', required=False)
@@ -55,31 +58,31 @@ p.add('--algorithm', required=False)
 ##### KMeans end #####
 
 ##### Cluster start #####
-p.add('--cdf_resolution', required=False)
-p.add('--grouping', required=False)
-p.add('--year', required=False)
+p.add('--cdf_resolution', required=False, help='length of cdf array for computing clusters')
+p.add('--grouping', required=False, help='how to compute cdfs')
+p.add('--year', required=False, help='cluster on specific year')
 ##### Cluster end #####
 
 ##### AKM start #####
-p.add('--ncore_akm', required=False)
+p.add('--ncore_akm', required=False, help='number of cores when computing akm')
 p.add('--batch', required=False)
 p.add('--ndraw_pii', required=False)
 p.add('--ndraw_tr_akm', required=False)
 p.add('--check', required=False)
 p.add('--hetero', required=False)
-p.add('--out_akm', required=False)
+p.add('--out_akm', required=False, help='filepath for akm results')
 p.add('--con', required=False)
 p.add('--logfile', required=False)
 p.add('--levfile', required=False)
-p.add('--statsonly', required=False)
-p.add('--Q', required=False)
+p.add('--statsonly', required=False, help='only compute basic statistics')
+p.add('--Q', required=False, help='custom Q matrix')
 ##### AKM end #####
 
 ##### CRE start #####
-p.add('--ncore_cre', required=False)
+p.add('--ncore_cre', required=False, help='number of cores when computing cre')
 p.add('--ndraw_tr_cre', required=False)
 p.add('--ndp', required=False)
-p.add('--out_cre', required=False)
+p.add('--out_cre', required=False, help='filepath for cre results')
 p.add('--posterior', required=False)
 p.add('--wobtw', required=False)
 ##### CRE end #####
@@ -94,7 +97,12 @@ else:
     col_dict = params.col_dict
 
 # Generate twfe_params dictionary
-twfe_params = {'data': pd.read_feather(params.data), 'formatting': params.format, 'col_dict': col_dict}
+if params.filetype == 'csv':
+    twfe_params = {'data': pd.read_csv(params.data), 'formatting': params.format, 'col_dict': col_dict}
+elif params.filetype == 'ftr':
+    twfe_params = {'data': pd.read_feather(params.data), 'formatting': params.format, 'col_dict': col_dict}
+elif params.filetype == 'dta':
+    twfe_params = {'data': pd.read_stata(params.data), 'formatting': params.format, 'col_dict': col_dict}
 twfe_params = clear_dict(twfe_params)
 ##### twfe_network end #####
 
