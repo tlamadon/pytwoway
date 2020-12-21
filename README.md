@@ -1,5 +1,5 @@
 # pytwoway
-Two way fixed effect models in python
+Two way fixed effect models for labor in python
 
 Full documentation can be found [here](https://tlamadon.github.io/pytwoway/).
 
