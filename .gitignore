@@ -6,6 +6,8 @@ pytwoway/__pycache__/
 .pytest_cache/
 tests/__pycache__/
 pytwoway/config.txt
+dist/
+pytwoway.egg-info/
 
 # Compiled source #
 ###################

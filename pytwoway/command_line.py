@@ -2,7 +2,7 @@
 Script to run twfe_network through the command line
 
 Usage example:
-python3 run_twfe.py --my-config config.txt --filetype csv --akm --cre
+pytw --my-config config.txt --akm --cre
 '''
 import configargparse
 import ast
