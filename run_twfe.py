@@ -7,7 +7,8 @@ python3 run_twfe.py --my-config config.txt --akm --cre
 import configargparse
 import ast
 import pandas as pd
-from twfe_network import twfe_network as tn
+from pytwoway import twfe_network
+tn = twfe_network.twfe_network
 
 def clear_dict(d):
     '''

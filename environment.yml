@@ -14,7 +14,7 @@ dependencies:
   - tqdm
   - networkx
   - scikit-learn
-  - mkdocs-material
+  # - mkdocs-material
   - pip
   - pip:
       # - mkdocstrings
@@ -23,6 +23,8 @@ dependencies:
       # - Pygments # Required for mknotebooks syntax highlighting
       # - mkdocs-jupyter
       - nbsphinx # For Jupyter in Sphinx
+      - ConfigArgParse
+      - pyarrow
 
 # conda env create --file environment.yml
 # conda env remove --name twfe-env
