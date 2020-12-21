@@ -24,8 +24,6 @@ The main pytwoway API is split into four modules:
   using ``import statsmodels.api as sm``.
 * ``pytoway.fe_approximate_correction_full.FEsolver``: FE esimators. Canonically imported
   using ``import pytoway.fe_approximate_correction_full.FEsolver as fe``.
-* ``pytoway.path_cov``: covariance estimators. Canonically imported
-  using ``import pytoway.path_cov as pc``.
 * ``pytwoway.twfe_network.twfe_network``: Class to format labor data. Canonically imported using
   ``import pytwoway.twfe_network.twfe_network as tn``.
 * ``pytwoway.sim_twfe_network.sim_twfe_network``: Class to format labor data. Canonically imported using
