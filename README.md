@@ -1,7 +1,9 @@
 # pytwoway
 Two way fixed effect models in python
 
-Comprehensive documentation can be found [here](https://tlamadon.github.io/pytwoway/)
+Full documentation can be found [here](https://tlamadon.github.io/pytwoway/).
+
+Quick start:
 
 To install from pip:
 ```shell
