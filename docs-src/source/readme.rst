@@ -1,4 +1,8 @@
-`pytwoway` is the Python package associated with the paper:
+.. image:: https://badge.fury.io/py/pytwoway.svg
+    :target: https://badge.fury.io/py/pytwoway
+
+|
+`pytwoway` is the Python package associated with the following paper:
 
 "`How Much Should we Trust Estimates of Firm Effects and Worker Sorting?. <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" 
 by Stéphane Bonhomme, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler.  
