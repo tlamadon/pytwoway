@@ -6,11 +6,11 @@ No. w27368. National Bureau of Economic Research, 2020.
 
 The package provides implementations for a series of estimators for model with two sided heterogeneity:
 
-* two way fixed effect estimator as proposed by Abowd Kramarz and Margolis
-* homoskedastic bias correction as in Andrews et al
-* heteroskedastic correction as in KSS (TBD)
-* a group fixed estimator as in BLM
-* a group correlated random effect as presented in the main paper
+1. two way fixed effect estimator as proposed by Abowd Kramarz and Margolis
+2. homoskedastic bias correction as in Andrews et al
+3. heteroskedastic correction as in KSS (TBD)
+4. a group fixed estimator as in BLM
+5. a group correlated random effect as presented in the main paper
 
 The code is relatively efficient. Solving large sparse linear relies on using `pyamg <https://github.com/pyamg/pyamg>`_. This is the code we used to estimate the different decompositions on the US data. 
 
