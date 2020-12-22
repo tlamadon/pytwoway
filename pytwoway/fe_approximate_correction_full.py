@@ -1,8 +1,10 @@
 '''
 Computes a bunch of estimates from an event study data set:
+
     - AKM variance decomposition
     - Andrews bias correction
     - KSS bias correction
+
 Does this through class FEsolver
 '''
 

@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-pytwoway
-========
+pytwoway package
+================
 
 pytwoway is a Python module that provides classes and functions for the estimation
 of two way fixed effect models. It includes AKM, homoskedastic- and heteroskedastic-corrected AKM, and CRE estimators,
@@ -231,6 +231,5 @@ Bibtex entry::
    notebooks/monte_carlo_example
    cre
    fe_approximate_correction_full
-   path_cov
    twfe_network
    sim_twfe_network
