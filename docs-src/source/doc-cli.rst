@@ -1,6 +1,6 @@
 Command line interface 
 ======================
-
+ 
 To install from pip, run::
 
   pip install pytwoway

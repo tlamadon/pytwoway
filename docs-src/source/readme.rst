@@ -21,11 +21,13 @@ Quick Start
 
 To install from pip, run::
 
-  pip install pytwoway
+    pip install pytwoway
+
 
 To run using command line interface::
 
-  pytw --my-config config.txt --akm --cre
+    pytw --my-config config.txt --akm --cre
+
 
 Example config.txt::
 

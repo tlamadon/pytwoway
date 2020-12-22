@@ -4,6 +4,7 @@
   :caption: User documention
   :maxdepth: 2
 
+  Home <self>
   From terminal <doc-cli>
   From python <doc-python>
 
@@ -19,3 +20,4 @@
   :maxdepth: 2
 
   internal
+
