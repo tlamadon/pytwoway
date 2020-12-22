@@ -17,37 +17,39 @@ tn = twfe_network.twfe_network
 
 class sim_twfe_network:
     '''
-    Class of sim_twfe_network, where sim_twfe_network simulates a network of firms and workers. This class has the following functions:
-        __init__(): initialize
-        update_dict(): update values in parameter dictionaries (this function is similar to, but different from dict.update())
-        sim_network_gen_fe(): generate fixed effects values for simulated panel data corresponding to the calibrated model (only for simulated data)
-        sim_network_draw_fids(): draw firm ids for individual, given data that is grouped by worker id, spell id, and firm type (only for simulated data)
-        sim_network(): simulate panel data corresponding to the calibrated model (only for simulated data)
-        twfe_monte_carlo_interior(): interior function for twfe_monte_carlo()
-        twfe_monte_carlo(): run Monte Carlo simulations of sim_twfe_network
-        plot_monte_carlo(): plot results from Monte Carlo simulations
+    Class of sim_twfe_network, where sim_twfe_network simulates a network of firms and workers.
+
+    Arguments:
+        sim_params (dict): parameters for simulated data
+
+            Dictionary parameters:
+
+                num_ind (int): number of workers
+
+                num_time (int): time length of panel
+
+                firm_size (int): max number of individuals per firm
+
+                nk (int): number of firm types
+
+                nl (int): number of worker types
+
+                alpha_sig (float): standard error of individual fixed effect (volatility of worker effects)
+
+                psi_sig (float): standard error of firm fixed effect (volatility of firm effects)
+
+                w_sig (float): standard error of residual in AKM wage equation (volatility of wage shocks)
+
+                csort (float): sorting effect
+
+                cnetw (float): network effect
+
+                csig (float): standard error of sorting/network effects
+
+                p_move (float): probability a worker moves firms in any period
     '''
 
     def __init__(self, sim_params={}):
-        '''
-        Initialize sim_twfe_network object.
-
-        Arguments:
-            sim_params (dict): parameters for simulated data
-                Dictionary parameters:
-                    num_ind (int): number of workers
-                    num_time (int): time length of panel
-                    firm_size (int): max number of individuals per firm
-                    nk (int): number of firm types
-                    nl (int): number of worker types
-                    alpha_sig (float): standard error of individual fixed effect (volatility of worker effects)
-                    psi_sig (float): standard error of firm fixed effect (volatility of firm effects)
-                    w_sig (float): standard error of residual in AKM wage equation (volatility of wage shocks)
-                    csort (float): sorting effect
-                    cnetw (float): network effect
-                    csig (float): standard error of sorting/network effects
-                    p_move (float): probability a worker moves firms in any period
-        '''
         logger.info('initializing sim_twfe_network object')
 
         # Define default parameter dictionaries
@@ -82,18 +84,31 @@ class sim_twfe_network:
 
         Arguments:
             sim_params (dict): parameters for simulated data
+
                 Dictionary parameters:
+
                     num_ind (int): number of workers
+
                     num_time (int): time length of panel
+
                     firm_size (int): max number of individuals per firm
+
                     nk (int): number of firm types
+
                     nl (int): number of worker types
+
                     alpha_sig (float): standard error of individual fixed effect (volatility of worker effects)
+
                     psi_sig (float): standard error of firm fixed effect (volatility of firm effects)
+
                     w_sig (float): standard error of residual in AKM wage equation (volatility of wage shocks)
+
                     csort (float): sorting effect
+
                     cnetw (float): network effect
+
                     csig (float): standard error of sorting/network effects
+
                     p_move (float): probability a worker moves firms in any period
 
         Returns:
@@ -223,33 +238,56 @@ class sim_twfe_network:
 
         Arguments:
             akm_params (dict): dictionary of parameters for bias-corrected AKM estimation
+
                 Dictionary parameters:
+
                     ncore (int): number of cores to use
+
                     batch (int): batch size to send in parallel
+
                     ndraw_pii (int): number of draw to use in approximation for leverages
+
                     ndraw_tr (int): number of draws to use in approximation for traces
+
                     check (bool): whether to compute the non-approximated estimates as well
+
                     hetero (bool): whether to compute the heteroskedastic estimates
+
                     out (string): outputfile
+
                     con (string): computes the smallest eigen values, this is the filepath where these results are saved
+
                     logfile (string): log output to a logfile
+
                     levfile (string): file to load precomputed leverages
+
                     statsonly (bool): save data statistics only
 
             cre_params (dict): dictionary of parameters for CRE estimation
+
                 Dictionary parameters:
+
                     ncore (int): number of cores to use
+
                     ndraw_tr (int): number of draws to use in approximation for traces
+
                     ndp (int): number of draw to use in approximation for leverages
+
                     out (string): outputfile
+
                     posterior (bool): compute posterior variance
+
                     wobtw (bool): sets between variation to 0, pure RE
-                    
+
             cluster_params (dict): dictionary of parameters for clustering in CRE estimation
+
                 Dictionary parameters:
+
                     cdf_resolution (int): how many values to use to approximate the cdf
                     grouping (string): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
+
                     year (int): if None, uses entire dataset; if int, gives year of data to consider
+
                     KMeans_params (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
 
         Returns:
@@ -289,46 +327,78 @@ class sim_twfe_network:
         '''
         Purpose:
             Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:
+
                 true_psi_var (NumPy Array): true simulated sample variance of psi
+
                 true_psi_alpha_cov (NumPy Array): true simulated sample covariance of psi and alpha
+
                 akm_psi_var (NumPy Array): AKM estimate of variance of psi
+
                 akm_psi_alpha_cov (NumPy Array): AKM estimate of covariance of psi and alpha
+
                 akm_corr_psi_var (NumPy Array): bias-corrected AKM estimate of variance of psi
+
                 akm_corr_psi_alpha_cov (NumPy Array): bias-corrected AKM estimate of covariance of psi and alpha
+
                 cre_psi_var (NumPy Array): CRE estimate of variance of psi
+
                 cre_psi_alpha_cov (NumPy Array): CRE estimate of covariance of psi and alpha
 
         Arguments:
             N (int): number of simulations
             ncore (int): how many cores to use
             akm_params (dict): dictionary of parameters for bias-corrected AKM estimation
+
                 Dictionary parameters:
+
                     ncore (int): number of cores to use
+
                     batch (int): batch size to send in parallel
+
                     ndraw_pii (int): number of draw to use in approximation for leverages
+
                     ndraw_tr (int): number of draws to use in approximation for traces
+
                     check (bool): whether to compute the non-approximated estimates as well
+
                     hetero (bool): whether to compute the heteroskedastic estimates
+
                     out (string): outputfile
+
                     con (string): computes the smallest eigen values, this is the filepath where these results are saved
+
                     logfile (string): log output to a logfile
+
                     levfile (string): file to load precomputed leverages
+
                     statsonly (bool): save data statistics only
 
             cre_params (dict): dictionary of parameters for CRE estimation
+
                 Dictionary parameters:
+
                     ncore (int): number of cores to use
+
                     ndraw_tr (int): number of draws to use in approximation for traces
+
                     ndp (int): number of draw to use in approximation for leverages
+
                     out (string): outputfile
+
                     posterior (bool): compute posterior variance
+
                     wobtw (bool): sets between variation to 0, pure RE
 
             cluster_params (dict): dictionary of parameters for clustering in CRE estimation
+
                 Dictionary parameters:
+
                     cdf_resolution (int): how many values to use to approximate the cdf
+
                     grouping (string): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
+
                     year (int): if None, uses entire dataset; if int, gives year of data to consider
+
                     KMeans_params (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
         '''
         # Initialize NumPy arrays to store results

@@ -1,4 +1,24 @@
 
+<<<<<<< HEAD
+=======
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="lang:clipboard.copy" content="Copy to clipboard">
+  <meta name="lang:clipboard.copied" content="Copied to clipboard">
+  <meta name="lang:search.language" content="en">
+  <meta name="lang:search.pipeline.stopwords" content="True">
+  <meta name="lang:search.pipeline.trimmer" content="True">
+  <meta name="lang:search.result.none" content="No matching documents">
+  <meta name="lang:search.result.one" content="1 matching document">
+  <meta name="lang:search.result.other" content="# matching documents">
+  <meta name="lang:search.tokenizer" content="[\s\-]+">
+>>>>>>> c9b1843be884e7cb7b55978bf73090cca5004b1e
 
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
@@ -17,6 +37,20 @@
   
   
   
+<<<<<<< HEAD
+=======
+    <title>sim_twfe_network module &#8212; pytwoway</title>
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="_static/material.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="twfe_network module" href="twfe_network.html" />
+>>>>>>> c9b1843be884e7cb7b55978bf73090cca5004b1e
   
 
   
@@ -115,6 +149,7 @@
         
           
 
+<<<<<<< HEAD
 
 
 
@@ -132,6 +167,53 @@
 <div role="navigation" aria-label="breadcrumbs navigation">
 
   <ul class="wy-breadcrumbs">
+=======
+  
+  <ul class="md-nav__list">
+    <li class="md-nav__item">
+    
+    
+      <a href="api.html" class="md-nav__link">API Reference</a>
+      
+    
+    </li>
+    <li class="md-nav__item">
+    
+    
+      <a href="notebooks/pytwoway_example.html" class="md-nav__link">pytwoway example</a>
+      
+    
+    </li>
+    <li class="md-nav__item">
+    
+    
+      <a href="notebooks/monte_carlo_example.html" class="md-nav__link">Monte Carlo example</a>
+      
+    
+    </li>
+    <li class="md-nav__item">
+    
+    
+      <a href="cre.html" class="md-nav__link">cre module</a>
+      
+    
+    </li>
+    <li class="md-nav__item">
+    
+    
+      <a href="fe_approximate_correction_full.html" class="md-nav__link">fe_approximate_correction_full module</a>
+      
+    
+    </li>
+    <li class="md-nav__item">
+    
+    
+      <a href="twfe_network.html" class="md-nav__link">twfe_network module</a>
+      
+    
+    </li>
+    <li class="md-nav__item">
+>>>>>>> c9b1843be884e7cb7b55978bf73090cca5004b1e
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
@@ -185,15 +267,26 @@
 <dt id="pytwoway.sim_twfe_network.sim_twfe_network">
 <em class="property">class </em><code class="sig-prename descclassname">pytwoway.sim_twfe_network.</code><code class="sig-name descname">sim_twfe_network</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sim_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.sim_twfe_network" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<dl class="simple">
-<dt>Class of sim_twfe_network, where sim_twfe_network simulates a network of firms and workers. This class has the following functions:</dt><dd><p>__init__(): initialize
-update_dict(): update values in parameter dictionaries (this function is similar to, but different from dict.update())
-sim_network_gen_fe(): generate fixed effects values for simulated panel data corresponding to the calibrated model (only for simulated data)
-sim_network_draw_fids(): draw firm ids for individual, given data that is grouped by worker id, spell id, and firm type (only for simulated data)
-sim_network(): simulate panel data corresponding to the calibrated model (only for simulated data)
-twfe_monte_carlo_interior(): interior function for twfe_monte_carlo()
-twfe_monte_carlo(): run Monte Carlo simulations of sim_twfe_network
-plot_monte_carlo(): plot results from Monte Carlo simulations</p>
+<p>Class of sim_twfe_network, where sim_twfe_network simulates a network of firms and workers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>sim_params</strong> (<em>dict</em>) – <p>parameters for simulated data</p>
+<p>Dictionary parameters:</p>
+<blockquote>
+<div><p>num_ind (int): number of workers</p>
+<p>num_time (int): time length of panel</p>
+<p>firm_size (int): max number of individuals per firm</p>
+<p>nk (int): number of firm types</p>
+<p>nl (int): number of worker types</p>
+<p>alpha_sig (float): standard error of individual fixed effect (volatility of worker effects)</p>
+<p>psi_sig (float): standard error of firm fixed effect (volatility of firm effects)</p>
+<p>w_sig (float): standard error of residual in AKM wage equation (volatility of wage shocks)</p>
+<p>csort (float): sorting effect</p>
+<p>cnetw (float): network effect</p>
+<p>csig (float): standard error of sorting/network effects</p>
+<p>p_move (float): probability a worker moves firms in any period</p>
+</div></blockquote>
+</p>
 </dd>
 </dl>
 <dl class="py method">
@@ -243,21 +336,21 @@ plot_monte_carlo(): plot results from Monte Carlo simulations</p>
 <dd><p>Generate fixed effects values for simulated panel data corresponding to the calibrated model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>sim_params</strong> (<em>dict</em>) – <p>parameters for simulated data
-Dictionary parameters:</p>
+<dd class="field-odd"><p><strong>sim_params</strong> (<em>dict</em>) – <p>parameters for simulated data</p>
+<p>Dictionary parameters:</p>
 <blockquote>
-<div><p>num_ind (int): number of workers
-num_time (int): time length of panel
-firm_size (int): max number of individuals per firm
-nk (int): number of firm types
-nl (int): number of worker types
-alpha_sig (float): standard error of individual fixed effect (volatility of worker effects)
-psi_sig (float): standard error of firm fixed effect (volatility of firm effects)
-w_sig (float): standard error of residual in AKM wage equation (volatility of wage shocks)
-csort (float): sorting effect
-cnetw (float): network effect
-csig (float): standard error of sorting/network effects
-p_move (float): probability a worker moves firms in any period</p>
+<div><p>num_ind (int): number of workers</p>
+<p>num_time (int): time length of panel</p>
+<p>firm_size (int): max number of individuals per firm</p>
+<p>nk (int): number of firm types</p>
+<p>nl (int): number of worker types</p>
+<p>alpha_sig (float): standard error of individual fixed effect (volatility of worker effects)</p>
+<p>psi_sig (float): standard error of firm fixed effect (volatility of firm effects)</p>
+<p>w_sig (float): standard error of residual in AKM wage equation (volatility of wage shocks)</p>
+<p>csort (float): sorting effect</p>
+<p>cnetw (float): network effect</p>
+<p>csig (float): standard error of sorting/network effects</p>
+<p>p_move (float): probability a worker moves firms in any period</p>
 </div></blockquote>
 </p>
 </dd>
@@ -276,18 +369,18 @@ H (NumPy Array): stationary distribution</p>
 <dl class="py method">
 <dt id="pytwoway.sim_twfe_network.sim_twfe_network.twfe_monte_carlo">
 <code class="sig-name descname">twfe_monte_carlo</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">N</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">ncore</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">akm_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cre_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cluster_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.sim_twfe_network.twfe_monte_carlo" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="simple">
-<dt>Purpose:</dt><dd><dl class="simple">
-<dt>Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:</dt><dd><p>true_psi_var (NumPy Array): true simulated sample variance of psi
-true_psi_alpha_cov (NumPy Array): true simulated sample covariance of psi and alpha
-akm_psi_var (NumPy Array): AKM estimate of variance of psi
-akm_psi_alpha_cov (NumPy Array): AKM estimate of covariance of psi and alpha
-akm_corr_psi_var (NumPy Array): bias-corrected AKM estimate of variance of psi
-akm_corr_psi_alpha_cov (NumPy Array): bias-corrected AKM estimate of covariance of psi and alpha
-cre_psi_var (NumPy Array): CRE estimate of variance of psi
-cre_psi_alpha_cov (NumPy Array): CRE estimate of covariance of psi and alpha</p>
-</dd>
-</dl>
+<dd><dl>
+<dt>Purpose:</dt><dd><p>Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:</p>
+<blockquote>
+<div><p>true_psi_var (NumPy Array): true simulated sample variance of psi</p>
+<p>true_psi_alpha_cov (NumPy Array): true simulated sample covariance of psi and alpha</p>
+<p>akm_psi_var (NumPy Array): AKM estimate of variance of psi</p>
+<p>akm_psi_alpha_cov (NumPy Array): AKM estimate of covariance of psi and alpha</p>
+<p>akm_corr_psi_var (NumPy Array): bias-corrected AKM estimate of variance of psi</p>
+<p>akm_corr_psi_alpha_cov (NumPy Array): bias-corrected AKM estimate of covariance of psi and alpha</p>
+<p>cre_psi_var (NumPy Array): CRE estimate of variance of psi</p>
+<p>cre_psi_alpha_cov (NumPy Array): CRE estimate of covariance of psi and alpha</p>
+</div></blockquote>
 </dd>
 </dl>
 <dl class="field-list simple">
@@ -295,40 +388,40 @@ cre_psi_alpha_cov (NumPy Array): CRE estimate of covariance of psi and alpha</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>N</strong> (<em>int</em>) – number of simulations</p></li>
 <li><p><strong>ncore</strong> (<em>int</em>) – how many cores to use</p></li>
-<li><p><strong>akm_params</strong> (<em>dict</em>) – <p>dictionary of parameters for bias-corrected AKM estimation
-Dictionary parameters:</p>
+<li><p><strong>akm_params</strong> (<em>dict</em>) – <p>dictionary of parameters for bias-corrected AKM estimation</p>
+<p>Dictionary parameters:</p>
 <blockquote>
-<div><p>ncore (int): number of cores to use
-batch (int): batch size to send in parallel
-ndraw_pii (int): number of draw to use in approximation for leverages
-ndraw_tr (int): number of draws to use in approximation for traces
-check (bool): whether to compute the non-approximated estimates as well
-hetero (bool): whether to compute the heteroskedastic estimates
-out (string): outputfile
-con (string): computes the smallest eigen values, this is the filepath where these results are saved
-logfile (string): log output to a logfile
-levfile (string): file to load precomputed leverages
-statsonly (bool): save data statistics only</p>
+<div><p>ncore (int): number of cores to use</p>
+<p>batch (int): batch size to send in parallel</p>
+<p>ndraw_pii (int): number of draw to use in approximation for leverages</p>
+<p>ndraw_tr (int): number of draws to use in approximation for traces</p>
+<p>check (bool): whether to compute the non-approximated estimates as well</p>
+<p>hetero (bool): whether to compute the heteroskedastic estimates</p>
+<p>out (string): outputfile</p>
+<p>con (string): computes the smallest eigen values, this is the filepath where these results are saved</p>
+<p>logfile (string): log output to a logfile</p>
+<p>levfile (string): file to load precomputed leverages</p>
+<p>statsonly (bool): save data statistics only</p>
 </div></blockquote>
 </p></li>
-<li><p><strong>cre_params</strong> (<em>dict</em>) – <p>dictionary of parameters for CRE estimation
-Dictionary parameters:</p>
+<li><p><strong>cre_params</strong> (<em>dict</em>) – <p>dictionary of parameters for CRE estimation</p>
+<p>Dictionary parameters:</p>
 <blockquote>
-<div><p>ncore (int): number of cores to use
-ndraw_tr (int): number of draws to use in approximation for traces
-ndp (int): number of draw to use in approximation for leverages
-out (string): outputfile
-posterior (bool): compute posterior variance
-wobtw (bool): sets between variation to 0, pure RE</p>
+<div><p>ncore (int): number of cores to use</p>
+<p>ndraw_tr (int): number of draws to use in approximation for traces</p>
+<p>ndp (int): number of draw to use in approximation for leverages</p>
+<p>out (string): outputfile</p>
+<p>posterior (bool): compute posterior variance</p>
+<p>wobtw (bool): sets between variation to 0, pure RE</p>
 </div></blockquote>
 </p></li>
-<li><p><strong>cluster_params</strong> (<em>dict</em>) – <p>dictionary of parameters for clustering in CRE estimation
-Dictionary parameters:</p>
+<li><p><strong>cluster_params</strong> (<em>dict</em>) – <p>dictionary of parameters for clustering in CRE estimation</p>
+<p>Dictionary parameters:</p>
 <blockquote>
-<div><p>cdf_resolution (int): how many values to use to approximate the cdf
-grouping (string): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)
-year (int): if None, uses entire dataset; if int, gives year of data to consider
-KMeans_params (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>), and use default parameters defined in class attribute default_KMeans for any parameters not specified</p>
+<div><p>cdf_resolution (int): how many values to use to approximate the cdf</p>
+<p>grouping (string): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)</p>
+<p>year (int): if None, uses entire dataset; if int, gives year of data to consider</p>
+<p>KMeans_params (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>), and use default parameters defined in class attribute default_KMeans for any parameters not specified</p>
 </div></blockquote>
 </p></li>
 </ul>
@@ -343,40 +436,40 @@ KMeans_params (dict): use parameters defined in KMeans_dict for KMeans estimatio
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>akm_params</strong> (<em>dict</em>) – <p>dictionary of parameters for bias-corrected AKM estimation
-Dictionary parameters:</p>
+<li><p><strong>akm_params</strong> (<em>dict</em>) – <p>dictionary of parameters for bias-corrected AKM estimation</p>
+<p>Dictionary parameters:</p>
 <blockquote>
-<div><p>ncore (int): number of cores to use
-batch (int): batch size to send in parallel
-ndraw_pii (int): number of draw to use in approximation for leverages
-ndraw_tr (int): number of draws to use in approximation for traces
-check (bool): whether to compute the non-approximated estimates as well
-hetero (bool): whether to compute the heteroskedastic estimates
-out (string): outputfile
-con (string): computes the smallest eigen values, this is the filepath where these results are saved
-logfile (string): log output to a logfile
-levfile (string): file to load precomputed leverages
-statsonly (bool): save data statistics only</p>
+<div><p>ncore (int): number of cores to use</p>
+<p>batch (int): batch size to send in parallel</p>
+<p>ndraw_pii (int): number of draw to use in approximation for leverages</p>
+<p>ndraw_tr (int): number of draws to use in approximation for traces</p>
+<p>check (bool): whether to compute the non-approximated estimates as well</p>
+<p>hetero (bool): whether to compute the heteroskedastic estimates</p>
+<p>out (string): outputfile</p>
+<p>con (string): computes the smallest eigen values, this is the filepath where these results are saved</p>
+<p>logfile (string): log output to a logfile</p>
+<p>levfile (string): file to load precomputed leverages</p>
+<p>statsonly (bool): save data statistics only</p>
 </div></blockquote>
 </p></li>
-<li><p><strong>cre_params</strong> (<em>dict</em>) – <p>dictionary of parameters for CRE estimation
-Dictionary parameters:</p>
+<li><p><strong>cre_params</strong> (<em>dict</em>) – <p>dictionary of parameters for CRE estimation</p>
+<p>Dictionary parameters:</p>
 <blockquote>
-<div><p>ncore (int): number of cores to use
-ndraw_tr (int): number of draws to use in approximation for traces
-ndp (int): number of draw to use in approximation for leverages
-out (string): outputfile
-posterior (bool): compute posterior variance
-wobtw (bool): sets between variation to 0, pure RE</p>
+<div><p>ncore (int): number of cores to use</p>
+<p>ndraw_tr (int): number of draws to use in approximation for traces</p>
+<p>ndp (int): number of draw to use in approximation for leverages</p>
+<p>out (string): outputfile</p>
+<p>posterior (bool): compute posterior variance</p>
+<p>wobtw (bool): sets between variation to 0, pure RE</p>
 </div></blockquote>
 </p></li>
-<li><p><strong>cluster_params</strong> (<em>dict</em>) – <p>dictionary of parameters for clustering in CRE estimation
-Dictionary parameters:</p>
+<li><p><strong>cluster_params</strong> (<em>dict</em>) – <p>dictionary of parameters for clustering in CRE estimation</p>
+<p>Dictionary parameters:</p>
 <blockquote>
 <div><p>cdf_resolution (int): how many values to use to approximate the cdf
-grouping (string): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)
-year (int): if None, uses entire dataset; if int, gives year of data to consider
-KMeans_params (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>), and use default parameters defined in class attribute default_KMeans for any parameters not specified</p>
+grouping (string): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)</p>
+<p>year (int): if None, uses entire dataset; if int, gives year of data to consider</p>
+<p>KMeans_params (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>), and use default parameters defined in class attribute default_KMeans for any parameters not specified</p>
 </div></blockquote>
 </p></li>
 </ul>
@@ -425,6 +518,7 @@ cre_psi_alpha_cov (float): CRE estimate of covariance of psi and alpha</p>
            </div>
            
           </div>
+<<<<<<< HEAD
           <footer>
   
 
@@ -451,6 +545,16 @@ cre_psi_alpha_cov (float): CRE estimate of covariance of psi and alpha</p>
 
 </footer>
 
+=======
+            Last updated on
+              Dec 22, 2020.
+            <br/>
+            Created using
+            <a href="http://www.sphinx-doc.org/">Sphinx</a> 3.4.0.
+             and
+            <a href="https://github.com/bashtage/sphinx-material/">Material for
+              Sphinx</a>
+>>>>>>> c9b1843be884e7cb7b55978bf73090cca5004b1e
         </div>
       </div>
 

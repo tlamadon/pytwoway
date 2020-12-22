@@ -14,53 +14,17 @@ from scipy.sparse.csgraph import connected_components
 from pytwoway import fe_approximate_correction_full as feacf
 from pytwoway import cre
 
-# # Testing
-# data = pd.read_feather('../../Google Drive File Stream/.shortcut-targets-by-id/1iN9LApqNxHmVCOV4IUISMwPS7KeZcRhz/ra-adam/data/English/worker_cleaned.ftr')
-# col_dict = {'fid': 'codf', 'wid': 'codf_w', 'year': 'year', 'comp': 'comp_current'}
-# # d_net for data_network
-# d_net = twfe_network(data=data, formatting='long', col_dict=col_dict)
-# d_net.clean_data()
-# d_net.refactor_es()
-# d_net.data_validity()
-# d_net.cluster()
-# akm_res = d_net.run_akm_corrected()
-# cre_res = d_net.run_cre()
-
-# # Simulate data
-# sim_params = 
-# d_net = twfe_network()
-# cdfs_1 = d_net.approx_cdfs()
-# d_net.refactor_es()
-# cdfs_2 = d_net.approx_cdfs()
-
 class twfe_network:
     '''
-    Class of twfe_network, where twfe_network gives a network of firms and workers. This class has the following functions:<br/>
-        __init__(): initialize<br/>
-        update_dict(): update values in parameter dictionaries (this function is similar to, but different from dict.update())
-        update_cols(): rename columns and keep only relevant columns<br/>
-        n_workers(): get the number of unique workers<br/>
-        n_firms(): get the number of unique firms<br/>
-        clean_data(): clean data<br/>
-        data_validity(): check that data is formatted correctly<br/>
-        conset(): update data to include only the largest connected set of movers, and if firm ids are contiguous, also return the NetworkX Graph<br/>
-        contiguous_fids(): make firm ids contiguous<br/>
-        refactor_es(): refactor long form data into event study data<br/>
-        approx_cdfs(): generate cdfs of compensation for firms<br/>
-        cluster(): cluster data and assign a new column giving the cluster for each firm<br/>
-        run_akm_corrected(): run bias-corrected AKM estimator<br/>
-        run_cre(): run CRE estimator
+    Class of twfe_network, where twfe_network gives a network of firms and workers.
+
+    Arguments:
+        data (Pandas DataFrame): data giving firms, workers, and compensation
+        formatting (str): if 'long', then data in long format; if 'es', then data in event study format. If simulating data, keep default value of 'long'
+        col_dict (dict): make data columns readable (requires: wid (worker id), comp (compensation), fid (firm id), year if long; wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover) if event study). Keep None if column names already correct
     '''
 
     def __init__(self, data, formatting='long', col_dict=None):
-        '''
-        Initialize twfe_network object.
-
-        Arguments:
-            data (Pandas DataFrame): data giving firms, workers, and compensation
-            formatting (str): if 'long', then data in long format; if 'es', then data in event study format. If simulating data, keep default value of 'long'
-            col_dict (dict): make data columns readable (requires: wid (worker id), comp (compensation), fid (firm id), year if long; wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover) if event study). Keep None if column names already correct
-        '''
         logger.info('initializing twfe_network object')
 
         # Define some attributes
@@ -74,7 +38,7 @@ class twfe_network:
             self.col_dict = {'fid': 'fid', 'wid': 'wid', 'year': 'year', 'comp': 'comp'}
         else:
             self.col_dict = col_dict
-        
+
         # Define default parameter dictionaries
         self.default_KMeans = {'n_clusters': 10, 'init': 'k-means++', 'n_init': 500, 'max_iter': 300, 'tol': 0.0001, 'precompute_distances': 'deprecated', 'verbose': 0, 'random_state': None, 'copy_x': True, 'n_jobs': 'deprecated', 'algorithm': 'auto'}
 
@@ -253,7 +217,7 @@ class twfe_network:
         elif self.formatting == 'es':
                 success_stayers = True
                 success_movers = True
-                
+
                 logger.info('--- checking columns ---')
                 cols = True
                 for col in ['wid', 'y1', 'y2', 'f1i', 'f2i', 'm']:
@@ -382,7 +346,7 @@ class twfe_network:
         # If connected data != full data, set contiguous to False
         if prev_workers != self.n_workers():
             self.contiguous = False
-    
+
         # Return G if firm ids are contiguous (if they're not contiguous, they have to be updated first)
         if self.contiguous:
             return G
@@ -573,11 +537,16 @@ class twfe_network:
         Cluster data and assign a new column giving the cluster for each firm.
 
         Arguments:
-            user_cluster (dict): dictionary of parameters for clustering<br/>
+            user_cluster (dict): dictionary of parameters for clustering
+
                 Dictionary parameters:
+
                     cdf_resolution (int): how many values to use to approximate the cdf
-                    grouping (string): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
+
+                    grouping (str): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
+
                     year (int or None): if None, uses entire dataset; if int, gives year of data to consider
+
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
         '''
         if self.formatting == 'es':
@@ -622,19 +591,32 @@ class twfe_network:
         Run bias-corrected AKM estimator.
 
         Arguments:
-            user_akm (dict): dictionary of parameters for bias-corrected AKM estimation<br/>
+            user_akm (dict): dictionary of parameters for bias-corrected AKM estimation
+
                 Dictionary parameters:
+
                     ncore (int): number of cores to use
+
                     batch (int): batch size to send in parallel
+
                     ndraw_pii (int): number of draw to use in approximation for leverages
+
                     ndraw_tr (int): number of draws to use in approximation for traces
+
                     check (bool): whether to compute the non-approximated estimates as well
+
                     hetero (bool): whether to compute the heteroskedastic estimates
+
                     out (str): outputfile
+
                     con (str): computes the smallest eigen values, this is the filepath where these results are saved
+
                     logfile (str): log output to a logfile
+
                     levfile (str): file to load precomputed leverages
+
                     statsonly (bool): save data statistics only
+
                     Q (str): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
 
         Returns:
@@ -658,13 +640,20 @@ class twfe_network:
         Run CRE estimator.
 
         Arguments:
-            user_cre (dict): dictionary of parameters for CRE estimation<br/>
+            user_cre (dict): dictionary of parameters for CRE estimation
+
                 Dictionary parameters:
+
                     ncore (int): number of cores to use
+
                     ndraw_tr (int): number of draws to use in approximation for traces
+
                     ndp (int): number of draw to use in approximation for leverages
-                    out (string): outputfile
+
+                    out (str): outputfile
+
                     posterior (bool): compute posterior variance
+
                     wobtw (bool): sets between variation to 0, pure RE
 
         Returns:
