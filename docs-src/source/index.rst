@@ -6,15 +6,17 @@
 pytwoway package
 ================
 
-`pytwoway` is the Python package associated with the paper "`How Much Should we Trust Estimates of Firm Effects and Worker Sorting?. <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" Stéphane Bonhomme, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler.  No. w27368. National Bureau of Economic Research, 2020.
+`pytwoway` is the Python package associated with the paper:
+
+"`How Much Should we Trust Estimates of Firm Effects and Worker Sorting?. <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" Stéphane Bonhomme, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler.  No. w27368. National Bureau of Economic Research, 2020.
 
 The package provides implementations for a series of estimators for model with two sided heterogeneity:
 
- - two way fixed effect estimator as proposed by Abowd Kramarz and Margolis
- - Homoskedastic bias correction as in Andrews et al
- - heteroskedastic correction as in KSS (TBD)
- - a group fixed estimator as in BLM
- - a group correlated random effect as presented in the main paper
+ * two way fixed effect estimator as proposed by Abowd Kramarz and Margolis
+ * Homoskedastic bias correction as in Andrews et al
+ * heteroskedastic correction as in KSS (TBD)
+ * a group fixed estimator as in BLM
+ * a group correlated random effect as presented in the main paper
 
 The code is relatively efficient. Solving large sparse linear relies on using `https://github.com/pyamg/pyamg`. This is the code we used to estimate the different decompositions on the US data. 
 
@@ -88,8 +90,6 @@ Citation
 
 Please use following citation to cite pytwoway in academic publications:
 
-Bonhomme, Stéphane, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler. "`How Much Should we Trust Estimates of Firm Effects and Worker Sorting?. <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" No. w27368. National Bureau of Economic Research, 2020.
-
 Bibtex entry::
 
   @techreport{bonhomme2020much,
@@ -99,9 +99,9 @@ Bibtex entry::
     institution={National Bureau of Economic Research}
   }
 
-========
-API
-========
+==========
+Python API
+==========
 
 The main pytwoway API is split into four modules:
 
