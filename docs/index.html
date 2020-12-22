@@ -259,6 +259,10 @@
               <ul class="md-nav__list">
         <li class="md-nav__item"><a href="#quick-start" class="md-nav__link">Quick Start</a>
         </li>
+        <li class="md-nav__item"><a href="#citation" class="md-nav__link">Citation</a>
+        </li>
+        <li class="md-nav__item"><a href="#api" class="md-nav__link">API</a>
+        </li>
         <li class="md-nav__item"><a href="#modules-and-methods" class="md-nav__link">Modules and Methods</a><nav class="md-nav">
               <ul class="md-nav__list">
         <li class="md-nav__item"><a href="#pytwoway-cre" class="md-nav__link"><code class="docutils literal notranslate"><span class="pre">pytwoway.cre</span></code></a>
@@ -270,8 +274,6 @@
         <li class="md-nav__item"><a href="#pytwoway-sim-twfe-network" class="md-nav__link"><code class="docutils literal notranslate"><span class="pre">pytwoway.sim_twfe_network</span></code></a>
         </li></ul>
             </nav>
-        </li>
-        <li class="md-nav__item"><a href="#citation" class="md-nav__link">Citation</a>
         </li></ul>
             </nav>
         </li>
@@ -291,38 +293,19 @@
             
   
 <h1 id="index--page-root">pytwoway package<a class="headerlink" href="#index--page-root" title="Permalink to this headline">¶</a></h1>
-<p>pytwoway is a Python module that provides classes and functions for the estimation
-of two way fixed effect models. It includes AKM, homoskedastic- and heteroskedastic-corrected AKM, and CRE estimators,
-as well as simulation tools. Estimators are tested against simulations to ensure they are correct.
-The online documentation is hosted at <a class="reference external" href="https://tlamadon.github.io/pytwoway/">https://tlamadon.github.io/pytwoway/</a>.</p>
-<p>The main pytwoway API is split into four modules:</p>
-<ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.cre</span></code>: CRE estimator. Canonically imported
-using</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">python</span> <span class="kn">import</span> <span class="n">cre</span>
-</pre></div>
-</div>
-</li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.fe_approximate_correction_full.FEsolver</span></code>: FE esimators. Canonically imported
-using</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">python</span> <span class="kn">import</span> <span class="n">fe_approximate_correction_full</span>
-<span class="n">fe</span> <span class="o">=</span> <span class="n">fe_approximate_correction_full</span><span class="o">.</span><span class="n">FEsolver</span>
-</pre></div>
-</div>
-</li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.twfe_network.twfe_network</span></code>: Class to format labor data. Canonically imported using</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">twfe_network</span>
-<span class="n">tn</span> <span class="o">=</span> <span class="n">twfe_network</span><span class="o">.</span><span class="n">twfe_network</span>
-</pre></div>
-</div>
-</li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.sim_twfe_network.sim_twfe_network</span></code>: Class to simulate labor data and run Monte Carlo simulations. Canonically imported using</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">sim_twfe_network</span>
-<span class="n">sn</span> <span class="o">=</span> <span class="n">sim_twfe_network</span><span class="o">.</span><span class="n">sim_twfe_network</span>
-</pre></div>
-</div>
-</li>
+<p><cite>pytwoway</cite> is the Python package associated with the paper “<a class="reference external" href="https://www.nber.org/system/files/working_papers/w27368/w27368.pdf">How Much Should we Trust Estimates of Firm Effects and Worker Sorting?.</a>” Stéphane Bonhomme, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler.  No. w27368. National Bureau of Economic Research, 2020.</p>
+<p>The package provides implementations for a series of estimators for model with two sided heterogeneity:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>two way fixed effect estimator as proposed by Abowd Kramarz and Margolis</p></li>
+<li><p>Homoskedastic bias correction as in Andrews et al</p></li>
+<li><p>heteroskedastic correction as in KSS (TBD)</p></li>
+<li><p>a group fixed estimator as in BLM</p></li>
+<li><p>a group correlated random effect as presented in the main paper</p></li>
 </ul>
+</div></blockquote>
+<p>The code is relatively efficient. Solving large sparse linear relies on using <cite>https://github.com/pyamg/pyamg</cite>. This is the code we used to estimate the different decompositions on the US data.</p>
+<p>The package provides a python interface as well as an intuitive command line interface. Installation is handled by <cite>pip</cite> or <cite>conda</cite> (TBD). The source of the package is available on github at <a class="reference external" href="https://github.com/tlamadon/pytwoway">pytwoway</a>. The online documentation is hosted  <a class="reference external" href="https://tlamadon.github.io/pytwoway/">here</a>.</p>
 
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permalink to this headline">¶</a></h2>
 <p>To install from pip, run:</p>
@@ -381,6 +364,51 @@ using</p>
 <span class="n">stw_net</span><span class="o">.</span><span class="n">plot_monte_carlo</span><span class="p">()</span>
 </pre></div>
 </div>
+
+
+<h2 id="citation">Citation<a class="headerlink" href="#citation" title="Permalink to this headline">¶</a></h2>
+<p>Please use following citation to cite pytwoway in academic publications:</p>
+<p>Bonhomme, Stéphane, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler. “<a class="reference external" href="https://www.nber.org/system/files/working_papers/w27368/w27368.pdf">How Much Should we Trust Estimates of Firm Effects and Worker Sorting?.</a>” No. w27368. National Bureau of Economic Research, 2020.</p>
+<p>Bibtex entry:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>@techreport{bonhomme2020much,
+  title={How Much Should We Trust Estimates of Firm Effects and Worker Sorting?},
+  author={Bonhomme, St{\'e}phane and Holzheu, Kerstin and Lamadon, Thibaut and Manresa, Elena and Mogstad, Magne and Setzler, Bradley},
+  year={2020},
+  institution={National Bureau of Economic Research}
+}
+</pre></div>
+</div>
+
+
+<h2 id="api">API<a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h2>
+<p>The main pytwoway API is split into four modules:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.cre</span></code>: CRE estimator. Canonically imported
+using</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">python</span> <span class="kn">import</span> <span class="n">cre</span>
+</pre></div>
+</div>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.fe_approximate_correction_full.FEsolver</span></code>: FE esimators. Canonically imported
+using</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">python</span> <span class="kn">import</span> <span class="n">fe_approximate_correction_full</span>
+<span class="n">fe</span> <span class="o">=</span> <span class="n">fe_approximate_correction_full</span><span class="o">.</span><span class="n">FEsolver</span>
+</pre></div>
+</div>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.twfe_network.twfe_network</span></code>: Class to format labor data. Canonically imported using</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">twfe_network</span>
+<span class="n">tn</span> <span class="o">=</span> <span class="n">twfe_network</span><span class="o">.</span><span class="n">twfe_network</span>
+</pre></div>
+</div>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.sim_twfe_network.sim_twfe_network</span></code>: Class to simulate labor data and run Monte Carlo simulations. Canonically imported using</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">sim_twfe_network</span>
+<span class="n">sn</span> <span class="o">=</span> <span class="n">sim_twfe_network</span><span class="o">.</span><span class="n">sim_twfe_network</span>
+</pre></div>
+</div>
+</li>
+</ul>
 
 
 <h2 id="modules-and-methods">Modules and Methods<a class="headerlink" href="#modules-and-methods" title="Permalink to this headline">¶</a></h2>
@@ -595,23 +623,9 @@ using</p>
 </tr>
 </tbody>
 </table>
-
-
-
-<h2 id="citation">Citation<a class="headerlink" href="#citation" title="Permalink to this headline">¶</a></h2>
-<p>Please use following citation to cite pytwoway in academic publications:</p>
-<p>Bonhomme, Stéphane, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler. “<a class="reference external" href="https://www.nber.org/system/files/working_papers/w27368/w27368.pdf">How Much Should we Trust Estimates of Firm Effects and Worker Sorting?.</a>” No. w27368. National Bureau of Economic Research, 2020.</p>
-<p>Bibtex entry:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>@techreport{bonhomme2020much,
-  title={How Much Should We Trust Estimates of Firm Effects and Worker Sorting?},
-  author={Bonhomme, St{\'e}phane and Holzheu, Kerstin and Lamadon, Thibaut and Manresa, Elena and Mogstad, Magne and Setzler, Bradley},
-  year={2020},
-  institution={National Bureau of Economic Research}
-}
-</pre></div>
-</div>
 <div class="toctree-wrapper compound">
 </div>
+
 
 
 

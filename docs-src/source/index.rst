@@ -6,54 +6,19 @@
 pytwoway package
 ================
 
-pytwoway is a Python module that provides classes and functions for the estimation
-of two way fixed effect models. It includes AKM, homoskedastic- and heteroskedastic-corrected AKM, and CRE estimators,
-as well as simulation tools. Estimators are tested against simulations to ensure they are correct.
-The online documentation is hosted at `https://tlamadon.github.io/pytwoway/ <https://tlamadon.github.io/pytwoway/>`_.
+`pytwoway` is the Python package associated with the paper "`How Much Should we Trust Estimates of Firm Effects and Worker Sorting?. <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" Stéphane Bonhomme, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler.  No. w27368. National Bureau of Economic Research, 2020.
 
-.. :ref:`statsmodels <about:About statsmodels>` is a Python module that provides classes and functions for the estimation
-.. of many different statistical models, as well as for conducting statistical tests, and statistical
-.. data exploration. An extensive list of result statistics are available for each estimator.
-.. The results are tested against existing statistical packages to ensure that they are correct. The
-.. package is released under the open source Modified BSD (3-clause) license.
-.. The online documentation is hosted at `statsmodels.org <https://www.statsmodels.org/>`__.
+The package provides implementations for a series of estimators for model with two sided heterogeneity:
 
-The main pytwoway API is split into four modules:
+ - two way fixed effect estimator as proposed by Abowd Kramarz and Margolis
+ - Homoskedastic bias correction as in Andrews et al
+ - heteroskedastic correction as in KSS (TBD)
+ - a group fixed estimator as in BLM
+ - a group correlated random effect as presented in the main paper
 
-* ``pytwoway.cre``: CRE estimator. Canonically imported
-  using
+The code is relatively efficient. Solving large sparse linear relies on using `https://github.com/pyamg/pyamg`. This is the code we used to estimate the different decompositions on the US data. 
 
-  .. code-block:: python
-
-    from python import cre
-
-* ``pytwoway.fe_approximate_correction_full.FEsolver``: FE esimators. Canonically imported
-  using
-
-  .. code-block:: python
-
-    from python import fe_approximate_correction_full
-    fe = fe_approximate_correction_full.FEsolver
-
-* ``pytwoway.twfe_network.twfe_network``: Class to format labor data. Canonically imported using
-
-  .. code-block:: python
-
-    from pytwoway import twfe_network
-    tn = twfe_network.twfe_network
-
-* ``pytwoway.sim_twfe_network.sim_twfe_network``: Class to simulate labor data and run Monte Carlo simulations. Canonically imported using
-
-  .. code-block:: python
-
-    from pytwoway import sim_twfe_network
-    sn = sim_twfe_network.sim_twfe_network
-
-.. The API focuses on models and the most frequently used statistical test, and tools.
-.. :ref:`api-structure:Import Paths and Structure` explains the design of the two API modules and how
-.. importing from the API differs from directly importing from the module where the
-.. model is defined. See the detailed topic pages in the :ref:`user-guide:User Guide` for a complete
-.. list of available models, statistics, and tools.
+The package provides a python interface as well as an intuitive command line interface. Installation is handled by `pip` or `conda` (TBD). The source of the package is available on github at `pytwoway <https://github.com/tlamadon/pytwoway>`_. The online documentation is hosted  `here <https://tlamadon.github.io/pytwoway/>`_.
 
 ===========
 Quick Start
@@ -115,6 +80,65 @@ To run in Python:
     stw_net.twfe_monte_carlo(N, ncore, akm_params, cre_params, cluster_params)
     # Plot results
     stw_net.plot_monte_carlo()
+
+
+========
+Citation
+========
+
+Please use following citation to cite pytwoway in academic publications:
+
+Bonhomme, Stéphane, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler. "`How Much Should we Trust Estimates of Firm Effects and Worker Sorting?. <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" No. w27368. National Bureau of Economic Research, 2020.
+
+Bibtex entry::
+
+  @techreport{bonhomme2020much,
+    title={How Much Should We Trust Estimates of Firm Effects and Worker Sorting?},
+    author={Bonhomme, St{\'e}phane and Holzheu, Kerstin and Lamadon, Thibaut and Manresa, Elena and Mogstad, Magne and Setzler, Bradley},
+    year={2020},
+    institution={National Bureau of Economic Research}
+  }
+
+========
+API
+========
+
+The main pytwoway API is split into four modules:
+
+* ``pytwoway.cre``: CRE estimator. Canonically imported
+  using
+
+  .. code-block:: python
+
+    from python import cre
+
+* ``pytwoway.fe_approximate_correction_full.FEsolver``: FE esimators. Canonically imported
+  using
+
+  .. code-block:: python
+
+    from python import fe_approximate_correction_full
+    fe = fe_approximate_correction_full.FEsolver
+
+* ``pytwoway.twfe_network.twfe_network``: Class to format labor data. Canonically imported using
+
+  .. code-block:: python
+
+    from pytwoway import twfe_network
+    tn = twfe_network.twfe_network
+
+* ``pytwoway.sim_twfe_network.sim_twfe_network``: Class to simulate labor data and run Monte Carlo simulations. Canonically imported using
+
+  .. code-block:: python
+
+    from pytwoway import sim_twfe_network
+    sn = sim_twfe_network.sim_twfe_network
+
+.. The API focuses on models and the most frequently used statistical test, and tools.
+.. :ref:`api-structure:Import Paths and Structure` explains the design of the two API modules and how
+.. importing from the API differs from directly importing from the module where the
+.. model is defined. See the detailed topic pages in the :ref:`user-guide:User Guide` for a complete
+.. list of available models, statistics, and tools.
 
 ===================
 Modules and Methods
@@ -205,22 +229,9 @@ Modules and Methods
    ~pytwoway.sim_twfe_network.sim_twfe_network.twfe_monte_carlo_interior
    ~pytwoway.sim_twfe_network.sim_twfe_network.update_dict
 
-========
-Citation
-========
 
-Please use following citation to cite pytwoway in academic publications:
 
-Bonhomme, Stéphane, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler. "`How Much Should we Trust Estimates of Firm Effects and Worker Sorting?. <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" No. w27368. National Bureau of Economic Research, 2020.
 
-Bibtex entry::
-
-  @techreport{bonhomme2020much,
-    title={How Much Should We Trust Estimates of Firm Effects and Worker Sorting?},
-    author={Bonhomme, St{\'e}phane and Holzheu, Kerstin and Lamadon, Thibaut and Manresa, Elena and Mogstad, Magne and Setzler, Bradley},
-    year={2020},
-    institution={National Bureau of Economic Research}
-  }
 
 .. toctree::
    :maxdepth: 1
