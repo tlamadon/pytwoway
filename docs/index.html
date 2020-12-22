@@ -46,7 +46,7 @@
   
   
   
-    <title>pytwoway &#8212; pytwoway</title>
+    <title>pytwoway package &#8212; pytwoway</title>
     <link rel="stylesheet" href="_static/material.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -94,7 +94,7 @@
       <div class="md-flex__cell md-flex__cell--stretch">
         <div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
           <span class="md-header-nav__topic">pytwoway v0.0.1</span>
-          <span class="md-header-nav__topic"> pytwoway </span>
+          <span class="md-header-nav__topic"> pytwoway package </span>
         </div>
       </div>
       <div class="md-flex__cell md-flex__cell--shrink">
@@ -255,7 +255,7 @@
 <nav class="md-nav md-nav--secondary">
     <label class="md-nav__title" for="__toc">Contents</label>
   <ul class="md-nav__list" data-md-scrollfix="">
-        <li class="md-nav__item"><a href="#index--page-root" class="md-nav__link">pytwoway</a><nav class="md-nav">
+        <li class="md-nav__item"><a href="#index--page-root" class="md-nav__link">pytwoway package</a><nav class="md-nav">
               <ul class="md-nav__list">
         <li class="md-nav__item"><a href="#quick-start" class="md-nav__link">Quick Start</a>
         </li>
@@ -290,7 +290,7 @@
           <article class="md-content__inner md-typeset" role="main">
             
   
-<h1 id="index--page-root">pytwoway<a class="headerlink" href="#index--page-root" title="Permalink to this headline">¶</a></h1>
+<h1 id="index--page-root">pytwoway package<a class="headerlink" href="#index--page-root" title="Permalink to this headline">¶</a></h1>
 <p>pytwoway is a Python module that provides classes and functions for the estimation
 of two way fixed effect models. It includes AKM, homoskedastic- and heteroskedastic-corrected AKM, and CRE estimators,
 as well as simulation tools. Estimators are tested against simulations to ensure they are correct.
@@ -330,11 +330,12 @@ using</p>
 </pre></div>
 </div>
 <p>To run using command line interface:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python3</span> <span class="n">run_twfe</span><span class="o">.</span><span class="n">py</span> <span class="o">--</span><span class="n">my</span><span class="o">-</span><span class="n">config</span> <span class="n">config</span><span class="o">.</span><span class="n">txt</span> <span class="o">--</span><span class="n">filetype</span> <span class="n">csv</span> <span class="o">--</span><span class="n">akm</span> <span class="o">--</span><span class="n">cre</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytw</span> <span class="o">--</span><span class="n">my</span><span class="o">-</span><span class="n">config</span> <span class="n">config</span><span class="o">.</span><span class="n">txt</span> <span class="o">--</span><span class="n">akm</span> <span class="o">--</span><span class="n">cre</span>
 </pre></div>
 </div>
 <p>Example config.txt:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">csv</span>
+<span class="n">filetype</span> <span class="o">=</span> <span class="n">csv</span>
 <span class="n">col_dict</span> <span class="o">=</span> <span class="s2">"{'fid': 'your_firmid_col', 'wid': 'your_workerid_col', 'year': 'your_year_col', 'comp': 'your_compensation_col'}"</span>
 </pre></div>
 </div>
@@ -648,7 +649,7 @@ using</p>
               
           </div>
             Last updated on
-              Dec 21, 2020.
+              Dec 22, 2020.
             <br/>
             Created using
             <a href="http://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
