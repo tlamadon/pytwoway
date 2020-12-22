@@ -44,30 +44,44 @@ class FEsolver:
     and creates associated A = [J W] matrix which are AKM dummies
 
     provides methods to do A x Y but also (A'A)^-1 A'Y solve method
+
+    Arguments:
+        params (dictionary): dictionary of parameters
+
+            Dictionary parameters:
+
+                data (Pandas DataFrame): labor data. Contains the following columns:
+
+                    wid (worker id)
+
+                    y1 (compensation 1)
+
+                    y2 (compensation 2)
+
+                    f1i (firm id 1)
+
+                    f2i (firm id 2)
+
+                    m (0 if stayer, 1 if mover)
+
+                ncore (int): number of cores to use
+
+                ndraw_pii (int): number of draws to compute leverage
+
+                ndraw_tr (int): number of draws to compute heteroskedastic correction
+
+                hetero (bool): if True, compute heteroskedastic correction
+
+                statsonly (bool): if True, return only basic statistics
+
+                out (string): if statsonly is True, this is the file where the statistics will be saved
+
+                batch (): @ FIXME I don't know what this is
+
+                Q (str): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
     '''
 
     def __init__(self, params):
-        '''
-        Initialize FEsolver object
-
-        Arguments:
-            params (dictionary): dictionary of parameters
-                data (Pandas DataFrame): labor data. Contains the following columns:
-                    wid (worker id)
-                    y1 (compensation 1)
-                    y2 (compensation 2)
-                    f1i (firm id 1)
-                    f2i (firm id 2)
-                    m (0 if stayer, 1 if mover)
-                ncore (int): number of cores to use
-                ndraw_pii (int): number of draws to compute leverage
-                ndraw_tr (int): number of draws to compute heteroskedastic correction
-                hetero (bool): if True, compute heteroskedastic correction
-                statsonly (bool): if True, return only basic statistics
-                out (string): if statsonly is True, this is the file where the statistics will be saved
-                batch (): @ FIXME I don't know what this is
-                Q (str): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
-        '''
         logger.info('initializing FEsolver object')
         self.params = params
         self.res = {} # Results dictionary
@@ -203,13 +217,21 @@ class FEsolver:
         Use prepped adata to initialize class attributes.
 
         Arguments:
-            adata (Pandas DataFrame): labor data. Contains the following columns:
-                wid (worker id)
-                y1 (compensation 1)
-                y2 (compensation 2)
-                f1i (firm id 1)
-                f2i (firm id 2)
-                m (0 if stayer, 1 if mover)
+            adata (Pandas DataFrame): labor data.
+
+                Contains the following columns:
+
+                    wid (worker id)
+
+                    y1 (compensation 1)
+
+                    y2 (compensation 2)
+
+                    f1i (firm id 1)
+
+                    f2i (firm id 2)
+
+                    m (0 if stayer, 1 if mover)
         '''
         nf = self.adata.f1i.max() # Number of firms
         nw = self.adata.wid.max() # Number of workers
