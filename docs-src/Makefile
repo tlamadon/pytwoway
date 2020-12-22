@@ -20,6 +20,6 @@ help:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 copy:
-	rm *.log
+	rm -f *.log
 	cp -r build/html/** ../docs
 	cp .nojekyll ../docs

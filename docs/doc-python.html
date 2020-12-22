@@ -1,0 +1,293 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Using from python &mdash; pytwoway 0.0.1 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="pytwoway example" href="notebooks/pytwoway_example.html" />
+    <link rel="prev" title="Command line interface" href="doc-cli.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> pytwoway
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">User documention</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From terminal</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">From python</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Notebook examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/pytwoway_example.html">Simple</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Under the hood</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="internal.html">Python API</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">pytwoway</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Using from python</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/doc-python.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<div class="section" id="using-from-python">
+<h1>Using from python<a class="headerlink" href="#using-from-python" title="Permalink to this headline">¶</a></h1>
+<p>To run in Python:</p>
+<ul class="simple">
+<li><p>If you have data</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">twfe_network</span>
+<span class="n">tn</span> <span class="o">=</span> <span class="n">twfe_network</span><span class="o">.</span><span class="n">twfe_network</span>
+<span class="c1"># Create twfe object</span>
+<span class="n">tw_net</span> <span class="o">=</span> <span class="n">tn</span><span class="o">.</span><span class="n">twfe_network</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">formatting</span><span class="p">,</span> <span class="n">col_dict</span><span class="p">)</span>
+<span class="c1"># Convert long data into event study data (not necessary if the data is already in event study format):</span>
+<span class="n">tw_net</span><span class="o">.</span><span class="n">refactor_es</span><span class="p">()</span>
+<span class="c1"># Run the bias-corrected AKM estimator:</span>
+<span class="n">tw_net</span><span class="o">.</span><span class="n">run_akm_corrected</span><span class="p">(</span><span class="n">user_akm</span><span class="p">)</span>
+<span class="c1"># Cluster firms based on their wage CDFs (required for the CRE estimator)</span>
+<span class="n">tw_net</span><span class="o">.</span><span class="n">cluster</span><span class="p">(</span><span class="n">user_cluster</span><span class="p">)</span>
+<span class="c1"># Run the CRE estimator</span>
+<span class="n">tw_net</span><span class="o">.</span><span class="n">run_cre</span><span class="p">(</span><span class="n">user_cre</span><span class="p">)</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>If you want to simulate data</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">sim_twfe_network</span>
+<span class="n">sn</span> <span class="o">=</span> <span class="n">sim_twfe_network</span><span class="o">.</span><span class="n">sim_twfe_network</span>
+<span class="c1"># Create simulated twfe object</span>
+<span class="n">stw_net</span> <span class="o">=</span> <span class="n">sn</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span>
+<span class="c1"># Generate data</span>
+<span class="n">sim_data</span> <span class="o">=</span> <span class="n">stw_net</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>If you want to run Monte Carlo on simulated data</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">sim_twfe_network</span>
+<span class="n">sn</span> <span class="o">=</span> <span class="n">sim_twfe_network</span><span class="o">.</span><span class="n">sim_twfe_network</span>
+<span class="c1"># Create simulated twfe object</span>
+<span class="n">stw_net</span> <span class="o">=</span> <span class="n">sn</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span>
+<span class="c1"># Run Monte Carlo</span>
+<span class="n">stw_net</span><span class="o">.</span><span class="n">twfe_monte_carlo</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">ncore</span><span class="p">,</span> <span class="n">akm_params</span><span class="p">,</span> <span class="n">cre_params</span><span class="p">,</span> <span class="n">cluster_params</span><span class="p">)</span>
+<span class="c1"># Plot results</span>
+<span class="n">stw_net</span><span class="o">.</span><span class="n">plot_monte_carlo</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="notebooks/pytwoway_example.html" class="btn btn-neutral float-right" title="pytwoway example" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="doc-cli.html" class="btn btn-neutral float-left" title="Command line interface" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Thibaut Lamadon
+      <span class="lastupdated">
+        Last updated on Dec 22, 2020.
+      </span>
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

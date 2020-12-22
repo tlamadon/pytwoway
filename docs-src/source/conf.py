@@ -15,6 +15,7 @@ import sys
 sys.path.insert(0, os.path.abspath('../..'))
 
 import sphinx_material
+import sphinx_rtd_theme
 
 # -- Project information -----------------------------------------------------
 
@@ -35,7 +36,8 @@ extensions = ['sphinx.ext.autodoc',
                 'sphinx.ext.napoleon',
                 'sphinx.ext.autosummary',
                 'sphinx.ext.autosectionlabel',
-                'nbsphinx']
+                'nbsphinx',
+                "sphinx_rtd_theme"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -51,43 +53,31 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_material'
+html_theme = 'sphinx_rtd_theme'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['']
 
-
 # The theme to use for HTML and HTML Help pages. Taken from
 # https://github.com/statsmodels/statsmodels/blob/master/docs/source/conf.py
-extensions.append('sphinx_material')
-html_theme_path = sphinx_material.html_theme_path()
-html_context = sphinx_material.get_html_context()
-html_theme = 'sphinx_material'
-html_title = project
-html_short_title = project
+# extensions.append('sphinx_material')
+# html_theme_path = sphinx_material.html_theme_path()
+# html_context = sphinx_material.get_html_context()
+# html_theme = 'sphinx_material'
+# html_title = project
+# html_short_title = project
 # material theme options (see theme.conf for more information)
 
 base_url = 'https://github.com/tlamadon/pytwoway'
 html_theme_options = {
-    'base_url': base_url,
-    'repo_url': 'https://github.com/tlamadon/pytwoway',
-    'repo_name': 'tlamadon',
-    'globaltoc_depth': 3,
-    'globaltoc_collapse': True,
-    'globaltoc_includehidden': True,
-    'color_primary': 'indigo',
-    'color_accent': 'blue',
-    'nav_title': 'pytwoway v{0}'.format(release),
-    'master_doc': False, # Gets rid of unnecessary bar at top that appears when scrolling up
-    'nav_links': [],
-    # 'heroes': {'index': 'statistical models, hypothesis tests, and data '
-    #                     'exploration',
-    #            'examples/index': 'examples and tutorials to get started with '
-    #                              'statsmodels'},
-    "version_dropdown": True,
-    # "version_json": "_static/versions.json",
+    # Toc options
+    'collapse_navigation': True,
+    'sticky_navigation': True,
+    'navigation_depth': 4,
+    'includehidden': True,
+    'titles_only': False
 }
 
 language = 'en'

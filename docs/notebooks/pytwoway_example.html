@@ -1,327 +1,175 @@
 
+
 <!DOCTYPE html>
-
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="x-ua-compatible" content="ie=edge">
-  <meta name="lang:clipboard.copy" content="Copy to clipboard">
-  <meta name="lang:clipboard.copied" content="Copied to clipboard">
-  <meta name="lang:search.language" content="en">
-  <meta name="lang:search.pipeline.stopwords" content="True">
-  <meta name="lang:search.pipeline.trimmer" content="True">
-  <meta name="lang:search.result.none" content="No matching documents">
-  <meta name="lang:search.result.one" content="1 matching document">
-  <meta name="lang:search.result.other" content="# matching documents">
-  <meta name="lang:search.tokenizer" content="[\s\-]+">
-
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
   
-    <link href="https://fonts.gstatic.com/" rel="preconnect" crossorigin>
-    <link href="https://fonts.googleapis.com/css?family=Roboto+Mono:400,500,700|Roboto:300,400,400i,700&display=fallback" rel="stylesheet">
-
-    <style>
-      body,
-      input {
-        font-family: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif
-      }
-
-      code,
-      kbd,
-      pre {
-        font-family: "Roboto Mono", "Courier New", Courier, monospace
-      }
-    </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>pytwoway example &mdash; pytwoway 0.0.1 documentation</title>
   
 
-  <link rel="stylesheet" href="../_static/stylesheets/application.css"/>
-  <link rel="stylesheet" href="../_static/stylesheets/application-palette.css"/>
-  <link rel="stylesheet" href="../_static/stylesheets/application-fixes.css"/>
   
-  <link rel="stylesheet" href="../_static/fonts/material-icons.css"/>
-  
-  <meta name="theme-color" content="#3f51b5">
-  <script src="../_static/javascripts/modernizr.js"></script>
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
   
   
   
-    <title>pytwoway example &#8212; pytwoway</title>
-    <link rel="stylesheet" href="../_static/material.css" type="text/css" />
-    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-    <script src="../_static/jquery.js"></script>
-    <script src="../_static/underscore.js"></script>
-    <script src="../_static/doctools.js"></script>
-    <script src="../_static/language_data.js"></script>
-    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Monte Carlo example" href="monte_carlo_example.html" />
-    <link rel="prev" title="pytwoway package" href="../index.html" />
-  
-   
+    <link rel="prev" title="Using from python" href="../doc-python.html" /> 
+</head>
 
-  </head>
-  <body dir=ltr
-        data-md-color-primary=indigo data-md-color-accent=blue>
-  
-  <svg class="md-svg">
-    <defs data-children-count="0">
-      
-      <svg xmlns="http://www.w3.org/2000/svg" width="416" height="448" viewBox="0 0 416 448" id="__github"><path fill="currentColor" d="M160 304q0 10-3.125 20.5t-10.75 19T128 352t-18.125-8.5-10.75-19T96 304t3.125-20.5 10.75-19T128 256t18.125 8.5 10.75 19T160 304zm160 0q0 10-3.125 20.5t-10.75 19T288 352t-18.125-8.5-10.75-19T256 304t3.125-20.5 10.75-19T288 256t18.125 8.5 10.75 19T320 304zm40 0q0-30-17.25-51T296 232q-10.25 0-48.75 5.25Q229.5 240 208 240t-39.25-2.75Q130.75 232 120 232q-29.5 0-46.75 21T56 304q0 22 8 38.375t20.25 25.75 30.5 15 35 7.375 37.25 1.75h42q20.5 0 37.25-1.75t35-7.375 30.5-15 20.25-25.75T360 304zm56-44q0 51.75-15.25 82.75-9.5 19.25-26.375 33.25t-35.25 21.5-42.5 11.875-42.875 5.5T212 416q-19.5 0-35.5-.75t-36.875-3.125-38.125-7.5-34.25-12.875T37 371.5t-21.5-28.75Q0 312 0 260q0-59.25 34-99-6.75-20.5-6.75-42.5 0-29 12.75-54.5 27 0 47.5 9.875t47.25 30.875Q171.5 96 212 96q37 0 70 8 26.25-20.5 46.75-30.25T376 64q12.75 25.5 12.75 54.5 0 21.75-6.75 42 34 40 34 99.5z"/></svg>
-      
-    </defs>
-  </svg>
-  
-  <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer">
-  <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search">
-  <label class="md-overlay" data-md-component="overlay" for="__drawer"></label>
-  <a href="#notebooks/pytwoway_example" tabindex="1" class="md-skip"> Skip to content </a>
-  <header class="md-header" data-md-component="header">
-  <nav class="md-header-nav md-grid">
-    <div class="md-flex navheader">
-      <div class="md-flex__cell md-flex__cell--shrink">
-        <a href="../index.html" title="pytwoway"
-           class="md-header-nav__button md-logo">
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
           
-            &nbsp;
+
           
-        </a>
-      </div>
-      <div class="md-flex__cell md-flex__cell--shrink">
-        <label class="md-icon md-icon--menu md-header-nav__button" for="__drawer"></label>
-      </div>
-      <div class="md-flex__cell md-flex__cell--stretch">
-        <div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
-          <span class="md-header-nav__topic">pytwoway v0.0.1</span>
-          <span class="md-header-nav__topic"> pytwoway example </span>
-        </div>
-      </div>
-      <div class="md-flex__cell md-flex__cell--shrink">
-        <label class="md-icon md-icon--search md-header-nav__button" for="__search"></label>
-        
-<div class="md-search" data-md-component="search" role="dialog">
-  <label class="md-search__overlay" for="__search"></label>
-  <div class="md-search__inner" role="search">
-    <form class="md-search__form" action="../search.html" method="GET" name="search">
-      <input type="text" class="md-search__input" name="q" placeholder="Search"
-             autocapitalize="off" autocomplete="off" spellcheck="false"
-             data-md-component="query" data-md-state="active">
-      <label class="md-icon md-search__icon" for="__search"></label>
-      <button type="reset" class="md-icon md-search__icon" data-md-component="reset" tabindex="-1">
-        &#xE5CD;
-      </button>
-    </form>
-    <div class="md-search__output">
-      <div class="md-search__scrollwrap" data-md-scrollfix>
-        <div class="md-search-result" data-md-component="result">
-          <div class="md-search-result__meta">
-            Type to start searching
-          </div>
-          <ol class="md-search-result__list"></ol>
-        </div>
-      </div>
-    </div>
-  </div>
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> pytwoway
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
 </div>
 
-      </div>
-      
-        <div class="md-flex__cell md-flex__cell--shrink">
-          <div class="md-header-nav__source">
-            <a href="https://github.com/tlamadon/pytwoway" title="Go to repository" class="md-source" data-md-source="github">
-
-    <div class="md-source__icon">
-      <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24" width="28" height="28">
-        <use xlink:href="#__github" width="24" height="24"></use>
-      </svg>
-    </div>
-  
-  <div class="md-source__repository">
-    tlamadon
-  </div>
-</a>
-          </div>
+          
         </div>
-      
-      
-  
-  <script src="../_static/javascripts/version_dropdown.js"></script>
-  <script>
-    var json_loc = "../"versions.json"",
-        target_loc = "../../",
-        text = "Versions";
-    $( document ).ready( add_version_dropdown(json_loc, target_loc, text));
-  </script>
-  
 
-    </div>
-  </nav>
-</header>
-
-  
-  <div class="md-container">
-    
-    
-    
-    <main class="md-main">
-      <div class="md-main__inner md-grid" data-md-component="container">
         
-          <div class="md-sidebar md-sidebar--primary" data-md-component="navigation">
-            <div class="md-sidebar__scrollwrap">
-              <div class="md-sidebar__inner">
-                <nav class="md-nav md-nav--primary" data-md-level="0">
-  <label class="md-nav__title md-nav__title--site" for="__drawer">
-    <a href="../index.html" title="pytwoway" class="md-nav__button md-logo">
-      
-        <img src="../_static/" alt=" logo" width="48" height="48">
-      
-    </a>
-    <a href="../index.html"
-       title="pytwoway">pytwoway v0.0.1</a>
-  </label>
-    <div class="md-nav__source">
-      <a href="https://github.com/tlamadon/pytwoway" title="Go to repository" class="md-source" data-md-source="github">
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">User documention</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../doc-cli.html">From terminal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-python.html">From python</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Notebook examples</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Simple</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#First,-get-your-data">First, get your data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Second,-create-a-twfe_network-object-using-your-data">Second, create a twfe_network object using your data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Third,-clean-your-data">Third, clean your data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Fourth,-refactor-your-data-into-event-study-format">Fourth, refactor your data into event study format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Now-we-can-run-AKM">Now we can run AKM</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Fifth,-cluster-your-data-for-CRE-estimates">Fifth, cluster your data for CRE estimates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Now-we-can-run-CRE">Now we can run CRE</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Finally,-we-can-investigate-the-results">Finally, we can investigate the results</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="monte_carlo_example.html">Monte Carlo</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Under the hood</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../internal.html">Python API</a></li>
+</ul>
 
-    <div class="md-source__icon">
-      <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 24 24" width="28" height="28">
-        <use xlink:href="#__github" width="24" height="24"></use>
-      </svg>
-    </div>
-  
-  <div class="md-source__repository">
-    tlamadon
-  </div>
-</a>
-    </div>
-  
-  
-
-  
-  <ul class="md-nav__list">
-    <li class="md-nav__item">
-    
-    
-    <input class="md-toggle md-nav__toggle" data-md-toggle="toc" type="checkbox" id="__toc">
-    <label class="md-nav__link md-nav__link--active" for="__toc"> pytwoway example </label>
-    
-      <a href="#" class="md-nav__link md-nav__link--active">pytwoway example</a>
-      
+            
+          
+        </div>
         
-<nav class="md-nav md-nav--secondary">
-    <label class="md-nav__title" for="__toc">Contents</label>
-  <ul class="md-nav__list" data-md-scrollfix="">
-        <li class="md-nav__item"><a href="#notebooks-pytwoway-example--page-root" class="md-nav__link">pytwoway example</a><nav class="md-nav">
-              <ul class="md-nav__list">
-        <li class="md-nav__item"><a href="#First,-get-your-data" class="md-nav__link">First, get your data</a>
-        </li>
-        <li class="md-nav__item"><a href="#Second,-create-a-twfe_network-object-using-your-data" class="md-nav__link">Second, create a twfe_network object using your data</a>
-        </li>
-        <li class="md-nav__item"><a href="#Third,-clean-your-data" class="md-nav__link">Third, clean your data</a>
-        </li>
-        <li class="md-nav__item"><a href="#Fourth,-refactor-your-data-into-event-study-format" class="md-nav__link">Fourth, refactor your data into event study format</a>
-        </li>
-        <li class="md-nav__item"><a href="#Now-we-can-run-AKM" class="md-nav__link">Now we can run AKM</a>
-        </li>
-        <li class="md-nav__item"><a href="#Fifth,-cluster-your-data-for-CRE-estimates" class="md-nav__link">Fifth, cluster your data for CRE estimates</a>
-        </li>
-        <li class="md-nav__item"><a href="#Now-we-can-run-CRE" class="md-nav__link">Now we can run CRE</a>
-        </li>
-        <li class="md-nav__item"><a href="#Finally,-we-can-investigate-the-results" class="md-nav__link">Finally, we can investigate the results</a>
-        </li></ul>
-            </nav>
-        </li>
-    
-<li class="md-nav__item"><a class="md-nav__extra_link" href="../_sources/notebooks/pytwoway_example.ipynb.txt">Show Source</a> </li>
+      </div>
+    </nav>
 
-  </ul>
-</nav>
-      
-    
-    </li>
-    <li class="md-nav__item">
-    
-    
-      <a href="monte_carlo_example.html" class="md-nav__link">Monte Carlo example</a>
-      
-    
-    </li>
-    <li class="md-nav__item">
-    
-    
-      <a href="../cre.html" class="md-nav__link">cre module</a>
-      
-    
-    </li>
-    <li class="md-nav__item">
-    
-    
-      <a href="../fe_approximate_correction_full.html" class="md-nav__link">fe_approximate_correction_full module</a>
-      
-    
-    </li>
-    <li class="md-nav__item">
-    
-    
-      <a href="../twfe_network.html" class="md-nav__link">twfe_network module</a>
-      
-    
-    </li>
-    <li class="md-nav__item">
-    
-    
-      <a href="../sim_twfe_network.html" class="md-nav__link">sim_twfe_network module</a>
-      
-    
-    </li>
-  </ul>
-  
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
 
-</nav>
-              </div>
-            </div>
-          </div>
-          <div class="md-sidebar md-sidebar--secondary" data-md-component="toc">
-            <div class="md-sidebar__scrollwrap">
-              <div class="md-sidebar__inner">
-                
-<nav class="md-nav md-nav--secondary">
-    <label class="md-nav__title" for="__toc">Contents</label>
-  <ul class="md-nav__list" data-md-scrollfix="">
-        <li class="md-nav__item"><a href="#notebooks-pytwoway-example--page-root" class="md-nav__link">pytwoway example</a><nav class="md-nav">
-              <ul class="md-nav__list">
-        <li class="md-nav__item"><a href="#First,-get-your-data" class="md-nav__link">First, get your data</a>
-        </li>
-        <li class="md-nav__item"><a href="#Second,-create-a-twfe_network-object-using-your-data" class="md-nav__link">Second, create a twfe_network object using your data</a>
-        </li>
-        <li class="md-nav__item"><a href="#Third,-clean-your-data" class="md-nav__link">Third, clean your data</a>
-        </li>
-        <li class="md-nav__item"><a href="#Fourth,-refactor-your-data-into-event-study-format" class="md-nav__link">Fourth, refactor your data into event study format</a>
-        </li>
-        <li class="md-nav__item"><a href="#Now-we-can-run-AKM" class="md-nav__link">Now we can run AKM</a>
-        </li>
-        <li class="md-nav__item"><a href="#Fifth,-cluster-your-data-for-CRE-estimates" class="md-nav__link">Fifth, cluster your data for CRE estimates</a>
-        </li>
-        <li class="md-nav__item"><a href="#Now-we-can-run-CRE" class="md-nav__link">Now we can run CRE</a>
-        </li>
-        <li class="md-nav__item"><a href="#Finally,-we-can-investigate-the-results" class="md-nav__link">Finally, we can investigate the results</a>
-        </li></ul>
-            </nav>
-        </li>
-    
-<li class="md-nav__item"><a class="md-nav__extra_link" href="../_sources/notebooks/pytwoway_example.ipynb.txt">Show Source</a> </li>
-
-<li id="searchbox" class="md-nav__item"></li>
-
-  </ul>
-</nav>
-              </div>
-            </div>
-          </div>
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
         
-        <div class="md-content">
-          <article class="md-content__inner md-typeset" role="main">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">pytwoway</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>pytwoway example</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/notebooks/pytwoway_example.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
             
   
 <style>
@@ -570,9 +418,31 @@ div.rendered_html tbody tr:nth-child(odd) {
 div.rendered_html tbody tr:hover {
   background: rgba(66, 165, 245, 0.2);
 }
-</style>
 
-<h1 id="notebooks-pytwoway-example--page-root">pytwoway example<a class="headerlink" href="#notebooks-pytwoway-example--page-root" title="Permalink to this headline">¶</a></h1>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<div class="section" id="pytwoway-example">
+<h1>pytwoway example<a class="headerlink" href="#pytwoway-example" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -580,22 +450,22 @@ div.rendered_html tbody tr:hover {
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">sys</span>
 <span class="c1"># Navigate to parent folder for import</span>
-<span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s1">'../../..'</span><span class="p">)</span>
+<span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s1">&#39;../../..&#39;</span><span class="p">)</span>
 <span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">sim_twfe_network</span>
 <span class="n">sn</span> <span class="o">=</span> <span class="n">sim_twfe_network</span><span class="o">.</span><span class="n">sim_twfe_network</span>
 <span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">twfe_network</span>
 <span class="n">tn</span> <span class="o">=</span> <span class="n">twfe_network</span><span class="o">.</span><span class="n">twfe_network</span>
 
 <span class="c1"># Weird code needed for output to show</span>
-<span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s1">'docs/source/notebooks'</span><span class="p">)</span>
+<span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s1">&#39;docs/source/notebooks&#39;</span><span class="p">)</span>
 <span class="n">stdout</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span>
-<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">'..'</span><span class="p">))</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;..&#39;</span><span class="p">))</span>
 <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">stdout</span>
 </pre></div>
 </div>
 </div>
-
-<h2 id="First,-get-your-data">First, get your data<a class="headerlink" href="#First,-get-your-data" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="First,-get-your-data">
+<h2>First, get your data<a class="headerlink" href="#First,-get-your-data" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
@@ -612,7 +482,7 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area rendered_html docutils container">
 <div>
-<style scoped="">
+<style scoped>
     .dataframe tbody tr th:only-of-type {
         vertical-align: middle;
     }
@@ -626,187 +496,187 @@ div.rendered_html tbody tr:hover {
     }
 </style>
 <table border="1" class="dataframe">
-<thead>
-<tr style="text-align: right;">
-<th></th>
-<th>wid</th>
-<th>year</th>
-<th>k</th>
-<th>alpha</th>
-<th>psi</th>
-<th>spell</th>
-<th>freq</th>
-<th>fid</th>
-<th>move</th>
-<th>comp</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<th>0</th>
-<td>1</td>
-<td>1</td>
-<td>0</td>
-<td>-0.430727</td>
-<td>-1.335178</td>
-<td>1</td>
-<td>3</td>
-<td>12</td>
-<td>False</td>
-<td>-3.365809</td>
-</tr>
-<tr>
-<th>1</th>
-<td>1</td>
-<td>2</td>
-<td>0</td>
-<td>-0.430727</td>
-<td>-1.335178</td>
-<td>1</td>
-<td>3</td>
-<td>12</td>
-<td>False</td>
-<td>-1.454216</td>
-</tr>
-<tr>
-<th>2</th>
-<td>1</td>
-<td>3</td>
-<td>0</td>
-<td>-0.430727</td>
-<td>-1.335178</td>
-<td>1</td>
-<td>3</td>
-<td>12</td>
-<td>False</td>
-<td>-2.237995</td>
-</tr>
-<tr>
-<th>3</th>
-<td>1</td>
-<td>4</td>
-<td>3</td>
-<td>-0.430727</td>
-<td>-0.348756</td>
-<td>2</td>
-<td>2</td>
-<td>52</td>
-<td>True</td>
-<td>-0.321821</td>
-</tr>
-<tr>
-<th>4</th>
-<td>1</td>
-<td>5</td>
-<td>3</td>
-<td>-0.430727</td>
-<td>-0.348756</td>
-<td>2</td>
-<td>2</td>
-<td>52</td>
-<td>False</td>
-<td>-2.804593</td>
-</tr>
-<tr>
-<th>...</th>
-<td>...</td>
-<td>...</td>
-<td>...</td>
-<td>...</td>
-<td>...</td>
-<td>...</td>
-<td>...</td>
-<td>...</td>
-<td>...</td>
-<td>...</td>
-</tr>
-<tr>
-<th>49995</th>
-<td>10000</td>
-<td>1</td>
-<td>4</td>
-<td>-0.430727</td>
-<td>-0.114185</td>
-<td>1</td>
-<td>5</td>
-<td>78</td>
-<td>False</td>
-<td>-1.264178</td>
-</tr>
-<tr>
-<th>49996</th>
-<td>10000</td>
-<td>2</td>
-<td>4</td>
-<td>-0.430727</td>
-<td>-0.114185</td>
-<td>1</td>
-<td>5</td>
-<td>78</td>
-<td>False</td>
-<td>-0.294214</td>
-</tr>
-<tr>
-<th>49997</th>
-<td>10000</td>
-<td>3</td>
-<td>4</td>
-<td>-0.430727</td>
-<td>-0.114185</td>
-<td>1</td>
-<td>5</td>
-<td>78</td>
-<td>False</td>
-<td>-0.178720</td>
-</tr>
-<tr>
-<th>49998</th>
-<td>10000</td>
-<td>4</td>
-<td>4</td>
-<td>-0.430727</td>
-<td>-0.114185</td>
-<td>1</td>
-<td>5</td>
-<td>78</td>
-<td>False</td>
-<td>1.191634</td>
-</tr>
-<tr>
-<th>49999</th>
-<td>10000</td>
-<td>5</td>
-<td>4</td>
-<td>-0.430727</td>
-<td>-0.114185</td>
-<td>1</td>
-<td>5</td>
-<td>78</td>
-<td>False</td>
-<td>0.318324</td>
-</tr>
-</tbody>
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>wid</th>
+      <th>year</th>
+      <th>k</th>
+      <th>alpha</th>
+      <th>psi</th>
+      <th>spell</th>
+      <th>freq</th>
+      <th>fid</th>
+      <th>move</th>
+      <th>comp</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>-0.430727</td>
+      <td>-1.335178</td>
+      <td>1</td>
+      <td>3</td>
+      <td>12</td>
+      <td>False</td>
+      <td>-3.365809</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>2</td>
+      <td>0</td>
+      <td>-0.430727</td>
+      <td>-1.335178</td>
+      <td>1</td>
+      <td>3</td>
+      <td>12</td>
+      <td>False</td>
+      <td>-1.454216</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1</td>
+      <td>3</td>
+      <td>0</td>
+      <td>-0.430727</td>
+      <td>-1.335178</td>
+      <td>1</td>
+      <td>3</td>
+      <td>12</td>
+      <td>False</td>
+      <td>-2.237995</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1</td>
+      <td>4</td>
+      <td>3</td>
+      <td>-0.430727</td>
+      <td>-0.348756</td>
+      <td>2</td>
+      <td>2</td>
+      <td>52</td>
+      <td>True</td>
+      <td>-0.321821</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>1</td>
+      <td>5</td>
+      <td>3</td>
+      <td>-0.430727</td>
+      <td>-0.348756</td>
+      <td>2</td>
+      <td>2</td>
+      <td>52</td>
+      <td>False</td>
+      <td>-2.804593</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>49995</th>
+      <td>10000</td>
+      <td>1</td>
+      <td>4</td>
+      <td>-0.430727</td>
+      <td>-0.114185</td>
+      <td>1</td>
+      <td>5</td>
+      <td>78</td>
+      <td>False</td>
+      <td>-1.264178</td>
+    </tr>
+    <tr>
+      <th>49996</th>
+      <td>10000</td>
+      <td>2</td>
+      <td>4</td>
+      <td>-0.430727</td>
+      <td>-0.114185</td>
+      <td>1</td>
+      <td>5</td>
+      <td>78</td>
+      <td>False</td>
+      <td>-0.294214</td>
+    </tr>
+    <tr>
+      <th>49997</th>
+      <td>10000</td>
+      <td>3</td>
+      <td>4</td>
+      <td>-0.430727</td>
+      <td>-0.114185</td>
+      <td>1</td>
+      <td>5</td>
+      <td>78</td>
+      <td>False</td>
+      <td>-0.178720</td>
+    </tr>
+    <tr>
+      <th>49998</th>
+      <td>10000</td>
+      <td>4</td>
+      <td>4</td>
+      <td>-0.430727</td>
+      <td>-0.114185</td>
+      <td>1</td>
+      <td>5</td>
+      <td>78</td>
+      <td>False</td>
+      <td>1.191634</td>
+    </tr>
+    <tr>
+      <th>49999</th>
+      <td>10000</td>
+      <td>5</td>
+      <td>4</td>
+      <td>-0.430727</td>
+      <td>-0.114185</td>
+      <td>1</td>
+      <td>5</td>
+      <td>78</td>
+      <td>False</td>
+      <td>0.318324</td>
+    </tr>
+  </tbody>
 </table>
 <p>50000 rows × 10 columns</p>
 </div></div>
 </div>
-
-
-<h2 id="Second,-create-a-twfe_network-object-using-your-data">Second, create a twfe_network object using your data<a class="headerlink" href="#Second,-create-a-twfe_network-object-using-your-data" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="Second,-create-a-twfe_network-object-using-your-data">
+<h2>Second, create a twfe_network object using your data<a class="headerlink" href="#Second,-create-a-twfe_network-object-using-your-data" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># We need to specify a column dictionary to make sure columns are named correctly. You can also manually update column names yourself</span>
-<span class="n">col_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'fid'</span><span class="p">:</span> <span class="s1">'fid'</span><span class="p">,</span> <span class="s1">'wid'</span><span class="p">:</span> <span class="s1">'wid'</span><span class="p">,</span> <span class="s1">'year'</span><span class="p">:</span> <span class="s1">'year'</span><span class="p">,</span> <span class="s1">'comp'</span><span class="p">:</span> <span class="s1">'comp'</span><span class="p">}</span>
+<span class="n">col_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;fid&#39;</span><span class="p">:</span> <span class="s1">&#39;fid&#39;</span><span class="p">,</span> <span class="s1">&#39;wid&#39;</span><span class="p">:</span> <span class="s1">&#39;wid&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="s1">&#39;year&#39;</span><span class="p">,</span> <span class="s1">&#39;comp&#39;</span><span class="p">:</span> <span class="s1">&#39;comp&#39;</span><span class="p">}</span>
 <span class="n">tw_net</span> <span class="o">=</span> <span class="n">tn</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="n">col_dict</span><span class="p">)</span> <span class="c1"># tw_net for two-way network</span>
 </pre></div>
 </div>
 </div>
-
-
-<h2 id="Third,-clean-your-data">Third, clean your data<a class="headerlink" href="#Third,-clean-your-data" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="Third,-clean-your-data">
+<h2>Third, clean your data<a class="headerlink" href="#Third,-clean-your-data" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
@@ -816,9 +686,9 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 </div>
-
-
-<h2 id="Fourth,-refactor-your-data-into-event-study-format">Fourth, refactor your data into event study format<a class="headerlink" href="#Fourth,-refactor-your-data-into-event-study-format" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="Fourth,-refactor-your-data-into-event-study-format">
+<h2>Fourth, refactor your data into event study format<a class="headerlink" href="#Fourth,-refactor-your-data-into-event-study-format" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
@@ -828,16 +698,16 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 </div>
-
-
-<h2 id="Now-we-can-run-AKM">Now we can run AKM<a class="headerlink" href="#Now-we-can-run-AKM" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="Now-we-can-run-AKM">
+<h2>Now we can run AKM<a class="headerlink" href="#Now-we-can-run-AKM" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># Optional parameters</span>
-<span class="n">akm_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'ncore'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">'batch'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">'ndraw_pii'</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">'ndraw_tr'</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">'check'</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">'hetero'</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">'out'</span><span class="p">:</span> <span class="s1">'res_akm.json'</span><span class="p">,</span> <span class="s1">'con'</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">'logfile'</span><span class="p">:</span> <span class="s1">''</span><span class="p">,</span> <span class="s1">'levfile'</span><span class="p">:</span> <span class="s1">''</span><span class="p">,</span> <span class="s1">'statsonly'</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+<span class="n">akm_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ndraw_pii&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;check&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;hetero&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_akm.json&#39;</span><span class="p">,</span> <span class="s1">&#39;con&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;logfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;levfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
 <span class="n">akm_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">run_akm_corrected</span><span class="p">(</span><span class="n">user_akm</span><span class="o">=</span><span class="n">akm_params</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -850,38 +720,38 @@ div.rendered_html tbody tr:hover {
 100%|██████████| 5/5 [00:00&lt;00:00, 23.89it/s]
 </pre></div></div>
 </div>
-
-
-<h2 id="Fifth,-cluster-your-data-for-CRE-estimates">Fifth, cluster your data for CRE estimates<a class="headerlink" href="#Fifth,-cluster-your-data-for-CRE-estimates" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="Fifth,-cluster-your-data-for-CRE-estimates">
+<h2>Fifth, cluster your data for CRE estimates<a class="headerlink" href="#Fifth,-cluster-your-data-for-CRE-estimates" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># Optional parameters</span>
-<span class="n">KMeans_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'n_clusters'</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">'init'</span><span class="p">:</span> <span class="s1">'k-means++'</span><span class="p">,</span> <span class="s1">'n_init'</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span> <span class="s1">'max_iter'</span><span class="p">:</span> <span class="mi">300</span><span class="p">,</span> <span class="s1">'tol'</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span> <span class="s1">'precompute_distances'</span><span class="p">:</span> <span class="s1">'deprecated'</span><span class="p">,</span> <span class="s1">'verbose'</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">'random_state'</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">'copy_x'</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">'n_jobs'</span><span class="p">:</span> <span class="s1">'deprecated'</span><span class="p">,</span> <span class="s1">'algorithm'</span><span class="p">:</span> <span class="s1">'auto'</span><span class="p">}</span> <span class="c1"># These parameters are specifically for the KMeans algorithm</span>
-<span class="n">cluster_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'cdf_resolution'</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">'grouping'</span><span class="p">:</span> <span class="s1">'quantile_all'</span><span class="p">,</span> <span class="s1">'year'</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">'user_KMeans'</span><span class="p">:</span> <span class="n">KMeans_params</span><span class="p">}</span>
+<span class="n">KMeans_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;n_clusters&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;init&#39;</span><span class="p">:</span> <span class="s1">&#39;k-means++&#39;</span><span class="p">,</span> <span class="s1">&#39;n_init&#39;</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span> <span class="s1">&#39;max_iter&#39;</span><span class="p">:</span> <span class="mi">300</span><span class="p">,</span> <span class="s1">&#39;tol&#39;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span> <span class="s1">&#39;precompute_distances&#39;</span><span class="p">:</span> <span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="s1">&#39;verbose&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;random_state&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;copy_x&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;n_jobs&#39;</span><span class="p">:</span> <span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="s1">&#39;algorithm&#39;</span><span class="p">:</span> <span class="s1">&#39;auto&#39;</span><span class="p">}</span> <span class="c1"># These parameters are specifically for the KMeans algorithm</span>
+<span class="n">cluster_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;cdf_resolution&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;grouping&#39;</span><span class="p">:</span> <span class="s1">&#39;quantile_all&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;user_KMeans&#39;</span><span class="p">:</span> <span class="n">KMeans_params</span><span class="p">}</span>
 <span class="n">tw_net</span><span class="o">.</span><span class="n">cluster</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-
-
-<h2 id="Now-we-can-run-CRE">Now we can run CRE<a class="headerlink" href="#Now-we-can-run-CRE" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="Now-we-can-run-CRE">
+<h2>Now we can run CRE<a class="headerlink" href="#Now-we-can-run-CRE" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># Optional parameters</span>
-<span class="n">cre_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'ncore'</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">'ndraw_tr'</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">'ndp'</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">'out'</span><span class="p">:</span> <span class="s1">'res_cre.json'</span><span class="p">,</span> <span class="s1">'posterior'</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">'wobtw'</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+<span class="n">cre_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;ndp&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_cre.json&#39;</span><span class="p">,</span> <span class="s1">&#39;posterior&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;wobtw&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
 <span class="n">cre_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">run_cre</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
-
-
-<h2 id="Finally,-we-can-investigate-the-results">Finally, we can investigate the results<a class="headerlink" href="#Finally,-we-can-investigate-the-results" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="Finally,-we-can-investigate-the-results">
+<h2>Finally, we can investigate the results<a class="headerlink" href="#Finally,-we-can-investigate-the-results" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
@@ -897,29 +767,29 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{'cores': '1',
- 'ndp': '50',
- 'ndt': '5',
- 'nm': '19876',
- 'ns': '641',
- 'n_firms': '196',
- 'n_workers': '10000',
- 'n_movers': '9359',
- 'mover_quantiles': '[153.0, 183.1142091152815, 191.0, 195.0, 199.0278728606357, 204.0, 207.0, 213.0, 218.0, 227.44847161572054, 242.0]',
- 'size_quantiles': '[157.0, 187.0, 194.0, 198.0, 203.03783783783783, 207.0, 210.0, 217.0, 221.0, 228.89694323144104, 246.0]',
- 'between_firm_var': '0.9901993152122719',
- 'var_y': '1.9748098517073747',
- 'solver_time': '0.03642719999999988',
- 'tot_var': '1.9815619279618752',
- 'eps_var_ho': '0.7791412507632073',
- 'eps_var_fe': '0.37962713728296194',
- 'tr_var_ho': '0.01359156599917644',
- 'tr_cov_ho': '-0.00855030428975486',
- 'var_fe': '0.565381796754361',
- 'cov_fe': '0.17785766674093728',
- 'var_ho': '0.554792047021932',
- 'cov_ho': '0.1845195615196629',
- 'total_time': '0.3574190139770508'}
+{&#39;cores&#39;: &#39;1&#39;,
+ &#39;ndp&#39;: &#39;50&#39;,
+ &#39;ndt&#39;: &#39;5&#39;,
+ &#39;nm&#39;: &#39;19876&#39;,
+ &#39;ns&#39;: &#39;641&#39;,
+ &#39;n_firms&#39;: &#39;196&#39;,
+ &#39;n_workers&#39;: &#39;10000&#39;,
+ &#39;n_movers&#39;: &#39;9359&#39;,
+ &#39;mover_quantiles&#39;: &#39;[153.0, 183.1142091152815, 191.0, 195.0, 199.0278728606357, 204.0, 207.0, 213.0, 218.0, 227.44847161572054, 242.0]&#39;,
+ &#39;size_quantiles&#39;: &#39;[157.0, 187.0, 194.0, 198.0, 203.03783783783783, 207.0, 210.0, 217.0, 221.0, 228.89694323144104, 246.0]&#39;,
+ &#39;between_firm_var&#39;: &#39;0.9901993152122719&#39;,
+ &#39;var_y&#39;: &#39;1.9748098517073747&#39;,
+ &#39;solver_time&#39;: &#39;0.03642719999999988&#39;,
+ &#39;tot_var&#39;: &#39;1.9815619279618752&#39;,
+ &#39;eps_var_ho&#39;: &#39;0.7791412507632073&#39;,
+ &#39;eps_var_fe&#39;: &#39;0.37962713728296194&#39;,
+ &#39;tr_var_ho&#39;: &#39;0.01359156599917644&#39;,
+ &#39;tr_cov_ho&#39;: &#39;-0.00855030428975486&#39;,
+ &#39;var_fe&#39;: &#39;0.565381796754361&#39;,
+ &#39;cov_fe&#39;: &#39;0.17785766674093728&#39;,
+ &#39;var_ho&#39;: &#39;0.554792047021932&#39;,
+ &#39;cov_ho&#39;: &#39;0.1845195615196629&#39;,
+ &#39;total_time&#39;: &#39;0.3574190139770508&#39;}
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -927,63 +797,63 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{'ndt': '5',
- 'nm': '19876',
- 'ns': '641',
- 'n_firms': '196',
- 'n_workers': '10000',
- 'var_y': '1.9748098517073747',
- 'y1s_y1s': '-0.018778670136099976',
- 'y1s_y1s_count': '623',
- 'y1s_var': '0.43099499394218876',
- 'y1s_var_count': '641',
- 'y1m_var': '0.9818785506383447',
- 'y1m_var_count': '19876',
- 'y2m_var': '0.9846774666587136',
- 'y2m_var_count': '19876',
- 'y1s_y1m1': '0.0010900910450677528',
- 'y1s_y1m1_count': '641',
- 'y1s_y2m1': '0.0011375691227155879',
- 'y1s_y2m1_count': '641',
- 'y1m1_y1m1': '-0.003670002633836549',
- 'y1m1_y1m1_count': '19876',
- 'y2m1_y1m1': '-0.0013277022473827153',
- 'y2m1_y1m1_count': '19876',
- 'y2m1_y2m1': '-0.00132049117105973',
- 'y2m1_y2m1_count': '19876',
- 'y1s_y1m2': '3.332738550275785e-06',
- 'y1s_y1m2_count': '641',
- 'y1s_y2m2': '0.0019052486391465664',
- 'y1s_y2m2_count': '641',
- 'y1m2_y1m2': '0.0003902146143839548',
- 'y1m2_y1m2_count': '19876',
- 'y2m2_y1m2': '-0.00023627415237117391',
- 'y2m2_y1m2_count': '19876',
- 'y2m2_y2m2': '-0.0011953236874498625',
- 'y2m2_y2m2_count': '19876',
- 'dym_dym': '1.5524383735039806',
- 'dym_dym_count': '16469',
- 'y1m_y2m': '0.2130824011991643',
- 'y1m_y2m_count': '16469',
- 'cov_Am1Am1': '-0.00132049117105973',
- 'cov_Am1Psi1': '-7.211076322985281e-06',
- 'var_psi_m1': '-0.0023350893101308483',
- 'cov_Am2Am2': '0.0003902146143839548',
- 'cov_Am2Psi2': '-0.0006264887667551287',
- 'var_psi_m2': '-0.0003325607683235599',
- 'cov_AsAm1': '0.0011447801990385731',
- 'cov_AsAm2': '0.0006298215053054045',
- 'psi_plus_cov1': '-4.74780776478351e-05',
- 'psi_plus_cov2': '0.0019019159005962906',
- 'var_psi': '-0.0013338250392272042',
- 'cov_AsPsi1': '0.0031882628621756597',
- 'cov_AsAs': '-0.02382137082122409',
- 'var_eps': '1.555106023582435',
- 'var_bw': '0.556476854998976',
- 'cov_bw': '0.183064814696513',
- 'var_wt': '-0.0013338250392272042',
- 'cov_wt': '9.262314868932799e-05',
- 'tot_var': '0.5551430299597488'}
+{&#39;ndt&#39;: &#39;5&#39;,
+ &#39;nm&#39;: &#39;19876&#39;,
+ &#39;ns&#39;: &#39;641&#39;,
+ &#39;n_firms&#39;: &#39;196&#39;,
+ &#39;n_workers&#39;: &#39;10000&#39;,
+ &#39;var_y&#39;: &#39;1.9748098517073747&#39;,
+ &#39;y1s_y1s&#39;: &#39;-0.018778670136099976&#39;,
+ &#39;y1s_y1s_count&#39;: &#39;623&#39;,
+ &#39;y1s_var&#39;: &#39;0.43099499394218876&#39;,
+ &#39;y1s_var_count&#39;: &#39;641&#39;,
+ &#39;y1m_var&#39;: &#39;0.9818785506383447&#39;,
+ &#39;y1m_var_count&#39;: &#39;19876&#39;,
+ &#39;y2m_var&#39;: &#39;0.9846774666587136&#39;,
+ &#39;y2m_var_count&#39;: &#39;19876&#39;,
+ &#39;y1s_y1m1&#39;: &#39;0.0010900910450677528&#39;,
+ &#39;y1s_y1m1_count&#39;: &#39;641&#39;,
+ &#39;y1s_y2m1&#39;: &#39;0.0011375691227155879&#39;,
+ &#39;y1s_y2m1_count&#39;: &#39;641&#39;,
+ &#39;y1m1_y1m1&#39;: &#39;-0.003670002633836549&#39;,
+ &#39;y1m1_y1m1_count&#39;: &#39;19876&#39;,
+ &#39;y2m1_y1m1&#39;: &#39;-0.0013277022473827153&#39;,
+ &#39;y2m1_y1m1_count&#39;: &#39;19876&#39;,
+ &#39;y2m1_y2m1&#39;: &#39;-0.00132049117105973&#39;,
+ &#39;y2m1_y2m1_count&#39;: &#39;19876&#39;,
+ &#39;y1s_y1m2&#39;: &#39;3.332738550275785e-06&#39;,
+ &#39;y1s_y1m2_count&#39;: &#39;641&#39;,
+ &#39;y1s_y2m2&#39;: &#39;0.0019052486391465664&#39;,
+ &#39;y1s_y2m2_count&#39;: &#39;641&#39;,
+ &#39;y1m2_y1m2&#39;: &#39;0.0003902146143839548&#39;,
+ &#39;y1m2_y1m2_count&#39;: &#39;19876&#39;,
+ &#39;y2m2_y1m2&#39;: &#39;-0.00023627415237117391&#39;,
+ &#39;y2m2_y1m2_count&#39;: &#39;19876&#39;,
+ &#39;y2m2_y2m2&#39;: &#39;-0.0011953236874498625&#39;,
+ &#39;y2m2_y2m2_count&#39;: &#39;19876&#39;,
+ &#39;dym_dym&#39;: &#39;1.5524383735039806&#39;,
+ &#39;dym_dym_count&#39;: &#39;16469&#39;,
+ &#39;y1m_y2m&#39;: &#39;0.2130824011991643&#39;,
+ &#39;y1m_y2m_count&#39;: &#39;16469&#39;,
+ &#39;cov_Am1Am1&#39;: &#39;-0.00132049117105973&#39;,
+ &#39;cov_Am1Psi1&#39;: &#39;-7.211076322985281e-06&#39;,
+ &#39;var_psi_m1&#39;: &#39;-0.0023350893101308483&#39;,
+ &#39;cov_Am2Am2&#39;: &#39;0.0003902146143839548&#39;,
+ &#39;cov_Am2Psi2&#39;: &#39;-0.0006264887667551287&#39;,
+ &#39;var_psi_m2&#39;: &#39;-0.0003325607683235599&#39;,
+ &#39;cov_AsAm1&#39;: &#39;0.0011447801990385731&#39;,
+ &#39;cov_AsAm2&#39;: &#39;0.0006298215053054045&#39;,
+ &#39;psi_plus_cov1&#39;: &#39;-4.74780776478351e-05&#39;,
+ &#39;psi_plus_cov2&#39;: &#39;0.0019019159005962906&#39;,
+ &#39;var_psi&#39;: &#39;-0.0013338250392272042&#39;,
+ &#39;cov_AsPsi1&#39;: &#39;0.0031882628621756597&#39;,
+ &#39;cov_AsAs&#39;: &#39;-0.02382137082122409&#39;,
+ &#39;var_eps&#39;: &#39;1.555106023582435&#39;,
+ &#39;var_bw&#39;: &#39;0.556476854998976&#39;,
+ &#39;cov_bw&#39;: &#39;0.183064814696513&#39;,
+ &#39;var_wt&#39;: &#39;-0.0013338250392272042&#39;,
+ &#39;cov_wt&#39;: &#39;9.262314868932799e-05&#39;,
+ &#39;tot_var&#39;: &#39;0.5551430299597488&#39;}
 </pre></div></div>
 </div>
 <div class="nbinput nblast docutils container">
@@ -998,68 +868,66 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 </div>
+</div>
+</div>
 
 
-
-
-          </article>
-        </div>
-      </div>
-    </main>
-  </div>
-  <footer class="md-footer">
-    <div class="md-footer-nav">
-      <nav class="md-footer-nav__inner md-grid">
-          
-            <a href="../index.html" title="pytwoway package"
-               class="md-flex md-footer-nav__link md-footer-nav__link--prev"
-               rel="prev">
-              <div class="md-flex__cell md-flex__cell--shrink">
-                <i class="md-icon md-icon--arrow-back md-footer-nav__button"></i>
-              </div>
-              <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title">
-                <span class="md-flex__ellipsis">
-                  <span
-                      class="md-footer-nav__direction"> Previous </span> pytwoway package </span>
-              </div>
-            </a>
-          
-          
-            <a href="monte_carlo_example.html" title="Monte Carlo example"
-               class="md-flex md-footer-nav__link md-footer-nav__link--next"
-               rel="next">
-            <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title"><span
-                class="md-flex__ellipsis"> <span
-                class="md-footer-nav__direction"> Next </span> Monte Carlo example </span>
-            </div>
-            <div class="md-flex__cell md-flex__cell--shrink"><i
-                class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
-            </div>
-          
-        </a>
-        
-      </nav>
-    </div>
-    <div class="md-footer-meta md-typeset">
-      <div class="md-footer-meta__inner md-grid">
-        <div class="md-footer-copyright">
-          <div class="md-footer-copyright__highlight">
-              &#169; Copyright 2020, Thibaut Lamadon.
-              
+           </div>
+           
           </div>
-            Last updated on
-              Dec 22, 2020.
-            <br/>
-            Created using
-            <a href="http://www.sphinx-doc.org/">Sphinx</a> 3.1.2.
-             and
-            <a href="https://github.com/bashtage/sphinx-material/">Material for
-              Sphinx</a>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="monte_carlo_example.html" class="btn btn-neutral float-right" title="Monte Carlo example" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../doc-python.html" class="btn btn-neutral float-left" title="Using from python" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Thibaut Lamadon
+      <span class="lastupdated">
+        Last updated on Dec 22, 2020.
+      </span>
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
         </div>
       </div>
-    </div>
-  </footer>
-  <script src="../_static/javascripts/application.js"></script>
-  <script>app.initialize({version: "1.0.4", url: {base: ".."}})</script>
-  </body>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
 </html>
