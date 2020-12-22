@@ -8,6 +8,9 @@ tests/__pycache__/
 pytwoway/config.txt
 dist/
 pytwoway.egg-info/
+docs/_sources
+docs/_static/**.rst
+docs/_static/conf.py
 
 # Compiled source #
 ###################

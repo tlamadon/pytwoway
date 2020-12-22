@@ -3,20 +3,24 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-pytwoway
-========
+pytwoway package
+================
 
-pytwoway is a Python module that provides classes and functions for the estimation
-of two way fixed effect models for labor. It includes AKM, homoskedastic- and heteroskedastic-corrected AKM, and CRE estimators,
-as well as simulation tools. Estimators are tested against simulations to ensure they are correct.
-The online documentation is hosted at `https://tlamadon.github.io/pytwoway/ <https://tlamadon.github.io/pytwoway/>`_.
+`pytwoway` is the Python package associated with the paper:
 
-.. :ref:`statsmodels <about:About statsmodels>` is a Python module that provides classes and functions for the estimation
-.. of many different statistical models, as well as for conducting statistical tests, and statistical
-.. data exploration. An extensive list of result statistics are available for each estimator.
-.. The results are tested against existing statistical packages to ensure that they are correct. The
-.. package is released under the open source Modified BSD (3-clause) license.
-.. The online documentation is hosted at `statsmodels.org <https://www.statsmodels.org/>`__.
+"`How Much Should we Trust Estimates of Firm Effects and Worker Sorting?. <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" Stéphane Bonhomme, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler.  No. w27368. National Bureau of Economic Research, 2020.
+
+The package provides implementations for a series of estimators for models with two sided heterogeneity:
+
+ * two way fixed effect estimator as proposed by Abowd Kramarz and Margolis
+ * homoskedastic bias correction as in Andrews et al
+ * heteroskedastic correction as in KSS (TBD)
+ * a group fixed estimator as in BLM
+ * a group correlated random effect as presented in the main paper
+
+The code is relatively efficient. Solving large sparse linear relies on using `https://github.com/pyamg/pyamg`. This is the code we used to estimate the different decompositions on the US data. 
+
+The package provides a python interface as well as an intuitive command line interface. Installation is handled by `pip` or `conda` (TBD). The source of the package is available on github at `pytwoway <https://github.com/tlamadon/pytwoway>`_. The online documentation is hosted  `here <https://tlamadon.github.io/pytwoway/>`_.
 
 ===========
 Quick Start
@@ -79,20 +83,11 @@ To run in Python:
     # Plot results
     stw_net.plot_monte_carlo()
 
-
-.. The API focuses on models and the most frequently used statistical test, and tools.
-.. :ref:`api-structure:Import Paths and Structure` explains the design of the two API modules and how
-.. importing from the API differs from directly importing from the module where the
-.. model is defined. See the detailed topic pages in the :ref:`user-guide:User Guide` for a complete
-.. list of available models, statistics, and tools.
-
 ========
 Citation
 ========
 
 Please use following citation to cite pytwoway in academic publications:
-
-Bonhomme, Stéphane, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler. "`How Much Should we Trust Estimates of Firm Effects and Worker Sorting?. <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" No. w27368. National Bureau of Economic Research, 2020.
 
 Bibtex entry::
 
@@ -108,11 +103,10 @@ Bibtex entry::
    :hidden:
    :titlesonly:
 
+   api
    notebooks/pytwoway_example
    notebooks/monte_carlo_example
-   api
    cre
    fe_approximate_correction_full
-   path_cov
    twfe_network
    sim_twfe_network

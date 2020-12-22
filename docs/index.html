@@ -46,7 +46,7 @@
   
   
   
-    <title>pytwoway &#8212; pytwoway</title>
+    <title>pytwoway package &#8212; pytwoway</title>
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="stylesheet" href="_static/material.css" type="text/css" />
     <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
@@ -56,7 +56,7 @@
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="pytwoway example" href="notebooks/pytwoway_example.html" />
+    <link rel="next" title="API Reference" href="api.html" />
   
    
 
@@ -93,7 +93,7 @@
       <div class="md-flex__cell md-flex__cell--stretch">
         <div class="md-flex__ellipsis md-header-nav__title" data-md-component="title">
           <span class="md-header-nav__topic">pytwoway v0.0.1</span>
-          <span class="md-header-nav__topic"> pytwoway </span>
+          <span class="md-header-nav__topic"> pytwoway package </span>
         </div>
       </div>
       <div class="md-flex__cell md-flex__cell--shrink">
@@ -201,6 +201,13 @@
     <li class="md-nav__item">
     
     
+      <a href="api.html" class="md-nav__link">API Reference</a>
+      
+    
+    </li>
+    <li class="md-nav__item">
+    
+    
       <a href="notebooks/pytwoway_example.html" class="md-nav__link">pytwoway example</a>
       
     
@@ -209,13 +216,6 @@
     
     
       <a href="notebooks/monte_carlo_example.html" class="md-nav__link">Monte Carlo example</a>
-      
-    
-    </li>
-    <li class="md-nav__item">
-    
-    
-      <a href="api.html" class="md-nav__link">API Reference</a>
       
     
     </li>
@@ -261,7 +261,7 @@
 <nav class="md-nav md-nav--secondary">
     <label class="md-nav__title" for="__toc">Contents</label>
   <ul class="md-nav__list" data-md-scrollfix="">
-        <li class="md-nav__item"><a href="#index--page-root" class="md-nav__link">pytwoway</a><nav class="md-nav">
+        <li class="md-nav__item"><a href="#index--page-root" class="md-nav__link">pytwoway package</a><nav class="md-nav">
               <ul class="md-nav__list">
         <li class="md-nav__item"><a href="#quick-start" class="md-nav__link">Quick Start</a>
         </li>
@@ -284,11 +284,21 @@
           <article class="md-content__inner md-typeset" role="main">
             
   
-<h1 id="index--page-root">pytwoway<a class="headerlink" href="#index--page-root" title="Permalink to this headline">¶</a></h1>
-<p>pytwoway is a Python module that provides classes and functions for the estimation
-of two way fixed effect models for labor. It includes AKM, homoskedastic- and heteroskedastic-corrected AKM, and CRE estimators,
-as well as simulation tools. Estimators are tested against simulations to ensure they are correct.
-The online documentation is hosted at <a class="reference external" href="https://tlamadon.github.io/pytwoway/">https://tlamadon.github.io/pytwoway/</a>.</p>
+<h1 id="index--page-root">pytwoway package<a class="headerlink" href="#index--page-root" title="Permalink to this headline">¶</a></h1>
+<p><cite>pytwoway</cite> is the Python package associated with the paper:</p>
+<p>“<a class="reference external" href="https://www.nber.org/system/files/working_papers/w27368/w27368.pdf">How Much Should we Trust Estimates of Firm Effects and Worker Sorting?.</a>” Stéphane Bonhomme, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler.  No. w27368. National Bureau of Economic Research, 2020.</p>
+<p>The package provides implementations for a series of estimators for models with two sided heterogeneity:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>two way fixed effect estimator as proposed by Abowd Kramarz and Margolis</p></li>
+<li><p>homoskedastic bias correction as in Andrews et al</p></li>
+<li><p>heteroskedastic correction as in KSS (TBD)</p></li>
+<li><p>a group fixed estimator as in BLM</p></li>
+<li><p>a group correlated random effect as presented in the main paper</p></li>
+</ul>
+</div></blockquote>
+<p>The code is relatively efficient. Solving large sparse linear relies on using <cite>https://github.com/pyamg/pyamg</cite>. This is the code we used to estimate the different decompositions on the US data.</p>
+<p>The package provides a python interface as well as an intuitive command line interface. Installation is handled by <cite>pip</cite> or <cite>conda</cite> (TBD). The source of the package is available on github at <a class="reference external" href="https://github.com/tlamadon/pytwoway">pytwoway</a>. The online documentation is hosted  <a class="reference external" href="https://tlamadon.github.io/pytwoway/">here</a>.</p>
 
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permalink to this headline">¶</a></h2>
 <p>To install from pip, run:</p>
@@ -351,7 +361,6 @@ The online documentation is hosted at <a class="reference external" href="https:
 
 <h2 id="citation">Citation<a class="headerlink" href="#citation" title="Permalink to this headline">¶</a></h2>
 <p>Please use following citation to cite pytwoway in academic publications:</p>
-<p>Bonhomme, Stéphane, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler. “<a class="reference external" href="https://www.nber.org/system/files/working_papers/w27368/w27368.pdf">How Much Should we Trust Estimates of Firm Effects and Worker Sorting?.</a>” No. w27368. National Bureau of Economic Research, 2020.</p>
 <p>Bibtex entry:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>@techreport{bonhomme2020much,
   title={How Much Should We Trust Estimates of Firm Effects and Worker Sorting?},
@@ -377,12 +386,12 @@ The online documentation is hosted at <a class="reference external" href="https:
       <nav class="md-footer-nav__inner md-grid">
           
           
-            <a href="notebooks/pytwoway_example.html" title="pytwoway example"
+            <a href="api.html" title="API Reference"
                class="md-flex md-footer-nav__link md-footer-nav__link--next"
                rel="next">
             <div class="md-flex__cell md-flex__cell--stretch md-footer-nav__title"><span
                 class="md-flex__ellipsis"> <span
-                class="md-footer-nav__direction"> Next </span> pytwoway example </span>
+                class="md-footer-nav__direction"> Next </span> API Reference </span>
             </div>
             <div class="md-flex__cell md-flex__cell--shrink"><i
                 class="md-icon md-icon--arrow-forward md-footer-nav__button"></i>
