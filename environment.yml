@@ -3,28 +3,26 @@ channels:
   - defaults
   - conda-forge
 dependencies:
-  - python   # or 2.7 if you are feeling nostalgic
+  # - python   # or 2.7 if you are feeling nostalgic
+  - pip
+  - ipython
+  - jupyterlab
+  - notebook
   - numpy
-  - matplotlib
   - pandas
-  - seaborn
-  - pylint
-  - pyamg
-  - pyreadr
+  - scipy
+  - matplotlib
   - tqdm
   - networkx
   - scikit-learn
-  # - mkdocs-material
-  - pip
+  - pyamg
+  - pyreadr
+  - configargparse
+  # - sphinx
+  - nbsphinx
   - pip:
-      # - mkdocstrings
-      # - mkdocs-material-extensions
-      # - mknotebooks
-      # - Pygments # Required for mknotebooks syntax highlighting
-      # - mkdocs-jupyter
-      - nbsphinx # For Jupyter in Sphinx
-      - ConfigArgParse
-      - pyarrow
+      - sphinx-rtd-theme # Sphinx theme
+      # - pyarrow
 
 # conda env create --file environment.yml
 # conda env remove --name twfe-env
