@@ -5,7 +5,7 @@ with open('README.md', 'r', encoding='utf-8') as fh:
 
 setuptools.setup(
     name='pytwoway',
-    version='0.0.2',
+    version='0.0.3',
     author='Thibaut Lamadon',
     author_email='thibaut.lamadon@gmail.com',
     description='Estimate two way fixed effect labor models',
@@ -13,6 +13,18 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url='https://github.com/tlamadon/pytwoway',
     packages=setuptools.find_packages(),
+    install_requires=[
+        'numpy',
+        'pandas',
+        'scipy',
+        'matplotlib',
+        'tqdm',
+        'networkx',
+        'scikit-learn',
+        'pyamg',
+        'pyreadr',
+        'ConfigArgParse'
+      ],
     entry_points = {
         'console_scripts': ['pytw=pytwoway.command_line:main'],
     },
