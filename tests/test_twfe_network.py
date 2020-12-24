@@ -501,35 +501,35 @@ def test_twfe_refactor_11():
     assert stayers.iloc[0]['y1'] == 1
     assert stayers.iloc[0]['y2'] == 1
 
-def test_akm_ho_1():
-    # Continuous time, 1 mover between firms 1 and 2, 1 between firms 2 and 4, and 1 stayer at firm 4, firm 4 gets reset to firm 3, and discontinuous time still counts as a move
-    # psi1 = 5, psi2 = 3, psi4 = 4
-    # alpha1 = 3, alpha2 = 2, alpha3 = 4
-    worker_data = []
-    worker_data.append({'firm': 1, 'time': 1, 'id': 1, 'comp': 8., 'index': 0})
-    worker_data.append({'firm': 2, 'time': 2, 'id': 1, 'comp': 6., 'index': 1})
-    worker_data.append({'firm': 2, 'time': 1, 'id': 2, 'comp': 5., 'index': 2})
-    worker_data.append({'firm': 4, 'time': 2, 'id': 2, 'comp': 6., 'index': 3})
-    worker_data.append({'firm': 4, 'time': 1, 'id': 3, 'comp': 8., 'index': 4})
-    worker_data.append({'firm': 4, 'time': 2, 'id': 3, 'comp': 8., 'index': 5})
+# def test_akm_ho_1():
+#     # Continuous time, 1 mover between firms 1 and 2, 1 between firms 2 and 4, and 1 stayer at firm 4, firm 4 gets reset to firm 3, and discontinuous time still counts as a move
+#     # psi1 = 5, psi2 = 3, psi4 = 4
+#     # alpha1 = 3, alpha2 = 2, alpha3 = 4
+#     worker_data = []
+#     worker_data.append({'firm': 1, 'time': 1, 'id': 1, 'comp': 8., 'index': 0})
+#     worker_data.append({'firm': 2, 'time': 2, 'id': 1, 'comp': 6., 'index': 1})
+#     worker_data.append({'firm': 2, 'time': 1, 'id': 2, 'comp': 5., 'index': 2})
+#     worker_data.append({'firm': 4, 'time': 2, 'id': 2, 'comp': 6., 'index': 3})
+#     worker_data.append({'firm': 4, 'time': 1, 'id': 3, 'comp': 8., 'index': 4})
+#     worker_data.append({'firm': 4, 'time': 2, 'id': 3, 'comp': 8., 'index': 5})
 
-    df = pd.concat([pd.DataFrame(worker, index=[worker['index']]) for worker in worker_data])
+#     df = pd.concat([pd.DataFrame(worker, index=[worker['index']]) for worker in worker_data])
 
-    col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
+#     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    tw_net = tn.twfe_network(data=df, col_dict=col_dict)
-    tw_net.clean_data()
-    tw_net.refactor_es()
+#     tw_net = tn.twfe_network(data=df, col_dict=col_dict)
+#     tw_net.clean_data()
+#     tw_net.refactor_es()
 
-    akm_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_akm.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'data': tw_net.data} # Do not define 'data' because will be updated later
+#     akm_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_akm.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'data': tw_net.data} # Do not define 'data' because will be updated later
 
-    fe = feacf.FEsolver(akm_params)
-    fe.run()
+#     fe = feacf.FEsolver(akm_params)
+#     fe.run()
 
-    psi_hat, alpha_hat = fe.get_akm_estimates()
+#     psi_hat, alpha_hat = fe.get_akm_estimates()
 
-    assert abs(psi_hat[1] - 1) < 1e-5
-    assert abs(psi_hat[2] + 1) < 1e-5
-    assert abs(alpha_hat[1] - 7) < 1e-5
-    assert abs(alpha_hat[2] - 6) < 1e-5
-    assert abs(alpha_hat[3] - 8) < 1e-5
+#     assert abs(psi_hat[1] - 1) < 1e-5
+#     assert abs(psi_hat[2] + 1) < 1e-5
+#     assert abs(alpha_hat[1] - 7) < 1e-5
+#     assert abs(alpha_hat[2] - 6) < 1e-5
+#     assert abs(alpha_hat[3] - 8) < 1e-5
