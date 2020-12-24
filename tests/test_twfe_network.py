@@ -9,10 +9,10 @@ import pandas as pd
 
 import os
 # Navigate to parent folder for import
-os.chdir('..')
+#os.chdir('..')
 
-from twfe_network import twfe_network as tn
-import fe_approximate_correction_full as feacf
+import pytwoway.twfe_network as tn
+import pytwoway.fe_approximate_correction_full as feacf
 
 def test_twfe_refactor_1():
     # Continuous time, 2 movers between firms 1 and 2, and 1 stayer at firm 3, and discontinuous time still counts as a move
