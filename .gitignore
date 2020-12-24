@@ -3,6 +3,7 @@
 .vscode/
 docs-src/build/
 pytwoway/__pycache__/
+tests/__pycache__/
 .pytest_cache/
 .eggs
 tests/__pycache__/

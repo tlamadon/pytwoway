@@ -5,9 +5,11 @@ channels:
 dependencies:
   # - python   # or 2.7 if you are feeling nostalgic
   - pip
+  - pybind11
   - ipython
   - jupyterlab
   - notebook
+  - pytest
   - numpy
   - pandas
   - scipy
