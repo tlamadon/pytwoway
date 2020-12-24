@@ -1,7 +1,9 @@
 .. image:: https://badge.fury.io/py/pytwoway.svg
     :target: https://badge.fury.io/py/pytwoway
 
-|
+.. image:: https://travis-ci.com/tlamadon/pytwoway.svg?branch=master
+    :target: https://travis-ci.com/tlamadon/pytwoway|
+
 `pytwoway` is the Python package associated with the following paper:
 
 "`How Much Should we Trust Estimates of Firm Effects and Worker Sorting?. <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" 
