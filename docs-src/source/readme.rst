@@ -4,9 +4,6 @@
 .. image:: https://travis-ci.com/tlamadon/pytwoway.svg?branch=master
     :target: https://travis-ci.com/tlamadon/pytwoway
 
-.. image:: https://mybinder.org/badge_logo.svg
- :target: https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD
-
 `pytwoway` is the Python package associated with the following paper:
 
 "`How Much Should we Trust Estimates of Firm Effects and Worker Sorting?. <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" 
@@ -21,7 +18,10 @@ The package provides implementations for a series of estimators for model with t
 4. a group fixed estimator as in BLM
 5. a group correlated random effect as presented in the main paper
 
-If you want to give it a try, you can start the `example notebook <https://mybinder.org/v2/gh/tlamadon/pytwoway/1a8a631c18a709c1cc1a2b4a5806136bba31a7e5>`_!
+.. |binder| image:: https://mybinder.org/badge_logo.svg 
+    :target: https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fnotebooks%2Fpytwoway_example.ipynb
+
+If you want to give it a try, you can start the example notebook here: |binder|. This starts an fully interactive notebook with a simple example that generates data and runs the estimators.
 
 The code is relatively efficient. Solving large sparse linear relies on using `pyamg <https://github.com/pyamg/pyamg>`_. This is the code we used to estimate the different decompositions on the US data. 
 
