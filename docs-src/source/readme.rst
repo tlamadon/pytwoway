@@ -2,7 +2,7 @@
     :target: https://badge.fury.io/py/pytwoway
 
 .. image:: https://travis-ci.com/tlamadon/pytwoway.svg?branch=master
-    :target: https://travis-ci.com/tlamadon/pytwoway|
+    :target: https://travis-ci.com/tlamadon/pytwoway
 
 `pytwoway` is the Python package associated with the following paper:
 
