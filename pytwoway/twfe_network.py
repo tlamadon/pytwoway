@@ -62,7 +62,7 @@ class twfe_network:
 
         self.default_cluster = {'cdf_resolution': 10, 'grouping': 'quantile_all', 'year': None, 'user_KMeans': self.default_KMeans}
 
-        self.default_akm = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_akm.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)'} # Do not define 'data' because will be updated later
+        self.default_fe = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_fe.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)'} # Do not define 'data' because will be updated later
 
         self.default_cre = {'ncore': 1, 'ndraw_tr': 5, 'ndp': 50, 'out': 'res_cre.json', 'posterior': False, 'wobtw': False} # Do not define 'data' because will be updated later
 
@@ -604,12 +604,12 @@ class twfe_network:
             self.data[['f1i', 'f2i', 'm']] = self.data[['f1i', 'f2i', 'm']].astype(int)
             self.logger.info('datatypes of clusters corrected')
 
-    def run_akm_corrected(self, user_akm={}):
+    def fit_fe(self, user_fe={}):
         '''
-        Run bias-corrected AKM estimator.
+        Fit the bias-corrected FE estimator.
 
         Arguments:
-            user_akm (dict): dictionary of parameters for bias-corrected AKM estimation
+            user_fe (dict): dictionary of parameters for bias-corrected FE estimation
 
                 Dictionary parameters:
 
@@ -638,24 +638,24 @@ class twfe_network:
                     Q (str): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
 
         Returns:
-            akm_res (dict): dictionary of results
+            fe_res (dict): dictionary of results
         '''
-        akm_params = self.update_dict(self.default_akm, user_akm)
+        fe_params = self.update_dict(self.default_fe, user_fe)
 
-        akm_params['data'] = self.data # Make sure to use up-to-date data
+        fe_params['data'] = self.data # Make sure to use up-to-date data
 
-        akm_solver = fe.FESolver(akm_params)
-        akm_solver.run_1()
-        akm_solver.construct_Q() # Comment out this line and manually create Q if you want a custom Q matrix
-        akm_solver.run_2()
+        fe_solver = fe.FESolver(fe_params)
+        fe_solver.fit_1()
+        fe_solver.construct_Q() # Comment out this line and manually create Q if you want a custom Q matrix
+        fe_solver.fit_2()
 
-        akm_res = akm_solver.res
+        fe_res = fe_solver.res
 
-        return akm_res
+        return fe_res
 
-    def run_cre(self, user_cre={}):
+    def fit_cre(self, user_cre={}):
         '''
-        Run CRE estimator.
+        Fit the CRE estimator.
 
         Arguments:
             user_cre (dict): dictionary of parameters for CRE estimation

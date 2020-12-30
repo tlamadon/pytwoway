@@ -13,7 +13,7 @@ import os
 
 from pytwoway import twfe_network
 tn = twfe_network.twfe_network
-from pytwoway import fe_approximate_correction_full as feacf
+from pytwoway import fe
 
 def test_twfe_refactor_1():
     # Continuous time, 2 movers between firms 1 and 2, and 1 stayer at firm 3, and discontinuous time still counts as a move
@@ -502,7 +502,7 @@ def test_twfe_refactor_11():
     assert stayers.iloc[0]['y1'] == 1
     assert stayers.iloc[0]['y2'] == 1
 
-def test_akm_ho_1():
+def test_fe_ho_1():
     # Continuous time, 1 mover between firms 1 and 2, 1 between firms 2 and 4, and 1 stayer at firm 4, firm 4 gets reset to firm 3, and discontinuous time still counts as a move
     # psi1 = 5, psi2 = 3, psi4 = 4
     # alpha1 = 3, alpha2 = 2, alpha3 = 4
@@ -522,14 +522,14 @@ def test_akm_ho_1():
     tw_net.clean_data()
     tw_net.refactor_es()
 
-    akm_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_akm.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)', 'data': tw_net.data} # Do not define 'data' because will be updated later
+    fe_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_fe.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)', 'data': tw_net.data} # Do not define 'data' because will be updated later
 
-    akm_solver = feacf.FEsolver(akm_params)
-    akm_solver.run_1()
-    akm_solver.construct_Q()
-    akm_solver.run_2()
+    fe_solver = fe.FEsolver(fe_params)
+    fe_solver.fit_1()
+    fe_solver.construct_Q()
+    fe_solver.fit_2()
 
-    psi_hat, alpha_hat = akm_solver.get_akm_estimates()
+    psi_hat, alpha_hat = fe_solver.get_fe_estimates()
 
     assert abs(psi_hat[1] - 1) < 1e-5
     assert abs(psi_hat[2] + 1) < 1e-5

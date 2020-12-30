@@ -164,9 +164,9 @@ class FESolver:
         with open(filename, 'wb') as outfile:
             pickle.dump(self, outfile)
 
-    def run_1(self):
+    def fit_1(self):
         '''
-        Run FE solver, part 1. Before run_2(), modify adata to allow creation of Q matrix.
+        Run FE solver, part 1. Before fit_2(), modify adata to allow creation of Q matrix.
         '''
         self.start_time = time.time()
 
@@ -175,7 +175,7 @@ class FESolver:
         self.init_prepped_adata() # Use cleaned adata to generate some attributes
         self.compute_early_stats() # Use cleaned data to compute some statistics
 
-    def run_2(self):
+    def fit_2(self):
         '''
         Run FE solver, part 2.
         '''
@@ -753,7 +753,7 @@ class FESolver:
 
         self.logger.info('Saved results to {}'.format(self.params['out']))
 
-    def get_akm_estimates(self):
+    def get_fe_estimates(self):
         '''
         Return estimated psi_hats linked to firm ids and alpha_hats linked to worker ids.
 

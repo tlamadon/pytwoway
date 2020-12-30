@@ -251,12 +251,72 @@ class sim_twfe_network:
 
         return data
 
-    def twfe_monte_carlo_interior(self, akm_params={}, cre_params={}, cluster_params={}):
+class twfe_monte_carlo:
+    '''
+    Class of twfe_monte_carlo, where twfe_monte_carlo runs a Monte Carlo estimate by simulating networks of firms and workers.
+
+    Arguments:
+        sim_params (dict): parameters for simulated data
+
+            Dictionary parameters:
+
+                num_ind (int): number of workers
+
+                num_time (int): time length of panel
+
+                firm_size (int): max number of individuals per firm
+
+                nk (int): number of firm types
+
+                nl (int): number of worker types
+
+                alpha_sig (float): standard error of individual fixed effect (volatility of worker effects)
+
+                psi_sig (float): standard error of firm fixed effect (volatility of firm effects)
+
+                w_sig (float): standard error of residual in AKM wage equation (volatility of wage shocks)
+
+                csort (float): sorting effect
+
+                cnetw (float): network effect
+
+                csig (float): standard error of sorting/network effects
+
+                p_move (float): probability a worker moves firms in any period
+    '''
+
+    def __init__(self, sim_params={}):
+        # Begin logging
+        self.logger = logging.getLogger('twfe_monte_carlo')
+        self.logger.setLevel(logging.DEBUG)
+        # Create logs folder
+        Path('twfe_logs').mkdir(parents=True, exist_ok=True)
+        # Create file handler which logs even debug messages
+        fh = logging.FileHandler('twfe_monte_carlo.log')
+        fh.setLevel(logging.DEBUG)
+        # Create console handler with a higher log level
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.ERROR)
+        # Create formatter and add it to the handlers
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+        ch.setFormatter(formatter)
+        # Add the handlers to the logger
+        self.logger.addHandler(fh)
+        self.logger.addHandler(ch)
+        self.logger.info('initializing twfe_monte_carlo object')
+
+        self.sim = sim_twfe_network(sim_params)
+
+        # Prevent plotting unless results exist
+        self.monte_carlo_res = False
+
+    def twfe_monte_carlo_interior(self, fe_params={}, cre_params={}, cluster_params={}):
         '''
         Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to twfe_monte_carlo.
 
         Arguments:
-            akm_params (dict): dictionary of parameters for bias-corrected AKM estimation
+            fe_params (dict): dictionary of parameters for bias-corrected AKM estimation
 
                 Dictionary parameters:
 
@@ -312,15 +372,15 @@ class sim_twfe_network:
         Returns:
             true_psi_var (float): true simulated sample variance of psi
             true_psi_alpha_cov (float): true simulated sample covariance of psi and alpha
-            akm_psi_var (float): AKM estimate of variance of psi
-            akm_psi_alpha_cov (float): AKM estimate of covariance of psi and alpha
-            akm_corr_psi_var (float): bias-corrected AKM estimate of variance of psi
-            akm_corr_psi_alpha_cov (float): bias-corrected AKM estimate of covariance of psi and alpha
+            fe_psi_var (float): AKM estimate of variance of psi
+            fe_psi_alpha_cov (float): AKM estimate of covariance of psi and alpha
+            fe_corr_psi_var (float): bias-corrected AKM estimate of variance of psi
+            fe_corr_psi_alpha_cov (float): bias-corrected AKM estimate of covariance of psi and alpha
             cre_psi_var (float): CRE estimate of variance of psi
             cre_psi_alpha_cov (float): CRE estimate of covariance of psi and alpha
         '''
         # Simulate data
-        sim_data = self.sim_network()
+        sim_data = self.sim.sim_network()
         # Compute true sample variance of psi and covariance of psi and alpha
         psi_var = np.var(sim_data['psi'])
         psi_alpha_cov = np.cov(sim_data['psi'], sim_data['alpha'])[0, 1]
@@ -330,19 +390,19 @@ class sim_twfe_network:
         tw_net.clean_data()
         # Convert into event study
         tw_net.refactor_es()
-        # Estimate AKM model
-        akm_res = tw_net.run_akm_corrected(user_akm=akm_params)
+        # Estimate FE model
+        fe_res = tw_net.fit_fe(user_fe=fe_params)
         # Cluster for CRE model
         tw_net.cluster(user_cluster=cluster_params)
         # Estimate CRE model
-        cre_res = tw_net.run_cre(user_cre=cre_params)
+        cre_res = tw_net.fit_cre(user_cre=cre_params)
 
         return psi_var, psi_alpha_cov, \
-                akm_res['var_fe'], akm_res['cov_fe'], \
-                akm_res['var_ho'], akm_res['cov_ho'], \
+                fe_res['var_fe'], fe_res['cov_fe'], \
+                fe_res['var_ho'], fe_res['cov_ho'], \
                 str(float(cre_res['var_wt']) + float(cre_res['var_bw'])), str(float(cre_res['cov_wt']) + float(cre_res['cov_bw']))
 
-    def twfe_monte_carlo(self, N=10, ncore=1, akm_params={}, cre_params={}, cluster_params={}):
+    def twfe_monte_carlo(self, N=10, ncore=1, fe_params={}, cre_params={}, cluster_params={}):
         '''
         Purpose:
             Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:
@@ -351,13 +411,13 @@ class sim_twfe_network:
 
                 true_psi_alpha_cov (NumPy Array): true simulated sample covariance of psi and alpha
 
-                akm_psi_var (NumPy Array): AKM estimate of variance of psi
+                fe_psi_var (NumPy Array): AKM estimate of variance of psi
 
-                akm_psi_alpha_cov (NumPy Array): AKM estimate of covariance of psi and alpha
+                fe_psi_alpha_cov (NumPy Array): AKM estimate of covariance of psi and alpha
 
-                akm_corr_psi_var (NumPy Array): bias-corrected AKM estimate of variance of psi
+                fe_corr_psi_var (NumPy Array): bias-corrected AKM estimate of variance of psi
 
-                akm_corr_psi_alpha_cov (NumPy Array): bias-corrected AKM estimate of covariance of psi and alpha
+                fe_corr_psi_alpha_cov (NumPy Array): bias-corrected AKM estimate of covariance of psi and alpha
 
                 cre_psi_var (NumPy Array): CRE estimate of variance of psi
 
@@ -366,7 +426,7 @@ class sim_twfe_network:
         Arguments:
             N (int): number of simulations
             ncore (int): how many cores to use
-            akm_params (dict): dictionary of parameters for bias-corrected AKM estimation
+            fe_params (dict): dictionary of parameters for bias-corrected AKM estimation
 
                 Dictionary parameters:
 
@@ -423,10 +483,10 @@ class sim_twfe_network:
         # Initialize NumPy arrays to store results
         true_psi_var = np.zeros(N)
         true_psi_alpha_cov = np.zeros(N)
-        akm_psi_var = np.zeros(N)
-        akm_psi_alpha_cov = np.zeros(N)
-        akm_corr_psi_var = np.zeros(N)
-        akm_corr_psi_alpha_cov = np.zeros(N)
+        fe_psi_var = np.zeros(N)
+        fe_psi_alpha_cov = np.zeros(N)
+        fe_corr_psi_var = np.zeros(N)
+        fe_corr_psi_alpha_cov = np.zeros(N)
         cre_psi_var = np.zeros(N)
         cre_psi_alpha_cov = np.zeros(N)
 
@@ -434,22 +494,22 @@ class sim_twfe_network:
         if ncore > 1:
             # Simulate networks
             with Pool(processes=ncore) as pool:
-                V = pool.starmap(self.twfe_monte_carlo_interior, [[akm_params, cre_params, cluster_params] for _ in range(N)])
+                V = pool.starmap(self.twfe_monte_carlo_interior, [[fe_params, cre_params, cluster_params] for _ in range(N)])
             for i, res in enumerate(V):
-                true_psi_var[i], true_psi_alpha_cov[i], akm_psi_var[i], akm_psi_alpha_cov[i], akm_corr_psi_var[i], akm_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = res
+                true_psi_var[i], true_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_corr_psi_var[i], fe_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = res
         else:
             for i in range(N):
                 # Simulate a network
-                true_psi_var[i], true_psi_alpha_cov[i], akm_psi_var[i], akm_psi_alpha_cov[i], akm_corr_psi_var[i], akm_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = self.twfe_monte_carlo_interior(akm_params=akm_params, cre_params=cre_params, cluster_params=cluster_params)
+                true_psi_var[i], true_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_corr_psi_var[i], fe_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = self.twfe_monte_carlo_interior(fe_params=fe_params, cre_params=cre_params, cluster_params=cluster_params)
 
         res = {}
 
         res['true_psi_var'] = true_psi_var
         res['true_psi_alpha_cov'] = true_psi_alpha_cov
-        res['akm_psi_var'] = akm_psi_var
-        res['akm_psi_alpha_cov'] = akm_psi_alpha_cov
-        res['akm_corr_psi_var'] = akm_corr_psi_var
-        res['akm_corr_psi_alpha_cov'] = akm_corr_psi_alpha_cov
+        res['fe_psi_var'] = fe_psi_var
+        res['fe_psi_alpha_cov'] = fe_psi_alpha_cov
+        res['fe_corr_psi_var'] = fe_corr_psi_var
+        res['fe_corr_psi_alpha_cov'] = fe_corr_psi_alpha_cov
         res['cre_psi_var'] = cre_psi_var
         res['cre_psi_alpha_cov'] = cre_psi_alpha_cov
 
@@ -461,38 +521,38 @@ class sim_twfe_network:
         Plot results from Monte Carlo simulations.
         '''
         if not self.monte_carlo_res:
-            print('Must run Monte Carlo simulations before results can be plotted. This can be done by running network_name.twfe_monte_carlo(self, N=10, ncore=1, akm_params={}, cre_params={}, cluster_params={})')
+            print('Must run Monte Carlo simulations before results can be plotted. This can be done by running network_name.twfe_monte_carlo(self, N=10, ncore=1, fe_params={}, cre_params={}, cluster_params={})')
 
         else:
             # Extract results
             true_psi_var = self.res['true_psi_var']
             true_psi_alpha_cov = self.res['true_psi_alpha_cov']
-            akm_psi_var = self.res['akm_psi_var']
-            akm_psi_alpha_cov = self.res['akm_psi_alpha_cov']
-            akm_corr_psi_var = self.res['akm_corr_psi_var']
-            akm_corr_psi_alpha_cov = self.res['akm_corr_psi_alpha_cov']
+            fe_psi_var = self.res['fe_psi_var']
+            fe_psi_alpha_cov = self.res['fe_psi_alpha_cov']
+            fe_corr_psi_var = self.res['fe_corr_psi_var']
+            fe_corr_psi_alpha_cov = self.res['fe_corr_psi_alpha_cov']
             cre_psi_var = self.res['cre_psi_var']
             cre_psi_alpha_cov = self.res['cre_psi_alpha_cov']
 
             # Define differences
-            akm_psi_diff = sorted(akm_psi_var - true_psi_var)
-            akm_psi_alpha_diff = sorted(akm_psi_alpha_cov - true_psi_alpha_cov)
-            akm_corr_psi_diff = sorted(akm_corr_psi_var - true_psi_var)
-            akm_corr_psi_alpha_diff = sorted(akm_corr_psi_alpha_cov - true_psi_alpha_cov)
+            fe_psi_diff = sorted(fe_psi_var - true_psi_var)
+            fe_psi_alpha_diff = sorted(fe_psi_alpha_cov - true_psi_alpha_cov)
+            fe_corr_psi_diff = sorted(fe_corr_psi_var - true_psi_var)
+            fe_corr_psi_alpha_diff = sorted(fe_corr_psi_alpha_cov - true_psi_alpha_cov)
             cre_psi_diff = sorted(cre_psi_var - true_psi_var)
             cre_psi_alpha_diff = sorted(cre_psi_alpha_cov - true_psi_alpha_cov)
 
             # Plot histograms
             # First, var(psi)
-            plt.hist(akm_psi_diff, bins=50, label='AKM var(psi)')
-            plt.hist(akm_corr_psi_diff, bins=50, label='Bias-corrected AKM var(psi)')
+            plt.hist(fe_psi_diff, bins=50, label='AKM var(psi)')
+            plt.hist(fe_corr_psi_diff, bins=50, label='Bias-corrected AKM var(psi)')
             plt.hist(cre_psi_diff, bins=50, label='CRE var(psi)')
             plt.legend()
             plt.show()
 
             # Second, cov(psi, alpha)
-            plt.hist(akm_psi_alpha_diff, bins=50, label='AKM cov(psi, alpha)')
-            plt.hist(akm_corr_psi_alpha_diff, bins=50, label='Bias-corrected AKM cov(psi, alpha)')
+            plt.hist(fe_psi_alpha_diff, bins=50, label='AKM cov(psi, alpha)')
+            plt.hist(fe_corr_psi_alpha_diff, bins=50, label='Bias-corrected AKM cov(psi, alpha)')
             plt.hist(cre_psi_alpha_diff, bins=50, label='CRE cov(psi, alpha)')
             plt.legend()
             plt.show()

@@ -2,7 +2,7 @@
 Script to run twfe_network through the command line
 
 Usage example:
-pytw --my-config config.txt --akm --cre
+pytw --my-config config.txt --fe --cre
 '''
 import configargparse
 import ast
@@ -35,7 +35,7 @@ def main():
     p.add('--filetype', required=False, help='file format of data')
 
     # Options to run AKM or CRE
-    p.add('--akm', action='store_true', help='run AKM estimation') # this option can be set in a config file because it starts with '--'
+    p.add('--fe', action='store_true', help='run AKM estimation') # this option can be set in a config file because it starts with '--'
     p.add('--cre', action='store_true', help='run CRE estimation')
 
     ##### twfe_network start #####
@@ -81,18 +81,18 @@ def main():
     ##### Cluster end #####
 
     ##### AKM start #####
-    p.add('--ncore_akm', required=False, help='number of cores to use when computing akm')
-    p.add('--batch', required=False, help='batch size to send in parallel when computing akm')
-    p.add('--ndraw_pii', required=False, help='number of draw to use in approximation for leverages when computing akm')
-    p.add('--ndraw_tr_akm', required=False, help='number of draws to use in approximation for traces when computing akm')
-    p.add('--check', required=False, help='whether to compute the non-approximated estimates as well when computing akm')
-    p.add('--hetero', required=False, help='whether to compute the heteroskedastic estimates when computing akm')
-    p.add('--out_akm', required=False, help='filepath for akm results')
-    p.add('--con', required=False, help='computes the smallest eigen values when computing akm, this is the filepath where these results are saved')
-    p.add('--logfile', required=False, help='log output to a logfile when computing akm')
-    p.add('--levfile', required=False, help='file to load precomputed leverages when computing akm')
-    p.add('--statsonly', required=False, help='save data statistics only when computing akm')
-    p.add('--Q', required=False, help="which Q matrix to consider when computing akm. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'")
+    p.add('--ncore_fe', required=False, help='number of cores to use when computing fe')
+    p.add('--batch', required=False, help='batch size to send in parallel when computing fe')
+    p.add('--ndraw_pii', required=False, help='number of draw to use in approximation for leverages when computing fe')
+    p.add('--ndraw_tr_fe', required=False, help='number of draws to use in approximation for traces when computing fe')
+    p.add('--check', required=False, help='whether to compute the non-approximated estimates as well when computing fe')
+    p.add('--hetero', required=False, help='whether to compute the heteroskedastic estimates when computing fe')
+    p.add('--out_fe', required=False, help='filepath for fe results')
+    p.add('--con', required=False, help='computes the smallest eigen values when computing fe, this is the filepath where these results are saved')
+    p.add('--logfile', required=False, help='log output to a logfile when computing fe')
+    p.add('--levfile', required=False, help='file to load precomputed leverages when computing fe')
+    p.add('--statsonly', required=False, help='save data statistics only when computing fe')
+    p.add('--Q', required=False, help="which Q matrix to consider when computing fe. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'")
     ##### AKM end #####
 
     ##### CRE start #####
@@ -134,8 +134,8 @@ def main():
     ##### Cluster end #####
 
     ##### AKM start #####
-    akm_params = {'ncore': params.ncore_akm, 'batch': params.batch, 'ndraw_pii': params.ndraw_pii, 'ndraw_tr': params.ndraw_tr_akm, 'check': params.check, 'hetero': params.hetero, 'out': params.out_akm, 'con': params.con, 'logfile': params.logfile, 'levfile': params.levfile, 'statsonly': params.statsonly, 'Q': params.Q}
-    akm_params = clear_dict(akm_params)
+    fe_params = {'ncore': params.ncore_fe, 'batch': params.batch, 'ndraw_pii': params.ndraw_pii, 'ndraw_tr': params.ndraw_tr_fe, 'check': params.check, 'hetero': params.hetero, 'out': params.out_fe, 'con': params.con, 'logfile': params.logfile, 'levfile': params.levfile, 'statsonly': params.statsonly, 'Q': params.Q}
+    fe_params = clear_dict(fe_params)
     ##### AKM end #####
 
     ##### CRE start #####
@@ -144,14 +144,14 @@ def main():
     ##### CRE end #####
 
     # Run estimation
-    if params.akm or params.cre:
-        net = tn(**twfe_params)
-        net.clean_data()
-        net.refactor_es()
+    if params.fe or params.cre:
+        tw_net = tn(**twfe_params)
+        tw_net.clean_data()
+        tw_net.refactor_es()
 
-        if params.akm:
-            net.run_akm_corrected(user_akm=akm_params)
+        if params.fe:
+            tw_net.fit_fe(user_fe=fe_params)
 
         if params.cre:
-            net.cluster(user_cluster=cluster_params)
-            net.run_cre(user_cre=cre_params)
+            tw_net.cluster(user_cluster=cluster_params)
+            tw_net.fit_cre(user_cre=cre_params)
