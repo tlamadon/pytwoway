@@ -3,6 +3,7 @@ Class for a simulated two-way fixed effect network
 '''
 
 import logging
+from pathlib import Path
 from multiprocessing import Pool
 import numpy as np
 from numpy import matlib
@@ -50,7 +51,25 @@ class sim_twfe_network:
     '''
 
     def __init__(self, sim_params={}):
-        logger.info('initializing sim_twfe_network object')
+        # Begin logging
+        self.logger = logging.getLogger('sim_twfe')
+        self.logger.setLevel(logging.DEBUG)
+        # Create logs folder
+        Path('twfe_logs').mkdir(parents=True, exist_ok=True)
+        # Create file handler which logs even debug messages
+        fh = logging.FileHandler('sim_twfe_spam.log')
+        fh.setLevel(logging.DEBUG)
+        # Create console handler with a higher log level
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.ERROR)
+        # Create formatter and add it to the handlers
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+        ch.setFormatter(formatter)
+        # Add the handlers to the logger
+        self.logger.addHandler(fh)
+        self.logger.addHandler(ch)
+        self.logger.info('initializing sim_twfe_network object')
 
         # Define default parameter dictionaries
         self.default_sim_params = {'num_ind': 10000, 'num_time': 5, 'firm_size': 50, 'nk': 10, 'nl': 5, 'alpha_sig': 1, 'psi_sig': 1, 'w_sig': 1, 'csort': 1, 'cnetw': 1, 'csig': 1, 'p_move': 0.5}
@@ -477,20 +496,3 @@ class sim_twfe_network:
             plt.hist(cre_psi_alpha_diff, bins=50, label='CRE cov(psi, alpha)')
             plt.legend()
             plt.show()
-
-# Begin logging
-logger = logging.getLogger('sim_twfe')
-logger.setLevel(logging.DEBUG)
-# create file handler which logs even debug messages
-fh = logging.FileHandler('sim_twfe_spam.log')
-fh.setLevel(logging.DEBUG)
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.ERROR)
-# create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-# add the handlers to the logger
-logger.addHandler(fh)
-logger.addHandler(ch)

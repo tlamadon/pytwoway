@@ -2,7 +2,8 @@
     Estimates the CRE model and computes posterior using Trace
     Approximation.
 """
-
+import logging
+from pathlib import Path
 import pyamg
 import numpy as np
 import pandas as pd
@@ -10,7 +11,6 @@ from scipy.sparse import csc_matrix, coo_matrix, diags, linalg, eye
 import time
 import pyreadr
 import os
-import logging
 from multiprocessing import Pool, TimeoutError
 from timeit import default_timer as timer
 
@@ -49,7 +49,7 @@ def pd_to_np(df,colr,colc,colv,nr,nc):
     # pd_to_np(df,'i','j','v',3,3)
 
 
-class CREsolver:
+class CRESolver:
     """
     Uses multigrid and partialing out to solve two way Fixed Effect model
     """
@@ -386,7 +386,7 @@ def main(args):
     res['var_y'] = adata.query('cs==1')['y1'].var()
     logger.info("total variance: {:0.4f}".format(res['var_y']))
 
-    fes = CREsolver(adata,sdata,jdata,wo_btw=args['wobtw'])
+    fes = CRESolver(adata,sdata,jdata,wo_btw=args['wobtw'])
 
     res.update(fes.moments_within)
     res.update(fes.within_params)
@@ -413,16 +413,18 @@ def main(args):
 # Begin logging
 logger = logging.getLogger('cre')
 logger.setLevel(logging.DEBUG)
-# create file handler which logs even debug messages
+# Create logs folder
+Path('twfe_logs').mkdir(parents=True, exist_ok=True)
+# Create file handler which logs even debug messages
 fh = logging.FileHandler('cre_spam.log')
 fh.setLevel(logging.DEBUG)
-# create console handler with a higher log level
+# Create console handler with a higher log level
 ch = logging.StreamHandler()
 ch.setLevel(logging.ERROR)
-# create formatter and add it to the handlers
+# Create formatter and add it to the handlers
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
 ch.setFormatter(formatter)
-# add the handlers to the logger
+# Add the handlers to the logger
 logger.addHandler(fh)
 logger.addHandler(ch)

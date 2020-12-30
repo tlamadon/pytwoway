@@ -1,8 +1,8 @@
 '''
 Class for a two-way fixed effect network
 '''
-
 import logging
+from pathlib import Path
 from tqdm.auto import tqdm
 import numpy as np
 import pandas as pd
@@ -11,7 +11,7 @@ from sklearn.cluster import KMeans
 from random import choices
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import connected_components
-from pytwoway import fe_approximate_correction_full as feacf
+from pytwoway import fe
 from pytwoway import cre
 
 class twfe_network:
@@ -25,7 +25,25 @@ class twfe_network:
     '''
 
     def __init__(self, data, formatting='long', col_dict=None):
-        logger.info('initializing twfe_network object')
+        # Begin logging
+        self.logger = logging.getLogger('twfe')
+        self.logger.setLevel(logging.DEBUG)
+        # Create logs folder
+        Path('twfe_logs').mkdir(parents=True, exist_ok=True)
+        # Create file handler which logs even debug messages
+        fh = logging.FileHandler('twfe_spam.log')
+        fh.setLevel(logging.DEBUG)
+        # Create console handler with a higher log level
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.ERROR)
+        # Create formatter and add it to the handlers
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+        ch.setFormatter(formatter)
+        # Add the handlers to the logger
+        self.logger.addHandler(fh)
+        self.logger.addHandler(ch)
+        self.logger.info('initializing twfe_network object')
 
         # Define some attributes
         self.data = data
@@ -48,7 +66,7 @@ class twfe_network:
 
         self.default_cre = {'ncore': 1, 'ndraw_tr': 5, 'ndp': 50, 'out': 'res_cre.json', 'posterior': False, 'wobtw': False} # Do not define 'data' because will be updated later
 
-        logger.info('twfe_network object initialized')
+        self.logger.info('twfe_network object initialized')
 
     def update_dict(self, default_params, user_params):
         '''
@@ -105,14 +123,14 @@ class twfe_network:
         '''
         Clean data to make sure there are no NaN observations, firms are connected by movers and firm ids are contiguous.
         '''
-        logger.info('beginning data cleaning')
-        logger.info('checking quality of data')
+        self.logger.info('beginning data cleaning')
+        self.logger.info('checking quality of data')
         # Make sure data is valid - computes no_na, connected, and contiguous, along with other checks (note that column names are corrected in data_validity() if all columns are in the data)
         self.data_validity()
 
         # Next, drop NaN observations
         if not self.no_na:
-            logger.info('dropping NaN observations')
+            self.logger.info('dropping NaN observations')
             self.data = self.data.dropna()
 
             # Update no_na
@@ -121,20 +139,20 @@ class twfe_network:
         # Next, find largest set of firms connected by movers
         if not self.connected:
             # Generate largest connected set
-            logger.info('generating largest connected set')
+            self.logger.info('generating largest connected set')
             self.conset()
 
         # Next, make firm ids contiguous
         if not self.contiguous:
             # Make firm ids contiguous
-            logger.info('making firm ids contiguous')
+            self.logger.info('making firm ids contiguous')
             self.contiguous_fids()
 
         # Using contiguous fids, get NetworkX Graph of largest connected set (note that this must be done even if firms already connected and contiguous)
-        logger.info('generating NetworkX Graph of largest connected set')
+        self.logger.info('generating NetworkX Graph of largest connected set')
         self.G = self.conset()
 
-        logger.info('data cleaning complete')
+        self.logger.info('data cleaning complete')
 
     def data_validity(self):
         '''
@@ -143,50 +161,50 @@ class twfe_network:
         if self.formatting == 'long':
             success = True
 
-            logger.info('--- checking columns ---')
+            self.logger.info('--- checking columns ---')
             cols = True
             for col in ['wid', 'comp', 'fid', 'year']:
                 if self.col_dict[col] not in self.data.columns:
-                    logger.info(col, 'missing from data')
+                    self.logger.info(col, 'missing from data')
                     cols = False
                 else:
                     if col == 'year':
                         if self.data[self.col_dict[col]].dtype != 'int':
-                            logger.info(self.col_dict[col], 'has wrong dtype, should be int but is', self.data[self.col_dict[col]].dtype)
+                            self.logger.info(self.col_dict[col], 'has wrong dtype, should be int but is', self.data[self.col_dict[col]].dtype)
                             cols = False
                     elif col == 'comp':
                         if self.data[self.col_dict[col]].dtype not in ['float', 'float16', 'float32', 'float64', 'float128', 'int', 'int16', 'int32', 'int64']:
-                            logger.info(self.col_dict[col], 'has wrong dtype, should be float or int but is', self.data[self.col_dict[col]].dtype)
+                            self.logger.info(self.col_dict[col], 'has wrong dtype, should be float or int but is', self.data[self.col_dict[col]].dtype)
                             cols = False
 
-            logger.info('columns correct:' + str(cols))
+            self.logger.info('columns correct:' + str(cols))
             if not cols:
                 success = False
                 raise ValueError('Your data does not include the correct columns. The twfe_network object cannot be generated with your data.')
             else:
                 # Correct column names
-                logger.info('correcting column names')
+                self.logger.info('correcting column names')
                 self.update_cols()
 
-            logger.info('--- checking worker-year observations ---')
+            self.logger.info('--- checking worker-year observations ---')
 
             max_obs = self.data.groupby(['wid', 'year']).size().max()
 
-            logger.info('max number of worker-year observations (should be 1):' + str(max_obs))
+            self.logger.info('max number of worker-year observations (should be 1):' + str(max_obs))
             if max_obs > 1:
                 success = False
 
-            logger.info('--- checking nan data ---')
+            self.logger.info('--- checking nan data ---')
 
             nan = self.data.shape[0] - self.data.dropna().shape[0]
 
-            logger.info('data nan rows (should be 0):' + str(nan))
+            self.logger.info('data nan rows (should be 0):' + str(nan))
             if nan > 0:
                 success = False
             else:
                 self.no_na = True
 
-            logger.info('--- checking connected set ---')
+            self.logger.info('--- checking connected set ---')
             self.data['fid_max'] = self.data.groupby(['wid'])['fid'].transform(max)
             G = nx.from_pandas_edgelist(self.data, 'fid', 'fid_max')
             largest_cc = max(nx.connected_components(G), key=len)
@@ -194,65 +212,65 @@ class twfe_network:
 
             outside_cc = self.data[(~self.data['fid'].isin(largest_cc))].shape[0]
 
-            logger.info('observations outside connected set (should be 0):' + str(outside_cc))
+            self.logger.info('observations outside connected set (should be 0):' + str(outside_cc))
             if outside_cc > 0:
                 success = False
             else:
                 self.connected = True
 
-            logger.info('--- checking contiguous firm ids ---')
+            self.logger.info('--- checking contiguous firm ids ---')
             fid_max = self.data['fid'].max()
             n_firms = self.n_firms()
 
             contig = (fid_max == n_firms)
 
-            logger.info('contiguous firm ids (should be True):' + str(contig))
+            self.logger.info('contiguous firm ids (should be True):' + str(contig))
             if not contig:
                 success = False
             else:
                 self.contiguous = True
 
-            logger.info('Overall success:' + str(success))
+            self.logger.info('Overall success:' + str(success))
 
         elif self.formatting == 'es':
                 success_stayers = True
                 success_movers = True
 
-                logger.info('--- checking columns ---')
+                self.logger.info('--- checking columns ---')
                 cols = True
                 for col in ['wid', 'y1', 'y2', 'f1i', 'f2i', 'm']:
                     if self.col_dict[col] not in self.data.columns:
-                        logger.info(col, 'missing from stayers')
+                        self.logger.info(col, 'missing from stayers')
                         cols = False
                     else:
                         if col in ['y1', 'y2']:
                             if self.data[self.col_dict[col]].dtype not in ['float', 'float16', 'float32', 'float64', 'float128', 'int', 'int16', 'int32', 'int64']:
-                                logger.info(col, 'has wrong dtype, should be float or int but is', self.data[self.col_dict[col]].dtype)
+                                self.logger.info(col, 'has wrong dtype, should be float or int but is', self.data[self.col_dict[col]].dtype)
                                 cols = False
                         elif col == 'm':
                             if self.data[self.col_dict[col]].dtype != 'int':
-                                logger.info(col, 'has wrong dtype, should be int but is', self.data[self.col_dict[col]].dtype)
+                                self.logger.info(col, 'has wrong dtype, should be int but is', self.data[self.col_dict[col]].dtype)
                                 cols = False
 
-                logger.info('columns correct:' + str(cols))
+                self.logger.info('columns correct:' + str(cols))
                 if not cols:
                     success_stayers = False
                     success_movers = False
                     raise ValueError('Your data does not include the correct columns. The twfe_network object cannot be generated with your data.')
                 else:
                     # Correct column names
-                    logger.info('correcting column names')
+                    self.logger.info('correcting column names')
                     self.update_cols()
 
                 stayers = self.data[self.data['m'] == 0]
                 movers = self.data[self.data['m'] == 1]
 
-                logger.info('--- checking rows ---')
+                self.logger.info('--- checking rows ---')
                 na_stayers = stayers.shape[0] - stayers.dropna().shape[0]
                 na_movers = movers.shape[0] - movers.dropna().shape[0]
 
-                logger.info('stayers nan rows (should be 0):' + str(na_stayers))
-                logger.info('movers nan rows (should be 0):' + str(na_movers))
+                self.logger.info('stayers nan rows (should be 0):' + str(na_stayers))
+                self.logger.info('movers nan rows (should be 0):' + str(na_movers))
                 if na_stayers > 0:
                     success_stayers = False
                 if na_movers > 0:
@@ -260,33 +278,33 @@ class twfe_network:
                 if (na_stayers == 0) and (na_movers == 0):
                     self.no_na = True
 
-                logger.info('--- checking firms ---')
+                self.logger.info('--- checking firms ---')
                 firms_stayers = (stayers['f1i'] != stayers['f2i']).sum()
                 firms_movers = (movers['f1i'] == movers['f2i']).sum()
 
-                logger.info('stayers with different firms (should be 0):' + str(firms_stayers))
-                logger.info('movers with same firm (should be 0):' + str(firms_movers))
+                self.logger.info('stayers with different firms (should be 0):' + str(firms_stayers))
+                self.logger.info('movers with same firm (should be 0):' + str(firms_movers))
                 if firms_stayers > 0:
                     success_stayers = False
                 if firms_movers > 0:
                     success_movers = False
 
-                logger.info('--- checking income ---')
+                self.logger.info('--- checking income ---')
                 income_stayers = (stayers['y1'] != stayers['y2']).sum()
 
-                logger.info('stayers with different income (should be 0):' + str(income_stayers))
+                self.logger.info('stayers with different income (should be 0):' + str(income_stayers))
                 if income_stayers > 0:
                     success_stayers = False
 
-                logger.info('--- checking connected set ---')
+                self.logger.info('--- checking connected set ---')
                 G = nx.from_pandas_edgelist(movers, 'f1i', 'f2i')
                 largest_cc = max(nx.connected_components(G), key=len)
 
                 cc_stayers = stayers[(~stayers['f1i'].isin(largest_cc)) | (~stayers['f2i'].isin(largest_cc))].shape[0]
                 cc_movers = movers[(~movers['f1i'].isin(largest_cc)) | (~movers['f2i'].isin(largest_cc))].shape[0]
 
-                logger.info('stayers outside connected set (should be 0):' + str(cc_stayers))
-                logger.info('movers outside connected set (should be 0):' + str(cc_movers))
+                self.logger.info('stayers outside connected set (should be 0):' + str(cc_stayers))
+                self.logger.info('movers outside connected set (should be 0):' + str(cc_movers))
                 if cc_stayers > 0:
                     success_stayers = False
                 if cc_movers > 0:
@@ -294,7 +312,7 @@ class twfe_network:
                 if (cc_stayers == 0) and (cc_movers == 0):
                     self.connected = True
 
-                logger.info('--- checking contiguous firm ids ---')
+                self.logger.info('--- checking contiguous firm ids ---')
                 fid_max = max(stayers['f1i'].max(), max(movers['f1i'].max(), movers['f2i'].max()))
                 n_firms = self.n_firms()
 
@@ -304,8 +322,8 @@ class twfe_network:
                 else:
                     self.contiguous = True
 
-                logger.info('Overall success for stayers:' + str(success_stayers))
-                logger.info('Overall success for movers:' + str(success_movers))
+                self.logger.info('Overall success for stayers:' + str(success_stayers))
+                self.logger.info('Overall success for movers:' + str(success_movers))
 
     def conset(self):
         '''
@@ -394,18 +412,18 @@ class twfe_network:
         if self.formatting == 'long':
             # Sort data by wid and year
             self.data = self.data.sort_values(['wid', 'year'])
-            logger.info('data sorted by wid and year')
+            self.logger.info('data sorted by wid and year')
 
             # Introduce lagged fid and wid
             self.data['fid_l1'] = self.data['fid'].shift(periods=1)
             self.data['wid_l1'] = self.data['wid'].shift(periods=1)
-            logger.info('lagged fid introduced')
+            self.logger.info('lagged fid introduced')
 
             # Generate spell ids
             # Source: https://stackoverflow.com/questions/59778744/pandas-grouping-and-aggregating-consecutive-rows-with-same-value-in-column
             new_spell = (self.data['fid'] != self.data['fid_l1']) | (self.data['wid'] != self.data['wid_l1']) # Allow for wid != wid_l1 to ensure that consecutive workers at the same firm get counted as different spells
             self.data['spell_id'] = new_spell.cumsum()
-            logger.info('spell ids generated')
+            self.logger.info('spell ids generated')
 
             # Aggregate at the spell level
             spell = self.data.groupby(['spell_id'])
@@ -416,7 +434,7 @@ class twfe_network:
                 year_start=pd.NamedAgg(column='year', aggfunc='min'),
                 year_end=pd.NamedAgg(column='fid', aggfunc='max')
             )
-            logger.info('data aggregated at the spell level')
+            self.logger.info('data aggregated at the spell level')
 
             ## Format as event study ##
             # Split workers by spell count
@@ -425,7 +443,7 @@ class twfe_network:
             stayers = data_spell[data_spell['wid'].isin(single_spell)]
             mult_spell = spell_count[spell_count > 1].index
             movers = data_spell[data_spell['wid'].isin(mult_spell)]
-            logger.info('workers split by spell count')
+            self.logger.info('workers split by spell count')
 
             # Add lagged values
             movers = movers.sort_values(['wid', 'year_start'])
@@ -446,7 +464,7 @@ class twfe_network:
             # Keep only relevant columns
             stayers = stayers[['wid', 'y1', 'y2', 'f1i', 'f2i', 'm']]
             movers = movers[['wid', 'y1', 'y2', 'f1i', 'f2i', 'm']]
-            logger.info('columns updated')
+            self.logger.info('columns updated')
 
             # Merge stayers and movers
             self.data = pd.concat([stayers, movers])
@@ -454,7 +472,7 @@ class twfe_network:
             # Update col_dict
             self.col_dict = {'wid': 'wid', 'y1': 'y1', 'y2': 'y2', 'f1i': 'f1i', 'f2i': 'f2i', 'm': 'm'}
 
-            logger.info('data reformatted as event study')
+            self.logger.info('data reformatted as event study')
 
             # Data is now formatted as event study
             self.formatting = 'es'
@@ -561,12 +579,12 @@ class twfe_network:
 
             # Compute cdfs
             cdfs = self.approx_cdfs(cdf_resolution=cdf_resolution, grouping=grouping, year=year)
-            logger.info('firm cdfs computed')
+            self.logger.info('firm cdfs computed')
 
             # Compute firm clusters
             KMeans_params = self.update_dict(self.default_KMeans, user_KMeans)
             clusters = KMeans(**KMeans_params).fit(cdfs).labels_ + 1 # Need +1 because need > 0
-            logger.info('firm clusters computed')
+            self.logger.info('firm clusters computed')
 
             # Create Pandas dataframe linking fid to firm cluster
             n_firms = cdfs.shape[0]
@@ -575,16 +593,16 @@ class twfe_network:
             clusters_dict_2 = {'f2i': fids, 'j2': clusters}
             clusters_df_1 = pd.DataFrame(clusters_dict_1, index=fids)
             clusters_df_2 = pd.DataFrame(clusters_dict_2, index=fids)
-            logger.info('dataframes linking fids to clusters generated')
+            self.logger.info('dataframes linking fids to clusters generated')
 
             # Merge into event study data
             self.data = self.data.merge(clusters_df_1, how='left', on='f1i')
             self.data = self.data.merge(clusters_df_2, how='left', on='f2i')
-            logger.info('clusters merged into event study data')
+            self.logger.info('clusters merged into event study data')
 
             # Correct datatypes
             self.data[['f1i', 'f2i', 'm']] = self.data[['f1i', 'f2i', 'm']].astype(int)
-            logger.info('datatypes of clusters corrected')
+            self.logger.info('datatypes of clusters corrected')
 
     def run_akm_corrected(self, user_akm={}):
         '''
@@ -626,7 +644,7 @@ class twfe_network:
 
         akm_params['data'] = self.data # Make sure to use up-to-date data
 
-        akm_solver = feacf.FEsolver(akm_params)
+        akm_solver = fe.FESolver(akm_params)
         akm_solver.run_1()
         akm_solver.construct_Q() # Comment out this line and manually create Q if you want a custom Q matrix
         akm_solver.run_2()
@@ -666,20 +684,3 @@ class twfe_network:
         cre_res = cre.main(cre_params)
 
         return cre_res
-
-# Begin logging
-logger = logging.getLogger('twfe')
-logger.setLevel(logging.DEBUG)
-# create file handler which logs even debug messages
-fh = logging.FileHandler('twfe_spam.log')
-fh.setLevel(logging.DEBUG)
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.ERROR)
-# create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-# add the handlers to the logger
-logger.addHandler(fh)
-logger.addHandler(ch)

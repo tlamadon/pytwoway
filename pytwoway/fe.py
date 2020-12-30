@@ -5,9 +5,10 @@ Computes a bunch of estimates from an event study data set:
     - Andrews bias correction
     - KSS bias correction
 
-Does this through class FEsolver
+Does this through class FESolver
 '''
-
+import logging
+from pathlib import Path
 import pyamg
 import numpy as np
 import pandas as pd
@@ -15,7 +16,6 @@ from scipy.sparse import csc_matrix, coo_matrix, diags, linalg
 import time
 import pyreadr
 import os
-import logging
 from multiprocessing import Pool, TimeoutError, set_start_method
 from timeit import default_timer as timer
 import itertools
@@ -27,7 +27,7 @@ import glob, sys
 
 # Try to use tqdm
 try:
-    from tqdm import tqdm,trange
+    from tqdm import tqdm, trange
 except ImportError:
     trange = range
 
@@ -36,7 +36,7 @@ except ImportError:
 #     v2 = df.eval(e2)
 #     return np.cov(v1, v2)[0][1]
 
-class FEsolver:
+class FESolver:
     '''
     Uses multigrid and partialing out to solve two way Fixed Effect model
 
@@ -84,7 +84,26 @@ class FEsolver:
     '''
 
     def __init__(self, params):
-        logger.info('initializing FEsolver object')
+        # Begin logging
+        self.logger = logging.getLogger('fe')
+        self.logger.setLevel(logging.DEBUG)
+        # Create logs folder
+        Path('twfe_logs').mkdir(parents=True, exist_ok=True)
+        # Create file handler which logs even debug messages
+        fh = logging.FileHandler('fe_spam.log')
+        fh.setLevel(logging.DEBUG)
+        # Create console handler with a higher log level
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.ERROR)
+        # Create formatter and add it to the handlers
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+        ch.setFormatter(formatter)
+        # Add the handlers to the logger
+        self.logger.addHandler(fh)
+        self.logger.addHandler(ch)
+        self.logger.info('initializing FESolver object')
+
         self.params = params
         self.res = {} # Results dictionary
 
@@ -99,7 +118,7 @@ class FEsolver:
         self.res['ndp'] = self.ndraw_pii
         self.res['ndt'] = self.ndraw_trace
 
-        logger.info('FEsolver object initialized')
+        self.logger.info('FESolver object initialized')
 
     def __getstate__(self):
         '''
@@ -137,7 +156,7 @@ class FEsolver:
 
     def save(self, filename):
         '''
-        Save FEsolver class to filename as pickle.
+        Save FESolver class to filename as pickle.
 
         Arguments:
             filename (string): filename to save to
@@ -181,19 +200,19 @@ class FEsolver:
 
         self.save_res() # Save results to json
 
-        logger.info('------ DONE -------')
+        self.logger.info('------ DONE -------')
 
     def prep_data(self):
         '''
         Do some initial data cleaning.
         '''
-        logger.info('Preparing the data')
+        self.logger.info('Preparing the data')
 
         data = self.params['data']
         sdata = data[data['m'] == 0].reset_index(drop=True)
         jdata = data[data['m'] == 1].reset_index(drop=True)
 
-        logger.info('Data movers={} stayers={}'.format(len(jdata), len(sdata)))
+        self.logger.info('Data movers={} stayers={}'.format(len(jdata), len(sdata)))
         self.res['nm'] = len(jdata)
         self.res['ns'] = len(sdata)
         self.res['n_firms'] = len(np.unique(pd.concat([jdata['f1i'], jdata['f2i'], sdata['f1i']], ignore_index=True)))
@@ -241,7 +260,7 @@ class FEsolver:
         self.nf = nf
         self.nw = nw
         self.nn = nn
-        logger.info('data nf:{} nw:{} nn:{}'.format(nf, nw, nn))
+        self.logger.info('data nf:{} nw:{} nn:{}'.format(nf, nw, nn))
 
         # Matrices for the cross-section
         J = csc_matrix((np.ones(nn), (self.adata.index, self.adata.f1i - 1)), shape=(nn, nf)) # Firms
@@ -253,7 +272,7 @@ class FEsolver:
         Dwinv = diags(1.0 / ((W.T * W).diagonal())) # FIXME changed from .transpose() to .T
         self.Dwinv = Dwinv
 
-        logger.info('Prepare linear solver')
+        self.logger.info('Prepare linear solver')
 
         # Finally create M
         M = J.T * J - J.T * W * Dwinv * W.T * J # FIXME changed from .transpose() to .T
@@ -366,9 +385,9 @@ class FEsolver:
         #res['woodcock_var_psi']   = ds.query('nsj  > 1').pipe(pipe_qcov, 'y1', 'y1s_lo')
         #res['woodcock_var_alpha'] = np.minimum( jdata.pipe(pipe_qcov, 'y1','y2'), adata.query('cs==1')['y1'].var() - res['woodcock_var_psi'] )
         #res['woodcock_var_eps'] = adata.query('cs==1')['y1'].var() - res['woodcock_var_alpha'] - res['woodcock_var_psi']
-        #logger.info("[woodcock] var psi = {}", res['woodcock_var_psi'])
-        #logger.info("[woodcock] var alpha = {}", res['woodcock_var_alpha'])
-        #logger.info("[woodcock] var eps = {}", res['woodcock_var_eps'])
+        #self.logger.info("[woodcock] var psi = {}", res['woodcock_var_psi'])
+        #self.logger.info("[woodcock] var alpha = {}", res['woodcock_var_alpha'])
+        #self.logger.info("[woodcock] var eps = {}", res['woodcock_var_eps'])
 
     def save_early_stats(self):
         '''
@@ -376,9 +395,9 @@ class FEsolver:
         '''
         with open(self.params['out'], 'w') as outfile:
             json.dump(self.res, outfile)
-        logger.info('saved results to {}'.format(self.params['out']))
-        logger.info('--statsonly was passed as argument, so we skip all estimation.')
-        logger.info('------ DONE -------')
+        self.logger.info('saved results to {}'.format(self.params['out']))
+        self.logger.info('--statsonly was passed as argument, so we skip all estimation.')
+        self.logger.info('------ DONE -------')
         # sys.exit() # FIXME I don't think this is necessary (does it even work?) since this is now a class object
 
     def construct_Q(self):
@@ -422,30 +441,30 @@ class FEsolver:
         # try to pickle the object to see its size
         # self.save('tmp.pkl') # FIXME should we delete these 2 lines?
 
-        logger.info('Extract firm effects')
+        self.logger.info('Extract firm effects')
 
         self.psi_hat, self.alpha_hat = self.solve(self.Y)
 
-        logger.info('Solver time {:2.4f} seconds'.format(self.last_invert_time))
-        logger.info('Expected total time {:2.4f} minutes'.format( (self.ndraw_trace * (1 + self.compute_hetero) + self.ndraw_pii * self.compute_hetero) * self.last_invert_time / 60))
+        self.logger.info('Solver time {:2.4f} seconds'.format(self.last_invert_time))
+        self.logger.info('Expected total time {:2.4f} minutes'.format( (self.ndraw_trace * (1 + self.compute_hetero) + self.ndraw_pii * self.compute_hetero) * self.last_invert_time / 60))
 
         self.E = self.Y - self.mult_A(self.psi_hat, self.alpha_hat)
 
         self.res['solver_time'] = self.last_invert_time
 
         fe_rsq = 1 - np.power(self.E, 2).mean() / np.power(self.Y, 2).mean()
-        logger.info('Fixed effect R-square {:2.4f}'.format(fe_rsq))
+        self.logger.info('Fixed effect R-square {:2.4f}'.format(fe_rsq))
 
         # FIXME This section moved into compute_trace_approximation_fe()
         # # FIXME Need to figure out when this section can be run
         # self.tot_var = np.var(self.Y)
         # self.var_fe = np.var(self.Jq * self.psi_hat)
         # self.cov_fe = np.cov(self.Jq * self.psi_hat, self.Wq * self.alpha_hat)[0][1]
-        # logger.info('[fe] var_psi={:2.4f} cov={:2.4f} tot={:2.4f}'.format(self.var_fe, self.cov_fe, self.tot_var))
+        # self.logger.info('[fe] var_psi={:2.4f} cov={:2.4f} tot={:2.4f}'.format(self.var_fe, self.cov_fe, self.tot_var))
         # # FIXME Section ends here
 
         self.var_e = self.nn / (self.nn - self.nw - self.nf + 1) * np.power(self.E, 2).mean()
-        logger.info('[ho] variance of residuals {:2.4f}'.format(self.var_e))
+        self.logger.info('[ho] variance of residuals {:2.4f}'.format(self.var_e))
 
     def compute_leverages_Pii(self):
         '''
@@ -455,10 +474,10 @@ class FEsolver:
         self.Sii = np.zeros(self.nn)
 
         if len(self.params['levfile']) > 1:
-            logger.info('[he] starting heteroskedastic correction, loading precomputed files')
+            self.logger.info('[he] starting heteroskedastic correction, loading precomputed files')
 
             files = glob.glob('{}*'.format(self.params['levfile']))
-            logger.info('[he] found {} files to get leverages from'.format(len(files)))
+            self.logger.info('[he] found {} files to get leverages from'.format(len(files)))
             self.res['lev_file_count'] = len(files)
             assert len(files) > 0, "Didn't find any leverage files!"
 
@@ -467,7 +486,7 @@ class FEsolver:
                 self.Pii += pp / len(files)
 
         elif self.ncore > 1:
-            logger.info('[he] starting heteroskedastic correction p2={}, using {} cores, batch size {}'.format(self.ndraw_pii, self.ncore, self.params['batch']))
+            self.logger.info('[he] starting heteroskedastic correction p2={}, using {} cores, batch size {}'.format(self.ndraw_pii, self.ncore, self.params['batch']))
             set_start_method('spawn')
             with Pool(processes=self.ncore) as pool:
                 Pii_all = pool.starmap(self.leverage_approx, [self.params['batch'] for _ in range(self.ndraw_pii // self.params['batch'])])
@@ -486,7 +505,7 @@ class FEsolver:
 
         # Attach the computed Pii to the dataframe
         self.adata['Pii'] = self.Pii
-        logger.info('[he] Leverage range {:2.4f} to {:2.4f}'.format(self.adata.query('m == 1').Pii.min(), self.adata.query('m == 1').Pii.max()))
+        self.logger.info('[he] Leverage range {:2.4f} to {:2.4f}'.format(self.adata.query('m == 1').Pii.min(), self.adata.query('m == 1').Pii.max()))
 
         # Give stayers the variance estimate at the firm level
         self.adata['Sii'] = self.Y * self.E / (1 - self.Pii)
@@ -496,13 +515,13 @@ class FEsolver:
         self.adata['Sii'] = np.where(self.adata['m'] == 1, self.adata['Sii'], self.adata['Sii_j'])
         self.Sii = self.adata['Sii']
 
-        logger.info('[he] variance of residuals in heteroskedastic case: {:2.4f}'.format(self.Sii.mean()))
+        self.logger.info('[he] variance of residuals in heteroskedastic case: {:2.4f}'.format(self.Sii.mean()))
 
     def compute_trace_approximation_fe(self):
         '''
         Compute FE trace approximation for arbitrary Q.
         '''
-        logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
+        self.logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
 
         # Construct Jq, Wq matrices
         Jq = self.adata[self.adata['Jq'] == 1].reset_index(drop=True)
@@ -525,16 +544,16 @@ class FEsolver:
         # Compute some stats
         # FIXME Need to figure out when this section can be run
         self.tot_var = np.var(self.Y)
-        logger.info('[fe]')
+        self.logger.info('[fe]')
         try:
             # print('psi', self.psi_hat)
             self.var_fe = np.var(Jq * self.psi_hat)
-            logger.info('var_psi={:2.4f}'.format(self.var_fe))
+            self.logger.info('var_psi={:2.4f}'.format(self.var_fe))
         except ValueError: # If dimension mismatch
             pass
         try:
             self.cov_fe = np.cov(Jq * self.psi_hat, Wq * self.alpha_hat)[0][1]
-            logger.info('cov={:2.4f} tot={:2.4f}'.format(self.cov_fe, self.tot_var))
+            self.logger.info('cov={:2.4f} tot={:2.4f}'.format(self.cov_fe, self.tot_var))
         except ValueError: # If dimension mismatch
             pass
         # FIXME Section ends here
@@ -569,14 +588,14 @@ class FEsolver:
                 except AttributeError: # Once deleted
                     pass
 
-            logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
+            self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
     # def compute_trace_approximation_fe(self):
     #     '''
     #     Purpose:
     #         Compute FE trace approximation.
     #     '''
-    #     logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
+    #     self.logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
     #     self.tr_var_ho_all = np.zeros(self.ndraw_trace)
     #     self.tr_cov_ho_all = np.zeros(self.ndraw_trace)
 
@@ -594,14 +613,14 @@ class FEsolver:
     #         self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
     #         self.tr_cov_ho_all[r] = np.cov(R1, R2_alpha)[0][1]
 
-    #         logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
+    #         self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
     # def compute_trace_approximation_j1j2(self):
     #     '''
     #     Purpose:
     #         covariance between psi before and after the move among movers
     #     '''
-    #     logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
+    #     self.logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
     #     self.tr_var_ho_all = np.zeros(self.ndraw_trace)
 
     #     for r in trange(self.ndraw_trace):
@@ -615,13 +634,13 @@ class FEsolver:
 
     #         # Trace corrections
     #         self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
-    #         logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
+    #         self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
     def compute_trace_approximation_he(self):
         '''
         Compute heteroskedastic trace approximation.
         '''
-        logger.info('Starting he trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
+        self.logger.info('Starting he trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
         self.tr_var_he_all = np.zeros(self.ndraw_trace)
         self.tr_cov_he_all = np.zeros(self.ndraw_trace)
 
@@ -640,7 +659,7 @@ class FEsolver:
             self.tr_var_he_all[r] = np.cov(R2_psi, R3_psi)[0][1]
             self.tr_cov_he_all[r] = np.cov(R2_alpha, R3_psi)[0][1]
 
-            logger.debug('he [traces] step {}/{} done.'.format(r, self.ndraw_trace))
+            self.logger.debug('he [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
     def collect_res(self):
         '''
@@ -650,12 +669,12 @@ class FEsolver:
         self.res['eps_var_ho'] = self.var_e
         self.res['eps_var_fe'] = np.var(self.E)
         self.res['tr_var_ho'] = np.mean(self.tr_var_ho_all)
-        logger.info('[ho] VAR tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_var_ho'], np.std(self.tr_var_ho_all)))
+        self.logger.info('[ho] VAR tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_var_ho'], np.std(self.tr_var_ho_all)))
 
         # FIXME Need to figure out when this section can be run
         try:
             self.res['tr_cov_ho'] = np.mean(self.tr_cov_ho_all)
-            logger.info('[ho] COV tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_cov_ho'], np.std(self.tr_cov_ho_all)))
+            self.logger.info('[ho] COV tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_cov_ho'], np.std(self.tr_cov_ho_all)))
         except AttributeError: # If no cov
             pass
         # FIXME Section ends here
@@ -670,32 +689,32 @@ class FEsolver:
             self.res['tr_cov_ho_sd'] = np.std(self.tr_cov_ho_all)
             self.res['tr_var_he_sd'] = np.std(self.tr_var_he_all)
             self.res['tr_cov_he_sd'] = np.std(self.tr_cov_he_all)
-            logger.info('[he] VAR tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_var_he'], np.std(self.tr_var_he_all)))
-            logger.info('[he] COV tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_cov_he'], np.std(self.tr_cov_he_all)))
+            self.logger.info('[he] VAR tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_var_he'], np.std(self.tr_var_he_all)))
+            self.logger.info('[he] COV tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_cov_he'], np.std(self.tr_cov_he_all)))
 
         # ----- FINAL ------
         # FIXME Need to figure out when this section can be run
         try:
-            logger.info('[ho] VAR fe={:2.4f}'.format(self.var_fe))
+            self.logger.info('[ho] VAR fe={:2.4f}'.format(self.var_fe))
         except AttributeError: # If no var fe
             pass
         try:
-            logger.info('[ho] VAR bc={:2.4f}'.format(self.var_fe - self.var_e * self.res['tr_var_ho']))
+            self.logger.info('[ho] VAR bc={:2.4f}'.format(self.var_fe - self.var_e * self.res['tr_var_ho']))
         except AttributeError: # If no var bc
             pass
         try:
-            logger.info('[ho] COV fe={:2.4f}'.format(self.cov_fe))
+            self.logger.info('[ho] COV fe={:2.4f}'.format(self.cov_fe))
         except AttributeError: # If no cov fe
             pass
         try:
-            logger.info('[ho] COV bc={:2.4f}'.format(self.cov_fe - self.var_e * self.res['tr_cov_ho']))
+            self.logger.info('[ho] COV bc={:2.4f}'.format(self.cov_fe - self.var_e * self.res['tr_cov_ho']))
         except AttributeError: # If no cov bc
             pass
         # FIXME Section ends here
 
         if self.compute_hetero:
-            logger.info('[he] VAR fe={:2.4f} bc={:2.4f}'.format(self.var_fe, self.var_fe - self.res['tr_var_he']))
-            logger.info('[he] COV fe={:2.4f} bc={:2.4f}'.format(self.cov_fe, self.cov_fe - self.res['tr_cov_he']))
+            self.logger.info('[he] VAR fe={:2.4f} bc={:2.4f}'.format(self.var_fe, self.var_fe - self.res['tr_var_he']))
+            self.logger.info('[he] COV fe={:2.4f} bc={:2.4f}'.format(self.cov_fe, self.cov_fe - self.res['tr_cov_he']))
 
         self.res['var_y'] = np.var(self.Yq)
         # FIXME Need to figure out when this section can be run
@@ -732,7 +751,7 @@ class FEsolver:
         with open(self.params['out'], 'w') as outfile:
             json.dump(self.res, outfile)
 
-        logger.info('Saved results to {}'.format(self.params['out']))
+        self.logger.info('Saved results to {}'.format(self.params['out']))
 
     def get_akm_estimates(self):
         '''
@@ -850,23 +869,6 @@ class FEsolver:
             R2  = 2 * np.random.binomial(1, 0.5, self.nn) - 1
             Pii += 1 / ndraw_pii * np.power(self.proj(R2), 2.0)
 
-        logger.info('Done with batch')
+        self.logger.info('Done with batch')
 
         return Pii
-
-# Begin logging
-logger = logging.getLogger('akm')
-logger.setLevel(logging.DEBUG)
-# create file handler which logs even debug messages
-fh = logging.FileHandler('akm_spam.log')
-fh.setLevel(logging.DEBUG)
-# create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.ERROR)
-# create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-# add the handlers to the logger
-logger.addHandler(fh)
-logger.addHandler(ch)
