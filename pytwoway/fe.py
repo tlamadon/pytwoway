@@ -223,7 +223,7 @@ class FESolver:
 
         self.res['n_firms'] = self.b_net.n_firms()
         self.res['n_workers'] = self.b_net.n_workers()
-        self.res['n_movers'] = len(np.unique(self.adata.iloc[(self.adata['m'] == 1), 'wid']))
+        self.res['n_movers'] = len(np.unique(self.adata[self.adata['m'] == 1]['wid']))
 
         #res['year_max'] = int(sdata['year'].max())
         #res['year_min'] = int(sdata['year'].min())

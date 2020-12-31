@@ -108,7 +108,7 @@ class BipartiteData:
         '''
         if self.formatting == 'long':
             return len(self.data['fid'].unique())
-        elif self.formatting == 'es':
+        elif self.formatting in ['es', 'pseudo_long']:
             return len(set(list(self.data['f1i'].unique()) + list(self.data['f2i'].unique())))
 
     def clean_data(self):
@@ -497,8 +497,8 @@ class BipartiteData:
 
             self.logger.info('data reformatted as pseudo-long form')
 
-            # Data is now formatted in long form
-            self.formatting = 'long'
+            # Data is now formatted in pseudo-long form
+            self.formatting = 'pseudo_long'
 
     def approx_cdfs(self, cdf_resolution=10, grouping='quantile_all', year=None):
         '''

@@ -522,7 +522,7 @@ def test_fe_ho_1():
     b_net.clean_data()
     b_net.refactor_es()
 
-    fe_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_fe.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)', 'data': b_net.data}
+    fe_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_fe.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)', 'data': b_net}
 
     fe_solver = fe.FESolver(fe_params)
     fe_solver.fit_1()
