@@ -54,9 +54,9 @@ class SimTwoWay:
         self.logger = logging.getLogger('simtwoway')
         self.logger.setLevel(logging.DEBUG)
         # Create logs folder
-        Path('simtwoway_logs').mkdir(parents=True, exist_ok=True)
+        Path('twfe_logs').mkdir(parents=True, exist_ok=True)
         # Create file handler which logs even debug messages
-        fh = logging.FileHandler('simtwoway_spam.log')
+        fh = logging.FileHandler('twfe_logs/simtwoway_spam.log')
         fh.setLevel(logging.DEBUG)
         # Create console handler with a higher log level
         ch = logging.StreamHandler()
@@ -289,9 +289,9 @@ class TwoWayMonteCarlo:
         self.logger = logging.getLogger('twowaymontecarlo')
         self.logger.setLevel(logging.DEBUG)
         # Create logs folder
-        Path('twowaymontecarlo_logs').mkdir(parents=True, exist_ok=True)
+        Path('twfe_logs').mkdir(parents=True, exist_ok=True)
         # Create file handler which logs even debug messages
-        fh = logging.FileHandler('twowaymontecarlo.log')
+        fh = logging.FileHandler('twfe_logs/twowaymontecarlo.log')
         fh.setLevel(logging.DEBUG)
         # Create console handler with a higher log level
         ch = logging.StreamHandler()

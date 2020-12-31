@@ -24,7 +24,7 @@ class TwoWay:
         # Create logs folder
         Path('twoway_logs').mkdir(parents=True, exist_ok=True)
         # Create file handler which logs even debug messages
-        fh = logging.FileHandler('twoway_spam.log')
+        fh = logging.FileHandler('twfe_logs/twoway_spam.log')
         fh.setLevel(logging.DEBUG)
         # Create console handler with a higher log level
         ch = logging.StreamHandler()

@@ -416,7 +416,7 @@ logger.setLevel(logging.DEBUG)
 # Create logs folder
 Path('twfe_logs').mkdir(parents=True, exist_ok=True)
 # Create file handler which logs even debug messages
-fh = logging.FileHandler('cre_spam.log')
+fh = logging.FileHandler('twfe_logs/cre_spam.log')
 fh.setLevel(logging.DEBUG)
 # Create console handler with a higher log level
 ch = logging.StreamHandler()
