@@ -10,9 +10,9 @@ import networkx as nx
 from sklearn.cluster import KMeans
 from scipy.sparse.csgraph import connected_components
 
-class bipartite_network:
+class BipartiteData:
     '''
-    Class of bipartite_network, where bipartite_network gives an arbitrary bipartite network.
+    Class of BipartiteData, where BipartiteData gives a bipartite network of firms and workers.
 
     Arguments:
         data (Pandas DataFrame): bipartite network data
@@ -25,9 +25,9 @@ class bipartite_network:
         self.logger = logging.getLogger('bipartite')
         self.logger.setLevel(logging.DEBUG)
         # Create logs folder
-        Path('twfe_logs').mkdir(parents=True, exist_ok=True)
+        Path('bipartite_logs').mkdir(parents=True, exist_ok=True)
         # Create file handler which logs even debug messages
-        fh = logging.FileHandler('twfe_spam.log')
+        fh = logging.FileHandler('bipartite_spam.log')
         fh.setLevel(logging.DEBUG)
         # Create console handler with a higher log level
         ch = logging.StreamHandler()
@@ -39,7 +39,7 @@ class bipartite_network:
         # Add the handlers to the logger
         self.logger.addHandler(fh)
         self.logger.addHandler(ch)
-        self.logger.info('initializing bipartite_network object')
+        self.logger.info('initializing BipartiteData object')
 
         # Define some attributes
         self.data = data
@@ -58,7 +58,7 @@ class bipartite_network:
 
         self.default_cluster = {'cdf_resolution': 10, 'grouping': 'quantile_all', 'year': None, 'user_KMeans': self.default_KMeans}
 
-        self.logger.info('bipartite_network object initialized')
+        self.logger.info('BipartiteData object initialized')
 
     def update_dict(self, default_params, user_params):
         '''
@@ -172,7 +172,7 @@ class bipartite_network:
             self.logger.info('columns correct:' + str(cols))
             if not cols:
                 success = False
-                raise ValueError('Your data does not include the correct columns. The twfe_network object cannot be generated with your data.')
+                raise ValueError('Your data does not include the correct columns. The TwoWay object cannot be generated with your data.')
             else:
                 # Correct column names
                 self.logger.info('correcting column names')
@@ -248,7 +248,7 @@ class bipartite_network:
                 if not cols:
                     success_stayers = False
                     success_movers = False
-                    raise ValueError('Your data does not include the correct columns. The twfe_network object cannot be generated with your data.')
+                    raise ValueError('Your data does not include the correct columns. The TwoWay object cannot be generated with your data.')
                 else:
                     # Correct column names
                     self.logger.info('correcting column names')
@@ -468,6 +468,37 @@ class bipartite_network:
 
             # Data is now formatted as event study
             self.formatting = 'es'
+
+    def refactor_psuedo_long(self):
+        '''
+        Refactor event study data as pseudo-long form data (since converting into event study removes time, it cannot be imputed into the long-form data).
+        '''
+        if self.formatting == 'es':
+            sdata = self.data[self.data['m'] == 0].reset_index(drop=True)
+            jdata = self.data[self.data['m'] == 1].reset_index(drop=True)
+
+            # Assign some values
+            nm = len(jdata)
+            ns = len(sdata)
+
+            # Make wids unique per row
+            jdata.set_index(np.arange(nm) + 1)
+            sdata.set_index(np.arange(ns) + 1 + nm)
+            jdata['wid'] = np.arange(nm) + 1
+            sdata['wid'] = np.arange(ns) + 1 + nm
+            self.logger.info('wids made unique per row')
+
+            # Combine the 2 data-sets
+            self.data = pd.concat([
+                sdata[['wid', 'f1i', 'f2i', 'y1']].assign(cs=1, m=0), jdata[['wid', 'f1i', 'f2i', 'y1']].assign(cs=1, m=1), jdata[['wid', 'f1i', 'f2i', 'y2']].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y2': 'y1'}, axis=1).assign(cs=0, m=1)])
+            self.data = self.data.reset_index(drop=True)
+            self.data['wid'] = self.data['wid'].astype('category').cat.codes + 1
+            self.logger.info('mover and stayer long form datasets combined')
+
+            self.logger.info('data reformatted as pseudo-long form')
+
+            # Data is now formatted in long form
+            self.formatting = 'long'
 
     def approx_cdfs(self, cdf_resolution=10, grouping='quantile_all', year=None):
         '''

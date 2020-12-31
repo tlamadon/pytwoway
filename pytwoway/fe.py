@@ -208,30 +208,37 @@ class FESolver:
         '''
         self.logger.info('Preparing the data')
 
-        data = self.params['data']
-        sdata = data[data['m'] == 0].reset_index(drop=True)
-        jdata = data[data['m'] == 1].reset_index(drop=True)
+        self.b_net = self.params['data']
+        # Refactor data as pseudo-long form
+        self.b_net.refactor_psuedo_long()
+        self.adata = self.b_net.data
 
-        self.logger.info('Data movers={} stayers={}'.format(len(jdata), len(sdata)))
-        self.res['nm'] = len(jdata)
-        self.res['ns'] = len(sdata)
-        self.res['n_firms'] = len(np.unique(pd.concat([jdata['f1i'], jdata['f2i'], sdata['f1i']], ignore_index=True)))
-        self.res['n_workers'] = len(np.unique(pd.concat([jdata['wid'], sdata['wid']], ignore_index=True)))
-        self.res['n_movers'] = len(np.unique(pd.concat([jdata['wid']], ignore_index=True)))
+        # data = self.params['data']
+        # sdata = data[data['m'] == 0].reset_index(drop=True)
+        # jdata = data[data['m'] == 1].reset_index(drop=True)
+
+        self.res['nm'] = len(self.adata[self.adata['m'] == 1]) / 2
+        self.res['ns'] = len(self.adata[self.adata['m'] == 0])
+        self.logger.info('Data movers={} stayers={}'.format(self.res['nm'], self.res['ns']))
+
+        self.res['n_firms'] = self.b_net.n_firms()
+        self.res['n_workers'] = self.b_net.n_workers()
+        self.res['n_movers'] = len(np.unique(self.adata.iloc[(self.adata['m'] == 1), 'wid']))
+
         #res['year_max'] = int(sdata['year'].max())
         #res['year_min'] = int(sdata['year'].min())
 
-        # Make wids unique per row
-        jdata.set_index(np.arange(self.res['nm']) + 1)
-        sdata.set_index(np.arange(self.res['ns']) + 1 + self.res['nm'])
-        jdata['wid'] = np.arange(self.res['nm']) + 1
-        sdata['wid'] = np.arange(self.res['ns']) + 1 + self.res['nm']
+        # # Make wids unique per row
+        # jdata.set_index(np.arange(self.res['nm']) + 1)
+        # sdata.set_index(np.arange(self.res['ns']) + 1 + self.res['nm'])
+        # jdata['wid'] = np.arange(self.res['nm']) + 1
+        # sdata['wid'] = np.arange(self.res['ns']) + 1 + self.res['nm']
 
-        # Combine the 2 data-sets
-        # self.adata = pd.concat([sdata[['wid', 'f1i', 'y1']].assign(cs=1, m=0), jdata[['wid', 'f1i', 'y1']].assign(cs=1, m=1), jdata[['wid', 'f2i', 'y2']].rename(columns={'f2i': 'f1i', 'y2': 'y1'}).assign(cs=0, m=1)]) # FIXME updated below
-        self.adata = pd.concat([sdata[['wid', 'f1i', 'f2i', 'y1']].assign(cs=1, m=0), jdata[['wid', 'f1i', 'f2i', 'y1']].assign(cs=1, m=1), jdata[['wid', 'f1i', 'f2i', 'y2']].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y2': 'y1'}, axis=1).assign(cs=0, m=1)]) # FIXME For some reason I didn't rename the last group's y2 to y1 before, but I'm changing it from y2 to y1 because it isn't working otherwise - make sure in the future to confirm this is the right thing to do (note that y2 is never used anywhere else in the code so it almost certainly is supposed to be labeled as y1, especially given that is how it was done in the original code above)
-        self.adata = self.adata.reset_index(drop=True) # FIXME changed from set_index(pd.Series(range(len(self.adata))))
-        self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1
+        # # Combine the 2 data-sets
+        # # self.adata = pd.concat([sdata[['wid', 'f1i', 'y1']].assign(cs=1, m=0), jdata[['wid', 'f1i', 'y1']].assign(cs=1, m=1), jdata[['wid', 'f2i', 'y2']].rename(columns={'f2i': 'f1i', 'y2': 'y1'}).assign(cs=0, m=1)]) # FIXME updated below
+        # self.adata = pd.concat([sdata[['wid', 'f1i', 'f2i', 'y1']].assign(cs=1, m=0), jdata[['wid', 'f1i', 'f2i', 'y1']].assign(cs=1, m=1), jdata[['wid', 'f1i', 'f2i', 'y2']].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y2': 'y1'}, axis=1).assign(cs=0, m=1)]) # FIXME For some reason I didn't rename the last group's y2 to y1 before, but I'm changing it from y2 to y1 because it isn't working otherwise - make sure in the future to confirm this is the right thing to do (note that y2 is never used anywhere else in the code so it almost certainly is supposed to be labeled as y1, especially given that is how it was done in the original code above)
+        # self.adata = self.adata.reset_index(drop=True) # FIXME changed from set_index(pd.Series(range(len(self.adata))))
+        # self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1
 
     def init_prepped_adata(self):
         '''

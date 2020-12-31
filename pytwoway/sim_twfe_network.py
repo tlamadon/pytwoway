@@ -13,12 +13,11 @@ from scipy.stats import mode, norm
 from scipy.linalg import eig
 ax = np.newaxis
 from matplotlib import pyplot as plt
-from pytwoway import twfe_network
-tn = twfe_network.twfe_network
+from pytwoway import twfe_network as tn
 
-class sim_twfe_network:
+class SimTwoWay:
     '''
-    Class of sim_twfe_network, where sim_twfe_network simulates a network of firms and workers.
+    Class of SimTwoWay, where SimTwoWay simulates a network of firms and workers.
 
     Arguments:
         sim_params (dict): parameters for simulated data
@@ -52,12 +51,12 @@ class sim_twfe_network:
 
     def __init__(self, sim_params={}):
         # Begin logging
-        self.logger = logging.getLogger('sim_twfe')
+        self.logger = logging.getLogger('simtwoway')
         self.logger.setLevel(logging.DEBUG)
         # Create logs folder
-        Path('twfe_logs').mkdir(parents=True, exist_ok=True)
+        Path('simtwoway_logs').mkdir(parents=True, exist_ok=True)
         # Create file handler which logs even debug messages
-        fh = logging.FileHandler('sim_twfe_spam.log')
+        fh = logging.FileHandler('simtwoway_spam.log')
         fh.setLevel(logging.DEBUG)
         # Create console handler with a higher log level
         ch = logging.StreamHandler()
@@ -69,7 +68,7 @@ class sim_twfe_network:
         # Add the handlers to the logger
         self.logger.addHandler(fh)
         self.logger.addHandler(ch)
-        self.logger.info('initializing sim_twfe_network object')
+        self.logger.info('initializing SimTwoWay object')
 
         # Define default parameter dictionaries
         self.default_sim_params = {'num_ind': 10000, 'num_time': 5, 'firm_size': 50, 'nk': 10, 'nl': 5, 'alpha_sig': 1, 'psi_sig': 1, 'w_sig': 1, 'csort': 1, 'cnetw': 1, 'csig': 1, 'p_move': 0.5}
@@ -251,9 +250,9 @@ class sim_twfe_network:
 
         return data
 
-class twfe_monte_carlo:
+class TwoWayMonteCarlo:
     '''
-    Class of twfe_monte_carlo, where twfe_monte_carlo runs a Monte Carlo estimate by simulating networks of firms and workers.
+    Class of TwoWayMonteCarlo, where TwoWayMonteCarlo runs a Monte Carlo estimate by simulating networks of firms and workers.
 
     Arguments:
         sim_params (dict): parameters for simulated data
@@ -287,12 +286,12 @@ class twfe_monte_carlo:
 
     def __init__(self, sim_params={}):
         # Begin logging
-        self.logger = logging.getLogger('twfe_monte_carlo')
+        self.logger = logging.getLogger('twowaymontecarlo')
         self.logger.setLevel(logging.DEBUG)
         # Create logs folder
-        Path('twfe_logs').mkdir(parents=True, exist_ok=True)
+        Path('twowaymontecarlo_logs').mkdir(parents=True, exist_ok=True)
         # Create file handler which logs even debug messages
-        fh = logging.FileHandler('twfe_monte_carlo.log')
+        fh = logging.FileHandler('twowaymontecarlo.log')
         fh.setLevel(logging.DEBUG)
         # Create console handler with a higher log level
         ch = logging.StreamHandler()
@@ -304,16 +303,18 @@ class twfe_monte_carlo:
         # Add the handlers to the logger
         self.logger.addHandler(fh)
         self.logger.addHandler(ch)
-        self.logger.info('initializing twfe_monte_carlo object')
+        self.logger.info('initializing TwoWayMonteCarlo object')
 
-        self.sim = sim_twfe_network(sim_params)
+        self.sim = SimTwoWay(sim_params)
 
         # Prevent plotting unless results exist
         self.monte_carlo_res = False
 
+        self.logger.info('TwoWayMonteCarlo object initialized')
+
     def twfe_monte_carlo_interior(self, fe_params={}, cre_params={}, cluster_params={}):
         '''
-        Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to twfe_monte_carlo.
+        Run Monte Carlo simulations of TwoWay to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to twfe_monte_carlo.
 
         Arguments:
             fe_params (dict): dictionary of parameters for bias-corrected AKM estimation
@@ -384,16 +385,14 @@ class twfe_monte_carlo:
         # Compute true sample variance of psi and covariance of psi and alpha
         psi_var = np.var(sim_data['psi'])
         psi_alpha_cov = np.cov(sim_data['psi'], sim_data['alpha'])[0, 1]
-        # Use data to create twfe_network object
-        tw_net = tn(data=sim_data)
-        # Clean data (just in case)
-        tw_net.clean_data()
-        # Convert into event study
-        tw_net.refactor_es()
+        # Use data to create TwoWay object
+        tw_net = tn.TwoWay(data=sim_data)
+        # Prepare for FE
+        tw_net.prep_fe()
         # Estimate FE model
         fe_res = tw_net.fit_fe(user_fe=fe_params)
-        # Cluster for CRE model
-        tw_net.cluster(user_cluster=cluster_params)
+        # Prepare for CRE
+        tw_net.prep_cre(user_cluster=cluster_params)
         # Estimate CRE model
         cre_res = tw_net.fit_cre(user_cre=cre_params)
 
@@ -405,7 +404,7 @@ class twfe_monte_carlo:
     def twfe_monte_carlo(self, N=10, ncore=1, fe_params={}, cre_params={}, cluster_params={}):
         '''
         Purpose:
-            Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:
+            Run Monte Carlo simulations of TwoWay to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:
 
                 true_psi_var (NumPy Array): true simulated sample variance of psi
 

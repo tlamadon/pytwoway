@@ -7,9 +7,9 @@ from pytwoway import bipartite_network as bn
 from pytwoway import fe
 from pytwoway import cre
 
-class twfe_network:
+class TwoWay:
     '''
-    Class of twfe_network, where twfe_network gives a network of firms and workers.
+    Class of TwoWay, where TwoWay gives a network of firms and workers.
 
     Arguments:
         data (Pandas DataFrame): data giving firms, workers, and compensation
@@ -19,12 +19,12 @@ class twfe_network:
 
     def __init__(self, data, formatting='long', col_dict=None):
         # Begin logging
-        self.logger = logging.getLogger('twfe')
+        self.logger = logging.getLogger('twoway')
         self.logger.setLevel(logging.DEBUG)
         # Create logs folder
-        Path('twfe_logs').mkdir(parents=True, exist_ok=True)
+        Path('twoway_logs').mkdir(parents=True, exist_ok=True)
         # Create file handler which logs even debug messages
-        fh = logging.FileHandler('twfe_spam.log')
+        fh = logging.FileHandler('twoway_spam.log')
         fh.setLevel(logging.DEBUG)
         # Create console handler with a higher log level
         ch = logging.StreamHandler()
@@ -36,17 +36,17 @@ class twfe_network:
         # Add the handlers to the logger
         self.logger.addHandler(fh)
         self.logger.addHandler(ch)
-        self.logger.info('initializing twfe_network object')
+        self.logger.info('initializing TwoWay object')
 
         # Define some attributes
-        self.b_net = bn.bipartite_network(data, formatting, col_dict)
+        self.b_net = bn.BipartiteData(data, formatting, col_dict)
 
         # Define default parameter dictionaries
         self.default_fe = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_fe.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)'} # Do not define 'data' because will be updated later
 
         self.default_cre = {'ncore': 1, 'ndraw_tr': 5, 'ndp': 50, 'out': 'res_cre.json', 'posterior': False, 'wobtw': False} # Do not define 'data' because will be updated later
 
-        self.logger.info('twfe_network object initialized')
+        self.logger.info('TwoWay object initialized')
 
     def prep_fe(self):
         '''
@@ -114,7 +114,7 @@ class twfe_network:
         '''
         fe_params = self.b_net.update_dict(self.default_fe, user_fe)
 
-        fe_params['data'] = self.b_net.data # Make sure to use up-to-date data
+        fe_params['data'] = self.b_net # Make sure to use up-to-date bipartite network
 
         fe_solver = fe.FESolver(fe_params)
         fe_solver.fit_1()

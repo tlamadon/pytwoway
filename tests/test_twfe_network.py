@@ -11,8 +11,8 @@ import os
 # Navigate to parent folder for import
 #os.chdir('..')
 
-from pytwoway import twfe_network
-tn = twfe_network.twfe_network
+from pytwoway import bipartite_network as bn
+from pytwoway import twfe_network as tn
 from pytwoway import fe
 
 def test_twfe_refactor_1():
@@ -29,11 +29,11 @@ def test_twfe_refactor_1():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    tw_net = tn(data=df, col_dict=col_dict)
-    tw_net.clean_data()
-    tw_net.refactor_es()
+    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net.clean_data()
+    b_net.refactor_es()
 
-    df_ES = tw_net.data
+    df_ES = b_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -66,11 +66,11 @@ def test_twfe_refactor_2():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    tw_net = tn(data=df, col_dict=col_dict)
-    tw_net.clean_data()
-    tw_net.refactor_es()
+    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net.clean_data()
+    b_net.refactor_es()
 
-    df_ES = tw_net.data
+    df_ES = b_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -101,11 +101,11 @@ def test_twfe_refactor_3():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    tw_net = tn(data=df, col_dict=col_dict)
-    tw_net.clean_data()
-    tw_net.refactor_es()
+    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net.clean_data()
+    b_net.refactor_es()
 
-    df_ES = tw_net.data
+    df_ES = b_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -143,11 +143,11 @@ def test_twfe_refactor_4():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    tw_net = tn(data=df, col_dict=col_dict)
-    tw_net.clean_data()
-    tw_net.refactor_es()
+    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net.clean_data()
+    b_net.refactor_es()
 
-    df_ES = tw_net.data
+    df_ES = b_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -191,11 +191,11 @@ def test_twfe_refactor_5():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    tw_net = tn(data=df, col_dict=col_dict)
-    tw_net.clean_data()
-    tw_net.refactor_es()
+    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net.clean_data()
+    b_net.refactor_es()
 
-    df_ES = tw_net.data
+    df_ES = b_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -240,11 +240,11 @@ def test_twfe_refactor_6():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    tw_net = tn(data=df, col_dict=col_dict)
-    tw_net.clean_data()
-    tw_net.refactor_es()
+    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net.clean_data()
+    b_net.refactor_es()
 
-    df_ES = tw_net.data
+    df_ES = b_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -289,11 +289,11 @@ def test_twfe_refactor_7():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    tw_net = tn(data=df, col_dict=col_dict)
-    tw_net.clean_data()
-    tw_net.refactor_es()
+    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net.clean_data()
+    b_net.refactor_es()
 
-    df_ES = tw_net.data
+    df_ES = b_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -338,11 +338,11 @@ def test_twfe_refactor_8():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    tw_net = tn(data=df, col_dict=col_dict)
-    tw_net.clean_data()
-    tw_net.refactor_es()
+    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net.clean_data()
+    b_net.refactor_es()
 
-    df_ES = tw_net.data
+    df_ES = b_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -387,11 +387,11 @@ def test_twfe_refactor_9():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    tw_net = tn(data=df, col_dict=col_dict)
-    tw_net.clean_data()
-    tw_net.refactor_es()
+    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net.clean_data()
+    b_net.refactor_es()
 
-    df_ES = tw_net.data
+    df_ES = b_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -434,11 +434,11 @@ def test_twfe_refactor_10():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    tw_net = tn(data=df, col_dict=col_dict)
-    tw_net.clean_data()
-    tw_net.refactor_es()
+    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net.clean_data()
+    b_net.refactor_es()
 
-    df_ES = tw_net.data
+    df_ES = b_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -475,11 +475,11 @@ def test_twfe_refactor_11():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    tw_net = tn(data=df, col_dict=col_dict)
-    tw_net.clean_data()
-    tw_net.refactor_es()
+    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net.clean_data()
+    b_net.refactor_es()
 
-    df_ES = tw_net.data
+    df_ES = b_net.data
 
     stayers = df_ES[df_ES['m'] == 0]
     movers = df_ES[df_ES['m'] == 1]
@@ -518,13 +518,13 @@ def test_fe_ho_1():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    tw_net = tn(data=df, col_dict=col_dict)
-    tw_net.clean_data()
-    tw_net.refactor_es()
+    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net.clean_data()
+    b_net.refactor_es()
 
-    fe_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_fe.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)', 'data': tw_net.data} # Do not define 'data' because will be updated later
+    fe_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_fe.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)', 'data': b_net.data}
 
-    fe_solver = fe.FEsolver(fe_params)
+    fe_solver = fe.FESolver(fe_params)
     fe_solver.fit_1()
     fe_solver.construct_Q()
     fe_solver.fit_2()
