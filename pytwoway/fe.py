@@ -53,7 +53,7 @@ class FESolver:
 
             Dictionary parameters:
 
-                data (Pandas DataFrame): labor data. Contains the following columns:
+                data (BipartiteData): BipartiteData object containing labor data. Data contains the following columns:
 
                     wid (worker id)
 

@@ -317,7 +317,7 @@ class TwoWayMonteCarlo:
         Run Monte Carlo simulations of TwoWay to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to twfe_monte_carlo.
 
         Arguments:
-            fe_params (dict): dictionary of parameters for bias-corrected AKM estimation
+            fe_params (dict): dictionary of parameters for FE estimation
 
                 Dictionary parameters:
 
@@ -425,7 +425,7 @@ class TwoWayMonteCarlo:
         Arguments:
             N (int): number of simulations
             ncore (int): how many cores to use
-            fe_params (dict): dictionary of parameters for bias-corrected AKM estimation
+            fe_params (dict): dictionary of parameters for FE estimation
 
                 Dictionary parameters:
 
