@@ -7,7 +7,7 @@ To install from pip, run::
 
 To run using command line interface::
 
-  pytw --my-config config.txt --akm --cre
+  pytw --my-config config.txt --fe --cre
 
 Example config.txt::
 
