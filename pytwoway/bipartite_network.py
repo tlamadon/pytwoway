@@ -25,9 +25,9 @@ class BipartiteData:
         self.logger = logging.getLogger('bipartite')
         self.logger.setLevel(logging.DEBUG)
         # Create logs folder
-        Path('twfe_logs').mkdir(parents=True, exist_ok=True)
+        Path('twoway_logs').mkdir(parents=True, exist_ok=True)
         # Create file handler which logs even debug messages
-        fh = logging.FileHandler('twfe_logs/bipartite_spam.log')
+        fh = logging.FileHandler('twoway_logs/bipartite_spam.log')
         fh.setLevel(logging.DEBUG)
         # Create console handler with a higher log level
         ch = logging.StreamHandler()
@@ -469,7 +469,7 @@ class BipartiteData:
             # Data is now formatted as event study
             self.formatting = 'es'
 
-    def refactor_psuedo_long(self):
+    def refactor_pseudo_long(self):
         '''
         Refactor event study data as pseudo-long form data (since converting into event study removes time, it cannot be imputed into the long-form data).
         '''

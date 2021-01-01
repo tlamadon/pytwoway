@@ -24,7 +24,7 @@ class TwoWay:
         # Create logs folder
         Path('twoway_logs').mkdir(parents=True, exist_ok=True)
         # Create file handler which logs even debug messages
-        fh = logging.FileHandler('twfe_logs/twoway_spam.log')
+        fh = logging.FileHandler('twoway_logs/twoway_spam.log')
         fh.setLevel(logging.DEBUG)
         # Create console handler with a higher log level
         ch = logging.StreamHandler()
@@ -74,7 +74,7 @@ class TwoWay:
         '''
         self.b_net.clean_data()
         self.b_net.refactor_es()
-        self.b_net.cluster(user_cluster)
+        self.b_net.cluster(user_cluster=user_cluster)
 
     def fit_fe(self, user_fe={}):
         '''

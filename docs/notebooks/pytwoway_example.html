@@ -82,7 +82,7 @@
               
             
             
-              <p class="caption"><span class="caption-text">User documention</span></p>
+              <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../doc-cli.html">From terminal</a></li>
@@ -93,10 +93,9 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Simple</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#First,-get-your-data">First, get your data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Second,-create-a-twfe_network-object-using-your-data">Second, create a twfe_network object using your data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Third,-clean-your-data">Third, clean your data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Fourth,-refactor-your-data-into-event-study-format">Fourth, refactor your data into event study format</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Now-we-can-run-AKM">Now we can run AKM</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Fifth,-cluster-your-data-for-CRE-estimates">Fifth, cluster your data for CRE estimates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Third,-prepare-your-data-for-running-the-FE-estimator">Third, prepare your data for running the FE estimator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Now-we-can-run-the-FE-estimator">Now we can run the FE estimator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Fourth,-prepare-your-data-for-running-the-CRE-estimator">Fourth, prepare your data for running the CRE estimator</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Now-we-can-run-CRE">Now we can run CRE</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Finally,-we-can-investigate-the-results">Finally, we can investigate the results</a></li>
 </ul>
@@ -436,10 +435,8 @@ div.rendered_html tbody tr:hover {
 <span></span><span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">sys</span>
 <span class="c1"># Navigate to parent folder for import</span>
 <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s1">&#39;../../..&#39;</span><span class="p">)</span>
-<span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">sim_twfe_network</span>
-<span class="n">sn</span> <span class="o">=</span> <span class="n">sim_twfe_network</span><span class="o">.</span><span class="n">sim_twfe_network</span>
-<span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">twfe_network</span>
-<span class="n">tn</span> <span class="o">=</span> <span class="n">twfe_network</span><span class="o">.</span><span class="n">twfe_network</span>
+<span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">sim_twfe_network</span> <span class="k">as</span> <span class="n">sn</span>
+<span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">twfe_network</span> <span class="k">as</span> <span class="n">tn</span>
 
 <span class="c1"># Weird code needed for output to show</span>
 <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s1">&#39;docs-src/source/notebooks&#39;</span><span class="p">)</span>
@@ -457,7 +454,8 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># For the example, we simulate data</span>
-<span class="n">sim_data</span> <span class="o">=</span> <span class="n">sn</span><span class="p">()</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()</span>
+<span class="n">stw_net</span> <span class="o">=</span> <span class="n">sn</span><span class="o">.</span><span class="n">SimTwoWay</span><span class="p">()</span>
+<span class="n">sim_data</span> <span class="o">=</span> <span class="n">stw_net</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()</span>
 <span class="n">display</span><span class="p">(</span><span class="n">sim_data</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -501,66 +499,66 @@ div.rendered_html tbody tr:hover {
       <th>0</th>
       <td>1</td>
       <td>1</td>
-      <td>4</td>
+      <td>7</td>
       <td>0.430727</td>
-      <td>-0.114185</td>
+      <td>0.604585</td>
       <td>1</td>
       <td>2</td>
-      <td>73</td>
+      <td>138</td>
       <td>False</td>
-      <td>0.771214</td>
+      <td>-0.316670</td>
     </tr>
     <tr>
       <th>1</th>
       <td>1</td>
       <td>2</td>
-      <td>4</td>
+      <td>7</td>
       <td>0.430727</td>
-      <td>-0.114185</td>
+      <td>0.604585</td>
       <td>1</td>
       <td>2</td>
-      <td>73</td>
+      <td>138</td>
       <td>False</td>
-      <td>0.035170</td>
+      <td>2.537300</td>
     </tr>
     <tr>
       <th>2</th>
       <td>1</td>
       <td>3</td>
-      <td>9</td>
+      <td>7</td>
       <td>0.430727</td>
-      <td>1.335178</td>
+      <td>0.604585</td>
       <td>2</td>
-      <td>3</td>
-      <td>173</td>
+      <td>1</td>
+      <td>146</td>
       <td>True</td>
-      <td>1.890424</td>
+      <td>2.583865</td>
     </tr>
     <tr>
       <th>3</th>
       <td>1</td>
       <td>4</td>
-      <td>9</td>
+      <td>7</td>
       <td>0.430727</td>
-      <td>1.335178</td>
-      <td>2</td>
+      <td>0.604585</td>
       <td>3</td>
-      <td>173</td>
-      <td>False</td>
-      <td>2.293282</td>
+      <td>1</td>
+      <td>133</td>
+      <td>True</td>
+      <td>2.452087</td>
     </tr>
     <tr>
       <th>4</th>
       <td>1</td>
       <td>5</td>
-      <td>9</td>
+      <td>5</td>
       <td>0.430727</td>
-      <td>1.335178</td>
-      <td>2</td>
-      <td>3</td>
-      <td>173</td>
-      <td>False</td>
-      <td>1.031803</td>
+      <td>0.114185</td>
+      <td>4</td>
+      <td>1</td>
+      <td>91</td>
+      <td>True</td>
+      <td>1.314499</td>
     </tr>
     <tr>
       <th>...</th>
@@ -579,66 +577,66 @@ div.rendered_html tbody tr:hover {
       <th>49995</th>
       <td>10000</td>
       <td>1</td>
-      <td>7</td>
+      <td>8</td>
       <td>0.967422</td>
-      <td>0.604585</td>
+      <td>0.908458</td>
       <td>1</td>
-      <td>2</td>
-      <td>128</td>
+      <td>1</td>
+      <td>165</td>
       <td>False</td>
-      <td>2.375694</td>
+      <td>1.599970</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>10000</td>
       <td>2</td>
-      <td>7</td>
+      <td>8</td>
       <td>0.967422</td>
-      <td>0.604585</td>
-      <td>1</td>
+      <td>0.908458</td>
       <td>2</td>
-      <td>128</td>
-      <td>False</td>
-      <td>1.844047</td>
+      <td>2</td>
+      <td>155</td>
+      <td>True</td>
+      <td>1.630563</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>10000</td>
       <td>3</td>
-      <td>5</td>
+      <td>8</td>
       <td>0.967422</td>
-      <td>0.114185</td>
+      <td>0.908458</td>
       <td>2</td>
       <td>2</td>
-      <td>96</td>
-      <td>True</td>
-      <td>1.167899</td>
+      <td>155</td>
+      <td>False</td>
+      <td>0.334739</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>10000</td>
       <td>4</td>
-      <td>5</td>
+      <td>9</td>
       <td>0.967422</td>
-      <td>0.114185</td>
-      <td>2</td>
-      <td>2</td>
-      <td>96</td>
-      <td>False</td>
-      <td>0.088703</td>
+      <td>1.335178</td>
+      <td>3</td>
+      <td>1</td>
+      <td>179</td>
+      <td>True</td>
+      <td>2.419748</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>10000</td>
       <td>5</td>
-      <td>6</td>
+      <td>8</td>
       <td>0.967422</td>
-      <td>0.348756</td>
-      <td>3</td>
+      <td>0.908458</td>
+      <td>4</td>
       <td>1</td>
-      <td>117</td>
+      <td>169</td>
       <td>True</td>
-      <td>2.512437</td>
+      <td>1.993326</td>
     </tr>
   </tbody>
 </table>
@@ -655,45 +653,33 @@ div.rendered_html tbody tr:hover {
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># We need to specify a column dictionary to make sure columns are named correctly. You can also manually update column names yourself</span>
 <span class="n">col_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;fid&#39;</span><span class="p">:</span> <span class="s1">&#39;fid&#39;</span><span class="p">,</span> <span class="s1">&#39;wid&#39;</span><span class="p">:</span> <span class="s1">&#39;wid&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="s1">&#39;year&#39;</span><span class="p">,</span> <span class="s1">&#39;comp&#39;</span><span class="p">:</span> <span class="s1">&#39;comp&#39;</span><span class="p">}</span>
-<span class="n">tw_net</span> <span class="o">=</span> <span class="n">tn</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="n">col_dict</span><span class="p">)</span> <span class="c1"># tw_net for two-way network</span>
+<span class="n">tw_net</span> <span class="o">=</span> <span class="n">tn</span><span class="o">.</span><span class="n">TwoWay</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="n">col_dict</span><span class="p">)</span> <span class="c1"># tw_net for two-way network</span>
 </pre></div>
 </div>
 </div>
 </div>
-<div class="section" id="Third,-clean-your-data">
-<h2>Third, clean your data<a class="headerlink" href="#Third,-clean-your-data" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="Third,-prepare-your-data-for-running-the-FE-estimator">
+<h2>Third, prepare your data for running the FE estimator<a class="headerlink" href="#Third,-prepare-your-data-for-running-the-FE-estimator" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">tw_net</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
+<span></span><span class="n">tw_net</span><span class="o">.</span><span class="n">prep_fe</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
 </div>
-<div class="section" id="Fourth,-refactor-your-data-into-event-study-format">
-<h2>Fourth, refactor your data into event study format<a class="headerlink" href="#Fourth,-refactor-your-data-into-event-study-format" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput nblast docutils container">
+<div class="section" id="Now-we-can-run-the-FE-estimator">
+<h2>Now we can run the FE estimator<a class="headerlink" href="#Now-we-can-run-the-FE-estimator" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">tw_net</span><span class="o">.</span><span class="n">refactor_es</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-</div>
-<div class="section" id="Now-we-can-run-AKM">
-<h2>Now we can run AKM<a class="headerlink" href="#Now-we-can-run-AKM" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># Optional parameters</span>
-<span class="n">akm_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ndraw_pii&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;check&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;hetero&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_akm.json&#39;</span><span class="p">,</span> <span class="s1">&#39;con&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;logfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;levfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
-<span class="n">akm_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">run_akm_corrected</span><span class="p">(</span><span class="n">user_akm</span><span class="o">=</span><span class="n">akm_params</span><span class="p">)</span>
+<span class="n">fe_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ndraw_pii&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;check&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;hetero&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_akm.json&#39;</span><span class="p">,</span> <span class="s1">&#39;con&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;logfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;levfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+<span class="n">fe_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">fit_fe</span><span class="p">(</span><span class="n">user_fe</span><span class="o">=</span><span class="n">fe_params</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -702,21 +688,21 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|██████████| 5/5 [00:00&lt;00:00, 157.13it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 31.16it/s]
 </pre></div></div>
 </div>
 </div>
-<div class="section" id="Fifth,-cluster-your-data-for-CRE-estimates">
-<h2>Fifth, cluster your data for CRE estimates<a class="headerlink" href="#Fifth,-cluster-your-data-for-CRE-estimates" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="Fourth,-prepare-your-data-for-running-the-CRE-estimator">
+<h2>Fourth, prepare your data for running the CRE estimator<a class="headerlink" href="#Fourth,-prepare-your-data-for-running-the-CRE-estimator" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># Optional parameters</span>
 <span class="n">KMeans_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;n_clusters&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;init&#39;</span><span class="p">:</span> <span class="s1">&#39;k-means++&#39;</span><span class="p">,</span> <span class="s1">&#39;n_init&#39;</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span> <span class="s1">&#39;max_iter&#39;</span><span class="p">:</span> <span class="mi">300</span><span class="p">,</span> <span class="s1">&#39;tol&#39;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span> <span class="s1">&#39;precompute_distances&#39;</span><span class="p">:</span> <span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="s1">&#39;verbose&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;random_state&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;copy_x&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;n_jobs&#39;</span><span class="p">:</span> <span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="s1">&#39;algorithm&#39;</span><span class="p">:</span> <span class="s1">&#39;auto&#39;</span><span class="p">}</span> <span class="c1"># These parameters are specifically for the KMeans algorithm</span>
 <span class="n">cluster_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;cdf_resolution&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;grouping&#39;</span><span class="p">:</span> <span class="s1">&#39;quantile_all&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;user_KMeans&#39;</span><span class="p">:</span> <span class="n">KMeans_params</span><span class="p">}</span>
-<span class="n">tw_net</span><span class="o">.</span><span class="n">cluster</span><span class="p">()</span>
+<span class="n">tw_net</span><span class="o">.</span><span class="n">prep_cre</span><span class="p">(</span><span class="n">user_cluster</span><span class="o">=</span><span class="n">cluster_params</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -724,13 +710,13 @@ div.rendered_html tbody tr:hover {
 <div class="section" id="Now-we-can-run-CRE">
 <h2>Now we can run CRE<a class="headerlink" href="#Now-we-can-run-CRE" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># Optional parameters</span>
 <span class="n">cre_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;ndp&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_cre.json&#39;</span><span class="p">,</span> <span class="s1">&#39;posterior&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;wobtw&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
-<span class="n">cre_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">run_cre</span><span class="p">(</span><span class="n">cre_params</span><span class="p">)</span>
+<span class="n">cre_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">fit_cre</span><span class="p">(</span><span class="n">cre_params</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -738,11 +724,11 @@ div.rendered_html tbody tr:hover {
 <div class="section" id="Finally,-we-can-investigate-the-results">
 <h2>Finally, we can investigate the results<a class="headerlink" href="#Finally,-we-can-investigate-the-results" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">display</span><span class="p">(</span><span class="n">akm_res</span><span class="p">)</span>
+<span></span><span class="n">display</span><span class="p">(</span><span class="n">fe_res</span><span class="p">)</span>
 <span class="n">display</span><span class="p">(</span><span class="n">cre_res</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -755,26 +741,26 @@ div.rendered_html tbody tr:hover {
 {&#39;cores&#39;: &#39;1&#39;,
  &#39;ndp&#39;: &#39;50&#39;,
  &#39;ndt&#39;: &#39;5&#39;,
- &#39;nm&#39;: &#39;19891&#39;,
- &#39;ns&#39;: &#39;628&#39;,
- &#39;n_firms&#39;: &#39;195&#39;,
- &#39;n_workers&#39;: &#39;10000&#39;,
- &#39;n_movers&#39;: &#39;9372&#39;,
- &#39;mover_quantiles&#39;: &#39;[142.0, 183.2860962566845, 192.0, 196.0, 202.0, 206.0, 209.0, 216.0, 220.0, 229.0, 248.0]&#39;,
- &#39;size_quantiles&#39;: &#39;[146.0, 187.0, 194.0, 200.02992518703243, 204.96332518337408, 209.0, 212.0, 218.0, 224.0, 231.56803455723542, 248.0]&#39;,
- &#39;between_firm_var&#39;: &#39;0.9883837155569579&#39;,
- &#39;var_y&#39;: &#39;1.9784975745432956&#39;,
- &#39;solver_time&#39;: &#39;0.00286392599999985&#39;,
- &#39;tot_var&#39;: &#39;1.99383740928026&#39;,
- &#39;eps_var_ho&#39;: &#39;0.7993938788120438&#39;,
- &#39;eps_var_fe&#39;: &#39;0.3896476424390207&#39;,
- &#39;tr_var_ho&#39;: &#39;0.010469772537502465&#39;,
- &#39;tr_cov_ho&#39;: &#39;-0.005917196869515334&#39;,
- &#39;var_fe&#39;: &#39;0.5709000088563824&#39;,
- &#39;cov_fe&#39;: &#39;0.17504710641965776&#39;,
- &#39;var_ho&#39;: &#39;0.5625305367773484&#39;,
- &#39;cov_ho&#39;: &#39;0.1797772773768741&#39;,
- &#39;total_time&#39;: &#39;0.12003612518310547&#39;}
+ &#39;nm&#39;: &#39;19797.0&#39;,
+ &#39;ns&#39;: &#39;657&#39;,
+ &#39;n_firms&#39;: &#39;196&#39;,
+ &#39;n_workers&#39;: &#39;20454&#39;,
+ &#39;n_movers&#39;: &#39;19797&#39;,
+ &#39;mover_quantiles&#39;: &#39;[161.0, 179.0, 188.0, 194.0, 200.0, 205.0, 210.0, 212.0, 217.0, 225.86945054945056, 246.0]&#39;,
+ &#39;size_quantiles&#39;: &#39;[163.0, 183.39019073569483, 192.78025974025974, 197.0, 203.52039312039312, 208.1031175059952, 213.0, 216.0, 220.0, 229.0, 248.0]&#39;,
+ &#39;between_firm_var&#39;: &#39;0.9791948500221341&#39;,
+ &#39;var_y&#39;: &#39;1.9534475375358358&#39;,
+ &#39;solver_time&#39;: &#39;0.028075437000000036&#39;,
+ &#39;tot_var&#39;: &#39;1.9584771001512542&#39;,
+ &#39;eps_var_ho&#39;: &#39;0.7915537561311395&#39;,
+ &#39;eps_var_fe&#39;: &#39;0.38548201852581543&#39;,
+ &#39;tr_var_ho&#39;: &#39;0.015167787940336514&#39;,
+ &#39;tr_cov_ho&#39;: &#39;-0.008444626700231293&#39;,
+ &#39;var_fe&#39;: &#39;0.5921559314545817&#39;,
+ &#39;cov_fe&#39;: &#39;0.16352784960412886&#39;,
+ &#39;var_ho&#39;: &#39;0.5801498119382077&#39;,
+ &#39;cov_ho&#39;: &#39;0.17021222558782226&#39;,
+ &#39;total_time&#39;: &#39;0.2863938808441162&#39;}
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -783,62 +769,62 @@ div.rendered_html tbody tr:hover {
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 {&#39;ndt&#39;: &#39;5&#39;,
- &#39;nm&#39;: &#39;19891&#39;,
- &#39;ns&#39;: &#39;628&#39;,
- &#39;n_firms&#39;: &#39;195&#39;,
+ &#39;nm&#39;: &#39;19797&#39;,
+ &#39;ns&#39;: &#39;657&#39;,
+ &#39;n_firms&#39;: &#39;196&#39;,
  &#39;n_workers&#39;: &#39;10000&#39;,
- &#39;var_y&#39;: &#39;1.9784975745432956&#39;,
- &#39;y1s_y1s&#39;: &#39;0.035297464535563886&#39;,
- &#39;y1s_y1s_count&#39;: &#39;610&#39;,
- &#39;y1s_var&#39;: &#39;0.3868875328015895&#39;,
- &#39;y1s_var_count&#39;: &#39;628&#39;,
- &#39;y1m_var&#39;: &#39;0.9974726215360628&#39;,
- &#39;y1m_var_count&#39;: &#39;19891&#39;,
- &#39;y2m_var&#39;: &#39;1.000243303764853&#39;,
- &#39;y2m_var_count&#39;: &#39;19891&#39;,
- &#39;y1s_y1m1&#39;: &#39;-0.00017031517812941057&#39;,
- &#39;y1s_y1m1_count&#39;: &#39;628&#39;,
- &#39;y1s_y2m1&#39;: &#39;-0.0005330669520971693&#39;,
- &#39;y1s_y2m1_count&#39;: &#39;628&#39;,
- &#39;y1m1_y1m1&#39;: &#39;-0.0015467229192112247&#39;,
- &#39;y1m1_y1m1_count&#39;: &#39;19891&#39;,
- &#39;y2m1_y1m1&#39;: &#39;-0.0009852650046617345&#39;,
- &#39;y2m1_y1m1_count&#39;: &#39;19891&#39;,
- &#39;y2m1_y2m1&#39;: &#39;-0.00028585089793406107&#39;,
- &#39;y2m1_y2m1_count&#39;: &#39;19891&#39;,
- &#39;y1s_y1m2&#39;: &#39;-0.001155578904117844&#39;,
- &#39;y1s_y1m2_count&#39;: &#39;628&#39;,
- &#39;y1s_y2m2&#39;: &#39;-0.00042701030842446773&#39;,
- &#39;y1s_y2m2_count&#39;: &#39;628&#39;,
- &#39;y1m2_y1m2&#39;: &#39;0.00146974744668433&#39;,
- &#39;y1m2_y1m2_count&#39;: &#39;19891&#39;,
- &#39;y2m2_y1m2&#39;: &#39;0.0004047538102877139&#39;,
- &#39;y2m2_y1m2_count&#39;: &#39;19891&#39;,
- &#39;y2m2_y2m2&#39;: &#39;-0.0008278402395265007&#39;,
- &#39;y2m2_y2m2_count&#39;: &#39;19891&#39;,
- &#39;dym_dym&#39;: &#39;1.6115147381235342&#39;,
- &#39;dym_dym_count&#39;: &#39;16657&#39;,
- &#39;y1m_y2m&#39;: &#39;0.20036338478603144&#39;,
- &#39;y1m_y2m_count&#39;: &#39;16657&#39;,
- &#39;cov_Am1Am1&#39;: &#39;-0.00028585089793406107&#39;,
- &#39;cov_Am1Psi1&#39;: &#39;-0.0006994141067276733&#39;,
- &#39;var_psi_m1&#39;: &#39;0.00013795619217818315&#39;,
- &#39;cov_Am2Am2&#39;: &#39;0.00146974744668433&#39;,
- &#39;cov_Am2Psi2&#39;: &#39;-0.001064993636396616&#39;,
- &#39;var_psi_m2&#39;: &#39;-0.00016760041341759872&#39;,
- &#39;cov_AsAm1&#39;: &#39;0.000166347154630504&#39;,
- &#39;cov_AsAm2&#39;: &#39;-9.058526772122801e-05&#39;,
- &#39;psi_plus_cov1&#39;: &#39;0.0003627517739677588&#39;,
- &#39;psi_plus_cov2&#39;: &#39;0.0007285685956933762&#39;,
- &#39;var_psi&#39;: &#39;-1.4822110619707785e-05&#39;,
- &#39;cov_AsPsi1&#39;: &#39;0.001106142480280843&#39;,
- &#39;cov_AsAs&#39;: &#39;0.0331000016856219&#39;,
- &#39;var_eps&#39;: &#39;1.6115443823447737&#39;,
- &#39;var_bw&#39;: &#39;0.5609297982957496&#39;,
- &#39;cov_bw&#39;: &#39;0.1793111654409875&#39;,
- &#39;var_wt&#39;: &#39;-1.4822110619707785e-05&#39;,
- &#39;cov_wt&#39;: &#39;-0.0006441536390323009&#39;,
- &#39;tot_var&#39;: &#39;0.5609149761851299&#39;}
+ &#39;var_y&#39;: &#39;1.9534475375358358&#39;,
+ &#39;y1s_y1s&#39;: &#39;-0.01189963890613305&#39;,
+ &#39;y1s_y1s_count&#39;: &#39;639&#39;,
+ &#39;y1s_var&#39;: &#39;0.4300736238962055&#39;,
+ &#39;y1s_var_count&#39;: &#39;657&#39;,
+ &#39;y1m_var&#39;: &#39;0.9740000192841033&#39;,
+ &#39;y1m_var_count&#39;: &#39;19797&#39;,
+ &#39;y2m_var&#39;: &#39;0.9773478869611208&#39;,
+ &#39;y2m_var_count&#39;: &#39;19797&#39;,
+ &#39;y1s_y1m1&#39;: &#39;-0.0038492794840281654&#39;,
+ &#39;y1s_y1m1_count&#39;: &#39;657&#39;,
+ &#39;y1s_y2m1&#39;: &#39;-0.0019106341485113634&#39;,
+ &#39;y1s_y2m1_count&#39;: &#39;657&#39;,
+ &#39;y1m1_y1m1&#39;: &#39;-0.0010446330663667635&#39;,
+ &#39;y1m1_y1m1_count&#39;: &#39;19797&#39;,
+ &#39;y2m1_y1m1&#39;: &#39;-0.00015778611082538767&#39;,
+ &#39;y2m1_y1m1_count&#39;: &#39;19797&#39;,
+ &#39;y2m1_y2m1&#39;: &#39;0.0010682926690437032&#39;,
+ &#39;y2m1_y2m1_count&#39;: &#39;19797&#39;,
+ &#39;y1s_y1m2&#39;: &#39;-5.1502378280613325e-05&#39;,
+ &#39;y1s_y1m2_count&#39;: &#39;657&#39;,
+ &#39;y1s_y2m2&#39;: &#39;-0.0038982376478934985&#39;,
+ &#39;y1s_y2m2_count&#39;: &#39;657&#39;,
+ &#39;y1m2_y1m2&#39;: &#39;0.0005614296192659173&#39;,
+ &#39;y1m2_y1m2_count&#39;: &#39;19797&#39;,
+ &#39;y2m2_y1m2&#39;: &#39;-0.0003095746753201728&#39;,
+ &#39;y2m2_y1m2_count&#39;: &#39;19797&#39;,
+ &#39;y2m2_y2m2&#39;: &#39;-0.00017511041449799392&#39;,
+ &#39;y2m2_y2m2_count&#39;: &#39;19797&#39;,
+ &#39;dym_dym&#39;: &#39;1.5869610501253242&#39;,
+ &#39;dym_dym_count&#39;: &#39;16423&#39;,
+ &#39;y1m_y2m&#39;: &#39;0.18590360817599513&#39;,
+ &#39;y1m_y2m_count&#39;: &#39;16423&#39;,
+ &#39;cov_Am1Am1&#39;: &#39;0.0010682926690437032&#39;,
+ &#39;cov_Am1Psi1&#39;: &#39;-0.001226078779869091&#39;,
+ &#39;var_psi_m1&#39;: &#39;0.0003392318243277152&#39;,
+ &#39;cov_Am2Am2&#39;: &#39;0.0005614296192659173&#39;,
+ &#39;cov_Am2Psi2&#39;: &#39;-0.0008710042945860901&#39;,
+ &#39;var_psi_m2&#39;: &#39;0.001005468555408269&#39;,
+ &#39;cov_AsAm1&#39;: &#39;-0.0006845553686422724&#39;,
+ &#39;cov_AsAm2&#39;: &#39;0.0008195019163054767&#39;,
+ &#39;psi_plus_cov1&#39;: &#39;-0.001938645335516802&#39;,
+ &#39;psi_plus_cov2&#39;: &#39;-0.0038467352696128854&#39;,
+ &#39;var_psi&#39;: &#39;0.0006723501898679921&#39;,
+ &#39;cov_AsPsi1&#39;: &#39;-0.00645773079499768&#39;,
+ &#39;cov_AsAs&#39;: &#39;0.0003434724939943186&#39;,
+ &#39;var_eps&#39;: &#39;1.5856163497455882&#39;,
+ &#39;var_bw&#39;: &#39;0.5823280930679625&#39;,
+ &#39;cov_bw&#39;: &#39;0.1686971402404331&#39;,
+ &#39;var_wt&#39;: &#39;0.0006723501898679921&#39;,
+ &#39;cov_wt&#39;: &#39;-0.0013941239237988594&#39;,
+ &#39;tot_var&#39;: &#39;0.5830004432578305&#39;}
 </pre></div></div>
 </div>
 </div>
@@ -867,7 +853,7 @@ div.rendered_html tbody tr:hover {
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Dec 24, 2020.
+        Last updated on Dec 31, 2020.
       </span>
 
     </p>

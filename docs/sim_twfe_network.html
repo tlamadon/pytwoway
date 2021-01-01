@@ -80,7 +80,7 @@
               
             
             
-              <p class="caption"><span class="caption-text">User documention</span></p>
+              <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
 <li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From terminal</a></li>
@@ -187,10 +187,10 @@
 <span id="sim-twfe-network-module"></span><h1>sim_twfe_network module<a class="headerlink" href="#module-pytwoway.sim_twfe_network" title="Permalink to this headline">¶</a></h1>
 <p>Class for a simulated two-way fixed effect network</p>
 <dl class="py class">
-<dt id="pytwoway.sim_twfe_network.sim_twfe_network">
-<em class="property">class </em><code class="sig-prename descclassname">pytwoway.sim_twfe_network.</code><code class="sig-name descname">sim_twfe_network</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sim_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.sim_twfe_network" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.sim_twfe_network.SimTwoWay">
+<em class="property">class </em><code class="sig-prename descclassname">pytwoway.sim_twfe_network.</code><code class="sig-name descname">SimTwoWay</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sim_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.SimTwoWay" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Class of sim_twfe_network, where sim_twfe_network simulates a network of firms and workers.</p>
+<p>Class of SimTwoWay, where SimTwoWay simulates a network of firms and workers.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>sim_params</strong> (<em>dict</em>) – <p>parameters for simulated data</p>
@@ -213,14 +213,8 @@
 </dd>
 </dl>
 <dl class="py method">
-<dt id="pytwoway.sim_twfe_network.sim_twfe_network.plot_monte_carlo">
-<code class="sig-name descname">plot_monte_carlo</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.sim_twfe_network.plot_monte_carlo" title="Permalink to this definition">¶</a></dt>
-<dd><p>Plot results from Monte Carlo simulations.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.sim_twfe_network.sim_twfe_network.sim_network">
-<code class="sig-name descname">sim_network</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.sim_twfe_network.sim_network" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.sim_twfe_network.SimTwoWay.sim_network">
+<code class="sig-name descname">sim_network</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.SimTwoWay.sim_network" title="Permalink to this definition">¶</a></dt>
 <dd><p>Simulate panel data corresponding to the calibrated model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -233,8 +227,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.sim_twfe_network.sim_twfe_network.sim_network_draw_fids">
-<code class="sig-name descname">sim_network_draw_fids</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">freq</span></em>, <em class="sig-param"><span class="n">num_time</span></em>, <em class="sig-param"><span class="n">firm_size</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.sim_twfe_network.sim_network_draw_fids" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.sim_twfe_network.SimTwoWay.sim_network_draw_fids">
+<code class="sig-name descname">sim_network_draw_fids</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">freq</span></em>, <em class="sig-param"><span class="n">num_time</span></em>, <em class="sig-param"><span class="n">firm_size</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.SimTwoWay.sim_network_draw_fids" title="Permalink to this definition">¶</a></dt>
 <dd><p>Draw firm ids for individual, given data that is grouped by worker id, spell id, and firm type.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -254,8 +248,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.sim_twfe_network.sim_twfe_network.sim_network_gen_fe">
-<code class="sig-name descname">sim_network_gen_fe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sim_params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.sim_twfe_network.sim_network_gen_fe" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.sim_twfe_network.SimTwoWay.sim_network_gen_fe">
+<code class="sig-name descname">sim_network_gen_fe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sim_params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.SimTwoWay.sim_network_gen_fe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generate fixed effects values for simulated panel data corresponding to the calibrated model.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -290,17 +284,71 @@ H (NumPy Array): stationary distribution</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.sim_twfe_network.sim_twfe_network.twfe_monte_carlo">
-<code class="sig-name descname">twfe_monte_carlo</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">N</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">ncore</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">akm_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cre_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cluster_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.sim_twfe_network.twfe_monte_carlo" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.sim_twfe_network.SimTwoWay.update_dict">
+<code class="sig-name descname">update_dict</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">default_params</span></em>, <em class="sig-param"><span class="n">user_params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.SimTwoWay.update_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace entries in default_params with values in user_params. This function allows user_params to include only a subset of the required parameters in the dictionary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>default_params</strong> (<em>dict</em>) – default parameter values</p></li>
+<li><p><strong>user_params</strong> (<em>dict</em>) – user selected parameter values</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>default_params updated with parameter values in user_params</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>params (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="pytwoway.sim_twfe_network.TwoWayMonteCarlo">
+<em class="property">class </em><code class="sig-prename descclassname">pytwoway.sim_twfe_network.</code><code class="sig-name descname">TwoWayMonteCarlo</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sim_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.TwoWayMonteCarlo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class of TwoWayMonteCarlo, where TwoWayMonteCarlo runs a Monte Carlo estimate by simulating networks of firms and workers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>sim_params</strong> (<em>dict</em>) – <p>parameters for simulated data</p>
+<p>Dictionary parameters:</p>
+<blockquote>
+<div><p>num_ind (int): number of workers</p>
+<p>num_time (int): time length of panel</p>
+<p>firm_size (int): max number of individuals per firm</p>
+<p>nk (int): number of firm types</p>
+<p>nl (int): number of worker types</p>
+<p>alpha_sig (float): standard error of individual fixed effect (volatility of worker effects)</p>
+<p>psi_sig (float): standard error of firm fixed effect (volatility of firm effects)</p>
+<p>w_sig (float): standard error of residual in AKM wage equation (volatility of wage shocks)</p>
+<p>csort (float): sorting effect</p>
+<p>cnetw (float): network effect</p>
+<p>csig (float): standard error of sorting/network effects</p>
+<p>p_move (float): probability a worker moves firms in any period</p>
+</div></blockquote>
+</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="pytwoway.sim_twfe_network.TwoWayMonteCarlo.plot_monte_carlo">
+<code class="sig-name descname">plot_monte_carlo</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.TwoWayMonteCarlo.plot_monte_carlo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot results from Monte Carlo simulations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.sim_twfe_network.TwoWayMonteCarlo.twfe_monte_carlo">
+<code class="sig-name descname">twfe_monte_carlo</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">N</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">ncore</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">fe_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cre_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cluster_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.TwoWayMonteCarlo.twfe_monte_carlo" title="Permalink to this definition">¶</a></dt>
 <dd><dl>
-<dt>Purpose:</dt><dd><p>Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:</p>
+<dt>Purpose:</dt><dd><p>Run Monte Carlo simulations of TwoWay to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:</p>
 <blockquote>
 <div><p>true_psi_var (NumPy Array): true simulated sample variance of psi</p>
 <p>true_psi_alpha_cov (NumPy Array): true simulated sample covariance of psi and alpha</p>
-<p>akm_psi_var (NumPy Array): AKM estimate of variance of psi</p>
-<p>akm_psi_alpha_cov (NumPy Array): AKM estimate of covariance of psi and alpha</p>
-<p>akm_corr_psi_var (NumPy Array): bias-corrected AKM estimate of variance of psi</p>
-<p>akm_corr_psi_alpha_cov (NumPy Array): bias-corrected AKM estimate of covariance of psi and alpha</p>
+<p>fe_psi_var (NumPy Array): AKM estimate of variance of psi</p>
+<p>fe_psi_alpha_cov (NumPy Array): AKM estimate of covariance of psi and alpha</p>
+<p>fe_corr_psi_var (NumPy Array): bias-corrected AKM estimate of variance of psi</p>
+<p>fe_corr_psi_alpha_cov (NumPy Array): bias-corrected AKM estimate of covariance of psi and alpha</p>
 <p>cre_psi_var (NumPy Array): CRE estimate of variance of psi</p>
 <p>cre_psi_alpha_cov (NumPy Array): CRE estimate of covariance of psi and alpha</p>
 </div></blockquote>
@@ -311,7 +359,7 @@ H (NumPy Array): stationary distribution</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>N</strong> (<em>int</em>) – number of simulations</p></li>
 <li><p><strong>ncore</strong> (<em>int</em>) – how many cores to use</p></li>
-<li><p><strong>akm_params</strong> (<em>dict</em>) – <p>dictionary of parameters for bias-corrected AKM estimation</p>
+<li><p><strong>fe_params</strong> (<em>dict</em>) – <p>dictionary of parameters for bias-corrected AKM estimation</p>
 <p>Dictionary parameters:</p>
 <blockquote>
 <div><p>ncore (int): number of cores to use</p>
@@ -353,13 +401,13 @@ H (NumPy Array): stationary distribution</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.sim_twfe_network.sim_twfe_network.twfe_monte_carlo_interior">
-<code class="sig-name descname">twfe_monte_carlo_interior</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">akm_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cre_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cluster_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.sim_twfe_network.twfe_monte_carlo_interior" title="Permalink to this definition">¶</a></dt>
-<dd><p>Run Monte Carlo simulations of twfe_network to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to twfe_monte_carlo.</p>
+<dt id="pytwoway.sim_twfe_network.TwoWayMonteCarlo.twfe_monte_carlo_interior">
+<code class="sig-name descname">twfe_monte_carlo_interior</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fe_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cre_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cluster_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.TwoWayMonteCarlo.twfe_monte_carlo_interior" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run Monte Carlo simulations of TwoWay to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to twfe_monte_carlo.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>akm_params</strong> (<em>dict</em>) – <p>dictionary of parameters for bias-corrected AKM estimation</p>
+<li><p><strong>fe_params</strong> (<em>dict</em>) – <p>dictionary of parameters for bias-corrected AKM estimation</p>
 <p>Dictionary parameters:</p>
 <blockquote>
 <div><p>ncore (int): number of cores to use</p>
@@ -400,35 +448,15 @@ grouping (string): how to group the cdfs (‘quantile_all’ to get quantiles fr
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>true simulated sample variance of psi
 true_psi_alpha_cov (float): true simulated sample covariance of psi and alpha
-akm_psi_var (float): AKM estimate of variance of psi
-akm_psi_alpha_cov (float): AKM estimate of covariance of psi and alpha
-akm_corr_psi_var (float): bias-corrected AKM estimate of variance of psi
-akm_corr_psi_alpha_cov (float): bias-corrected AKM estimate of covariance of psi and alpha
+fe_psi_var (float): AKM estimate of variance of psi
+fe_psi_alpha_cov (float): AKM estimate of covariance of psi and alpha
+fe_corr_psi_var (float): bias-corrected AKM estimate of variance of psi
+fe_corr_psi_alpha_cov (float): bias-corrected AKM estimate of covariance of psi and alpha
 cre_psi_var (float): CRE estimate of variance of psi
 cre_psi_alpha_cov (float): CRE estimate of covariance of psi and alpha</p>
 </dd>
 <dt class="field-odd">Return type</dt>
 <dd class="field-odd"><p>true_psi_var (float)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.sim_twfe_network.sim_twfe_network.update_dict">
-<code class="sig-name descname">update_dict</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">default_params</span></em>, <em class="sig-param"><span class="n">user_params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.sim_twfe_network.update_dict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Replace entries in default_params with values in user_params. This function allows user_params to include only a subset of the required parameters in the dictionary.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>default_params</strong> (<em>dict</em>) – default parameter values</p></li>
-<li><p><strong>user_params</strong> (<em>dict</em>) – user selected parameter values</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>default_params updated with parameter values in user_params</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>params (dict)</p>
 </dd>
 </dl>
 </dd></dl>
@@ -451,7 +479,7 @@ cre_psi_alpha_cov (float): CRE estimate of covariance of psi and alpha</p>
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Dec 30, 2020.
+        Last updated on Dec 31, 2020.
       </span>
 
     </p>

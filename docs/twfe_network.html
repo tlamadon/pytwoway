@@ -80,7 +80,7 @@
               
             
             
-              <p class="caption"><span class="caption-text">User documention</span></p>
+              <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
 <li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From terminal</a></li>
@@ -187,10 +187,10 @@
 <span id="twfe-network-module"></span><h1>twfe_network module<a class="headerlink" href="#module-pytwoway.twfe_network" title="Permalink to this headline">¶</a></h1>
 <p>Class for a two-way fixed effect network</p>
 <dl class="py class">
-<dt id="pytwoway.twfe_network.twfe_network">
-<em class="property">class </em><code class="sig-prename descclassname">pytwoway.twfe_network.</code><code class="sig-name descname">twfe_network</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">formatting</span><span class="o">=</span><span class="default_value">'long'</span></em>, <em class="sig-param"><span class="n">col_dict</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.twfe_network" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.twfe_network.TwoWay">
+<em class="property">class </em><code class="sig-prename descclassname">pytwoway.twfe_network.</code><code class="sig-name descname">TwoWay</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">formatting</span><span class="o">=</span><span class="default_value">'long'</span></em>, <em class="sig-param"><span class="n">col_dict</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Class of twfe_network, where twfe_network gives a network of firms and workers.</p>
+<p>Class of TwoWay, where TwoWay gives a network of firms and workers.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
@@ -201,148 +201,9 @@
 </dd>
 </dl>
 <dl class="py method">
-<dt id="pytwoway.twfe_network.twfe_network.approx_cdfs">
-<code class="sig-name descname">approx_cdfs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">cdf_resolution</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">grouping</span><span class="o">=</span><span class="default_value">'quantile_all'</span></em>, <em class="sig-param"><span class="n">year</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.twfe_network.approx_cdfs" title="Permalink to this definition">¶</a></dt>
-<dd><p>Generate cdfs of compensation for firms.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>cdf_resolution</strong> (<em>int</em>) – how many values to use to approximate the cdf</p></li>
-<li><p><strong>grouping</strong> (<em>str</em>) – how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)</p></li>
-<li><p><strong>year</strong> (<em>int</em><em> or </em><em>None</em>) – if None, uses entire dataset; if int, gives year of data to consider</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>NumPy array of firm cdfs</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>cdf_df (NumPy Array)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.twfe_network.twfe_network.clean_data">
-<code class="sig-name descname">clean_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.twfe_network.clean_data" title="Permalink to this definition">¶</a></dt>
-<dd><p>Clean data to make sure there are no NaN observations, firms are connected by movers and firm ids are contiguous.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.twfe_network.twfe_network.cluster">
-<code class="sig-name descname">cluster</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cluster</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.twfe_network.cluster" title="Permalink to this definition">¶</a></dt>
-<dd><p>Cluster data and assign a new column giving the cluster for each firm.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>user_cluster</strong> (<em>dict</em>) – <p>dictionary of parameters for clustering</p>
-<p>Dictionary parameters:</p>
-<blockquote>
-<div><p>cdf_resolution (int): how many values to use to approximate the cdf</p>
-<p>grouping (str): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)</p>
-<p>year (int or None): if None, uses entire dataset; if int, gives year of data to consider</p>
-<p>user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>), and use default parameters defined in class attribute default_KMeans for any parameters not specified</p>
-</div></blockquote>
-</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.twfe_network.twfe_network.conset">
-<code class="sig-name descname">conset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.twfe_network.conset" title="Permalink to this definition">¶</a></dt>
-<dd><p>Update data to include only the largest connected set of movers, and if firm ids are contiguous, also return the NetworkX Graph.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>largest connected set of movers (only returns if firm ids are contiguous, otherwise returns None)</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>G (NetworkX Graph)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.twfe_network.twfe_network.contiguous_fids">
-<code class="sig-name descname">contiguous_fids</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.twfe_network.contiguous_fids" title="Permalink to this definition">¶</a></dt>
-<dd><p>Make firm ids contiguous.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.twfe_network.twfe_network.data_validity">
-<code class="sig-name descname">data_validity</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.twfe_network.data_validity" title="Permalink to this definition">¶</a></dt>
-<dd><p>Checks that data is formatted correctly and updates relevant attributes.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.twfe_network.twfe_network.n_firms">
-<code class="sig-name descname">n_firms</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.twfe_network.n_firms" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get the number of unique firms.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>number of unique firms</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>(int)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.twfe_network.twfe_network.n_workers">
-<code class="sig-name descname">n_workers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.twfe_network.n_workers" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get the number of unique workers.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>number of unique workers</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>(int)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.twfe_network.twfe_network.refactor_es">
-<code class="sig-name descname">refactor_es</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.twfe_network.refactor_es" title="Permalink to this definition">¶</a></dt>
-<dd><p>Refactor long form data into event study data.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.twfe_network.twfe_network.run_akm_corrected">
-<code class="sig-name descname">run_akm_corrected</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_akm</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.twfe_network.run_akm_corrected" title="Permalink to this definition">¶</a></dt>
-<dd><p>Run bias-corrected AKM estimator.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>user_akm</strong> (<em>dict</em>) – <p>dictionary of parameters for bias-corrected AKM estimation</p>
-<p>Dictionary parameters:</p>
-<blockquote>
-<div><p>ncore (int): number of cores to use</p>
-<p>batch (int): batch size to send in parallel</p>
-<p>ndraw_pii (int): number of draw to use in approximation for leverages</p>
-<p>ndraw_tr (int): number of draws to use in approximation for traces</p>
-<p>check (bool): whether to compute the non-approximated estimates as well</p>
-<p>hetero (bool): whether to compute the heteroskedastic estimates</p>
-<p>out (str): outputfile</p>
-<p>con (str): computes the smallest eigen values, this is the filepath where these results are saved</p>
-<p>logfile (str): log output to a logfile</p>
-<p>levfile (str): file to load precomputed leverages</p>
-<p>statsonly (bool): save data statistics only</p>
-<p>Q (str): which Q matrix to consider. Options include ‘cov(alpha, psi)’ and ‘cov(psi_t, psi_{t+1})’</p>
-</div></blockquote>
-</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>dictionary of results</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>akm_res (dict)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.twfe_network.twfe_network.run_cre">
-<code class="sig-name descname">run_cre</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cre</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.twfe_network.run_cre" title="Permalink to this definition">¶</a></dt>
-<dd><p>Run CRE estimator.</p>
+<dt id="pytwoway.twfe_network.TwoWay.fit_cre">
+<code class="sig-name descname">fit_cre</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cre</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay.fit_cre" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit the CRE estimator.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>user_cre</strong> (<em>dict</em>) – <p>dictionary of parameters for CRE estimation</p>
@@ -367,29 +228,61 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.twfe_network.twfe_network.update_cols">
-<code class="sig-name descname">update_cols</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.twfe_network.update_cols" title="Permalink to this definition">¶</a></dt>
-<dd><p>Rename columns and keep only relevant columns.</p>
+<dt id="pytwoway.twfe_network.TwoWay.fit_fe">
+<code class="sig-name descname">fit_fe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_fe</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay.fit_fe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit the bias-corrected FE estimator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>user_fe</strong> (<em>dict</em>) – <p>dictionary of parameters for bias-corrected FE estimation</p>
+<p>Dictionary parameters:</p>
+<blockquote>
+<div><p>ncore (int): number of cores to use</p>
+<p>batch (int): batch size to send in parallel</p>
+<p>ndraw_pii (int): number of draw to use in approximation for leverages</p>
+<p>ndraw_tr (int): number of draws to use in approximation for traces</p>
+<p>check (bool): whether to compute the non-approximated estimates as well</p>
+<p>hetero (bool): whether to compute the heteroskedastic estimates</p>
+<p>out (str): outputfile</p>
+<p>con (str): computes the smallest eigen values, this is the filepath where these results are saved</p>
+<p>logfile (str): log output to a logfile</p>
+<p>levfile (str): file to load precomputed leverages</p>
+<p>statsonly (bool): save data statistics only</p>
+<p>Q (str): which Q matrix to consider. Options include ‘cov(alpha, psi)’ and ‘cov(psi_t, psi_{t+1})’</p>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dictionary of results</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>fe_res (dict)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.twfe_network.twfe_network.update_dict">
-<code class="sig-name descname">update_dict</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">default_params</span></em>, <em class="sig-param"><span class="n">user_params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.twfe_network.update_dict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Replace entries in default_params with values in user_params. This function allows user_params to include only a subset of the required parameters in the dictionary.</p>
+<dt id="pytwoway.twfe_network.TwoWay.prep_cre">
+<code class="sig-name descname">prep_cre</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cluster</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay.prep_cre" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepare bipartite network for running fit_cre.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>default_params</strong> (<em>dict</em>) – default parameter values</p></li>
-<li><p><strong>user_params</strong> (<em>dict</em>) – user selected parameter values</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>default_params updated with parameter values in user_params</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>params (dict)</p>
+<dd class="field-odd"><p><strong>user_cluster</strong> (<em>dict</em>) – <p>dictionary of parameters for clustering</p>
+<p>Dictionary parameters:</p>
+<blockquote>
+<div><p>cdf_resolution (int): how many values to use to approximate the cdf</p>
+<p>grouping (str): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)</p>
+<p>year (int or None): if None, uses entire dataset; if int, gives year of data to consider</p>
+<p>user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>), and use default parameters defined in class attribute default_KMeans for any parameters not specified</p>
+</div></blockquote>
+</p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.twfe_network.TwoWay.prep_fe">
+<code class="sig-name descname">prep_fe</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay.prep_fe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepare bipartite network for running fit_fe.</p>
 </dd></dl>
 
 </dd></dl>
@@ -410,7 +303,7 @@
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Dec 30, 2020.
+        Last updated on Dec 31, 2020.
       </span>
 
     </p>

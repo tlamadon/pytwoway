@@ -1,7 +1,7 @@
 .. include:: readme.rst 
 
 .. toctree::
-  :caption: User documention
+  :caption: User documentation
   :maxdepth: 2
 
   Home <self>
@@ -20,4 +20,3 @@
   :maxdepth: 2
 
   internal
-

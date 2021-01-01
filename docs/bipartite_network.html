@@ -1,0 +1,395 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>bipartite_network module &mdash; pytwoway 0.0.3 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> pytwoway
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">User documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From terminal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-python.html">From python</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Notebook examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/pytwoway_example.html">Simple</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Under the hood</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="internal.html">Python API</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">pytwoway</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>bipartite_network module</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/bipartite_network.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<div class="section" id="module-pytwoway.bipartite_network">
+<span id="bipartite-network-module"></span><h1>bipartite_network module<a class="headerlink" href="#module-pytwoway.bipartite_network" title="Permalink to this headline">¶</a></h1>
+<p>Class for a bipartite network</p>
+<dl class="py class">
+<dt id="pytwoway.bipartite_network.BipartiteData">
+<em class="property">class </em><code class="sig-prename descclassname">pytwoway.bipartite_network.</code><code class="sig-name descname">BipartiteData</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">formatting</span><span class="o">=</span><span class="default_value">'long'</span></em>, <em class="sig-param"><span class="n">col_dict</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class of BipartiteData, where BipartiteData gives a bipartite network of firms and workers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data</strong> (<em>Pandas DataFrame</em>) – bipartite network data</p></li>
+<li><p><strong>formatting</strong> (<em>str</em>) – if ‘long’, then data in long format; if ‘es’, then data in event study format. If simulating data, keep default value of ‘long’</p></li>
+<li><p><strong>col_dict</strong> (<em>dict</em>) – make data columns readable (requires: wid (worker id), comp (compensation), fid (firm id), year if long; wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover) if event study). Keep None if column names already correct</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.approx_cdfs">
+<code class="sig-name descname">approx_cdfs</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">cdf_resolution</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">grouping</span><span class="o">=</span><span class="default_value">'quantile_all'</span></em>, <em class="sig-param"><span class="n">year</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.approx_cdfs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate cdfs of compensation for firms.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cdf_resolution</strong> (<em>int</em>) – how many values to use to approximate the cdf</p></li>
+<li><p><strong>grouping</strong> (<em>str</em>) – how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)</p></li>
+<li><p><strong>year</strong> (<em>int</em><em> or </em><em>None</em>) – if None, uses entire dataset; if int, gives year of data to consider</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>NumPy array of firm cdfs</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>cdf_df (NumPy Array)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.clean_data">
+<code class="sig-name descname">clean_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.clean_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clean data to make sure there are no NaN observations, firms are connected by movers and firm ids are contiguous.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.cluster">
+<code class="sig-name descname">cluster</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cluster</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.cluster" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cluster data and assign a new column giving the cluster for each firm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>user_cluster</strong> (<em>dict</em>) – <p>dictionary of parameters for clustering</p>
+<p>Dictionary parameters:</p>
+<blockquote>
+<div><p>cdf_resolution (int): how many values to use to approximate the cdf</p>
+<p>grouping (str): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)</p>
+<p>year (int or None): if None, uses entire dataset; if int, gives year of data to consider</p>
+<p>user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>), and use default parameters defined in class attribute default_KMeans for any parameters not specified</p>
+</div></blockquote>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.conset">
+<code class="sig-name descname">conset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.conset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update data to include only the largest connected set of movers, and if firm ids are contiguous, also return the NetworkX Graph.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>largest connected set of movers (only returns if firm ids are contiguous, otherwise returns None)</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>G (NetworkX Graph)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.contiguous_fids">
+<code class="sig-name descname">contiguous_fids</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.contiguous_fids" title="Permalink to this definition">¶</a></dt>
+<dd><p>Make firm ids contiguous.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.data_validity">
+<code class="sig-name descname">data_validity</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.data_validity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks that data is formatted correctly and updates relevant attributes.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.n_firms">
+<code class="sig-name descname">n_firms</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.n_firms" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the number of unique firms.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>number of unique firms</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>(int)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.n_workers">
+<code class="sig-name descname">n_workers</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.n_workers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the number of unique workers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>number of unique workers</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>(int)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.refactor_es">
+<code class="sig-name descname">refactor_es</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.refactor_es" title="Permalink to this definition">¶</a></dt>
+<dd><p>Refactor long form data into event study data.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.refactor_pseudo_long">
+<code class="sig-name descname">refactor_pseudo_long</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.refactor_pseudo_long" title="Permalink to this definition">¶</a></dt>
+<dd><p>Refactor event study data as pseudo-long form data (since converting into event study removes time, it cannot be imputed into the long-form data).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.update_cols">
+<code class="sig-name descname">update_cols</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.update_cols" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rename columns and keep only relevant columns.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.update_dict">
+<code class="sig-name descname">update_dict</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">default_params</span></em>, <em class="sig-param"><span class="n">user_params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.update_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace entries in default_params with values in user_params. This function allows user_params to include only a subset of the required parameters in the dictionary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>default_params</strong> (<em>dict</em>) – default parameter values</p></li>
+<li><p><strong>user_params</strong> (<em>dict</em>) – user selected parameter values</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>default_params updated with parameter values in user_params</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>params (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Thibaut Lamadon
+      <span class="lastupdated">
+        Last updated on Dec 31, 2020.
+      </span>
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

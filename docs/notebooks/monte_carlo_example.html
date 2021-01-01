@@ -82,7 +82,7 @@
               
             
             
-              <p class="caption"><span class="caption-text">User documention</span></p>
+              <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../doc-cli.html">From terminal</a></li>
@@ -433,8 +433,7 @@ div.rendered_html tbody tr:hover {
 <span></span><span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">sys</span>
 <span class="c1"># Navigate to parent folder for import</span>
 <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s1">&#39;../../..&#39;</span><span class="p">)</span>
-<span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">sim_twfe_network</span>
-<span class="n">sn</span> <span class="o">=</span> <span class="n">sim_twfe_network</span><span class="o">.</span><span class="n">sim_twfe_network</span>
+<span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">sim_twfe_network</span> <span class="k">as</span> <span class="n">sn</span>
 
 <span class="c1"># Weird code needed for output to show</span>
 <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s1">&#39;docs-src/source/notebooks&#39;</span><span class="p">)</span>
@@ -463,7 +462,7 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">stw_net</span> <span class="o">=</span> <span class="n">sn</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span> <span class="c1"># stw_net for simulated two-way network</span>
+<span></span><span class="n">smc_net</span> <span class="o">=</span> <span class="n">sn</span><span class="o">.</span><span class="n">TwoWayMonteCarlo</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span> <span class="c1"># smc_net for simulated Monte Carlo two-way network</span>
 </pre></div>
 </div>
 </div>
@@ -475,8 +474,8 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># For AKM estimation</span>
-<span class="n">akm_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ndraw_pii&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;check&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;hetero&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_akm.json&#39;</span><span class="p">,</span> <span class="s1">&#39;con&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;logfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;levfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;Q&#39;</span><span class="p">:</span> <span class="s1">&#39;cov(alpha, psi)&#39;</span><span class="p">}</span>
+<span></span><span class="c1"># For FE estimation</span>
+<span class="n">fe_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ndraw_pii&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;check&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;hetero&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_akm.json&#39;</span><span class="p">,</span> <span class="s1">&#39;con&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;logfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;levfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;Q&#39;</span><span class="p">:</span> <span class="s1">&#39;cov(alpha, psi)&#39;</span><span class="p">}</span>
 
 <span class="c1"># For CRE estimation</span>
 <span class="n">cre_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;ndp&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_cre.json&#39;</span><span class="p">,</span> <span class="s1">&#39;posterior&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;wobtw&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
@@ -492,14 +491,71 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="section" id="Fourth,-run-the-Monte-Carlo-simulation-using-the-parameter-choices">
 <h2>Fourth, run the Monte Carlo simulation using the parameter choices<a class="headerlink" href="#Fourth,-run-the-Monte-Carlo-simulation-using-the-parameter-choices" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput nblast docutils container">
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">stw_net</span><span class="o">.</span><span class="n">twfe_monte_carlo</span><span class="p">(</span><span class="n">N</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">ncore</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">akm_params</span><span class="o">=</span><span class="n">akm_params</span><span class="p">,</span> <span class="n">cre_params</span><span class="o">=</span><span class="n">cre_params</span><span class="p">,</span> <span class="n">cluster_params</span><span class="o">=</span><span class="n">cluster_params</span><span class="p">)</span>
+<span></span><span class="n">smc_net</span><span class="o">.</span><span class="n">twfe_monte_carlo</span><span class="p">(</span><span class="n">N</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">ncore</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">fe_params</span><span class="o">=</span><span class="n">fe_params</span><span class="p">,</span> <span class="n">cre_params</span><span class="o">=</span><span class="n">cre_params</span><span class="p">,</span> <span class="n">cluster_params</span><span class="o">=</span><span class="n">cluster_params</span><span class="p">)</span>
 </pre></div>
 </div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+100%|██████████| 5/5 [00:00&lt;00:00, 166.99it/s]
+
+
+100%|██████████| 5/5 [00:00&lt;00:00, 157.26it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 165.09it/s]
+  0%|          | 0/5 [00:00&lt;?, ?it/s]8.47it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 126.27it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 125.60it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 158.39it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 150.52it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 157.03it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 139.80it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 138.76it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 125.01it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 133.97it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 140.17it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 145.45it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 139.66it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 154.35it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 31.31it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 120.09it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 129.36it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 140.20it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 140.39it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 132.53it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 133.97it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 29.08it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 111.85it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 117.10it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 104.40it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 27.03it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 23.32it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 102.94it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 111.33it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 24.73it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 118.88it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 110.45it/s]
+
+100%|██████████| 5/5 [00:00&lt;00:00, 103.43it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 111.72it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 113.16it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 103.98it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 21.90it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 87.81it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 103.03it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 88.83it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 100.73it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 106.81it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 114.51it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 134.66it/s]
+</pre></div></div>
 </div>
 </div>
 <div class="section" id="Fifth-and-finally,-plot-parameter-estimates-(plots-show-the-difference-from-the-truth)">
@@ -509,7 +565,7 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">stw_net</span><span class="o">.</span><span class="n">plot_monte_carlo</span><span class="p">()</span>
+<span></span><span class="n">smc_net</span><span class="o">.</span><span class="n">plot_monte_carlo</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -553,7 +609,7 @@ div.rendered_html tbody tr:hover {
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Dec 24, 2020.
+        Last updated on Dec 31, 2020.
       </span>
 
     </p>

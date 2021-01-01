@@ -10,6 +10,7 @@ pytwoway
    notebooks/pytwoway_example
    notebooks/monte_carlo_example
    cre
-   fe_approximate_correction_full
+   fe
+   bipartite_network
    twfe_network
    sim_twfe_network

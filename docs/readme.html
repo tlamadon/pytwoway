@@ -80,7 +80,7 @@
               
             
             
-              <p class="caption"><span class="caption-text">User documention</span></p>
+              <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
 <li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From terminal</a></li>
@@ -189,7 +189,7 @@
 <p>“<a class="reference external" href="https://www.nber.org/system/files/working_papers/w27368/w27368.pdf">How Much Should we Trust Estimates of Firm Effects and Worker Sorting?.</a>”
 by Stéphane Bonhomme, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler.
 No. w27368. National Bureau of Economic Research, 2020.</p>
-<p>The package provides implementations for a series of estimators for model with two sided heterogeneity:</p>
+<p>The package provides implementations for a series of estimators for models with two sided heterogeneity:</p>
 <ol class="arabic simple">
 <li><p>two way fixed effect estimator as proposed by Abowd Kramarz and Margolis</p></li>
 <li><p>homoskedastic bias correction as in Andrews et al</p></li>
@@ -197,8 +197,8 @@ No. w27368. National Bureau of Economic Research, 2020.</p>
 <li><p>a group fixed estimator as in BLM</p></li>
 <li><p>a group correlated random effect as presented in the main paper</p></li>
 </ol>
-<p>If you want to give it a try, you can start the example notebook here: <a class="reference external" href="https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fnotebooks%2Fpytwoway_example.ipynb"><img alt="binder" src="https://mybinder.org/badge_logo.svg" /></a>. This starts an fully interactive notebook with a simple example that generates data and runs the estimators.</p>
-<p>The code is relatively efficient. Solving large sparse linear relies on using <a class="reference external" href="https://github.com/pyamg/pyamg">pyamg</a>. This is the code we used to estimate the different decompositions on the US data.</p>
+<p>If you want to give it a try, you can start the example notebook here: <a class="reference external" href="https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fnotebooks%2Fpytwoway_example.ipynb"><img alt="binder" src="https://mybinder.org/badge_logo.svg" /></a>. This starts a fully interactive notebook with a simple example that generates data and runs the estimators.</p>
+<p>The code is relatively efficient. Solving large sparse linear models relies on using <a class="reference external" href="https://github.com/pyamg/pyamg">pyamg</a>. This is the code we used to estimate the different decompositions on the US data.</p>
 <p>The package provides a python interface as well as an intuitive command line interface. Installation is handled by <cite>pip</cite> or <cite>conda</cite> (TBD). The source of the package is available on github at <a class="reference external" href="https://github.com/tlamadon/pytwoway">pytwoway</a>. The online documentation is hosted  <a class="reference external" href="https://tlamadon.github.io/pytwoway/">here</a>.</p>
 <div class="section" id="quick-start">
 <h1>Quick Start<a class="headerlink" href="#quick-start" title="Permalink to this headline">¶</a></h1>
@@ -206,7 +206,7 @@ No. w27368. National Bureau of Economic Research, 2020.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">pytwoway</span>
 </pre></div>
 </div>
-<p>To run using command line interface:</p>
+<p>To run using the command line interface:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytw</span> <span class="o">--</span><span class="n">my</span><span class="o">-</span><span class="n">config</span> <span class="n">config</span><span class="o">.</span><span class="n">txt</span> <span class="o">--</span><span class="n">akm</span> <span class="o">--</span><span class="n">cre</span>
 </pre></div>
 </div>
@@ -221,7 +221,7 @@ No. w27368. National Bureau of Economic Research, 2020.</p>
 <h1>Citation<a class="headerlink" href="#citation" title="Permalink to this headline">¶</a></h1>
 <p>Please use following citation to cite pytwoway in academic publications:</p>
 <p>Bibtex entry:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>@techreport{bonhomme2020much,
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>@techreport{bhlmms2020,
   title={How Much Should We Trust Estimates of Firm Effects and Worker Sorting?},
   author={Bonhomme, St{\&#39;e}phane and Holzheu, Kerstin and Lamadon, Thibaut and Manresa, Elena and Mogstad, Magne and Setzler, Bradley},
   year={2020},
@@ -245,7 +245,7 @@ No. w27368. National Bureau of Economic Research, 2020.</p>
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Dec 30, 2020.
+        Last updated on Dec 31, 2020.
       </span>
 
     </p>

@@ -24,6 +24,7 @@ import time
 import argparse
 import json
 import glob, sys
+import copy
 
 # Try to use tqdm
 try:
@@ -88,9 +89,9 @@ class FESolver:
         self.logger = logging.getLogger('fe')
         self.logger.setLevel(logging.DEBUG)
         # Create logs folder
-        Path('twfe_logs').mkdir(parents=True, exist_ok=True)
+        Path('twoway_logs').mkdir(parents=True, exist_ok=True)
         # Create file handler which logs even debug messages
-        fh = logging.FileHandler('twfe_logs/fe_spam.log')
+        fh = logging.FileHandler('twoway_logs/fe_spam.log')
         fh.setLevel(logging.DEBUG)
         # Create console handler with a higher log level
         ch = logging.StreamHandler()
@@ -208,9 +209,9 @@ class FESolver:
         '''
         self.logger.info('Preparing the data')
 
-        self.b_net = self.params['data']
+        self.b_net = copy.deepcopy(self.params['data'])
         # Refactor data as pseudo-long form
-        self.b_net.refactor_psuedo_long()
+        self.b_net.refactor_pseudo_long()
         self.adata = self.b_net.data
 
         # data = self.params['data']

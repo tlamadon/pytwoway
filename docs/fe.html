@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>fe_approximate_correction_full module &mdash; pytwoway 0.0.3 documentation</title>
+  <title>fe module &mdash; pytwoway 0.0.3 documentation</title>
   
 
   
@@ -29,7 +29,6 @@
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
@@ -81,7 +80,7 @@
               
             
             
-              <p class="caption"><span class="caption-text">User documention</span></p>
+              <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
 <li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From terminal</a></li>
@@ -141,13 +140,13 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li>fe_approximate_correction_full module</li>
+      <li>fe module</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="_sources/fe_approximate_correction_full.rst.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/fe.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -184,8 +183,8 @@
     text-align: unset;
 }
 </style>
-<div class="section" id="module-pytwoway.fe_approximate_correction_full">
-<span id="fe-approximate-correction-full-module"></span><h1>fe_approximate_correction_full module<a class="headerlink" href="#module-pytwoway.fe_approximate_correction_full" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-pytwoway.fe">
+<span id="fe-module"></span><h1>fe module<a class="headerlink" href="#module-pytwoway.fe" title="Permalink to this headline">¶</a></h1>
 <p>Computes a bunch of estimates from an event study data set:</p>
 <blockquote>
 <div><ul class="simple">
@@ -194,10 +193,10 @@
 <li><p>KSS bias correction</p></li>
 </ul>
 </div></blockquote>
-<p>Does this through class FEsolver</p>
+<p>Does this through class FESolver</p>
 <dl class="py class">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver">
-<em class="property">class </em><code class="sig-prename descclassname">pytwoway.fe_approximate_correction_full.</code><code class="sig-name descname">FEsolver</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver">
+<em class="property">class </em><code class="sig-prename descclassname">pytwoway.fe.</code><code class="sig-name descname">FESolver</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Uses multigrid and partialing out to solve two way Fixed Effect model</p>
 <p>&#64; FIXME I think delete everything below this, it’s basically contained in the class/functions within the class</p>
@@ -231,50 +230,62 @@ and creates associated A = [J W] matrix which are AKM dummies</p>
 </dd>
 </dl>
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.collect_res">
-<code class="sig-name descname">collect_res</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.collect_res" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.collect_res">
+<code class="sig-name descname">collect_res</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.collect_res" title="Permalink to this definition">¶</a></dt>
 <dd><p>Collect all results.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.compute_early_stats">
-<code class="sig-name descname">compute_early_stats</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.compute_early_stats" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.compute_early_stats">
+<code class="sig-name descname">compute_early_stats</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.compute_early_stats" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute some early statistics.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.compute_leverages_Pii">
-<code class="sig-name descname">compute_leverages_Pii</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.compute_leverages_Pii" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.compute_leverages_Pii">
+<code class="sig-name descname">compute_leverages_Pii</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.compute_leverages_Pii" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute leverages for heteroskedastic correction.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.compute_trace_approximation_fe">
-<code class="sig-name descname">compute_trace_approximation_fe</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.compute_trace_approximation_fe" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.compute_trace_approximation_fe">
+<code class="sig-name descname">compute_trace_approximation_fe</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.compute_trace_approximation_fe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute FE trace approximation for arbitrary Q.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.compute_trace_approximation_he">
-<code class="sig-name descname">compute_trace_approximation_he</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.compute_trace_approximation_he" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.compute_trace_approximation_he">
+<code class="sig-name descname">compute_trace_approximation_he</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.compute_trace_approximation_he" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute heteroskedastic trace approximation.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.construct_Q">
-<code class="sig-name descname">construct_Q</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.construct_Q" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.construct_Q">
+<code class="sig-name descname">construct_Q</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.construct_Q" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generate columns in adata necessary to construct Q.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.create_fe_solver">
-<code class="sig-name descname">create_fe_solver</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.create_fe_solver" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.create_fe_solver">
+<code class="sig-name descname">create_fe_solver</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.create_fe_solver" title="Permalink to this definition">¶</a></dt>
 <dd><p>Solve FE model.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.get_akm_estimates">
-<code class="sig-name descname">get_akm_estimates</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.get_akm_estimates" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.fit_1">
+<code class="sig-name descname">fit_1</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.fit_1" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run FE solver, part 1. Before fit_2(), modify adata to allow creation of Q matrix.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.fe.FESolver.fit_2">
+<code class="sig-name descname">fit_2</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.fit_2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run FE solver, part 2.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.fe.FESolver.get_fe_estimates">
+<code class="sig-name descname">get_fe_estimates</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.get_fe_estimates" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return estimated psi_hats linked to firm ids and alpha_hats linked to worker ids.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -288,8 +299,8 @@ alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed e
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.init_prepped_adata">
-<code class="sig-name descname">init_prepped_adata</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.init_prepped_adata" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.init_prepped_adata">
+<code class="sig-name descname">init_prepped_adata</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.init_prepped_adata" title="Permalink to this definition">¶</a></dt>
 <dd><p>Use prepped adata to initialize class attributes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -309,8 +320,8 @@ alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed e
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.leverage_approx">
-<code class="sig-name descname">leverage_approx</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ndraw_pii</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.leverage_approx" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.leverage_approx">
+<code class="sig-name descname">leverage_approx</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ndraw_pii</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.leverage_approx" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute an approximate leverage using ndraw_pii.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -326,8 +337,8 @@ alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed e
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.load">
-<em class="property">static </em><code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.load" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.load">
+<em class="property">static </em><code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.load" title="Permalink to this definition">¶</a></dt>
 <dd><p>Load files for heteroskedastic correction.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -343,8 +354,8 @@ alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed e
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.mult_A">
-<code class="sig-name descname">mult_A</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">psi</span></em>, <em class="sig-param"><span class="n">alpha</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.mult_A" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.mult_A">
+<code class="sig-name descname">mult_A</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">psi</span></em>, <em class="sig-param"><span class="n">alpha</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.mult_A" title="Permalink to this definition">¶</a></dt>
 <dd><p>Multiplies A = [J W] stored in the object by psi and alpha (used, for example, to compute estimated outcomes and sample errors).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -363,8 +374,8 @@ alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed e
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.mult_AAinv">
-<code class="sig-name descname">mult_AAinv</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">psi</span></em>, <em class="sig-param"><span class="n">alpha</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.mult_AAinv" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.mult_AAinv">
+<code class="sig-name descname">mult_AAinv</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">psi</span></em>, <em class="sig-param"><span class="n">alpha</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.mult_AAinv" title="Permalink to this definition">¶</a></dt>
 <dd><p>Multiplies gamma = [psi alpha] by (A’A)^(-1) where A = [J W] stored in the object.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -384,8 +395,8 @@ alpha_out: estimated worker fixed effects &#64; FIXME correct datatype</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.mult_Atranspose">
-<code class="sig-name descname">mult_Atranspose</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">v</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.mult_Atranspose" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.mult_Atranspose">
+<code class="sig-name descname">mult_Atranspose</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">v</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.mult_Atranspose" title="Permalink to this definition">¶</a></dt>
 <dd><p>Multiplies the transpose of A = [J W] stored in the object by v.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -402,14 +413,14 @@ W_transpose_V (CSC Matrix): workers * v</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.prep_data">
-<code class="sig-name descname">prep_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.prep_data" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.prep_data">
+<code class="sig-name descname">prep_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.prep_data" title="Permalink to this definition">¶</a></dt>
 <dd><p>Do some initial data cleaning.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.proj">
-<code class="sig-name descname">proj</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.proj" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.proj">
+<code class="sig-name descname">proj</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.proj" title="Permalink to this definition">¶</a></dt>
 <dd><p>Solve y, then project onto X space of data stored in the object.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -422,21 +433,9 @@ W_transpose_V (CSC Matrix): workers * v</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.run_1">
-<code class="sig-name descname">run_1</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.run_1" title="Permalink to this definition">¶</a></dt>
-<dd><p>Run FE solver, part 1. Before run_2(), modify adata to allow creation of Q matrix.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.run_2">
-<code class="sig-name descname">run_2</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.run_2" title="Permalink to this definition">¶</a></dt>
-<dd><p>Run FE solver, part 2.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.save">
-<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.save" title="Permalink to this definition">¶</a></dt>
-<dd><p>Save FEsolver class to filename as pickle.</p>
+<dt id="pytwoway.fe.FESolver.save">
+<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save FESolver class to filename as pickle.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>filename</strong> (<em>string</em>) – filename to save to</p>
@@ -445,20 +444,20 @@ W_transpose_V (CSC Matrix): workers * v</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.save_early_stats">
-<code class="sig-name descname">save_early_stats</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.save_early_stats" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.save_early_stats">
+<code class="sig-name descname">save_early_stats</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.save_early_stats" title="Permalink to this definition">¶</a></dt>
 <dd><p>Save the early statistics computed in compute_early_stats().</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.save_res">
-<code class="sig-name descname">save_res</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.save_res" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.save_res">
+<code class="sig-name descname">save_res</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.save_res" title="Permalink to this definition">¶</a></dt>
 <dd><p>Save results as json.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.solve">
-<code class="sig-name descname">solve</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">Y</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.solve" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.solve">
+<code class="sig-name descname">solve</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">Y</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.solve" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute (A’A)^-1 A’Y, the least squares estimate of A [psi_hat, alpha_hat] = Y.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -475,8 +474,8 @@ alpha_hat: estimated worker fixed effects &#64; FIXME correct datatype</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.weighted_quantile">
-<code class="sig-name descname">weighted_quantile</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">values</span></em>, <em class="sig-param"><span class="n">quantiles</span></em>, <em class="sig-param"><span class="n">sample_weight</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">values_sorted</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">old_style</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.weighted_quantile" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.weighted_quantile">
+<code class="sig-name descname">weighted_quantile</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">values</span></em>, <em class="sig-param"><span class="n">quantiles</span></em>, <em class="sig-param"><span class="n">sample_weight</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">values_sorted</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">old_style</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.weighted_quantile" title="Permalink to this definition">¶</a></dt>
 <dd><p>Very close to numpy.percentile, but supports weights.
 NOTE: quantiles should be in [0, 1]!</p>
 <p>:param : param values: numpy.array with data
@@ -492,8 +491,8 @@ NOTE: quantiles should be in [0, 1]!</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe_approximate_correction_full.FEsolver.weighted_var">
-<code class="sig-name descname">weighted_var</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">v</span></em>, <em class="sig-param"><span class="n">w</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe_approximate_correction_full.FEsolver.weighted_var" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.fe.FESolver.weighted_var">
+<code class="sig-name descname">weighted_var</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">v</span></em>, <em class="sig-param"><span class="n">w</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.weighted_var" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compute weighted variance &#64; FIXME I don’t know what this function really does</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -529,7 +528,7 @@ NOTE: quantiles should be in [0, 1]!</p>
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Dec 24, 2020.
+        Last updated on Dec 31, 2020.
       </span>
 
     </p>
