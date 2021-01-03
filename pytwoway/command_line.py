@@ -80,7 +80,7 @@ def main():
     p.add('--year', required=False, help='if None, uses entire dataset when clustering; if int, gives year of data to consider when clustering')
     ##### Cluster end #####
 
-    ##### AKM start #####
+    ##### FE start #####
     p.add('--ncore_fe', required=False, help='number of cores to use when computing fe')
     p.add('--batch', required=False, help='batch size to send in parallel when computing fe')
     p.add('--ndraw_pii', required=False, help='number of draw to use in approximation for leverages when computing fe')
@@ -93,7 +93,7 @@ def main():
     p.add('--levfile', required=False, help='file to load precomputed leverages when computing fe')
     p.add('--statsonly', required=False, help='save data statistics only when computing fe')
     p.add('--Q', required=False, help="which Q matrix to consider when computing fe. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'")
-    ##### AKM end #####
+    ##### FE end #####
 
     ##### CRE start #####
     p.add('--ncore_cre', required=False, help='number of cores to use when computing cre')
@@ -101,7 +101,7 @@ def main():
     p.add('--ndp', required=False, help=' number of draw to use in approximation for leverages when computing cre')
     p.add('--out_cre', required=False, help='filepath for cre results')
     p.add('--posterior', required=False, help='compute posterior variance when computing cre')
-    p.add('--wobtw', required=False, help='sets between variation to 0, pure RE when computing cre')
+    p.add('--wo_btw', required=False, help='sets between variation to 0, pure RE when computing cre')
     ##### CRE end #####
 
     params = p.parse_args()

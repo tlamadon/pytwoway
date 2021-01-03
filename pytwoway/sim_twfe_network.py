@@ -357,7 +357,7 @@ class TwoWayMonteCarlo:
 
                     posterior (bool): compute posterior variance
 
-                    wobtw (bool): sets between variation to 0, pure RE
+                    wo_btw (bool): sets between variation to 0, pure RE
 
             cluster_params (dict): dictionary of parameters for clustering in CRE estimation
 
@@ -465,7 +465,7 @@ class TwoWayMonteCarlo:
 
                     posterior (bool): compute posterior variance
 
-                    wobtw (bool): sets between variation to 0, pure RE
+                    wo_btw (bool): sets between variation to 0, pure RE
 
             cluster_params (dict): dictionary of parameters for clustering in CRE estimation
 

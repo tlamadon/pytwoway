@@ -44,7 +44,7 @@ class TwoWay:
         # Define default parameter dictionaries
         self.default_fe = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_fe.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)'} # Do not define 'data' because will be updated later
 
-        self.default_cre = {'ncore': 1, 'ndraw_tr': 5, 'ndp': 50, 'out': 'res_cre.json', 'posterior': False, 'wobtw': False} # Do not define 'data' because will be updated later
+        self.default_cre = {'ncore': 1, 'ndraw_tr': 5, 'ndp': 50, 'out': 'res_cre.json', 'posterior': False, 'wo_btw': False} # Do not define 'data' because will be updated later
 
         self.logger.info('TwoWay object initialized')
 
@@ -144,7 +144,7 @@ class TwoWay:
 
                     posterior (bool): compute posterior variance
 
-                    wobtw (bool): sets between variation to 0, pure RE
+                    wo_btw (bool): sets between variation to 0, pure RE
 
         Returns:
             cre_res (dict): dictionary of results
@@ -153,6 +153,10 @@ class TwoWay:
 
         cre_params['data'] = self.b_net.data # Make sure to use up-to-date data
 
-        cre_res = cre.main(cre_params)
+        cre_solver = cre.CRESolver(cre_params)
+        cre_solver.prep_data()
+        cre_solver.fit()
+
+        cre_res = cre_solver.res
 
         return cre_res

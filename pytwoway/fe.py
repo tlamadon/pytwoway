@@ -109,9 +109,9 @@ class FESolver:
         self.res = {} # Results dictionary
 
         # Save some commonly used parameters as attributes
-        self.ncore = self.params['ncore'] # number of cores to use
-        self.ndraw_pii = self.params['ndraw_pii'] # number of draws to compute leverage
-        self.ndraw_trace = self.params['ndraw_tr'] # number of draws to compute hetero correction
+        self.ncore = self.params['ncore'] # Number of cores to use
+        self.ndraw_pii = self.params['ndraw_pii'] # Number of draws to compute leverage
+        self.ndraw_trace = self.params['ndraw_tr'] # Number of draws to compute hetero correction
         self.compute_hetero = self.params['hetero']
 
         # Store some parameters in results dictionary

@@ -13,6 +13,7 @@ import pyreadr
 import os
 from multiprocessing import Pool, TimeoutError
 from timeit import default_timer as timer
+import copy
 
 import argparse
 import json
@@ -48,31 +49,122 @@ def pd_to_np(df, colr, colc, colv, nr, nc):
     return(A)
     # pd_to_np(df, 'i', 'j', 'v', 3, 3)
 
-
 class CRESolver:
     '''
-    Uses multigrid and partialing out to solve two way Fixed Effect model
+    Uses multigrid and partialing out to solve two way Fixed Effect model.
     '''
-    def __init__(self, adata, sdata, jdata, wo_btw=False):
-        self.nf = adata.f1i.max()
-        self.nc = jdata.j1.max()
-        self.nw = adata.wid.max()
-        self.nn = len(adata)
+    def __init__(self, params):
+        # Begin logging
+        self.logger = logging.getLogger('cre')
+        self.logger.setLevel(logging.DEBUG)
+        # Create logs folder
+        Path('twoway_logs').mkdir(parents=True, exist_ok=True)
+        # Create file handler which logs even debug messages
+        fh = logging.FileHandler('twoway_logs/cre_spam.log')
+        fh.setLevel(logging.DEBUG)
+        # Create console handler with a higher log level
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.ERROR)
+        # Create formatter and add it to the handlers
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+        ch.setFormatter(formatter)
+        # Add the handlers to the logger
+        self.logger.addHandler(fh)
+        self.logger.addHandler(ch)
+        self.logger.info('initializing CRESolver object')
+
+        self.params = params
+        self.res = {} # Results dictionary
+
+        # Save some commonly used parameters as attributes
+        self.ncore = self.params['ncore'] # Number of cores to use
+        self.ndraw_trace = self.params['ndraw_tr'] # Number of draws to compute hetero correction
+
+        # Store some parameters in results dictionary
+        self.res['cores'] = self.ncore
+        self.res['ndt'] = self.ndraw_trace
+
+        self.logger.info('CRESolver object initialized')
+
+    def prep_data(self):
+        '''
+        Do some initial data cleaning.
+        '''
+        '''
+        In R do
+            f1s = jdata[,unique(c(f1,f2))]
+            fids = data.table(f1=f1s,nfid=1:length(f1s))
+            setkey(fids,f1)
+            setkey(jdata,f1)
+            jdata[,f1i := fids[jdata,nfid]]
+            setkey(sdata,f1)
+            sdata[,f1i := fids[sdata,nfid]]
+            setkey(jdata,f2)
+            jdata[,f2i := fids[jdata,nfid]]
+
+            jdata = as.data.frame(jdata)
+            sdata = as.data.frame(sdata)
+            saveRDS(sdata,file="~/Dropbox/paper-small-firm-effects/results/simsdata.rds")
+            saveRDS(jdata,file="~/Dropbox/paper-small-firm-effects/results/simjdata.rds")
+        '''
+        self.logger.info('Preparing the data')
+        data = self.params['data']
+        sdata = data[data['m'] == 0].reset_index(drop=True)
+        jdata = data[data['m'] == 1].reset_index(drop=True)
+
+        sdata['j1'] = sdata['j1'].astype(int)
+        sdata['j2'] = sdata['j2'].astype(int)
+        jdata['j1'] = jdata['j1'].astype(int)
+        jdata['j2'] = jdata['j2'].astype(int)
+
         self.nm = len(jdata)
         self.ns = len(sdata)
 
-        mdata = adata.query('cs == 1')
+        self.res['nm'] = self.nm
+        self.res['ns'] = self.ns
+        self.logger.info('Data movers={} stayers={}'.format(self.nm, self.ns))
+
+        self.res['n_firms'] = len(np.unique(pd.concat([jdata['f1i'], jdata['f2i'], sdata['f1i']], ignore_index=True)))
+        self.res['n_workers'] = len(np.unique(pd.concat([jdata['wid'], sdata['wid']], ignore_index=True)))
+
+        # Make wids unique per row
+        jdata.set_index(np.arange(self.res['nm']) + 1)
+        sdata.set_index(np.arange(self.res['ns']) + 1 + self.res['nm'])
+        self.jdata = jdata
+        self.sdata = sdata
+
+        # Combine the 2 data-sets
+        self.adata = pd.concat([sdata[['wid', 'f1i', 'y1']].assign(cs=1, m=0),
+                                jdata[['wid', 'f1i', 'y1']].assign(cs=1, m=1),
+                                jdata[['wid', 'f2i', 'y2']].rename(columns={'f2i': 'f1i', 'y2': 'y1'}).assign(cs=0, m=1)])
+        self.adata = self.adata.set_index(pd.Series(range(len(self.adata))))
+        self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1
+
+        self.nf = self.adata.f1i.max()
+        self.nc = jdata.j1.max()
+        self.nw = self.adata.wid.max()
+        self.nn = len(self.adata)
+
+        self.res['var_y'] = self.adata.query('cs == 1')['y1'].var()
+        self.logger.info('Total variance: {:0.4f}'.format(self.res['var_y']))
+
+    def fit(self):
+        wo_btw = self.params['wo_btw']
+        jdata = copy.deepcopy(self.jdata)
+        sdata = copy.deepcopy(self.sdata)
+
+        mdata = self.adata.query('cs == 1')
         mdata = mdata.set_index(pd.Series(range(len(mdata))))
         Yq = mdata['y1']
 
-        logger.info('data nf:{} nw:{} nn:{} nc:{}'.format(self.nf, self.nw, self.nn, self.nc))
+        self.logger.info('Data nf:{} nw:{} nn:{} nc:{}'.format(self.nf, self.nw, self.nn, self.nc))
 
-        sdata,jdata = self.estimate_between_cluster(sdata, jdata, wo_btw=wo_btw)
+        sdata, jdata = self.estimate_between_cluster(sdata, jdata)
         self.estimate_within_cluster(sdata, jdata)
         self.estimate_within_parameters()
 
         # Compute the between terms
-        self.res = {}
         cdata = pd.concat([sdata[['y1', 'psi1_tmp', 'mx', 'f1i']], jdata[['y1', 'psi1_tmp', 'mx', 'f1i']]], axis=0)
         cov_mat_between = cdata.cov()
         self.res['var_bw'] = cov_mat_between['psi1_tmp'].get('psi1_tmp')
@@ -84,8 +176,8 @@ class CRESolver:
         self.res['tot_var'] = self.res['var_bw'] + self.res['var_wt']
         self.res['var_y'] = np.var(Yq)
 
-        logger.info('[cre] VAR bw={:4f} wt={:4f} tot={:4f}'.format(self.res['var_bw'], self.res['var_wt'], self.res['var_bw'] + self.res['var_wt']))
-        logger.info('[cre] COV bw={:4f} wt={:4f} tot={:4f}'.format(self.res['cov_bw'], self.res['cov_wt'], self.res['cov_bw'] + self.res['cov_wt']))
+        self.logger.info('[cre] VAR bw={:4f} wt={:4f} tot={:4f}'.format(self.res['var_bw'], self.res['var_wt'], self.res['var_bw'] + self.res['var_wt']))
+        self.logger.info('[cre] COV bw={:4f} wt={:4f} tot={:4f}'.format(self.res['cov_bw'], self.res['cov_wt'], self.res['cov_bw'] + self.res['cov_wt']))
 
         # ------ STARTING POSTERIOR FOR VAR IN DIFF -----------
         jdata['val'] = 1
@@ -93,7 +185,7 @@ class CRESolver:
         J2 = csc_matrix((jdata.val, (jdata.index, jdata.f2i - 1)), shape=(self.nm, self.nf))
         Jd = J2 - J1
         Yd = jdata.eval('y2 - y1') # Create the difference Y
-        mdata = adata.query('cs == 1')
+        mdata = self.adata.query('cs == 1')
         mdata = mdata[~pd.isnull(mdata['f1i'])]
 
         nnq = len(mdata)
@@ -104,7 +196,7 @@ class CRESolver:
         self.Yd = Yd
         self.Jq = Jq
 
-        logger.info('preparing linear solver')
+        self.logger.info('Preparing linear solver')
         M = 1 / self.within_params['var_psi'] * eye(self.nf) + 1 / self.within_params['var_eps'] * Jd.transpose() * Jd
         self.ml = pyamg.ruge_stuben_solver(M)
 
@@ -113,15 +205,29 @@ class CRESolver:
         Jf = csc_matrix((np.ones(len(jdata_f)), (jdata_f.f1i - 1, jdata_f.j1 - 1)), shape=(len(jdata_f), self.nc))
         self.Mud = Jf * self.between_params['Afill']
 
-        self.last_invert_time=0
+        self.last_invert_time = 0
 
-    def estimate_between_cluster(self, sdata, jdata, wo_btw=False):
+        if self.params['posterior']:
+            self.compute_posterior_var()
+            self.res['var_posterior'] = self.posterior_var
+
+        # Saving to file
+        # Convert results into strings to prevent JSON errors
+        for key, val in self.res.items():
+                self.res[key] = str(val)
+
+        with open(self.params['out'], 'w') as outfile:
+            json.dump(self.res, outfile)
+        self.logger.info("Saved results to {}".format(self.params['out']))
+
+        self.logger.info("------ DONE -------")
+
+    def estimate_between_cluster(self, sdata, jdata):
         '''
-        Takes sdata and jdata and extracts cluster levels means of firm effects and average value of worker effects
-        :param sdata:
-        :param jdata:
-        :return:
+        Takes sdata and jdata and extracts cluster levels means of firm effects and average value of worker effects.
         '''
+        wo_btw = self.params['wo_btw']
+
         # Matrices for group level estimation
         J1c = csc_matrix((np.ones(self.nm), (jdata.index, jdata.j1 - 1)), shape=(self.nm, self.nc))
         J2c = csc_matrix((np.ones(self.nm), (jdata.index, jdata.j2 - 1)), shape=(self.nm, self.nc))
@@ -165,10 +271,9 @@ class CRESolver:
 
         self.between_params = pb
 
-        return(sdata,jdata)
+        return sdata, jdata
 
     def estimate_within_cluster(self, sdata, jdata):
-
         res = {}
 
         # We construct wages net of between group means
@@ -249,9 +354,9 @@ class CRESolver:
         res['y1m_y2m_count'] = dm.query('j1 != j2').shape[0]
 
         self.moments_within = res
+        self.res.update(self.moments_within)
 
     def estimate_within_parameters(self):
-
         pw = {}
         # Using movers leaving from firm
         pw['cov_Am1Am1'] = self.moments_within['y2m1_y2m1']
@@ -276,6 +381,7 @@ class CRESolver:
         pw['var_eps'] = np.maximum(0, self.moments_within['dym_dym'] - 2 * pw['var_psi'])
 
         self.within_params = pw
+        self.res.update(self.within_params)
 
     # def estimate_within_woodcock(self):
 
@@ -295,11 +401,11 @@ class CRESolver:
 
     #     self.within_params_woodcock = pw
 
-    def compute_posterior_var(self, ndraw_trace):
+    def compute_posterior_var(self):
         '''
-        compute the posterior variance of the CRE model
-        :return:
+        Compute the posterior variance of the CRE model.
         '''
+        ndraw_trace = self.params['ndraw_tr']
 
         # We first compute the direct term
         v1 = 1 / self.within_params['var_psi'] * self.Mud
@@ -321,110 +427,4 @@ class CRESolver:
         t2 = np.mean(tr_var_pos_all)
         self.posterior_var = t1 + t2
 
-        logger.info("[cre] posterior variance of psi = {:4f}".format(self.posterior_var))
-
-def main(args):
-    ncore = args['ncore'] # Number of cores to use
-    ndraw_trace = args['ndraw_tr']  # Number of draws to compute hetero correction
-
-    '''
-    In R do
-        f1s = jdata[,unique(c(f1,f2))]
-        fids = data.table(f1=f1s,nfid=1:length(f1s))
-        setkey(fids,f1)
-        setkey(jdata,f1)
-        jdata[,f1i := fids[jdata,nfid]]
-        setkey(sdata,f1)
-        sdata[,f1i := fids[sdata,nfid]]
-        setkey(jdata,f2)
-        jdata[,f2i := fids[jdata,nfid]]
-
-        jdata = as.data.frame(jdata)
-        sdata = as.data.frame(sdata)
-        saveRDS(sdata,file="~/Dropbox/paper-small-firm-effects/results/simsdata.rds")
-        saveRDS(jdata,file="~/Dropbox/paper-small-firm-effects/results/simjdata.rds")
-    '''
-
-    res = {}
-    res['ndt'] = ndraw_trace
-
-    # import sdata/jdata
-    logger.info('loading the data')
-    for i in range(0,30):
-        try:
-            data = args['data']
-            sdata = data[data['m'] == 0].reset_index(drop=True)
-            jdata = data[data['m'] == 1].reset_index(drop=True)
-        except pyreadr.custom_errors.LibrdataError:
-            logger.info("can't read file, waiting 30s and trying again {}/30".format(i+1))
-            time.sleep(30)
-            continue
-        break
-
-    sdata['j1'] = sdata['j1'].astype(int)
-    sdata['j2'] = sdata['j2'].astype(int)
-    jdata['j1'] = jdata['j1'].astype(int)
-    jdata['j2'] = jdata['j2'].astype(int)
-
-    logger.info('data movers={} stayers={}'.format(len(jdata), len(sdata)))
-    res['nm'] = len(jdata)
-    res['ns'] = len(sdata)
-    res['n_firms'] = len(np.unique(pd.concat([jdata['f1i'], jdata['f2i'], sdata['f1i']], ignore_index=True)))
-    res['n_workers'] = len(np.unique(pd.concat([jdata['wid'], sdata['wid']], ignore_index=True)))
-
-    # Make wids unique per row
-    jdata.set_index(np.arange(res['nm']) + 1)
-    sdata.set_index(np.arange(res['ns']) + 1 + res['nm'])
-
-    # Combine the 2 data-sets
-    adata = pd.concat( [ sdata[['wid','f1i','y1']].assign(cs=1,m=0),
-                         jdata[['wid','f1i','y1']].assign(cs=1,m=1),
-                         jdata[['wid','f2i','y2']].rename(columns={'f2i':'f1i','y2':'y1'}).assign(cs=0,m=1) ])
-    adata = adata.set_index(pd.Series(range(len(adata))))
-    adata['wid'] = adata['wid'].astype('category').cat.codes + 1
-
-    res['var_y'] = adata.query('cs==1')['y1'].var()
-    logger.info('total variance: {:0.4f}'.format(res['var_y']))
-
-    fes = CRESolver(adata, sdata, jdata, wo_btw=args['wobtw'])
-
-    res.update(fes.moments_within)
-    res.update(fes.within_params)
-    res.update(fes.res)
-    #res.update(fes.between_params)
-
-    if args['posterior']:
-        fes.compute_posterior_var(ndraw_trace)
-        res['var_posterior'] = fes.posterior_var
-
-    # Saving to file
-    # Convert results into strings to prevent JSON errors
-    for key, val in res.items():
-            res[key] = str(val)
-
-    with open(args['out'],'w') as outfile:
-        json.dump(res, outfile)
-    logger.info("saved results to {}".format(args['out']))
-
-    logger.info("------ DONE -------")
-
-    return res
-
-# Begin logging
-logger = logging.getLogger('cre')
-logger.setLevel(logging.DEBUG)
-# Create logs folder
-Path('twoway_logs').mkdir(parents=True, exist_ok=True)
-# Create file handler which logs even debug messages
-fh = logging.FileHandler('twoway_logs/cre_spam.log')
-fh.setLevel(logging.DEBUG)
-# Create console handler with a higher log level
-ch = logging.StreamHandler()
-ch.setLevel(logging.ERROR)
-# Create formatter and add it to the handlers
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-fh.setFormatter(formatter)
-ch.setFormatter(formatter)
-# Add the handlers to the logger
-logger.addHandler(fh)
-logger.addHandler(ch)
+        self.logger.info("[cre] posterior variance of psi = {:4f}".format(self.posterior_var))
