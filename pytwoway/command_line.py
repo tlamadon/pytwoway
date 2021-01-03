@@ -7,8 +7,7 @@ pytw --my-config config.txt --fe --cre
 import configargparse
 import ast
 import pandas as pd
-from pytwoway import twfe_network
-tn = twfe_network.twfe_network
+from pytwoway import twfe_network as tn
 
 def clear_dict(d):
     '''
@@ -145,13 +144,13 @@ def main():
 
     # Run estimation
     if params.fe or params.cre:
-        tw_net = tn(**twfe_params)
-        tw_net.clean_data()
-        tw_net.refactor_es()
+        tw_net = tn.TwoWay(**twfe_params)
 
         if params.fe:
+            tw_net.prep_fe()
             tw_net.fit_fe(user_fe=fe_params)
 
         if params.cre:
+            tw_net.prep_cre()
             tw_net.cluster(user_cluster=cluster_params)
             tw_net.fit_cre(user_cre=cre_params)
