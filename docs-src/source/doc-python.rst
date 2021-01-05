@@ -8,27 +8,25 @@ To run in Python:
 
 .. code-block:: python
 
-    from pytwoway import twfe_network
-    tn = twfe_network.twfe_network
+    from pytwoway import twfe_network as tn
     # Create twfe object
-    tw_net = tn.twfe_network(data, formatting, col_dict)
-    # Convert long data into event study data (not necessary if the data is already in event study format):
-    tw_net.refactor_es()
-    # Run the bias-corrected AKM estimator:
-    tw_net.run_akm_corrected(user_akm)
-    # Cluster firms based on their wage CDFs (required for the CRE estimator)
-    tw_net.cluster(user_cluster)
+    tw_net = tn.TwoWay(data, formatting, col_dict)
+    # Prepare data for FE estimators
+    tw_net.prep_fe()
+    # Fit the FE estimators:
+    tw_net.fit_fe(user_fe)
+    # Prepare data for CRE estimator
+    tw_net.prep_cre(user_cluster)
     # Run the CRE estimator
-    tw_net.run_cre(user_cre)
+    tw_net.fit_cre(user_cre)
 
 - If you want to simulate data
 
 .. code-block:: python
 
-    from pytwoway import sim_twfe_network
-    sn = sim_twfe_network.sim_twfe_network
+    from pytwoway import sim_twfe_network as sn
     # Create simulated twfe object
-    stw_net = sn(sim_params)
+    stw_net = sn.SimTwoWay(sim_params)
     # Generate data
     sim_data = stw_net.sim_network()
 
@@ -36,11 +34,10 @@ To run in Python:
 
 .. code-block:: python
 
-    from pytwoway import sim_twfe_network
-    sn = sim_twfe_network.sim_twfe_network
-    # Create simulated twfe object
-    stw_net = sn(sim_params)
+    from pytwoway import sim_twfe_network as sn
+    # Create simulated Monte Carlo object
+    smc_net = sn.TwoWayMonteCarlo(sim_params)
     # Run Monte Carlo
-    stw_net.twfe_monte_carlo(N, ncore, akm_params, cre_params, cluster_params)
+    smc_net.twfe_monte_carlo(N, ncore, akm_params, cre_params, cluster_params)
     # Plot results
-    stw_net.plot_monte_carlo()
+    smc_net.plot_monte_carlo()

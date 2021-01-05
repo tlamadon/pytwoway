@@ -82,7 +82,7 @@
               
             
             
-              <p class="caption"><span class="caption-text">User documention</span></p>
+              <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
 <li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From terminal</a></li>
@@ -191,27 +191,25 @@
 <ul class="simple">
 <li><p>If you have data</p></li>
 </ul>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">twfe_network</span>
-<span class="n">tn</span> <span class="o">=</span> <span class="n">twfe_network</span><span class="o">.</span><span class="n">twfe_network</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">twfe_network</span> <span class="k">as</span> <span class="n">tn</span>
 <span class="c1"># Create twfe object</span>
-<span class="n">tw_net</span> <span class="o">=</span> <span class="n">tn</span><span class="o">.</span><span class="n">twfe_network</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">formatting</span><span class="p">,</span> <span class="n">col_dict</span><span class="p">)</span>
-<span class="c1"># Convert long data into event study data (not necessary if the data is already in event study format):</span>
-<span class="n">tw_net</span><span class="o">.</span><span class="n">refactor_es</span><span class="p">()</span>
-<span class="c1"># Run the bias-corrected AKM estimator:</span>
-<span class="n">tw_net</span><span class="o">.</span><span class="n">run_akm_corrected</span><span class="p">(</span><span class="n">user_akm</span><span class="p">)</span>
-<span class="c1"># Cluster firms based on their wage CDFs (required for the CRE estimator)</span>
-<span class="n">tw_net</span><span class="o">.</span><span class="n">cluster</span><span class="p">(</span><span class="n">user_cluster</span><span class="p">)</span>
+<span class="n">tw_net</span> <span class="o">=</span> <span class="n">tn</span><span class="o">.</span><span class="n">TwoWay</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">formatting</span><span class="p">,</span> <span class="n">col_dict</span><span class="p">)</span>
+<span class="c1"># Prepare data for FE estimators</span>
+<span class="n">tw_net</span><span class="o">.</span><span class="n">prep_fe</span><span class="p">()</span>
+<span class="c1"># Fit the FE estimators:</span>
+<span class="n">tw_net</span><span class="o">.</span><span class="n">fit_fe</span><span class="p">(</span><span class="n">user_fe</span><span class="p">)</span>
+<span class="c1"># Prepare data for CRE estimator</span>
+<span class="n">tw_net</span><span class="o">.</span><span class="n">prep_cre</span><span class="p">(</span><span class="n">user_cluster</span><span class="p">)</span>
 <span class="c1"># Run the CRE estimator</span>
-<span class="n">tw_net</span><span class="o">.</span><span class="n">run_cre</span><span class="p">(</span><span class="n">user_cre</span><span class="p">)</span>
+<span class="n">tw_net</span><span class="o">.</span><span class="n">fit_cre</span><span class="p">(</span><span class="n">user_cre</span><span class="p">)</span>
 </pre></div>
 </div>
 <ul class="simple">
 <li><p>If you want to simulate data</p></li>
 </ul>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">sim_twfe_network</span>
-<span class="n">sn</span> <span class="o">=</span> <span class="n">sim_twfe_network</span><span class="o">.</span><span class="n">sim_twfe_network</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">sim_twfe_network</span> <span class="k">as</span> <span class="n">sn</span>
 <span class="c1"># Create simulated twfe object</span>
-<span class="n">stw_net</span> <span class="o">=</span> <span class="n">sn</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span>
+<span class="n">stw_net</span> <span class="o">=</span> <span class="n">sn</span><span class="o">.</span><span class="n">SimTwoWay</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span>
 <span class="c1"># Generate data</span>
 <span class="n">sim_data</span> <span class="o">=</span> <span class="n">stw_net</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()</span>
 </pre></div>
@@ -219,14 +217,13 @@
 <ul class="simple">
 <li><p>If you want to run Monte Carlo on simulated data</p></li>
 </ul>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">sim_twfe_network</span>
-<span class="n">sn</span> <span class="o">=</span> <span class="n">sim_twfe_network</span><span class="o">.</span><span class="n">sim_twfe_network</span>
-<span class="c1"># Create simulated twfe object</span>
-<span class="n">stw_net</span> <span class="o">=</span> <span class="n">sn</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">sim_twfe_network</span> <span class="k">as</span> <span class="n">sn</span>
+<span class="c1"># Create simulated Monte Carlo object</span>
+<span class="n">smc_net</span> <span class="o">=</span> <span class="n">sn</span><span class="o">.</span><span class="n">TwoWayMonteCarlo</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span>
 <span class="c1"># Run Monte Carlo</span>
-<span class="n">stw_net</span><span class="o">.</span><span class="n">twfe_monte_carlo</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">ncore</span><span class="p">,</span> <span class="n">akm_params</span><span class="p">,</span> <span class="n">cre_params</span><span class="p">,</span> <span class="n">cluster_params</span><span class="p">)</span>
+<span class="n">smc_net</span><span class="o">.</span><span class="n">twfe_monte_carlo</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">ncore</span><span class="p">,</span> <span class="n">akm_params</span><span class="p">,</span> <span class="n">cre_params</span><span class="p">,</span> <span class="n">cluster_params</span><span class="p">)</span>
 <span class="c1"># Plot results</span>
-<span class="n">stw_net</span><span class="o">.</span><span class="n">plot_monte_carlo</span><span class="p">()</span>
+<span class="n">smc_net</span><span class="o">.</span><span class="n">plot_monte_carlo</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -254,7 +251,7 @@
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Dec 24, 2020.
+        Last updated on Jan 05, 2021.
       </span>
 
     </p>

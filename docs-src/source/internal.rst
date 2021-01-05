@@ -49,9 +49,9 @@ Modules and Methods
 
    ~pytwoway.cre.CRESolver
    ~pytwoway.cre.CRESolver.compute_posterior_var
-   ~pytwoway.cre.CREsolver.estimate_between_cluster
-   ~pytwoway.cre.CREsolver.estimate_within_cluster
-   ~pytwoway.cre.CREsolver.estimate_within_parameters
+   ~pytwoway.cre.CRESolver.estimate_between_cluster
+   ~pytwoway.cre.CRESolver.estimate_within_cluster
+   ~pytwoway.cre.CRESolver.estimate_within_parameters
    ~pytwoway.cre.expand_grid
    ~pytwoway.cre.main
    ~pytwoway.cre.pd_to_np

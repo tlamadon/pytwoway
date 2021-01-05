@@ -240,16 +240,22 @@ using</p>
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CRESolver" title="pytwoway.cre.CRESolver"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CRESolver</span></code></a>(adata, sdata, jdata[, wo_btw])</p></td>
-<td><p>Uses multigrid and partialing out to solve two way Fixed Effect model</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CRESolver" title="pytwoway.cre.CRESolver"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CRESolver</span></code></a>(params)</p></td>
+<td><p>Uses multigrid and partialing out to solve two way Fixed Effect model.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CRESolver.compute_posterior_var" title="pytwoway.cre.CRESolver.compute_posterior_var"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_posterior_var</span></code></a>(ndraw_trace)</p></td>
-<td><p>compute the posterior variance of the CRE model :return:</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CRESolver.compute_posterior_var" title="pytwoway.cre.CRESolver.compute_posterior_var"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_posterior_var</span></code></a>()</p></td>
+<td><p>Compute the posterior variance of the CRE model.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.expand_grid" title="pytwoway.cre.expand_grid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">expand_grid</span></code></a>(data_dict)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CRESolver.estimate_between_cluster" title="pytwoway.cre.CRESolver.estimate_between_cluster"><code class="xref py py-obj docutils literal notranslate"><span class="pre">estimate_between_cluster</span></code></a>(sdata, jdata)</p></td>
+<td><p>Takes sdata and jdata and extracts cluster levels means of firm effects and average value of worker effects.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CRESolver.estimate_within_cluster" title="pytwoway.cre.CRESolver.estimate_within_cluster"><code class="xref py py-obj docutils literal notranslate"><span class="pre">estimate_within_cluster</span></code></a>(sdata, jdata)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.main" title="pytwoway.cre.main"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main</span></code></a>(args)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CRESolver.estimate_within_parameters" title="pytwoway.cre.CRESolver.estimate_within_parameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">estimate_within_parameters</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.expand_grid" title="pytwoway.cre.expand_grid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">expand_grid</span></code></a>(data_dict)</p></td>
 <td><p></p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.pd_to_np" title="pytwoway.cre.pd_to_np"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pd_to_np</span></code></a>(df, colr, colc, colv, nr, nc)</p></td>
@@ -485,7 +491,7 @@ using</p>
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Dec 31, 2020.
+        Last updated on Jan 05, 2021.
       </span>
 
     </p>
