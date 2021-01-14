@@ -13,7 +13,8 @@ from scipy.stats import mode, norm
 from scipy.linalg import eig
 ax = np.newaxis
 from matplotlib import pyplot as plt
-from pytwoway import twfe_network as tn
+from pytwoway import TwoWay as tn
+from pytwoway import update_dict
 
 class SimTwoWay:
     '''
@@ -74,27 +75,10 @@ class SimTwoWay:
         self.default_sim_params = {'num_ind': 10000, 'num_time': 5, 'firm_size': 50, 'nk': 10, 'nl': 5, 'alpha_sig': 1, 'psi_sig': 1, 'w_sig': 1, 'csort': 1, 'cnetw': 1, 'csig': 1, 'p_move': 0.5}
 
         # Update parameters to include user parameters
-        self.sim_params = self.update_dict(self.default_sim_params, sim_params)
+        self.sim_params = update_dict(self.default_sim_params, sim_params)
 
         # Prevent plotting unless results exist
         self.monte_carlo_res = False
-
-    def update_dict(self, default_params, user_params):
-        '''
-        Replace entries in default_params with values in user_params. This function allows user_params to include only a subset of the required parameters in the dictionary.
-
-        Arguments:
-            default_params (dict): default parameter values
-            user_params (dict): user selected parameter values
-
-        Returns:
-            params (dict): default_params updated with parameter values in user_params
-        '''
-        params = default_params.copy()
-
-        params.update(user_params)
-
-        return params
 
     def sim_network_gen_fe(self, sim_params):
         '''
@@ -386,15 +370,11 @@ class TwoWayMonteCarlo:
         psi_var = np.var(sim_data['psi'])
         psi_alpha_cov = np.cov(sim_data['psi'], sim_data['alpha'])[0, 1]
         # Use data to create TwoWay object
-        tw_net = tn.TwoWay(data=sim_data)
-        # Prepare for FE
-        tw_net.prep_fe()
+        tw_net = tn(data=sim_data)
         # Estimate FE model
         fe_res = tw_net.fit_fe(user_fe=fe_params)
-        # Prepare for CRE
-        tw_net.prep_cre(user_cluster=cluster_params)
         # Estimate CRE model
-        cre_res = tw_net.fit_cre(user_cre=cre_params)
+        cre_res = tw_net.fit_cre(user_cre=cre_params, user_cluster=cluster_params)
 
         return psi_var, psi_alpha_cov, \
                 fe_res['var_fe'], fe_res['cov_fe'], \

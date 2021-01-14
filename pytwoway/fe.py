@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import csc_matrix, coo_matrix, diags, linalg
 import time
-import pyreadr
+# import pyreadr
 import os
 from multiprocessing import Pool, TimeoutError, set_start_method
 from timeit import default_timer as timer
@@ -24,7 +24,6 @@ import time
 import argparse
 import json
 import glob, sys
-import copy
 
 # Try to use tqdm
 try:
@@ -49,7 +48,7 @@ class FESolver:
     provides methods to do A x Y but also (A'A)^-1 A'Y solve method
 
     Arguments:
-        params (dictionary): dictionary of parameters
+        params (dictionary): dictionary of parameters for FE estimation
 
             Dictionary parameters:
 
@@ -140,7 +139,7 @@ class FESolver:
         self.ml = pyamg.ruge_stuben_solver(self.M)
 
     @staticmethod
-    def load(filename):
+    def __load(filename):
         '''
         Load files for heteroskedastic correction.
 
@@ -155,7 +154,7 @@ class FESolver:
             fes = pickle.load(infile)
         return fes
 
-    def save(self, filename):
+    def __save(self, filename):
         '''
         Save FESolver class to filename as pickle.
 
@@ -172,59 +171,56 @@ class FESolver:
         self.start_time = time.time()
 
         # Begin cleaning and analysis
-        self.prep_data() # Prepare data
-        self.init_prepped_adata() # Use cleaned adata to generate some attributes
-        self.compute_early_stats() # Use cleaned data to compute some statistics
+        self.__prep_vars() # Prepare data
+        self.__prep_JWM() # Use cleaned adata to generate some attributes
+        self.__compute_early_stats() # Use cleaned data to compute some statistics
 
     def fit_2(self):
         '''
         Run FE solver, part 2.
         '''
         if self.params['statsonly']: # If only returning early statistics
-            self.save_early_stats()
+            self.__save_early_stats()
 
         else: # If running analysis
-            self.create_fe_solver() # Solve FE model
-            self.compute_trace_approximation_fe() # Compute trace approxmation
+            self.__create_fe_solver() # Solve FE model
+            self.__compute_trace_approximation_fe() # Compute trace approxmation
 
             # If computing heteroskedastic correction
             if self.compute_hetero:
-                self.compute_leverages_Pii() # Solve he model
-                self.compute_trace_approximation_he() # Compute trace approximation
+                self.__compute_leverages_Pii() # Solve he model
+                self.__compute_trace_approximation_he() # Compute trace approximation
 
-            self.collect_res() # Collect all results
+            self.__collect_res() # Collect all results
 
         end_time = time.time()
 
         self.res['total_time'] = end_time - self.start_time
         del self.start_time
 
-        self.save_res() # Save results to json
+        self.__save_res() # Save results to json
 
         self.logger.info('------ DONE -------')
 
-    def prep_data(self):
+    def __prep_vars(self):
         '''
-        Do some initial data cleaning.
+        Generate some initial class attributes and results.
         '''
-        self.logger.info('Preparing the data')
+        self.logger.info('preparing the data')
 
-        self.b_net = copy.deepcopy(self.params['data'])
-        # Refactor data as pseudo-long form
-        self.b_net.refactor_pseudo_long()
-        self.adata = self.b_net.data
+        self.adata = self.params['data']
+        self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1
 
-        # data = self.params['data']
-        # sdata = data[data['m'] == 0].reset_index(drop=True)
-        # jdata = data[data['m'] == 1].reset_index(drop=True)
+        self.nf = len(set(list(self.adata['f1i'].unique()) + list(self.adata['f2i'].unique()))) # Number of firms
+        self.nw = self.adata['wid'].max() # Number of workers
+        self.nn = len(self.adata) # Number of observations
+        self.logger.info('data firms={} workers={} observations={}'.format(self.nf, self.nw, self.nn))
 
-        self.res['nm'] = len(self.adata[self.adata['m'] == 1]) / 2
-        self.res['ns'] = len(self.adata[self.adata['m'] == 0])
-        self.logger.info('Data movers={} stayers={}'.format(self.res['nm'], self.res['ns']))
-
-        self.res['n_firms'] = self.b_net.n_firms()
-        self.res['n_workers'] = self.b_net.n_workers()
+        self.res['n_firms'] = self.nf
+        self.res['n_workers'] = self.nw
         self.res['n_movers'] = len(np.unique(self.adata[self.adata['m'] == 1]['wid']))
+        self.res['n_stayers'] = self.res['n_workers'] - self.res['n_movers']
+        self.logger.info('data movers={} stayers={}'.format(self.res['n_movers'], self.res['n_stayers']))
 
         #res['year_max'] = int(sdata['year'].max())
         #res['year_min'] = int(sdata['year'].min())
@@ -241,9 +237,9 @@ class FESolver:
         # self.adata = self.adata.reset_index(drop=True) # FIXME changed from set_index(pd.Series(range(len(self.adata))))
         # self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1
 
-    def init_prepped_adata(self):
+    def __prep_JWM(self):
         '''
-        Use prepped adata to initialize class attributes.
+        Generate J, W, and M matrices.
 
         Arguments:
             adata (Pandas DataFrame): labor data.
@@ -262,19 +258,11 @@ class FESolver:
 
                     m (0 if stayer, 1 if mover)
         '''
-        nf = self.adata.f1i.max() # Number of firms
-        nw = self.adata.wid.max() # Number of workers
-        nn = len(self.adata) # Number of observations
-        self.nf = nf
-        self.nw = nw
-        self.nn = nn
-        self.logger.info('data nf:{} nw:{} nn:{}'.format(nf, nw, nn))
-
         # Matrices for the cross-section
-        J = csc_matrix((np.ones(nn), (self.adata.index, self.adata.f1i - 1)), shape=(nn, nf)) # Firms
-        J = J[:, range(nf - 1)]  # Normalize one firm to 0
+        J = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata.f1i - 1)), shape=(self.nn, self.nf)) # Firms
+        J = J[:, range(self.nf - 1)]  # Normalize one firm to 0
         self.J = J
-        W = csc_matrix((np.ones(nn), (self.adata.index, self.adata.wid - 1)), shape=(nn, nw)) # Workers
+        W = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata.wid - 1)), shape=(self.nn, self.nw)) # Workers
         self.W = W
         # Dw = diags((W.T * W).diagonal()) # FIXME changed from .transpose() to .T ALSO commented this out since it's not used
         Dwinv = diags(1.0 / ((W.T * W).diagonal())) # FIXME changed from .transpose() to .T
@@ -321,7 +309,7 @@ class FESolver:
         # Save time variable
         self.last_invert_time = 0
 
-    def weighted_quantile(self, values, quantiles, sample_weight=None, values_sorted=False, old_style=False): # FIXME was formerly a function outside the class
+    def __weighted_quantile(self, values, quantiles, sample_weight=None, values_sorted=False, old_style=False): # FIXME was formerly a function outside the class
         '''
         Very close to numpy.percentile, but supports weights.
         NOTE: quantiles should be in [0, 1]!
@@ -359,7 +347,7 @@ class FESolver:
 
         return np.interp(quantiles, weighted_quantiles, values)
 
-    def weighted_var(self, v, w): # FIXME was formerly a function outside the class
+    def __weighted_var(self, v, w): # FIXME was formerly a function outside the class
         '''
         Compute weighted variance @ FIXME I don't know what this function really does
 
@@ -375,15 +363,16 @@ class FESolver:
 
         return v0
 
-    def compute_early_stats(self):
+    def __compute_early_stats(self):
         '''
         Compute some early statistics.
         '''
         fdata = self.adata.groupby('f1i').agg({'m':'sum', 'y1':'mean', 'wid':'count' })
-        self.res['mover_quantiles'] = self.weighted_quantile(fdata['m'], np.linspace(0, 1, 11), fdata['wid']).tolist()
-        self.res['size_quantiles'] = self.weighted_quantile(fdata['wid'], np.linspace(0, 1, 11), fdata['wid']).tolist()
-        self.res['between_firm_var'] = self.weighted_var(fdata['y1'], fdata['wid'])
+        self.res['mover_quantiles'] = self.__weighted_quantile(fdata['m'], np.linspace(0, 1, 11), fdata['wid']).tolist()
+        self.res['size_quantiles'] = self.__weighted_quantile(fdata['wid'], np.linspace(0, 1, 11), fdata['wid']).tolist()
+        self.res['between_firm_var'] = self.__weighted_var(fdata['y1'], fdata['wid'])
         self.res['var_y'] = self.adata[self.adata['cs'] == 1]['y1'].var() # FIXME changed from adata.query('cs==1') (I ran %timeit and slicing is faster)
+        self.logger.info('total variance: {:0.4f}'.format(self.res['var_y']))
 
         # extract woodcock moments using sdata and jdata
         # get averages by firms for stayers
@@ -397,7 +386,7 @@ class FESolver:
         #self.logger.info("[woodcock] var alpha = {}", res['woodcock_var_alpha'])
         #self.logger.info("[woodcock] var eps = {}", res['woodcock_var_eps'])
 
-    def save_early_stats(self):
+    def __save_early_stats(self):
         '''
         Save the early statistics computed in compute_early_stats().
         '''
@@ -440,7 +429,7 @@ class FESolver:
             self.adata['Wq_row'] = self.adata['f2i'] - 1
             self.adata['Wq_col'] = self.adata['f1i'] - 1
 
-    def create_fe_solver(self):
+    def __create_fe_solver(self):
         '''
         Solve FE model.
         '''
@@ -449,19 +438,19 @@ class FESolver:
         # try to pickle the object to see its size
         # self.save('tmp.pkl') # FIXME should we delete these 2 lines?
 
-        self.logger.info('Extract firm effects')
+        self.logger.info('extract firm effects')
 
-        self.psi_hat, self.alpha_hat = self.solve(self.Y)
+        self.psi_hat, self.alpha_hat = self.__solve(self.Y)
 
-        self.logger.info('Solver time {:2.4f} seconds'.format(self.last_invert_time))
-        self.logger.info('Expected total time {:2.4f} minutes'.format( (self.ndraw_trace * (1 + self.compute_hetero) + self.ndraw_pii * self.compute_hetero) * self.last_invert_time / 60))
+        self.logger.info('solver time {:2.4f} seconds'.format(self.last_invert_time))
+        self.logger.info('expected total time {:2.4f} minutes'.format( (self.ndraw_trace * (1 + self.compute_hetero) + self.ndraw_pii * self.compute_hetero) * self.last_invert_time / 60))
 
-        self.E = self.Y - self.mult_A(self.psi_hat, self.alpha_hat)
+        self.E = self.Y - self.__mult_A(self.psi_hat, self.alpha_hat)
 
         self.res['solver_time'] = self.last_invert_time
 
         fe_rsq = 1 - np.power(self.E, 2).mean() / np.power(self.Y, 2).mean()
-        self.logger.info('Fixed effect R-square {:2.4f}'.format(fe_rsq))
+        self.logger.info('fixed effect R-square {:2.4f}'.format(fe_rsq))
 
         # FIXME This section moved into compute_trace_approximation_fe()
         # # FIXME Need to figure out when this section can be run
@@ -474,7 +463,7 @@ class FESolver:
         self.var_e = self.nn / (self.nn - self.nw - self.nf + 1) * np.power(self.E, 2).mean()
         self.logger.info('[ho] variance of residuals {:2.4f}'.format(self.var_e))
 
-    def compute_leverages_Pii(self):
+    def __compute_leverages_Pii(self):
         '''
         Compute leverages for heteroskedastic correction.
         '''
@@ -497,13 +486,13 @@ class FESolver:
             self.logger.info('[he] starting heteroskedastic correction p2={}, using {} cores, batch size {}'.format(self.ndraw_pii, self.ncore, self.params['batch']))
             set_start_method('spawn')
             with Pool(processes=self.ncore) as pool:
-                Pii_all = pool.starmap(self.leverage_approx, [self.params['batch'] for _ in range(self.ndraw_pii // self.params['batch'])])
+                Pii_all = pool.starmap(self.__leverage_approx, [self.params['batch'] for _ in range(self.ndraw_pii // self.params['batch'])])
 
             for pp in Pii_all:
                 Pii += pp / len(Pii_all)
 
         else:
-            Pii_all = list(itertools.starmap(self.leverage_approx, [self.params['batch'] for _ in range(self.ndraw_pii // self.params['batch'])]))
+            Pii_all = list(itertools.starmap(self.__leverage_approx, [self.params['batch'] for _ in range(self.ndraw_pii // self.params['batch'])]))
 
             for pp in Pii_all:
                 self.Pii += pp / len(Pii_all)
@@ -525,7 +514,7 @@ class FESolver:
 
         self.logger.info('[he] variance of residuals in heteroskedastic case: {:2.4f}'.format(self.Sii.mean()))
 
-    def compute_trace_approximation_fe(self):
+    def __compute_trace_approximation_fe(self):
         '''
         Compute FE trace approximation for arbitrary Q.
         '''
@@ -576,7 +565,7 @@ class FESolver:
             Zalpha = 2 * np.random.binomial(1, 0.5, self.nw) - 1
 
             R1 = Jq * Zpsi
-            psi1, alpha1 = self.mult_AAinv(Zpsi, Zalpha)
+            psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
             try:
                 R2_psi = Jq * psi1
                 # Trace correction
@@ -613,7 +602,7 @@ class FESolver:
     #         Zalpha = 2 * np.random.binomial(1, 0.5, self.nw) - 1
 
     #         R1 = self.Jq * Zpsi
-    #         psi1, alpha1 = self.mult_AAinv(Zpsi, Zalpha)
+    #         psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
     #         R2_psi = self.Jq * psi1
     #         R2_alpha = self.Wq * alpha1
 
@@ -637,14 +626,14 @@ class FESolver:
     #         Zalpha = 2 * np.random.binomial(1, 0.5, self.nw) - 1
 
     #         R1 = self.J1 * Zpsi
-    #         psi1, _ = self.mult_AAinv(Zpsi, Zalpha)
+    #         psi1, _ = self.__mult_AAinv(Zpsi, Zalpha)
     #         R2_psi = self.J2 * psi1
 
     #         # Trace corrections
     #         self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
     #         self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
-    def compute_trace_approximation_he(self):
+    def __compute_trace_approximation_he(self):
         '''
         Compute heteroskedastic trace approximation.
         '''
@@ -656,11 +645,11 @@ class FESolver:
             Zpsi = 2 * np.random.binomial(1, 0.5, self.nf - 1) - 1
             Zalpha = 2 * np.random.binomial(1, 0.5, self.nw) - 1
 
-            psi1, alpha1 = self.mult_AAinv(Zpsi, Zalpha)
+            psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
             R2_psi = self.Jq * psi1
             R2_alpha = self.Wq * alpha1
 
-            psi2, alpha2 = self.mult_AAinv(*self.mult_Atranspose(self.Sii * self.mult_A(Zpsi, Zalpha)))
+            psi2, alpha2 = self.__mult_AAinv(*self.__mult_Atranspose(self.Sii * self.__mult_A(Zpsi, Zalpha)))
             R3_psi = self.Jq * psi2
 
             # Trace corrections
@@ -669,7 +658,7 @@ class FESolver:
 
             self.logger.debug('he [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
-    def collect_res(self):
+    def __collect_res(self):
         '''
         Collect all results.
         '''
@@ -748,7 +737,7 @@ class FESolver:
             self.res['var_he'] = self.var_fe - self.res['tr_var_he']
             self.res['cov_he'] = self.cov_fe - self.res['tr_cov_he']
 
-    def save_res(self):
+    def __save_res(self):
         '''
         Save results as json.
         '''
@@ -759,7 +748,7 @@ class FESolver:
         with open(self.params['out'], 'w') as outfile:
             json.dump(self.res, outfile)
 
-        self.logger.info('Saved results to {}'.format(self.params['out']))
+        self.logger.info('saved results to {}'.format(self.params['out']))
 
     def get_fe_estimates(self):
         '''
@@ -776,7 +765,7 @@ class FESolver:
 
         return psi_hat_dict, alpha_hat_dict
 
-    def solve(self, Y):
+    def __solve(self, Y):
         '''
         Compute (A'A)^-1 A'Y, the least squares estimate of A [psi_hat, alpha_hat] = Y.
 
@@ -787,12 +776,12 @@ class FESolver:
             psi_hat: estimated firm fixed effects @ FIXME correct datatype
             alpha_hat: estimated worker fixed effects @ FIXME correct datatype
         '''
-        J_transpose_Y, W_transpose_Y = self.mult_Atranspose(Y) # This gives A'Y
-        psi_hat, alpha_hat = self.mult_AAinv(J_transpose_Y, W_transpose_Y)
+        J_transpose_Y, W_transpose_Y = self.__mult_Atranspose(Y) # This gives A'Y
+        psi_hat, alpha_hat = self.__mult_AAinv(J_transpose_Y, W_transpose_Y)
 
         return psi_hat, alpha_hat
 
-    def mult_A(self, psi, alpha):
+    def __mult_A(self, psi, alpha):
         '''
         Multiplies A = [J W] stored in the object by psi and alpha (used, for example, to compute estimated outcomes and sample errors).
 
@@ -808,7 +797,7 @@ class FESolver:
 
         return self.J * psi + self.W * alpha # J_psi + W_alpha
 
-    def mult_Atranspose(self, v):
+    def __mult_Atranspose(self, v):
         '''
         Multiplies the transpose of A = [J W] stored in the object by v.
 
@@ -824,7 +813,7 @@ class FESolver:
 
         return self.J.T * v, self.W.T * v # J_transpose_V, W_transpose_V
 
-    def mult_AAinv(self, psi, alpha):
+    def __mult_AAinv(self, psi, alpha):
         '''
         Multiplies gamma = [psi alpha] by (A'A)^(-1) where A = [J W] stored in the object.
 
@@ -848,7 +837,7 @@ class FESolver:
 
         return psi_out, alpha_out
 
-    def proj(self, y): # FIXME should this y be Y?
+    def __proj(self, y): # FIXME should this y be Y?
         '''
         Solve y, then project onto X space of data stored in the object.
 
@@ -858,9 +847,9 @@ class FESolver:
         Returns:
             Projection of psi, alpha solved from y onto X space
         '''
-        return self.mult_A(*self.solve(y))
+        return self.__mult_A(*self.__solve(y))
 
-    def leverage_approx(self, ndraw_pii):
+    def __leverage_approx(self, ndraw_pii):
         '''
         Compute an approximate leverage using ndraw_pii.
 
@@ -875,7 +864,7 @@ class FESolver:
         # Compute the different draws
         for r in trange(ndraw_pii):
             R2  = 2 * np.random.binomial(1, 0.5, self.nn) - 1
-            Pii += 1 / ndraw_pii * np.power(self.proj(R2), 2.0)
+            Pii += 1 / ndraw_pii * np.power(self.__proj(R2), 2.0)
 
         self.logger.info('Done with batch')
 

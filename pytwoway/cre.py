@@ -9,11 +9,10 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import csc_matrix, coo_matrix, diags, linalg, eye
 import time
-import pyreadr
+# import pyreadr
 import os
 from multiprocessing import Pool, TimeoutError
 from timeit import default_timer as timer
-import copy
 
 import argparse
 import json
@@ -30,9 +29,9 @@ def pipe_qcov(df, e1, e2):
     v2 = df.eval(e2)
     return(np.cov(v1, v2)[0][1])
 
-def expand_grid(data_dict):
-    rows = itertools.product(*data_dict.values())
-    return pd.DataFrame.from_records(rows, columns=data_dict.keys())
+# def expand_grid(data_dict): # FIXME This is not used anywhere
+#     rows = itertools.product(*data_dict.values())
+#     return pd.DataFrame.from_records(rows, columns=data_dict.keys())
 
 def pd_to_np(df, colr, colc, colv, nr, nc):
     row_index = df[colr].to_numpy()
@@ -54,6 +53,26 @@ class CRESolver:
     Uses multigrid and partialing out to solve two way Fixed Effect model.
     '''
     def __init__(self, params):
+        '''
+        Arguments:
+            params (dict): dictionary of parameters for CRE estimation
+
+                Dictionary parameters:
+
+                    ncore (int): number of cores to use
+
+                    ndraw_tr (int): number of draws to use in approximation for traces
+
+                    ndp (int): number of draw to use in approximation for leverages
+
+                    out (str): outputfile
+
+                    posterior (bool): compute posterior variance
+
+                    wo_btw (bool): sets between variation to 0, pure RE
+
+                    data (Pandas DataFrame): cross-sectional labor data
+        '''
         # Begin logging
         self.logger = logging.getLogger('cre')
         self.logger.setLevel(logging.DEBUG)
@@ -80,6 +99,7 @@ class CRESolver:
         # Save some commonly used parameters as attributes
         self.ncore = self.params['ncore'] # Number of cores to use
         self.ndraw_trace = self.params['ndraw_tr'] # Number of draws to compute hetero correction
+        self.wo_btw = self.params['wo_btw'] # If True, sets between variation to 0, pure RE
 
         # Store some parameters in results dictionary
         self.res['cores'] = self.ncore
@@ -87,9 +107,49 @@ class CRESolver:
 
         self.logger.info('CRESolver object initialized')
 
-    def prep_data(self):
+    def fit(self):
         '''
-        Do some initial data cleaning.
+        Run CRE solver.
+        '''
+        self.start_time = time.time()
+
+        # Begin cleaning and analysis
+        self.__prep_vars() # Prepare data
+
+        # Generate stayers and movers, and set indices so they don't overlap
+        jdata = self.adata[(self.adata['m'] == 1) & (self.adata['cs'] == 1)].reset_index(drop=True)
+        self.mn = len(jdata) # Number of observations from movers # FIXME I renamed from nm to mn, since nm makes it seem like it's the number of movers, while mn gives movers, where n is the total number of observations
+        sdata = self.adata[(self.adata['m'] == 0) & (self.adata['cs'] == 1)].set_index(np.arange(self.ns) + 1 + self.mn)
+        sdata, jdata = self.__estimate_between_cluster(sdata, jdata)
+        self.__estimate_within_cluster(sdata, jdata)
+        self.__estimate_within_parameters()
+
+        cdata = pd.concat([sdata[['y1', 'psi1_tmp', 'mx', 'f1i']], jdata[['y1', 'psi1_tmp', 'mx', 'f1i']]], axis=0)
+        Yq = self.__get_Yq() # Pandas series with the cross-section income
+
+        self.__collect_res(cdata, Yq) # Collect results
+        self.__prior_in_diff(jdata) # Store the prior in diff
+
+        if self.params['posterior']:
+            self.logger.info('preparing ')
+            self.__prep_posterior_var(jdata, cdata)
+
+            self.logger.info('computing posterior variance')
+            self.__compute_posterior_var()
+            self.res['var_posterior'] = self.posterior_var
+
+        end_time = time.time()
+
+        self.res['total_time'] = end_time - self.start_time
+        del self.start_time
+
+        self.__save_res() # Save results to json
+
+        self.logger.info('------ DONE -------')
+
+    def __prep_vars(self):
+        '''
+        Generate some initial class attributes and results.
         '''
         '''
         In R do
@@ -108,129 +168,72 @@ class CRESolver:
             saveRDS(sdata,file="~/Dropbox/paper-small-firm-effects/results/simsdata.rds")
             saveRDS(jdata,file="~/Dropbox/paper-small-firm-effects/results/simjdata.rds")
         '''
-        self.logger.info('Preparing the data')
-        data = self.params['data']
-        sdata = data[data['m'] == 0].reset_index(drop=True)
-        jdata = data[data['m'] == 1].reset_index(drop=True)
+        self.logger.info('preparing the data')
 
-        sdata['j1'] = sdata['j1'].astype(int)
-        sdata['j2'] = sdata['j2'].astype(int)
-        jdata['j1'] = jdata['j1'].astype(int)
-        jdata['j2'] = jdata['j2'].astype(int)
-
-        self.nm = len(jdata)
-        self.ns = len(sdata)
-
-        self.res['nm'] = self.nm
-        self.res['ns'] = self.ns
-        self.logger.info('Data movers={} stayers={}'.format(self.nm, self.ns))
-
-        self.res['n_firms'] = len(np.unique(pd.concat([jdata['f1i'], jdata['f2i'], sdata['f1i']], ignore_index=True)))
-        self.res['n_workers'] = len(np.unique(pd.concat([jdata['wid'], sdata['wid']], ignore_index=True)))
-
-        # Make wids unique per row
-        jdata.set_index(np.arange(self.res['nm']) + 1)
-        sdata.set_index(np.arange(self.res['ns']) + 1 + self.res['nm'])
-        self.jdata = jdata
-        self.sdata = sdata
-
-        # Combine the 2 data-sets
-        self.adata = pd.concat([sdata[['wid', 'f1i', 'y1']].assign(cs=1, m=0),
-                                jdata[['wid', 'f1i', 'y1']].assign(cs=1, m=1),
-                                jdata[['wid', 'f2i', 'y2']].rename(columns={'f2i': 'f1i', 'y2': 'y1'}).assign(cs=0, m=1)])
-        self.adata = self.adata.set_index(pd.Series(range(len(self.adata))))
+        self.adata = self.params['data']
         self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1
 
-        self.nf = self.adata.f1i.max()
-        self.nc = jdata.j1.max()
-        self.nw = self.adata.wid.max()
-        self.nn = len(self.adata)
+        self.nf = max(self.adata['f1i'].max(), self.adata['f2i'].max()) # Number of firms
+        self.nw = self.adata['wid'].max() # Number of workers
+        self.nc = max(self.adata['j1'].max(), self.adata['j2'].max()) # Number of clusters
+        nn = len(self.adata) # Number of observations
+        self.logger.info('data firms={} workers={} clusters={} observations={}'.format(self.nf, self.nw, self.nc, nn))
 
-        self.res['var_y'] = self.adata.query('cs == 1')['y1'].var()
-        self.logger.info('Total variance: {:0.4f}'.format(self.res['var_y']))
+        nm = len(np.unique(self.adata[self.adata['m'] == 1]['wid'])) # Number of movers
+        self.ns = self.nw - nm # Number of stayers
+        self.logger.info('data movers={} stayers={}'.format(nm, self.ns))
 
-    def fit(self):
-        wo_btw = self.params['wo_btw']
-        jdata = copy.deepcopy(self.jdata)
-        sdata = copy.deepcopy(self.sdata)
+        self.res['n_firms'] = self.nf
+        self.res['n_workers'] = self.nw
+        self.res['n_movers'] = nm
+        self.res['n_stayers'] = self.ns
 
-        mdata = self.adata.query('cs == 1')
-        mdata = mdata.set_index(pd.Series(range(len(mdata))))
-        Yq = mdata['y1']
+        # data = self.params['data']
+        # sdata = self.adata[(self.adata['m'] == 0) & (self.adata['cs'] == 1)].reset_index(drop=True)
+        # jdata = self.adata[(self.adata['m'] == 1) & (self.adata['cs'] == 1)].reset_index(drop=True)
 
-        self.logger.info('Data nf:{} nw:{} nn:{} nc:{}'.format(self.nf, self.nw, self.nn, self.nc))
+        # sdata['j1'] = sdata['j1'].astype(int)
+        # sdata['j2'] = sdata['j2'].astype(int)
+        # jdata['j1'] = jdata['j1'].astype(int)
+        # jdata['j2'] = jdata['j2'].astype(int)
 
-        sdata, jdata = self.estimate_between_cluster(sdata, jdata)
-        self.estimate_within_cluster(sdata, jdata)
-        self.estimate_within_parameters()
+        # self.jdata = jdata
+        # self.sdata = sdata
 
-        # Compute the between terms
-        cdata = pd.concat([sdata[['y1', 'psi1_tmp', 'mx', 'f1i']], jdata[['y1', 'psi1_tmp', 'mx', 'f1i']]], axis=0)
-        cov_mat_between = cdata.cov()
-        self.res['var_bw'] = cov_mat_between['psi1_tmp'].get('psi1_tmp')
-        self.res['cov_bw'] = cov_mat_between['psi1_tmp'].get('mx')
+        # FIXME commented out the below because wids are made unique in BipartiteData, but the below code may still be necessary
+        # # Make wids unique per row
+        # jdata.set_index(np.arange(self.res['nm']) + 1)
+        # sdata.set_index(np.arange(self.res['ns']) + 1 + self.res['nm'])
+        # self.jdata = jdata
+        # self.sdata = sdata
 
-        # Compute the within terms
-        self.res['var_wt'] = self.within_params['var_psi']
-        self.res['cov_wt'] = (self.ns * self.within_params['cov_AsPsi1'] + self.nm * self.within_params['cov_Am1Psi1']) / (self.ns + self.nm)
-        self.res['tot_var'] = self.res['var_bw'] + self.res['var_wt']
-        self.res['var_y'] = np.var(Yq)
+        # # Combine the 2 data-sets
+        # self.adata = pd.concat([sdata[['wid', 'f1i', 'y1']].assign(cs=1, m=0),
+        #                         jdata[['wid', 'f1i', 'y1']].assign(cs=1, m=1),
+        #                         jdata[['wid', 'f2i', 'y2']].rename(columns={'f2i': 'f1i', 'y2': 'y1'}).assign(cs=0, m=1)])
+        # self.adata = self.adata.set_index(pd.Series(range(len(self.adata))))
+        # self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1
 
-        self.logger.info('[cre] VAR bw={:4f} wt={:4f} tot={:4f}'.format(self.res['var_bw'], self.res['var_wt'], self.res['var_bw'] + self.res['var_wt']))
-        self.logger.info('[cre] COV bw={:4f} wt={:4f} tot={:4f}'.format(self.res['cov_bw'], self.res['cov_wt'], self.res['cov_bw'] + self.res['cov_wt']))
+        # self.nf = self.res['n_firms']
+        # self.nc = max(jdata.j1.max(), jdata.j2.max())
+        # self.nw = self.res['n_workers']
+        # self.nn = len(self.adata)
 
-        # ------ STARTING POSTERIOR FOR VAR IN DIFF -----------
-        jdata['val'] = 1
-        J1 = csc_matrix((jdata.val, (jdata.index, jdata.f1i - 1)), shape=(self.nm, self.nf))
-        J2 = csc_matrix((jdata.val, (jdata.index, jdata.f2i - 1)), shape=(self.nm, self.nf))
-        Jd = J2 - J1
-        Yd = jdata.eval('y2 - y1') # Create the difference Y
-        mdata = self.adata.query('cs == 1')
-        mdata = mdata[~pd.isnull(mdata['f1i'])]
-
-        nnq = len(mdata)
-        Jq = csc_matrix((np.ones(nnq), (range(nnq), mdata.f1i - 1)), shape=(nnq, self.nf)) # Get the weighting for the cross-section
-        Yq = mdata['y1']
-        self.nnq = len(cdata)
-        self.Jd = Jd
-        self.Yd = Yd
-        self.Jq = Jq
-
-        self.logger.info('Preparing linear solver')
-        M = 1 / self.within_params['var_psi'] * eye(self.nf) + 1 / self.within_params['var_eps'] * Jd.transpose() * Jd
-        self.ml = pyamg.ruge_stuben_solver(M)
-
-        # Store the prior in diff
-        jdata_f = pd.concat([jdata[['f1i', 'j1']], jdata[['f2i', 'j2']].rename(columns={'f2i': 'f1i', 'j2': 'j1'})]).drop_duplicates()
-        Jf = csc_matrix((np.ones(len(jdata_f)), (jdata_f.f1i - 1, jdata_f.j1 - 1)), shape=(len(jdata_f), self.nc))
-        self.Mud = Jf * self.between_params['Afill']
-
-        self.last_invert_time = 0
-
-        if self.params['posterior']:
-            self.compute_posterior_var()
-            self.res['var_posterior'] = self.posterior_var
-
-        # Saving to file
-        # Convert results into strings to prevent JSON errors
-        for key, val in self.res.items():
-                self.res[key] = str(val)
-
-        with open(self.params['out'], 'w') as outfile:
-            json.dump(self.res, outfile)
-        self.logger.info("Saved results to {}".format(self.params['out']))
-
-        self.logger.info("------ DONE -------")
-
-    def estimate_between_cluster(self, sdata, jdata):
+    def __estimate_between_cluster(self, sdata, jdata):
         '''
         Takes sdata and jdata and extracts cluster levels means of firm effects and average value of worker effects.
-        '''
-        wo_btw = self.params['wo_btw']
 
+        Arguments:
+            sdata (Pandas DataFrame): stayers
+            jdata (Pandas DataFrame): movers
+
+        Returns:
+            sdata (Pandas DataFrame): @ FIXME correct this
+            jdata (Pandas DataFrame): @ FIXME correct this
+        '''
         # Matrices for group level estimation
-        J1c = csc_matrix((np.ones(self.nm), (jdata.index, jdata.j1 - 1)), shape=(self.nm, self.nc))
-        J2c = csc_matrix((np.ones(self.nm), (jdata.index, jdata.j2 - 1)), shape=(self.nm, self.nc))
+        J1c = csc_matrix((np.ones(self.mn), (jdata.index, jdata['j1'] - 1)), shape=(self.mn, self.nc))
+        J2c = csc_matrix((np.ones(self.mn), (jdata.index, jdata['j2'] - 1)), shape=(self.mn, self.nc))
         Jc = J2c - J1c
         Jc = Jc[:, range(self.nc - 1)]  # Normalizing last group to 0
         Yc = jdata['y2'] - jdata['y1']
@@ -240,15 +243,15 @@ class CRESolver:
         # Extract CRE means
         Mc = Jc.transpose() * Jc
         A = linalg.spsolve(Mc, Jc.transpose() * Yc)
-        if wo_btw:
+        if self.wo_btw:
             A = A * 0.0
         pb['Afill'] = np.append(A, 0)
 
         jdata['psi1_tmp'] = pb['Afill'][jdata['j1'] - 1]
         jdata['psi2_tmp'] = pb['Afill'][jdata['j2'] - 1]
 
-        EEm = jdata.assign(mx = lambda df: 0.5 * (df.y2 - df.psi2_tmp + df.y1 - df.psi1_tmp)).groupby(['j1', 'j2'])['mx'].agg('mean')
-        if wo_btw:
+        EEm = jdata.assign(mx=lambda df: 0.5 * (df['y2'] - df['psi2_tmp'] + df['y1'] - df['psi1_tmp'])).groupby(['j1', 'j2'])['mx'].agg('mean')
+        if self.wo_btw:
             EEm = EEm * 0.0
         jdata = pd.merge(jdata, EEm, on=('j1', 'j2'))
         pb['EEm'] = pd_to_np(EEm.reset_index(), 'j1', 'j2', 'mx', self.nc, self.nc)
@@ -256,8 +259,8 @@ class CRESolver:
         #print(pd_to_np(EEm.reset_index(), 'j1', 'j2', 'mx', self.nc, self.nc) - np.array(EEm.values).reshape(self.nc, self.nc))
 
         sdata['psi1_tmp'] = pb['Afill'][sdata['j1'] - 1]
-        Em = sdata.assign(mx = lambda df: df.y1 - df.psi1_tmp).groupby(['j1'])['mx'].agg('mean')
-        if wo_btw:
+        Em = sdata.assign(mx = lambda df: df['y1'] - df['psi1_tmp']).groupby(['j1'])['mx'].agg('mean')
+        if self.wo_btw:
             Em = Em * 0.0
         sdata = pd.merge(sdata, Em, on=('j1'))
         pb['Em'] = np.array(Em.values)
@@ -273,7 +276,14 @@ class CRESolver:
 
         return sdata, jdata
 
-    def estimate_within_cluster(self, sdata, jdata):
+    def __estimate_within_cluster(self, sdata, jdata):
+        '''
+        @ FIXME add description of function
+
+        Arguments:
+            sdata (Pandas DataFrame): stayers
+            jdata (Pandas DataFrame): movers
+        '''
         res = {}
 
         # We construct wages net of between group means
@@ -336,10 +346,10 @@ class CRESolver:
         res['y2m1_y2m1_count'] = dm.query('nm1j > nm1c').shape[0]
 
         # Compute the moments involving movers arriving at the firm
-        res['y1s_y1m2']  = ds.query('nm2j > 0').pipe(pipe_qcov, 'y1n', 'y1m2j')
-        res['y1s_y1m2_count']  = ds.query('nm2j > 0').shape[0]
-        res['y1s_y2m2']  = ds.query('nm2j > 0').pipe(pipe_qcov, 'y1n', 'y2m2j')
-        res['y1s_y2m2_count']  = ds.query('nm2j > 0').shape[0]
+        res['y1s_y1m2'] = ds.query('nm2j > 0').pipe(pipe_qcov, 'y1n', 'y1m2j')
+        res['y1s_y1m2_count'] = ds.query('nm2j > 0').shape[0]
+        res['y1s_y2m2'] = ds.query('nm2j > 0').pipe(pipe_qcov, 'y1n', 'y2m2j')
+        res['y1s_y2m2_count'] = ds.query('nm2j > 0').shape[0]
         res['y1m2_y1m2'] = dm.query('nm2j > nm2c').pipe(pipe_qcov, 'y1n', 'y1m2j_lo')
         res['y1m2_y1m2_count'] = dm.query('nm2j > nm2c').shape[0]
         res['y2m2_y1m2'] = dm.query('nm2j > nm2c').pipe(pipe_qcov, 'y2n', 'y1m2j_lo')
@@ -356,7 +366,10 @@ class CRESolver:
         self.moments_within = res
         self.res.update(self.moments_within)
 
-    def estimate_within_parameters(self):
+    def __estimate_within_parameters(self):
+        '''
+        @ FIXME add description of function
+        '''
         pw = {}
         # Using movers leaving from firm
         pw['cov_Am1Am1'] = self.moments_within['y2m1_y2m1']
@@ -401,23 +414,98 @@ class CRESolver:
 
     #     self.within_params_woodcock = pw
 
-    def compute_posterior_var(self):
+    def __get_Yq(self):
+        '''
+        Generate Yq, the Pandas series with the cross-section income
+
+        Returns:
+            Yq (Pandas Series): cross-section income
+        '''
+        mdata = self.adata[self.adata['cs'] == 1] # FIXME changed from adata.query('cs==1') (I ran %timeit and slicing is faster)
+        mdata = mdata.reset_index(drop=True) # FIXME changed from set_index(pd.Series(range(len(mdata))))
+        Yq = mdata['y1']
+
+        return Yq
+
+    def __collect_res(self, cdata, Yq):
+        '''
+        Compute the within terms
+
+        Arguments:
+            cdata (Pandas DataFrame): movers and stayers
+            Yq (Pandas Series): income for movers
+        '''
+        self.res['var_y'] = Yq.var()
+        self.logger.info('total variance: {:0.4f}'.format(self.res['var_y']))
+
+        # Compute the between terms
+        cov_mat_between = cdata.cov()
+        self.res['var_bw'] = cov_mat_between['psi1_tmp'].get('psi1_tmp')
+        self.res['cov_bw'] = cov_mat_between['psi1_tmp'].get('mx')
+
+        # Compute the within terms
+        self.res['var_wt'] = self.within_params['var_psi']
+        self.res['cov_wt'] = (self.ns * self.within_params['cov_AsPsi1'] + self.mn * self.within_params['cov_Am1Psi1']) / (self.ns + self.mn)
+        self.res['tot_var'] = self.res['var_bw'] + self.res['var_wt']
+        self.res['var_y'] = np.var(Yq)
+
+        self.logger.info('[cre] VAR bw={:4f} wt={:4f} tot={:4f}'.format(self.res['var_bw'], self.res['var_wt'], self.res['var_bw'] + self.res['var_wt']))
+        self.logger.info('[cre] COV bw={:4f} wt={:4f} tot={:4f}'.format(self.res['cov_bw'], self.res['cov_wt'], self.res['cov_bw'] + self.res['cov_wt']))
+
+    def __prior_in_diff(self, jdata):
+        '''
+        Store the prior in diff.
+
+        Arguments:
+            jdata (Pandas DataFrame): movers
+        '''
+        jdata_f = pd.concat([jdata[['f1i', 'j1']], jdata[['f2i', 'j2']].rename(columns={'f2i': 'f1i', 'j2': 'j1'})]).drop_duplicates()
+        Jf = csc_matrix((np.ones(len(jdata_f)), (jdata_f['f1i'] - 1, jdata_f['j1'] - 1)), shape=(len(jdata_f), self.nc))
+        self.Mud = Jf * self.between_params['Afill']
+
+    def __prep_posterior_var(self, jdata, cdata):
+        '''
+        Prepare data for computing the posterior variance of the CRE model.
+
+        Arguments:
+            jdata (Pandas DataFrame): movers
+            cdata (Pandas DataFrame): movers and stayers, dataframe created when computing the between terms
+        '''
+        jdata['val'] = 1
+        J1 = csc_matrix((jdata['val'], (jdata.index, jdata['f1i'] - 1)), shape=(self.mn, self.nf))
+        J2 = csc_matrix((jdata['val'], (jdata.index, jdata['f2i'] - 1)), shape=(self.mn, self.nf))
+        Jd = J2 - J1
+        Yd = jdata.eval('y2 - y1') # Create the difference Y
+        mdata = self.adata.query('cs == 1')
+        mdata = mdata[~pd.isnull(mdata['f1i'])]
+
+        nnq = len(mdata)
+        Jq = csc_matrix((np.ones(nnq), (range(nnq), mdata['f1i'] - 1)), shape=(nnq, self.nf)) # Get the weighting for the cross-section
+        # Yq = mdata['y1'] # FIXME commented this out
+        # self.nnq = len(cdata) # FIXME commented this out
+        self.Jd = Jd
+        self.Yd = Yd
+        self.Jq = Jq
+
+        self.logger.info('preparing linear solver')
+        M = 1 / self.within_params['var_psi'] * eye(self.nf) + 1 / self.within_params['var_eps'] * Jd.transpose() * Jd
+        self.ml = pyamg.ruge_stuben_solver(M)
+
+    def __compute_posterior_var(self):
         '''
         Compute the posterior variance of the CRE model.
         '''
-        ndraw_trace = self.params['ndraw_tr']
-
         # We first compute the direct term
         v1 = 1 / self.within_params['var_psi'] * self.Mud
         v1 += 1 / self.within_params['var_eps'] * self.Jd.transpose() * self.Yd
         v2 = self.Jq * self.ml.solve(v1)
         t1 = np.var(v2)
 
-        v3 = self.Jq * self.Mud
+        # v3 = self.Jq * self.Mud # FIXME commented this out
 
         # Next we look at the trace term
-        tr_var_pos_all = np.zeros(ndraw_trace)
-        for r in trange(ndraw_trace):
+        tr_var_pos_all = np.zeros(self.ndraw_trace)
+        for r in trange(self.ndraw_trace):
             Zpsi = 2 * np.random.binomial(1, 0.5, self.nf) - 1
 
             R1 = self.Jq * Zpsi
@@ -427,4 +515,17 @@ class CRESolver:
         t2 = np.mean(tr_var_pos_all)
         self.posterior_var = t1 + t2
 
-        self.logger.info("[cre] posterior variance of psi = {:4f}".format(self.posterior_var))
+        self.logger.info('[cre] posterior variance of psi = {:4f}'.format(self.posterior_var))
+
+    def __save_res(self):
+        '''
+        Save results as json.
+        '''
+        # Convert results into strings to prevent JSON errors
+        for key, val in self.res.items():
+            self.res[key] = str(val)
+
+        with open(self.params['out'], 'w') as outfile:
+            json.dump(self.res, outfile)
+
+        self.logger.info('saved results to {}'.format(self.params['out']))

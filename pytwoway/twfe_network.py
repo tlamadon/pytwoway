@@ -3,9 +3,10 @@ Class for a two-way fixed effect network
 '''
 import logging
 from pathlib import Path
-from pytwoway import bipartite_network as bn
-from pytwoway import fe
-from pytwoway import cre
+from pytwoway import BipartiteData as bn
+from pytwoway import update_dict
+from pytwoway import FESolver as fe
+from pytwoway import CRESolver as cre
 
 class TwoWay:
     '''
@@ -39,7 +40,7 @@ class TwoWay:
         self.logger.info('initializing TwoWay object')
 
         # Define some attributes
-        self.b_net = bn.BipartiteData(data, formatting, col_dict)
+        self.b_net = bn(data, formatting, col_dict)
 
         # Define default parameter dictionaries
         self.default_fe = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_fe.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)'} # Do not define 'data' because will be updated later
@@ -53,9 +54,9 @@ class TwoWay:
         Prepare bipartite network for running fit_fe.
         '''
         self.b_net.clean_data()
-        self.b_net.refactor_es()
+        self.b_net.long_to_es()
 
-    def prep_cre(self, user_cluster):
+    def prep_cre(self, user_cluster={}):
         '''
         Prepare bipartite network for running fit_cre.
 
@@ -73,7 +74,7 @@ class TwoWay:
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
         '''
         self.b_net.clean_data()
-        self.b_net.refactor_es()
+        self.b_net.long_to_es()
         self.b_net.cluster(user_cluster=user_cluster)
 
     def fit_fe(self, user_fe={}):
@@ -112,11 +113,12 @@ class TwoWay:
         Returns:
             fe_res (dict): dictionary of results
         '''
-        fe_params = self.b_net.update_dict(self.default_fe, user_fe)
+        self.prep_fe()
+        fe_params = update_dict(self.default_fe, user_fe)
 
-        fe_params['data'] = self.b_net # Make sure to use up-to-date bipartite network
+        fe_params['data'] = self.b_net.es_to_cs() # Make sure to use up-to-date bipartite network
 
-        fe_solver = fe.FESolver(fe_params)
+        fe_solver = fe(fe_params)
         fe_solver.fit_1()
         fe_solver.construct_Q() # Comment out this line and manually create Q if you want a custom Q matrix
         fe_solver.fit_2()
@@ -125,7 +127,7 @@ class TwoWay:
 
         return fe_res
 
-    def fit_cre(self, user_cre={}):
+    def fit_cre(self, user_cre={}, user_cluster={}):
         '''
         Fit the CRE estimator.
 
@@ -146,15 +148,27 @@ class TwoWay:
 
                     wo_btw (bool): sets between variation to 0, pure RE
 
+            user_cluster (dict): dictionary of parameters for clustering
+
+                Dictionary parameters:
+
+                    cdf_resolution (int): how many values to use to approximate the cdf
+
+                    grouping (str): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
+
+                    year (int or None): if None, uses entire dataset; if int, gives year of data to consider
+
+                    user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
+
         Returns:
             cre_res (dict): dictionary of results
         '''
-        cre_params = self.b_net.update_dict(self.default_cre, user_cre)
+        self.prep_cre(user_cluster=user_cluster)
+        cre_params = update_dict(self.default_cre, user_cre)
 
-        cre_params['data'] = self.b_net.data # Make sure to use up-to-date data
+        cre_params['data'] = self.b_net.es_to_cs() # Make sure to use up-to-date data
 
-        cre_solver = cre.CRESolver(cre_params)
-        cre_solver.prep_data()
+        cre_solver = cre(cre_params)
         cre_solver.fit()
 
         cre_res = cre_solver.res
