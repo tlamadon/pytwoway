@@ -226,83 +226,6 @@
 </dl>
 </dd></dl>
 
-<dl class="py method">
-<dt id="pytwoway.sim_twfe_network.SimTwoWay.sim_network_draw_fids">
-<code class="sig-name descname">sim_network_draw_fids</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">freq</span></em>, <em class="sig-param"><span class="n">num_time</span></em>, <em class="sig-param"><span class="n">firm_size</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.SimTwoWay.sim_network_draw_fids" title="Permalink to this definition">¶</a></dt>
-<dd><p>Draw firm ids for individual, given data that is grouped by worker id, spell id, and firm type.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>freq</strong> (<em>NumPy Array</em>) – size of groups (groups by worker id, spell id, and firm type)</p></li>
-<li><p><strong>num_time</strong> (<em>int</em>) – time length of panel</p></li>
-<li><p><strong>firm_size</strong> (<em>int</em>) – max number of individuals per firm</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>random firms for each group</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>(NumPy Array)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.sim_twfe_network.SimTwoWay.sim_network_gen_fe">
-<code class="sig-name descname">sim_network_gen_fe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sim_params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.SimTwoWay.sim_network_gen_fe" title="Permalink to this definition">¶</a></dt>
-<dd><p>Generate fixed effects values for simulated panel data corresponding to the calibrated model.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>sim_params</strong> (<em>dict</em>) – <p>parameters for simulated data</p>
-<p>Dictionary parameters:</p>
-<blockquote>
-<div><p>num_ind (int): number of workers</p>
-<p>num_time (int): time length of panel</p>
-<p>firm_size (int): max number of individuals per firm</p>
-<p>nk (int): number of firm types</p>
-<p>nl (int): number of worker types</p>
-<p>alpha_sig (float): standard error of individual fixed effect (volatility of worker effects)</p>
-<p>psi_sig (float): standard error of firm fixed effect (volatility of firm effects)</p>
-<p>w_sig (float): standard error of residual in AKM wage equation (volatility of wage shocks)</p>
-<p>csort (float): sorting effect</p>
-<p>cnetw (float): network effect</p>
-<p>csig (float): standard error of sorting/network effects</p>
-<p>p_move (float): probability a worker moves firms in any period</p>
-</div></blockquote>
-</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>array of firm fixed effects
-alpha (NumPy Array): array of individual fixed effects
-G (NumPy Array): transition matrices
-H (NumPy Array): stationary distribution</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>psi (NumPy Array)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.sim_twfe_network.SimTwoWay.update_dict">
-<code class="sig-name descname">update_dict</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">default_params</span></em>, <em class="sig-param"><span class="n">user_params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.SimTwoWay.update_dict" title="Permalink to this definition">¶</a></dt>
-<dd><p>Replace entries in default_params with values in user_params. This function allows user_params to include only a subset of the required parameters in the dictionary.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>default_params</strong> (<em>dict</em>) – default parameter values</p></li>
-<li><p><strong>user_params</strong> (<em>dict</em>) – user selected parameter values</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>default_params updated with parameter values in user_params</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>params (dict)</p>
-</dd>
-</dl>
-</dd></dl>
-
 </dd></dl>
 
 <dl class="py class">
@@ -400,67 +323,6 @@ H (NumPy Array): stationary distribution</p>
 </dl>
 </dd></dl>
 
-<dl class="py method">
-<dt id="pytwoway.sim_twfe_network.TwoWayMonteCarlo.twfe_monte_carlo_interior">
-<code class="sig-name descname">twfe_monte_carlo_interior</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fe_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cre_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cluster_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.sim_twfe_network.TwoWayMonteCarlo.twfe_monte_carlo_interior" title="Permalink to this definition">¶</a></dt>
-<dd><p>Run Monte Carlo simulations of TwoWay to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to twfe_monte_carlo.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>fe_params</strong> (<em>dict</em>) – <p>dictionary of parameters for FE estimation</p>
-<p>Dictionary parameters:</p>
-<blockquote>
-<div><p>ncore (int): number of cores to use</p>
-<p>batch (int): batch size to send in parallel</p>
-<p>ndraw_pii (int): number of draw to use in approximation for leverages</p>
-<p>ndraw_tr (int): number of draws to use in approximation for traces</p>
-<p>check (bool): whether to compute the non-approximated estimates as well</p>
-<p>hetero (bool): whether to compute the heteroskedastic estimates</p>
-<p>out (string): outputfile</p>
-<p>con (string): computes the smallest eigen values, this is the filepath where these results are saved</p>
-<p>logfile (string): log output to a logfile</p>
-<p>levfile (string): file to load precomputed leverages</p>
-<p>statsonly (bool): save data statistics only</p>
-</div></blockquote>
-</p></li>
-<li><p><strong>cre_params</strong> (<em>dict</em>) – <p>dictionary of parameters for CRE estimation</p>
-<p>Dictionary parameters:</p>
-<blockquote>
-<div><p>ncore (int): number of cores to use</p>
-<p>ndraw_tr (int): number of draws to use in approximation for traces</p>
-<p>ndp (int): number of draw to use in approximation for leverages</p>
-<p>out (string): outputfile</p>
-<p>posterior (bool): compute posterior variance</p>
-<p>wo_btw (bool): sets between variation to 0, pure RE</p>
-</div></blockquote>
-</p></li>
-<li><p><strong>cluster_params</strong> (<em>dict</em>) – <p>dictionary of parameters for clustering in CRE estimation</p>
-<p>Dictionary parameters:</p>
-<blockquote>
-<div><p>cdf_resolution (int): how many values to use to approximate the cdf
-grouping (string): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)</p>
-<p>year (int): if None, uses entire dataset; if int, gives year of data to consider</p>
-<p>KMeans_params (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>), and use default parameters defined in class attribute default_KMeans for any parameters not specified</p>
-</div></blockquote>
-</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>true simulated sample variance of psi
-true_psi_alpha_cov (float): true simulated sample covariance of psi and alpha
-fe_psi_var (float): AKM estimate of variance of psi
-fe_psi_alpha_cov (float): AKM estimate of covariance of psi and alpha
-fe_corr_psi_var (float): bias-corrected AKM estimate of variance of psi
-fe_corr_psi_alpha_cov (float): bias-corrected AKM estimate of covariance of psi and alpha
-cre_psi_var (float): CRE estimate of variance of psi
-cre_psi_alpha_cov (float): CRE estimate of covariance of psi and alpha</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>true_psi_var (float)</p>
-</dd>
-</dl>
-</dd></dl>
-
 </dd></dl>
 
 </div>
@@ -479,7 +341,7 @@ cre_psi_alpha_cov (float): CRE estimate of covariance of psi and alpha</p>
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Jan 05, 2021.
+        Last updated on Jan 14, 2021.
       </span>
 
     </p>

@@ -13,7 +13,7 @@ from scipy.stats import mode, norm
 from scipy.linalg import eig
 ax = np.newaxis
 from matplotlib import pyplot as plt
-from pytwoway import TwoWay as tn
+from pytwoway import TwoWay as tw
 from pytwoway import update_dict
 
 class SimTwoWay:
@@ -80,7 +80,7 @@ class SimTwoWay:
         # Prevent plotting unless results exist
         self.monte_carlo_res = False
 
-    def sim_network_gen_fe(self, sim_params):
+    def __sim_network_gen_fe(self, sim_params):
         '''
         Generate fixed effects values for simulated panel data corresponding to the calibrated model.
 
@@ -145,7 +145,7 @@ class SimTwoWay:
 
         return psi, alpha, G, H
 
-    def sim_network_draw_fids(self, freq, num_time, firm_size):
+    def __sim_network_draw_fids(self, freq, num_time, firm_size):
         '''
         Draw firm ids for individual, given data that is grouped by worker id, spell id, and firm type.
 
@@ -168,7 +168,7 @@ class SimTwoWay:
             data (Pandas DataFrame): simulated network
         '''
         # Generate fixed effects
-        psi, alpha, G, H = self.sim_network_gen_fe(self.sim_params)
+        psi, alpha, G, H = self.__sim_network_gen_fe(self.sim_params)
 
         # Extract parameters
         num_ind, num_time, firm_size = self.sim_params['num_ind'], self.sim_params['num_time'], self.sim_params['firm_size']
@@ -220,7 +220,7 @@ class SimTwoWay:
         # Generate size of spells
         dspell = data.groupby(['wid', 'spell', 'k']).size().to_frame(name='freq').reset_index()
         # Draw firm ids
-        dspell['fid'] = dspell.groupby(['k'])['freq'].transform(self.sim_network_draw_fids, *[num_time, firm_size])
+        dspell['fid'] = dspell.groupby(['k'])['freq'].transform(self.__sim_network_draw_fids, *[num_time, firm_size])
         # Make firm ids contiguous (and have them start at 1)
         dspell['fid'] = dspell.groupby(['k', 'fid'])['freq'].ngroup() + 1
 
@@ -289,14 +289,16 @@ class TwoWayMonteCarlo:
         self.logger.addHandler(ch)
         self.logger.info('initializing TwoWayMonteCarlo object')
 
-        self.sim = SimTwoWay(sim_params)
+        self.stw_net = SimTwoWay(sim_params)
 
         # Prevent plotting unless results exist
         self.monte_carlo_res = False
 
         self.logger.info('TwoWayMonteCarlo object initialized')
 
-    def twfe_monte_carlo_interior(self, fe_params={}, cre_params={}, cluster_params={}):
+    # Cannot include two underscores because isn't compatible with starmap for multiprocessing
+    # Source: https://stackoverflow.com/questions/27054963/python-attribute-error-object-has-no-attribute
+    def _twfe_monte_carlo_interior(self, fe_params={}, cre_params={}, cluster_params={}):
         '''
         Run Monte Carlo simulations of TwoWay to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to twfe_monte_carlo.
 
@@ -365,12 +367,12 @@ class TwoWayMonteCarlo:
             cre_psi_alpha_cov (float): CRE estimate of covariance of psi and alpha
         '''
         # Simulate data
-        sim_data = self.sim.sim_network()
+        sim_data = self.stw_net.sim_network()
         # Compute true sample variance of psi and covariance of psi and alpha
         psi_var = np.var(sim_data['psi'])
         psi_alpha_cov = np.cov(sim_data['psi'], sim_data['alpha'])[0, 1]
         # Use data to create TwoWay object
-        tw_net = tn(data=sim_data)
+        tw_net = tw(data=sim_data)
         # Estimate FE model
         fe_res = tw_net.fit_fe(user_fe=fe_params)
         # Estimate CRE model
@@ -473,13 +475,13 @@ class TwoWayMonteCarlo:
         if ncore > 1:
             # Simulate networks
             with Pool(processes=ncore) as pool:
-                V = pool.starmap(self.twfe_monte_carlo_interior, [[fe_params, cre_params, cluster_params] for _ in range(N)])
+                V = pool.starmap(self._twfe_monte_carlo_interior, [[fe_params, cre_params, cluster_params] for _ in range(N)])
             for i, res in enumerate(V):
                 true_psi_var[i], true_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_corr_psi_var[i], fe_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = res
         else:
             for i in range(N):
                 # Simulate a network
-                true_psi_var[i], true_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_corr_psi_var[i], fe_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = self.twfe_monte_carlo_interior(fe_params=fe_params, cre_params=cre_params, cluster_params=cluster_params)
+                true_psi_var[i], true_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_corr_psi_var[i], fe_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = self._twfe_monte_carlo_interior(fe_params=fe_params, cre_params=cre_params, cluster_params=cluster_params)
 
         res = {}
 

@@ -3,7 +3,7 @@ Class for a two-way fixed effect network
 '''
 import logging
 from pathlib import Path
-from pytwoway import BipartiteData as bn
+from pytwoway import BipartiteData as bd
 from pytwoway import update_dict
 from pytwoway import FESolver as fe
 from pytwoway import CRESolver as cre
@@ -40,7 +40,7 @@ class TwoWay:
         self.logger.info('initializing TwoWay object')
 
         # Define some attributes
-        self.b_net = bn(data, formatting, col_dict)
+        self.b_net = bd(data, formatting, col_dict)
 
         # Define default parameter dictionaries
         self.default_fe = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_fe.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)'} # Do not define 'data' because will be updated later
@@ -49,14 +49,14 @@ class TwoWay:
 
         self.logger.info('TwoWay object initialized')
 
-    def prep_fe(self):
+    def __prep_fe(self):
         '''
         Prepare bipartite network for running fit_fe.
         '''
         self.b_net.clean_data()
         self.b_net.long_to_es()
 
-    def prep_cre(self, user_cluster={}):
+    def __prep_cre(self, user_cluster={}):
         '''
         Prepare bipartite network for running fit_cre.
 
@@ -113,7 +113,7 @@ class TwoWay:
         Returns:
             fe_res (dict): dictionary of results
         '''
-        self.prep_fe()
+        self.__prep_fe()
         fe_params = update_dict(self.default_fe, user_fe)
 
         fe_params['data'] = self.b_net.es_to_cs() # Make sure to use up-to-date bipartite network
@@ -163,7 +163,7 @@ class TwoWay:
         Returns:
             cre_res (dict): dictionary of results
         '''
-        self.prep_cre(user_cluster=user_cluster)
+        self.__prep_cre(user_cluster=user_cluster)
         cre_params = update_dict(self.default_cre, user_cre)
 
         cre_params['data'] = self.b_net.es_to_cs() # Make sure to use up-to-date data

@@ -205,7 +205,7 @@ and creates associated A = [J W] matrix which are AKM dummies</p>
 <p>provides methods to do A x Y but also (A’A)^-1 A’Y solve method</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>params</strong> (<em>dictionary</em>) – <p>dictionary of parameters</p>
+<dd class="field-odd"><p><strong>params</strong> (<em>dictionary</em>) – <p>dictionary of parameters for FE estimation</p>
 <p>Dictionary parameters:</p>
 <blockquote>
 <div><p>data (BipartiteData): BipartiteData object containing labor data. Data contains the following columns:</p>
@@ -230,45 +230,9 @@ and creates associated A = [J W] matrix which are AKM dummies</p>
 </dd>
 </dl>
 <dl class="py method">
-<dt id="pytwoway.fe.FESolver.collect_res">
-<code class="sig-name descname">collect_res</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.collect_res" title="Permalink to this definition">¶</a></dt>
-<dd><p>Collect all results.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.compute_early_stats">
-<code class="sig-name descname">compute_early_stats</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.compute_early_stats" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute some early statistics.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.compute_leverages_Pii">
-<code class="sig-name descname">compute_leverages_Pii</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.compute_leverages_Pii" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute leverages for heteroskedastic correction.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.compute_trace_approximation_fe">
-<code class="sig-name descname">compute_trace_approximation_fe</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.compute_trace_approximation_fe" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute FE trace approximation for arbitrary Q.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.compute_trace_approximation_he">
-<code class="sig-name descname">compute_trace_approximation_he</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.compute_trace_approximation_he" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute heteroskedastic trace approximation.</p>
-</dd></dl>
-
-<dl class="py method">
 <dt id="pytwoway.fe.FESolver.construct_Q">
 <code class="sig-name descname">construct_Q</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.construct_Q" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generate columns in adata necessary to construct Q.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.create_fe_solver">
-<code class="sig-name descname">create_fe_solver</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.create_fe_solver" title="Permalink to this definition">¶</a></dt>
-<dd><p>Solve FE model.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -298,218 +262,6 @@ alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed e
 </dl>
 </dd></dl>
 
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.init_prepped_adata">
-<code class="sig-name descname">init_prepped_adata</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.init_prepped_adata" title="Permalink to this definition">¶</a></dt>
-<dd><p>Use prepped adata to initialize class attributes.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>adata</strong> (<em>Pandas DataFrame</em>) – <p>labor data.</p>
-<p>Contains the following columns:</p>
-<blockquote>
-<div><p>wid (worker id)</p>
-<p>y1 (compensation 1)</p>
-<p>y2 (compensation 2)</p>
-<p>f1i (firm id 1)</p>
-<p>f2i (firm id 2)</p>
-<p>m (0 if stayer, 1 if mover)</p>
-</div></blockquote>
-</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.leverage_approx">
-<code class="sig-name descname">leverage_approx</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ndraw_pii</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.leverage_approx" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute an approximate leverage using ndraw_pii.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>ndraw_pii</strong> (<em>int</em>) – number of draws</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>&#64; FIXME I don’t know what this function does, so I don’t know what Pii is</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>Pii (NumPy Array)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.load">
-<em class="property">static </em><code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.load" title="Permalink to this definition">¶</a></dt>
-<dd><p>Load files for heteroskedastic correction.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>filename</strong> (<em>string</em>) – file to load</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>loaded file</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>fes</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.mult_A">
-<code class="sig-name descname">mult_A</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">psi</span></em>, <em class="sig-param"><span class="n">alpha</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.mult_A" title="Permalink to this definition">¶</a></dt>
-<dd><p>Multiplies A = [J W] stored in the object by psi and alpha (used, for example, to compute estimated outcomes and sample errors).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>psi</strong> – firm fixed effects &#64; FIXME correct datatype</p></li>
-<li><p><strong>alpha</strong> – worker fixed effects &#64; FIXME correct datatype</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>firms * firm fixed effects + workers * worker fixed effects</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>J_psi + W_alpha (CSC Matrix)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.mult_AAinv">
-<code class="sig-name descname">mult_AAinv</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">psi</span></em>, <em class="sig-param"><span class="n">alpha</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.mult_AAinv" title="Permalink to this definition">¶</a></dt>
-<dd><p>Multiplies gamma = [psi alpha] by (A’A)^(-1) where A = [J W] stored in the object.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>psi</strong> – firm fixed effects &#64; FIXME correct datatype</p></li>
-<li><p><strong>alpha</strong> – worker fixed effects &#64; FIXME correct datatype</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>estimated firm fixed effects &#64; FIXME correct datatype
-alpha_out: estimated worker fixed effects &#64; FIXME correct datatype</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>psi_out</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.mult_Atranspose">
-<code class="sig-name descname">mult_Atranspose</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">v</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.mult_Atranspose" title="Permalink to this definition">¶</a></dt>
-<dd><p>Multiplies the transpose of A = [J W] stored in the object by v.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>v</strong> – what to multiply by &#64; FIXME correct datatype</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>firms * v
-W_transpose_V (CSC Matrix): workers * v</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>J_transpose_V (CSC Matrix)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.prep_data">
-<code class="sig-name descname">prep_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.prep_data" title="Permalink to this definition">¶</a></dt>
-<dd><p>Do some initial data cleaning.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.proj">
-<code class="sig-name descname">proj</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">y</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.proj" title="Permalink to this definition">¶</a></dt>
-<dd><p>Solve y, then project onto X space of data stored in the object.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>y</strong> (<em>Pandas DataFrame</em>) – labor data</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>Projection of psi, alpha solved from y onto X space</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.save">
-<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filename</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.save" title="Permalink to this definition">¶</a></dt>
-<dd><p>Save FESolver class to filename as pickle.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>filename</strong> (<em>string</em>) – filename to save to</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.save_early_stats">
-<code class="sig-name descname">save_early_stats</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.save_early_stats" title="Permalink to this definition">¶</a></dt>
-<dd><p>Save the early statistics computed in compute_early_stats().</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.save_res">
-<code class="sig-name descname">save_res</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.save_res" title="Permalink to this definition">¶</a></dt>
-<dd><p>Save results as json.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.solve">
-<code class="sig-name descname">solve</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">Y</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.solve" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute (A’A)^-1 A’Y, the least squares estimate of A [psi_hat, alpha_hat] = Y.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>Y</strong> (<em>Pandas DataFrame</em>) – labor data</p>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>estimated firm fixed effects &#64; FIXME correct datatype
-alpha_hat: estimated worker fixed effects &#64; FIXME correct datatype</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>psi_hat</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.weighted_quantile">
-<code class="sig-name descname">weighted_quantile</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">values</span></em>, <em class="sig-param"><span class="n">quantiles</span></em>, <em class="sig-param"><span class="n">sample_weight</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">values_sorted</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">old_style</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.weighted_quantile" title="Permalink to this definition">¶</a></dt>
-<dd><p>Very close to numpy.percentile, but supports weights.
-NOTE: quantiles should be in [0, 1]!</p>
-<p>:param : param values: numpy.array with data
-:param : param quantiles: array-like with many quantiles needed
-:param : param sample_weight: array-like of the same length as <cite>array</cite>
-:param : param values_sorted: bool, if True, then will avoid sorting of initial array
-:param : param old_style: if True, will correct output to be consistent with numpy.percentile.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>return: numpy.array with computed quantiles.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FESolver.weighted_var">
-<code class="sig-name descname">weighted_var</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">v</span></em>, <em class="sig-param"><span class="n">w</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.weighted_var" title="Permalink to this definition">¶</a></dt>
-<dd><p>Compute weighted variance &#64; FIXME I don’t know what this function really does</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>v</strong> – &#64; FIXME I don’t know what this is</p></li>
-<li><p><strong>w</strong> – &#64; FIXME I don’t know what this is</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns</dt>
-<dd class="field-even"><p>&#64; FIXME I don’t know what this is</p>
-</dd>
-<dt class="field-odd">Return type</dt>
-<dd class="field-odd"><p>v0</p>
-</dd>
-</dl>
-</dd></dl>
-
 </dd></dl>
 
 </div>
@@ -528,7 +280,7 @@ NOTE: quantiles should be in [0, 1]!</p>
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Jan 05, 2021.
+        Last updated on Jan 14, 2021.
       </span>
 
     </p>

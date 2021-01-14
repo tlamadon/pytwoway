@@ -80,7 +80,7 @@
               
             
             
-              <p class="caption"><span class="caption-text">User documention</span></p>
+              <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
 <li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From terminal</a></li>
@@ -185,30 +185,37 @@
 </style>
 <div class="section" id="api-reference">
 <h1>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">¶</a></h1>
-<p>The main pytwoway API is split into four modules:</p>
+<p>The main pytwoway API is split into six classes:</p>
 <ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.cre</span></code>: CRE estimator. Canonically imported
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.CRESolver</span></code>: Class for CRE estimator. Canonically imported
 using</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">python</span> <span class="kn">import</span> <span class="n">cre</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">CRESolver</span> <span class="k">as</span> <span class="n">cre</span>
 </pre></div>
 </div>
 </li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.fe_approximate_correction_full.FEsolver</span></code>: FE esimators. Canonically imported
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwowaySolver</span></code>: Class for FE estimators. Canonically imported
 using</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">python</span> <span class="kn">import</span> <span class="n">fe_approximate_correction_full</span>
-<span class="n">fe</span> <span class="o">=</span> <span class="n">fe_approximate_correction_full</span><span class="o">.</span><span class="n">FEsolver</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">FESolver</span> <span class="k">as</span> <span class="n">fe</span>
 </pre></div>
 </div>
 </li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.twfe_network.twfe_network</span></code>: Class to format labor data. Canonically imported using</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">twfe_network</span>
-<span class="n">tn</span> <span class="o">=</span> <span class="n">twfe_network</span><span class="o">.</span><span class="n">twfe_network</span>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.BipartiteData</span></code>: Class for formatting bipartite networks (usually of firms and workers). Canonically imported using</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">BipartiteData</span> <span class="k">as</span> <span class="n">bd</span>
 </pre></div>
 </div>
 </li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.sim_twfe_network.sim_twfe_network</span></code>: Class to simulate labor data and run Monte Carlo simulations. Canonically imported using</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">sim_twfe_network</span>
-<span class="n">sn</span> <span class="o">=</span> <span class="n">sim_twfe_network</span><span class="o">.</span><span class="n">sim_twfe_network</span>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWay</span></code>: Class for formatting data and run CRE and FE estimators. Canonically imported using</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">TwoWay</span> <span class="k">as</span> <span class="n">tw</span>
+</pre></div>
+</div>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.SimTwoWay</span></code>: Class to simulate labor data. Canonically imported using</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">SimTwoWay</span> <span class="k">as</span> <span class="n">stw</span>
+</pre></div>
+</div>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWayMonteCarlo</span></code>: Class to run Monte Carlo simulations. Canonically imported using</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">TwoWayMonteCarlo</span> <span class="k">as</span> <span class="n">twmc</span>
 </pre></div>
 </div>
 </li>
@@ -223,206 +230,129 @@ using</p>
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CREsolver" title="pytwoway.cre.CREsolver"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CREsolver</span></code></a>(adata, sdata, jdata[, wo_btw])</p></td>
-<td><p>Uses multigrid and partialing out to solve two way Fixed Effect model</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CRESolver</span></code>(params)</p></td>
+<td><p>Uses multigrid and partialing out to solve two way Fixed Effect model.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CREsolver.compute_posterior_var" title="pytwoway.cre.CREsolver.compute_posterior_var"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_posterior_var</span></code></a>(ndraw_trace)</p></td>
-<td><p>compute the posterior variance of the CRE model :return:</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>()</p></td>
+<td><p>Run CRE solver.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CREsolver.estimate_between_cluster" title="pytwoway.cre.CREsolver.estimate_between_cluster"><code class="xref py py-obj docutils literal notranslate"><span class="pre">estimate_between_cluster</span></code></a>(sdata, jdata[, wo_btw])</p></td>
-<td><p>Takes sdata and jdata and extracts cluster levels means of firm effects and average value of worker effects :param sdata: :param jdata: :return:</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CREsolver.estimate_within_cluster" title="pytwoway.cre.CREsolver.estimate_within_cluster"><code class="xref py py-obj docutils literal notranslate"><span class="pre">estimate_within_cluster</span></code></a>(sdata, jdata)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.pd_to_np" title="pytwoway.cre.pd_to_np"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pd_to_np</span></code></a>(df, colr, colc, colv, nr, nc)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.CREsolver.estimate_within_parameters" title="pytwoway.cre.CREsolver.estimate_within_parameters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">estimate_within_parameters</span></code></a>()</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.expand_grid" title="pytwoway.cre.expand_grid"><code class="xref py py-obj docutils literal notranslate"><span class="pre">expand_grid</span></code></a>(data_dict)</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.main" title="pytwoway.cre.main"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main</span></code></a>(args)</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.pd_to_np" title="pytwoway.cre.pd_to_np"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pd_to_np</span></code></a>(df, colr, colc, colv, nr, nc)</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.pipe_qcov" title="pytwoway.cre.pipe_qcov"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pipe_qcov</span></code></a>(df, e1, e2)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.pipe_qcov" title="pytwoway.cre.pipe_qcov"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pipe_qcov</span></code></a>(df, e1, e2)</p></td>
 <td><p></p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<div class="section" id="pytwoway-fe-approximate-correction-full">
-<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.fe_approximate_correction_full</span></code><a class="headerlink" href="#pytwoway-fe-approximate-correction-full" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="pytwoway">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway</span></code><a class="headerlink" href="#pytwoway" title="Permalink to this headline">¶</a></h3>
 <table class="longtable docutils align-default">
 <colgroup>
 <col style="width: 10%" />
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver" title="pytwoway.fe_approximate_correction_full.FEsolver"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FEsolver</span></code></a>(params)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">FESolver</span></code>(params)</p></td>
 <td><p>Uses multigrid and partialing out to solve two way Fixed Effect model</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.collect_res" title="pytwoway.fe_approximate_correction_full.FEsolver.collect_res"><code class="xref py py-obj docutils literal notranslate"><span class="pre">collect_res</span></code></a>()</p></td>
-<td><p>Collect all results.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.compute_early_stats" title="pytwoway.fe_approximate_correction_full.FEsolver.compute_early_stats"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_early_stats</span></code></a>()</p></td>
-<td><p>Compute some early statistics.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.compute_leverages_Pii" title="pytwoway.fe_approximate_correction_full.FEsolver.compute_leverages_Pii"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_leverages_Pii</span></code></a>()</p></td>
-<td><p>Compute leverages for heteroskedastic correction.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.compute_trace_approximation_fe" title="pytwoway.fe_approximate_correction_full.FEsolver.compute_trace_approximation_fe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_trace_approximation_fe</span></code></a>()</p></td>
-<td><p>Compute FE trace approximation for arbitrary Q.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.compute_trace_approximation_he" title="pytwoway.fe_approximate_correction_full.FEsolver.compute_trace_approximation_he"><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_trace_approximation_he</span></code></a>()</p></td>
-<td><p>Compute heteroskedastic trace approximation.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.construct_Q" title="pytwoway.fe_approximate_correction_full.FEsolver.construct_Q"><code class="xref py py-obj docutils literal notranslate"><span class="pre">construct_Q</span></code></a>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">construct_Q</span></code>()</p></td>
 <td><p>Generate columns in adata necessary to construct Q.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.create_fe_solver" title="pytwoway.fe_approximate_correction_full.FEsolver.create_fe_solver"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_fe_solver</span></code></a>()</p></td>
-<td><p>Solve FE model.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.get_akm_estimates" title="pytwoway.fe_approximate_correction_full.FEsolver.get_akm_estimates"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_akm_estimates</span></code></a>()</p></td>
-<td><p>Return estimated psi_hats linked to firm ids and alpha_hats linked to worker ids.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.init_prepped_adata" title="pytwoway.fe_approximate_correction_full.FEsolver.init_prepped_adata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">init_prepped_adata</span></code></a>()</p></td>
-<td><p>Use prepped adata to initialize class attributes.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.leverage_approx" title="pytwoway.fe_approximate_correction_full.FEsolver.leverage_approx"><code class="xref py py-obj docutils literal notranslate"><span class="pre">leverage_approx</span></code></a>(ndraw_pii)</p></td>
-<td><p>Compute an approximate leverage using ndraw_pii.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.load" title="pytwoway.fe_approximate_correction_full.FEsolver.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>(filename)</p></td>
-<td><p>Load files for heteroskedastic correction.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.mult_A" title="pytwoway.fe_approximate_correction_full.FEsolver.mult_A"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mult_A</span></code></a>(psi, alpha)</p></td>
-<td><p>Multiplies A = [J W] stored in the object by psi and alpha (used, for example, to compute estimated outcomes and sample errors).</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.mult_AAinv" title="pytwoway.fe_approximate_correction_full.FEsolver.mult_AAinv"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mult_AAinv</span></code></a>(psi, alpha)</p></td>
-<td><p>Multiplies gamma = [psi alpha] by (A’A)^(-1) where A = [J W] stored in the object.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.mult_Atranspose" title="pytwoway.fe_approximate_correction_full.FEsolver.mult_Atranspose"><code class="xref py py-obj docutils literal notranslate"><span class="pre">mult_Atranspose</span></code></a>(v)</p></td>
-<td><p>Multiplies the transpose of A = [J W] stored in the object by v.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.prep_data" title="pytwoway.fe_approximate_correction_full.FEsolver.prep_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prep_data</span></code></a>()</p></td>
-<td><p>Do some initial data cleaning.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.proj" title="pytwoway.fe_approximate_correction_full.FEsolver.proj"><code class="xref py py-obj docutils literal notranslate"><span class="pre">proj</span></code></a>(y)</p></td>
-<td><p>Solve y, then project onto X space of data stored in the object.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.run_1" title="pytwoway.fe_approximate_correction_full.FEsolver.run_1"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_1</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_1</span></code>()</p></td>
 <td><p>Run FE solver, part 1.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.run_2" title="pytwoway.fe_approximate_correction_full.FEsolver.run_2"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_2</span></code></a>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_2</span></code>()</p></td>
 <td><p>Run FE solver, part 2.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.save" title="pytwoway.fe_approximate_correction_full.FEsolver.save"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save</span></code></a>(filename)</p></td>
-<td><p>Save FEsolver class to filename as pickle.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.save_early_stats" title="pytwoway.fe_approximate_correction_full.FEsolver.save_early_stats"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save_early_stats</span></code></a>()</p></td>
-<td><p>Save the early statistics computed in compute_early_stats().</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.save_res" title="pytwoway.fe_approximate_correction_full.FEsolver.save_res"><code class="xref py py-obj docutils literal notranslate"><span class="pre">save_res</span></code></a>()</p></td>
-<td><p>Save results as json.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.solve" title="pytwoway.fe_approximate_correction_full.FEsolver.solve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">solve</span></code></a>(Y)</p></td>
-<td><p>Compute (A’A)^-1 A’Y, the least squares estimate of A [psi_hat, alpha_hat] = Y.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.weighted_quantile" title="pytwoway.fe_approximate_correction_full.FEsolver.weighted_quantile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">weighted_quantile</span></code></a>(values, quantiles[, …])</p></td>
-<td><p>Very close to numpy.percentile, but supports weights.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="fe_approximate_correction_full.html#pytwoway.fe_approximate_correction_full.FEsolver.weighted_var" title="pytwoway.fe_approximate_correction_full.FEsolver.weighted_var"><code class="xref py py-obj docutils literal notranslate"><span class="pre">weighted_var</span></code></a>(v, w)</p></td>
-<td><p>Compute weighted variance &#64; FIXME I don’t know what this function really does</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_fe_estimates</span></code>()</p></td>
+<td><p>Return estimated psi_hats linked to firm ids and alpha_hats linked to worker ids.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<div class="section" id="pytwoway-twfe-network">
-<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.twfe_network</span></code><a class="headerlink" href="#pytwoway-twfe-network" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="pytwoway-bipartitedata">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.BipartiteData</span></code><a class="headerlink" href="#pytwoway-bipartitedata" title="Permalink to this headline">¶</a></h3>
 <table class="longtable docutils align-default">
 <colgroup>
 <col style="width: 10%" />
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network" title="pytwoway.twfe_network.twfe_network"><code class="xref py py-obj docutils literal notranslate"><span class="pre">twfe_network</span></code></a>(data[, formatting, col_dict])</p></td>
-<td><p>Class of twfe_network, where twfe_network gives a network of firms and workers.</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BipartiteData</span></code>(data[, formatting, col_dict])</p></td>
+<td><p>Abstract class of BipartiteData, where BipartiteData gives a bipartite network of firms and workers.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.approx_cdfs" title="pytwoway.twfe_network.twfe_network.approx_cdfs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">approx_cdfs</span></code></a>([cdf_resolution, grouping, year])</p></td>
-<td><p>Generate cdfs of compensation for firms.</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">clean_data</span></code>()</p></td>
+<td><p>Clean data.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.clean_data" title="pytwoway.twfe_network.twfe_network.clean_data"><code class="xref py py-obj docutils literal notranslate"><span class="pre">clean_data</span></code></a>()</p></td>
-<td><p>Clean data to make sure there are no NaN observations, firms are connected by movers and firm ids are contiguous.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.cluster" title="pytwoway.twfe_network.twfe_network.cluster"><code class="xref py py-obj docutils literal notranslate"><span class="pre">cluster</span></code></a>([user_cluster])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">cluster</span></code>([user_cluster])</p></td>
 <td><p>Cluster data and assign a new column giving the cluster for each firm.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.conset" title="pytwoway.twfe_network.twfe_network.conset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">conset</span></code></a>()</p></td>
-<td><p>Update data to include only the largest connected set of movers, and if firm ids are contiguous, also return the NetworkX Graph.</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">es_to_cs</span></code>()</p></td>
+<td><p>Refactor event study data into cross section data.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.contiguous_fids" title="pytwoway.twfe_network.twfe_network.contiguous_fids"><code class="xref py py-obj docutils literal notranslate"><span class="pre">contiguous_fids</span></code></a>()</p></td>
-<td><p>Make firm ids contiguous.</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">es_to_long</span></code>()</p></td>
+<td><p>Refactor event study data into long data.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.data_validity" title="pytwoway.twfe_network.twfe_network.data_validity"><code class="xref py py-obj docutils literal notranslate"><span class="pre">data_validity</span></code></a>()</p></td>
-<td><p>Checks that data is formatted correctly and updates relevant attributes.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.n_firms" title="pytwoway.twfe_network.twfe_network.n_firms"><code class="xref py py-obj docutils literal notranslate"><span class="pre">n_firms</span></code></a>()</p></td>
-<td><p>Get the number of unique firms.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.n_workers" title="pytwoway.twfe_network.twfe_network.n_workers"><code class="xref py py-obj docutils literal notranslate"><span class="pre">n_workers</span></code></a>()</p></td>
-<td><p>Get the number of unique workers.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.refactor_es" title="pytwoway.twfe_network.twfe_network.refactor_es"><code class="xref py py-obj docutils literal notranslate"><span class="pre">refactor_es</span></code></a>()</p></td>
-<td><p>Refactor long form data into event study data.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.run_akm_corrected" title="pytwoway.twfe_network.twfe_network.run_akm_corrected"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_akm_corrected</span></code></a>([user_akm])</p></td>
-<td><p>Run bias-corrected AKM estimator.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.run_cre" title="pytwoway.twfe_network.twfe_network.run_cre"><code class="xref py py-obj docutils literal notranslate"><span class="pre">run_cre</span></code></a>([user_cre])</p></td>
-<td><p>Run CRE estimator.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.update_cols" title="pytwoway.twfe_network.twfe_network.update_cols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_cols</span></code></a>()</p></td>
-<td><p>Rename columns and keep only relevant columns.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="twfe_network.html#pytwoway.twfe_network.twfe_network.update_dict" title="pytwoway.twfe_network.twfe_network.update_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_dict</span></code></a>(default_params, user_params)</p></td>
-<td><p>Replace entries in default_params with values in user_params.</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">long_to_es</span></code>()</p></td>
+<td><p>Refactor long data into event study data.</p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<div class="section" id="pytwoway-sim-twfe-network">
-<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.sim_twfe_network</span></code><a class="headerlink" href="#pytwoway-sim-twfe-network" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="pytwoway-twoway">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWay</span></code><a class="headerlink" href="#pytwoway-twoway" title="Permalink to this headline">¶</a></h3>
 <table class="longtable docutils align-default">
 <colgroup>
 <col style="width: 10%" />
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.sim_twfe_network" title="pytwoway.sim_twfe_network.sim_twfe_network"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sim_twfe_network</span></code></a>([sim_params])</p></td>
-<td><p>Class of sim_twfe_network, where sim_twfe_network simulates a network of firms and workers.</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">TwoWay</span></code>(data[, formatting, col_dict])</p></td>
+<td><p>Class of TwoWay, where TwoWay gives a network of firms and workers.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.sim_twfe_network.plot_monte_carlo" title="pytwoway.sim_twfe_network.sim_twfe_network.plot_monte_carlo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_monte_carlo</span></code></a>()</p></td>
-<td><p>Plot results from Monte Carlo simulations.</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_cre</span></code>([user_cre, user_cluster])</p></td>
+<td><p>Fit the CRE estimator.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.sim_twfe_network.sim_network" title="pytwoway.sim_twfe_network.sim_twfe_network.sim_network"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sim_network</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_fe</span></code>([user_fe])</p></td>
+<td><p>Fit the bias-corrected FE estimator.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="pytwoway-simtwoway">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.SimTwoWay</span></code><a class="headerlink" href="#pytwoway-simtwoway" title="Permalink to this headline">¶</a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SimTwoWay</span></code>([sim_params])</p></td>
+<td><p>Class of SimTwoWay, where SimTwoWay simulates a network of firms and workers.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">sim_network</span></code>()</p></td>
 <td><p>Simulate panel data corresponding to the calibrated model.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.sim_twfe_network.sim_network_draw_fids" title="pytwoway.sim_twfe_network.sim_twfe_network.sim_network_draw_fids"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sim_network_draw_fids</span></code></a>(freq, num_time, firm_size)</p></td>
-<td><p>Draw firm ids for individual, given data that is grouped by worker id, spell id, and firm type.</p></td>
+</tbody>
+</table>
+</div>
+<div class="section" id="pytwoway-twowaymontecarlo">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWayMonteCarlo</span></code><a class="headerlink" href="#pytwoway-twowaymontecarlo" title="Permalink to this headline">¶</a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">TwoWayMonteCarlo</span></code>([sim_params])</p></td>
+<td><p>Class of TwoWayMonteCarlo, where TwoWayMonteCarlo runs a Monte Carlo estimate by simulating networks of firms and workers.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.sim_twfe_network.sim_network_gen_fe" title="pytwoway.sim_twfe_network.sim_twfe_network.sim_network_gen_fe"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sim_network_gen_fe</span></code></a>(sim_params)</p></td>
-<td><p>Generate fixed effects values for simulated panel data corresponding to the calibrated model.</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_monte_carlo</span></code>()</p></td>
+<td><p>Plot results from Monte Carlo simulations.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.sim_twfe_network.twfe_monte_carlo" title="pytwoway.sim_twfe_network.sim_twfe_network.twfe_monte_carlo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">twfe_monte_carlo</span></code></a>([N, ncore, akm_params, …])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">twfe_monte_carlo</span></code>([N, ncore, fe_params, …])</p></td>
 <td><p>Purpose:</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.sim_twfe_network.twfe_monte_carlo_interior" title="pytwoway.sim_twfe_network.sim_twfe_network.twfe_monte_carlo_interior"><code class="xref py py-obj docutils literal notranslate"><span class="pre">twfe_monte_carlo_interior</span></code></a>([akm_params, …])</p></td>
-<td><p>Run Monte Carlo simulations of twfe_network to see the distribution of the true vs.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="sim_twfe_network.html#pytwoway.sim_twfe_network.sim_twfe_network.update_dict" title="pytwoway.sim_twfe_network.sim_twfe_network.update_dict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_dict</span></code></a>(default_params, user_params)</p></td>
-<td><p>Replace entries in default_params with values in user_params.</p></td>
 </tr>
 </tbody>
 </table>
@@ -444,7 +374,7 @@ using</p>
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Dec 24, 2020.
+        Last updated on Jan 14, 2021.
       </span>
 
     </p>

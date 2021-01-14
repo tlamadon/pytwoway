@@ -202,11 +202,12 @@
 </dl>
 <dl class="py method">
 <dt id="pytwoway.twfe_network.TwoWay.fit_cre">
-<code class="sig-name descname">fit_cre</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cre</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay.fit_cre" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">fit_cre</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cre</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">user_cluster</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay.fit_cre" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fit the CRE estimator.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>user_cre</strong> (<em>dict</em>) – <p>dictionary of parameters for CRE estimation</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>user_cre</strong> (<em>dict</em>) – <p>dictionary of parameters for CRE estimation</p>
 <p>Dictionary parameters:</p>
 <blockquote>
 <div><p>ncore (int): number of cores to use</p>
@@ -216,7 +217,17 @@
 <p>posterior (bool): compute posterior variance</p>
 <p>wo_btw (bool): sets between variation to 0, pure RE</p>
 </div></blockquote>
-</p>
+</p></li>
+<li><p><strong>user_cluster</strong> (<em>dict</em>) – <p>dictionary of parameters for clustering</p>
+<p>Dictionary parameters:</p>
+<blockquote>
+<div><p>cdf_resolution (int): how many values to use to approximate the cdf</p>
+<p>grouping (str): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)</p>
+<p>year (int or None): if None, uses entire dataset; if int, gives year of data to consider</p>
+<p>user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>), and use default parameters defined in class attribute default_KMeans for any parameters not specified</p>
+</div></blockquote>
+</p></li>
+</ul>
 </dd>
 <dt class="field-even">Returns</dt>
 <dd class="field-even"><p>dictionary of results</p>
@@ -260,31 +271,6 @@
 </dl>
 </dd></dl>
 
-<dl class="py method">
-<dt id="pytwoway.twfe_network.TwoWay.prep_cre">
-<code class="sig-name descname">prep_cre</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cluster</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay.prep_cre" title="Permalink to this definition">¶</a></dt>
-<dd><p>Prepare bipartite network for running fit_cre.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>user_cluster</strong> (<em>dict</em>) – <p>dictionary of parameters for clustering</p>
-<p>Dictionary parameters:</p>
-<blockquote>
-<div><p>cdf_resolution (int): how many values to use to approximate the cdf</p>
-<p>grouping (str): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)</p>
-<p>year (int or None): if None, uses entire dataset; if int, gives year of data to consider</p>
-<p>user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>), and use default parameters defined in class attribute default_KMeans for any parameters not specified</p>
-</div></blockquote>
-</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.twfe_network.TwoWay.prep_fe">
-<code class="sig-name descname">prep_fe</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay.prep_fe" title="Permalink to this definition">¶</a></dt>
-<dd><p>Prepare bipartite network for running fit_fe.</p>
-</dd></dl>
-
 </dd></dl>
 
 </div>
@@ -303,7 +289,7 @@
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Jan 05, 2021.
+        Last updated on Jan 14, 2021.
       </span>
 
     </p>

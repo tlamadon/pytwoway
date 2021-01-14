@@ -49,9 +49,9 @@ class BipartiteData:
 
         # Create subclass
         if self.formatting == 'long':
-            self.bn = BipartiteLong(self.data, self.col_dict)
+            self.bd = BipartiteLong(self.data, self.col_dict)
         elif self.formatting == 'es':
-            self.bn = BipartiteEventStudy(self.data, self.col_dict)
+            self.bd = BipartiteEventStudy(self.data, self.col_dict)
 
         self.logger.info('BipartiteData object initialized')
 
@@ -59,11 +59,11 @@ class BipartiteData:
         '''
         Clean data.
         '''
-        self.bn.clean_data()
+        self.bd.clean_data()
         if self.formatting == 'long':
-            self.bn.collapse_spells()
-        self.data = self.bn.data
-        self.col_dict = self.bn.col_dict
+            self.bd.collapse_spells()
+        self.data = self.bd.data
+        self.col_dict = self.bd.col_dict
 
     def long_to_es(self):
         '''
@@ -71,18 +71,18 @@ class BipartiteData:
         '''
         if self.formatting == 'long':
             # Save attributes
-            connected = self.bn.connected
-            contiguous = self.bn.contiguous
-            no_na = self.bn.no_na
+            connected = self.bd.connected
+            contiguous = self.bd.contiguous
+            no_na = self.bd.no_na
             # Update bipartite network
-            self.bn = BipartiteEventStudy(self.bn.get_es())
+            self.bd = BipartiteEventStudy(self.bd.get_es())
             # Use attributes from before
-            self.bn.connected = connected
-            self.bn.contiguous = contiguous
-            self.bn.no_na = no_na
+            self.bd.connected = connected
+            self.bd.contiguous = contiguous
+            self.bd.no_na = no_na
             # Update superclass attributes
-            self.data = self.bn.data
-            self.col_dict = self.bn.col_dict
+            self.data = self.bd.data
+            self.col_dict = self.bd.col_dict
             self.formatting = 'es'
         elif self.formatting == 'es':
             self.logger.info('Data is already formatted as event study.')
@@ -95,19 +95,19 @@ class BipartiteData:
         '''
         if self.formatting == 'es':
             # Save attributes
-            connected = self.bn.connected
-            contiguous = self.bn.contiguous
-            no_na = self.bn.no_na
+            connected = self.bd.connected
+            contiguous = self.bd.contiguous
+            no_na = self.bd.no_na
             # Update bipartite network
-            self.bn = BipartiteLong(self.bn.get_long())
+            self.bd = BipartiteLong(self.bd.get_long())
             # Use attributes from before
-            self.bn.connected = connected
-            self.bn.contiguous = contiguous
-            self.bn.no_na = no_na
-            self.bn.collapsed = True # Event study is always collapsed
+            self.bd.connected = connected
+            self.bd.contiguous = contiguous
+            self.bd.no_na = no_na
+            self.bd.collapsed = True # Event study is always collapsed
             # Update superclass attributes
-            self.data = self.bn.data
-            self.col_dict = self.bn.col_dict
+            self.data = self.bd.data
+            self.col_dict = self.bd.col_dict
             self.formatting = 'long'
         elif self.formatting == 'long':
             self.logger.info('Data is already formatted as long.')
@@ -119,7 +119,7 @@ class BipartiteData:
         Refactor event study data into cross section data.
         '''
         if self.formatting == 'es':
-            return self.bn.get_cross_section()
+            return self.bd.get_cross_section()
         elif self.formatting == 'long':
             self.logger.info('Cross section cannot be constructed from long data. Run long_to_es() first to convert data into event study formatting.')
         else:
@@ -143,8 +143,8 @@ class BipartiteData:
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
         '''
         if self.formatting == 'es':
-            self.bn.cluster(user_cluster=user_cluster)
-            self.data = self.bn.data
+            self.bd.cluster(user_cluster=user_cluster)
+            self.data = self.bd.data
         elif self.formatting == 'long':
             self.logger.info('Cannot cluster from long data. Run long_to_es() first to convert data into event study formatting.')
         else:
