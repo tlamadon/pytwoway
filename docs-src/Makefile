@@ -23,3 +23,6 @@ copy:
 	rm -f *.log
 	cp -r build/html/** ../docs
 	cp .nojekyll ../docs
+
+serve:
+	python3 -m http.server --directory ./build/html
