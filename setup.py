@@ -1,11 +1,11 @@
 import setuptools
 
-with open('README.md', 'r', encoding='utf-8') as fh:
+with open('README.rst', 'r', encoding='utf-8') as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name='pytwoway',
-    version='0.0.3',
+    version='0.0.4',
     author='Thibaut Lamadon',
     author_email='thibaut.lamadon@gmail.com',
     description='Estimate two way fixed effect labor models',
@@ -22,7 +22,6 @@ setuptools.setup(
         'networkx',
         'scikit-learn',
         'pyamg',
-        'pyreadr',
         'ConfigArgParse'
       ],
     entry_points = {
