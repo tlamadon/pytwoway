@@ -18,7 +18,11 @@ class BipartiteData:
     Arguments:
         data (Pandas DataFrame): bipartite network data
         formatting (str): if 'long', then data in long format; if 'es', then data in event study format.
-        col_dict (dict): make data columns readable (requires: wid (worker id), comp (compensation), fid (firm id), year if long; wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover) if event study). Keep None if column names already correct
+        col_dict (dict): make data columns readable (requires:
+            if long: wid (worker id), comp (compensation), fid (firm id), year;
+            if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover);
+                optionally include: year_end_1 (last year of observation 1), year_end_2 (last year of observation 2), w1 (weight 1), w2 (weight 2)).
+            Keep None if column names already correct
     '''
 
     def __init__(self, data, formatting='long', col_dict=None):
@@ -54,6 +58,18 @@ class BipartiteData:
             self.bd = BipartiteEventStudy(self.data, self.col_dict)
 
         self.logger.info('BipartiteData object initialized')
+
+    def copy(self):
+        '''
+        Copy the current instance of BipartiteData.
+
+        Returns:
+            bd_copy (BipartiteData): copy of the current instance of BipartiteData.
+        '''
+        bd_copy = BipartiteData(self.data, self.formatting, self.col_dict)
+        bd_copy.bd = self.bd.copy()
+
+        return bd_copy
 
     def clean_data(self):
         '''
@@ -116,7 +132,7 @@ class BipartiteData:
 
     def es_to_cs(self):
         '''
-        Refactor event study data into cross section data.
+        Return event study data reformatted into cross section data.
         '''
         if self.formatting == 'es':
             return self.bd.get_cross_section()
@@ -193,6 +209,21 @@ class BipartiteLong:
             self.col_dict = col_dict
 
         self.logger.info('BipartiteLong object initialized')
+
+    def copy(self):
+        '''
+        Copy the current instance of BipartiteLong.
+
+        Returns:
+            bd_copy (BipartiteLong): copy of the current instance of BipartiteLong.
+        '''
+        bd_copy = BipartiteLong(self.data, self.col_dict)
+        bd_copy.connected = self.connected
+        bd_copy.contiguous = self.contiguous
+        bd_copy.no_na = self.no_na
+        bd_copy.collapsed = self.collapsed
+
+        return bd_copy
 
     def update_cols(self):
         '''
@@ -557,7 +588,7 @@ class BipartiteEventStudy:
 
     Arguments:
         data (Pandas DataFrame): bipartite network data
-        col_dict (dict): make data columns readable (requires: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover)). Keep None if column names already correct
+        col_dict (dict): make data columns readable (requires: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover); optionally include: year_end_1 (last year of observation 1), year_end_2 (last year of observation 2), w1 (weight 1), w2 (weight 2)). Keep None if column names already correct
     '''
 
     def __init__(self, data, col_dict=None):
@@ -598,6 +629,20 @@ class BipartiteEventStudy:
         self.default_cluster = {'cdf_resolution': 10, 'grouping': 'quantile_all', 'year': None, 'user_KMeans': self.default_KMeans}
 
         self.logger.info('BipartiteEventStudy object initialized')
+
+    def copy(self):
+        '''
+        Copy the current instance of BipartiteEventStudy.
+
+        Returns:
+            bd_copy (BipartiteEventStudy): copy of the current instance of BipartiteEventStudy.
+        '''
+        bd_copy = BipartiteEventStudy(self.data, self.col_dict)
+        bd_copy.connected = self.connected
+        bd_copy.contiguous = self.contiguous
+        bd_copy.no_na = self.no_na
+
+        return bd_copy
 
     def update_cols(self):
         '''
@@ -825,6 +870,9 @@ class BipartiteEventStudy:
     def get_cross_section(self):
         '''
         Return event study data reformatted into cross section data.
+
+        Returns:
+            data_cs (Pandas DataFrame): cross section data
         '''
         sdata = self.data[self.data['m'] == 0]
         jdata = self.data[self.data['m'] == 1]
@@ -840,10 +888,10 @@ class BipartiteEventStudy:
         # Combine the 2 data-sets
         try: # If clustering, include j1 and j2
             data_cs = pd.concat([
-                sdata[['wid', 'f1i', 'f2i', 'y1', 'y2', 'j1', 'j2', 'year_end_1', 'w1', 'm']].assign(cs=1), jdata[['wid', 'f1i', 'f2i', 'y1', 'y2', 'j1', 'j2', 'year_end_1', 'w1', 'm']].assign(cs=1), jdata[['wid', 'f1i', 'f2i', 'y2', 'y1', 'j1', 'j2', 'year_end_2', 'w2', 'm']].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'j1': 'j2', 'j2': 'j1', 'year_end_2': 'year_end_1', 'w2': 'w1'}, axis=1).assign(cs=0)], ignore_index=True)
+                sdata[['wid', 'f1i', 'f2i', 'y1', 'y2', 'j1', 'j2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm']].assign(cs=1), jdata[['wid', 'f1i', 'f2i', 'y1', 'y2', 'j1', 'j2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm']].assign(cs=1), jdata[['wid', 'f1i', 'f2i', 'y2', 'y1', 'j1', 'j2', 'year_end_2', 'year_end_1', 'w2', 'w1', 'm']].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'j1': 'j2', 'j2': 'j1', 'year_end_1': 'year_end_2', 'year_end_2': 'year_end_1', 'w1': 'w2', 'w2': 'w1'}, axis=1).assign(cs=0)], ignore_index=True)
         except KeyError: # If not clustering, no j1 or j2
             data_cs = pd.concat([
-                sdata[['wid', 'f1i', 'f2i', 'y1', 'y2', 'year_end_1', 'w1', 'm']].assign(cs=1), jdata[['wid', 'f1i', 'f2i', 'y1', 'y2', 'year_end_1', 'w1', 'm']].assign(cs=1), jdata[['wid', 'f1i', 'f2i', 'y2', 'y1', 'year_end_2', 'w2', 'm']].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'year_end_2': 'year_end_1', 'w2': 'w1'}, axis=1).assign(cs=0)], ignore_index=True)
+                sdata[['wid', 'f1i', 'f2i', 'y1', 'y2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm']].assign(cs=1), jdata[['wid', 'f1i', 'f2i', 'y1', 'y2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm']].assign(cs=1), jdata[['wid', 'f1i', 'f2i', 'y2', 'y1', 'year_end_2', 'year_end_1', 'w2', 'w1', 'm']].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'year_end_1': 'year_end_2', 'year_end_2': 'year_end_1', 'w1': 'w2', 'w2': 'w1'}, axis=1).assign(cs=0)], ignore_index=True)
         # self.data = self.data.reset_index(drop=True)
         # self.data['wid'] = self.data['wid'].astype('category').cat.codes + 1
         self.logger.info('mover and stayer long form datasets combined into cross section')
@@ -853,6 +901,9 @@ class BipartiteEventStudy:
     def get_long(self):
         '''
         Return event study data reformatted into long data.
+
+        Returns:
+            (Pandas DataFrame): long data
         '''
         # Append the last row if a mover (this is because the last observation is only given as an f2i, never as an f1i)
         return self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'year_end_1': 'year_end_2', 'year_end_2': 'year_end_1', 'w1': 'w2', 'w2': 'w1'}, axis=1)) if a.iloc[0]['m'] == 1 else a) \

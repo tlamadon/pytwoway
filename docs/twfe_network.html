@@ -191,15 +191,6 @@
 <em class="property">class </em><code class="sig-prename descclassname">pytwoway.twfe_network.</code><code class="sig-name descname">TwoWay</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">formatting</span><span class="o">=</span><span class="default_value">'long'</span></em>, <em class="sig-param"><span class="n">col_dict</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Class of TwoWay, where TwoWay gives a network of firms and workers.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>Pandas DataFrame</em>) – data giving firms, workers, and compensation</p></li>
-<li><p><strong>formatting</strong> (<em>str</em>) – if ‘long’, then data in long format; if ‘es’, then data in event study format. If simulating data, keep default value of ‘long’</p></li>
-<li><p><strong>col_dict</strong> (<em>dict</em>) – make data columns readable (requires: wid (worker id), comp (compensation), fid (firm id), year if long; wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover) if event study). Keep None if column names already correct</p></li>
-</ul>
-</dd>
-</dl>
 <dl class="py method">
 <dt id="pytwoway.twfe_network.TwoWay.fit_cre">
 <code class="sig-name descname">fit_cre</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cre</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">user_cluster</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay.fit_cre" title="Permalink to this definition">¶</a></dt>
@@ -289,7 +280,7 @@
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Jan 14, 2021.
+        Last updated on Jan 15, 2021.
       </span>
 
     </p>

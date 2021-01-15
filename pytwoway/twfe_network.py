@@ -3,22 +3,24 @@ Class for a two-way fixed effect network
 '''
 import logging
 from pathlib import Path
-from pytwoway import BipartiteData as bd
-from pytwoway import update_dict
-from pytwoway import FESolver as fe
-from pytwoway import CRESolver as cre
+import pytwoway as tw
 
 class TwoWay:
     '''
     Class of TwoWay, where TwoWay gives a network of firms and workers.
-
-    Arguments:
-        data (Pandas DataFrame): data giving firms, workers, and compensation
-        formatting (str): if 'long', then data in long format; if 'es', then data in event study format. If simulating data, keep default value of 'long'
-        col_dict (dict): make data columns readable (requires: wid (worker id), comp (compensation), fid (firm id), year if long; wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover) if event study). Keep None if column names already correct
     '''
 
     def __init__(self, data, formatting='long', col_dict=None):
+        '''
+        Arguments:
+            data (Pandas DataFrame): data giving firms, workers, and compensation
+            formatting (str): if 'long', then data in long format; if 'es', then data in event study format. If simulating data, keep default value of 'long'
+            col_dict (dict): make data columns readable (requires:
+                if long: wid (worker id), comp (compensation), fid (firm id), year;
+                if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover);
+                    optionally include: year_end_1 (last year of observation 1), year_end_2 (last year of observation 2), w1 (weight 1), w2 (weight 2)).
+                Keep None if column names already correct
+        '''
         # Begin logging
         self.logger = logging.getLogger('twoway')
         self.logger.setLevel(logging.DEBUG)
@@ -40,7 +42,7 @@ class TwoWay:
         self.logger.info('initializing TwoWay object')
 
         # Define some attributes
-        self.b_net = bd(data, formatting, col_dict)
+        self.b_net = tw.BipartiteData(data, formatting, col_dict)
 
         # Define default parameter dictionaries
         self.default_fe = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_fe.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)'} # Do not define 'data' because will be updated later
@@ -114,11 +116,11 @@ class TwoWay:
             fe_res (dict): dictionary of results
         '''
         self.__prep_fe()
-        fe_params = update_dict(self.default_fe, user_fe)
+        fe_params = tw.update_dict(self.default_fe, user_fe)
 
         fe_params['data'] = self.b_net.es_to_cs() # Make sure to use up-to-date bipartite network
 
-        fe_solver = fe(fe_params)
+        fe_solver = tw.FESolver(fe_params)
         fe_solver.fit_1()
         fe_solver.construct_Q() # Comment out this line and manually create Q if you want a custom Q matrix
         fe_solver.fit_2()
@@ -164,11 +166,11 @@ class TwoWay:
             cre_res (dict): dictionary of results
         '''
         self.__prep_cre(user_cluster=user_cluster)
-        cre_params = update_dict(self.default_cre, user_cre)
+        cre_params = tw.update_dict(self.default_cre, user_cre)
 
         cre_params['data'] = self.b_net.es_to_cs() # Make sure to use up-to-date data
 
-        cre_solver = cre(cre_params)
+        cre_solver = tw.CRESolver(cre_params)
         cre_solver.fit()
 
         cre_res = cre_solver.res

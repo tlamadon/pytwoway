@@ -4,16 +4,8 @@ Tests for twfe_network.py
 DATE: October 2020
 '''
 import pytest
-import networkx as nx
 import pandas as pd
-
-import os
-# Navigate to parent folder for import
-#os.chdir('..')
-
-from pytwoway import bipartite_network as bn
-from pytwoway import twfe_network as tn
-from pytwoway import fe
+import pytwoway as tw
 
 def test_twfe_refactor_1():
     # Continuous time, 2 movers between firms 1 and 2, and 1 stayer at firm 3, and discontinuous time still counts as a move
@@ -29,9 +21,9 @@ def test_twfe_refactor_1():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.refactor_es()
+    b_net.long_to_es()
 
     df_ES = b_net.data
 
@@ -66,9 +58,9 @@ def test_twfe_refactor_2():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.refactor_es()
+    b_net.long_to_es()
 
     df_ES = b_net.data
 
@@ -101,9 +93,9 @@ def test_twfe_refactor_3():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.refactor_es()
+    b_net.long_to_es()
 
     df_ES = b_net.data
 
@@ -143,9 +135,9 @@ def test_twfe_refactor_4():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.refactor_es()
+    b_net.long_to_es()
 
     df_ES = b_net.data
 
@@ -191,9 +183,9 @@ def test_twfe_refactor_5():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.refactor_es()
+    b_net.long_to_es()
 
     df_ES = b_net.data
 
@@ -240,9 +232,9 @@ def test_twfe_refactor_6():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.refactor_es()
+    b_net.long_to_es()
 
     df_ES = b_net.data
 
@@ -289,9 +281,9 @@ def test_twfe_refactor_7():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.refactor_es()
+    b_net.long_to_es()
 
     df_ES = b_net.data
 
@@ -338,9 +330,9 @@ def test_twfe_refactor_8():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.refactor_es()
+    b_net.long_to_es()
 
     df_ES = b_net.data
 
@@ -387,9 +379,9 @@ def test_twfe_refactor_9():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.refactor_es()
+    b_net.long_to_es()
 
     df_ES = b_net.data
 
@@ -434,9 +426,9 @@ def test_twfe_refactor_10():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.refactor_es()
+    b_net.long_to_es()
 
     df_ES = b_net.data
 
@@ -475,9 +467,9 @@ def test_twfe_refactor_11():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.refactor_es()
+    b_net.long_to_es()
 
     df_ES = b_net.data
 
@@ -518,13 +510,13 @@ def test_fe_ho_1():
 
     col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
 
-    b_net = bn.BipartiteData(data=df, col_dict=col_dict)
+    b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.refactor_es()
+    b_net.long_to_es()
 
     fe_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_fe.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)', 'data': b_net}
 
-    fe_solver = fe.FESolver(fe_params)
+    fe_solver = tw.FESolver(fe_params)
     fe_solver.fit_1()
     fe_solver.construct_Q()
     fe_solver.fit_2()

@@ -196,7 +196,14 @@
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<em>Pandas DataFrame</em>) – bipartite network data</p></li>
 <li><p><strong>formatting</strong> (<em>str</em>) – if ‘long’, then data in long format; if ‘es’, then data in event study format.</p></li>
-<li><p><strong>col_dict</strong> (<em>dict</em>) – make data columns readable (requires: wid (worker id), comp (compensation), fid (firm id), year if long; wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover) if event study). Keep None if column names already correct</p></li>
+<li><p><strong>col_dict</strong> (<em>dict</em>) – <p>make data columns readable (requires:
+if long: wid (worker id), comp (compensation), fid (firm id), year;
+if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover);</p>
+<blockquote>
+<div><p>optionally include: year_end_1 (last year of observation 1), year_end_2 (last year of observation 2), w1 (weight 1), w2 (weight 2)).</p>
+</div></blockquote>
+<p>Keep None if column names already correct</p>
+</p></li>
 </ul>
 </dd>
 </dl>
@@ -226,9 +233,23 @@
 </dd></dl>
 
 <dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.copy">
+<code class="sig-name descname">copy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.copy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copy the current instance of BipartiteData.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>copy of the current instance of BipartiteData.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>bd_copy (<a class="reference internal" href="#pytwoway.bipartite_network.BipartiteData" title="pytwoway.bipartite_network.BipartiteData">BipartiteData</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt id="pytwoway.bipartite_network.BipartiteData.es_to_cs">
 <code class="sig-name descname">es_to_cs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.es_to_cs" title="Permalink to this definition">¶</a></dt>
-<dd><p>Refactor event study data into cross section data.</p>
+<dd><p>Return event study data reformatted into cross section data.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -254,7 +275,7 @@
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<em>Pandas DataFrame</em>) – bipartite network data</p></li>
-<li><p><strong>col_dict</strong> (<em>dict</em>) – make data columns readable (requires: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover)). Keep None if column names already correct</p></li>
+<li><p><strong>col_dict</strong> (<em>dict</em>) – make data columns readable (requires: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover); optionally include: year_end_1 (last year of observation 1), year_end_2 (last year of observation 2), w1 (weight 1), w2 (weight 2)). Keep None if column names already correct</p></li>
 </ul>
 </dd>
 </dl>
@@ -324,6 +345,20 @@
 </dd></dl>
 
 <dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteEventStudy.copy">
+<code class="sig-name descname">copy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteEventStudy.copy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copy the current instance of BipartiteEventStudy.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>copy of the current instance of BipartiteEventStudy.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>bd_copy (<a class="reference internal" href="#pytwoway.bipartite_network.BipartiteEventStudy" title="pytwoway.bipartite_network.BipartiteEventStudy">BipartiteEventStudy</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt id="pytwoway.bipartite_network.BipartiteEventStudy.data_validity">
 <code class="sig-name descname">data_validity</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteEventStudy.data_validity" title="Permalink to this definition">¶</a></dt>
 <dd><p>Checks that data is formatted correctly and updates relevant attributes.</p>
@@ -333,12 +368,28 @@
 <dt id="pytwoway.bipartite_network.BipartiteEventStudy.get_cross_section">
 <code class="sig-name descname">get_cross_section</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteEventStudy.get_cross_section" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return event study data reformatted into cross section data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>cross section data</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>data_cs (Pandas DataFrame)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt id="pytwoway.bipartite_network.BipartiteEventStudy.get_long">
 <code class="sig-name descname">get_long</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteEventStudy.get_long" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return event study data reformatted into long data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>long data</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>(Pandas DataFrame)</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -444,6 +495,20 @@
 </dd></dl>
 
 <dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteLong.copy">
+<code class="sig-name descname">copy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteLong.copy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Copy the current instance of BipartiteLong.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>copy of the current instance of BipartiteLong.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>bd_copy (<a class="reference internal" href="#pytwoway.bipartite_network.BipartiteLong" title="pytwoway.bipartite_network.BipartiteLong">BipartiteLong</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt id="pytwoway.bipartite_network.BipartiteLong.data_validity">
 <code class="sig-name descname">data_validity</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteLong.data_validity" title="Permalink to this definition">¶</a></dt>
 <dd><p>Checks that data is formatted correctly and updates relevant attributes.</p>
@@ -515,7 +580,7 @@
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Jan 14, 2021.
+        Last updated on Jan 15, 2021.
       </span>
 
     </p>

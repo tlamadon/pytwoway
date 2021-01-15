@@ -38,7 +38,7 @@ except ImportError:
 
 class FESolver:
     '''
-    Uses multigrid and partialing out to solve two way Fixed Effect model
+    Uses multigrid and partialing out to solve two way fixed effect model.
 
     @ FIXME I think delete everything below this, it's basically contained in the class/functions within the class
 
@@ -46,44 +46,55 @@ class FESolver:
     and creates associated A = [J W] matrix which are AKM dummies
 
     provides methods to do A x Y but also (A'A)^-1 A'Y solve method
-
-    Arguments:
-        params (dictionary): dictionary of parameters for FE estimation
-
-            Dictionary parameters:
-
-                data (BipartiteData): BipartiteData object containing labor data. Data contains the following columns:
-
-                    wid (worker id)
-
-                    y1 (compensation 1)
-
-                    y2 (compensation 2)
-
-                    f1i (firm id 1)
-
-                    f2i (firm id 2)
-
-                    m (0 if stayer, 1 if mover)
-
-                ncore (int): number of cores to use
-
-                ndraw_pii (int): number of draws to compute leverage
-
-                ndraw_tr (int): number of draws to compute heteroskedastic correction
-
-                hetero (bool): if True, compute heteroskedastic correction
-
-                statsonly (bool): if True, return only basic statistics
-
-                out (string): if statsonly is True, this is the file where the statistics will be saved
-
-                batch (): @ FIXME I don't know what this is
-
-                Q (str): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
     '''
 
     def __init__(self, params):
+        '''
+        Arguments:
+            params (dictionary): dictionary of parameters for FE estimation
+
+                Dictionary parameters:
+
+                    data (Pandas DataFrame): cross-section labor data. Data contains the following columns:
+
+                        wid (worker id)
+
+                        f1i (firm id 1)
+
+                        f2i (firm id 2)
+
+                        y1 (compensation 1)
+
+                        y2 (compensation 2)
+
+                        year_end_1 (last year of observation 1)
+
+                        year_end_2 (last year of observation 2)
+
+                        w1 (weight 1)
+
+                        w2 (weight 2)
+
+                        m (0 if stayer, 1 if mover)
+
+                        cs (0 if not in cross section, 1 if in cross section)
+
+                    ncore (int): number of cores to use
+
+                    ndraw_pii (int): number of draws to compute leverage
+
+                    ndraw_tr (int): number of draws to compute heteroskedastic correction
+
+                    hetero (bool): if True, compute heteroskedastic correction
+
+                    statsonly (bool): if True, return only basic statistics
+
+                    out (string): if statsonly is True, this is the file where the statistics will be saved
+
+                    batch (): @ FIXME I don't know what this is
+
+                    Q (str): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
+        '''
         # Begin logging
         self.logger = logging.getLogger('fe')
         self.logger.setLevel(logging.DEBUG)
@@ -240,23 +251,6 @@ class FESolver:
     def __prep_JWM(self):
         '''
         Generate J, W, and M matrices.
-
-        Arguments:
-            adata (Pandas DataFrame): labor data.
-
-                Contains the following columns:
-
-                    wid (worker id)
-
-                    y1 (compensation 1)
-
-                    y2 (compensation 2)
-
-                    f1i (firm id 1)
-
-                    f2i (firm id 2)
-
-                    m (0 if stayer, 1 if mover)
         '''
         # Matrices for the cross-section
         J = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata.f1i - 1)), shape=(self.nn, self.nf)) # Firms
@@ -315,14 +309,14 @@ class FESolver:
         NOTE: quantiles should be in [0, 1]!
 
         Arguments:
-            :param values: numpy.array with data
-            :param quantiles: array-like with many quantiles needed
-            :param sample_weight: array-like of the same length as `array`
-            :param values_sorted: bool, if True, then will avoid sorting of initial array
-            :param old_style: if True, will correct output to be consistent with numpy.percentile.
+            values (NumPy Array): data
+            quantiles (array-like): quantiles to compute
+            sample_weight (array-like): weighting, must be same length as `array` (is `array` supposed to be quantiles?)
+            values_sorted (bool): if True, skips sorting of initial array
+            old_style (bool): if True, changes output to be consistent with numpy.percentile
 
         Returns:
-            :return: numpy.array with computed quantiles.
+            (NumPy Array): computed quantiles
         '''
         values = np.array(values)
         quantiles = np.array(quantiles)
@@ -349,7 +343,7 @@ class FESolver:
 
     def __weighted_var(self, v, w): # FIXME was formerly a function outside the class
         '''
-        Compute weighted variance @ FIXME I don't know what this function really does
+        Compute weighted variance. @ FIXME I don't know what this function really does
 
         Arguments:
             v: @ FIXME I don't know what this is

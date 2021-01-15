@@ -59,6 +59,30 @@ class CRESolver:
 
                 Dictionary parameters:
 
+                    data (Pandas DataFrame): cross-section labor data. Data contains the following columns:
+
+                        wid (worker id)
+
+                        f1i (firm id 1)
+
+                        f2i (firm id 2)
+
+                        y1 (compensation 1)
+
+                        y2 (compensation 2)
+
+                        year_end_1 (last year of observation 1)
+
+                        year_end_2 (last year of observation 2)
+
+                        w1 (weight 1)
+
+                        w2 (weight 2)
+
+                        m (0 if stayer, 1 if mover)
+
+                        cs (0 if not in cross section, 1 if in cross section)
+
                     ncore (int): number of cores to use
 
                     ndraw_tr (int): number of draws to use in approximation for traces
@@ -70,8 +94,6 @@ class CRESolver:
                     posterior (bool): compute posterior variance
 
                     wo_btw (bool): sets between variation to 0, pure RE
-
-                    data (Pandas DataFrame): cross-sectional labor data
         '''
         # Begin logging
         self.logger = logging.getLogger('cre')
@@ -228,8 +250,8 @@ class CRESolver:
             jdata (Pandas DataFrame): movers
 
         Returns:
-            sdata (Pandas DataFrame): @ FIXME correct this
-            jdata (Pandas DataFrame): @ FIXME correct this
+            sdata (Pandas DataFrame): @ FIXME update this
+            jdata (Pandas DataFrame): @ FIXME update this
         '''
         # Matrices for group level estimation
         J1c = csc_matrix((np.ones(self.mn), (jdata.index, jdata['j1'] - 1)), shape=(self.mn, self.nc))
@@ -416,7 +438,7 @@ class CRESolver:
 
     def __get_Yq(self):
         '''
-        Generate Yq, the Pandas series with the cross-section income
+        Generate Yq, the Pandas series with the cross-section income.
 
         Returns:
             Yq (Pandas Series): cross-section income
@@ -429,7 +451,7 @@ class CRESolver:
 
     def __collect_res(self, cdata, Yq):
         '''
-        Compute the within terms
+        Compute the within terms.
 
         Arguments:
             cdata (Pandas DataFrame): movers and stayers

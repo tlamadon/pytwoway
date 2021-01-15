@@ -198,37 +198,11 @@
 <dt id="pytwoway.fe.FESolver">
 <em class="property">class </em><code class="sig-prename descclassname">pytwoway.fe.</code><code class="sig-name descname">FESolver</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Uses multigrid and partialing out to solve two way Fixed Effect model</p>
+<p>Uses multigrid and partialing out to solve two way fixed effect model.</p>
 <p>&#64; FIXME I think delete everything below this, it’s basically contained in the class/functions within the class</p>
 <p>takes as an input this adata
 and creates associated A = [J W] matrix which are AKM dummies</p>
 <p>provides methods to do A x Y but also (A’A)^-1 A’Y solve method</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>params</strong> (<em>dictionary</em>) – <p>dictionary of parameters for FE estimation</p>
-<p>Dictionary parameters:</p>
-<blockquote>
-<div><p>data (BipartiteData): BipartiteData object containing labor data. Data contains the following columns:</p>
-<blockquote>
-<div><p>wid (worker id)</p>
-<p>y1 (compensation 1)</p>
-<p>y2 (compensation 2)</p>
-<p>f1i (firm id 1)</p>
-<p>f2i (firm id 2)</p>
-<p>m (0 if stayer, 1 if mover)</p>
-</div></blockquote>
-<p>ncore (int): number of cores to use</p>
-<p>ndraw_pii (int): number of draws to compute leverage</p>
-<p>ndraw_tr (int): number of draws to compute heteroskedastic correction</p>
-<p>hetero (bool): if True, compute heteroskedastic correction</p>
-<p>statsonly (bool): if True, return only basic statistics</p>
-<p>out (string): if statsonly is True, this is the file where the statistics will be saved</p>
-<p>batch (): &#64; FIXME I don’t know what this is</p>
-<p>Q (str): which Q matrix to consider. Options include ‘cov(alpha, psi)’ and ‘cov(psi_t, psi_{t+1})’</p>
-</div></blockquote>
-</p>
-</dd>
-</dl>
 <dl class="py method">
 <dt id="pytwoway.fe.FESolver.construct_Q">
 <code class="sig-name descname">construct_Q</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.construct_Q" title="Permalink to this definition">¶</a></dt>
@@ -280,7 +254,7 @@ alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed e
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Jan 14, 2021.
+        Last updated on Jan 15, 2021.
       </span>
 
     </p>
