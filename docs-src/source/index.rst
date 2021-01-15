@@ -20,3 +20,4 @@
   :maxdepth: 2
 
   internal
+  BipartiteData <class-bipartitedata>
