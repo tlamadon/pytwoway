@@ -92,8 +92,8 @@
 <p class="caption"><span class="caption-text">Notebook examples</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Simple</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#First,-get-your-data">First, get your data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Second,-create-a-TwoWay-object-using-your-data">Second, create a TwoWay object using your data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Simulate-some-data">Simulate some data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Create-a-TwoWay-object-using-your-data">Create a TwoWay object using your data</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Now-we-can-run-the-FE-estimator">Now we can run the FE estimator</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#We-can-also-run-the-CRE-estimator">We can also run the CRE estimator</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Finally,-we-can-investigate-the-results">Finally, we can investigate the results</a></li>
@@ -442,23 +442,7 @@ div.rendered_html tbody tr:hover {
 <div class="section" id="pytwoway-example">
 <h1>pytwoway example<a class="headerlink" href="#pytwoway-example" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># import os, sys</span>
-<span class="c1"># # Navigate to parent folder for import</span>
-<span class="c1"># os.chdir(&#39;../../..&#39;)</span>
-<span class="c1"># Weird code needed for output to show</span>
-<span class="c1"># os.chdir(&#39;docs-src/source/notebooks&#39;)</span>
-<span class="c1"># stdout = sys.stdout</span>
-<span class="c1"># sys.path.insert(1, os.path.join(sys.path[0], &#39;..&#39;))</span>
-<span class="c1"># sys.stdout = stdout</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -468,8 +452,8 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 </div>
-<div class="section" id="First,-get-your-data">
-<h2>First, get your data<a class="headerlink" href="#First,-get-your-data" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="Simulate-some-data">
+<h2>Simulate some data<a class="headerlink" href="#Simulate-some-data" title="Permalink to this headline">¶</a></h2>
 <p>The package contains function to simulate data. We use this here to keep things simple. If you have your own data, you can import it. Load it as a pandas dataframe and use it as an input.</p>
 <p>As you can see, we will need the following required columns in our data:</p>
 <ul class="simple">
@@ -479,12 +463,12 @@ div.rendered_html tbody tr:hover {
 <li><p><code class="docutils literal notranslate"><span class="pre">comp</span></code>: the outcome variable, in our case the compensation</p></li>
 </ul>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># For the example, we simulate data</span>
-<span class="n">stw_net</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">SimTwoWay</span><span class="p">()</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()</span>
+<span class="n">sim_data</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">SimTwoWay</span><span class="p">()</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()</span>
 <span class="n">display</span><span class="p">(</span><span class="n">sim_data</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -528,27 +512,27 @@ div.rendered_html tbody tr:hover {
       <th>0</th>
       <td>1</td>
       <td>1</td>
-      <td>8</td>
+      <td>5</td>
       <td>0.967422</td>
-      <td>0.908458</td>
+      <td>0.114185</td>
       <td>1</td>
       <td>1</td>
-      <td>158</td>
+      <td>84</td>
       <td>False</td>
-      <td>0.835341</td>
+      <td>1.644341</td>
     </tr>
     <tr>
       <th>1</th>
       <td>1</td>
       <td>2</td>
-      <td>9</td>
+      <td>8</td>
       <td>0.967422</td>
-      <td>1.335178</td>
+      <td>0.908458</td>
       <td>2</td>
-      <td>1</td>
-      <td>170</td>
+      <td>3</td>
+      <td>152</td>
       <td>True</td>
-      <td>1.909317</td>
+      <td>-0.109389</td>
     </tr>
     <tr>
       <th>2</th>
@@ -557,11 +541,11 @@ div.rendered_html tbody tr:hover {
       <td>8</td>
       <td>0.967422</td>
       <td>0.908458</td>
-      <td>3</td>
       <td>2</td>
+      <td>3</td>
       <td>152</td>
-      <td>True</td>
-      <td>0.771528</td>
+      <td>False</td>
+      <td>1.955849</td>
     </tr>
     <tr>
       <th>3</th>
@@ -570,24 +554,24 @@ div.rendered_html tbody tr:hover {
       <td>8</td>
       <td>0.967422</td>
       <td>0.908458</td>
-      <td>3</td>
       <td>2</td>
+      <td>3</td>
       <td>152</td>
       <td>False</td>
-      <td>1.986680</td>
+      <td>1.034616</td>
     </tr>
     <tr>
       <th>4</th>
       <td>1</td>
       <td>5</td>
-      <td>5</td>
+      <td>9</td>
       <td>0.967422</td>
-      <td>0.114185</td>
-      <td>4</td>
+      <td>1.335178</td>
+      <td>3</td>
       <td>1</td>
-      <td>82</td>
+      <td>183</td>
       <td>True</td>
-      <td>1.570041</td>
+      <td>4.729998</td>
     </tr>
     <tr>
       <th>...</th>
@@ -606,66 +590,66 @@ div.rendered_html tbody tr:hover {
       <th>49995</th>
       <td>10000</td>
       <td>1</td>
-      <td>6</td>
-      <td>0.430727</td>
-      <td>0.348756</td>
       <td>1</td>
-      <td>2</td>
-      <td>118</td>
+      <td>-0.430727</td>
+      <td>-0.908458</td>
+      <td>1</td>
+      <td>1</td>
+      <td>22</td>
       <td>False</td>
-      <td>-0.956492</td>
+      <td>-1.220417</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>10000</td>
       <td>2</td>
-      <td>6</td>
-      <td>0.430727</td>
-      <td>0.348756</td>
-      <td>1</td>
+      <td>4</td>
+      <td>-0.430727</td>
+      <td>-0.114185</td>
       <td>2</td>
-      <td>118</td>
-      <td>False</td>
-      <td>1.422862</td>
+      <td>1</td>
+      <td>67</td>
+      <td>True</td>
+      <td>0.341023</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>10000</td>
       <td>3</td>
+      <td>7</td>
+      <td>-0.430727</td>
+      <td>0.604585</td>
       <td>3</td>
-      <td>0.430727</td>
-      <td>-0.348756</td>
-      <td>2</td>
-      <td>2</td>
-      <td>60</td>
+      <td>3</td>
+      <td>136</td>
       <td>True</td>
-      <td>1.718743</td>
+      <td>-0.310735</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>10000</td>
       <td>4</td>
+      <td>7</td>
+      <td>-0.430727</td>
+      <td>0.604585</td>
       <td>3</td>
-      <td>0.430727</td>
-      <td>-0.348756</td>
-      <td>2</td>
-      <td>2</td>
-      <td>60</td>
+      <td>3</td>
+      <td>136</td>
       <td>False</td>
-      <td>1.603658</td>
+      <td>0.101317</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>10000</td>
       <td>5</td>
-      <td>4</td>
-      <td>0.430727</td>
-      <td>-0.114185</td>
+      <td>7</td>
+      <td>-0.430727</td>
+      <td>0.604585</td>
       <td>3</td>
-      <td>1</td>
-      <td>65</td>
-      <td>True</td>
-      <td>-0.393178</td>
+      <td>3</td>
+      <td>136</td>
+      <td>False</td>
+      <td>0.898169</td>
     </tr>
   </tbody>
 </table>
@@ -673,16 +657,24 @@ div.rendered_html tbody tr:hover {
 </div></div>
 </div>
 </div>
-<div class="section" id="Second,-create-a-TwoWay-object-using-your-data">
-<h2>Second, create a TwoWay object using your data<a class="headerlink" href="#Second,-create-a-TwoWay-object-using-your-data" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="Create-a-TwoWay-object-using-your-data">
+<h2>Create a TwoWay object using your data<a class="headerlink" href="#Create-a-TwoWay-object-using-your-data" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># We need to specify a column dictionary to make sure columns are named correctly. You can also manually update column names yourself</span>
-<span class="n">col_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;fid&#39;</span><span class="p">:</span> <span class="s1">&#39;fid&#39;</span><span class="p">,</span> <span class="s1">&#39;wid&#39;</span><span class="p">:</span> <span class="s1">&#39;wid&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="s1">&#39;year&#39;</span><span class="p">,</span> <span class="s1">&#39;comp&#39;</span><span class="p">:</span> <span class="s1">&#39;comp&#39;</span><span class="p">}</span>
-<span class="n">tw_net</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">TwoWay</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">&#39;long&#39;</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="n">col_dict</span><span class="p">)</span>
+<span></span><span class="c1"># We need to specify a column dictionary to make sure columns are named correctly.</span>
+<span class="c1"># You can also manually update column names yourself</span>
+<span class="n">col_name_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;fid&#39;</span><span class="p">:</span> <span class="s1">&#39;fid&#39;</span><span class="p">,</span>    <span class="c1"># specicy the column name for the firm identifier</span>
+    <span class="s1">&#39;wid&#39;</span><span class="p">:</span> <span class="s1">&#39;wid&#39;</span><span class="p">,</span>    <span class="c1"># specicy the column name for the firm identifier</span>
+    <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="s1">&#39;year&#39;</span><span class="p">,</span>  <span class="c1"># specicy the column name for the firm identifier</span>
+    <span class="s1">&#39;comp&#39;</span><span class="p">:</span> <span class="s1">&#39;comp&#39;</span>   <span class="c1"># specicy the column name for the firm identifier</span>
+<span class="p">}</span>
+
+<span class="c1"># create the TwoWay object that will do all the heavy lifting</span>
+<span class="n">tw_net</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">TwoWay</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">&#39;long&#39;</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="n">col_name_dict</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -695,7 +687,21 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># Optional parameters</span>
-<span class="n">fe_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ndraw_pii&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;check&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;hetero&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_fe.json&#39;</span><span class="p">,</span> <span class="s1">&#39;con&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;logfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;levfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+<span class="n">fe_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s1">&#39;batch&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s1">&#39;ndraw_pii&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span>
+    <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+    <span class="s1">&#39;check&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s1">&#39;hetero&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_fe.json&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;con&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s1">&#39;logfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;levfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+
+
+<span class="c1"># compute the fixed effect decomposition</span>
 <span class="n">fe_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">fit_fe</span><span class="p">(</span><span class="n">user_fe</span><span class="o">=</span><span class="n">fe_params</span><span class="p">)</span>
 </pre></div>
 </div>
