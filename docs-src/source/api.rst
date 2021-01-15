@@ -1,45 +1,23 @@
 API Reference
 =============
 
-The main pytwoway API is split into six classes:
-
-* ``pytwoway.CRESolver``: Class for CRE estimator. Canonically imported
-  using
+The main pytwoway API is split into six classes. pytwoway is canonically imported using
 
   .. code-block:: python
 
-    from pytwoway import CRESolver as cre
+    import pytwoway as tw
 
-* ``pytwowaySolver``: Class for FE estimators. Canonically imported
-  using
+* ``pytwoway.CRESolver``: Class for CRE estimator.
 
-  .. code-block:: python
+* ``pytwoway.FESolver``: Class for FE estimators.
 
-    from pytwoway import FESolver as fe
+* ``pytwoway.BipartiteData``: Class for formatting bipartite networks (usually of firms and workers).
 
-* ``pytwoway.BipartiteData``: Class for formatting bipartite networks (usually of firms and workers). Canonically imported using
+* ``pytwoway.TwoWay``: Class for formatting data and running CRE and FE estimators.
 
-  .. code-block:: python
+* ``pytwoway.SimTwoWay``: Class to simulate labor data.
 
-    from pytwoway import BipartiteData as bd
-
-* ``pytwoway.TwoWay``: Class for formatting data and run CRE and FE estimators. Canonically imported using
-
-  .. code-block:: python
-
-    from pytwoway import TwoWay as tw
-
-* ``pytwoway.SimTwoWay``: Class to simulate labor data. Canonically imported using
-
-  .. code-block:: python
-
-    from pytwoway import SimTwoWay as stw
-
-* ``pytwoway.TwoWayMonteCarlo``: Class to run Monte Carlo simulations. Canonically imported using
-
-  .. code-block:: python
-
-    from pytwoway import TwoWayMonteCarlo as twmc
+* ``pytwoway.TwoWayMonteCarlo``: Class to run Monte Carlo simulations.
 
 Modules and Methods
 -------------------

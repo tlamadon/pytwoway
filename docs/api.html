@@ -185,40 +185,19 @@
 </style>
 <div class="section" id="api-reference">
 <h1>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">¶</a></h1>
-<p>The main pytwoway API is split into six classes:</p>
-<ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.CRESolver</span></code>: Class for CRE estimator. Canonically imported
-using</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">CRESolver</span> <span class="k">as</span> <span class="n">cre</span>
+<p>The main pytwoway API is split into six classes. pytwoway is canonically imported using</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
 </pre></div>
 </div>
-</li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwowaySolver</span></code>: Class for FE estimators. Canonically imported
-using</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">FESolver</span> <span class="k">as</span> <span class="n">fe</span>
-</pre></div>
-</div>
-</li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.BipartiteData</span></code>: Class for formatting bipartite networks (usually of firms and workers). Canonically imported using</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">BipartiteData</span> <span class="k">as</span> <span class="n">bd</span>
-</pre></div>
-</div>
-</li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWay</span></code>: Class for formatting data and run CRE and FE estimators. Canonically imported using</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">TwoWay</span> <span class="k">as</span> <span class="n">tw</span>
-</pre></div>
-</div>
-</li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.SimTwoWay</span></code>: Class to simulate labor data. Canonically imported using</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">SimTwoWay</span> <span class="k">as</span> <span class="n">stw</span>
-</pre></div>
-</div>
-</li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWayMonteCarlo</span></code>: Class to run Monte Carlo simulations. Canonically imported using</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">TwoWayMonteCarlo</span> <span class="k">as</span> <span class="n">twmc</span>
-</pre></div>
-</div>
-</li>
+</div></blockquote>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.CRESolver</span></code>: Class for CRE estimator.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.FESolver</span></code>: Class for FE estimators.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.BipartiteData</span></code>: Class for formatting bipartite networks (usually of firms and workers).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWay</span></code>: Class for formatting data and running CRE and FE estimators.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.SimTwoWay</span></code>: Class to simulate labor data.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWayMonteCarlo</span></code>: Class to run Monte Carlo simulations.</p></li>
 </ul>
 <div class="section" id="modules-and-methods">
 <h2>Modules and Methods<a class="headerlink" href="#modules-and-methods" title="Permalink to this headline">¶</a></h2>
@@ -254,7 +233,7 @@ using</p>
 </colgroup>
 <tbody>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">FESolver</span></code>(params)</p></td>
-<td><p>Uses multigrid and partialing out to solve two way Fixed Effect model</p></td>
+<td><p>Uses multigrid and partialing out to solve two way fixed effect model.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">construct_Q</span></code>()</p></td>
 <td><p>Generate columns in adata necessary to construct Q.</p></td>
@@ -289,7 +268,7 @@ using</p>
 <td><p>Cluster data and assign a new column giving the cluster for each firm.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">es_to_cs</span></code>()</p></td>
-<td><p>Refactor event study data into cross section data.</p></td>
+<td><p>Return event study data reformatted into cross section data.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">es_to_long</span></code>()</p></td>
 <td><p>Refactor event study data into long data.</p></td>
@@ -374,7 +353,7 @@ using</p>
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Jan 14, 2021.
+        Last updated on Jan 15, 2021.
       </span>
 
     </p>

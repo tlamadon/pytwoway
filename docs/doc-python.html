@@ -191,21 +191,21 @@
 <ul class="simple">
 <li><p>If you have data</p></li>
 </ul>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">TwoWay</span> <span class="k">as</span> <span class="n">tw</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
 <span class="c1"># Create TwoWay object</span>
-<span class="n">tw_net</span> <span class="o">=</span> <span class="n">tw</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">formatting</span><span class="p">,</span> <span class="n">col_dict</span><span class="p">)</span>
+<span class="n">tw_net</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">TwoWay</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">formatting</span><span class="p">,</span> <span class="n">col_dict</span><span class="p">)</span>
 <span class="c1"># Fit the FE estimators:</span>
-<span class="n">tw_net</span><span class="o">.</span><span class="n">fit_fe</span><span class="p">(</span><span class="n">fe_params</span><span class="p">)</span>
+<span class="n">fe_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">fit_fe</span><span class="p">(</span><span class="n">fe_params</span><span class="p">)</span>
 <span class="c1"># Fit the CRE estimator</span>
-<span class="n">tw_net</span><span class="o">.</span><span class="n">fit_cre</span><span class="p">(</span><span class="n">cre_params</span><span class="p">,</span> <span class="n">cluster_params</span><span class="p">)</span>
+<span class="n">cre_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">fit_cre</span><span class="p">(</span><span class="n">cre_params</span><span class="p">,</span> <span class="n">cluster_params</span><span class="p">)</span>
 </pre></div>
 </div>
 <ul class="simple">
 <li><p>If you want to simulate data</p></li>
 </ul>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">SimTwoWay</span> <span class="k">as</span> <span class="n">stw</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
 <span class="c1"># Create SimTwoWay object</span>
-<span class="n">stw_net</span> <span class="o">=</span> <span class="n">stw</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span>
+<span class="n">stw_net</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">SimTwoWay</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span>
 <span class="c1"># Generate data</span>
 <span class="n">sim_data</span> <span class="o">=</span> <span class="n">stw_net</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()</span>
 </pre></div>
@@ -213,9 +213,9 @@
 <ul class="simple">
 <li><p>If you want to run Monte Carlo on simulated data</p></li>
 </ul>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">TwoWayMonteCarlo</span> <span class="k">as</span> <span class="n">twmc</span>
-<span class="c1"># Create simulated Monte Carlo object</span>
-<span class="n">twmc_net</span> <span class="o">=</span> <span class="n">twmc</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
+<span class="c1"># Create TwoWayMonteCarlo object</span>
+<span class="n">twmc_net</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">TwoWayMonteCarlo</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span>
 <span class="c1"># Run Monte Carlo</span>
 <span class="n">twmc_net</span><span class="o">.</span><span class="n">twfe_monte_carlo</span><span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">ncore</span><span class="p">,</span> <span class="n">akm_params</span><span class="p">,</span> <span class="n">cre_params</span><span class="p">,</span> <span class="n">cluster_params</span><span class="p">)</span>
 <span class="c1"># Plot results</span>
@@ -247,7 +247,7 @@
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Jan 14, 2021.
+        Last updated on Jan 15, 2021.
       </span>
 
     </p>

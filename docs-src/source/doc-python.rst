@@ -8,21 +8,21 @@ To run in Python:
 
 .. code-block:: python
 
-    from pytwoway import TwoWay as tw
+    import pytwoway as tw
     # Create TwoWay object
-    tw_net = tw(data, formatting, col_dict)
+    tw_net = tw.TwoWay(data, formatting, col_dict)
     # Fit the FE estimators:
-    tw_net.fit_fe(fe_params)
+    fe_res = tw_net.fit_fe(fe_params)
     # Fit the CRE estimator
-    tw_net.fit_cre(cre_params, cluster_params)
+    cre_res = tw_net.fit_cre(cre_params, cluster_params)
 
 - If you want to simulate data
 
 .. code-block:: python
 
-    from pytwoway import SimTwoWay as stw
+    import pytwoway as tw
     # Create SimTwoWay object
-    stw_net = stw(sim_params)
+    stw_net = tw.SimTwoWay(sim_params)
     # Generate data
     sim_data = stw_net.sim_network()
 
@@ -30,9 +30,9 @@ To run in Python:
 
 .. code-block:: python
 
-    from pytwoway import TwoWayMonteCarlo as twmc
-    # Create simulated Monte Carlo object
-    twmc_net = twmc(sim_params)
+    import pytwoway as tw
+    # Create TwoWayMonteCarlo object
+    twmc_net = tw.TwoWayMonteCarlo(sim_params)
     # Run Monte Carlo
     twmc_net.twfe_monte_carlo(N, ncore, akm_params, cre_params, cluster_params)
     # Plot results
