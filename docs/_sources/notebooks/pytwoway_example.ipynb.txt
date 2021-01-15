@@ -18,16 +18,16 @@
    },
    "outputs": [],
    "source": [
-    "import os, sys\n",
-    "# Navigate to parent folder for import\n",
-    "os.chdir('../../..')\n",
+    "# import os, sys\n",
+    "# # Navigate to parent folder for import\n",
+    "# os.chdir('../../..')\n",
     "import pytwoway as tw\n",
     "\n",
     "# Weird code needed for output to show\n",
-    "os.chdir('docs-src/source/notebooks')\n",
-    "stdout = sys.stdout\n",
-    "sys.path.insert(1, os.path.join(sys.path[0], '..'))\n",
-    "sys.stdout = stdout"
+    "# os.chdir('docs-src/source/notebooks')\n",
+    "# stdout = sys.stdout\n",
+    "# sys.path.insert(1, os.path.join(sys.path[0], '..'))\n",
+    "# sys.stdout = stdout"
    ]
   },
   {
@@ -476,7 +476,7 @@
    "name": "python",
    "nbconvert_exporter": "python",
    "pygments_lexer": "ipython3",
-   "version": "3.7.9"
+   "version": "3.8.3"
   },
   "latex_envs": {
    "LaTeX_envs_menu_present": true,
