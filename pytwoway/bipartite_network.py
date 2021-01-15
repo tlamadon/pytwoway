@@ -13,7 +13,7 @@ from pytwoway import update_dict
 
 class BipartiteData:
     '''
-    Abstract class of BipartiteData, where BipartiteData gives a bipartite network of firms and workers. Subclasses include BipartiteLong which gives a bipartite network of firms and workers in long form and BipartiteEventStudy which gives a bipartite network of firms and workers in event study form.
+    Class of BipartiteData, where BipartiteData gives a bipartite network of firms and workers. Subclasses include BipartiteLong which gives a bipartite network of firms and workers in long form and BipartiteEventStudy which gives a bipartite network of firms and workers in event study form.
 
     Arguments:
         data (Pandas DataFrame): bipartite network data
