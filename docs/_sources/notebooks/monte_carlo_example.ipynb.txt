@@ -118,7 +118,7 @@
      "end_time": "2020-12-22T21:43:16.646468Z",
      "start_time": "2020-12-22T21:42:40.780053Z"
     },
-    "scrolled": true
+    "collapsed": true
    },
    "outputs": [
     {
