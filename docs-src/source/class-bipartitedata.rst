@@ -1,6 +1,5 @@
-
 BipartiteData class
-========================================
+===================
 
 .. autoclass:: pytwoway.bipartite_network.BipartiteData
    :members:

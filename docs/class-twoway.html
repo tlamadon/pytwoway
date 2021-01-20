@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>BipartiteData class &mdash; pytwoway 0.0.3 documentation</title>
+  <title>TwoWay class &mdash; pytwoway 0.0.3 documentation</title>
   
 
   
@@ -36,8 +36,8 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="SimTwoWay class" href="class-simtwoway.html" />
-    <link rel="prev" title="FESolver class" href="class-fesolver.html" /> 
+    <link rel="next" title="CRESolver class" href="class-cresolver.html" />
+    <link rel="prev" title="Python API" href="internal.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -96,10 +96,10 @@
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="internal.html">Python API</a></li>
-<li class="toctree-l1"><a class="reference internal" href="class-twoway.html">TwoWay</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">TwoWay</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-cresolver.html">CRESolver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-fesolver.html">FESolver</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">BipartiteData</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-bipartitedata.html">BipartiteData</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-simtwoway.html">SimTwoWay</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-twowaymontecarlo.html">TwoWayMonteCarlo</a></li>
 </ul>
@@ -148,13 +148,13 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li>BipartiteData class</li>
+      <li>TwoWay class</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="_sources/class-bipartitedata.rst.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/class-twoway.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -191,42 +191,32 @@
     text-align: unset;
 }
 </style>
-<div class="section" id="bipartitedata-class">
-<h1>BipartiteData class<a class="headerlink" href="#bipartitedata-class" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="twoway-class">
+<h1>TwoWay class<a class="headerlink" href="#twoway-class" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
-<dt id="pytwoway.bipartite_network.BipartiteData">
-<em class="property">class </em><code class="sig-prename descclassname">pytwoway.bipartite_network.</code><code class="sig-name descname">BipartiteData</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">formatting</span><span class="o">=</span><span class="default_value">'long'</span></em>, <em class="sig-param"><span class="n">col_dict</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.twfe_network.TwoWay">
+<em class="property">class </em><code class="sig-prename descclassname">pytwoway.twfe_network.</code><code class="sig-name descname">TwoWay</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">formatting</span><span class="o">=</span><span class="default_value">'long'</span></em>, <em class="sig-param"><span class="n">col_dict</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Class of BipartiteData, where BipartiteData gives a bipartite network of firms and workers. Subclasses include BipartiteLong which gives a bipartite network of firms and workers in long form and BipartiteEventStudy which gives a bipartite network of firms and workers in event study form.</p>
+<p>Class of TwoWay, where TwoWay gives a network of firms and workers.</p>
+<dl class="py method">
+<dt id="pytwoway.twfe_network.TwoWay.fit_cre">
+<code class="sig-name descname">fit_cre</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cre</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">user_cluster</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay.fit_cre" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit the CRE estimator.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>data</strong> (<em>Pandas DataFrame</em>) – bipartite network data</p></li>
-<li><p><strong>formatting</strong> (<em>str</em>) – if ‘long’, then data in long format; if ‘es’, then data in event study format.</p></li>
-<li><p><strong>col_dict</strong> (<em>dict</em>) – <p>make data columns readable (requires:
-if long: wid (worker id), comp (compensation), fid (firm id), year;
-if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover);</p>
+<li><p><strong>user_cre</strong> (<em>dict</em>) – <p>dictionary of parameters for CRE estimation</p>
+<p>Dictionary parameters:</p>
 <blockquote>
-<div><p>optionally include: year_end_1 (last year of observation 1), year_end_2 (last year of observation 2), w1 (weight 1), w2 (weight 2)).</p>
+<div><p>ncore (int): number of cores to use</p>
+<p>ndraw_tr (int): number of draws to use in approximation for traces</p>
+<p>ndp (int): number of draw to use in approximation for leverages</p>
+<p>out (str): outputfile</p>
+<p>posterior (bool): compute posterior variance</p>
+<p>wo_btw (bool): sets between variation to 0, pure RE</p>
 </div></blockquote>
-<p>Keep None if column names already correct</p>
 </p></li>
-</ul>
-</dd>
-</dl>
-<dl class="py method">
-<dt id="pytwoway.bipartite_network.BipartiteData.clean_data">
-<code class="sig-name descname">clean_data</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.clean_data" title="Permalink to this definition">¶</a></dt>
-<dd><p>Clean data.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.bipartite_network.BipartiteData.cluster">
-<code class="sig-name descname">cluster</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cluster</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.cluster" title="Permalink to this definition">¶</a></dt>
-<dd><p>Cluster data and assign a new column giving the cluster for each firm. Only works if data is formatted as event study.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>user_cluster</strong> (<em>dict</em>) – <p>dictionary of parameters for clustering</p>
+<li><p><strong>user_cluster</strong> (<em>dict</em>) – <p>dictionary of parameters for clustering</p>
 <p>Dictionary parameters:</p>
 <blockquote>
 <div><p>cdf_resolution (int): how many values to use to approximate the cdf</p>
@@ -234,41 +224,49 @@ if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (
 <p>year (int or None): if None, uses entire dataset; if int, gives year of data to consider</p>
 <p>user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>), and use default parameters defined in class attribute default_KMeans for any parameters not specified</p>
 </div></blockquote>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dictionary of results</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>cre_res (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.twfe_network.TwoWay.fit_fe">
+<code class="sig-name descname">fit_fe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_fe</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay.fit_fe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit the bias-corrected FE estimator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>user_fe</strong> (<em>dict</em>) – <p>dictionary of parameters for bias-corrected FE estimation</p>
+<p>Dictionary parameters:</p>
+<blockquote>
+<div><p>ncore (int): number of cores to use</p>
+<p>batch (int): batch size to send in parallel</p>
+<p>ndraw_pii (int): number of draw to use in approximation for leverages</p>
+<p>ndraw_tr (int): number of draws to use in approximation for traces</p>
+<p>check (bool): whether to compute the non-approximated estimates as well</p>
+<p>hetero (bool): whether to compute the heteroskedastic estimates</p>
+<p>out (str): outputfile</p>
+<p>con (str): computes the smallest eigen values, this is the filepath where these results are saved</p>
+<p>logfile (str): log output to a logfile</p>
+<p>levfile (str): file to load precomputed leverages</p>
+<p>statsonly (bool): save data statistics only</p>
+<p>Q (str): which Q matrix to consider. Options include ‘cov(alpha, psi)’ and ‘cov(psi_t, psi_{t+1})’</p>
+</div></blockquote>
 </p>
 </dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.bipartite_network.BipartiteData.copy">
-<code class="sig-name descname">copy</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.copy" title="Permalink to this definition">¶</a></dt>
-<dd><p>Copy the current instance of BipartiteData.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>copy of the current instance of BipartiteData.</p>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dictionary of results</p>
 </dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>bd_copy (<a class="reference internal" href="#pytwoway.bipartite_network.BipartiteData" title="pytwoway.bipartite_network.BipartiteData">BipartiteData</a>)</p>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>fe_res (dict)</p>
 </dd>
 </dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.bipartite_network.BipartiteData.es_to_long">
-<code class="sig-name descname">es_to_long</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.es_to_long" title="Permalink to this definition">¶</a></dt>
-<dd><p>Refactor event study data into long data.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.bipartite_network.BipartiteData.get_cs">
-<code class="sig-name descname">get_cs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.get_cs" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return event study data reformatted into cross section data.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.bipartite_network.BipartiteData.long_to_es">
-<code class="sig-name descname">long_to_es</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.long_to_es" title="Permalink to this definition">¶</a></dt>
-<dd><p>Refactor long data into event study data.</p>
 </dd></dl>
 
 </dd></dl>
@@ -283,10 +281,10 @@ if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="class-simtwoway.html" class="btn btn-neutral float-right" title="SimTwoWay class" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="class-cresolver.html" class="btn btn-neutral float-right" title="CRESolver class" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="class-fesolver.html" class="btn btn-neutral float-left" title="FESolver class" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="internal.html" class="btn btn-neutral float-left" title="Python API" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

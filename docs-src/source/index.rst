@@ -20,4 +20,9 @@
   :maxdepth: 2
 
   internal
+  TwoWay <class-twoway>
+  CRESolver <class-cresolver>
+  FESolver <class-fesolver>
   BipartiteData <class-bipartitedata>
+  SimTwoWay <class-simtwoway>
+  TwoWayMonteCarlo <class-twowaymontecarlo>

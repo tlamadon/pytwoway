@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Command line interface &mdash; pytwoway 0.0.3 documentation</title>
+  <title>FESolver class &mdash; pytwoway 0.0.3 documentation</title>
   
 
   
@@ -36,8 +36,8 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Using from python" href="doc-python.html" />
-    <link rel="prev" title="Quick Start" href="index.html" /> 
+    <link rel="next" title="BipartiteData class" href="class-bipartitedata.html" />
+    <link rel="prev" title="CRESolver class" href="class-cresolver.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -83,9 +83,9 @@
             
             
               <p class="caption"><span class="caption-text">User documentation</span></p>
-<ul class="current">
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">From terminal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From terminal</a></li>
 <li class="toctree-l1"><a class="reference internal" href="doc-python.html">From python</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Notebook examples</span></p>
@@ -94,11 +94,11 @@
 <li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="internal.html">Python API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-twoway.html">TwoWay</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-cresolver.html">CRESolver</a></li>
-<li class="toctree-l1"><a class="reference internal" href="class-fesolver.html">FESolver</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">FESolver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-bipartitedata.html">BipartiteData</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-simtwoway.html">SimTwoWay</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-twowaymontecarlo.html">TwoWayMonteCarlo</a></li>
@@ -148,13 +148,13 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li>Command line interface</li>
+      <li>FESolver class</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="_sources/doc-cli.rst.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/class-fesolver.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -191,26 +191,52 @@
     text-align: unset;
 }
 </style>
-<div class="section" id="command-line-interface">
-<h1>Command line interface<a class="headerlink" href="#command-line-interface" title="Permalink to this headline">¶</a></h1>
-<p>To install from pip, from the command line run:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">pytwoway</span>
-</pre></div>
-</div>
-<p>To run pytwoway using command line interface:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytw</span> <span class="o">--</span><span class="n">my</span><span class="o">-</span><span class="n">config</span> <span class="n">config</span><span class="o">.</span><span class="n">txt</span> <span class="o">--</span><span class="n">fe</span> <span class="o">--</span><span class="n">cre</span>
-</pre></div>
-</div>
-<p>Example config.txt:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">csv</span>
-<span class="n">filetype</span> <span class="o">=</span> <span class="n">csv</span>
-<span class="n">col_dict</span> <span class="o">=</span> <span class="s2">&quot;{&#39;fid&#39;: &#39;your_firmid_col&#39;, &#39;wid&#39;: &#39;your_workerid_col&#39;, &#39;year&#39;: &#39;your_year_col&#39;, &#39;comp&#39;: &#39;your_compensation_col&#39;}&quot;</span>
-</pre></div>
-</div>
-<p>For help about all the options that can be included in your config file (all options can also be included directly in the command line):</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytw</span> <span class="o">-</span><span class="n">h</span>
-</pre></div>
-</div>
+<div class="section" id="fesolver-class">
+<h1>FESolver class<a class="headerlink" href="#fesolver-class" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="pytwoway.fe.FESolver">
+<em class="property">class </em><code class="sig-prename descclassname">pytwoway.fe.</code><code class="sig-name descname">FESolver</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Uses multigrid and partialing out to solve two way fixed effect model.</p>
+<p>&#64; FIXME I think delete everything below this, it’s basically contained in the class/functions within the class</p>
+<p>takes as an input this adata
+and creates associated A = [J W] matrix which are AKM dummies</p>
+<p>provides methods to do A x Y but also (A’A)^-1 A’Y solve method</p>
+<dl class="py method">
+<dt id="pytwoway.fe.FESolver.construct_Q">
+<code class="sig-name descname">construct_Q</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.construct_Q" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate columns in adata necessary to construct Q.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.fe.FESolver.fit_1">
+<code class="sig-name descname">fit_1</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.fit_1" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run FE solver, part 1. Before fit_2(), modify adata to allow creation of Q matrix.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.fe.FESolver.fit_2">
+<code class="sig-name descname">fit_2</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.fit_2" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run FE solver, part 2.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.fe.FESolver.get_fe_estimates">
+<code class="sig-name descname">get_fe_estimates</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FESolver.get_fe_estimates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return estimated psi_hats linked to firm ids and alpha_hats linked to worker ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>dictionary linking firm ids to estimated firm fixed effects
+alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed effects</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>alpha_hat_dict (dict)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 
 
@@ -221,10 +247,10 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="doc-python.html" class="btn btn-neutral float-right" title="Using from python" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="class-bipartitedata.html" class="btn btn-neutral float-right" title="BipartiteData class" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="index.html" class="btn btn-neutral float-left" title="Quick Start" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="class-cresolver.html" class="btn btn-neutral float-left" title="CRESolver class" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

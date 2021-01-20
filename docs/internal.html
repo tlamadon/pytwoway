@@ -36,7 +36,7 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="BipartiteData class" href="class-bipartitedata.html" />
+    <link rel="next" title="TwoWay class" href="class-twoway.html" />
     <link rel="prev" title="Monte Carlo example" href="notebooks/monte_carlo_example.html" /> 
 </head>
 
@@ -98,17 +98,22 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Python API</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#modules-and-methods">Modules and Methods</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#pytwoway-cre"><code class="docutils literal notranslate"><span class="pre">pytwoway.cre</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pytwoway"><code class="docutils literal notranslate"><span class="pre">pytwoway</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pytwoway-bipartitedata"><code class="docutils literal notranslate"><span class="pre">pytwoway.BipartiteData</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pytwoway-twoway"><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWay</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-cresolver"><code class="docutils literal notranslate"><span class="pre">pytwoway.CRESolver</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-fesolver"><code class="docutils literal notranslate"><span class="pre">pytwoway.FESolver</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-bipartitedata"><code class="docutils literal notranslate"><span class="pre">pytwoway.BipartiteData</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pytwoway-simtwoway"><code class="docutils literal notranslate"><span class="pre">pytwoway.SimTwoWay</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pytwoway-twowaymontecarlo"><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWayMonteCarlo</span></code></a></li>
 </ul>
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="class-twoway.html">TwoWay</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-cresolver.html">CRESolver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-fesolver.html">FESolver</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-bipartitedata.html">BipartiteData</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-simtwoway.html">SimTwoWay</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-twowaymontecarlo.html">TwoWayMonteCarlo</a></li>
 </ul>
 
             
@@ -209,18 +214,38 @@
 </div>
 </div></blockquote>
 <ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWay</span></code>: Class for formatting data and running CRE and FE estimators.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.CRESolver</span></code>: Class for CRE estimator.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.FESolver</span></code>: Class for FE estimators.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.BipartiteData</span></code>: Class for formatting bipartite networks (usually of firms and workers).</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWay</span></code>: Class for formatting data and running CRE and FE estimators.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.SimTwoWay</span></code>: Class to simulate labor data.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWayMonteCarlo</span></code>: Class to run Monte Carlo simulations.</p></li>
 </ul>
 </div>
 <div class="section" id="modules-and-methods">
 <h2>Modules and Methods<a class="headerlink" href="#modules-and-methods" title="Permalink to this headline">¶</a></h2>
-<div class="section" id="pytwoway-cre">
-<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.cre</span></code><a class="headerlink" href="#pytwoway-cre" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="pytwoway-twoway">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWay</span></code><a class="headerlink" href="#pytwoway-twoway" title="Permalink to this headline">¶</a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">TwoWay</span></code>(data[, formatting, col_dict])</p></td>
+<td><p>Class of TwoWay, where TwoWay gives a network of firms and workers.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_cre</span></code>([user_cre, user_cluster])</p></td>
+<td><p>Fit the CRE estimator.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_fe</span></code>([user_fe])</p></td>
+<td><p>Fit the bias-corrected FE estimator.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="pytwoway-cresolver">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.CRESolver</span></code><a class="headerlink" href="#pytwoway-cresolver" title="Permalink to this headline">¶</a></h3>
 <table class="longtable docutils align-default">
 <colgroup>
 <col style="width: 10%" />
@@ -233,17 +258,17 @@
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>()</p></td>
 <td><p>Run CRE solver.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.pd_to_np" title="pytwoway.cre.pd_to_np"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pd_to_np</span></code></a>(df, colr, colc, colv, nr, nc)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">pd_to_np</span></code>(df, colr, colc, colv, nr, nc)</p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="cre.html#pytwoway.cre.pipe_qcov" title="pytwoway.cre.pipe_qcov"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pipe_qcov</span></code></a>(df, e1, e2)</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">pipe_qcov</span></code>(df, e1, e2)</p></td>
 <td><p></p></td>
 </tr>
 </tbody>
 </table>
 </div>
-<div class="section" id="pytwoway">
-<h3><code class="docutils literal notranslate"><span class="pre">pytwoway</span></code><a class="headerlink" href="#pytwoway" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="pytwoway-fesolver">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.FESolver</span></code><a class="headerlink" href="#pytwoway-fesolver" title="Permalink to this headline">¶</a></h3>
 <table class="longtable docutils align-default">
 <colgroup>
 <col style="width: 10%" />
@@ -297,26 +322,6 @@
 </tbody>
 </table>
 </div>
-<div class="section" id="pytwoway-twoway">
-<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWay</span></code><a class="headerlink" href="#pytwoway-twoway" title="Permalink to this headline">¶</a></h3>
-<table class="longtable docutils align-default">
-<colgroup>
-<col style="width: 10%" />
-<col style="width: 90%" />
-</colgroup>
-<tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">TwoWay</span></code>(data[, formatting, col_dict])</p></td>
-<td><p>Class of TwoWay, where TwoWay gives a network of firms and workers.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_cre</span></code>([user_cre, user_cluster])</p></td>
-<td><p>Fit the CRE estimator.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_fe</span></code>([user_fe])</p></td>
-<td><p>Fit the bias-corrected FE estimator.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
 <div class="section" id="pytwoway-simtwoway">
 <h3><code class="docutils literal notranslate"><span class="pre">pytwoway.SimTwoWay</span></code><a class="headerlink" href="#pytwoway-simtwoway" title="Permalink to this headline">¶</a></h3>
 <table class="longtable docutils align-default">
@@ -365,7 +370,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="class-bipartitedata.html" class="btn btn-neutral float-right" title="BipartiteData class" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="class-twoway.html" class="btn btn-neutral float-right" title="TwoWay class" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="notebooks/monte_carlo_example.html" class="btn btn-neutral float-left" title="Monte Carlo example" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
