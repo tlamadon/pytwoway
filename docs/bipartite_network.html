@@ -29,7 +29,6 @@
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
@@ -95,6 +94,7 @@
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="internal.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-bipartitedata.html">BipartiteData</a></li>
 </ul>
 
             
@@ -242,21 +242,21 @@ if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (
 <dd class="field-odd"><p>copy of the current instance of BipartiteData.</p>
 </dd>
 <dt class="field-even">Return type</dt>
-<dd class="field-even"><p>bd_copy (<a class="reference internal" href="#pytwoway.bipartite_network.BipartiteData" title="pytwoway.bipartite_network.BipartiteData">BipartiteData</a>)</p>
+<dd class="field-even"><p>bd_copy (<a class="reference internal" href="class-bipartitedata.html#pytwoway.bipartite_network.BipartiteData" title="pytwoway.bipartite_network.BipartiteData">BipartiteData</a>)</p>
 </dd>
 </dl>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.bipartite_network.BipartiteData.es_to_cs">
-<code class="sig-name descname">es_to_cs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.es_to_cs" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return event study data reformatted into cross section data.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt id="pytwoway.bipartite_network.BipartiteData.es_to_long">
 <code class="sig-name descname">es_to_long</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.es_to_long" title="Permalink to this definition">¶</a></dt>
 <dd><p>Refactor event study data into long data.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.get_cs">
+<code class="sig-name descname">get_cs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.get_cs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return event study data reformatted into cross section data.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -366,8 +366,8 @@ if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.bipartite_network.BipartiteEventStudy.get_cross_section">
-<code class="sig-name descname">get_cross_section</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteEventStudy.get_cross_section" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.bipartite_network.BipartiteEventStudy.get_cs">
+<code class="sig-name descname">get_cs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteEventStudy.get_cs" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return event study data reformatted into cross section data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -581,7 +581,7 @@ if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Jan 15, 2021.
+        Last updated on Jan 19, 2021.
       </span>
 
     </p>

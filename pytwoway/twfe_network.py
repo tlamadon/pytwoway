@@ -118,7 +118,7 @@ class TwoWay:
         self.__prep_fe()
         fe_params = tw.update_dict(self.default_fe, user_fe)
 
-        fe_params['data'] = self.b_net.es_to_cs() # Make sure to use up-to-date bipartite network
+        fe_params['data'] = self.b_net.get_cs() # Make sure to use up-to-date bipartite network
 
         fe_solver = tw.FESolver(fe_params)
         fe_solver.fit_1()
@@ -168,7 +168,7 @@ class TwoWay:
         self.__prep_cre(user_cluster=user_cluster)
         cre_params = tw.update_dict(self.default_cre, user_cre)
 
-        cre_params['data'] = self.b_net.es_to_cs() # Make sure to use up-to-date data
+        cre_params['data'] = self.b_net.get_cs() # Make sure to use up-to-date data
 
         cre_solver = tw.CRESolver(cre_params)
         cre_solver.fit()

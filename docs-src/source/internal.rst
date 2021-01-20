@@ -55,7 +55,7 @@ Modules and Methods
    ~pytwoway.BipartiteData
    ~pytwoway.BipartiteData.clean_data
    ~pytwoway.BipartiteData.cluster
-   ~pytwoway.BipartiteData.es_to_cs
+   ~pytwoway.BipartiteData.get_cs
    ~pytwoway.BipartiteData.es_to_long
    ~pytwoway.BipartiteData.long_to_es
 

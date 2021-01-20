@@ -29,7 +29,6 @@
         <script src="../_static/jquery.js"></script>
         <script src="../_static/underscore.js"></script>
         <script src="../_static/doctools.js"></script>
-        <script src="../_static/language_data.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
@@ -104,6 +103,7 @@
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../internal.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-bipartitedata.html">BipartiteData</a></li>
 </ul>
 
             
@@ -174,35 +174,21 @@
 /* CSS for nbsphinx extension */
 
 /* remove conflicting styling from Sphinx themes */
-div.nbinput.container div.prompt *,
-div.nboutput.container div.prompt *,
-div.nbinput.container div.input_area pre,
-div.nboutput.container div.output_area pre,
-div.nbinput.container div.input_area .highlight,
-div.nboutput.container div.output_area .highlight {
+div.nbinput.container,
+div.nbinput.container div.prompt,
+div.nbinput.container div.input_area,
+div.nbinput.container div[class*=highlight],
+div.nbinput.container div[class*=highlight] pre,
+div.nboutput.container,
+div.nboutput.container div.prompt,
+div.nboutput.container div.output_area,
+div.nboutput.container div[class*=highlight],
+div.nboutput.container div[class*=highlight] pre {
+    background: none;
     border: none;
-    padding: 0;
+    padding: 0 0;
     margin: 0;
     box-shadow: none;
-}
-
-div.nbinput.container > div[class*=highlight],
-div.nboutput.container > div[class*=highlight] {
-    margin: 0;
-}
-
-div.nbinput.container div.prompt *,
-div.nboutput.container div.prompt * {
-    background: none;
-}
-
-div.nboutput.container div.output_area .highlight,
-div.nboutput.container div.output_area pre {
-    background: unset;
-}
-
-div.nboutput.container div.output_area div.highlight {
-    color: unset;  /* override Pygments text color */
 }
 
 /* avoid gaps between output lines */
@@ -303,7 +289,7 @@ div.nboutput.container div.output_area {
 div.nbinput.container div.input_area {
     border: 1px solid #e0e0e0;
     border-radius: 2px;
-    /*background: #f5f5f5;*/
+    background: #f5f5f5;
 }
 
 /* override MathJax center alignment in output cells */
@@ -369,7 +355,6 @@ div.nboutput.container div.output_area.rendered_html,
 div.nboutput.container div.output_area > div.output_javascript,
 div.nboutput.container div.output_area:not(.rendered_html) > img{
     padding: 5px;
-    margin: 0;
 }
 
 /* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
@@ -446,27 +431,45 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">sys</span>
-<span class="c1"># Navigate to parent folder for import</span>
-<span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s1">&#39;../../..&#39;</span><span class="p">)</span>
+<span></span><span class="c1"># Add pytwoway to system path, do not run this</span>
+<span class="c1"># import sys</span>
+<span class="c1"># sys.path.append(&#39;../../..&#39;)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Import the pytwoway package</span>
+<span class="c1"># (Make sure you have installed it using pip install pytwoway)</span>
 <span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
-
-<span class="c1"># Weird code needed for output to show</span>
-<span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s1">&#39;docs-src/source/notebooks&#39;</span><span class="p">)</span>
-<span class="n">stdout</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span>
-<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;..&#39;</span><span class="p">))</span>
-<span class="n">sys</span><span class="o">.</span><span class="n">stdout</span> <span class="o">=</span> <span class="n">stdout</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="First,-optionally-set-parameter-values-for-the-simulated-data">
 <h2>First, optionally set parameter values for the simulated data<a class="headerlink" href="#First,-optionally-set-parameter-values-for-the-simulated-data" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">sim_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;num_ind&#39;</span><span class="p">:</span> <span class="mi">10000</span><span class="p">,</span> <span class="s1">&#39;num_time&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;firm_size&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">&#39;nk&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;nl&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;alpha_sig&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;psi_sig&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;w_sig&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;csort&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;cnetw&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;csig&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;p_move&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">}</span>
+<span></span><span class="c1">## Optional Parameters ##</span>
+<span class="n">sim_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;num_ind&#39;</span><span class="p">:</span> <span class="mi">10000</span><span class="p">,</span> <span class="c1"># Number of workers</span>
+    <span class="s1">&#39;num_time&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Time length of panel</span>
+    <span class="s1">&#39;firm_size&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="c1"># Max number of individuals per firm</span>
+    <span class="s1">&#39;nk&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="c1"># Number of firm types</span>
+    <span class="s1">&#39;nl&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of worker types</span>
+    <span class="s1">&#39;alpha_sig&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Standard error of individual fixed effect (volatility of worker effects)</span>
+    <span class="s1">&#39;psi_sig&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Standard error of firm fixed effect (volatility of firm effects)</span>
+    <span class="s1">&#39;w_sig&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Standard error of residual in AKM wage equation (volatility of wage shocks)</span>
+    <span class="s1">&#39;csort&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Sorting effect</span>
+    <span class="s1">&#39;cnetw&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Network effect</span>
+    <span class="s1">&#39;csig&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Standard error of sorting/network effects</span>
+    <span class="s1">&#39;p_move&#39;</span><span class="p">:</span> <span class="mf">0.5</span> <span class="c1"># Probability a worker moves firms in any period</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </div>
@@ -474,11 +477,12 @@ div.rendered_html tbody tr:hover {
 <div class="section" id="Second,-create-a-simulated-Monte-Carlo-object-using-the-parameter-choices">
 <h2>Second, create a simulated Monte Carlo object using the parameter choices<a class="headerlink" href="#Second,-create-a-simulated-Monte-Carlo-object-using-the-parameter-choices" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">twmc_net</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">TwoWayMonteCarlo</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span> <span class="c1"># smc_net for simulated Monte Carlo two-way network</span>
+<span></span><span class="c1"># Create the TwoWayMonteCarlo object</span>
+<span class="n">twmc_net</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">TwoWayMonteCarlo</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -486,29 +490,75 @@ div.rendered_html tbody tr:hover {
 <div class="section" id="Third,-optionally-set-parameter-values-for-the-Monte-Carlo-simulation">
 <h2>Third, optionally set parameter values for the Monte Carlo simulation<a class="headerlink" href="#Third,-optionally-set-parameter-values-for-the-Monte-Carlo-simulation" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># For FE estimation</span>
-<span class="n">fe_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;batch&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ndraw_pii&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;check&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;hetero&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_fe.json&#39;</span><span class="p">,</span> <span class="s1">&#39;con&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;logfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;levfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;Q&#39;</span><span class="p">:</span> <span class="s1">&#39;cov(alpha, psi)&#39;</span><span class="p">}</span>
-
+<span></span><span class="c1">## Optional Parameters ##</span>
+<span class="c1"># For FE estimation</span>
+<span class="n">fe_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Number of cores to use</span>
+    <span class="s1">&#39;batch&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Batch size to send in parallel</span>
+    <span class="s1">&#39;ndraw_pii&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="c1"># Number of draw to use in approximation for leverages</span>
+    <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of draws to use in approximation for traces</span>
+    <span class="s1">&#39;check&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Whether to compute the non-approximated estimates as well</span>
+    <span class="s1">&#39;hetero&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Whether to compute the heteroskedastic estimates</span>
+    <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_fe.json&#39;</span><span class="p">,</span> <span class="c1"># Filepath for fe results</span>
+    <span class="s1">&#39;con&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Computes the smallest eigen values, this is the filepath where these results are saved</span>
+    <span class="s1">&#39;logfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="c1"># Log output to a logfile</span>
+    <span class="s1">&#39;levfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="c1"># File to load precomputed leverages</span>
+    <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># Save data statistics only</span>
+<span class="p">}</span>
 <span class="c1"># For CRE estimation</span>
-<span class="n">cre_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;ndp&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_cre.json&#39;</span><span class="p">,</span> <span class="s1">&#39;posterior&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;wobtw&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
-
+<span class="n">cre_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Number of cores to use</span>
+    <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of draws to use in approximation for traces</span>
+    <span class="s1">&#39;ndp&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="c1"># Number of draw to use in approximation for leverages</span>
+    <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_cre.json&#39;</span><span class="p">,</span> <span class="c1"># Filepath for cre results</span>
+    <span class="s1">&#39;posterior&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Whether to compute the posterior variance</span>
+    <span class="s1">&#39;wobtw&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># Sets between variation to 0, pure RE when computing cre</span>
+<span class="p">}</span>
 <span class="c1"># For clustering (specifically for the KMeans algorithm)</span>
-<span class="n">KMeans_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;n_clusters&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;init&#39;</span><span class="p">:</span> <span class="s1">&#39;k-means++&#39;</span><span class="p">,</span> <span class="s1">&#39;n_init&#39;</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span> <span class="s1">&#39;max_iter&#39;</span><span class="p">:</span> <span class="mi">300</span><span class="p">,</span> <span class="s1">&#39;tol&#39;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span> <span class="s1">&#39;precompute_distances&#39;</span><span class="p">:</span> <span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="s1">&#39;verbose&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;random_state&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;copy_x&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;n_jobs&#39;</span><span class="p">:</span> <span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="s1">&#39;algorithm&#39;</span><span class="p">:</span> <span class="s1">&#39;auto&#39;</span><span class="p">}</span>
-
+<span class="n">KMeans_params</span> <span class="o">=</span> <span class="p">{</span> <span class="c1"># These parameters are specifically for the KMeans algorithm</span>
+                  <span class="c1"># Read more at https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</span>
+    <span class="s1">&#39;n_clusters&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="s1">&#39;init&#39;</span><span class="p">:</span> <span class="s1">&#39;k-means++&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;n_init&#39;</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span>
+    <span class="s1">&#39;max_iter&#39;</span><span class="p">:</span> <span class="mi">300</span><span class="p">,</span>
+    <span class="s1">&#39;tol&#39;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span>
+    <span class="s1">&#39;precompute_distances&#39;</span><span class="p">:</span> <span class="s1">&#39;deprecated&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;verbose&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s1">&#39;random_state&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="s1">&#39;copy_x&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;n_jobs&#39;</span><span class="p">:</span> <span class="s1">&#39;deprecated&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;algorithm&#39;</span><span class="p">:</span> <span class="s1">&#39;auto&#39;</span>
+<span class="p">}</span>
 <span class="c1"># For clustering</span>
-<span class="n">cluster_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;cdf_resolution&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;grouping&#39;</span><span class="p">:</span> <span class="s1">&#39;quantile_all&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;user_KMeans&#39;</span><span class="p">:</span> <span class="n">KMeans_params</span><span class="p">}</span>
+<span class="n">cluster_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;cdf_resolution&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="c1"># How many values to use to approximate the cdf when clustering</span>
+    <span class="s1">&#39;grouping&#39;</span><span class="p">:</span> <span class="s1">&#39;quantile_all&#39;</span><span class="p">,</span>
+        <span class="c1"># How to group the cdfs when clustering</span>
+        <span class="c1"># (&#39;quantile_all&#39; to get quantiles from entire set of data,</span>
+        <span class="c1">#     then have firm-level values between 0 and 1;</span>
+        <span class="c1"># &#39;quantile_firm_small&#39; to get quantiles at the firm-level</span>
+        <span class="c1">#     and have values be compensations if small data;</span>
+        <span class="c1"># &#39;quantile_firm_large&#39; to get quantiles at the firm-level</span>
+        <span class="c1">#     and have values be compensations if large data,</span>
+        <span class="c1">#     note that this is up to 50 times slower than &#39;quantile_firm_small&#39;</span>
+        <span class="c1">#     and should only be used if the dataset is too large to copy</span>
+        <span class="c1">#     into a dictionary)</span>
+    <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># If None, uses entire dataset when clustering;</span>
+                  <span class="c1"># If int, gives year of data to consider when clustering</span>
+    <span class="s1">&#39;user_KMeans&#39;</span><span class="p">:</span> <span class="n">KMeans_params</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </div>
 </div>
 <div class="section" id="Fourth,-run-the-Monte-Carlo-simulation-using-the-parameter-choices">
 <h2>Fourth, run the Monte Carlo simulation using the parameter choices<a class="headerlink" href="#Fourth,-run-the-Monte-Carlo-simulation-using-the-parameter-choices" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -516,518 +566,11 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-100%|██████████| 5/5 [00:00&lt;00:00, 167.91it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 165.76it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 145.74it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 130.71it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 169.45it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 160.13it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 163.83it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 16.80it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 150.55it/s]
-
-100%|██████████| 5/5 [00:00&lt;00:00, 134.54it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 172.72it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 144.71it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 146.61it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 129.38it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 171.01it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 140.64it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 131.49it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 138.16it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 149.69it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 129.16it/s]
-  0%|          | 0/5 [00:00&lt;?, ?it/s]7.66it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 113.24it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 131.43it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 133.31it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 116.01it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 124.72it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 121.04it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 117.25it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 101.27it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 103.60it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 123.56it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 117.42it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 114.35it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 111.74it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 109.62it/s]
-  0%|          | 0/5 [00:00&lt;?, ?it/s]3.39it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 105.08it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 100.46it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 99.99it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 102.77it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 99.73it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 93.72it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 105.58it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 93.56it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 98.92it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 90.91it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 98.91it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 95.46it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 92.35it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 95.49it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.13it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 92.25it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 93.59it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 88.21it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 91.90it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 85.39it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 88.52it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 91.10it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 89.46it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 81.12it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 89.69it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 87.09it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 80.25it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 84.10it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 87.02it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 82.09it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 81.24it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 82.84it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 84.30it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 78.08it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 75.72it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 80.55it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 70.37it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 68.55it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 76.15it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 78.88it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 74.72it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 69.14it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 68.30it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 67.33it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 70.12it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 72.90it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 71.87it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 67.82it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 70.23it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 68.63it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 60.94it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 64.38it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 60.32it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 63.56it/s]
-
-100%|██████████| 5/5 [00:00&lt;00:00, 50.77it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 43.40it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 43.80it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 44.71it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 40.82it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 41.10it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 44.77it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 39.75it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 59.41it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 58.04it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 59.46it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 59.18it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 63.68it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 58.12it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 58.59it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 58.16it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 59.33it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 58.06it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 56.03it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 60.71it/s]
-  0%|          | 0/5 [00:00&lt;?, ?it/s].31it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 50.98it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 53.19it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 52.19it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 47.84it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 44.96it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 45.35it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 52.64it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 52.36it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 47.50it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 47.15it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 52.76it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 55.01it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 55.68it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 54.09it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 54.20it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 47.41it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 51.79it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 48.15it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 17.08it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 38.67it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 35.49it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 38.21it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 40.64it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 40.71it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 42.34it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 43.05it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 43.85it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 43.68it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 43.20it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 45.29it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 44.35it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 44.11it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 43.98it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 45.73it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 43.49it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 43.59it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 44.15it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 40.77it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 39.83it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 42.24it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 40.55it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 38.77it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 38.53it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 43.20it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 42.14it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 41.98it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 42.89it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 41.05it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 38.75it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 35.00it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 35.84it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 35.00it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 34.76it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 32.30it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 14.46it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 35.65it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 36.02it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 34.14it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 34.44it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 40.46it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 39.55it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 38.47it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 36.85it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 35.47it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 33.09it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 33.38it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 32.08it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 30.93it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 31.56it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 30.89it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 29.63it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 35.37it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 34.24it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 36.03it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 35.23it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 36.45it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 36.56it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 36.29it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 16.81it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 36.66it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 37.48it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 37.03it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 35.93it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 11.58it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 32.17it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 33.16it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 32.68it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 33.35it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 30.53it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 31.34it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 30.75it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 33.87it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 32.68it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 31.52it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 32.35it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 33.69it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 32.29it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 32.03it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 31.48it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 30.17it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 30.07it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 30.23it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 29.42it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 32.93it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 31.93it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 32.48it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 32.32it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 31.42it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 29.98it/s]
-
-100%|██████████| 5/5 [00:00&lt;00:00, 30.85it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 29.07it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 28.89it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 28.73it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 28.41it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 28.67it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 30.38it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 12.45it/s]
-100%|██████████| 5/5 [00:00&lt;00:00,  9.47it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 27.44it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 29.81it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 28.15it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 29.15it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 29.93it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 28.78it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 29.22it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 28.55it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 28.78it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 27.88it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 27.03it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 27.20it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 28.95it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 28.14it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 28.02it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 28.15it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 28.36it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 28.50it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 27.94it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 27.24it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 27.22it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 26.08it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 25.53it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.63it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 27.32it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 26.43it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 25.45it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 26.54it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 26.78it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 27.60it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 26.27it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 13.80it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 27.32it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 27.25it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 26.01it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 26.17it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.61it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.38it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 23.92it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.39it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 28.01it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.38it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 25.57it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 25.73it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 25.99it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 25.17it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 25.09it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.56it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 25.01it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 23.52it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.20it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.66it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 27.12it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 26.18it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 25.44it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 26.16it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 27.01it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 26.37it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.47it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.76it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 26.22it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 26.20it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 11.35it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 25.14it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.73it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.97it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 25.45it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.90it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.50it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.27it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.10it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 23.70it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.65it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.55it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 23.77it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.39it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 25.10it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 23.26it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 23.56it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.41it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.18it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 23.14it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 23.39it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 12.20it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.12it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 25.41it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.80it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 24.59it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 23.03it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.34it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.60it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.98it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.11it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.98it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.91it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.73it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 23.19it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 23.69it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 23.68it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 23.63it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.78it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.69it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.50it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.59it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.35it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.94it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.42it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.85it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.97it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.88it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.18it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.34it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.75it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.63it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.42it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.68it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.54it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.73it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.42it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.39it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.66it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.65it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.39it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.76it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.36it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.81it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.12it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.51it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.51it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.32it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.89it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.12it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.35it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 10.92it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.78it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.32it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.99it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.29it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.53it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.46it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.29it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.46it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.85it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.30it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.48it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.84it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 11.33it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.08it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.26it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.50it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.59it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 22.45it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.49it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.90it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.23it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.69it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.99it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.65it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.92it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.04it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.70it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.73it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.94it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.62it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.55it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.09it/s]
- 80%|████████  | 4/5 [00:00&lt;00:00, 19.49it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.20it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.58it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.38it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.67it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 21.62it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.87it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.29it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.54it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.83it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 17.74it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.24it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.88it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.18it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.12it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.42it/s]
- 80%|████████  | 4/5 [00:00&lt;00:00, 18.66it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.19it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.94it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.71it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.79it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.54it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.56it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.84it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.89it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.34it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.06it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.70it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.58it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.71it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.34it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.67it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.73it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.05it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 17.92it/s]
- 40%|████      | 2/5 [00:00&lt;00:00, 18.71it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.21it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.63it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.87it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.36it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.20it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.96it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.00it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.06it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 17.23it/s]
-100%|██████████| 5/5 [00:00&lt;00:00,  8.71it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 10.08it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.08it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.35it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.94it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.00it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.28it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 17.87it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.43it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 16.59it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.24it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.79it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.09it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.02it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 17.47it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 17.88it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.61it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 16.43it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 17.84it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 17.77it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 17.66it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.25it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.16it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.51it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.16it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.08it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.93it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.82it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.09it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.64it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.54it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.41it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.65it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.41it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.03it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.43it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.76it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.28it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 20.07it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.80it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.45it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.48it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.44it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.23it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.45it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.39it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.30it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.59it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 17.70it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.91it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.00it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 17.70it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 17.83it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 17.71it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.63it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 18.73it/s]
-100%|██████████| 5/5 [00:00&lt;00:00, 19.35it/s]
-</pre></div></div>
-</div>
 </div>
 <div class="section" id="Fifth-and-finally,-plot-parameter-estimates-(plots-show-the-difference-from-the-truth)">
 <h2>Fifth and finally, plot parameter estimates (plots show the difference from the truth)<a class="headerlink" href="#Fifth-and-finally,-plot-parameter-estimates-(plots-show-the-difference-from-the-truth)" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -1039,14 +582,14 @@ div.rendered_html tbody tr:hover {
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_monte_carlo_example_11_0.png" src="../_images/notebooks_monte_carlo_example_11_0.png" />
+<img alt="../_images/notebooks_monte_carlo_example_12_0.png" src="../_images/notebooks_monte_carlo_example_12_0.png" />
 </div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_monte_carlo_example_11_1.png" src="../_images/notebooks_monte_carlo_example_11_1.png" />
+<img alt="../_images/notebooks_monte_carlo_example_12_1.png" src="../_images/notebooks_monte_carlo_example_12_1.png" />
 </div>
 </div>
 </div>
@@ -1075,7 +618,7 @@ div.rendered_html tbody tr:hover {
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Jan 15, 2021.
+        Last updated on Jan 19, 2021.
       </span>
 
     </p>

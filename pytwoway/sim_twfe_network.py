@@ -525,6 +525,7 @@ class TwoWayMonteCarlo:
 
             # Plot histograms
             # First, var(psi)
+            plt.axvline(x=0, color='purple', linestyle='--', label=r'$\Delta$Truth=0')
             plt.hist(fe_psi_diff, bins=50, label='AKM var(psi)')
             plt.hist(fe_corr_psi_diff, bins=50, label='Bias-corrected AKM var(psi)')
             plt.hist(cre_psi_diff, bins=50, label='CRE var(psi)')
@@ -532,6 +533,7 @@ class TwoWayMonteCarlo:
             plt.show()
 
             # Second, cov(psi, alpha)
+            plt.axvline(x=0, color='purple', linestyle='--', label=r'$\Delta$Truth=0')
             plt.hist(fe_psi_alpha_diff, bins=50, label='AKM cov(psi, alpha)')
             plt.hist(fe_corr_psi_alpha_diff, bins=50, label='Bias-corrected AKM cov(psi, alpha)')
             plt.hist(cre_psi_alpha_diff, bins=50, label='CRE cov(psi, alpha)')

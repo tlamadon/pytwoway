@@ -29,7 +29,6 @@
         <script src="../_static/jquery.js"></script>
         <script src="../_static/underscore.js"></script>
         <script src="../_static/doctools.js"></script>
-        <script src="../_static/language_data.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     
     <script type="text/javascript" src="../_static/js/theme.js"></script>
@@ -104,6 +103,7 @@
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../internal.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-bipartitedata.html">BipartiteData</a></li>
 </ul>
 
             
@@ -174,35 +174,21 @@
 /* CSS for nbsphinx extension */
 
 /* remove conflicting styling from Sphinx themes */
-div.nbinput.container div.prompt *,
-div.nboutput.container div.prompt *,
-div.nbinput.container div.input_area pre,
-div.nboutput.container div.output_area pre,
-div.nbinput.container div.input_area .highlight,
-div.nboutput.container div.output_area .highlight {
+div.nbinput.container,
+div.nbinput.container div.prompt,
+div.nbinput.container div.input_area,
+div.nbinput.container div[class*=highlight],
+div.nbinput.container div[class*=highlight] pre,
+div.nboutput.container,
+div.nboutput.container div.prompt,
+div.nboutput.container div.output_area,
+div.nboutput.container div[class*=highlight],
+div.nboutput.container div[class*=highlight] pre {
+    background: none;
     border: none;
-    padding: 0;
+    padding: 0 0;
     margin: 0;
     box-shadow: none;
-}
-
-div.nbinput.container > div[class*=highlight],
-div.nboutput.container > div[class*=highlight] {
-    margin: 0;
-}
-
-div.nbinput.container div.prompt *,
-div.nboutput.container div.prompt * {
-    background: none;
-}
-
-div.nboutput.container div.output_area .highlight,
-div.nboutput.container div.output_area pre {
-    background: unset;
-}
-
-div.nboutput.container div.output_area div.highlight {
-    color: unset;  /* override Pygments text color */
 }
 
 /* avoid gaps between output lines */
@@ -303,7 +289,7 @@ div.nboutput.container div.output_area {
 div.nbinput.container div.input_area {
     border: 1px solid #e0e0e0;
     border-radius: 2px;
-    /*background: #f5f5f5;*/
+    background: #f5f5f5;
 }
 
 /* override MathJax center alignment in output cells */
@@ -369,7 +355,6 @@ div.nboutput.container div.output_area.rendered_html,
 div.nboutput.container div.output_area > div.output_javascript,
 div.nboutput.container div.output_area:not(.rendered_html) > img{
     padding: 5px;
-    margin: 0;
 }
 
 /* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
@@ -442,25 +427,36 @@ div.rendered_html tbody tr:hover {
 <div class="section" id="pytwoway-example">
 <h1>pytwoway example<a class="headerlink" href="#pytwoway-example" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Add pytwoway to system path, do not run this</span>
+<span class="c1"># import sys</span>
+<span class="c1"># sys.path.append(&#39;../../..&#39;)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1">#  we import the pytwoway package</span>
-<span class="c1"># (make sure you have installed it using pip install pytwoway)</span>
+<span></span><span class="c1"># Import the pytwoway package</span>
+<span class="c1"># (Make sure you have installed it using pip install pytwoway)</span>
 <span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="Simulate-some-data">
 <h2>Simulate some data<a class="headerlink" href="#Simulate-some-data" title="Permalink to this headline">¶</a></h2>
-<p>The package contains function to simulate data. We use this here to keep things simple. If you have your own data, you can import it. Load it as a pandas dataframe and use it as an input.</p>
+<p>The package contains functions to simulate data. We use this here to keep things simple. If you have your own data, you can import it. Load it as a pandas dataframe and use it as an input.</p>
 <p>As you can see, we will need the following required columns in our data:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">wid</span></code>: the worker identifier</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">fid</span></code>: the firm identifier</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">year</span></code>: the time</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">comp</span></code>: the outcome variable, in our case the compensation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">comp</span></code>: the outcome variable, in our case compensation</p></li>
 </ul>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
@@ -513,65 +509,65 @@ div.rendered_html tbody tr:hover {
       <td>1</td>
       <td>1</td>
       <td>5</td>
-      <td>0.967422</td>
+      <td>0.430727</td>
       <td>0.114185</td>
       <td>1</td>
-      <td>1</td>
+      <td>3</td>
       <td>84</td>
       <td>False</td>
-      <td>1.644341</td>
+      <td>1.920632</td>
     </tr>
     <tr>
       <th>1</th>
       <td>1</td>
       <td>2</td>
-      <td>8</td>
-      <td>0.967422</td>
-      <td>0.908458</td>
-      <td>2</td>
+      <td>5</td>
+      <td>0.430727</td>
+      <td>0.114185</td>
+      <td>1</td>
       <td>3</td>
-      <td>152</td>
-      <td>True</td>
-      <td>-0.109389</td>
+      <td>84</td>
+      <td>False</td>
+      <td>0.527406</td>
     </tr>
     <tr>
       <th>2</th>
       <td>1</td>
       <td>3</td>
-      <td>8</td>
-      <td>0.967422</td>
-      <td>0.908458</td>
-      <td>2</td>
+      <td>5</td>
+      <td>0.430727</td>
+      <td>0.114185</td>
+      <td>1</td>
       <td>3</td>
-      <td>152</td>
+      <td>84</td>
       <td>False</td>
-      <td>1.955849</td>
+      <td>-0.714207</td>
     </tr>
     <tr>
       <th>3</th>
       <td>1</td>
       <td>4</td>
-      <td>8</td>
-      <td>0.967422</td>
-      <td>0.908458</td>
+      <td>6</td>
+      <td>0.430727</td>
+      <td>0.348756</td>
       <td>2</td>
-      <td>3</td>
-      <td>152</td>
-      <td>False</td>
-      <td>1.034616</td>
+      <td>2</td>
+      <td>115</td>
+      <td>True</td>
+      <td>0.375877</td>
     </tr>
     <tr>
       <th>4</th>
       <td>1</td>
       <td>5</td>
-      <td>9</td>
-      <td>0.967422</td>
-      <td>1.335178</td>
-      <td>3</td>
-      <td>1</td>
-      <td>183</td>
-      <td>True</td>
-      <td>4.729998</td>
+      <td>6</td>
+      <td>0.430727</td>
+      <td>0.348756</td>
+      <td>2</td>
+      <td>2</td>
+      <td>115</td>
+      <td>False</td>
+      <td>0.843413</td>
     </tr>
     <tr>
       <th>...</th>
@@ -590,66 +586,66 @@ div.rendered_html tbody tr:hover {
       <th>49995</th>
       <td>10000</td>
       <td>1</td>
+      <td>8</td>
+      <td>0.000000</td>
+      <td>0.908458</td>
       <td>1</td>
-      <td>-0.430727</td>
-      <td>-0.908458</td>
       <td>1</td>
-      <td>1</td>
-      <td>22</td>
+      <td>150</td>
       <td>False</td>
-      <td>-1.220417</td>
+      <td>1.267188</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>10000</td>
       <td>2</td>
-      <td>4</td>
-      <td>-0.430727</td>
-      <td>-0.114185</td>
+      <td>7</td>
+      <td>0.000000</td>
+      <td>0.604585</td>
       <td>2</td>
-      <td>1</td>
-      <td>67</td>
+      <td>4</td>
+      <td>137</td>
       <td>True</td>
-      <td>0.341023</td>
+      <td>0.672805</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>10000</td>
       <td>3</td>
       <td>7</td>
-      <td>-0.430727</td>
+      <td>0.000000</td>
       <td>0.604585</td>
-      <td>3</td>
-      <td>3</td>
-      <td>136</td>
-      <td>True</td>
-      <td>-0.310735</td>
+      <td>2</td>
+      <td>4</td>
+      <td>137</td>
+      <td>False</td>
+      <td>-0.623615</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>10000</td>
       <td>4</td>
       <td>7</td>
-      <td>-0.430727</td>
+      <td>0.000000</td>
       <td>0.604585</td>
-      <td>3</td>
-      <td>3</td>
-      <td>136</td>
+      <td>2</td>
+      <td>4</td>
+      <td>137</td>
       <td>False</td>
-      <td>0.101317</td>
+      <td>0.291969</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>10000</td>
       <td>5</td>
       <td>7</td>
-      <td>-0.430727</td>
+      <td>0.000000</td>
       <td>0.604585</td>
-      <td>3</td>
-      <td>3</td>
-      <td>136</td>
+      <td>2</td>
+      <td>4</td>
+      <td>137</td>
       <td>False</td>
-      <td>0.898169</td>
+      <td>0.454164</td>
     </tr>
   </tbody>
 </table>
@@ -664,16 +660,16 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># We need to specify a column dictionary to make sure columns are named correctly.</span>
+<span></span><span class="c1"># We need to specify a column dictionary to make sure columns are named correctly</span>
 <span class="c1"># You can also manually update column names yourself</span>
 <span class="n">col_name_dict</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">&#39;fid&#39;</span><span class="p">:</span> <span class="s1">&#39;fid&#39;</span><span class="p">,</span>    <span class="c1"># specicy the column name for the firm identifier</span>
-    <span class="s1">&#39;wid&#39;</span><span class="p">:</span> <span class="s1">&#39;wid&#39;</span><span class="p">,</span>    <span class="c1"># specicy the column name for the worker identifier</span>
-    <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="s1">&#39;year&#39;</span><span class="p">,</span>  <span class="c1"># specicy the column name for the year</span>
-    <span class="s1">&#39;comp&#39;</span><span class="p">:</span> <span class="s1">&#39;comp&#39;</span>   <span class="c1"># specicy the column name for the outcome variable</span>
+    <span class="s1">&#39;fid&#39;</span><span class="p">:</span> <span class="s1">&#39;fid&#39;</span><span class="p">,</span>    <span class="c1"># Specify the column name for the firm identifier</span>
+    <span class="s1">&#39;wid&#39;</span><span class="p">:</span> <span class="s1">&#39;wid&#39;</span><span class="p">,</span>    <span class="c1"># Specify the column name for the worker identifier</span>
+    <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="s1">&#39;year&#39;</span><span class="p">,</span>  <span class="c1"># Specify the column name for the year</span>
+    <span class="s1">&#39;comp&#39;</span><span class="p">:</span> <span class="s1">&#39;comp&#39;</span>   <span class="c1"># Specify the column name for the outcome variable</span>
 <span class="p">}</span>
 
-<span class="c1"># create the TwoWay object that will do all the heavy lifting</span>
+<span class="c1"># Create the TwoWay object that will do all the heavy lifting</span>
 <span class="n">tw_net</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">TwoWay</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">&#39;long&#39;</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="n">col_name_dict</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -682,26 +678,26 @@ div.rendered_html tbody tr:hover {
 <div class="section" id="Now-we-can-run-the-FE-estimator">
 <h2>Now we can run the FE estimator<a class="headerlink" href="#Now-we-can-run-the-FE-estimator" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># Optional parameters</span>
+<span></span><span class="c1">## Optional Parameters ##</span>
 <span class="n">fe_params</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="s1">&#39;batch&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
-    <span class="s1">&#39;ndraw_pii&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span>
-    <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
-    <span class="s1">&#39;check&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="s1">&#39;hetero&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_fe.json&#39;</span><span class="p">,</span>
-    <span class="s1">&#39;con&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="s1">&#39;logfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
-    <span class="s1">&#39;levfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
-    <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
+    <span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Number of cores to use</span>
+    <span class="s1">&#39;batch&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Batch size to send in parallel</span>
+    <span class="s1">&#39;ndraw_pii&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="c1"># Number of draw to use in approximation for leverages</span>
+    <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of draws to use in approximation for traces</span>
+    <span class="s1">&#39;check&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Whether to compute the non-approximated estimates as well</span>
+    <span class="s1">&#39;hetero&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Whether to compute the heteroskedastic estimates</span>
+    <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_fe.json&#39;</span><span class="p">,</span> <span class="c1"># Filepath for fe results</span>
+    <span class="s1">&#39;con&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Computes the smallest eigen values, this is the filepath where these results are saved</span>
+    <span class="s1">&#39;logfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="c1"># Log output to a logfile</span>
+    <span class="s1">&#39;levfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="c1"># File to load precomputed leverages</span>
+    <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># Save data statistics only</span>
+<span class="p">}</span>
 
-
-<span class="c1"># compute the fixed effect decomposition</span>
+<span class="c1"># Compute the fixed effect decomposition</span>
 <span class="n">fe_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">fit_fe</span><span class="p">(</span><span class="n">user_fe</span><span class="o">=</span><span class="n">fe_params</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -711,21 +707,59 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|██████████| 5/5 [00:00&lt;00:00, 223.77it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 249.65it/s]
 </pre></div></div>
 </div>
 </div>
 <div class="section" id="We-can-also-run-the-CRE-estimator">
 <h2>We can also run the CRE estimator<a class="headerlink" href="#We-can-also-run-the-CRE-estimator" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># Optional parameters</span>
-<span class="n">cre_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="s1">&#39;ndp&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_cre.json&#39;</span><span class="p">,</span> <span class="s1">&#39;posterior&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;wobtw&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">}</span>
-<span class="n">KMeans_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;n_clusters&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;init&#39;</span><span class="p">:</span> <span class="s1">&#39;k-means++&#39;</span><span class="p">,</span> <span class="s1">&#39;n_init&#39;</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span> <span class="s1">&#39;max_iter&#39;</span><span class="p">:</span> <span class="mi">300</span><span class="p">,</span> <span class="s1">&#39;tol&#39;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span> <span class="s1">&#39;precompute_distances&#39;</span><span class="p">:</span> <span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="s1">&#39;verbose&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;random_state&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;copy_x&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;n_jobs&#39;</span><span class="p">:</span> <span class="s1">&#39;deprecated&#39;</span><span class="p">,</span> <span class="s1">&#39;algorithm&#39;</span><span class="p">:</span> <span class="s1">&#39;auto&#39;</span><span class="p">}</span> <span class="c1"># These parameters are specifically for the KMeans algorithm</span>
-<span class="n">cluster_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;cdf_resolution&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;grouping&#39;</span><span class="p">:</span> <span class="s1">&#39;quantile_all&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;user_KMeans&#39;</span><span class="p">:</span> <span class="n">KMeans_params</span><span class="p">}</span>
+<span></span><span class="c1">## Optional Parameters ##</span>
+<span class="n">cre_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Number of cores to use</span>
+    <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of draws to use in approximation for traces</span>
+    <span class="s1">&#39;ndp&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="c1"># Number of draw to use in approximation for leverages</span>
+    <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_cre.json&#39;</span><span class="p">,</span> <span class="c1"># Filepath for cre results</span>
+    <span class="s1">&#39;posterior&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Whether to compute the posterior variance</span>
+    <span class="s1">&#39;wobtw&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># Sets between variation to 0, pure RE when computing cre</span>
+<span class="p">}</span>
+<span class="n">KMeans_params</span> <span class="o">=</span> <span class="p">{</span> <span class="c1"># These parameters are specifically for the KMeans algorithm</span>
+                  <span class="c1"># Read more at https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</span>
+    <span class="s1">&#39;n_clusters&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="s1">&#39;init&#39;</span><span class="p">:</span> <span class="s1">&#39;k-means++&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;n_init&#39;</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span>
+    <span class="s1">&#39;max_iter&#39;</span><span class="p">:</span> <span class="mi">300</span><span class="p">,</span>
+    <span class="s1">&#39;tol&#39;</span><span class="p">:</span> <span class="mf">0.0001</span><span class="p">,</span>
+    <span class="s1">&#39;precompute_distances&#39;</span><span class="p">:</span> <span class="s1">&#39;deprecated&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;verbose&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="s1">&#39;random_state&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="s1">&#39;copy_x&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;n_jobs&#39;</span><span class="p">:</span> <span class="s1">&#39;deprecated&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;algorithm&#39;</span><span class="p">:</span> <span class="s1">&#39;auto&#39;</span>
+<span class="p">}</span>
+<span class="n">cluster_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;cdf_resolution&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="c1"># How many values to use to approximate the cdf when clustering</span>
+    <span class="s1">&#39;grouping&#39;</span><span class="p">:</span> <span class="s1">&#39;quantile_all&#39;</span><span class="p">,</span>
+        <span class="c1"># How to group the cdfs when clustering</span>
+        <span class="c1"># (&#39;quantile_all&#39; to get quantiles from entire set of data,</span>
+        <span class="c1">#     then have firm-level values between 0 and 1;</span>
+        <span class="c1"># &#39;quantile_firm_small&#39; to get quantiles at the firm-level</span>
+        <span class="c1">#     and have values be compensations if small data;</span>
+        <span class="c1"># &#39;quantile_firm_large&#39; to get quantiles at the firm-level</span>
+        <span class="c1">#     and have values be compensations if large data,</span>
+        <span class="c1">#     note that this is up to 50 times slower than &#39;quantile_firm_small&#39;</span>
+        <span class="c1">#     and should only be used if the dataset is too large to copy</span>
+        <span class="c1">#     into a dictionary)</span>
+    <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># If None, uses entire dataset when clustering;</span>
+                  <span class="c1"># If int, gives year of data to consider when clustering</span>
+    <span class="s1">&#39;user_KMeans&#39;</span><span class="p">:</span> <span class="n">KMeans_params</span>
+<span class="p">}</span>
+
+<span class="c1"># Compute the cre model</span>
 <span class="n">cre_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">fit_cre</span><span class="p">(</span><span class="n">user_cre</span><span class="o">=</span><span class="n">cre_params</span><span class="p">,</span> <span class="n">user_cluster</span><span class="o">=</span><span class="n">cluster_params</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -734,7 +768,7 @@ div.rendered_html tbody tr:hover {
 <div class="section" id="Finally,-we-can-investigate-the-results">
 <h2>Finally, we can investigate the results<a class="headerlink" href="#Finally,-we-can-investigate-the-results" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -751,25 +785,25 @@ div.rendered_html tbody tr:hover {
 {&#39;cores&#39;: &#39;1&#39;,
  &#39;ndp&#39;: &#39;50&#39;,
  &#39;ndt&#39;: &#39;5&#39;,
- &#39;n_firms&#39;: &#39;194&#39;,
+ &#39;n_firms&#39;: &#39;196&#39;,
  &#39;n_workers&#39;: &#39;10000&#39;,
- &#39;n_movers&#39;: &#39;9342&#39;,
- &#39;n_stayers&#39;: &#39;658&#39;,
- &#39;mover_quantiles&#39;: &#39;[169.0, 182.9018970189702, 191.0, 197.0, 201.4356968215159, 206.0, 210.0, 216.0, 221.0, 228.6442060085837, 252.0]&#39;,
- &#39;size_quantiles&#39;: &#39;[169.0, 185.0, 195.0, 201.0, 205.0, 210.0, 213.0, 220.0, 225.91288888888892, 231.0, 255.0]&#39;,
- &#39;between_firm_var&#39;: &#39;0.9952771137426026&#39;,
- &#39;var_y&#39;: &#39;1.9674165885604504&#39;,
- &#39;solver_time&#39;: &#39;0.003141746999999917&#39;,
- &#39;tot_var&#39;: &#39;1.9749358615740908&#39;,
- &#39;eps_var_ho&#39;: &#39;0.6944922089616817&#39;,
- &#39;eps_var_fe&#39;: &#39;0.5190707120605959&#39;,
- &#39;tr_var_ho&#39;: &#39;0.0063540842392182705&#39;,
- &#39;tr_cov_ho&#39;: &#39;-0.0016462682768020403&#39;,
- &#39;var_fe&#39;: &#39;0.5888298918123765&#39;,
- &#39;cov_fe&#39;: &#39;0.17313564231257597&#39;,
- &#39;var_ho&#39;: &#39;0.5844170298131532&#39;,
- &#39;cov_ho&#39;: &#39;0.17427896280467575&#39;,
- &#39;total_time&#39;: &#39;0.0749521255493164&#39;}
+ &#39;n_movers&#39;: &#39;9344&#39;,
+ &#39;n_stayers&#39;: &#39;656&#39;,
+ &#39;mover_quantiles&#39;: &#39;[157.0, 181.0, 187.92894736842106, 195.0, 200.7450980392157, 206.0, 210.0, 214.0, 217.0, 228.0, 255.0]&#39;,
+ &#39;size_quantiles&#39;: &#39;[161.0, 185.50404312668465, 191.0, 198.0, 204.0, 209.0, 213.0, 217.0, 221.76975169300226, 231.61555075593952, 261.0]&#39;,
+ &#39;between_firm_var&#39;: &#39;0.9891734496234688&#39;,
+ &#39;var_y&#39;: &#39;1.9550009807689568&#39;,
+ &#39;solver_time&#39;: &#39;0.003079912000000018&#39;,
+ &#39;tot_var&#39;: &#39;1.9599014840913969&#39;,
+ &#39;eps_var_ho&#39;: &#39;0.6962512205591249&#39;,
+ &#39;eps_var_fe&#39;: &#39;0.5205946703586726&#39;,
+ &#39;tr_var_ho&#39;: &#39;0.00863868934254388&#39;,
+ &#39;tr_cov_ho&#39;: &#39;-0.004786864415815065&#39;,
+ &#39;var_fe&#39;: &#39;0.6109407805741677&#39;,
+ &#39;cov_fe&#39;: &#39;0.16480214211415423&#39;,
+ &#39;var_ho&#39;: &#39;0.6049260825753904&#39;,
+ &#39;cov_ho&#39;: &#39;0.1681350023063165&#39;,
+ &#39;total_time&#39;: &#39;0.07845926284790039&#39;}
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -779,63 +813,63 @@ div.rendered_html tbody tr:hover {
 <div class="highlight"><pre>
 {&#39;cores&#39;: &#39;1&#39;,
  &#39;ndt&#39;: &#39;5&#39;,
- &#39;n_firms&#39;: &#39;194&#39;,
+ &#39;n_firms&#39;: &#39;196&#39;,
  &#39;n_workers&#39;: &#39;10000&#39;,
- &#39;n_movers&#39;: &#39;9342&#39;,
- &#39;n_stayers&#39;: &#39;658&#39;,
- &#39;y1s_y1s&#39;: &#39;-0.022118075710381307&#39;,
- &#39;y1s_y1s_count&#39;: &#39;634&#39;,
- &#39;y1s_var&#39;: &#39;0.40822821774678264&#39;,
- &#39;y1s_var_count&#39;: &#39;658&#39;,
- &#39;y1m_var&#39;: &#39;0.9795200163981378&#39;,
- &#39;y1m_var_count&#39;: &#39;19848&#39;,
- &#39;y2m_var&#39;: &#39;0.9732388508738447&#39;,
- &#39;y2m_var_count&#39;: &#39;19848&#39;,
- &#39;y1s_y1m1&#39;: &#39;-0.0025762301226147227&#39;,
- &#39;y1s_y1m1_count&#39;: &#39;658&#39;,
- &#39;y1s_y2m1&#39;: &#39;-0.0021464529568242575&#39;,
- &#39;y1s_y2m1_count&#39;: &#39;658&#39;,
- &#39;y1m1_y1m1&#39;: &#39;5.685936069007484e-05&#39;,
- &#39;y1m1_y1m1_count&#39;: &#39;19848&#39;,
- &#39;y2m1_y1m1&#39;: &#39;0.00030242568545481286&#39;,
- &#39;y2m1_y1m1_count&#39;: &#39;19848&#39;,
- &#39;y2m1_y2m1&#39;: &#39;0.00040250824642047164&#39;,
- &#39;y2m1_y2m1_count&#39;: &#39;19848&#39;,
- &#39;y1s_y1m2&#39;: &#39;-0.0024265973436971783&#39;,
- &#39;y1s_y1m2_count&#39;: &#39;658&#39;,
- &#39;y1s_y2m2&#39;: &#39;-0.0037280420030730973&#39;,
- &#39;y1s_y2m2_count&#39;: &#39;658&#39;,
- &#39;y1m2_y1m2&#39;: &#39;-0.001117554552676051&#39;,
- &#39;y1m2_y1m2_count&#39;: &#39;19848&#39;,
- &#39;y2m2_y1m2&#39;: &#39;-0.0004995491492006349&#39;,
- &#39;y2m2_y1m2_count&#39;: &#39;19848&#39;,
- &#39;y2m2_y2m2&#39;: &#39;-0.0005076355338281374&#39;,
- &#39;y2m2_y2m2_count&#39;: &#39;19848&#39;,
- &#39;dym_dym&#39;: &#39;1.574506271995155&#39;,
- &#39;dym_dym_count&#39;: &#39;16432&#39;,
- &#39;y1m_y2m&#39;: &#39;0.19622584317882683&#39;,
- &#39;y1m_y2m_count&#39;: &#39;16432&#39;,
- &#39;cov_Am1Am1&#39;: &#39;0.00040250824642047164&#39;,
- &#39;cov_Am1Psi1&#39;: &#39;-0.00010008256096565878&#39;,
- &#39;var_psi_m1&#39;: &#39;-0.00014548376379907923&#39;,
- &#39;cov_Am2Am2&#39;: &#39;-0.001117554552676051&#39;,
- &#39;cov_Am2Psi2&#39;: &#39;0.0006180054034754161&#39;,
- &#39;var_psi_m2&#39;: &#39;-0.0006260917881029186&#39;,
- &#39;cov_AsAm1&#39;: &#39;-0.0020463703958585986&#39;,
- &#39;cov_AsAm2&#39;: &#39;-0.003044602747172594&#39;,
- &#39;psi_plus_cov1&#39;: &#39;-0.00042977716579046523&#39;,
- &#39;psi_plus_cov2&#39;: &#39;-0.001301444659375919&#39;,
- &#39;var_psi&#39;: &#39;-0.00038578777595099894&#39;,
- &#39;cov_AsPsi1&#39;: &#39;-0.0013454340492153852&#39;,
- &#39;cov_AsAs&#39;: &#39;-0.019041419835999537&#39;,
- &#39;var_eps&#39;: &#39;1.575277847547057&#39;,
- &#39;var_y&#39;: &#39;1.9674165885604504&#39;,
- &#39;var_bw&#39;: &#39;0.578081628670516&#39;,
- &#39;cov_bw&#39;: &#39;0.1759145210784208&#39;,
- &#39;var_wt&#39;: &#39;-0.00038578777595099894&#39;,
- &#39;cov_wt&#39;: &#39;-0.00014004361037891927&#39;,
- &#39;tot_var&#39;: &#39;0.577695840894565&#39;,
- &#39;total_time&#39;: &#39;0.22063398361206055&#39;}
+ &#39;n_movers&#39;: &#39;9344&#39;,
+ &#39;n_stayers&#39;: &#39;656&#39;,
+ &#39;y1s_y1s&#39;: &#39;0.02229858598031033&#39;,
+ &#39;y1s_y1s_count&#39;: &#39;620&#39;,
+ &#39;y1s_var&#39;: &#39;0.43221433361635203&#39;,
+ &#39;y1s_var_count&#39;: &#39;656&#39;,
+ &#39;y1m_var&#39;: &#39;0.9638887986375038&#39;,
+ &#39;y1m_var_count&#39;: &#39;19877&#39;,
+ &#39;y2m_var&#39;: &#39;0.9733870015979674&#39;,
+ &#39;y2m_var_count&#39;: &#39;19877&#39;,
+ &#39;y1s_y1m1&#39;: &#39;-0.0006583412937040781&#39;,
+ &#39;y1s_y1m1_count&#39;: &#39;656&#39;,
+ &#39;y1s_y2m1&#39;: &#39;-0.00024645058225545305&#39;,
+ &#39;y1s_y2m1_count&#39;: &#39;656&#39;,
+ &#39;y1m1_y1m1&#39;: &#39;-0.0013848178450396778&#39;,
+ &#39;y1m1_y1m1_count&#39;: &#39;19877&#39;,
+ &#39;y2m1_y1m1&#39;: &#39;-0.00042964278133828876&#39;,
+ &#39;y2m1_y1m1_count&#39;: &#39;19877&#39;,
+ &#39;y2m1_y2m1&#39;: &#39;-0.00019569228326585966&#39;,
+ &#39;y2m1_y2m1_count&#39;: &#39;19877&#39;,
+ &#39;y1s_y1m2&#39;: &#39;0.0028913676531741777&#39;,
+ &#39;y1s_y1m2_count&#39;: &#39;656&#39;,
+ &#39;y1s_y2m2&#39;: &#39;0.00041021309905162924&#39;,
+ &#39;y1s_y2m2_count&#39;: &#39;656&#39;,
+ &#39;y1m2_y1m2&#39;: &#39;0.0009235715713498977&#39;,
+ &#39;y1m2_y1m2_count&#39;: &#39;19877&#39;,
+ &#39;y2m2_y1m2&#39;: &#39;-0.00047052000676044045&#39;,
+ &#39;y2m2_y1m2_count&#39;: &#39;19877&#39;,
+ &#39;y2m2_y2m2&#39;: &#39;-0.0024230242553870823&#39;,
+ &#39;y2m2_y2m2_count&#39;: &#39;19877&#39;,
+ &#39;dym_dym&#39;: &#39;1.5663549895290279&#39;,
+ &#39;dym_dym_count&#39;: &#39;16517&#39;,
+ &#39;y1m_y2m&#39;: &#39;0.1924235851198149&#39;,
+ &#39;y1m_y2m_count&#39;: &#39;16517&#39;,
+ &#39;cov_Am1Am1&#39;: &#39;-0.00019569228326585966&#39;,
+ &#39;cov_Am1Psi1&#39;: &#39;-0.0002339504980724291&#39;,
+ &#39;var_psi_m1&#39;: &#39;-0.0007212245656289598&#39;,
+ &#39;cov_Am2Am2&#39;: &#39;0.0009235715713498977&#39;,
+ &#39;cov_Am2Psi2&#39;: &#39;-0.0013940915781103381&#39;,
+ &#39;var_psi_m2&#39;: &#39;-0.0005584126705163038&#39;,
+ &#39;cov_AsAm1&#39;: &#39;-1.2500084183023947e-05&#39;,
+ &#39;cov_AsAm2&#39;: &#39;0.004285459231284516&#39;,
+ &#39;psi_plus_cov1&#39;: &#39;-0.00041189071144862504&#39;,
+ &#39;psi_plus_cov2&#39;: &#39;-0.0024811545541225484&#39;,
+ &#39;var_psi&#39;: &#39;-0.0006398186180726318&#39;,
+ &#39;cov_AsPsi1&#39;: &#39;-0.0022532266474985414&#39;,
+ &#39;cov_AsAs&#39;: &#39;0.027444857893380043&#39;,
+ &#39;var_eps&#39;: &#39;1.567634626765173&#39;,
+ &#39;var_y&#39;: &#39;1.9550009807689568&#39;,
+ &#39;var_bw&#39;: &#39;0.6071808800494524&#39;,
+ &#39;cov_bw&#39;: &#39;0.167157390383125&#39;,
+ &#39;var_wt&#39;: &#39;-0.0006398186180726318&#39;,
+ &#39;cov_wt&#39;: &#39;-0.0002984634846805005&#39;,
+ &#39;tot_var&#39;: &#39;0.6065410614313798&#39;,
+ &#39;total_time&#39;: &#39;0.20052409172058105&#39;}
 </pre></div></div>
 </div>
 </div>
@@ -864,7 +898,7 @@ div.rendered_html tbody tr:hover {
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Jan 15, 2021.
+        Last updated on Jan 19, 2021.
       </span>
 
     </p>

@@ -130,12 +130,12 @@ class BipartiteData:
         else:
             self.logger.warning('Data cannot be refactored into long as its current formatting, {}, is invalid.'.format(self.formatting))
 
-    def es_to_cs(self):
+    def get_cs(self):
         '''
         Return event study data reformatted into cross section data.
         '''
         if self.formatting == 'es':
-            return self.bd.get_cross_section()
+            return self.bd.get_cs()
         elif self.formatting == 'long':
             self.logger.info('Cross section cannot be constructed from long data. Run long_to_es() first to convert data into event study formatting.')
         else:
@@ -867,7 +867,7 @@ class BipartiteEventStudy:
             # Firm ids are now contiguous
             self.contiguous = True
 
-    def get_cross_section(self):
+    def get_cs(self):
         '''
         Return event study data reformatted into cross section data.
 

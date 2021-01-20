@@ -33,8 +33,8 @@ def main():
     # Options to select filetype
     p.add('--filetype', required=False, help='file format of data')
 
-    # Options to run AKM or CRE
-    p.add('--fe', action='store_true', help='run AKM estimation') # this option can be set in a config file because it starts with '--'
+    # Options to run FE or CRE
+    p.add('--fe', action='store_true', help='run FE estimation') # this option can be set in a config file because it starts with '--'
     p.add('--cre', action='store_true', help='run CRE estimation')
 
     ##### twfe_network start #####
@@ -132,10 +132,10 @@ def main():
     cluster_params = clear_dict(cluster_params)
     ##### Cluster end #####
 
-    ##### AKM start #####
+    ##### FE start #####
     fe_params = {'ncore': params.ncore_fe, 'batch': params.batch, 'ndraw_pii': params.ndraw_pii, 'ndraw_tr': params.ndraw_tr_fe, 'check': params.check, 'hetero': params.hetero, 'out': params.out_fe, 'con': params.con, 'logfile': params.logfile, 'levfile': params.levfile, 'statsonly': params.statsonly, 'Q': params.Q}
     fe_params = clear_dict(fe_params)
-    ##### AKM end #####
+    ##### FE end #####
 
     ##### CRE start #####
     cre_params = {'ncore': params.ncore_cre, 'ndraw_tr': params.ndraw_tr_cre, 'ndp': params.ndp, 'out': params.out_cre, 'posterior': params.posterior, 'wobtw': params.wobtw}
