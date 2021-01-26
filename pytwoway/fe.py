@@ -424,6 +424,34 @@ class FESolver:
             self.adata['Wq_row'] = self.adata['f2i'] - 1
             self.adata['Wq_col'] = self.adata['f1i'] - 1
 
+    def __construct_Jq_Wq(self):
+        '''
+        Construct Jq and Wq matrices.
+
+        Returns:
+            Jq (Pandas DataFrame): left matrix for computing Q
+            Wq (Pandas DataFrame): right matrix for computing Q
+        '''
+        # Construct Jq, Wq matrices
+        Jq = self.adata[self.adata['Jq'] == 1].reset_index(drop=True)
+        self.Yq = Jq['y1']
+        nJ = len(Jq)
+        nJ_row = Jq['Jq_row'].max() + 1 # FIXME len(Jq['Jq_row'].unique())
+        nJ_col = Jq['Jq_col'].max() + 1 # FIXME len(Jq['Jq_col'].unique())
+        Jq = csc_matrix((np.ones(nJ), (Jq['Jq_row'], Jq['Jq_col'])), shape=(nJ_row, nJ_col))
+        if nJ_col == self.nf: # If looking at firms, normalize one to 0
+            Jq = Jq[:, range(self.nf - 1)]
+
+        Wq = self.adata[self.adata['Wq'] == 1].reset_index(drop=True)
+        nW = len(Wq)
+        nW_row = Wq['Wq_row'].max() + 1 # FIXME len(Wq['Wq_row'].unique())
+        nW_col = Wq['Wq_col'].max() + 1 # FIXME len(Wq['Wq_col'].unique())
+        Wq = csc_matrix((np.ones(nW), (Wq['Wq_row'], Wq['Wq_col'])), shape=(nW_row, nW_col)) # FIXME Should we use nJ because require Jq, Wq to have the same size?
+        if nW_col == self.nf: # If looking at firms, normalize one to 0
+            Wq = Wq[:, range(self.nf - 1)]
+
+        return Jq, Wq
+
     def __create_fe_solver(self):
         '''
         Solve FE model.
@@ -487,7 +515,7 @@ class FESolver:
                 Pii += pp / len(Pii_all)
 
         else:
-            Pii_all = list(itertools.starmap(self.__leverage_approx, [self.params['batch'] for _ in range(self.ndraw_pii // self.params['batch'])]))
+            Pii_all = list(itertools.starmap(self.__leverage_approx, [[self.params['batch']] for _ in range(self.ndraw_pii // self.params['batch'])]))
 
             for pp in Pii_all:
                 self.Pii += pp / len(Pii_all)
@@ -515,23 +543,7 @@ class FESolver:
         '''
         self.logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
 
-        # Construct Jq, Wq matrices
-        Jq = self.adata[self.adata['Jq'] == 1].reset_index(drop=True)
-        self.Yq = Jq['y1']
-        nJ = len(Jq)
-        nJ_row = Jq['Jq_row'].max() + 1 # FIXME len(Jq['Jq_row'].unique())
-        nJ_col = Jq['Jq_col'].max() + 1 # FIXME len(Jq['Jq_col'].unique())
-        Jq = csc_matrix((np.ones(nJ), (Jq['Jq_row'], Jq['Jq_col'])), shape=(nJ_row, nJ_col))
-        if nJ_col == self.nf: # If looking at firms, normalize one to 0
-            Jq = Jq[:, range(self.nf - 1)]
-
-        Wq = self.adata[self.adata['Wq'] == 1].reset_index(drop=True)
-        nW = len(Wq)
-        nW_row = Wq['Wq_row'].max() + 1 # FIXME len(Wq['Wq_row'].unique())
-        nW_col = Wq['Wq_col'].max() + 1 # FIXME len(Wq['Wq_col'].unique())
-        Wq = csc_matrix((np.ones(nW), (Wq['Wq_row'], Wq['Wq_col'])), shape=(nW_row, nW_col)) # FIXME Should we use nJ because require Jq, Wq to have the same size?
-        if nW_col == self.nf: # If looking at firms, normalize one to 0
-            Wq = Wq[:, range(self.nf - 1)]
+        Jq, Wq = self.__construct_Jq_Wq()
 
         # Compute some stats
         # FIXME Need to figure out when this section can be run
@@ -636,16 +648,18 @@ class FESolver:
         self.tr_var_he_all = np.zeros(self.ndraw_trace)
         self.tr_cov_he_all = np.zeros(self.ndraw_trace)
 
+        Jq, Wq = self.__construct_Jq_Wq()
+
         for r in trange(self.ndraw_trace):
             Zpsi = 2 * np.random.binomial(1, 0.5, self.nf - 1) - 1
             Zalpha = 2 * np.random.binomial(1, 0.5, self.nw) - 1
 
             psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
-            R2_psi = self.Jq * psi1
-            R2_alpha = self.Wq * alpha1
+            R2_psi = Jq * psi1
+            R2_alpha = Wq * alpha1
 
             psi2, alpha2 = self.__mult_AAinv(*self.__mult_Atranspose(self.Sii * self.__mult_A(Zpsi, Zalpha)))
-            R3_psi = self.Jq * psi2
+            R3_psi = Jq * psi2
 
             # Trace corrections
             self.tr_var_he_all[r] = np.cov(R2_psi, R3_psi)[0][1]

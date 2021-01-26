@@ -5,6 +5,8 @@ To install from pip, from the command line run::
 
   pip install pytwoway
 
+Sample data: :download:`download <twoway_sample_data.csv>`
+
 To run pytwoway using command line interface::
 
   pytw --my-config config.txt --fe --cre
