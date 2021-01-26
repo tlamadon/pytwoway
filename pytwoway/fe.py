@@ -712,18 +712,22 @@ class FESolver:
         # FIXME Need to figure out when this section can be run
         try:
             self.res['var_fe'] = self.var_fe
+            self.summary['var_fe'] = self.res['var_fe']
         except AttributeError:
             pass
         try:
             self.res['cov_fe'] = self.cov_fe
+            self.summary['cov_fe'] = self.res['cov_fe']
         except AttributeError:
             pass
         try:
             self.res['var_ho'] = self.var_fe - self.var_e * self.res['tr_var_ho']
+            self.summary['var_ho'] = self.res['var_ho']
         except AttributeError:
             pass
         try:
             self.res['cov_ho'] = self.cov_fe - self.var_e * self.res['tr_cov_ho']
+            self.summary['cov_ho'] = self.res['cov_ho']
         except AttributeError:
             pass
         # FIXME Section ends here
@@ -734,10 +738,6 @@ class FESolver:
 
         # Create summary variable
         self.summary['var_y'] = self.res['var_y']
-        self.summary['var_fe'] = self.res['var_fe']
-        self.summary['cov_fe'] = self.res['cov_fe']
-        self.summary['var_ho'] = self.res['var_ho']
-        self.summary['cov_ho'] = self.res['cov_ho']
 
     def __save_res(self):
         '''
