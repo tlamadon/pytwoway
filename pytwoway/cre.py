@@ -117,6 +117,7 @@ class CRESolver:
 
         self.params = params
         self.res = {} # Results dictionary
+        self.summary = {} # Summary results dictionary
 
         # Save some commonly used parameters as attributes
         self.ncore = self.params['ncore'] # Number of cores to use
@@ -469,10 +470,18 @@ class CRESolver:
         self.res['var_wt'] = self.within_params['var_psi']
         self.res['cov_wt'] = (self.ns * self.within_params['cov_AsPsi1'] + self.mn * self.within_params['cov_Am1Psi1']) / (self.ns + self.mn)
         self.res['tot_var'] = self.res['var_bw'] + self.res['var_wt']
+        self.res['tot_cov'] = self.res['cov_bw'] + self.res['cov_wt']
         self.res['var_y'] = np.var(Yq)
 
         self.logger.info('[cre] VAR bw={:4f} wt={:4f} tot={:4f}'.format(self.res['var_bw'], self.res['var_wt'], self.res['var_bw'] + self.res['var_wt']))
         self.logger.info('[cre] COV bw={:4f} wt={:4f} tot={:4f}'.format(self.res['cov_bw'], self.res['cov_wt'], self.res['cov_bw'] + self.res['cov_wt']))
+
+        # Create summary variable
+        self.summary['var_y'] = self.res['var_y']
+        self.summary['var_bw'] = self.res['var_bw']
+        self.summary['cov_bw'] = self.res['cov_bw']
+        self.summary['var_tot'] = self.res['tot_var']
+        self.summary['cov_tot'] = self.res['tot_cov']
 
     def __prior_in_diff(self, jdata):
         '''

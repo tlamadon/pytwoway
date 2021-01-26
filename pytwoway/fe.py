@@ -117,6 +117,7 @@ class FESolver:
 
         self.params = params
         self.res = {} # Results dictionary
+        self.summary = {} # Summary results dictionary
 
         # Save some commonly used parameters as attributes
         self.ncore = self.params['ncore'] # Number of cores to use
@@ -730,6 +731,13 @@ class FESolver:
         if self.compute_hetero:
             self.res['var_he'] = self.var_fe - self.res['tr_var_he']
             self.res['cov_he'] = self.cov_fe - self.res['tr_cov_he']
+
+        # Create summary variable
+        self.summary['var_y'] = self.res['var_y']
+        self.summary['var_fe'] = self.res['var_fe']
+        self.summary['cov_fe'] = self.res['cov_fe']
+        self.summary['var_ho'] = self.res['var_ho']
+        self.summary['cov_ho'] = self.res['cov_ho']
 
     def __save_res(self):
         '''

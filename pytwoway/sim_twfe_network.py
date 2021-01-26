@@ -374,14 +374,18 @@ class TwoWayMonteCarlo:
         # Use data to create TwoWay object
         tw_net = tw(data=sim_data)
         # Estimate FE model
-        fe_res = tw_net.fit_fe(user_fe=fe_params)
+        tw_net.fit_fe(user_fe=fe_params)
+        # Save results
+        fe_res = tw_net.fe_res
         # Estimate CRE model
-        cre_res = tw_net.fit_cre(user_cre=cre_params, user_cluster=cluster_params)
+        tw_net.fit_cre(user_cre=cre_params, user_cluster=cluster_params)
+        # Save results
+        cre_res = tw_net.cre_res
 
         return psi_var, psi_alpha_cov, \
                 fe_res['var_fe'], fe_res['cov_fe'], \
                 fe_res['var_ho'], fe_res['cov_ho'], \
-                str(float(cre_res['var_wt']) + float(cre_res['var_bw'])), str(float(cre_res['cov_wt']) + float(cre_res['cov_bw']))
+                cre_res['tot_var'], cre_res['tot_cov']
 
     def twfe_monte_carlo(self, N=10, ncore=1, fe_params={}, cre_params={}, cluster_params={}):
         '''

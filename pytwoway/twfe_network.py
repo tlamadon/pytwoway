@@ -81,7 +81,7 @@ class TwoWay:
 
     def fit_fe(self, user_fe={}):
         '''
-        Fit the bias-corrected FE estimator.
+        Fit the bias-corrected FE estimator. Saves two dictionary attributes: self.fe_res (complete results) and self.fe_summary (summary results).
 
         Arguments:
             user_fe (dict): dictionary of parameters for bias-corrected FE estimation
@@ -111,9 +111,6 @@ class TwoWay:
                     statsonly (bool): save data statistics only
 
                     Q (str): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
-
-        Returns:
-            fe_res (dict): dictionary of results
         '''
         self.__prep_fe()
         fe_params = tw.update_dict(self.default_fe, user_fe)
@@ -125,13 +122,12 @@ class TwoWay:
         fe_solver.construct_Q() # Comment out this line and manually create Q if you want a custom Q matrix
         fe_solver.fit_2()
 
-        fe_res = fe_solver.res
-
-        return fe_res
+        self.fe_res = fe_solver.res
+        self.fe_summary = fe_solver.summary
 
     def fit_cre(self, user_cre={}, user_cluster={}):
         '''
-        Fit the CRE estimator.
+        Fit the CRE estimator. Saves two dictionary attributes: self.cre_res (complete results) and self.cre_summary (summary results).
 
         Arguments:
             user_cre (dict): dictionary of parameters for CRE estimation
@@ -161,9 +157,6 @@ class TwoWay:
                     year (int or None): if None, uses entire dataset; if int, gives year of data to consider
 
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
-
-        Returns:
-            cre_res (dict): dictionary of results
         '''
         self.__prep_cre(user_cluster=user_cluster)
         cre_params = tw.update_dict(self.default_cre, user_cre)
@@ -173,6 +166,23 @@ class TwoWay:
         cre_solver = tw.CRESolver(cre_params)
         cre_solver.fit()
 
-        cre_res = cre_solver.res
+        self.cre_res = cre_solver.res
+        self.cre_summary = cre_solver.summary
 
-        return cre_res
+    def summary_fe(self):
+        '''
+        Return summary results for FE estimator.
+
+        Returns:
+            self.fe_summary (dict): dictionary of FE summary results
+        '''
+        return self.fe_summary
+
+    def summary_cre(self):
+        '''
+        Return summary results for CRE estimator.
+
+        Returns:
+            self.cre_summary (dict): dictionary of CRE summary results
+        '''
+        return self.cre_summary

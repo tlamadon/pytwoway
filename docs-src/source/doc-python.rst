@@ -5,10 +5,6 @@ To install from pip, from the command line run::
 
    pip install pytwoway
 
-For help about all the options that can be included in the following classes, from the command line run::
-
-   pytw -h
-
 To run in Python:
 
 - If you want to run estimators on your own data:
