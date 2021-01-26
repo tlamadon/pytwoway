@@ -14,7 +14,7 @@ To run in Python:
    import pytwoway as tw
    # Create TwoWay object
    tw_net = tw.TwoWay(data)
-   # Fit the FE estimators:
+   # Fit the FE estimators
    tw_net.fit_fe()
    # Save the FE results
    fe_res = tw_net.summary_fe()
