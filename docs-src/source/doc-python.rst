@@ -15,9 +15,13 @@ To run in Python:
    # Create TwoWay object
    tw_net = tw.TwoWay(data)
    # Fit the FE estimators:
-   fe_res = tw_net.fit_fe()
+   tw_net.fit_fe()
+   # Save the FE results
+   fe_res = tw_net.summary_fe()
    # Fit the CRE estimator
-   cre_res = tw_net.fit_cre()
+   tw_net.fit_cre()
+   # Save the CRE results
+   cre_res = tw_net.summary_cre()
 
 .. note::
    Your data must include the following columns:
@@ -65,9 +69,13 @@ To run in Python:
    # Create TwoWay object
    tw_net = tw.TwoWay(sim_data)
    # Fit the FE estimators:
-   fe_res = tw_net.fit_fe()
+   tw_net.fit_fe()
+   # Save the FE results
+   fe_res = tw_net.summary_fe()
    # Fit the CRE estimator
-   cre_res = tw_net.fit_cre()
+   tw_net.fit_cre()
+   # Save the CRE results
+   cre_res = tw_net.summary_cre()
 
 - If you want to run Monte Carlo on simulated data:
 

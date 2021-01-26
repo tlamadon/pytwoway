@@ -27,16 +27,18 @@ Modules and Methods
 -------------------
 
 ``pytwoway.TwoWay``
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
 
    ~pytwoway.TwoWay
    ~pytwoway.TwoWay.fit_cre
    ~pytwoway.TwoWay.fit_fe
+   ~pytwoway.TwoWay.summary_cre
+   ~pytwoway.TwoWay.summary_fe
 
 ``pytwoway.CRESolver``
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
 
@@ -46,7 +48,7 @@ Modules and Methods
    ~pytwoway.cre.pipe_qcov
 
 ``pytwoway.FESolver``
-~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
 
@@ -57,7 +59,7 @@ Modules and Methods
    ~pytwoway.FESolver.get_fe_estimates
 
 ``pytwoway.BipartiteData``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
 
@@ -69,7 +71,7 @@ Modules and Methods
    ~pytwoway.BipartiteData.long_to_es
 
 ``pytwoway.SimTwoWay``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
 

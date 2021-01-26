@@ -205,9 +205,13 @@
 <span class="c1"># Create TwoWay object</span>
 <span class="n">tw_net</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">TwoWay</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 <span class="c1"># Fit the FE estimators:</span>
-<span class="n">fe_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">fit_fe</span><span class="p">()</span>
+<span class="n">tw_net</span><span class="o">.</span><span class="n">fit_fe</span><span class="p">()</span>
+<span class="c1"># Save the FE results</span>
+<span class="n">fe_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">summary_fe</span><span class="p">()</span>
 <span class="c1"># Fit the CRE estimator</span>
-<span class="n">cre_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">fit_cre</span><span class="p">()</span>
+<span class="n">tw_net</span><span class="o">.</span><span class="n">fit_cre</span><span class="p">()</span>
+<span class="c1"># Save the CRE results</span>
+<span class="n">cre_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">summary_cre</span><span class="p">()</span>
 </pre></div>
 </div>
 <div class="admonition note">
@@ -272,9 +276,13 @@
 <span class="c1"># Create TwoWay object</span>
 <span class="n">tw_net</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">TwoWay</span><span class="p">(</span><span class="n">sim_data</span><span class="p">)</span>
 <span class="c1"># Fit the FE estimators:</span>
-<span class="n">fe_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">fit_fe</span><span class="p">()</span>
+<span class="n">tw_net</span><span class="o">.</span><span class="n">fit_fe</span><span class="p">()</span>
+<span class="c1"># Save the FE results</span>
+<span class="n">fe_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">summary_fe</span><span class="p">()</span>
 <span class="c1"># Fit the CRE estimator</span>
-<span class="n">cre_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">fit_cre</span><span class="p">()</span>
+<span class="n">tw_net</span><span class="o">.</span><span class="n">fit_cre</span><span class="p">()</span>
+<span class="c1"># Save the CRE results</span>
+<span class="n">cre_res</span> <span class="o">=</span> <span class="n">tw_net</span><span class="o">.</span><span class="n">summary_cre</span><span class="p">()</span>
 </pre></div>
 </div>
 <ul class="simple">
