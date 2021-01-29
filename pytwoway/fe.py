@@ -85,11 +85,11 @@ class FESolver:
 
                     ndraw_pii (int): number of draws to use in approximation for leverages
 
+                    levfile (str): file to load precomputed leverages`
+
                     ndraw_tr (int): number of draws to use in approximation for traces
 
                     h2 (bool): if True, compute h2 correction
-
-                    levfile (str): file to load precomputed leverages
 
                     out (str): outputfile where results are saved
 
