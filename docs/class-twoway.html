@@ -241,16 +241,16 @@
 <blockquote>
 <div><p>ncore (int): number of cores to use</p>
 <p>batch (int): batch size to send in parallel</p>
-<p>ndraw_pii (int): number of draw to use in approximation for leverages</p>
-<p>ndraw_tr (int): number of draws to use in approximation for traces</p>
-<p>check (bool): whether to compute the non-approximated estimates as well</p>
-<p>hetero (bool): whether to compute the heteroskedastic estimates</p>
-<p>out (str): outputfile</p>
-<p>con (str): computes the smallest eigen values, this is the filepath where these results are saved</p>
-<p>logfile (str): log output to a logfile</p>
+<p>ndraw_pii (int): number of draws to use in approximation for leverages</p>
 <p>levfile (str): file to load precomputed leverages</p>
-<p>statsonly (bool): save data statistics only</p>
+<p>ndraw_tr (int): number of draws to use in approximation for traces</p>
+<p>h2 (bool): if True, compute h2 correction</p>
+<p>out (str): outputfile where results are saved</p>
+<p>statsonly (bool): if True, return only basic statistics</p>
 <p>Q (str): which Q matrix to consider. Options include ‘cov(alpha, psi)’ and ‘cov(psi_t, psi_{t+1})’</p>
+<p>con (str): computes the smallest eigen values, this is the filepath where these results are saved &#64; FIXME I don’t think this is used</p>
+<p>logfile (str): log output to a logfile &#64; FIXME I don’t think this is used</p>
+<p>check (bool): whether to compute the non-approximated estimates as well &#64; FIXME I don’t think this is used</p>
 </div></blockquote>
 </p>
 </dd>
@@ -312,7 +312,7 @@
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Jan 26, 2021.
+        Last updated on Jan 29, 2021.
       </span>
 
     </p>

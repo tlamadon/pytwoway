@@ -45,7 +45,7 @@ class TwoWay:
         self.b_net = tw.BipartiteData(data, formatting, col_dict)
 
         # Define default parameter dictionaries
-        self.default_fe = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'hetero': False, 'out': 'res_fe.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)'} # Do not define 'data' because will be updated later
+        self.default_fe = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'levfile': '', 'ndraw_tr': 5, 'h2': False, 'out': 'res_fe.json', 'statsonly': False, 'Q': 'cov(alpha, psi)', 'con': False, 'logfile': '', 'check': False} # Do not define 'data' because will be updated later
 
         self.default_cre = {'ncore': 1, 'ndraw_tr': 5, 'ndp': 50, 'out': 'res_cre.json', 'posterior': False, 'wo_btw': False} # Do not define 'data' because will be updated later
 
@@ -92,25 +92,25 @@ class TwoWay:
 
                     batch (int): batch size to send in parallel
 
-                    ndraw_pii (int): number of draw to use in approximation for leverages
-
-                    ndraw_tr (int): number of draws to use in approximation for traces
-
-                    check (bool): whether to compute the non-approximated estimates as well
-
-                    hetero (bool): whether to compute the heteroskedastic estimates
-
-                    out (str): outputfile
-
-                    con (str): computes the smallest eigen values, this is the filepath where these results are saved
-
-                    logfile (str): log output to a logfile
+                    ndraw_pii (int): number of draws to use in approximation for leverages
 
                     levfile (str): file to load precomputed leverages
 
-                    statsonly (bool): save data statistics only
+                    ndraw_tr (int): number of draws to use in approximation for traces
+
+                    h2 (bool): if True, compute h2 correction
+
+                    out (str): outputfile where results are saved
+
+                    statsonly (bool): if True, return only basic statistics
 
                     Q (str): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
+
+                    con (str): computes the smallest eigen values, this is the filepath where these results are saved @ FIXME I don't think this is used
+
+                    logfile (str): log output to a logfile @ FIXME I don't think this is used
+
+                    check (bool): whether to compute the non-approximated estimates as well @ FIXME I don't think this is used
         '''
         self.__prep_fe()
         fe_params = tw.update_dict(self.default_fe, user_fe)

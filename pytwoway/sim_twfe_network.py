@@ -311,23 +311,19 @@ class TwoWayMonteCarlo:
 
                     batch (int): batch size to send in parallel
 
-                    ndraw_pii (int): number of draw to use in approximation for leverages
+                    ndraw_pii (int): number of draws to use in approximation for leverages
+
+                    levfile (str): file to load precomputed leverages
 
                     ndraw_tr (int): number of draws to use in approximation for traces
 
-                    check (bool): whether to compute the non-approximated estimates as well
+                    h2 (bool): if True, compute h2 correction
 
-                    hetero (bool): whether to compute the heteroskedastic estimates
+                    out (str): outputfile where results are saved
 
-                    out (string): outputfile
+                    statsonly (bool): if True, return only basic statistics
 
-                    con (string): computes the smallest eigen values, this is the filepath where these results are saved
-
-                    logfile (string): log output to a logfile
-
-                    levfile (string): file to load precomputed leverages
-
-                    statsonly (bool): save data statistics only
+                    Q (str): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
 
             cre_params (dict): dictionary of parameters for CRE estimation
 
@@ -419,23 +415,19 @@ class TwoWayMonteCarlo:
 
                     batch (int): batch size to send in parallel
 
-                    ndraw_pii (int): number of draw to use in approximation for leverages
+                    ndraw_pii (int): number of draws to use in approximation for leverages
+
+                    levfile (str): file to load precomputed leverages
 
                     ndraw_tr (int): number of draws to use in approximation for traces
 
-                    check (bool): whether to compute the non-approximated estimates as well
+                    h2 (bool): if True, compute h2 correction
 
-                    hetero (bool): whether to compute the heteroskedastic estimates
+                    out (str): outputfile where results are saved
 
-                    out (string): outputfile
+                    statsonly (bool): if True, return only basic statistics
 
-                    con (string): computes the smallest eigen values, this is the filepath where these results are saved
-
-                    logfile (string): log output to a logfile
-
-                    levfile (string): file to load precomputed leverages
-
-                    statsonly (bool): save data statistics only
+                    Q (str): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
 
             cre_params (dict): dictionary of parameters for CRE estimation
 
