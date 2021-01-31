@@ -30,7 +30,8 @@ def m2_mixt_new(nk, nf, fixb=False, stationary=False):
     model.pk0 = np.random.dirichlet(alpha=[1] * nk, size=nf)
     model.pk0 = np.expand_dims(model.pk0, axis=0)
 
-    model.NNm = np.random.randint(low=1, high=nf + 1, size=[nf, nf])
+    model.NNm = np.random.randint(low=0, high=nf // 2 + 1, size=[nf, nf]) # FIXME new code
+    model.NNs = np.random.randint(low=nf // 2 + 1, high=nf, size=nf * nf) # FIXME new code
 
     model.nk = nk
     model.nf = nf
@@ -57,11 +58,11 @@ def m2_mixt_simulate_movers(model, NNm=np.nan):
     Returns:
         jdatae (Pandas DataFrame):
     '''
-    J1 = np.zeros(shape=np.sum(NNm))
-    J2 = np.zeros(shape=np.sum(NNm))
-    Y1 = np.zeros(shape=np.sum(NNm))
-    Y2 = np.zeros(shape=np.sum(NNm))
-    K = np.zeros(shape=np.sum(NNm))
+    J1 = np.zeros(shape=np.sum(NNm)) - 1
+    J2 = np.zeros(shape=np.sum(NNm)) - 1
+    Y1 = np.zeros(shape=np.sum(NNm)) - 1
+    Y2 = np.zeros(shape=np.sum(NNm)) - 1
+    K = np.zeros(shape=np.sum(NNm)) - 1
 
     A1 = model.A1
     A2 = model.A2
@@ -71,7 +72,7 @@ def m2_mixt_simulate_movers(model, NNm=np.nan):
     nk = model.nk
     nf = model.nf
 
-    i = 1
+    i = 0
     for l1 in range(nf):
         for l2 in range(nf):
             I = np.arange(i, i + NNm[l1, l2])
@@ -81,7 +82,7 @@ def m2_mixt_simulate_movers(model, NNm=np.nan):
             J2[I] = l2
 
             # Draw k
-            draw_vals = np.arange(1, nk + 1)
+            draw_vals = np.arange(nk)
             Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk1[jj, :])
             K[I] = Ki
 
@@ -101,11 +102,11 @@ def m2_mixt_simulate_stayers(model, NNs):
     Returns:
         sdatae (Pandas DataFrame):
     '''
-    J1 = np.zeros(shape=np.sum(NNs))
-    J2 = np.zeros(shape=np.sum(NNs))
-    Y1 = np.zeros(shape=np.sum(NNs))
-    Y2 = np.zeros(shape=np.sum(NNs))
-    K  = np.zeros(shape=np.sum(NNs))
+    J1 = np.zeros(shape=np.sum(NNs)) - 1
+    J2 = np.zeros(shape=np.sum(NNs)) - 1
+    Y1 = np.zeros(shape=np.sum(NNs)) - 1
+    Y2 = np.zeros(shape=np.sum(NNs)) - 1
+    K  = np.zeros(shape=np.sum(NNs)) - 1
 
     A1 = model.A1
     A2 = model.A2
@@ -116,15 +117,15 @@ def m2_mixt_simulate_stayers(model, NNs):
     nf = model.nf
 
     # ------ Impute K, Y1, Y4 on jdata ------- #
-    i = 1
+    i = 0
     for l1 in range(nf):
         I = np.arange(i, i + NNs[l1])
         ni = len(I)
         J1[I] = l1
 
         # Draw k
-        draw_vals = np.arange(1, nk + 1)
-        Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk0[1, l1, :])
+        draw_vals = np.arange(nk)
+        Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk0[0, l1, :])
         K[I] = Ki
 
         # Draw Y2, Y3
@@ -143,12 +144,12 @@ def m2_mixt_simulate_stayers_withx(model, NNsx):
     Returns:
         sdatae (Pandas DataFrame):
     '''
-    J1 = np.zeros(shape=np.sum(NNsx))
-    J2 = np.zeros(shape=np.sum(NNsx))
-    Y1 = np.zeros(shape=np.sum(NNsx))
-    Y2 = np.zeros(shape=np.sum(NNsx))
-    K = np.zeros(shape=np.sum(NNsx))
-    X = np.zeros(shape=np.sum(NNsx))
+    J1 = np.zeros(shape=np.sum(NNsx)) - 1
+    J2 = np.zeros(shape=np.sum(NNsx)) - 1
+    Y1 = np.zeros(shape=np.sum(NNsx)) - 1
+    Y2 = np.zeros(shape=np.sum(NNsx)) - 1
+    K = np.zeros(shape=np.sum(NNsx)) - 1
+    X = np.zeros(shape=np.sum(NNsx)) - 1
 
     A1 = model.A1
     A2 = model.A2
@@ -160,7 +161,7 @@ def m2_mixt_simulate_stayers_withx(model, NNsx):
     nx = len(NNsx)
 
     # ------ Impute K, Y1, Y4 on jdata ------- #
-    i = 1
+    i = 0
     for l1 in range(nf):
         for x in range(nx):
             I = np.arange(i, i + NNsx[x, l1])
@@ -168,7 +169,7 @@ def m2_mixt_simulate_stayers_withx(model, NNsx):
             J1[I] = l1
 
             # Draw k
-            draw_vals = np.arange(1, nk + 1)
+            draw_vals = np.arange(nk)
             Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk0[x, l1, :])
             K[I] = Ki
             X[I] = x
@@ -200,7 +201,7 @@ def m2_mixt_impute_movers(model, jdatae):
     # FIXME the follow code probably doesn't run
     ni = len(jdatae)
     jj = jdatae['j1'] + nf * (jdatae['j2'] - 1)
-    draw_vals = np.arange(1, nk + 1)
+    draw_vals = np.arange(nk)
     Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk1[jj, :])
     # Draw Y1, Y4
     Y1 = A1[jdatae['j1'], Ki] + S1[jdatae['j1'], Ki] * np.random.normal(size=ni)
@@ -226,7 +227,7 @@ def m2_mixt_impute_stayers(model, sdatae):
     # Generate Ki, Y2, Y3
     # FIXME the follow code probably doesn't run
     ni = len(sdatae)
-    draw_vals = np.arange(1, nk + 1)
+    draw_vals = np.arange(nk)
     Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk0[sdatae['x'], sdatae['j1'], :])
     # Draw Y2, Y3
     Y1 = A1[sdatae['j1'], Ki] + S1[sdatae['j1'], Ki] * np.random.normal(size=ni)
@@ -245,19 +246,15 @@ def m2_mixt_simulate_sim(model, fsize, mmult=1, smult=1):
     sdata = m2_mixt_simulate_stayers(model, model.NNs * smult)
 
     # Create some firm ids
-    sdata <- sdata[,f1 := paste("F",j1 + model$nf*(sample.int(.N/fsize,.N,replace=T)-1),sep=""),j1]
-    sdata <- sdata[,j1b:=j1]
-    sdata <- sdata[,j1true := j1]
-    jdata <- jdata[,j1true := j1][,j2true := j2]
-    jdata <- jdata[,j1c:=j1]
+    sdata['f1'] = np.hstack(np.roll(sdata.groupby('j1')['k'].apply(lambda df: np.random.randint(low=0, high=len(df) // fsize + 1, size=len(df))), -1)) # Random number generation, roll is required because f1 is -1 for empty rows but they appear at the end of the dataframe
+    sdata['f1'] = 'F' + (sdata['j1'].astype(int) + sdata['f1']).astype(str)
+    sdata[['j1b', 'j1true']] = sdata[['j1', 'j1']]
+    jdata[['j1c', 'j1true', 'j2true']] = jdata[['j1', 'j1', 'j2']]
     jdata <- jdata[,f1:=sample( unique(sdata[j1b %in% j1c,f1]) ,.N,replace=T),j1c]
-    jdata <- jdata[,j2c:=j2]
+    jdata['j2c'] = jdata['j2']
     jdata <- jdata[,f2:=sample( unique(sdata[j1b %in% j2c,f1])  ,.N,replace=T),j2c]
-    jdata.j2c = None
-    jdata.j1c = None
-    sdata.j1b = None
+    jdata = jdata.drop(['j1b', 'j1c', 'j2c'], axis=1)
     sdata['f2'] = sdata['f1']
-    sdata[,f2:=f1]
 
     sim = {'sdata': sdata, 'jdata': jdata}
     return sim
