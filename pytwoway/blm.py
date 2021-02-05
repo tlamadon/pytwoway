@@ -975,10 +975,10 @@ class BLMEstimator:
             self.A1 = np.reshape(res_a, [nl, nk, 2])[:, :, 1]
             self.A2 = np.reshape(res_a, [nl, nk, 2])[:, :, 2]
 
-            XwS = np.zeros(shape=nl * nk + ts) # FIXME new line
+            XwS = np.zeros(shape=nl * len(J1) + ts) # np.zeros(shape=nl * nk + ts) # FIXME new line
             # next we extract the variances
             for l in range(nl):
-                lr = range(l * nk, (l + 1) * nk) # range that selects corresponding block
+                lr = lr = np.arange(l * len(J1), (l + 1) * len(J1)) # np.arange(l * nk, (l + 1) * nk) # range that selects corresponding block
                 t2 = nl * nk # shift for period 2
                 XwS[lr] = J1 * (qi[:, l] / self.S1[J1, l]) * (Y1 - self.A1[J1, l]) ** 2 # FIXME changed first J1m to J1
                 XwS[lr + ts] = J2 * (qi[:, l] / self.S2[J2, l]) * (Y2 - self.A2[J2, l]) ** 2 # FIXME changed first J2m to J2
