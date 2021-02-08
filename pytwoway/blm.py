@@ -592,260 +592,6 @@ def m2_mixt_stayers(model, sdata, ctrl):
 ####################
 class QPConstrained:
     '''
-    Params:
-        nl (int): number of worker types
-        nk (int): number of firm types
-    '''
-
-    def __init__(self, nl, nk):
-        self.nl = nl
-        self.nk = nk
-
-        self.C = np.array([])
-        self.H = np.array([])
-        self.meq = 0
-
-        self.default_constraints = {
-            'gap': 0,
-            'nt': 4
-        }
-
-    def add_constraint_builtin(self, constraint, constraint_params={}):
-        '''
-        Add a built-in constraint.
-
-        Params:
-            constraint (str): name of constraint to add
-            constraint_params (dict): parameters
-        '''
-        nl = self.nl
-        nk = self.nk
-        params = update_dict(self.default_constraints, constraint_params)
-        if constraint in ['lin', 'lin_add', 'akm']:
-            LL = np.zeros(shape=(nl - 1, nl))
-            for l in range(nl - 1):
-                LL[l, l] = 1
-                LL[l, l + 1] = - 1
-            KK = np.zeros(shape=(nk - 1, nk))
-            for k in range(nk - 1):
-                KK[k, k] = 1
-                KK[k, k + 1] = - 1
-            C = np.kron(LL, KK)
-            H = np.zeros(shape=C.shape[0])
-            meq = C.shape[0]
-
-        elif constraint == 'akmmono':
-            gap = params['gap']
-            LL = np.zeros(shape=(nl - 1, nl))
-            for l in range(nl - 1):
-                LL[l, l] = 1
-                LL[l, l + 1] = - 1
-            KK = np.zeros(shape=(nk - 1, nk))
-            for k in range(nk - 1):
-                KK[k, k] = 1
-                KK[k, k + 1] = - 1
-            C = - np.kron(np.eye(nl), KK)
-            H = gap * np.ones(shape=(nl * (nk - 1)))
-
-            Cb = np.kron(LL, KK)
-            C = np.concatenate((Cb, C), axis=0)
-            H = np.concatenate((np.zeros(shape=Cb.shape[0]), H), axis=0)
-            meq = Cb.shape[0]
-
-        elif constraint == 'mono_k':
-            gap = params['gap']
-            KK = np.zeros(shape=(nk - 1, nk))
-            for k in range(nk - 1):
-                KK[k, k] = 1
-                KK[k, k + 1] = - 1
-            C = - np.kron(np.eye(nl), KK)
-            H = gap * np.ones(shape=(nl * (nk - 1)))
-            meq = 0
-
-        elif constraint == 'fixb':
-            if len(self.C) > 0 or len(self.H) > 0:
-                self.clear_constraints()
-                warnings.warn("Constraint 'fixb' requires different dimensions than other constraints, existing constraints have been removed. It is recommended to manually run clear_constraints() prior to adding the constraint 'fixb' in order to ensure you are not unintentionally removing existing constraints.")
-            nt = params['nt']
-            KK = np.zeros(shape=(nk - 1, nk))
-            for k in range(nk - 1):
-                KK[k, k] = 1
-                KK[k, k + 1] = - 1
-            C = - np.kron(np.eye(nl), KK) # FIXME was formerly called CC
-            MM = np.zeros(shape=(nt - 1, nt))
-            for i in range(nt - 1):
-                MM[i, i] = 1
-                MM[i, i + 1] = - 1
-            C = np.kron(MM, C) # FIXME was formerly called CC
-            H = np.zeros(shape=nl * (nk - 1) * (nt - 1))
-            meq = nl * (nk - 1) * (nt - 1)
-
-        elif constraint == 'biggerthan':
-            gap = params['gap']
-            C = np.eye(nk * nl) # FIXME was formerly called CC
-            H = gap * np.ones(shape=nk * nl)
-            meq = 0
-
-        elif constraint == 'lin_para':
-            LL = np.zeros(shape=(nl - 1, nl))
-            for l in range(nl - 1):
-                LL[l, l] = 1
-                LL[l, l + 1] = - 1
-            C = - np.kron(LL, np.eye(nk))
-            H = np.zeros(shape=(nl - 1) * nk)
-            meq = (nl - 1) * nk
-
-        elif constraint == 'none':
-            C = np.zeros(shape=(1, nk * nl))
-            H = np.array([0])
-            meq = 0
-
-        elif constraint == 'sum':
-            C = np.kron(np.eye(nl), np.ones(shape=nk).T)
-            H = np.zeros(shape=nl)
-            meq = nl
-
-        else:
-            warnings.warn('Invalid constraint entered.')
-            return
-
-        # Add constraints to attributes
-        self.add_constraint_manual(C, H, meq)
-
-    def add_constraints_builtin(self, constraints, constraint_params={}):
-        '''
-        Add a built-in constraint.
-
-        Params:
-            constraints (list of str): names of constraint to add
-            constraint_params (dict): parameters
-        '''
-        for constraint in constraints:
-            self.add_constraint_builtin(constraint, constraint_params)
-
-    def add_constraint_manual(self, C, H, meq):
-        '''
-        Manually add a constraint.
-
-        Params:
-            C (NumPy Array):
-            H (NumPy Array):
-            meq (int): number of rows in C with equality constraints
-        '''
-        if len(self.C) > 0:
-            self.C = np.concatenate((
-                self.C[range(self.meq), :],
-                C[range(meq), :],
-                self.C[range(self.meq, len(self.H)), :],
-                C[range(meq, len(H)), :]
-                ), axis=0)
-        else:
-            self.C = C
-        if len(self.H) > 0:
-            self.H = np.concatenate((
-                self.H[range(self.meq)],
-                H[range(meq)],
-                self.H[range(self.meq, len(self.H))],
-                H[range(meq, len(H))]
-                ), axis=0)
-        else:
-            self.H = H
-        self.meq += meq
-
-    def pad(self, l=0, r=0):
-        '''
-        Add padding to the left and/or right of C matrix.
-
-        Params:
-            l (int): how many columns to add on left
-            r (int): how many columns to add on right
-        '''
-        if len(self.C) > 0:
-            self.C = np.concatenate((
-                    np.zeros(shape=(self.C.shape[0], l)),
-                    self.C,
-                    np.zeros(shape=(self.C.shape[0], r)),
-                ), axis=1)
-        else:
-            self.C = np.zeros(shape=l + r)
-
-    def clear_constraints(self):
-        '''
-        Remove all constraints.
-        '''
-        self.C = np.array([])
-        self.H = np.array([])
-        self.meq = 0
-
-    def solve(self, P, q):
-        '''
-        '''
-        if len(self.C) > 0: # If constraints
-            meq = self.meq
-            G = self.C[meq:, :] # Inequality
-            h = - self.H[meq:] # Inequality
-            A = self.C[: meq, :] # Equality
-            b = - self.H[: meq] # Equality
-
-            # Do quadprod
-            res = solve_qp(P, q, G, h, A, b)
-            # Full options:
-            # res = solve_qp(P, q, G, h, A, b, lb, ub)
-        else: # If no constraints
-            res = solve_qp(P, q)
-
-
-        # nl = self.nl
-        # nk = self.nk
-        # meq = self.meq
-        # YY = np.array(YY)
-        # XX = np.array(XX)
-        # # to make sure the problem is positive semi definite, we add
-        # # the equality constraints to the XX matrix! nice, no?
-
-        # if meq > 0:
-        #     XXb = np.concatenate((XX, self.C[:meq, :]), axis=0) # FIXME second matrix should be sparse
-        #     YYb = np.concatenate((YY,self.H[: meq]), axis=0)
-        #     rwb = np.concatenate((rw, np.ones(shape=meq)), axis=0)
-        # else:
-        #     XXb = XX
-        #     YYb = YY
-        #     rwb = rw
-
-        # # From https://stat.ethz.ch/pipermail/r-devel/2004-November/031516.html
-        # # the below line creates an identity matrix
-        # # t2 = as(dim(XXb)[1],"matrix.diag.csr")
-        # t2 = np.eye(XXb.shape[0]) # FIXME should be sparse
-        # # From https://www.rdocumentation.org/packages/SparseM/versions/1.78/topics/matrix.csr-class
-        # # the below line adjusts the values along the diagonal        
-        # # t2@ra = rwb
-        # for i in range(len(t2)):
-        #     t2[i, i] = rwb[i] # FIXME should be sparse
-        # XXw = t2 @ XXb
-        # P = XXw.T @ XXb # FIXME whole matrix should be sparse
-        # q = - (YYb @ XXw).T # FIXME whole matrix should be sparse
-
-        # # scaling
-        # #
-        # if scaling > 0:
-        #     sc = np.linalg.norm(P, ord=2) ** scaling # ord=2 for spectral norm
-        # else:
-        #     sc = 1
-
-        # G = self.C[meq:, :] # Inequality
-        # h = - self.H[meq:] # Inequality
-        # A = self.C[: meq, :] # Equality
-        # b = - self.H[: meq] # Equality
-
-        # # Do quadprod
-        # res = solve_qp(P / sc, q / sc, G / sc, h / sc, A / sc, b / sc)
-        # # Full options:
-        # # res = solve_qp(P, q, G, h, A, b, lb, ub)
-
-        return res
-
-class QPConstrained2:
-    '''
     Solve a quadratic programming model of the following form:
         min_x(1/2 x.T @ P @ x + q.T @ x)
         s.t.    Gx <= h
@@ -869,12 +615,6 @@ class QPConstrained2:
             'gap': 0, # Used for biggerthan constraint to determine bound
             'nt': 4
         }
-
-    def get_C(self):
-        return np.concatenate((self.G, self.A))
-
-    def get_H(self):
-        return np.concatenate((self.h, self.b))
 
     def add_constraint_builtin(self, constraint, constraint_params={}):
         '''
@@ -945,10 +685,15 @@ class QPConstrained2:
             A = - np.kron(MM, A)
             b = - np.zeros(shape=nl * (nk - 1) * (nt - 1))
 
-        elif constraint == 'biggerthan':
+        elif constraint in ['greaterthan', 'biggerthan']:
             gap = params['gap']
             G = - np.eye(nk * nl)
             h = - gap * np.ones(shape=nk * nl)
+
+        elif constraint == ['lessthan', 'smallerthan']:
+            gap = params['gap']
+            G = np.eye(nk * nl)
+            h = gap * np.ones(shape=nk * nl)
 
         elif constraint == 'lin_para':
             LL = np.zeros(shape=(nl - 1, nl))
@@ -986,7 +731,7 @@ class QPConstrained2:
 
     def add_constraint_manual(self, G=None, h=None, A=None, b=None):
         '''
-        Manually add a constraint.
+        Manually add a constraint. If setting inequality constraints, must set both G and h to have the same dimension 0. If setting equality constraints, must set both A and b to have the same dimension 0.
 
         Params:
             G (NumPy Array): inequality constraint matrix
@@ -1042,6 +787,12 @@ class QPConstrained2:
         self.h = np.array([])
         self.A = np.array([])
         self.b = np.array([])
+
+    def check_feasible(self):
+        '''
+        Check that constraints are feasible.
+        '''
+        b_sol = np.linalg.solve(self.A, self.b)
 
     def solve(self, P, q):
         '''
