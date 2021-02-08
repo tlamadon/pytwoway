@@ -6,7 +6,7 @@ import numpy as np
 from numpy import pi
 import pandas as pd
 from scipy.special import logsumexp
-from scipy.sparse import csc_matrix
+from scipy.sparse import csc_matrix, diags
 from scipy.stats import norm
 from qpsolvers import solve_qp
 from matplotlib import pyplot as plt
@@ -18,7 +18,7 @@ from util import update_dict
 # Create a random model for EM with
 # endogenous mobility with multinomial pr
 
-def m2_mixt_new(nk, nf, fixb=False, stationary=False):
+def m2_mixt_new(nl, nk, fixb=False, stationary=False):
     '''
     Returns:
         model (Pandas DataFrame):
@@ -26,29 +26,29 @@ def m2_mixt_new(nk, nf, fixb=False, stationary=False):
     model = argparse.Namespace()
 
     # model for Y1|Y2,l,k for movers and stayes
-    model.A1 = 0.9 * (1 + 0.5 * np.random.normal(size=[nf, nk]))
-    model.S1 = 0.3 * (1 + 0.5 * np.random.uniform(size=[nf, nk]))
+    model.A1 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
+    model.S1 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
     # model for Y4|Y3,l,k for movers and stayes
-    model.A2 = 0.9 * (1 + 0.5 * np.random.normal(size=[nf, nk]))
-    model.S2 = 0.3 * (1 + 0.5 * np.random.uniform(size=[nf, nk]))
+    model.A2 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
+    model.S2 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
     # model for p(K | l ,l') for movers
-    model.pk1 = np.random.dirichlet(alpha=[1] * nk, size=nf * nf)
+    model.pk1 = np.random.dirichlet(alpha=[1] * nl, size=nk * nk)
     # model for p(K | l ,l') for stayers
-    model.pk0 = np.random.dirichlet(alpha=[1] * nk, size=nf)
-    model.pk0 = np.expand_dims(model.pk0, axis=0)
+    model.pk0 = np.random.dirichlet(alpha=np.ones(shape=nk), size=(nk, nl)) # np.random.dirichlet(alpha=[1] * nk, size=nl)
+    # model.pk0 = np.expand_dims(model.pk0, axis=0)
 
-    model.NNm = np.random.randint(low=0, high=nf // 2 + 1, size=[nf, nf]) # FIXME new code
-    model.NNs = np.random.randint(low=nf // 2 + 1, high=nf, size=nf * nf) # FIXME new code
+    model.NNm = np.zeros(shape=(nk, nk)).astype(int) + 10 # np.random.randint(low=0, high=max(nl // 2 + 1, 1), size=[nl, nl]) # FIXME new code
+    model.NNs = np.zeros(shape=nk).astype(int) + 10 # np.random.randint(low=nl // 2 + 1, high=max(nl, nl // 2 + 2), size=nl * nl) # FIXME new code
 
+    model.nl = nl
     model.nk = nk
-    model.nf = nf
 
-    for l in range(nf):
-        model.A1[l, :] = sorted(model.A1[l, :])
-        model.A2[l, :] = sorted(model.A2[l, :])
+    for l in range(nl):
+        model.A1[:, l] = sorted(model.A1[:, l])
+        model.A2[:, l] = sorted(model.A2[:, l])
 
     if fixb:
-        model.A2 = np.mean(model.A2, axis=1) + model.A1 - np.mean(model.A1, axis=1)
+        model.A2 = np.mean(model.A2, axis=0) + model.A1 - np.mean(model.A1, axis=0)
 
     if stationary:
         model.A2 = model.A1
@@ -68,37 +68,37 @@ def m2_mixt_simulate_movers(model, NNm=np.nan):
     J2 = np.zeros(shape=np.sum(NNm)).astype(int) - 1
     Y1 = np.zeros(shape=np.sum(NNm))
     Y2 = np.zeros(shape=np.sum(NNm))
-    K = np.zeros(shape=np.sum(NNm)) - 1
+    L = np.zeros(shape=np.sum(NNm)).astype(int) - 1
 
     A1 = model.A1
     A2 = model.A2
     S1 = model.S1
     S2 = model.S2
     pk1 = model.pk1
+    nl = model.nl
     nk = model.nk
-    nf = model.nf
 
     i = 0
-    for l1 in range(nf):
-        for l2 in range(nf):
-            I = np.arange(i, i + NNm[l1, l2])
+    for k1 in range(nk): # FIXME changed from nl to nk
+        for k2 in range(nk): # FIXME changed from nl to nk
+            I = np.arange(i, i + NNm[k1, k2])
             ni = len(I)
-            jj = l1 + nf * (l2 - 1)
-            J1[I] = l1
-            J2[I] = l2
+            jj = k1 + nk * k2 # k1 + nk * (k2 - 1)
+            J1[I] = k1
+            J2[I] = k2
 
             # Draw k
-            draw_vals = np.arange(nk)
-            Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk1[jj, :])
-            K[I] = Ki
+            draw_vals = np.arange(nl)
+            Li = np.random.choice(draw_vals, size=ni, replace=True, p=pk1[jj, :])
+            L[I] = Li
 
             # Draw Y2, Y3
-            Y1[I] = A1[l1, Ki] + S1[l1, Ki] * np.random.normal(size=ni)
-            Y2[I] = A2[l2, Ki] + S2[l2, Ki] * np.random.normal(size=ni)
+            Y1[I] = A1[k1, Li] + S1[k1, Li] * np.random.normal(size=ni)
+            Y2[I] = A2[k2, Li] + S2[k2, Li] * np.random.normal(size=ni)
 
-            i += NNm[l1, l2]
+            i += NNm[k1, k2]
 
-    jdatae = pd.DataFrame(data={'k': K, 'y1': Y1, 'y2': Y2, 'j1': J1, 'j2': J2})
+    jdatae = pd.DataFrame(data={'l': L, 'y1': Y1, 'y2': Y2, 'j1': J1, 'j2': J2})
 
     return jdatae
 
@@ -112,33 +112,33 @@ def m2_mixt_simulate_stayers(model, NNs):
     J2 = np.zeros(shape=np.sum(NNs)).astype(int) - 1
     Y1 = np.zeros(shape=np.sum(NNs))
     Y2 = np.zeros(shape=np.sum(NNs))
-    K  = np.zeros(shape=np.sum(NNs)) - 1
+    K  = np.zeros(shape=np.sum(NNs)).astype(int) - 1
 
     A1 = model.A1
     A2 = model.A2
     S1 = model.S1
     S2 = model.S2
     pk0 = model.pk0
+    nl = model.nl
     nk = model.nk
-    nf = model.nf
 
     # ------ Impute K, Y1, Y4 on jdata ------- #
     i = 0
-    for l1 in range(nf):
-        I = np.arange(i, i + NNs[l1])
+    for k1 in range(nl):
+        I = np.arange(i, i + NNs[k1])
         ni = len(I)
-        J1[I] = l1
+        J1[I] = k1
 
         # Draw k
         draw_vals = np.arange(nk)
-        Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk0[0, l1, :])
+        Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk0[0, k1, :])
         K[I] = Ki
 
         # Draw Y2, Y3
-        Y1[I] = A1[l1, Ki] + S1[l1, Ki] * np.random.normal(size=ni)
-        Y2[I] = A2[l1, Ki] + S2[l1, Ki] * np.random.normal(size=ni)
+        Y1[I] = A1[Ki, k1] + S1[Ki, k1] * np.random.normal(size=ni)
+        Y2[I] = A2[Ki, k1] + S2[Ki, k1] * np.random.normal(size=ni)
 
-        i += NNs[l1]
+        i += NNs[k1]
 
     sdatae = pd.DataFrame(data={'k': K, 'y1': Y1, 'y2': Y2, 'j1': J1, 'j2': J1, 'x': 1})
 
@@ -844,6 +844,221 @@ class QPConstrained:
 
         return res
 
+class QPConstrained2:
+    '''
+    Solve a quadratic programming model of the following form:
+        min_x(1/2 x.T @ P @ x + q.T @ x)
+        s.t.    Gx <= h
+                Ax = b
+
+    Params:
+        nl (int): number of worker types
+        nk (int): number of firm types
+    '''
+
+    def __init__(self, nl, nk):
+        self.nl = nl
+        self.nk = nk
+
+        self.G = np.array([]) # Inequality constraint matrix
+        self.h = np.array([]) # Inequality constraint bound
+        self.A = np.array([]) # Equality constraint matrix
+        self.b = np.array([]) # Equality constraint bound
+
+        self.default_constraints = {
+            'gap': 0, # Used for biggerthan constraint to determine bound
+            'nt': 4
+        }
+
+    def get_C(self):
+        return np.concatenate((self.G, self.A))
+
+    def get_H(self):
+        return np.concatenate((self.h, self.b))
+
+    def add_constraint_builtin(self, constraint, constraint_params={}):
+        '''
+        Add a built-in constraint.
+
+        Params:
+            constraint (str): name of constraint to add
+            constraint_params (dict): parameters
+        '''
+        nl = self.nl
+        nk = self.nk
+        params = update_dict(self.default_constraints, constraint_params)
+        G = None
+        h = None
+        A = None
+        b = None
+        if constraint in ['lin', 'lin_add', 'akm']:
+            LL = np.zeros(shape=(nl - 1, nl))
+            for l in range(nl - 1):
+                LL[l, l] = 1
+                LL[l, l + 1] = - 1
+            KK = np.zeros(shape=(nk - 1, nk))
+            for k in range(nk - 1):
+                KK[k, k] = 1
+                KK[k, k + 1] = - 1
+            A = - np.kron(LL, KK)
+            b = - np.zeros(shape=A.shape[0])
+
+        elif constraint == 'akmmono':
+            gap = params['gap']
+            LL = np.zeros(shape=(nl - 1, nl))
+            for l in range(nl - 1):
+                LL[l, l] = 1
+                LL[l, l + 1] = - 1
+            KK = np.zeros(shape=(nk - 1, nk))
+            for k in range(nk - 1):
+                KK[k, k] = 1
+                KK[k, k + 1] = - 1
+            G = np.kron(np.eye(nl), KK)
+            h = - gap * np.ones(shape=(nl * (nk - 1)))
+
+            A = - np.kron(LL, KK)
+            b = - np.zeros(shape=A.shape[0])
+
+        elif constraint == 'mono_k':
+            gap = params['gap']
+            KK = np.zeros(shape=(nk - 1, nk))
+            for k in range(nk - 1):
+                KK[k, k] = 1
+                KK[k, k + 1] = - 1
+            G = np.kron(np.eye(nl), KK)
+            h = - gap * np.ones(shape=(nl * (nk - 1)))
+
+        elif constraint == 'fixb':
+            if len(self.G) > 0 or len(self.A) > 0:
+                self.clear_constraints()
+                warnings.warn("Constraint 'fixb' requires different dimensions than other constraints, existing constraints have been removed. It is recommended to manually run clear_constraints() prior to adding the constraint 'fixb' in order to ensure you are not unintentionally removing existing constraints.")
+            nt = params['nt']
+            KK = np.zeros(shape=(nk - 1, nk))
+            for k in range(nk - 1):
+                KK[k, k] = 1
+                KK[k, k + 1] = - 1
+            A = - np.kron(np.eye(nl), KK)
+            MM = np.zeros(shape=(nt - 1, nt))
+            for i in range(nt - 1):
+                MM[i, i] = 1
+                MM[i, i + 1] = - 1
+            A = - np.kron(MM, A)
+            b = - np.zeros(shape=nl * (nk - 1) * (nt - 1))
+
+        elif constraint == 'biggerthan':
+            gap = params['gap']
+            G = - np.eye(nk * nl)
+            h = - gap * np.ones(shape=nk * nl)
+
+        elif constraint == 'lin_para':
+            LL = np.zeros(shape=(nl - 1, nl))
+            for l in range(nl - 1):
+                LL[l, l] = 1
+                LL[l, l + 1] = - 1
+            A = np.kron(LL, np.eye(nk))
+            b = - np.zeros(shape=(nl - 1) * nk)
+
+        elif constraint == 'none':
+            G = - np.zeros(shape=(1, nk * nl))
+            h = - np.array([0])
+
+        elif constraint == 'sum':
+            A = - np.kron(np.eye(nl), np.ones(shape=nk).T)
+            b = - np.zeros(shape=nl)
+
+        else:
+            warnings.warn('Invalid constraint entered.')
+            return
+
+        # Add constraints to attributes
+        self.add_constraint_manual(G=G, h=h, A=A, b=b)
+
+    def add_constraints_builtin(self, constraints, constraint_params={}):
+        '''
+        Add a built-in constraint.
+
+        Params:
+            constraints (list of str): names of constraint to add
+            constraint_params (dict): parameters
+        '''
+        for constraint in constraints:
+            self.add_constraint_builtin(constraint, constraint_params)
+
+    def add_constraint_manual(self, G=None, h=None, A=None, b=None):
+        '''
+        Manually add a constraint.
+
+        Params:
+            G (NumPy Array): inequality constraint matrix
+            h (NumPy Array): inequality constraint bound
+            A (NumPy Array): equality constraint matrix
+            b (NumPy Array): equality constraint bound
+        '''
+        if G is not None: # If you have inequality constraints
+            if len(self.G) > 0:
+                self.G = np.concatenate((self.G, G), axis=0)
+                self.h = np.concatenate((self.h, h), axis=0)
+            else:
+                self.G = G
+                self.h = h
+        if A is not None: # If you have equality constraints
+            if len(self.A) > 0:
+                self.A = np.concatenate((self.A, A), axis=0)
+                self.b = np.concatenate((self.b, b), axis=0)
+            else:
+                self.A = A
+                self.b = b
+
+    def pad(self, l=0, r=0):
+        '''
+        Add padding to the left and/or right of C matrix.
+
+        Params:
+            l (int): how many columns to add on left
+            r (int): how many columns to add on right
+        '''
+        if len(self.G) > 0:
+            self.G = np.concatenate((
+                    np.zeros(shape=(self.G.shape[0], l)),
+                    self.G,
+                    np.zeros(shape=(self.G.shape[0], r)),
+                ), axis=1)
+        else:
+            self.G = np.zeros(shape=l + r)
+        if len(self.A) > 0:
+            self.A = np.concatenate((
+                    np.zeros(shape=(self.A.shape[0], l)),
+                    self.A,
+                    np.zeros(shape=(self.A.shape[0], r)),
+                ), axis=1)
+        else:
+            self.A = np.zeros(shape=l + r)
+
+    def clear_constraints(self):
+        '''
+        Remove all constraints.
+        '''
+        self.G = np.array([])
+        self.h = np.array([])
+        self.A = np.array([])
+        self.b = np.array([])
+
+    def solve(self, P, q):
+        '''
+        Solve a quadratic programming model of the following form:
+        min_x(1/2 x.T @ P @ x + q.T @ x)
+        s.t.    Gx <= h
+                Ax = b
+        '''
+        if len(self.G) > 0 and len(self.A) > 0:
+            self.res = solve_qp(P=P, q=q, G=self.G, h=self.h, A=self.A, b=self.b)
+        elif len(self.G) > 0:
+            self.res = solve_qp(P=P, q=q, G=self.G, h=self.h)
+        elif len(self.A) > 0:
+            self.res = solve_qp(P=P, q=q, A=self.A, b=self.b)
+        else:
+            self.res = solve_qp(P=P, q=q)
+
 def lognormpdf(x, mu, sd):
     return - 0.5 * np.log(2 * pi) - np.log(sd) - (x - mu) ** 2 / (2 * sd ** 2)
 
@@ -865,27 +1080,27 @@ class BLMEstimator:
         self.nl = nl # Number of worker types
         self.nk = nk # Number of firm types
 
-        # Model for Y1|l,k for movers and stayes
+        # model for Y1|Y2,l,k for movers and stayes
         self.A1 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
         self.S1 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
-        # Model for Y2|l,k for movers and stayes
+        # model for Y4|Y3,l,k for movers and stayes
         self.A2 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
         self.S2 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
-        # Model for p(l|k,k') for movers
-        self.pk1 = np.ones((self.nk, self.nk, self.nl)) / self.nl # np.random.dirichlet(alpha=np.ones(shape=nk), size=nl * nl)
-        # Model for p(l|k) for stayers
-        self.pk0 = np.random.dirichlet(alpha=np.ones(shape=nk), size=nl)
-        self.pk0 = np.expand_dims(self.pk0, axis=0)
+        # model for p(K | l ,l') for movers
+        self.pk1 = np.random.dirichlet(alpha=[1] * nl, size=nk * nk)
+        # model for p(K | l ,l') for stayers
+        self.pk0 = np.random.dirichlet(alpha=np.ones(shape=nk), size=(nk, nl)) # np.random.dirichlet(alpha=[1] * nk, size=nl)
+        # model.pk0 = np.expand_dims(model.pk0, axis=0)
 
-        self.NNm = np.random.randint(low=0, high=nl // 2 + 1, size=[nl, nl]) # FIXME new code
-        self.NNs = np.random.randint(low=nl // 2 + 1, high=nl, size=nl * nl) # FIXME new code
+        self.NNm = np.zeros(shape=(nk, nk)).astype(int) + 10 # np.random.randint(low=0, high=max(nl // 2 + 1, 1), size=[nl, nl]) # FIXME new code
+        self.NNs = np.zeros(shape=nk).astype(int) + 10 # np.random.randint(low=nl // 2 + 1, high=max(nl, nl // 2 + 2), size=nl * nl) # FIXME new code
 
         for l in range(nl):
-            self.A1[l, :] = sorted(self.A1[l, :])
-            self.A2[l, :] = sorted(self.A2[l, :])
+            self.A1[:, l] = sorted(self.A1[:, l])
+            self.A2[:, l] = sorted(self.A2[:, l])
 
         if params['fixb']:
-            self.A2 = np.mean(self.A2, axis=1) + self.A1 - np.mean(self.A1, axis=1)
+            self.A2 = np.mean(self.A2, axis=0) + self.A1 - np.mean(self.A1, axis=0)
 
         if params['stationary']:
             self.A2 = self.A1
@@ -930,21 +1145,25 @@ class BLMEstimator:
         cons_s = QPConstrained(nl, nk)
         cons_s.add_constraints_builtin(['biggerthan'], {'gap': 0})
 
+        lp = np.zeros(shape=(ni, nl))
+        JJ1 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
+        JJ2 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
+
         for iter in range(params['maxiter']):
 
             # -------- E-Step ---------
             # we compute the posterior probabiluties for each row
             # we iterate over the worker types, should not be be 
             # to costly since the vector is quite large within each iteration
-            lp = np.zeros(shape=(Y1.shape[0], nl)) # FIXME new line
             for l in range(nl): 
                 lp1 = lognormpdf(Y1, self.A1[J1, l], self.S1[J1, l])
                 lp2 = lognormpdf(Y2, self.A2[J2, l], self.S2[J2, l])
-                lp[:, l] = np.log(self.pk1[J1, J2, l]) + lp1 + lp2
+                KK = J1 + nk * J2
+                lp[:, l] = np.log(self.pk1[KK, l]) + lp1 + lp2 # FIXME added new middle dimension to lp
 
             # we compute log sum exp to get likelihoods and probabilities
-            qi = np.exp(lp - np.expand_dims(logsumexp(lp, axis=1), axis=1)) # FIXME changed logsumexp from axis=2 to axis=1
-            liks = logsumexp(lp, axis=0).sum()
+            qi = np.exp(lp.T - logsumexp(lp, axis=1)).T # FIXME changed logsumexp from axis=2 to axis=1
+            liks = logsumexp(lp, axis=0).sum() # FIXME should this be returend?
 
             # --------- M-step ----------
             # for now we run a simple ols, however later we
@@ -956,18 +1175,17 @@ class BLMEstimator:
             # instead we will construct X'X and X'Y by looping over nl
             # we also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
             ts = nl * nk # shift for period 2 FIXME used to be called t2, I assumed it is ts
-            XwX = np.zeros(shape=(nl * len(J1) + ts, nl * len(J1) + ts)) # np.zeros(shape=(nl * nk + ts, nl * nk + ts)) # FIXME new line
-            XwY = np.zeros(shape=nl * len(J1) + ts) # np.zeros(shape=nl * nk + ts) # FIXME new line
+            XwX = np.zeros(shape=(2 * nl * ni, 2 * nl * ni)) # np.zeros(shape=(nl * nk + ts, nl * nk + ts)) # FIXME new line
+            XwY = np.zeros(shape=2 * nl * ni) # np.zeros(shape=nl * nk + ts) # FIXME new line
             for l in range(nl):
-                l_index = l * len(J1)
-                r_index = (l + 1) * len(J1)
-                lr = np.arange(l * len(J1), (l + 1) * len(J1)) # np.arange(l * nk, (l + 1) * nk) # range that selects corresponding block
-                XwX[l_index: r_index, l_index: r_index] = np.expand_dims(J1 * (qi[:, l] / self.S1[J1, l]), axis=1) @ np.expand_dims(J1, axis=1).T # FIXME changed first and last J1m to J1 and changed from * to @
+                l_index = l * nk
+                r_index = (l + 1) * nk
+                XwX[l_index: r_index, l_index: r_index] = (JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ JJ1)).todense()
                 # here want to compute the matrix multiplication with a diagonal mattrix in the middle, 
                 # we might be better off trying this within numba or something.
-                XwY[lr] = J1 * (qi[:, l] / self.S1[J1, l]) * Y1 # FIXME changed first J1m to J1 and changed from * to @
-                XwX[l_index + ts: r_index + ts, l_index + ts: r_index + ts] = np.expand_dims(J2 * (qi[:, l] / self.S2[J2, l]), axis=1) @ np.expand_dims(J2, axis=1).T # FIXME changed first and last J2m to J2 and changed from * to @
-                XwY[lr + ts] = J2 * (qi[:, l] / self.S2[J2, l]) * Y2 # FIXME changed first J2m to J2 and changed from * to @
+                XwY[l_index: r_index] = JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ Y1)
+                XwX[l_index + ts: r_index + ts, l_index + ts: r_index + ts] = (JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ JJ2)).todense()
+                XwY[l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ Y2)
             
             # we solve the system to get all the parameters
             # we need to add the constraints here using quadprog
@@ -975,13 +1193,13 @@ class BLMEstimator:
             self.A1 = np.reshape(res_a, [nl, nk, 2])[:, :, 1]
             self.A2 = np.reshape(res_a, [nl, nk, 2])[:, :, 2]
 
-            XwS = np.zeros(shape=nl * len(J1) + ts) # np.zeros(shape=nl * nk + ts) # FIXME new line
+            XwS = np.zeros(shape=2 * nl * ni)
             # next we extract the variances
             for l in range(nl):
-                lr = lr = np.arange(l * len(J1), (l + 1) * len(J1)) # np.arange(l * nk, (l + 1) * nk) # range that selects corresponding block
-                t2 = nl * nk # shift for period 2
-                XwS[lr] = J1 * (qi[:, l] / self.S1[J1, l]) * (Y1 - self.A1[J1, l]) ** 2 # FIXME changed first J1m to J1
-                XwS[lr + ts] = J2 * (qi[:, l] / self.S2[J2, l]) * (Y2 - self.A2[J2, l]) ** 2 # FIXME changed first J2m to J2
+                l_index = l * nk
+                r_index = (l + 1) * nk
+                XwS[l_index: r_index] = JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ ((Y1 - self.A1[J1, l]) ** 2))
+                XwS[l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ ((Y2 - self.A2[J2, l]) ** 2))
 
             res_s = cons_s.solve(XwX, XwS) # we need to constraint the parameters to be all positive
             self.S1 = np.sqrt(np.reshape(res_s, [nl, nk, 2])[:, :, 1])
