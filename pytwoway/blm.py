@@ -612,7 +612,11 @@ class QPConstrained:
         self.b = np.array([]) # Equality constraint bound
 
         self.default_constraints = {
-            'gap': 0, # Used for biggerthan constraint to determine bound
+            'gap_akmmono': 0, # Used for akmmono constraint
+            'gap_mono_k': 0, # Used for mono_k constraint
+            'gap_bigger': 0, # Used for biggerthan constraint to determine bound
+            'gap_smaller': 0, # Used for smallerthan constraint to determine bound,
+            'n_periods': 2, # Number of periods in the data
             'nt': 4
         }
 
@@ -644,7 +648,7 @@ class QPConstrained:
             b = - np.zeros(shape=A.shape[0])
 
         elif constraint == 'akmmono':
-            gap = params['gap']
+            gap = params['gap_akmmono']
             LL = np.zeros(shape=(nl - 1, nl))
             for l in range(nl - 1):
                 LL[l, l] = 1
@@ -660,7 +664,7 @@ class QPConstrained:
             b = - np.zeros(shape=A.shape[0])
 
         elif constraint == 'mono_k':
-            gap = params['gap']
+            gap = params['gap_mono_k']
             KK = np.zeros(shape=(nk - 1, nk))
             for k in range(nk - 1):
                 KK[k, k] = 1
@@ -685,15 +689,17 @@ class QPConstrained:
             A = - np.kron(MM, A)
             b = - np.zeros(shape=nl * (nk - 1) * (nt - 1))
 
-        elif constraint in ['greaterthan', 'biggerthan']:
-            gap = params['gap']
-            G = - np.eye(nk * nl)
-            h = - gap * np.ones(shape=nk * nl)
+        elif constraint in ['biggerthan', 'greaterthan']:
+            gap = params['gap_bigger']
+            n_periods = params['n_periods']
+            G = - np.eye(n_periods * nk * nl)
+            h = - gap * np.ones(shape=n_periods * nk * nl)
 
-        elif constraint == ['lessthan', 'smallerthan']:
-            gap = params['gap']
-            G = np.eye(nk * nl)
-            h = gap * np.ones(shape=nk * nl)
+        elif constraint == ['smallerthan', 'lessthan']:
+            gap = params['gap_smaller']
+            n_periods = params['n_periods']
+            G = np.eye(n_periods * nk * nl)
+            h = gap * np.ones(shape=n_periods * nk * nl)
 
         elif constraint == 'lin_para':
             LL = np.zeros(shape=(nl - 1, nl))
@@ -712,7 +718,7 @@ class QPConstrained:
             b = - np.zeros(shape=nl)
 
         else:
-            warnings.warn('Invalid constraint entered.')
+            warnings.warn('Invalid constraint entered {}.'.format(constraint))
             return
 
         # Add constraints to attributes
@@ -894,7 +900,7 @@ class BLMEstimator:
         # constraints
         cons_a = QPConstrained(nl, nk)
         cons_s = QPConstrained(nl, nk)
-        cons_s.add_constraints_builtin(['biggerthan'], {'gap': 0})
+        cons_s.add_constraints_builtin(['biggerthan'], {'gap_bigger': 0, 'n_periods': 2})
 
         lp = np.zeros(shape=(ni, nl))
         JJ1 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
@@ -926,8 +932,8 @@ class BLMEstimator:
             # instead we will construct X'X and X'Y by looping over nl
             # we also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
             ts = nl * nk # shift for period 2 FIXME used to be called t2, I assumed it is ts
-            XwX = np.zeros(shape=(2 * nl * ni, 2 * nl * ni)) # np.zeros(shape=(nl * nk + ts, nl * nk + ts)) # FIXME new line
-            XwY = np.zeros(shape=2 * nl * ni) # np.zeros(shape=nl * nk + ts) # FIXME new line
+            XwX = np.zeros(shape=(2 * ts, 2 * ts)) # np.zeros(shape=(2 * nl * ni, 2 * nl * ni)) # np.zeros(shape=(nl * nk + ts, nl * nk + ts)) # FIXME new line
+            XwY = np.zeros(shape=2 * ts) # np.zeros(shape=2 * nl * ni) # np.zeros(shape=nl * nk + ts) # FIXME new line
             for l in range(nl):
                 l_index = l * nk
                 r_index = (l + 1) * nk
@@ -940,11 +946,12 @@ class BLMEstimator:
             
             # we solve the system to get all the parameters
             # we need to add the constraints here using quadprog
-            res_a = cons_a.solve(XwX, XwY)
-            self.A1 = np.reshape(res_a, [nl, nk, 2])[:, :, 1]
-            self.A2 = np.reshape(res_a, [nl, nk, 2])[:, :, 2]
+            cons_a.solve(XwX, XwY)
+            res_a = cons_a.res
+            self.A1 = np.reshape(res_a, [nk, nl, 2])[:, :, 0]
+            self.A2 = np.reshape(res_a, [nk, nl, 2])[:, :, 1]
 
-            XwS = np.zeros(shape=2 * nl * ni)
+            XwS = np.zeros(shape=2 * ts) # np.zeros(shape=2 * nl * ni)
             # next we extract the variances
             for l in range(nl):
                 l_index = l * nk
@@ -952,6 +959,7 @@ class BLMEstimator:
                 XwS[l_index: r_index] = JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ ((Y1 - self.A1[J1, l]) ** 2))
                 XwS[l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ ((Y2 - self.A2[J2, l]) ** 2))
 
-            res_s = cons_s.solve(XwX, XwS) # we need to constraint the parameters to be all positive
-            self.S1 = np.sqrt(np.reshape(res_s, [nl, nk, 2])[:, :, 1])
-            self.S2 = np.sqrt(np.reshape(res_s, [nl, nk, 2])[:, :, 2])
+            cons_s.solve(XwX, XwS) # we need to constraint the parameters to be all positive
+            res_s = cons_s.res
+            self.S1 = np.sqrt(np.reshape(res_s, [nk, nl, 2])[:, :, 0])
+            self.S2 = np.sqrt(np.reshape(res_s, [nk, nl, 2])[:, :, 1])
