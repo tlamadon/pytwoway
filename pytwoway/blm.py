@@ -956,8 +956,165 @@ class BLMEstimator:
             for l in range(nl):
                 l_index = l * nk
                 r_index = (l + 1) * nk
-                XwS[l_index: r_index] = JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ ((Y1 - self.A1[J1, l]) ** 2))
-                XwS[l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ ((Y2 - self.A2[J2, l]) ** 2))
+                XwS[l_index: r_index] = - JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ ((Y1 - self.A1[J1, l]) ** 2)) # FIXME changed to -
+                XwS[l_index + ts: r_index + ts] = - JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ ((Y2 - self.A2[J2, l]) ** 2)) # FIXME changed to -
+
+            cons_s.solve(XwX, XwS) # we need to constraint the parameters to be all positive
+            res_s = cons_s.res
+            self.S1 = np.sqrt(np.reshape(res_s, [nk, nl, 2])[:, :, 0])
+            self.S2 = np.sqrt(np.reshape(res_s, [nk, nl, 2])[:, :, 1])
+
+    def fit_A(self, jdata, user_params={}):
+        '''
+            We write the EM algorithm for the movers
+        '''
+        nl = self.nl
+        nk = self.nk
+        ni = len(jdata)
+
+        # update params
+        default_fit = {
+            'maxiter': 1000 # Max number of iterations
+        }
+        params = update_dict(default_fit, user_params)
+
+        # store wage outcomes and groups
+        Y1 = jdata['y1'].to_numpy() 
+        Y2 = jdata['y2'].to_numpy()
+        J1 = jdata['j1'].to_numpy()
+        J2 = jdata['j2'].to_numpy()
+
+        # matrix of posterior probabilities
+        qi = np.ones(shape=(ni, nl))
+
+        # constraints
+        cons_a = QPConstrained(nl, nk)
+        cons_s = QPConstrained(nl, nk)
+        cons_s.add_constraints_builtin(['biggerthan'], {'gap_bigger': 0, 'n_periods': 2})
+
+        lp = np.zeros(shape=(ni, nl))
+        JJ1 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
+        JJ2 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
+
+        for iter in range(params['maxiter']):
+
+            # -------- E-Step ---------
+            # we compute the posterior probabiluties for each row
+            # we iterate over the worker types, should not be be 
+            # to costly since the vector is quite large within each iteration
+            for l in range(nl): 
+                lp1 = lognormpdf(Y1, self.A1[J1, l], self.S1[J1, l])
+                lp2 = lognormpdf(Y2, self.A2[J2, l], self.S2[J2, l])
+                KK = J1 + nk * J2
+                lp[:, l] = np.log(self.pk1[KK, l]) + lp1 + lp2 # FIXME added new middle dimension to lp
+
+            # we compute log sum exp to get likelihoods and probabilities
+            qi = np.exp(lp.T - logsumexp(lp, axis=1)).T # FIXME changed logsumexp from axis=2 to axis=1
+            liks = logsumexp(lp, axis=0).sum() # FIXME should this be returend?
+
+            # --------- M-step ----------
+            # for now we run a simple ols, however later we
+            # want to add constraints!
+            # see https://scaron.info/blog/quadratic-programming-in-python.html
+
+            # the regression has 2 * nl * nk parameters and nl * ni rows
+            # we do not necessarly want to construct the duplicated data by nl
+            # instead we will construct X'X and X'Y by looping over nl
+            # we also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
+            ts = nl * nk # shift for period 2
+            XwX = np.zeros(shape=(2 * ts, 2 * ts))
+            XwY = np.zeros(shape=2 * ts)
+            for l in range(nl):
+                l_index = l * nk
+                r_index = (l + 1) * nk
+                XwX[l_index: r_index, l_index: r_index] = (JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ JJ1)).todense()
+                # here want to compute the matrix multiplication with a diagonal mattrix in the middle, 
+                # we might be better off trying this within numba or something.
+                XwY[l_index: r_index] = JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ Y1)
+                XwX[l_index + ts: r_index + ts, l_index + ts: r_index + ts] = (JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ JJ2)).todense()
+                XwY[l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ Y2)
+
+            # we solve the system to get all the parameters
+            # we need to add the constraints here using quadprog
+            cons_a.solve(XwX, XwY)
+            res_a = cons_a.res
+            self.A1 = np.reshape(res_a, [nk, nl, 2])[:, :, 0]
+            self.A2 = np.reshape(res_a, [nk, nl, 2])[:, :, 1]
+
+    def fit_S(self, jdata, user_params={}):
+        '''
+            We write the EM algorithm for the movers
+        '''
+        nl = self.nl
+        nk = self.nk
+        ni = len(jdata)
+
+        # update params
+        default_fit = {
+            'maxiter': 1000 # Max number of iterations
+        }
+        params = update_dict(default_fit, user_params)
+
+        # store wage outcomes and groups
+        Y1 = jdata['y1'].to_numpy() 
+        Y2 = jdata['y2'].to_numpy()
+        J1 = jdata['j1'].to_numpy()
+        J2 = jdata['j2'].to_numpy()
+
+        # matrix of posterior probabilities
+        qi = np.ones(shape=(ni, nl))
+
+        # constraints
+        cons_a = QPConstrained(nl, nk)
+        cons_s = QPConstrained(nl, nk)
+        cons_s.add_constraints_builtin(['biggerthan'], {'gap_bigger': 0, 'n_periods': 2})
+
+        lp = np.zeros(shape=(ni, nl))
+        JJ1 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
+        JJ2 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
+
+        for iter in range(params['maxiter']):
+
+            # -------- E-Step ---------
+            # we compute the posterior probabiluties for each row
+            # we iterate over the worker types, should not be be 
+            # to costly since the vector is quite large within each iteration
+            for l in range(nl): 
+                lp1 = lognormpdf(Y1, self.A1[J1, l], self.S1[J1, l])
+                lp2 = lognormpdf(Y2, self.A2[J2, l], self.S2[J2, l])
+                KK = J1 + nk * J2
+                lp[:, l] = np.log(self.pk1[KK, l]) + lp1 + lp2 # FIXME added new middle dimension to lp
+
+            # we compute log sum exp to get likelihoods and probabilities
+            qi = np.exp(lp.T - logsumexp(lp, axis=1)).T # FIXME changed logsumexp from axis=2 to axis=1
+            liks = logsumexp(lp, axis=0).sum() # FIXME should this be returend?
+
+            # --------- M-step ----------
+            # for now we run a simple ols, however later we
+            # want to add constraints!
+            # see https://scaron.info/blog/quadratic-programming-in-python.html
+
+            # the regression has 2 * nl * nk parameters and nl * ni rows
+            # we do not necessarly want to construct the duplicated data by nl
+            # instead we will construct X'X and X'Y by looping over nl
+            # we also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
+            ts = nl * nk # shift for period 2 FIXME used to be called t2, I assumed it is ts
+            XwX = np.zeros(shape=(2 * ts, 2 * ts)) # np.zeros(shape=(2 * nl * ni, 2 * nl * ni)) # np.zeros(shape=(nl * nk + ts, nl * nk + ts)) # FIXME new line
+            for l in range(nl):
+                l_index = l * nk
+                r_index = (l + 1) * nk
+                XwX[l_index: r_index, l_index: r_index] = (JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ JJ1)).todense()
+                # here want to compute the matrix multiplication with a diagonal mattrix in the middle, 
+                # we might be better off trying this within numba or something.
+                XwX[l_index + ts: r_index + ts, l_index + ts: r_index + ts] = (JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ JJ2)).todense()
+
+            XwS = np.zeros(shape=2 * ts) # np.zeros(shape=2 * nl * ni)
+            # next we extract the variances
+            for l in range(nl):
+                l_index = l * nk
+                r_index = (l + 1) * nk
+                XwS[l_index: r_index] = - JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ ((Y1 - self.A1[J1, l]) ** 2)) # FIXME changed to -
+                XwS[l_index + ts: r_index + ts] = - JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ ((Y2 - self.A2[J2, l]) ** 2)) # FIXME changed to -
 
             cons_s.solve(XwX, XwS) # we need to constraint the parameters to be all positive
             res_s = cons_s.res
