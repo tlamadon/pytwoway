@@ -616,7 +616,7 @@ class QPConstrained:
             'gap_mono_k': 0, # Used for mono_k constraint
             'gap_bigger': 0, # Used for biggerthan constraint to determine bound
             'gap_smaller': 0, # Used for smallerthan constraint to determine bound,
-            'n_periods': 2, # Number of periods in the data
+            'n_periods': 1, # Number of periods in the data
             'nt': 4
         }
 
@@ -695,7 +695,7 @@ class QPConstrained:
             G = - np.eye(n_periods * nk * nl)
             h = - gap * np.ones(shape=n_periods * nk * nl)
 
-        elif constraint == ['smallerthan', 'lessthan']:
+        elif constraint in ['smallerthan', 'lessthan']:
             gap = params['gap_smaller']
             n_periods = params['n_periods']
             G = np.eye(n_periods * nk * nl)
@@ -797,8 +797,30 @@ class QPConstrained:
     def check_feasible(self):
         '''
         Check that constraints are feasible.
+
+        Returns:
+            (bool): True if constraints feasiable, False otherwise
         '''
-        b_sol = np.linalg.solve(self.A, self.b)
+        # -------  simulate an OLS -------
+        n = 100
+        k = 10
+        # parameters
+
+        x = np.random.normal(size=k)
+        # regressors
+        M = np.random.normal(size=(n, k))
+        # dependent
+        Y = M @ x 
+
+        # =-------- map to quadprog ---------
+        cons = QPConstrained(k, 1)
+        P = M.T @ M
+        q = - M.T @ Y
+        try:
+            self.solve(P, q)
+            return True
+        except ValueError:
+            return False
 
     def solve(self, P, q):
         '''
