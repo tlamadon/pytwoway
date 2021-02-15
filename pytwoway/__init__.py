@@ -7,3 +7,4 @@ from .fe import FESolver
 from .twfe_network import TwoWay
 from .sim_twfe_network import SimTwoWay
 from .sim_twfe_network import TwoWayMonteCarlo
+from .blm import BLMEstimator

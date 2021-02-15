@@ -13,7 +13,7 @@ from matplotlib import pyplot as plt
 import time
 import argparse
 import warnings
-from util import update_dict
+from pytwoway import update_dict
 
 ####################
 ##### New Code #####
@@ -444,7 +444,7 @@ class BLMEstimator:
 
         lp = np.zeros(shape=(ni, nl))
         JJ1 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
-        JJ2 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
+        JJ2 = csc_matrix((np.ones(ni), (jdata.index, jdata['j2'])), shape=(ni, nk))
 
         for iter in range(params['maxiter']):
 
@@ -471,25 +471,28 @@ class BLMEstimator:
             # we do not necessarly want to construct the duplicated data by nl
             # instead we will construct X'X and X'Y by looping over nl
             # we also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
+            # actually X'X is a diagonal matrix
             ts = nl * nk # shift for period 2
-            XwX = np.zeros(shape=(2 * ts, 2 * ts))
-            XwY = np.zeros(shape=2 * ts)
+            XwXd = np.zeros(shape=2 * ts) # only store the diagonal
+            XwY  = np.zeros(shape=2 * ts)
             for l in range(nl):
-                l_index = l * nk
-                r_index = (l + 1) * nk
-                XwX[l_index: r_index, l_index: r_index] = (JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ JJ1)).todense()
-                # here want to compute the matrix multiplication with a diagonal mattrix in the middle, 
-                # we might be better off trying this within numba or something.
-                XwY[l_index: r_index] = JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ Y1)
-                XwX[l_index + ts: r_index + ts, l_index + ts: r_index + ts] = (JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ JJ2)).todense()
-                XwY[l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ Y2)
+                l_index,r_index = l * nk, (l + 1) * nk
+
+                # we compute the terms for period 1
+                # (we might be better off trying this within numba or something)
+                XwXd[l_index: r_index] = (JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ JJ1)).diagonal()
+                XwY [l_index: r_index] = JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ Y1)
+                # we do the same for period 2
+                XwXd[l_index + ts: r_index + ts] = (JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ JJ2)).diagonal()
+                XwY [l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ Y2)
 
             # we solve the system to get all the parameters
             # we need to add the constraints here using quadprog
-            cons_a.solve(XwX, XwY)
+            XwX = np.diag(XwXd)
+            cons_a.solve(XwX, -XwY)
             res_a = cons_a.res
-            self.A1 = np.reshape(res_a, [nk, nl, 2])[:, :, 0]
-            self.A2 = np.reshape(res_a, [nk, nl, 2])[:, :, 1]
+            self.A1 = np.reshape(res_a, (2,nl,nk))[0,::].T
+            self.A2 = np.reshape(res_a, (2,nl,nk))[1,::].T
 
     def fit_S(self, jdata, user_params={}):
         '''
@@ -989,7 +992,7 @@ class BLMEstimator:
 
 #             # Compute prior
 #             lik_prior = (dprior - 1) * np.sum(np.log(pk1))
-#             lik = liks + lik_prior
+#             lik = liks + BLM.fit_A(jdata)lik_prior
 #         else:
 #             pass
 #             # cat("skiping first max step, using supplied posterior probabilities\n") FIXME
