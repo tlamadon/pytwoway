@@ -22,7 +22,8 @@ setuptools.setup(
         'networkx',
         'scikit-learn',
         'pyamg',
-        'ConfigArgParse'
+        'ConfigArgParse',
+        'qpsolvers'
       ],
     entry_points = {
         'console_scripts': ['pytw=pytwoway.command_line:main'],
