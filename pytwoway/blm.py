@@ -354,7 +354,7 @@ class BLMEstimator:
 
         lp = np.zeros(shape=(ni, nl))
         JJ1 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
-        JJ2 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
+        JJ2 = csc_matrix((np.ones(ni), (jdata.index, jdata['j2'])), shape=(ni, nk))
 
         for iter in range(params['maxiter']):
 
@@ -396,23 +396,23 @@ class BLMEstimator:
             
             # we solve the system to get all the parameters
             # we need to add the constraints here using quadprog
-            cons_a.solve(XwX, XwY)
+            cons_a.solve(XwX, - XwY)
             res_a = cons_a.res
-            self.A1 = np.reshape(res_a, [nk, nl, 2])[:, :, 0]
-            self.A2 = np.reshape(res_a, [nk, nl, 2])[:, :, 1]
+            self.A1 = np.reshape(res_a, (2, nl, nk))[0, :, :].T
+            self.A2 = np.reshape(res_a, (2, nl, nk))[1, :, :].T
 
             XwS = np.zeros(shape=2 * ts) # np.zeros(shape=2 * nl * ni)
             # next we extract the variances
             for l in range(nl):
                 l_index = l * nk
                 r_index = (l + 1) * nk
-                XwS[l_index: r_index] = - JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ ((Y1 - self.A1[J1, l]) ** 2)) # FIXME changed to -
-                XwS[l_index + ts: r_index + ts] = - JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ ((Y2 - self.A2[J2, l]) ** 2)) # FIXME changed to -
+                XwS[l_index: r_index] = JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ ((Y1 - self.A1[J1, l]) ** 2))
+                XwS[l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ ((Y2 - self.A2[J2, l]) ** 2))
 
-            cons_s.solve(XwX, XwS) # we need to constraint the parameters to be all positive
+            cons_s.solve(XwX, - XwS) # we need to constraint the parameters to be all positive
             res_s = cons_s.res
-            self.S1 = np.sqrt(np.reshape(res_s, [nk, nl, 2])[:, :, 0])
-            self.S2 = np.sqrt(np.reshape(res_s, [nk, nl, 2])[:, :, 1])
+            self.S1 = np.sqrt(np.reshape(res_s, (2, nl, nk))[0, :, :]).T
+            self.S2 = np.sqrt(np.reshape(res_s, (2, nl, nk))[1, :, :]).T
 
     def fit_A(self, jdata, user_params={}):
         '''
@@ -489,10 +489,10 @@ class BLMEstimator:
             # we solve the system to get all the parameters
             # we need to add the constraints here using quadprog
             XwX = np.diag(XwXd)
-            cons_a.solve(XwX, -XwY)
+            cons_a.solve(XwX, - XwY)
             res_a = cons_a.res
-            self.A1 = np.reshape(res_a, (2,nl,nk))[0,::].T
-            self.A2 = np.reshape(res_a, (2,nl,nk))[1,::].T
+            self.A1 = np.reshape(res_a, (2, nl, nk))[0, :, :].T
+            self.A2 = np.reshape(res_a, (2, nl, nk))[1, :, :].T
 
     def fit_S(self, jdata, user_params={}):
         '''
@@ -524,7 +524,7 @@ class BLMEstimator:
 
         lp = np.zeros(shape=(ni, nl))
         JJ1 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
-        JJ2 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
+        JJ2 = csc_matrix((np.ones(ni), (jdata.index, jdata['j2'])), shape=(ni, nk))
 
         for iter in range(params['maxiter']):
 
@@ -566,13 +566,13 @@ class BLMEstimator:
             for l in range(nl):
                 l_index = l * nk
                 r_index = (l + 1) * nk
-                XwS[l_index: r_index] = - JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ ((Y1 - self.A1[J1, l]) ** 2)) # FIXME changed to -
-                XwS[l_index + ts: r_index + ts] = - JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ ((Y2 - self.A2[J2, l]) ** 2)) # FIXME changed to -
+                XwS[l_index: r_index] = JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ ((Y1 - self.A1[J1, l]) ** 2))
+                XwS[l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ ((Y2 - self.A2[J2, l]) ** 2))
 
-            cons_s.solve(XwX, XwS) # we need to constraint the parameters to be all positive
+            cons_s.solve(XwX, - XwS) # we need to constraint the parameters to be all positive
             res_s = cons_s.res
-            self.S1 = np.sqrt(np.reshape(res_s, [nk, nl, 2])[:, :, 0])
-            self.S2 = np.sqrt(np.reshape(res_s, [nk, nl, 2])[:, :, 1])
+            self.S1 = np.sqrt(np.reshape(res_s, (2, nl, nk))[0, :, :]).T
+            self.S2 = np.sqrt(np.reshape(res_s, (2, nl, nk))[1, :, :]).T
 
     def fit_qi(self, jdata, user_params={}):
         '''
@@ -604,7 +604,7 @@ class BLMEstimator:
 
         lp = np.zeros(shape=(ni, nl))
         JJ1 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
-        JJ2 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
+        JJ2 = csc_matrix((np.ones(ni), (jdata.index, jdata['j2'])), shape=(ni, nk))
 
         for iter in range(params['maxiter']):
 
