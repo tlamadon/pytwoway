@@ -90,12 +90,14 @@ class BipartiteData:
             connected = self.bd.connected
             contiguous = self.bd.contiguous
             no_na = self.bd.no_na
+            no_duplicates = self.bd.no_duplicates
             # Update bipartite network
             self.bd = BipartiteEventStudy(self.bd.get_es())
             # Use attributes from before
             self.bd.connected = connected
             self.bd.contiguous = contiguous
             self.bd.no_na = no_na
+            self.bd.no_duplicates = no_duplicates
             # Update superclass attributes
             self.data = self.bd.data
             self.col_dict = self.bd.col_dict
@@ -114,12 +116,14 @@ class BipartiteData:
             connected = self.bd.connected
             contiguous = self.bd.contiguous
             no_na = self.bd.no_na
+            no_duplicates = self.bd.no_duplicates
             # Update bipartite network
             self.bd = BipartiteLong(self.bd.get_long())
             # Use attributes from before
             self.bd.connected = connected
             self.bd.contiguous = contiguous
             self.bd.no_na = no_na
+            self.bd.no_duplicates = no_duplicates
             self.bd.collapsed = True # Event study is always collapsed
             # Update superclass attributes
             self.data = self.bd.data
@@ -201,6 +205,7 @@ class BipartiteLong:
         self.connected = False # If True, all firms are connected by movers
         self.contiguous = False # If True, firm ids are contiguous
         self.no_na = False # If True, no NaN observations in the data
+        self.no_duplicates = False # If True, no duplicate rows in the data
         self.collapsed = False # If True, employment spells are collapsed into a single observation
 
         if col_dict is None: # If columns already correct
@@ -221,6 +226,7 @@ class BipartiteLong:
         bd_copy.connected = self.connected
         bd_copy.contiguous = self.contiguous
         bd_copy.no_na = self.no_na
+        bd_copy.no_duplicates = self.no_duplicates
         bd_copy.collapsed = self.collapsed
 
         return bd_copy
@@ -253,11 +259,11 @@ class BipartiteLong:
 
     def clean_data(self):
         '''
-        Clean data to make sure there are no NaN observations, firms are connected by movers and firm ids are contiguous.
+        Clean data to make sure there are no NaN or duplicate observations, firms are connected by movers and firm ids are contiguous.
         '''
         self.logger.info('beginning data cleaning')
         self.logger.info('checking quality of data')
-        # Make sure data is valid - computes no_na, connected, and contiguous, along with other checks (note that column names are corrected in data_validity() if all columns are in the data)
+        # Make sure data is valid - computes no_na, no_duplicates, connected, and contiguous, along with other checks (note that column names are corrected in data_validity() if all columns are in the data)
         self.data_validity()
 
         # Next, drop NaN observations
@@ -267,6 +273,14 @@ class BipartiteLong:
 
             # Update no_na
             self.no_na = True
+
+        # Next, drop duplicate observations
+        if not self.no_duplicates:
+            self.logger.info('dropping duplicate observations')
+            self.data = self.data.drop_duplicates()
+
+            # Update no_duplicates
+            self.no_duplicates = True
 
         # Next, find largest set of firms connected by movers
         if not self.connected:
@@ -321,7 +335,6 @@ class BipartiteLong:
             self.update_cols()
 
         self.logger.info('--- checking worker-year observations ---')
-
         max_obs = self.data.groupby(['wid', 'year']).size().max()
 
         self.logger.info('max number of worker-year observations (should be 1):' + str(max_obs))
@@ -329,14 +342,22 @@ class BipartiteLong:
             success = False
 
         self.logger.info('--- checking nan data ---')
+        nans = self.data.shape[0] - self.data.dropna().shape[0]
 
-        nan = self.data.shape[0] - self.data.dropna().shape[0]
-
-        self.logger.info('data nan rows (should be 0):' + str(nan))
-        if nan > 0:
+        self.logger.info('data nans (should be 0):' + str(nans))
+        if nans > 0:
             success = False
         else:
             self.no_na = True
+
+        self.logger.info('--- checking duplicates ---')
+        duplicates = self.data.shape[0] - self.data.drop_duplicates().shape[0]
+
+        self.logger.info('duplicates (should be 0):' + str(duplicates))
+        if duplicates > 0:
+            success = False
+        else:
+            self.no_duplicates = True
 
         self.logger.info('--- checking connected set ---')
         self.data['fid_max'] = self.data.groupby(['wid'])['fid'].transform(max)
@@ -617,6 +638,7 @@ class BipartiteEventStudy:
         self.connected = False # If True, all firms are connected by movers
         self.contiguous = False # If True, firm ids are contiguous
         self.no_na = False # If True, no NaN observations in the data
+        self.no_duplicates = False # If True, no duplicate rows in the data
 
         if col_dict is None: # If columns already correct
             self.col_dict = {'wid': 'wid', 'y1': 'y1', 'y2': 'y2', 'f1i': 'f1i', 'f2i': 'f2i', 'year_end_1': 'year_end_1', 'year_end_2': 'year_end_2', 'w1': 'w1', 'w2': 'w2', 'm': 'm'}
@@ -641,6 +663,7 @@ class BipartiteEventStudy:
         bd_copy.connected = self.connected
         bd_copy.contiguous = self.contiguous
         bd_copy.no_na = self.no_na
+        bd_copy.no_duplicates = self.no_duplicates
 
         return bd_copy
 
@@ -672,11 +695,11 @@ class BipartiteEventStudy:
 
     def clean_data(self):
         '''
-        Clean data to make sure there are no NaN observations, firms are connected by movers and firm ids are contiguous.
+        Clean data to make sure there are no NaN or duplicate observations, firms are connected by movers and firm ids are contiguous.
         '''
         self.logger.info('beginning data cleaning')
         self.logger.info('checking quality of data')
-        # Make sure data is valid - computes no_na, connected, and contiguous, along with other checks (note that column names are corrected in data_validity() if all columns are in the data)
+        # Make sure data is valid - computes no_na, no_duplicates, connected, and contiguous, along with other checks (note that column names are corrected in data_validity() if all columns are in the data)
         self.data_validity()
 
         # Next, drop NaN observations
@@ -686,6 +709,14 @@ class BipartiteEventStudy:
 
             # Update no_na
             self.no_na = True
+
+        # Next, drop duplicate observations
+        if not self.no_duplicates:
+            self.logger.info('dropping duplicate observations')
+            self.data = self.data.drop_duplicates()
+
+            # Update no_duplicates
+            self.no_duplicates = True
 
         # Next, find largest set of firms connected by movers
         if not self.connected:
@@ -744,18 +775,31 @@ class BipartiteEventStudy:
         stayers = self.data[self.data['m'] == 0]
         movers = self.data[self.data['m'] == 1]
 
-        self.logger.info('--- checking rows ---')
+        self.logger.info('--- checking nan data ---')
         na_stayers = stayers.shape[0] - stayers.dropna().shape[0]
         na_movers = movers.shape[0] - movers.dropna().shape[0]
 
-        self.logger.info('stayers nan rows (should be 0):' + str(na_stayers))
-        self.logger.info('movers nan rows (should be 0):' + str(na_movers))
+        self.logger.info('stayers nans (should be 0):' + str(na_stayers))
+        self.logger.info('movers nans (should be 0):' + str(na_movers))
         if na_stayers > 0:
             success_stayers = False
         if na_movers > 0:
             success_movers = False
         if (na_stayers == 0) and (na_movers == 0):
             self.no_na = True
+
+        self.logger.info('--- checking duplicates ---')
+        duplicates_stayers = stayers.shape[0] - stayers.drop_duplicates().shape[0]
+        duplicates_movers = movers.shape[0] - movers.drop_duplicates().shape[0]
+
+        self.logger.info('stayers duplicates (should be 0):' + str(duplicates_stayers))
+        self.logger.info('movers duplicates (should be 0):' + str(duplicates_movers))
+        if duplicates_stayers > 0:
+            success_stayers = False
+        if duplicates_movers > 0:
+            success_movers = False
+        if (duplicates_stayers == 0) and (duplicates_movers == 0):
+            self.no_duplicates = True
 
         self.logger.info('--- checking firms ---')
         firms_stayers = (stayers['f1i'] != stayers['f2i']).sum()

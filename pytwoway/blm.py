@@ -59,16 +59,17 @@ class QPConstrained:
         nl = self.nl
         nk = self.nk
         params = update_dict(self.default_constraints, constraint_params)
-        G = None
-        h = None
-        A = None
-        b = None
+        G = np.array([])
+        h = np.array([])
+        A = np.array([])
+        b = np.array([])
         if constraint in ['lin', 'lin_add', 'akm']:
+            n_periods = params['n_periods']
             LL = np.zeros(shape=(nl - 1, nl))
             for l in range(nl - 1):
                 LL[l, l] = 1
                 LL[l, l + 1] = - 1
-            KK = np.zeros(shape=(nk - 1, nk))
+            KK = np.zeros(shape=(nk - 1, n_periods * nk)) # FIXME added n_periods
             for k in range(nk - 1):
                 KK[k, k] = 1
                 KK[k, k + 1] = - 1
@@ -163,7 +164,7 @@ class QPConstrained:
         for constraint in constraints:
             self.add_constraint_builtin(constraint, constraint_params)
 
-    def add_constraint_manual(self, G=None, h=None, A=None, b=None):
+    def add_constraint_manual(self, G=np.array([]), h=np.array([]), A=np.array([]), b=np.array([])):
         '''
         Manually add a constraint. If setting inequality constraints, must set both G and h to have the same dimension 0. If setting equality constraints, must set both A and b to have the same dimension 0.
 
@@ -173,14 +174,14 @@ class QPConstrained:
             A (NumPy Array): equality constraint matrix
             b (NumPy Array): equality constraint bound
         '''
-        if G is not None: # If you have inequality constraints
+        if len(G) > 0: # If you have inequality constraints
             if len(self.G) > 0:
                 self.G = np.concatenate((self.G, G), axis=0)
                 self.h = np.concatenate((self.h, h), axis=0)
             else:
                 self.G = G
                 self.h = h
-        if A is not None: # If you have equality constraints
+        if len(A) > 0: # If you have equality constraints
             if len(self.A) > 0:
                 self.A = np.concatenate((self.A, A), axis=0)
                 self.b = np.concatenate((self.b, b), axis=0)
@@ -287,17 +288,29 @@ class BLMEstimator:
         self.nl = nl # Number of worker types
         self.nk = nk # Number of firm types
 
-        # model for Y1|Y2,l,k for movers and stayes
+        # # Mean of wages by firm and worker type
+        # self.A1 = np.zeros(shape=(nk, nl))
+        # self.A2 = np.zeros(shape=(nk, nl))
+        # Standard deviation of wages by firm and worker type
+        self.S1 = np.ones(shape=(nk, nl))        
+        self.S2 = np.ones(shape=(nk, nl))        
+
+        # Model for p(K | l, l') for movers
+        self.pk1 = np.ones(shape=(nk * nk, nl)) / nl # np.ones(shape=(nk, nk, nl)) / nl
+        # Model for p(K | l, l') for stayers
+        self.pk0 = np.ones(shape=(nk, nl)) / nl
+
+        # # Model for Y1 | Y2, l, k for movers and stayers
         self.A1 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
-        self.S1 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
-        # model for Y4|Y3,l,k for movers and stayes
+        # self.S1 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
+        # # Model for Y4 | Y3, l, k for movers and stayes
         self.A2 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
-        self.S2 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
-        # model for p(K | l ,l') for movers
-        self.pk1 = np.random.dirichlet(alpha=[1] * nl, size=nk * nk)
-        # model for p(K | l ,l') for stayers
-        self.pk0 = np.random.dirichlet(alpha=np.ones(shape=nk), size=(nk, nl)) # np.random.dirichlet(alpha=[1] * nk, size=nl)
-        # model.pk0 = np.expand_dims(model.pk0, axis=0)
+        # self.S2 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
+        # # Model for p(K | l, l') for movers
+        # self.pk1 = np.random.dirichlet(alpha=[1] * nl, size=nk * nk)
+        # # Model for p(K | l, l') for stayers
+        # self.pk0 = np.random.dirichlet(alpha=np.ones(shape=nk), size=(nk, nl)) # np.random.dirichlet(alpha=[1] * nk, size=nl)
+        # # model.pk0 = np.expand_dims(model.pk0, axis=0)
 
         self.NNm = np.zeros(shape=(nk, nk)).astype(int) + 10 # np.random.randint(low=0, high=max(nl // 2 + 1, 1), size=[nl, nl]) # FIXME new code
         self.NNs = np.zeros(shape=nk).astype(int) + 10 # np.random.randint(low=nl // 2 + 1, high=max(nl, nl // 2 + 2), size=nl * nl) # FIXME new code
@@ -312,49 +325,42 @@ class BLMEstimator:
         if params['stationary']:
             self.A2 = self.A1
 
-        # # Mean of wages by firm and worker type
-        # self.A1 = np.zeros((self.nk, self.nl))
-        # self.A2 = np.zeros((self.nk, self.nl))
-        # # Starndard deviation of wages by firm and worker type
-        # self.S1 = np.ones((self.nk, self.nl))        
-        # self.S2 = np.ones((self.nk, self.nl))        
-
-        # # Model for p(K | l ,l') for movers
-        # self.pk1 = np.ones((self.nk, self.nk, self.nl)) / self.nl
-        # # Model for p(K | l ,l') for stayers
-        # self.pk0 = np.ones((self.nk, self.nl)) / self.nl
-
     def fit(self, jdata, user_params={}):
         '''
             We write the EM algorithm for the movers
         '''
         nl = self.nl
         nk = self.nk
-        ni = len(jdata)
+        ni = jdata.shape[0]
 
         # update params
         default_fit = {
-            'maxiter': 1000 # Max number of iterations
+            'maxiter': 1000, # Max number of iterations
+            'update_a': True,
+            'update_s': True,
+            'return_qi': False
         }
         params = update_dict(default_fit, user_params)
 
-        # store wage outcomes and groups
+        # Store wage outcomes and groups
         Y1 = jdata['y1'].to_numpy() 
         Y2 = jdata['y2'].to_numpy()
         J1 = jdata['j1'].to_numpy()
         J2 = jdata['j2'].to_numpy()
 
-        # matrix of posterior probabilities
+        # Matrix of posterior probabilities
         qi = np.ones(shape=(ni, nl))
 
-        # constraints
+        # Constraints
         cons_a = QPConstrained(nl, nk)
+        cons_a.add_constraints_builtin(['lin'], {'n_periods': 2})
         cons_s = QPConstrained(nl, nk)
         cons_s.add_constraints_builtin(['biggerthan'], {'gap_bigger': 0, 'n_periods': 2})
 
         lp = np.zeros(shape=(ni, nl))
-        JJ1 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
-        JJ2 = csc_matrix((np.ones(ni), (jdata.index, jdata['j2'])), shape=(ni, nk))
+        JJ1 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), J1)), shape=(ni, nk))
+        JJ2 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), J2)), shape=(ni, nk))
+        JJ12 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), J1 + nk * J2)), shape=(ni, nk * nk))
 
         for iter in range(params['maxiter']):
 
@@ -362,15 +368,18 @@ class BLMEstimator:
             # we compute the posterior probabiluties for each row
             # we iterate over the worker types, should not be be 
             # to costly since the vector is quite large within each iteration
-            for l in range(nl): 
+            for l in range(nl):
                 lp1 = lognormpdf(Y1, self.A1[J1, l], self.S1[J1, l])
                 lp2 = lognormpdf(Y2, self.A2[J2, l], self.S2[J2, l])
                 KK = J1 + nk * J2
-                lp[:, l] = np.log(self.pk1[KK, l]) + lp1 + lp2 # FIXME added new middle dimension to lp
+                lp[:, l] = np.log(self.pk1[KK, l]) + lp1 + lp2
 
             # we compute log sum exp to get likelihoods and probabilities
             qi = np.exp(lp.T - logsumexp(lp, axis=1)).T # FIXME changed logsumexp from axis=2 to axis=1
+            if params['return_qi']:
+                return qi
             liks = logsumexp(lp, axis=0).sum() # FIXME should this be returend?
+            print('loop {}, liks {}'.format(iter, liks))
 
             # --------- M-step ----------
             # for now we run a simple ols, however later we
@@ -382,102 +391,10 @@ class BLMEstimator:
             # instead we will construct X'X and X'Y by looping over nl
             # we also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
             ts = nl * nk # shift for period 2 FIXME used to be called t2, I assumed it is ts
-            XwX = np.zeros(shape=(2 * ts, 2 * ts)) # np.zeros(shape=(2 * nl * ni, 2 * nl * ni)) # np.zeros(shape=(nl * nk + ts, nl * nk + ts)) # FIXME new line
-            XwY = np.zeros(shape=2 * ts) # np.zeros(shape=2 * nl * ni) # np.zeros(shape=nl * nk + ts) # FIXME new line
-            for l in range(nl):
-                l_index = l * nk
-                r_index = (l + 1) * nk
-                XwX[l_index: r_index, l_index: r_index] = (JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ JJ1)).todense()
-                # here want to compute the matrix multiplication with a diagonal mattrix in the middle, 
-                # we might be better off trying this within numba or something.
-                XwY[l_index: r_index] = JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ Y1)
-                XwX[l_index + ts: r_index + ts, l_index + ts: r_index + ts] = (JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ JJ2)).todense()
-                XwY[l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ Y2)
-            
-            # we solve the system to get all the parameters
-            # we need to add the constraints here using quadprog
-            cons_a.solve(XwX, - XwY)
-            res_a = cons_a.res
-            self.A1 = np.reshape(res_a, (2, nl, nk))[0, :, :].T
-            self.A2 = np.reshape(res_a, (2, nl, nk))[1, :, :].T
-
-            XwS = np.zeros(shape=2 * ts) # np.zeros(shape=2 * nl * ni)
-            # next we extract the variances
-            for l in range(nl):
-                l_index = l * nk
-                r_index = (l + 1) * nk
-                XwS[l_index: r_index] = JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ ((Y1 - self.A1[J1, l]) ** 2))
-                XwS[l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ ((Y2 - self.A2[J2, l]) ** 2))
-
-            cons_s.solve(XwX, - XwS) # we need to constraint the parameters to be all positive
-            res_s = cons_s.res
-            self.S1 = np.sqrt(np.reshape(res_s, (2, nl, nk))[0, :, :]).T
-            self.S2 = np.sqrt(np.reshape(res_s, (2, nl, nk))[1, :, :]).T
-
-    def fit_A(self, jdata, user_params={}):
-        '''
-            We write the EM algorithm for the movers
-        '''
-        nl = self.nl
-        nk = self.nk
-        ni = len(jdata)
-
-        # update params
-        default_fit = {
-            'maxiter': 1000 # Max number of iterations
-        }
-        params = update_dict(default_fit, user_params)
-
-        # store wage outcomes and groups
-        Y1 = jdata['y1'].to_numpy() 
-        Y2 = jdata['y2'].to_numpy()
-        J1 = jdata['j1'].to_numpy()
-        J2 = jdata['j2'].to_numpy()
-
-        # matrix of posterior probabilities
-        qi = np.ones(shape=(ni, nl))
-
-        # constraints
-        cons_a = QPConstrained(nl, nk)
-        cons_s = QPConstrained(nl, nk)
-        cons_s.add_constraints_builtin(['biggerthan'], {'gap_bigger': 0, 'n_periods': 2})
-
-        lp = np.zeros(shape=(ni, nl))
-        JJ1 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
-        JJ2 = csc_matrix((np.ones(ni), (jdata.index, jdata['j2'])), shape=(ni, nk))
-
-        for iter in range(params['maxiter']):
-
-            # -------- E-Step ---------
-            # we compute the posterior probabiluties for each row
-            # we iterate over the worker types, should not be be 
-            # to costly since the vector is quite large within each iteration
-            for l in range(nl): 
-                lp1 = lognormpdf(Y1, self.A1[J1, l], self.S1[J1, l])
-                lp2 = lognormpdf(Y2, self.A2[J2, l], self.S2[J2, l])
-                KK = J1 + nk * J2
-                lp[:, l] = np.log(self.pk1[KK, l]) + lp1 + lp2 # FIXME added new middle dimension to lp
-
-            # we compute log sum exp to get likelihoods and probabilities
-            qi = np.exp(lp.T - logsumexp(lp, axis=1)).T # FIXME changed logsumexp from axis=2 to axis=1
-            liks = logsumexp(lp, axis=0).sum() # FIXME should this be returend?
-
-            # --------- M-step ----------
-            # for now we run a simple ols, however later we
-            # want to add constraints!
-            # see https://scaron.info/blog/quadratic-programming-in-python.html
-
-            # the regression has 2 * nl * nk parameters and nl * ni rows
-            # we do not necessarly want to construct the duplicated data by nl
-            # instead we will construct X'X and X'Y by looping over nl
-            # we also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
-            # actually X'X is a diagonal matrix
-            ts = nl * nk # shift for period 2
             XwXd = np.zeros(shape=2 * ts) # only store the diagonal
-            XwY  = np.zeros(shape=2 * ts)
+            XwY = np.zeros(shape=2 * ts)
             for l in range(nl):
-                l_index,r_index = l * nk, (l + 1) * nk
-
+                l_index, r_index = l * nk, (l + 1) * nk
                 # we compute the terms for period 1
                 # (we might be better off trying this within numba or something)
                 XwXd[l_index: r_index] = (JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ JJ1)).diagonal()
@@ -485,141 +402,32 @@ class BLMEstimator:
                 # we do the same for period 2
                 XwXd[l_index + ts: r_index + ts] = (JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ JJ2)).diagonal()
                 XwY [l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ Y2)
-
+            
             # we solve the system to get all the parameters
             # we need to add the constraints here using quadprog
             XwX = np.diag(XwXd)
-            cons_a.solve(XwX, - XwY)
-            res_a = cons_a.res
-            self.A1 = np.reshape(res_a, (2, nl, nk))[0, :, :].T
-            self.A2 = np.reshape(res_a, (2, nl, nk))[1, :, :].T
+            if params['update_a']:
+                cons_a.solve(XwX, - XwY)
+                res_a = cons_a.res
+                self.A1 = np.reshape(res_a, (2, nl, nk))[0, :, :].T
+                self.A2 = np.reshape(res_a, (2, nl, nk))[1, :, :].T
 
-    def fit_S(self, jdata, user_params={}):
-        '''
-            We write the EM algorithm for the movers
-        '''
-        nl = self.nl
-        nk = self.nk
-        ni = len(jdata)
+            if params['update_s']:
+                XwS = np.zeros(shape=2 * ts) # np.zeros(shape=2 * nl * ni)
+                # next we extract the variances
+                for l in range(nl):
+                    l_index = l * nk
+                    r_index = (l + 1) * nk
+                    XwS[l_index: r_index] = JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ ((Y1 - self.A1[J1, l]) ** 2))
+                    XwS[l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ ((Y2 - self.A2[J2, l]) ** 2))
 
-        # update params
-        default_fit = {
-            'maxiter': 1000 # Max number of iterations
-        }
-        params = update_dict(default_fit, user_params)
+                cons_s.solve(XwX, - XwS) # we need to constraint the parameters to be all positive
+                res_s = cons_s.res
+                self.S1 = np.sqrt(np.reshape(res_s, (2, nl, nk))[0, :, :]).T
+                self.S2 = np.sqrt(np.reshape(res_s, (2, nl, nk))[1, :, :]).T
 
-        # store wage outcomes and groups
-        Y1 = jdata['y1'].to_numpy() 
-        Y2 = jdata['y2'].to_numpy()
-        J1 = jdata['j1'].to_numpy()
-        J2 = jdata['j2'].to_numpy()
-
-        # matrix of posterior probabilities
-        qi = np.ones(shape=(ni, nl))
-
-        # constraints
-        cons_a = QPConstrained(nl, nk)
-        cons_s = QPConstrained(nl, nk)
-        cons_s.add_constraints_builtin(['biggerthan'], {'gap_bigger': 0, 'n_periods': 2})
-
-        lp = np.zeros(shape=(ni, nl))
-        JJ1 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
-        JJ2 = csc_matrix((np.ones(ni), (jdata.index, jdata['j2'])), shape=(ni, nk))
-
-        for iter in range(params['maxiter']):
-
-            # -------- E-Step ---------
-            # we compute the posterior probabiluties for each row
-            # we iterate over the worker types, should not be be 
-            # to costly since the vector is quite large within each iteration
-            for l in range(nl): 
-                lp1 = lognormpdf(Y1, self.A1[J1, l], self.S1[J1, l])
-                lp2 = lognormpdf(Y2, self.A2[J2, l], self.S2[J2, l])
-                KK = J1 + nk * J2
-                lp[:, l] = np.log(self.pk1[KK, l]) + lp1 + lp2 # FIXME added new middle dimension to lp
-
-            # we compute log sum exp to get likelihoods and probabilities
-            qi = np.exp(lp.T - logsumexp(lp, axis=1)).T # FIXME changed logsumexp from axis=2 to axis=1
-            liks = logsumexp(lp, axis=0).sum() # FIXME should this be returend?
-
-            # --------- M-step ----------
-            # for now we run a simple ols, however later we
-            # want to add constraints!
-            # see https://scaron.info/blog/quadratic-programming-in-python.html
-
-            # the regression has 2 * nl * nk parameters and nl * ni rows
-            # we do not necessarly want to construct the duplicated data by nl
-            # instead we will construct X'X and X'Y by looping over nl
-            # we also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
-            ts = nl * nk # shift for period 2 FIXME used to be called t2, I assumed it is ts
-            XwX = np.zeros(shape=(2 * ts, 2 * ts)) # np.zeros(shape=(2 * nl * ni, 2 * nl * ni)) # np.zeros(shape=(nl * nk + ts, nl * nk + ts)) # FIXME new line
             for l in range(nl):
-                l_index = l * nk
-                r_index = (l + 1) * nk
-                XwX[l_index: r_index, l_index: r_index] = (JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ JJ1)).todense()
-                # here want to compute the matrix multiplication with a diagonal mattrix in the middle, 
-                # we might be better off trying this within numba or something.
-                XwX[l_index + ts: r_index + ts, l_index + ts: r_index + ts] = (JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ JJ2)).todense()
-
-            XwS = np.zeros(shape=2 * ts) # np.zeros(shape=2 * nl * ni)
-            # next we extract the variances
-            for l in range(nl):
-                l_index = l * nk
-                r_index = (l + 1) * nk
-                XwS[l_index: r_index] = JJ1.T @ (diags(qi[:, l] / self.S1[J1, l]) @ ((Y1 - self.A1[J1, l]) ** 2))
-                XwS[l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / self.S2[J2, l]) @ ((Y2 - self.A2[J2, l]) ** 2))
-
-            cons_s.solve(XwX, - XwS) # we need to constraint the parameters to be all positive
-            res_s = cons_s.res
-            self.S1 = np.sqrt(np.reshape(res_s, (2, nl, nk))[0, :, :]).T
-            self.S2 = np.sqrt(np.reshape(res_s, (2, nl, nk))[1, :, :]).T
-
-    def fit_qi(self, jdata, user_params={}):
-        '''
-            We write the EM algorithm for the movers
-        '''
-        nl = self.nl
-        nk = self.nk
-        ni = len(jdata)
-
-        # update params
-        default_fit = {
-            'maxiter': 1000 # Max number of iterations
-        }
-        params = update_dict(default_fit, user_params)
-
-        # store wage outcomes and groups
-        Y1 = jdata['y1'].to_numpy() 
-        Y2 = jdata['y2'].to_numpy()
-        J1 = jdata['j1'].to_numpy()
-        J2 = jdata['j2'].to_numpy()
-
-        # matrix of posterior probabilities
-        qi = np.ones(shape=(ni, nl))
-
-        # constraints
-        cons_a = QPConstrained(nl, nk)
-        cons_s = QPConstrained(nl, nk)
-        cons_s.add_constraints_builtin(['biggerthan'], {'gap_bigger': 0, 'n_periods': 2})
-
-        lp = np.zeros(shape=(ni, nl))
-        JJ1 = csc_matrix((np.ones(ni), (jdata.index, jdata['j1'])), shape=(ni, nk))
-        JJ2 = csc_matrix((np.ones(ni), (jdata.index, jdata['j2'])), shape=(ni, nk))
-
-        for iter in range(params['maxiter']):
-
-            # -------- E-Step ---------
-            # we compute the posterior probabiluties for each row
-            # we iterate over the worker types, should not be be 
-            # to costly since the vector is quite large within each iteration
-            for l in range(nl): 
-                lp1 = lognormpdf(Y1, self.A1[J1, l], self.S1[J1, l])
-                lp2 = lognormpdf(Y2, self.A2[J2, l], self.S2[J2, l])
-                KK = J1 + nk * J2
-                lp[:, l] = np.log(self.pk1[KK, l]) + lp1 + lp2 # FIXME added new middle dimension to lp
-
-            # we compute log sum exp to get likelihoods and probabilities
-            return np.exp(lp.T - logsumexp(lp, axis=1)).T # FIXME changed logsumexp from axis=2 to axis=1
+                self.pk1[:, l] = JJ12.T * qi[:, l]
 
     def sim_model(self, fixb=False, stationary=False, fsize=10, mmult=1, smult=1):
         '''
