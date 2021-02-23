@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>pytwoway example &mdash; pytwoway 0.0.3 documentation</title>
+  <title>BLM example &mdash; pytwoway 0.0.3 documentation</title>
   
 
   
@@ -39,9 +39,7 @@
 
     
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Monte Carlo example" href="monte_carlo_example.html" />
-    <link rel="prev" title="Using from python" href="../doc-python.html" /> 
+    <link rel="search" title="Search" href="../search.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -93,15 +91,8 @@
 <li class="toctree-l1"><a class="reference internal" href="../doc-python.html">From python</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Notebook examples</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Simple</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#Simulate-some-data">Simulate some data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Create-a-TwoWay-object-using-your-data">Create a TwoWay object using your data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Now-we-can-run-the-FE-estimator">Now we can run the FE estimator</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#We-can-also-run-the-CRE-estimator">We can also run the CRE estimator</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Finally,-we-can-investigate-the-results">Finally, we can investigate the results</a></li>
-</ul>
-</li>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pytwoway_example.html">Simple</a></li>
 <li class="toctree-l1"><a class="reference internal" href="monte_carlo_example.html">Monte Carlo</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
@@ -161,13 +152,13 @@
     
       <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li>pytwoway example</li>
+      <li>BLM example</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../_sources/notebooks/pytwoway_example.ipynb.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/notebooks/blm_example.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -450,8 +441,8 @@ div.rendered_html tbody tr:hover {
     text-align: unset;
 }
 </style>
-<div class="section" id="pytwoway-example">
-<h1>pytwoway example<a class="headerlink" href="#pytwoway-example" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="BLM-example">
+<h1>BLM example<a class="headerlink" href="#BLM-example" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
@@ -471,6 +462,7 @@ div.rendered_html tbody tr:hover {
 <span></span><span class="c1"># Import the pytwoway package</span>
 <span class="c1"># (Make sure you have installed it using pip install pytwoway)</span>
 <span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 </pre></div>
 </div>
 </div>
@@ -534,66 +526,66 @@ div.rendered_html tbody tr:hover {
       <th>0</th>
       <td>1</td>
       <td>1</td>
-      <td>4</td>
-      <td>0.430727</td>
-      <td>-0.114185</td>
+      <td>3</td>
+      <td>-0.430727</td>
+      <td>-0.348756</td>
       <td>1</td>
-      <td>1</td>
-      <td>62</td>
+      <td>2</td>
+      <td>61</td>
       <td>False</td>
-      <td>-0.002648</td>
+      <td>-0.039403</td>
     </tr>
     <tr>
       <th>1</th>
       <td>1</td>
       <td>2</td>
-      <td>2</td>
-      <td>0.430727</td>
-      <td>-0.604585</td>
-      <td>2</td>
+      <td>3</td>
+      <td>-0.430727</td>
+      <td>-0.348756</td>
       <td>1</td>
-      <td>41</td>
-      <td>True</td>
-      <td>0.081698</td>
+      <td>2</td>
+      <td>61</td>
+      <td>False</td>
+      <td>0.191977</td>
     </tr>
     <tr>
       <th>2</th>
       <td>1</td>
       <td>3</td>
+      <td>4</td>
+      <td>-0.430727</td>
+      <td>-0.114185</td>
       <td>2</td>
-      <td>0.430727</td>
-      <td>-0.604585</td>
-      <td>3</td>
       <td>1</td>
-      <td>35</td>
+      <td>65</td>
       <td>True</td>
-      <td>-0.671860</td>
+      <td>0.921665</td>
     </tr>
     <tr>
       <th>3</th>
       <td>1</td>
       <td>4</td>
-      <td>6</td>
-      <td>0.430727</td>
-      <td>0.348756</td>
       <td>4</td>
-      <td>1</td>
-      <td>107</td>
+      <td>-0.430727</td>
+      <td>-0.114185</td>
+      <td>3</td>
+      <td>2</td>
+      <td>80</td>
       <td>True</td>
-      <td>-1.581872</td>
+      <td>0.438901</td>
     </tr>
     <tr>
       <th>4</th>
       <td>1</td>
       <td>5</td>
       <td>4</td>
-      <td>0.430727</td>
+      <td>-0.430727</td>
       <td>-0.114185</td>
-      <td>5</td>
-      <td>1</td>
-      <td>78</td>
-      <td>True</td>
-      <td>-0.340476</td>
+      <td>3</td>
+      <td>2</td>
+      <td>80</td>
+      <td>False</td>
+      <td>-1.845248</td>
     </tr>
     <tr>
       <th>...</th>
@@ -612,66 +604,66 @@ div.rendered_html tbody tr:hover {
       <th>49995</th>
       <td>10000</td>
       <td>1</td>
-      <td>4</td>
-      <td>0.430727</td>
-      <td>-0.114185</td>
+      <td>8</td>
+      <td>0.967422</td>
+      <td>0.908458</td>
       <td>1</td>
-      <td>2</td>
-      <td>77</td>
+      <td>5</td>
+      <td>160</td>
       <td>False</td>
-      <td>0.608855</td>
+      <td>0.733515</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>10000</td>
       <td>2</td>
-      <td>4</td>
-      <td>0.430727</td>
-      <td>-0.114185</td>
+      <td>8</td>
+      <td>0.967422</td>
+      <td>0.908458</td>
       <td>1</td>
-      <td>2</td>
-      <td>77</td>
+      <td>5</td>
+      <td>160</td>
       <td>False</td>
-      <td>1.941444</td>
+      <td>-1.197897</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>10000</td>
       <td>3</td>
-      <td>6</td>
-      <td>0.430727</td>
-      <td>0.348756</td>
-      <td>2</td>
-      <td>3</td>
-      <td>120</td>
-      <td>True</td>
-      <td>-0.267260</td>
+      <td>8</td>
+      <td>0.967422</td>
+      <td>0.908458</td>
+      <td>1</td>
+      <td>5</td>
+      <td>160</td>
+      <td>False</td>
+      <td>2.218761</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>10000</td>
       <td>4</td>
-      <td>6</td>
-      <td>0.430727</td>
-      <td>0.348756</td>
-      <td>2</td>
-      <td>3</td>
-      <td>120</td>
+      <td>8</td>
+      <td>0.967422</td>
+      <td>0.908458</td>
+      <td>1</td>
+      <td>5</td>
+      <td>160</td>
       <td>False</td>
-      <td>0.504194</td>
+      <td>1.925685</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>10000</td>
       <td>5</td>
-      <td>6</td>
-      <td>0.430727</td>
-      <td>0.348756</td>
-      <td>2</td>
-      <td>3</td>
-      <td>120</td>
+      <td>8</td>
+      <td>0.967422</td>
+      <td>0.908458</td>
+      <td>1</td>
+      <td>5</td>
+      <td>160</td>
       <td>False</td>
-      <td>0.014792</td>
+      <td>2.612456</td>
     </tr>
   </tbody>
 </table>
@@ -679,8 +671,8 @@ div.rendered_html tbody tr:hover {
 </div></div>
 </div>
 </div>
-<div class="section" id="Create-a-TwoWay-object-using-your-data">
-<h2>Create a TwoWay object using your data<a class="headerlink" href="#Create-a-TwoWay-object-using-your-data" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="Create-a-BipartiteData-object-using-your-data">
+<h2>Create a BipartiteData object using your data<a class="headerlink" href="#Create-a-BipartiteData-object-using-your-data" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
@@ -695,67 +687,26 @@ div.rendered_html tbody tr:hover {
     <span class="s1">&#39;comp&#39;</span><span class="p">:</span> <span class="s1">&#39;comp&#39;</span>   <span class="c1"># Specify the column name for the outcome variable</span>
 <span class="p">}</span>
 
-<span class="c1"># Create the TwoWay object that will do all the heavy lifting</span>
-<span class="n">tw_net</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">TwoWay</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">&#39;long&#39;</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="n">col_name_dict</span><span class="p">)</span>
+<span class="c1"># Create the BipartiteData object to prepare your data</span>
+<span class="n">b_net</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteData</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="n">col_name_dict</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 </div>
-<div class="section" id="Now-we-can-run-the-FE-estimator">
-<h2>Now we can run the FE estimator<a class="headerlink" href="#Now-we-can-run-the-FE-estimator" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput docutils container">
+</div>
+<div class="section" id="Clean-your-data">
+<h1>Clean your data<a class="headerlink" href="#Clean-your-data" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1">## Optional Parameters ##</span>
-<span class="n">fe_params</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Number of cores to use</span>
-    <span class="s1">&#39;batch&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Batch size to send in parallel</span>
-    <span class="s1">&#39;ndraw_pii&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="c1"># Number of draw to use in approximation for leverages</span>
-    <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of draws to use in approximation for traces</span>
-    <span class="s1">&#39;check&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Whether to compute the non-approximated estimates as well</span>
-    <span class="s1">&#39;hetero&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Whether to compute the heteroskedastic estimates</span>
-    <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_fe.json&#39;</span><span class="p">,</span> <span class="c1"># Filepath for fe results</span>
-    <span class="s1">&#39;con&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Computes the smallest eigen values, this is the filepath where these results are saved</span>
-    <span class="s1">&#39;logfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="c1"># Log output to a logfile</span>
-    <span class="s1">&#39;levfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="c1"># File to load precomputed leverages</span>
-    <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># Save data statistics only</span>
-<span class="p">}</span>
-
-<span class="c1"># Estimate the fixed effect decomposition</span>
-<span class="n">tw_net</span><span class="o">.</span><span class="n">fit_fe</span><span class="p">(</span><span class="n">user_fe</span><span class="o">=</span><span class="n">fe_params</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-100%|██████████| 5/5 [00:00&lt;00:00, 217.92it/s]
-</pre></div></div>
-</div>
-</div>
-<div class="section" id="We-can-also-run-the-CRE-estimator">
-<h2>We can also run the CRE estimator<a class="headerlink" href="#We-can-also-run-the-CRE-estimator" title="Permalink to this headline">¶</a></h2>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1">## Optional Parameters ##</span>
-<span class="n">cre_params</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Number of cores to use</span>
-    <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of draws to use in approximation for traces</span>
-    <span class="s1">&#39;ndp&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="c1"># Number of draw to use in approximation for leverages</span>
-    <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_cre.json&#39;</span><span class="p">,</span> <span class="c1"># Filepath for cre results</span>
-    <span class="s1">&#39;posterior&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Whether to compute the posterior variance</span>
-    <span class="s1">&#39;wobtw&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># Sets between variation to 0, pure RE when computing cre</span>
-<span class="p">}</span>
+<span></span><span class="c1"># Set nk, the number of firm types you would like</span>
+<span class="n">nk</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="c1">## Optional Parameters ##</span>
 <span class="n">KMeans_params</span> <span class="o">=</span> <span class="p">{</span> <span class="c1"># These parameters are specifically for the KMeans algorithm</span>
                   <span class="c1"># Read more at https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</span>
-    <span class="s1">&#39;n_clusters&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="s1">&#39;n_clusters&#39;</span><span class="p">:</span> <span class="n">nk</span><span class="p">,</span>
     <span class="s1">&#39;init&#39;</span><span class="p">:</span> <span class="s1">&#39;k-means++&#39;</span><span class="p">,</span>
     <span class="s1">&#39;n_init&#39;</span><span class="p">:</span> <span class="mi">500</span><span class="p">,</span>
     <span class="s1">&#39;max_iter&#39;</span><span class="p">:</span> <span class="mi">300</span><span class="p">,</span>
@@ -785,21 +736,237 @@ div.rendered_html tbody tr:hover {
     <span class="s1">&#39;user_KMeans&#39;</span><span class="p">:</span> <span class="n">KMeans_params</span>
 <span class="p">}</span>
 
-<span class="c1"># Estimate the cre model</span>
-<span class="n">tw_net</span><span class="o">.</span><span class="n">fit_cre</span><span class="p">(</span><span class="n">user_cre</span><span class="o">=</span><span class="n">cre_params</span><span class="p">,</span> <span class="n">user_cluster</span><span class="o">=</span><span class="n">cluster_params</span><span class="p">)</span>
+<span class="c1"># Prepare data</span>
+<span class="n">b_net</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
+<span class="n">b_net</span><span class="o">.</span><span class="n">long_to_es</span><span class="p">()</span>
+<span class="c1"># Cluster data</span>
+<span class="n">b_net</span><span class="o">.</span><span class="n">cluster</span><span class="p">(</span><span class="n">user_cluster</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;user_KMeans&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;n_clusters&#39;</span><span class="p">:</span> <span class="n">nk</span><span class="p">}})</span>
 </pre></div>
 </div>
 </div>
 </div>
-<div class="section" id="Finally,-we-can-investigate-the-results">
-<h2>Finally, we can investigate the results<a class="headerlink" href="#Finally,-we-can-investigate-the-results" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="Extract-jdata-and-sdata-from-your-BipartiteData">
+<h1>Extract jdata and sdata from your BipartiteData<a class="headerlink" href="#Extract-jdata-and-sdata-from-your-BipartiteData" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Get cross section</span>
+<span class="n">cs</span> <span class="o">=</span> <span class="n">b_net</span><span class="o">.</span><span class="n">get_cs</span><span class="p">()</span>
+<span class="c1"># Fix j1 and j2 to start at 0</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">mode</span><span class="o">.</span><span class="n">chained_assignment</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">cs</span><span class="p">[</span><span class="s1">&#39;j1&#39;</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
+<span class="n">cs</span><span class="p">[</span><span class="s1">&#39;j2&#39;</span><span class="p">]</span> <span class="o">-=</span> <span class="mi">1</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">options</span><span class="o">.</span><span class="n">mode</span><span class="o">.</span><span class="n">chained_assignment</span> <span class="o">=</span> <span class="s1">&#39;warn&#39;</span>
+<span class="c1"># Get jdata and sdata</span>
+<span class="n">jdata</span> <span class="o">=</span> <span class="n">cs</span><span class="p">[(</span><span class="n">cs</span><span class="p">[</span><span class="s1">&#39;m&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">cs</span><span class="p">[</span><span class="s1">&#39;cs&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)]</span>
+<span class="n">sdata</span> <span class="o">=</span> <span class="n">cs</span><span class="p">[(</span><span class="n">cs</span><span class="p">[</span><span class="s1">&#39;m&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">cs</span><span class="p">[</span><span class="s1">&#39;cs&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)]</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Initialize-and-run-BLMEstimator">
+<h1>Initialize and run BLMEstimator<a class="headerlink" href="#Initialize-and-run-BLMEstimator" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">display</span><span class="p">(</span><span class="n">tw_net</span><span class="o">.</span><span class="n">summary_fe</span><span class="p">())</span>
-<span class="n">display</span><span class="p">(</span><span class="n">tw_net</span><span class="o">.</span><span class="n">summary_cre</span><span class="p">())</span>
+<span></span><span class="c1"># Set nl, the number of worker types you would like</span>
+<span class="n">nl</span> <span class="o">=</span> <span class="mi">6</span>
+<span class="c1">## Optional Parameters ##</span>
+<span class="n">BLM_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;nl&#39;</span><span class="p">:</span> <span class="n">nl</span><span class="p">,</span> <span class="c1"># Number of worker types</span>
+    <span class="s1">&#39;nk&#39;</span><span class="p">:</span> <span class="n">nk</span><span class="p">,</span> <span class="c1"># Number of firm types</span>
+    <span class="s1">&#39;fixb&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)</span>
+    <span class="s1">&#39;stationary&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># Set A1 = A2</span>
+<span class="p">}</span>
+<span class="n">fit_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;maxiter&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Max number of iterations</span>
+    <span class="s1">&#39;update_a&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="c1"># If False, don&#39;t update A1 or A2</span>
+    <span class="s1">&#39;update_s&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="c1"># If False, don&#39;t update S1 or S2</span>
+    <span class="s1">&#39;return_qi&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># If True, return first qi matrix</span>
+    <span class="s1">&#39;cons_a&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s1">&#39;lin&#39;</span><span class="p">],</span> <span class="p">{</span><span class="s1">&#39;n_periods&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">}),</span> <span class="c1"># Constraints on A</span>
+    <span class="s1">&#39;cons_s&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s1">&#39;biggerthan&#39;</span><span class="p">],</span> <span class="p">{</span><span class="s1">&#39;gap_bigger&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;n_periods&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">})</span> <span class="c1"># Constraints on S</span>
+<span class="p">}</span>
+<span class="c1"># Initialize BLM estimator</span>
+<span class="n">BLM</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BLMEstimator</span><span class="p">(</span><span class="n">BLM_params</span><span class="p">)</span>
+<span class="c1"># Run BLM estimator</span>
+<span class="n">BLM</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">jdata</span><span class="o">=</span><span class="n">jdata</span><span class="p">,</span> <span class="n">sdata</span><span class="o">=</span><span class="n">sdata</span><span class="p">,</span> <span class="nb">iter</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">ncore</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">user_fit</span><span class="o">=</span><span class="n">fit_params</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Running constrained movers
+Generating parameters
+loop 0, liks 30.218359375057076
+loop 1, liks 67.3989586190527
+loop 2, liks 67.40635063263085
+loop 3, liks 67.4165405679269
+loop 4, liks 67.42917888156046
+Running unconstrained movers
+Using given parameters
+loop 0, liks 67.44411776363494
+loop 1, liks 67.46188459719222
+loop 2, liks 67.47998545242893
+loop 3, liks 67.49683220552113
+loop 4, liks 67.51169994867115
+Running constrained movers
+Generating parameters
+loop 0, liks 30.270691839232825
+loop 1, liks 67.39190524516901
+loop 2, liks 67.40120256264245
+loop 3, liks 67.41396130267192
+loop 4, liks 67.42973692694575
+Running unconstrained movers
+Using given parameters
+loop 0, liks 67.44749940943852
+loop 1, liks 67.46851469200482
+loop 2, liks 67.48629045819018
+loop 3, liks 67.50145698502727
+loop 4, liks 67.5141260053384
+Running constrained movers
+Generating parameters
+loop 0, liks 30.41503883631233
+loop 1, liks 67.39066041617879
+loop 2, liks 67.39658443187582
+loop 3, liks 67.40329713475991
+loop 4, liks 67.4121743579305
+Running unconstrained movers
+Using given parameters
+loop 0, liks 67.42390943144498
+loop 1, liks 67.44024039248646
+loop 2, liks 67.45781919769426
+loop 3, liks 67.4756296209491
+loop 4, liks 67.4917933848534
+Running constrained movers
+Generating parameters
+loop 0, liks 30.384971391500798
+loop 1, liks 67.38821704646213
+loop 2, liks 67.39126108577585
+loop 3, liks 67.39590827315114
+loop 4, liks 67.40143462150084
+Running unconstrained movers
+Using given parameters
+loop 0, liks 67.40867188591092
+loop 1, liks 67.41847764502313
+loop 2, liks 67.43084750792877
+loop 3, liks 67.44480210680805
+loop 4, liks 67.45900571304861
+Running constrained movers
+Generating parameters
+loop 0, liks 30.14403055538926
+loop 1, liks 67.36606379588274
+loop 2, liks 67.37937999571217
+loop 3, liks 67.39248749388987
+loop 4, liks 67.40831436198127
+Running unconstrained movers
+Using given parameters
+loop 0, liks 67.42586126825033
+loop 1, liks 67.4439144026178
+loop 2, liks 67.46159413294457
+loop 3, liks 67.47689361453845
+loop 4, liks 67.48955708460322
+Running constrained movers
+Generating parameters
+loop 0, liks 30.42935999143949
+loop 1, liks 67.41462500626142
+loop 2, liks 67.43060064801864
+loop 3, liks 67.447214870166
+loop 4, liks 67.46432063963516
+Running unconstrained movers
+Using given parameters
+loop 0, liks 67.48005932036426
+loop 1, liks 67.49671236915358
+loop 2, liks 67.50743603489005
+loop 3, liks 67.51472974447738
+loop 4, liks 67.51966966909107
+Running constrained movers
+Generating parameters
+loop 0, liks 30.345856898709624
+loop 1, liks 67.37963464166396
+loop 2, liks 67.38983889770321
+loop 3, liks 67.40201295121474
+loop 4, liks 67.41751750679913
+Running unconstrained movers
+Using given parameters
+loop 0, liks 67.43609473267108
+loop 1, liks 67.4574063096945
+loop 2, liks 67.47933123767022
+loop 3, liks 67.50043489228041
+loop 4, liks 67.51988226201763
+Running constrained movers
+Generating parameters
+loop 0, liks 30.322511835783686
+loop 1, liks 67.39605492421794
+loop 2, liks 67.4010619637916
+loop 3, liks 67.40927363365128
+loop 4, liks 67.41909307205795
+Running unconstrained movers
+Using given parameters
+loop 0, liks 67.42961148673848
+loop 1, liks 67.44351954630089
+loop 2, liks 67.45339767257042
+loop 3, liks 67.45992368245425
+loop 4, liks 67.46320863148364
+Running constrained movers
+Generating parameters
+loop 0, liks 30.145969846237428
+loop 1, liks 67.36721043021075
+loop 2, liks 67.36949770019656
+loop 3, liks 67.37164748660443
+loop 4, liks 67.37461986442639
+Running unconstrained movers
+Using given parameters
+loop 0, liks 67.37896733754427
+loop 1, liks 67.38569093831765
+loop 2, liks 67.39422752744163
+loop 3, liks 67.40519842909741
+loop 4, liks 67.41845262661221
+Running constrained movers
+Generating parameters
+loop 0, liks 30.3536937277648
+loop 1, liks 67.38513834329873
+loop 2, liks 67.39230104127397
+loop 3, liks 67.4010299462476
+loop 4, liks 67.41256102448237
+Running unconstrained movers
+Using given parameters
+loop 0, liks 67.42742585111876
+loop 1, liks 67.44610936862753
+loop 2, liks 67.46664227506113
+loop 3, liks 67.48794301047762
+loop 4, liks 67.50857603900073
+max_liks: 67.51988226201763
+Running stayers
+loop 0, liks 21.169306648645016
+loop 1, liks 46.14528018898912
+loop 2, liks 46.153605817711686
+loop 3, liks 46.15134158023668
+loop 4, liks 46.14035526366938
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Finally,-we-can-investigate-the-results">
+<h1>Finally, we can investigate the results<a class="headerlink" href="#Finally,-we-can-investigate-the-results" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;A1:&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">BLM</span><span class="o">.</span><span class="n">A1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;A2:&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">BLM</span><span class="o">.</span><span class="n">A2</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;S1:&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">BLM</span><span class="o">.</span><span class="n">S1</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;S2:&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">BLM</span><span class="o">.</span><span class="n">S2</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -808,11 +975,112 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;var_y&#39;: 1.9850874905837954,
- &#39;var_fe&#39;: 0.5877239062756846,
- &#39;cov_fe&#39;: 0.17524843068460458,
- &#39;var_ho&#39;: 0.5822717184260641,
- &#39;cov_ho&#39;: 0.1771904511905588}
+A1:
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+array([[-0.53295763, -0.80978886, -0.49480033, -1.38011816, -1.074124  ,
+        -0.79188372],
+       [ 1.33914708,  1.0282124 ,  1.39437845,  0.22460559,  0.77387847,
+         1.05412613],
+       [ 0.40564531,  0.13171075,  0.61489814, -0.62809604, -0.17698568,
+         0.19075934],
+       [ 2.21835329,  1.92377594,  2.25336956,  1.12714919,  1.67101083,
+         2.02885716],
+       [ 0.70922378,  0.51254119,  0.8371937 , -0.33932867,  0.23627682,
+         0.53441204],
+       [-0.20092191, -0.27117599, -0.14825091, -1.11996037, -0.65793066,
+        -0.28373386],
+       [ 1.78127403,  1.38009708,  1.76242337,  0.57327071,  1.10053876,
+         1.47259383],
+       [ 0.21127129, -0.01618626,  0.33730459, -0.85955676, -0.34447407,
+         0.01400774],
+       [-0.7238159 , -1.26501781, -1.12080842, -1.97343547, -1.57032924,
+        -1.22038656],
+       [ 1.16471975,  0.76099611,  1.07140956, -0.08389307,  0.45454247,
+         0.79296914]])
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+A2:
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+array([[-8.45395535e-01, -3.82848623e-01, -1.05799314e+00,
+        -1.40078732e+00, -6.70535294e-01, -6.71232864e-01],
+       [ 8.14685213e-01,  1.30137470e+00,  1.21940921e+00,
+         1.65707945e-01,  1.08249987e+00,  1.17839090e+00],
+       [ 3.90739812e-04,  2.78486620e-01,  6.63897485e-01,
+        -6.70137534e-01, -1.15619362e-02,  2.73148305e-01],
+       [ 2.07414170e+00,  1.81229887e+00,  2.27258932e+00,
+         1.19196960e+00,  1.66166956e+00,  2.09410797e+00],
+       [ 7.21989567e-01,  3.79517424e-01,  9.52448953e-01,
+        -2.96745564e-01,  1.50909635e-01,  5.45438116e-01],
+       [-1.47555903e-01, -5.25556654e-01,  3.59187555e-01,
+        -1.02368094e+00, -9.07727687e-01, -5.02436691e-01],
+       [ 1.97444354e+00,  1.19141712e+00,  1.75043433e+00,
+         5.36156057e-01,  1.00283818e+00,  1.21055280e+00],
+       [ 6.92447866e-01, -1.56341676e-02,  2.73156516e-01,
+        -7.32676446e-01, -4.43080725e-01, -4.52986690e-01],
+       [-1.43904909e-01, -1.25802341e+00, -9.03603733e-01,
+        -1.69546106e+00, -1.57589397e+00, -8.72109583e-01],
+       [ 1.53669062e+00,  6.89196721e-01,  1.08502394e+00,
+         1.19373527e-01,  1.96002890e-01,  8.13301472e-01]])
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+S1:
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+array([[1.1679172 , 0.80413269, 0.87375661, 0.74240759, 0.89447157,
+        1.00076143],
+       [0.94909727, 0.88398172, 0.86789392, 0.98305102, 0.93068299,
+        0.93505749],
+       [0.96944175, 0.89469752, 1.00412768, 0.86240097, 0.87201958,
+        0.91920204],
+       [0.9608749 , 0.94307186, 0.88373894, 0.87291135, 0.94045962,
+        0.90787711],
+       [0.8872984 , 0.85482774, 0.95192519, 0.89412739, 0.84707078,
+        0.90528755],
+       [1.12004615, 1.04739902, 0.93590677, 0.84920168, 0.91090938,
+        0.99363943],
+       [1.01073451, 0.92066133, 0.92009193, 0.91708267, 0.95253793,
+        0.91836802],
+       [0.9268142 , 0.92148819, 0.97385926, 0.87695215, 0.93486273,
+        0.95605649],
+       [1.0744111 , 0.90563456, 0.87571905, 0.87732243, 0.81690352,
+        0.91164962],
+       [1.00580484, 0.89553059, 0.79304674, 0.93129439, 0.80742514,
+        0.83595328]])
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+S2:
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -820,12 +1088,42 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;var_y&#39;: 1.9850874905837954,
- &#39;var_bw&#39;: 0.5845515792925647,
- &#39;cov_bw&#39;: 0.17582443706921494,
- &#39;var_tot&#39;: 0.5847032595847196,
- &#39;cov_tot&#39;: 0.17571711821397532}
+array([[0.93690686, 1.06381299, 0.81896065, 0.85201773, 0.97884109,
+        0.92446184],
+       [1.02902939, 0.91566569, 0.97821669, 0.83216162, 0.87879211,
+        0.93677752],
+       [0.82992163, 0.95698771, 0.98831419, 0.87319725, 0.90086339,
+        0.95903818],
+       [0.94969097, 0.90983187, 0.92293259, 0.96701386, 0.93271278,
+        0.93979178],
+       [0.90480257, 0.89026458, 0.89966509, 0.89251514, 0.90100503,
+        0.89104362],
+       [0.97888247, 0.88131896, 1.05441506, 0.89134181, 0.9067524 ,
+        0.89017353],
+       [0.87983762, 0.95188914, 0.8913769 , 0.8741808 , 0.94748445,
+        0.95911894],
+       [0.84283876, 0.91360155, 0.87424496, 0.85200397, 0.92883678,
+        0.97410372],
+       [0.73855666, 0.90138096, 0.952808  , 0.81924396, 1.01364679,
+        0.93590071],
+       [0.94372772, 0.85942538, 0.7461781 , 0.86611448, 0.93510599,
+        0.82213238]])
 </pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">BLM</span><span class="o">.</span><span class="n">plot_A1</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_15_0.png" src="../_images/notebooks_blm_example_15_0.png" />
 </div>
 </div>
 </div>
@@ -835,10 +1133,6 @@ div.rendered_html tbody tr:hover {
            
           </div>
           <footer>
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-        <a href="monte_carlo_example.html" class="btn btn-neutral float-right" title="Monte Carlo example" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-        <a href="../doc-python.html" class="btn btn-neutral float-left" title="Using from python" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-    </div>
 
   <hr/>
 

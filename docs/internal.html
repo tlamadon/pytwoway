@@ -3,9 +3,9 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
   <title>Python API &mdash; pytwoway 0.0.3 documentation</title>
   
@@ -16,7 +16,10 @@
 
   
   
+
   
+  
+
   
 
   
@@ -29,6 +32,7 @@
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
@@ -51,7 +55,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home" alt="Documentation Home"> pytwoway
+            <a href="index.html" class="icon icon-home"> pytwoway
           
 
           
@@ -154,6 +158,8 @@
 
 
 
+
+
 <div role="navigation" aria-label="breadcrumbs navigation">
 
   <ul class="wy-breadcrumbs">
@@ -165,7 +171,7 @@
     
       <li class="wy-breadcrumbs-aside">
         
-            
+          
             <a href="_sources/internal.rst.txt" rel="nofollow"> View page source</a>
           
         
@@ -232,21 +238,6 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">TwoWay</span></code>(data[, formatting, col_dict])</p></td>
-<td><p>Class of TwoWay, where TwoWay gives a network of firms and workers.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_cre</span></code>([user_cre, user_cluster])</p></td>
-<td><p>Fit the CRE estimator.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_fe</span></code>([user_fe])</p></td>
-<td><p>Fit the bias-corrected FE estimator.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">summary_cre</span></code>()</p></td>
-<td><p>Return summary results for CRE estimator.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">summary_fe</span></code>()</p></td>
-<td><p>Return summary results for FE estimator.</p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -258,12 +249,6 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CRESolver</span></code>(params)</p></td>
-<td><p>Uses multigrid and partialing out to solve two way Fixed Effect model.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>()</p></td>
-<td><p>Run CRE solver.</p></td>
-</tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">pd_to_np</span></code>(df, colr, colc, colv, nr, nc)</p></td>
 <td><p></p></td>
 </tr>
@@ -281,21 +266,6 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">FESolver</span></code>(params)</p></td>
-<td><p>Uses multigrid and partialing out to solve two way fixed effect model.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">construct_Q</span></code>()</p></td>
-<td><p>Generate columns in adata necessary to construct Q.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_1</span></code>()</p></td>
-<td><p>Run FE solver, part 1.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_2</span></code>()</p></td>
-<td><p>Run FE solver, part 2.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_fe_estimates</span></code>()</p></td>
-<td><p>Return estimated psi_hats linked to firm ids and alpha_hats linked to worker ids.</p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -307,24 +277,6 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BipartiteData</span></code>(data[, formatting, col_dict])</p></td>
-<td><p>Class of BipartiteData, where BipartiteData gives a bipartite network of firms and workers.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">clean_data</span></code>()</p></td>
-<td><p>Clean data.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">cluster</span></code>([user_cluster])</p></td>
-<td><p>Cluster data and assign a new column giving the cluster for each firm.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_cs</span></code>()</p></td>
-<td><p>Return event study data reformatted into cross section data.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">es_to_long</span></code>()</p></td>
-<td><p>Refactor event study data into long data.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">long_to_es</span></code>()</p></td>
-<td><p>Refactor long data into event study data.</p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -336,12 +288,6 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SimTwoWay</span></code>([sim_params])</p></td>
-<td><p>Class of SimTwoWay, where SimTwoWay simulates a network of firms and workers.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">sim_network</span></code>()</p></td>
-<td><p>Simulate panel data corresponding to the calibrated model.</p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -353,15 +299,6 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">TwoWayMonteCarlo</span></code>([sim_params])</p></td>
-<td><p>Class of TwoWayMonteCarlo, where TwoWayMonteCarlo runs a Monte Carlo estimate by simulating networks of firms and workers.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_monte_carlo</span></code>()</p></td>
-<td><p>Plot results from Monte Carlo simulations.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">twfe_monte_carlo</span></code>([N, ncore, fe_params, …])</p></td>
-<td><p>Purpose:</p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -373,25 +310,18 @@
            
           </div>
           <footer>
-  
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="class-twoway.html" class="btn btn-neutral float-right" title="TwoWay class" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="notebooks/monte_carlo_example.html" class="btn btn-neutral float-left" title="Monte Carlo example" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+        <a href="class-twoway.html" class="btn btn-neutral float-right" title="TwoWay class" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="notebooks/monte_carlo_example.html" class="btn btn-neutral float-left" title="Monte Carlo example" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
-  
 
   <hr/>
 
   <div role="contentinfo">
     <p>
-        
-        &copy; Copyright 2020, Thibaut Lamadon
+        &#169; Copyright 2020, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Jan 26, 2021.
+        Last updated on Feb 23, 2021.
       </span>
 
     </p>
@@ -399,14 +329,13 @@
     
     
     
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
     
     provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
 </footer>
-
         </div>
       </div>
 
