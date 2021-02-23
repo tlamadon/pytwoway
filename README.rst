@@ -8,7 +8,7 @@ pytwoway
     :target: https://travis-ci.com/tlamadon/pytwoway
 
 .. image:: https://img.shields.io/badge/doc-latest-blue
-    :target: https://github.com/tlamadon/pytwoway
+    :target: https://tlamadon.github.io/pytwoway/
 
 `pytwoway` is the Python package associated with the following paper:
 
