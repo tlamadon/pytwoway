@@ -1,0 +1,1152 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>BLM example &mdash; pytwoway 0.0.3 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> pytwoway
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">User documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-cli.html">From terminal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-python.html">From python</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Notebook examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pytwoway_example.html">Simple</a></li>
+<li class="toctree-l1"><a class="reference internal" href="monte_carlo_example.html">Monte Carlo</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Under the hood</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../internal.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-twoway.html">TwoWay</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-creestimator.html">CREEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-feestimator.html">FEEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-bipartitedata.html">BipartiteData</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-simtwoway.html">SimTwoWay</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-twowaymontecarlo.html">TwoWayMonteCarlo</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">pytwoway</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>BLM example</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/notebooks/blm_example.ipynb.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput.container,
+div.nbinput.container div.prompt,
+div.nbinput.container div.input_area,
+div.nbinput.container div[class*=highlight],
+div.nbinput.container div[class*=highlight] pre,
+div.nboutput.container,
+div.nboutput.container div.prompt,
+div.nboutput.container div.output_area,
+div.nboutput.container div[class*=highlight],
+div.nboutput.container div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput.container div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput.container,
+div.nboutput.container {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput.container,
+    div.nboutput.container {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput.container {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast.container {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput.container div.prompt pre {
+    color: #307FC1;
+}
+
+/* output prompt */
+div.nboutput.container div.prompt pre {
+    color: #BF5B3D;
+}
+
+/* all prompts */
+div.nbinput.container div.prompt,
+div.nboutput.container div.prompt {
+    width: 4.5ex;
+    padding-top: 5px;
+    position: relative;
+    user-select: none;
+}
+
+div.nbinput.container div.prompt > div,
+div.nboutput.container div.prompt > div {
+    position: absolute;
+    right: 0;
+    margin-right: 0.3ex;
+}
+
+@media (max-width: 540px) {
+    div.nbinput.container div.prompt,
+    div.nboutput.container div.prompt {
+        width: unset;
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput.container div.prompt.empty {
+        padding: 0;
+    }
+
+    div.nbinput.container div.prompt > div,
+    div.nboutput.container div.prompt > div {
+        position: unset;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput.container div.prompt pre,
+div.nboutput.container div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput.container div.input_area,
+div.nboutput.container div.output_area {
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput.container div.input_area,
+    div.nboutput.container div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput.container div.input_area {
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+    background: #f5f5f5;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput.container div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.imgmath center alignment in output cells */
+div.nboutput.container div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput.container div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+
+div.nbinput.container div.input_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight].math,
+div.nboutput.container div.output_area.rendered_html,
+div.nboutput.container div.output_area > div.output_javascript,
+div.nboutput.container div.output_area:not(.rendered_html) > img{
+    padding: 5px;
+}
+
+/* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
+div.nbinput.container div.input_area > div[class^='highlight'],
+div.nboutput.container div.output_area > div[class^='highlight']{
+    overflow-y: hidden;
+}
+
+/* hide copybtn icon on prompts (needed for 'sphinx_copybutton') */
+.prompt a.copybtn {
+    display: none;
+}
+
+/* Some additional styling taken form the Jupyter notebook CSS */
+div.rendered_html table {
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+div.rendered_html thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+div.rendered_html tr,
+div.rendered_html th,
+div.rendered_html td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: normal;
+  white-space: normal;
+  max-width: none;
+  border: none;
+}
+div.rendered_html th {
+  font-weight: bold;
+}
+div.rendered_html tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+div.rendered_html tbody tr:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<div class="section" id="BLM-example">
+<h1>BLM example<a class="headerlink" href="#BLM-example" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
+<span class="o">%</span><span class="k">autoreload</span> 2
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Add pytwoway to system path, do not run this</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;../../..&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Import the pytwoway package</span>
+<span class="c1"># (Make sure you have installed it using pip install pytwoway)</span>
+<span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="Simulate-some-data">
+<h2>Simulate some data<a class="headerlink" href="#Simulate-some-data" title="Permalink to this headline">¶</a></h2>
+<p>The package contains functions to simulate data. We use this here to keep things simple.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># For the example, we simulate data</span>
+<span class="n">sim_model</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BLMModel</span><span class="p">({</span>
+    <span class="s1">&#39;nl&#39;</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span class="c1"># Number of worker types</span>
+    <span class="s1">&#39;nk&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="c1"># Number of firm types</span>
+    <span class="s1">&#39;simulation&#39;</span><span class="p">:</span> <span class="kc">True</span> <span class="c1"># Simulating data</span>
+<span class="p">})</span>
+<span class="n">sim_data</span> <span class="o">=</span> <span class="n">sim_model</span><span class="o">.</span><span class="n">_m2_mixt_simulate_sim</span><span class="p">()</span>
+<span class="n">display</span><span class="p">(</span><span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;jdata&#39;</span><span class="p">])</span>
+<span class="n">display</span><span class="p">(</span><span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;sdata&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>l</th>
+      <th>y1</th>
+      <th>y2</th>
+      <th>j1</th>
+      <th>j2</th>
+      <th>j1true</th>
+      <th>j2true</th>
+      <th>f1</th>
+      <th>f2</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2</td>
+      <td>0.369317</td>
+      <td>0.428335</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>F6</td>
+      <td>F5</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>0.179391</td>
+      <td>1.068883</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>F5</td>
+      <td>F6</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0</td>
+      <td>-0.293172</td>
+      <td>0.401046</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>F1</td>
+      <td>F9</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>5</td>
+      <td>0.198402</td>
+      <td>0.751647</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>F5</td>
+      <td>F4</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>4</td>
+      <td>0.875508</td>
+      <td>0.218473</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>F4</td>
+      <td>F7</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>995</th>
+      <td>3</td>
+      <td>1.636969</td>
+      <td>1.676450</td>
+      <td>9</td>
+      <td>9</td>
+      <td>9</td>
+      <td>9</td>
+      <td>F2</td>
+      <td>F1</td>
+    </tr>
+    <tr>
+      <th>996</th>
+      <td>4</td>
+      <td>1.683084</td>
+      <td>1.800596</td>
+      <td>9</td>
+      <td>9</td>
+      <td>9</td>
+      <td>9</td>
+      <td>F10</td>
+      <td>F2</td>
+    </tr>
+    <tr>
+      <th>997</th>
+      <td>1</td>
+      <td>1.323135</td>
+      <td>1.462752</td>
+      <td>9</td>
+      <td>9</td>
+      <td>9</td>
+      <td>9</td>
+      <td>F1</td>
+      <td>F4</td>
+    </tr>
+    <tr>
+      <th>998</th>
+      <td>2</td>
+      <td>2.249883</td>
+      <td>2.281154</td>
+      <td>9</td>
+      <td>9</td>
+      <td>9</td>
+      <td>9</td>
+      <td>F3</td>
+      <td>F4</td>
+    </tr>
+    <tr>
+      <th>999</th>
+      <td>2</td>
+      <td>2.015486</td>
+      <td>2.414283</td>
+      <td>9</td>
+      <td>9</td>
+      <td>9</td>
+      <td>9</td>
+      <td>F4</td>
+      <td>F4</td>
+    </tr>
+  </tbody>
+</table>
+<p>1000 rows × 9 columns</p>
+</div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>k</th>
+      <th>y1</th>
+      <th>y2</th>
+      <th>j1</th>
+      <th>j2</th>
+      <th>x</th>
+      <th>f1</th>
+      <th>j1true</th>
+      <th>f2</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2</td>
+      <td>-0.233565</td>
+      <td>0.268999</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>F0</td>
+      <td>0</td>
+      <td>F0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>-0.668797</td>
+      <td>0.392462</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>F0</td>
+      <td>0</td>
+      <td>F0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1</td>
+      <td>0.129065</td>
+      <td>1.003138</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>F0</td>
+      <td>0</td>
+      <td>F0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>5</td>
+      <td>0.786237</td>
+      <td>0.204564</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>F0</td>
+      <td>0</td>
+      <td>F0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>3</td>
+      <td>-0.110720</td>
+      <td>0.416532</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>F1</td>
+      <td>0</td>
+      <td>F1</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>95</th>
+      <td>2</td>
+      <td>1.372111</td>
+      <td>2.011265</td>
+      <td>9</td>
+      <td>9</td>
+      <td>1</td>
+      <td>F9</td>
+      <td>9</td>
+      <td>F9</td>
+    </tr>
+    <tr>
+      <th>96</th>
+      <td>4</td>
+      <td>0.892515</td>
+      <td>2.707899</td>
+      <td>9</td>
+      <td>9</td>
+      <td>1</td>
+      <td>F9</td>
+      <td>9</td>
+      <td>F9</td>
+    </tr>
+    <tr>
+      <th>97</th>
+      <td>1</td>
+      <td>1.957556</td>
+      <td>1.489878</td>
+      <td>9</td>
+      <td>9</td>
+      <td>1</td>
+      <td>F10</td>
+      <td>9</td>
+      <td>F10</td>
+    </tr>
+    <tr>
+      <th>98</th>
+      <td>4</td>
+      <td>1.818067</td>
+      <td>2.403558</td>
+      <td>9</td>
+      <td>9</td>
+      <td>1</td>
+      <td>F9</td>
+      <td>9</td>
+      <td>F9</td>
+    </tr>
+    <tr>
+      <th>99</th>
+      <td>2</td>
+      <td>1.568831</td>
+      <td>1.543977</td>
+      <td>9</td>
+      <td>9</td>
+      <td>1</td>
+      <td>F9</td>
+      <td>9</td>
+      <td>F9</td>
+    </tr>
+  </tbody>
+</table>
+<p>100 rows × 9 columns</p>
+</div></div>
+</div>
+</div>
+</div>
+<div class="section" id="Initialize-and-run-BLMEstimator">
+<h1>Initialize and run BLMEstimator<a class="headerlink" href="#Initialize-and-run-BLMEstimator" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[54]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1">## Optional Parameters ##</span>
+<span class="n">fit_params</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># Class parameters</span>
+    <span class="s1">&#39;nl&#39;</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span class="c1"># Number of worker types</span>
+    <span class="s1">&#39;nk&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="c1"># Number of firm types</span>
+    <span class="s1">&#39;fixb&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)</span>
+    <span class="s1">&#39;stationary&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Set A1 = A2</span>
+    <span class="s1">&#39;simulation&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># If True, using model to simulate data</span>
+    <span class="c1"># fit_movers() and fit_stayers() parameters</span>
+    <span class="s1">&#39;maxiters&#39;</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span> <span class="c1"># Max number of iterations</span>
+    <span class="c1"># fit_movers() parameters</span>
+    <span class="s1">&#39;update_a&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="c1"># If False, do not update A1 or A2</span>
+    <span class="s1">&#39;update_s&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="c1"># If False, do not update S1 or S2</span>
+    <span class="s1">&#39;return_qi&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># If True, return qi matrix after first loop</span>
+    <span class="s1">&#39;cons_a&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s1">&#39;lin&#39;</span><span class="p">],</span> <span class="p">{</span><span class="s1">&#39;n_periods&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">}),</span> <span class="c1"># Constraints on A1 and A2</span>
+    <span class="s1">&#39;cons_s&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s1">&#39;biggerthan&#39;</span><span class="p">],</span> <span class="p">{</span><span class="s1">&#39;gap_bigger&#39;</span><span class="p">:</span> <span class="mf">1e-4</span><span class="p">,</span> <span class="s1">&#39;n_periods&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">}),</span> <span class="c1"># Constraints on S1 and S2</span>
+    <span class="c1"># fit_stayers() parameters</span>
+    <span class="s1">&#39;return_qi&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># If True, return qi matrix after first loop</span>
+<span class="p">}</span>
+<span class="c1"># Initialize BLM estimator</span>
+<span class="n">BLM</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BLMEstimator</span><span class="p">()</span>
+<span class="c1"># Fit BLM estimator</span>
+<span class="n">BLM</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">jdata</span><span class="o">=</span><span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;jdata&#39;</span><span class="p">],</span> <span class="n">sdata</span><span class="o">=</span><span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;sdata&#39;</span><span class="p">],</span> <span class="nb">iter</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">ncore</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">user_params</span><span class="o">=</span><span class="n">fit_params</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Running fixm movers
+loop 0, liks 9.653297942998213
+loop 1, liks 25.298901094479653
+loop 2, liks 21.90227818405526
+loop 3, liks 17.949463608949912
+loop 4, liks 14.02561449355989
+loop 5, liks 10.317676731298711
+loop 6, liks 6.902956863462586
+loop 7, liks 3.826145701568697
+loop 8, liks 1.3459336396730102
+loop 9, liks 0.4198643424471795
+loop 10, liks 0.28803266257660365
+loop 11, liks 0.13077099111525836
+loop 12, liks -0.2779578660144324
+loop 13, liks -1.0430892205179854
+loop 14, liks -2.250806875588659
+loop 15, liks -3.9067522221970012
+loop 16, liks -5.901764371734204
+loop 17, liks -8.14459474811296
+loop 18, liks -10.586280543777017
+loop 19, liks -13.232650536949052
+loop 20, liks -16.17118372360156
+loop 21, liks -19.267164665958898
+loop 22, liks -22.367772504701527
+loop 23, liks -25.4391063346103
+loop 24, liks -28.455065294006175
+loop 25, liks -31.38479591691527
+loop 26, liks -34.202466662461816
+loop 27, liks -36.9027270455864
+loop 28, liks -39.50500432413661
+loop 29, liks -42.04030788797272
+loop 30, liks -44.535064584298944
+loop 31, liks -47.00555945819618
+loop 32, liks -49.46024321866108
+loop 33, liks -51.90270759317032
+loop 34, liks -54.32524651352055
+loop 35, liks -56.73931990147211
+loop 36, liks -59.138723254198524
+loop 37, liks -61.53277298333228
+loop 38, liks -63.93670353747328
+loop 39, liks -66.35310941385548
+loop 40, liks -68.77668344554749
+loop 41, liks -71.20338621137375
+loop 42, liks -73.63129425302395
+loop 43, liks -76.05942712126676
+loop 44, liks -78.48716504103493
+loop 45, liks -80.91405789501476
+loop 46, liks -83.33974471757759
+loop 47, liks -85.76390064001441
+loop 48, liks -88.18619712902654
+loop 49, liks -90.60627208539086
+loop 50, liks -93.02370660750984
+loop 51, liks -95.43800571527984
+loop 52, liks -97.8485815668825
+loop 53, liks -100.25473912220332
+loop 54, liks -102.65566557866816
+loop 55, liks -105.05042616176733
+loop 56, liks -107.43796987904147
+loop 57, liks -109.8171493755805
+loop 58, liks -112.18675863272976
+loop 59, liks -114.54559045465653
+loop 60, liks -116.89251222428845
+loop 61, liks -119.22655352792012
+loop 62, liks -121.54699403515444
+loop 63, liks -123.8534365903638
+loop 64, liks -126.14585089612642
+loop 65, liks -128.4245779958169
+loop 66, liks -130.6902937971769
+loop 67, liks -132.94393836462757
+loop 68, liks -135.18662344948766
+loop 69, liks -137.41953189530892
+loop 70, liks -139.64381947612114
+loop 71, liks -141.86052449437545
+loop 72, liks -144.07048631674647
+loop 73, liks -146.27427555086444
+loop 74, liks -148.47215286140292
+loop 75, liks -150.66410822563253
+loop 76, liks -152.85007735986386
+loop 77, liks -155.03040853294877
+loop 78, liks -157.2064115296408
+loop 79, liks -159.38044187554402
+loop 80, liks -161.55512226827426
+loop 81, liks -163.73224872945394
+loop 82, liks -165.91235327578224
+loop 83, liks -168.09506445682797
+loop 84, liks -170.27968386433903
+loop 85, liks -172.4655555925479
+loop 86, liks -174.65219361479154
+loop 87, liks -176.83927913716735
+loop 88, liks -179.02661762295205
+loop 89, liks -181.21409586855083
+loop 90, liks -183.4016502864249
+loop 91, liks -185.58924620165837
+loop 92, liks -187.7768651692537
+loop 93, liks -189.96449747284996
+loop 94, liks -192.15213776834133
+loop 95, liks -194.33978256228784
+loop 96, liks -196.52742872419265
+loop 97, liks -198.7150725532571
+loop 98, liks -200.9027091121116
+loop 99, liks -203.09033164997362
+Running constrained movers
+loop 0, liks -205.27793099794016
+loop 1, liks -198.30769455842713
+loop 2, liks -235.3122777507596
+loop 3, liks -232.76352389201926
+loop 4, liks -221.93410524733875
+loop 5, liks -207.8399084561479
+loop 6, liks -193.04727370518273
+loop 7, liks -177.5462536894115
+loop 8, liks -162.77170839499058
+loop 9, liks -148.28646676444612
+loop 10, liks -132.69000445143575
+loop 11, liks -117.11279848986385
+loop 12, liks -101.47640130353803
+loop 13, liks -86.04416492636884
+loop 14, liks -70.25793781048331
+loop 15, liks -54.683864610946344
+loop 16, liks -39.05029699657624
+loop 17, liks -23.51604413107043
+loop 18, liks -7.876088479792574
+loop 19, liks 7.756826703468641
+loop 20, liks 23.358970629756328
+loop 21, liks 35.07144597706991
+loop 22, liks 39.11308860035511
+loop 23, liks 39.35016425206876
+loop 24, liks 39.4278172818321
+loop 25, liks 39.452314912062114
+loop 26, liks 39.57096642414733
+loop 27, liks 39.23107878112279
+loop 28, liks 39.264603969546386
+loop 29, liks 39.37757046999086
+loop 30, liks 44.32077244773344
+loop 31, liks 41.10473857106091
+loop 32, liks 37.71980308864429
+loop 33, liks 40.73410170725134
+loop 34, liks 38.4842528440093
+loop 35, liks 44.15447771157574
+loop 36, liks 40.72720484036408
+loop 37, liks 40.440380850410484
+loop 38, liks 40.86355145713076
+loop 39, liks 40.4752654674446
+loop 40, liks 40.42899026194174
+loop 41, liks 40.43472259355578
+loop 42, liks 38.7539042912438
+loop 43, liks 38.764267219218944
+loop 44, liks 38.76380261632776
+loop 45, liks 38.76010138637482
+loop 46, liks 38.78846143797439
+loop 47, liks 36.77351202339284
+loop 48, liks 37.92674696381785
+loop 49, liks 37.873658676971004
+loop 50, liks 36.5529195796432
+loop 51, liks 37.91553292768282
+loop 52, liks 36.751858366704894
+loop 53, liks 37.79589047404433
+loop 54, liks 37.56568178940062
+loop 55, liks 36.12242488623251
+loop 56, liks 36.308202412213035
+loop 57, liks 34.94436184730899
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">ValueError</span>                                Traceback (most recent call last)
+<span class="ansi-green-fg">&lt;ipython-input-54-076033861ba0&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span>
+<span class="ansi-green-intense-fg ansi-bold">     21</span> BLM <span class="ansi-blue-fg">=</span> tw<span class="ansi-blue-fg">.</span>BLMEstimator<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">     22</span> <span class="ansi-red-fg"># Fit BLM estimator</span>
+<span class="ansi-green-fg">---&gt; 23</span><span class="ansi-red-fg"> </span>BLM<span class="ansi-blue-fg">.</span>fit<span class="ansi-blue-fg">(</span>jdata<span class="ansi-blue-fg">=</span>sim_data<span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">&#39;jdata&#39;</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span> sdata<span class="ansi-blue-fg">=</span>sim_data<span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">&#39;sdata&#39;</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span> iter<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">10</span><span class="ansi-blue-fg">,</span> ncore<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">,</span> user_params<span class="ansi-blue-fg">=</span>fit_params<span class="ansi-blue-fg">)</span>
+
+<span class="ansi-green-fg">~/Desktop/pytwoway/pytwoway/blm.py</span> in <span class="ansi-cyan-fg">fit</span><span class="ansi-blue-fg">(self, jdata, sdata, iter, ncore, user_params)</span>
+<span class="ansi-green-intense-fg ansi-bold">    693</span>         best_model <span class="ansi-blue-fg">=</span> <span class="ansi-green-fg">None</span>
+<span class="ansi-green-intense-fg ansi-bold">    694</span>
+<span class="ansi-green-fg">--&gt; 695</span><span class="ansi-red-fg">         </span><span class="ansi-green-fg">for</span> model <span class="ansi-green-fg">in</span> sim_model_lst<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    696</span>             <span class="ansi-green-fg">if</span> model<span class="ansi-blue-fg">.</span>liks1 <span class="ansi-blue-fg">&gt;</span> max_liks<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    697</span>                 max_liks <span class="ansi-blue-fg">=</span> model<span class="ansi-blue-fg">.</span>liks1
+
+<span class="ansi-green-fg">~/Desktop/pytwoway/pytwoway/blm.py</span> in <span class="ansi-cyan-fg">_sim_model</span><span class="ansi-blue-fg">(self, jdata, params)</span>
+<span class="ansi-green-intense-fg ansi-bold">    675</span>         &#39;&#39;&#39;
+<span class="ansi-green-intense-fg ansi-bold">    676</span>         model <span class="ansi-blue-fg">=</span> BLMModel<span class="ansi-blue-fg">(</span>params<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">--&gt; 677</span><span class="ansi-red-fg">         </span>model<span class="ansi-blue-fg">.</span>fit_movers_cstr_uncstr<span class="ansi-blue-fg">(</span>jdata<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    678</span>         <span class="ansi-green-fg">return</span> model
+<span class="ansi-green-intense-fg ansi-bold">    679</span>
+
+<span class="ansi-green-fg">~/Desktop/pytwoway/pytwoway/blm.py</span> in <span class="ansi-cyan-fg">fit_movers_cstr_uncstr</span><span class="ansi-blue-fg">(self, jdata)</span>
+<span class="ansi-green-intense-fg ansi-bold">    518</span>         self<span class="ansi-blue-fg">.</span>params<span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">&#39;cons_a&#39;</span><span class="ansi-blue-fg">]</span> <span class="ansi-blue-fg">=</span> <span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">&#39;lin&#39;</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">{</span><span class="ansi-blue-fg">&#39;n_periods&#39;</span><span class="ansi-blue-fg">:</span> <span class="ansi-cyan-fg">2</span><span class="ansi-blue-fg">}</span><span class="ansi-blue-fg">)</span> <span class="ansi-red-fg"># Set constraints</span>
+<span class="ansi-green-intense-fg ansi-bold">    519</span>         print<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">&#39;Running constrained movers&#39;</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">--&gt; 520</span><span class="ansi-red-fg">         </span>self<span class="ansi-blue-fg">.</span>fit_movers<span class="ansi-blue-fg">(</span>jdata<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    521</span>         <span class="ansi-red-fg">##### Loop 3 #####</span>
+<span class="ansi-green-intense-fg ansi-bold">    522</span>         self<span class="ansi-blue-fg">.</span>params<span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">&#39;cons_a&#39;</span><span class="ansi-blue-fg">]</span> <span class="ansi-blue-fg">=</span> <span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span> <span class="ansi-red-fg"># Remove constraints</span>
+
+<span class="ansi-green-fg">~/Desktop/pytwoway/pytwoway/blm.py</span> in <span class="ansi-cyan-fg">fit_movers</span><span class="ansi-blue-fg">(self, jdata)</span>
+<span class="ansi-green-intense-fg ansi-bold">    427</span>             XwX <span class="ansi-blue-fg">=</span> np<span class="ansi-blue-fg">.</span>diag<span class="ansi-blue-fg">(</span>XwXd<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    428</span>             <span class="ansi-green-fg">if</span> params<span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">&#39;update_a&#39;</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 429</span><span class="ansi-red-fg">                 </span>cons_a<span class="ansi-blue-fg">.</span>solve<span class="ansi-blue-fg">(</span>XwX<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">-</span> XwY<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    430</span>                 res_a <span class="ansi-blue-fg">=</span> cons_a<span class="ansi-blue-fg">.</span>res
+<span class="ansi-green-intense-fg ansi-bold">    431</span>                 A1 <span class="ansi-blue-fg">=</span> np<span class="ansi-blue-fg">.</span>reshape<span class="ansi-blue-fg">(</span>res_a<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">(</span><span class="ansi-cyan-fg">2</span><span class="ansi-blue-fg">,</span> nl<span class="ansi-blue-fg">,</span> nk<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">[</span><span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">:</span><span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">:</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">.</span>T
+
+<span class="ansi-green-fg">~/Desktop/pytwoway/pytwoway/blm.py</span> in <span class="ansi-cyan-fg">solve</span><span class="ansi-blue-fg">(self, P, q)</span>
+<span class="ansi-green-intense-fg ansi-bold">    266</span>             self<span class="ansi-blue-fg">.</span>res <span class="ansi-blue-fg">=</span> solve_qp<span class="ansi-blue-fg">(</span>P<span class="ansi-blue-fg">=</span>P<span class="ansi-blue-fg">,</span> q<span class="ansi-blue-fg">=</span>q<span class="ansi-blue-fg">,</span> G<span class="ansi-blue-fg">=</span>self<span class="ansi-blue-fg">.</span>G<span class="ansi-blue-fg">,</span> h<span class="ansi-blue-fg">=</span>self<span class="ansi-blue-fg">.</span>h<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    267</span>         <span class="ansi-green-fg">elif</span> len<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>A<span class="ansi-blue-fg">)</span> <span class="ansi-blue-fg">&gt;</span> <span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 268</span><span class="ansi-red-fg">             </span>self<span class="ansi-blue-fg">.</span>res <span class="ansi-blue-fg">=</span> solve_qp<span class="ansi-blue-fg">(</span>P<span class="ansi-blue-fg">=</span>P<span class="ansi-blue-fg">,</span> q<span class="ansi-blue-fg">=</span>q<span class="ansi-blue-fg">,</span> A<span class="ansi-blue-fg">=</span>self<span class="ansi-blue-fg">.</span>A<span class="ansi-blue-fg">,</span> b<span class="ansi-blue-fg">=</span>self<span class="ansi-blue-fg">.</span>b<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    269</span>         <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">    270</span>             self<span class="ansi-blue-fg">.</span>res <span class="ansi-blue-fg">=</span> solve_qp<span class="ansi-blue-fg">(</span>P<span class="ansi-blue-fg">=</span>P<span class="ansi-blue-fg">,</span> q<span class="ansi-blue-fg">=</span>q<span class="ansi-blue-fg">)</span>
+
+<span class="ansi-green-fg">~/opt/anaconda3/envs/twfe-env/lib/python3.7/site-packages/qpsolvers/__init__.py</span> in <span class="ansi-cyan-fg">solve_qp</span><span class="ansi-blue-fg">(P, q, G, h, A, b, lb, ub, solver, initvals, sym_proj, verbose, **kwargs)</span>
+<span class="ansi-green-intense-fg ansi-bold">    260</span>         <span class="ansi-green-fg">return</span> qpoases_solve_qp<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">**</span>kwargs<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    261</span>     <span class="ansi-green-fg">elif</span> solver <span class="ansi-blue-fg">==</span> <span class="ansi-blue-fg">&#39;quadprog&#39;</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 262</span><span class="ansi-red-fg">         </span><span class="ansi-green-fg">return</span> quadprog_solve_qp<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">**</span>kwargs<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    263</span>     <span class="ansi-green-fg">raise</span> Exception<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">&#34;solver &#39;%s&#39; not recognized&#34;</span> <span class="ansi-blue-fg">%</span> solver<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-intense-fg ansi-bold">    264</span>
+
+<span class="ansi-green-fg">~/opt/anaconda3/envs/twfe-env/lib/python3.7/site-packages/qpsolvers/quadprog_.py</span> in <span class="ansi-cyan-fg">quadprog_solve_qp</span><span class="ansi-blue-fg">(P, q, G, h, A, b, initvals, verbose)</span>
+<span class="ansi-green-intense-fg ansi-bold">     86</span>         meq <span class="ansi-blue-fg">=</span> <span class="ansi-cyan-fg">0</span>
+<span class="ansi-green-intense-fg ansi-bold">     87</span>     <span class="ansi-green-fg">try</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">---&gt; 88</span><span class="ansi-red-fg">         </span><span class="ansi-green-fg">return</span> solve_qp<span class="ansi-blue-fg">(</span>qp_G<span class="ansi-blue-fg">,</span> qp_a<span class="ansi-blue-fg">,</span> qp_C<span class="ansi-blue-fg">,</span> qp_b<span class="ansi-blue-fg">,</span> meq<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">[</span><span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">]</span>
+<span class="ansi-green-intense-fg ansi-bold">     89</span>     <span class="ansi-green-fg">except</span> ValueError <span class="ansi-green-fg">as</span> e<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-intense-fg ansi-bold">     90</span>         <span class="ansi-green-fg">if</span> <span class="ansi-blue-fg">&#34;matrix G is not positive definite&#34;</span> <span class="ansi-green-fg">in</span> str<span class="ansi-blue-fg">(</span>e<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">quadprog/quadprog.pyx</span> in <span class="ansi-cyan-fg">quadprog.solve_qp</span><span class="ansi-blue-fg">()</span>
+
+<span class="ansi-red-fg">ValueError</span>: constraints are inconsistent, no solution
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Finally,-we-can-investigate-the-results">
+<h1>Finally, we can investigate the results<a class="headerlink" href="#Finally,-we-can-investigate-the-results" title="Permalink to this headline">¶</a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">BLM</span><span class="o">.</span><span class="n">plot_A1</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Thibaut Lamadon
+      <span class="lastupdated">
+        Last updated on Feb 25, 2021.
+      </span>
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
