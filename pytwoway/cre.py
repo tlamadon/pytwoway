@@ -48,7 +48,7 @@ def pd_to_np(df, colr, colc, colv, nr, nc):
     return(A)
     # pd_to_np(df, 'i', 'j', 'v', 3, 3)
 
-class CRESolver:
+class CREEstimator:
     '''
     Uses multigrid and partialing out to solve two way Fixed Effect model.
     '''

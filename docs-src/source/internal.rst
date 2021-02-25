@@ -13,9 +13,9 @@ The main pytwoway API is split into six classes. pytwoway is canonically importe
 
 * ``pytwoway.TwoWay``: Class for formatting data and running CRE and FE estimators.
 
-* ``pytwoway.CRESolver``: Class for CRE estimator.
+* ``pytwoway.CREEstimator``: Class for CRE estimator.
 
-* ``pytwoway.FESolver``: Class for FE estimators.
+* ``pytwoway.FEEstimator``: Class for FE estimators.
 
 * ``pytwoway.BipartiteData``: Class for formatting bipartite networks (usually of firms and workers).
 
@@ -37,26 +37,26 @@ Modules and Methods
    ~pytwoway.TwoWay.summary_cre
    ~pytwoway.TwoWay.summary_fe
 
-``pytwoway.CRESolver``
+``pytwoway.CREEstimator``
 ~~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
 
-   ~pytwoway.CRESolver
-   ~pytwoway.CRESolver.fit
+   ~pytwoway.CREEstimator
+   ~pytwoway.CREEstimator.fit
    ~pytwoway.cre.pd_to_np
    ~pytwoway.cre.pipe_qcov
 
-``pytwoway.FESolver``
+``pytwoway.FEEstimator``
 ~~~~~~~~~~~~~~~~~~~~~
 
 .. autosummary::
 
-   ~pytwoway.FESolver
-   ~pytwoway.FESolver.construct_Q
-   ~pytwoway.FESolver.fit_1
-   ~pytwoway.FESolver.fit_2
-   ~pytwoway.FESolver.get_fe_estimates
+   ~pytwoway.FEEstimator
+   ~pytwoway.FEEstimator.construct_Q
+   ~pytwoway.FEEstimator.fit_1
+   ~pytwoway.FEEstimator.fit_2
+   ~pytwoway.FEEstimator.get_fe_estimates
 
 ``pytwoway.BipartiteData``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

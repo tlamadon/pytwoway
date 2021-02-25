@@ -99,8 +99,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#modules-and-methods">Modules and Methods</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#pytwoway-twoway"><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWay</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pytwoway-cresolver"><code class="docutils literal notranslate"><span class="pre">pytwoway.CRESolver</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pytwoway-fesolver"><code class="docutils literal notranslate"><span class="pre">pytwoway.FESolver</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-creestimator"><code class="docutils literal notranslate"><span class="pre">pytwoway.CREEstimator</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-feestimator"><code class="docutils literal notranslate"><span class="pre">pytwoway.FEEstimator</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pytwoway-bipartitedata"><code class="docutils literal notranslate"><span class="pre">pytwoway.BipartiteData</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pytwoway-simtwoway"><code class="docutils literal notranslate"><span class="pre">pytwoway.SimTwoWay</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pytwoway-twowaymontecarlo"><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWayMonteCarlo</span></code></a></li>
@@ -109,8 +109,8 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="class-twoway.html">TwoWay</a></li>
-<li class="toctree-l1"><a class="reference internal" href="class-cresolver.html">CRESolver</a></li>
-<li class="toctree-l1"><a class="reference internal" href="class-fesolver.html">FESolver</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-feestimator.html">FEEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-bipartitedata.html">BipartiteData</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-simtwoway.html">SimTwoWay</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-twowaymontecarlo.html">TwoWayMonteCarlo</a></li>
@@ -215,8 +215,8 @@
 </div></blockquote>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWay</span></code>: Class for formatting data and running CRE and FE estimators.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.CRESolver</span></code>: Class for CRE estimator.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.FESolver</span></code>: Class for FE estimators.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.CREEstimator</span></code>: Class for CRE estimator.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.FEEstimator</span></code>: Class for FE estimators.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.BipartiteData</span></code>: Class for formatting bipartite networks (usually of firms and workers).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.SimTwoWay</span></code>: Class to simulate labor data.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWayMonteCarlo</span></code>: Class to run Monte Carlo simulations.</p></li>
@@ -232,38 +232,17 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">TwoWay</span></code>(data[, formatting, col_dict])</p></td>
-<td><p>Class of TwoWay, where TwoWay gives a network of firms and workers.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_cre</span></code>([user_cre, user_cluster])</p></td>
-<td><p>Fit the CRE estimator.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_fe</span></code>([user_fe])</p></td>
-<td><p>Fit the bias-corrected FE estimator.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">summary_cre</span></code>()</p></td>
-<td><p>Return summary results for CRE estimator.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">summary_fe</span></code>()</p></td>
-<td><p>Return summary results for FE estimator.</p></td>
-</tr>
 </tbody>
 </table>
 </div>
-<div class="section" id="pytwoway-cresolver">
-<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.CRESolver</span></code><a class="headerlink" href="#pytwoway-cresolver" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="pytwoway-creestimator">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.CREEstimator</span></code><a class="headerlink" href="#pytwoway-creestimator" title="Permalink to this headline">¶</a></h3>
 <table class="longtable docutils align-default">
 <colgroup>
 <col style="width: 10%" />
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CRESolver</span></code>(params)</p></td>
-<td><p>Uses multigrid and partialing out to solve two way Fixed Effect model.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>()</p></td>
-<td><p>Run CRE solver.</p></td>
-</tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">pd_to_np</span></code>(df, colr, colc, colv, nr, nc)</p></td>
 <td><p></p></td>
 </tr>
@@ -273,29 +252,14 @@
 </tbody>
 </table>
 </div>
-<div class="section" id="pytwoway-fesolver">
-<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.FESolver</span></code><a class="headerlink" href="#pytwoway-fesolver" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="pytwoway-feestimator">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.FEEstimator</span></code><a class="headerlink" href="#pytwoway-feestimator" title="Permalink to this headline">¶</a></h3>
 <table class="longtable docutils align-default">
 <colgroup>
 <col style="width: 10%" />
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">FESolver</span></code>(params)</p></td>
-<td><p>Uses multigrid and partialing out to solve two way fixed effect model.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">construct_Q</span></code>()</p></td>
-<td><p>Generate columns in adata necessary to construct Q.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_1</span></code>()</p></td>
-<td><p>Run FE solver, part 1.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_2</span></code>()</p></td>
-<td><p>Run FE solver, part 2.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_fe_estimates</span></code>()</p></td>
-<td><p>Return estimated psi_hats linked to firm ids and alpha_hats linked to worker ids.</p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -307,24 +271,6 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BipartiteData</span></code>(data[, formatting, col_dict])</p></td>
-<td><p>Class of BipartiteData, where BipartiteData gives a bipartite network of firms and workers.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">clean_data</span></code>()</p></td>
-<td><p>Clean data.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">cluster</span></code>([user_cluster])</p></td>
-<td><p>Cluster data and assign a new column giving the cluster for each firm.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_cs</span></code>()</p></td>
-<td><p>Return event study data reformatted into cross section data.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">es_to_long</span></code>()</p></td>
-<td><p>Refactor event study data into long data.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">long_to_es</span></code>()</p></td>
-<td><p>Refactor long data into event study data.</p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -336,12 +282,6 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SimTwoWay</span></code>([sim_params])</p></td>
-<td><p>Class of SimTwoWay, where SimTwoWay simulates a network of firms and workers.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">sim_network</span></code>()</p></td>
-<td><p>Simulate panel data corresponding to the calibrated model.</p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -353,15 +293,6 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">TwoWayMonteCarlo</span></code>([sim_params])</p></td>
-<td><p>Class of TwoWayMonteCarlo, where TwoWayMonteCarlo runs a Monte Carlo estimate by simulating networks of firms and workers.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_monte_carlo</span></code>()</p></td>
-<td><p>Plot results from Monte Carlo simulations.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">twfe_monte_carlo</span></code>([N, ncore, fe_params, …])</p></td>
-<td><p>Purpose:</p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -391,7 +322,7 @@
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Jan 26, 2021.
+        Last updated on Feb 25, 2021.
       </span>
 
     </p>

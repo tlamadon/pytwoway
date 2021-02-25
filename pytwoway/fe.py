@@ -5,7 +5,7 @@ Computes a bunch of estimates from an event study data set:
     - Andrews bias correction
     - KSS bias correction
 
-Does this through class FESolver
+Does this through class FEEstimator
 '''
 import logging
 from pathlib import Path
@@ -36,7 +36,7 @@ except ImportError:
 #     v2 = df.eval(e2)
 #     return np.cov(v1, v2)[0][1]
 
-class FESolver:
+class FEEstimator:
     '''
     Uses multigrid and partialing out to solve two way fixed effect model.
 
@@ -115,7 +115,7 @@ class FESolver:
         # Add the handlers to the logger
         self.logger.addHandler(fh)
         self.logger.addHandler(ch)
-        self.logger.info('initializing FESolver object')
+        self.logger.info('initializing FEEstimator object')
 
         self.params = params
         self.res = {} # Results dictionary
@@ -132,7 +132,7 @@ class FESolver:
         self.res['ndp'] = self.ndraw_pii
         self.res['ndt'] = self.ndraw_trace
 
-        self.logger.info('FESolver object initialized')
+        self.logger.info('FEEstimator object initialized')
 
     def __getstate__(self):
         '''
@@ -170,7 +170,7 @@ class FESolver:
 
     def __save(self, filename):
         '''
-        Save FESolver class to filename as pickle.
+        Save FEEstimator class to filename as pickle.
 
         Arguments:
             filename (string): filename to save to

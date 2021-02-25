@@ -272,19 +272,32 @@ class QPConstrained:
 def lognormpdf(x, mu, sd):
     return - 0.5 * np.log(2 * pi) - np.log(sd) - (x - mu) ** 2 / (2 * sd ** 2)
 
-class BLMEstimator:
-
-    def __init__(self, user_params):
-        '''
-            Initialize the model
-        '''
-        default_BLM = {
+class BLMModel:
+    '''
+    Class for storing the parameters used in BLMEstimator.
+    '''
+    def __init__(self, user_params={}):
+        # Default parameters
+        default_params = {
+            # Class parameters
             'nl': 6, # Number of worker types
             'nk': 10, # Number of firm types
-            'fixb': False,
-            'stationary': False
+            'fixb': False, # Set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)
+            'stationary': False, # Set A1 = A2
+            'simulation': False, # If True, using model to simulate data
+            # fit_movers() and fit_stayers() parameters
+            'maxiters': 1000, # Max number of iterations
+            # fit_movers() parameters
+            'update_a': True, # If False, do not update A1 or A2
+            'update_s': True, # If False, do not update S1 or S2
+            'return_qi': False, # If True, return qi matrix after first loop
+            'cons_a': (['lin'], {'n_periods': 2}), # Constraints on A1 and A2
+            'cons_s': (['biggerthan'], {'gap_bigger': 0, 'n_periods': 2}), # Constraints on S1 and S2
+            # fit_stayers() parameters
+            'return_qi': False # If True, return qi matrix after first loop
         }
-        params = update_dict(default_BLM, user_params)
+        params = update_dict(default_params, user_params)
+        self.params = params
         nl = params['nl']
         nk = params['nk']
         self.nl = nl # Number of worker types
@@ -292,32 +305,35 @@ class BLMEstimator:
         self.fixb = params['fixb']
         self.stationary = params['stationary']
 
-        # # Mean of wages by firm and worker type
-        # self.A1 = np.zeros(shape=(nk, nl))
-        # self.A2 = np.zeros(shape=(nk, nl))
-        # Standard deviation of wages by firm and worker type
-        self.S1 = np.ones(shape=(nk, nl))
-        self.S2 = np.ones(shape=(nk, nl))
+        # np.random.seed() # Required for multiprocessing to ensure different seeds
+        if params['simulation']:
+            # Model for Y1 | Y2, l, k for movers and stayers
+            self.A1 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
+            self.S1 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
+            # Model for Y4 | Y3, l, k for movers and stayers
+            self.A2 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
+            self.S2 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
+            # Model for p(K | l, l') for movers
+            self.pk1 = np.ones(shape=(nk * nk, nl)) / nl # np.random.dirichlet(alpha=[1] * nl, size=nk * nk)
+            # Model for p(K | l, l') for stayers
+            self.pk0 = np.ones(shape=(nk, nl)) / nl # np.random.dirichlet(alpha=[1] * nl, size=nk)
+        else:
+            # Model for Y1 | Y2, l, k for movers and stayers
+            self.A1 = np.tile(sorted(np.random.normal(size=nl)), (nk, 1))
+            self.S1 = np.ones(shape=(nk, nl))
+            # Model for Y4 | Y3, l, k for movers and stayers
+            self.A2 = self.A1.copy()
+            self.S2 = np.ones(shape=(nk, nl))
+            # Model for p(K | l, l') for movers
+            self.pk1 = np.ones(shape=(nk * nk, nl)) / nl
+            # Model for p(K | l, l') for stayers
+            self.pk0 = np.ones(shape=(nk, nl)) / nl
 
-        # Model for p(K | l, l') for movers
-        self.pk1 = np.ones(shape=(nk * nk, nl)) / nl # np.ones(shape=(nk, nk, nl)) / nl
-        # Model for p(K | l, l') for stayers
-        self.pk0 = np.ones(shape=(nk, nl)) / nl
+        self.NNm = np.zeros(shape=(nk, nk)).astype(int) + 10
+        self.NNs = np.zeros(shape=nk).astype(int) + 10
 
-        # # Model for Y1 | Y2, l, k for movers and stayers
-        self.A1 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
-        # self.S1 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
-        # # Model for Y4 | Y3, l, k for movers and stayes
-        self.A2 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
-        # self.S2 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
-        # # Model for p(K | l, l') for movers
-        # self.pk1 = np.random.dirichlet(alpha=[1] * nl, size=nk * nk)
-        # # Model for p(K | l, l') for stayers
-        # self.pk0 = np.random.dirichlet(alpha=np.ones(shape=nk), size=(nk, nl)) # np.random.dirichlet(alpha=[1] * nk, size=nl)
-        # # model.pk0 = np.expand_dims(model.pk0, axis=0)
-
-        self.NNm = np.zeros(shape=(nk, nk)).astype(int) + 10 # np.random.randint(low=0, high=max(nl // 2 + 1, 1), size=[nl, nl]) # FIXME new code
-        self.NNs = np.zeros(shape=nk).astype(int) + 10 # np.random.randint(low=nl // 2 + 1, high=max(nl, nl // 2 + 2), size=nl * nl) # FIXME new code
+        self.liks1 = None # Log likelihood for movers
+        self.liks0 = None # Log likelihood for stayers
 
         for l in range(nl):
             self.A1[:, l] = sorted(self.A1[:, l])
@@ -329,38 +345,20 @@ class BLMEstimator:
         if self.stationary:
             self.A2 = self.A1
 
-    def fit_movers(self, jdata, user_fit_movers={}):
+    def fit_movers(self, jdata):
         '''
-            We write the EM algorithm for the movers
+            EM algorithm for movers.
         '''
+        params = self.params
+        A1 = self.A1
+        S1 = self.S1
+        A2 = self.A2
+        S2 = self.S2
+        pk1 = self.pk1
         nl = self.nl
         nk = self.nk
         ni = jdata.shape[0]
-
-        # Update params
-        default_fit_movers = {
-            'maxiter': 1000, # Max number of iterations
-            'set_params': False,
-            'update_a': True,
-            'update_s': True,
-            'return_qi': False,
-            'cons_a': (['lin'], {'n_periods': 2}),
-            'cons_s': (['biggerthan'], {'gap_bigger': 0, 'n_periods': 2})
-        }
-        params = update_dict(default_fit_movers, user_fit_movers)
-
-        # Generate A1, S1, A2, S2, pk1
-        if isinstance(params['set_params'], dict):
-            print('Using given parameters')
-            set_params = params['set_params']
-            A1 = set_params['A1']
-            S1 = set_params['S1']
-            A2 = set_params['A2']
-            S2 = set_params['S2']
-            pk1 = set_params['pk1']
-        else:
-            print('Generating parameters')
-            A1, S1, A2, S2, pk1 = self.generate_params()
+        liks1 = None # Log likelihood for movers
 
         # Store wage outcomes and groups
         Y1 = jdata['y1'].to_numpy()
@@ -384,7 +382,7 @@ class BLMEstimator:
         JJ2 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), J2)), shape=(ni, nk))
         JJ12 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), J1 + nk * J2)), shape=(ni, nk * nk))
 
-        for iter in range(params['maxiter']):
+        for iter in range(params['maxiters']):
 
             # -------- E-Step ---------
             # We compute the posterior probabilities for each row
@@ -400,8 +398,8 @@ class BLMEstimator:
             qi = np.exp(lp.T - logsumexp(lp, axis=1)).T
             if params['return_qi']:
                 return qi
-            liks = logsumexp(lp, axis=0).sum() # FIXME should this be returned?
-            print('loop {}, liks {}'.format(iter, liks))
+            liks1 = logsumexp(lp, axis=0).sum() # FIXME should this be returned?
+            print('loop {}, liks {}'.format(iter, liks1))
 
             # --------- M-step ----------
             # For now we run a simple ols, however later we
@@ -450,22 +448,25 @@ class BLMEstimator:
             for l in range(nl):
                 pk1[:, l] = JJ12.T * qi[:, l]
 
-        return liks, A1, S1, A2, S2, pk1
+        self.A1 = A1
+        self.S1 = S1
+        self.A2 = A2
+        self.S2 = S2
+        self.pk1 = pk1
+        self.liks1 = liks1
 
-    def fit_stayers(self, sdata, user_fit_stayers={}):
+    def fit_stayers(self, sdata):
         '''
             We write the EM algorithm for the movers
         '''
+        params = self.params
+        A1 = self.A1
+        S1 = self.S1
+        pk0 = self.pk0
         nl = self.nl
         nk = self.nk
         ni = sdata.shape[0]
-
-        # Update params
-        default_fit_stayers = {
-            'maxiter': 1000, # Max number of iterations
-            'return_qi': False
-        }
-        params = update_dict(default_fit_stayers, user_fit_stayers)
+        liks0 = None # Log likelihood for stayers
 
         # Store wage outcomes and groups
         Y1 = sdata['y1'].to_numpy()
@@ -477,118 +478,50 @@ class BLMEstimator:
         lp = np.zeros(shape=(ni, nl))
         JJ1 = csc_matrix((np.ones(ni), (range(sdata.shape[0]), J1)), shape=(ni, nk))
 
-        for iter in range(params['maxiter']):
+        for iter in range(params['maxiters']):
 
             # -------- E-Step ---------
             # We compute the posterior probabilities for each row
             # We iterate over the worker types, should not be be
             # too costly since the vector is quite large within each iteration
             for l in range(nl):
-                lp1 = lognormpdf(Y1, self.A1[J1, l], self.S1[J1, l])
-                lp[:, l] = np.log(self.pk0[J1, l]) + lp1
+                lp1 = lognormpdf(Y1, A1[J1, l], S1[J1, l])
+                lp[:, l] = np.log(pk0[J1, l]) + lp1
 
             # We compute log sum exp to get likelihoods and probabilities
             qi = np.exp(lp.T - logsumexp(lp, axis=1)).T
             if params['return_qi']:
                 return qi
-            liks = logsumexp(lp, axis=0).sum() # FIXME should this be returned?
-            print('loop {}, liks {}'.format(iter, liks))
+            liks0 = logsumexp(lp, axis=0).sum() # FIXME should this be returned?
+            print('loop {}, liks {}'.format(iter, liks0))
 
             # --------- M-step ----------
             for l in range(nl):
-                self.pk0[:, l] = JJ1.T * qi[:, l]
+                pk0[:, l] = JJ1.T * qi[:, l]
 
-    def fit_movers_cstr_uncstr(self, jdata, user_fit_movers={}):
+        self.pk0 = pk0
+        self.liks0 = liks0
+
+    def fit_movers_cstr_uncstr(self, jdata):
         '''
-        Run fit_movers(), first constrained to be linear, then using results as starting values, run unconstrained.
+        Run fit_movers(), first constrained, then using results as starting values, run unconstrained.
         '''
-        # First, simulate parameters and run with constraints
-        # Then use estimated parameters as starting point to run without constraints
-        local_params = user_fit_movers
-        local_params['set_params'] = False # Simulate parameters with constraints by not manually setting parameters
-        local_params['cons_a'] = (['lin'], {'n_periods': 2}) # Set constraints
+        # First, simulate parameters but keep A fixed
+        # Second, use estimated parameters as starting point to run with A constrained to be linear
+        # Finally use estimated parameters as starting point to run without constraints
+        ##### Loop 1 #####
+        self.params['update_a'] = False # First run fixm = True, which fixes A but updates S and pk
+        print('Running fixm movers')
+        self.fit_movers(jdata)
+        ##### Loop 2 #####
+        self.params['update_a'] = True # Now update A
+        self.params['cons_a'] = (['lin'], {'n_periods': 2}) # Set constraints
         print('Running constrained movers')
-        liks, A1, S1, A2, S2, pk1 = self.fit_movers(jdata, user_fit_movers=local_params)
-        local_params['set_params'] = {'A1': A1, 'S1': S1, 'A2': A2, 'S2': S2, 'pk1': pk1} # Set parameters manually
-        local_params['cons_a'] = () # Remove constraints
+        self.fit_movers(jdata)
+        ##### Loop 3 #####
+        self.params['cons_a'] = () # Remove constraints
         print('Running unconstrained movers')
-
-        return self.fit_movers(jdata, user_fit_movers=local_params)
-
-    def fit(self, jdata, sdata, iter=10, ncore=1, user_fit={}):
-        '''
-        Fit EM model for movers and stayers.
-        '''
-        # Update params
-        default_fit = {
-            'maxiter': 1000, # Max number of iterations
-            'update_a': True,
-            'update_s': True,
-            'return_qi': False,
-            'cons_a': (['lin'], {'n_periods': 2}),
-            'cons_s': (['biggerthan'], {'gap_bigger': 0, 'n_periods': 2})
-        }
-        params = update_dict(default_fit, user_fit)
-
-        # Run fit_movers()
-        if ncore > 1:
-            with Pool(processes=ncore) as pool:
-                sim_res_lst = pool.starmap(self.fit_movers_cstr_uncstr, [(jdata, params) for _ in range(iter)])
-        else:
-            sim_res_lst = itertools.starmap(self.fit_movers_cstr_uncstr, [(jdata, params) for _ in range(iter)])
-
-        # Find best simulation
-        max_liks = 0
-        best_A1 = None
-        best_S1 = None
-        best_A2 = None
-        best_S2 = None
-        best_pk1 = None
-
-        for sim_res in sim_res_lst:
-            liks, A1, S1, A2, S2, pk1 = sim_res
-            if liks > max_liks:
-                max_liks = liks
-                best_A1 = A1
-                best_A2 = A2
-                best_S1 = S1
-                best_S2 = S2
-                best_pk1 = pk1
-        print('max_liks:', max_liks)
-        self.A1 = best_A1
-        self.S1 = best_S1
-        self.A2 = best_A2
-        self.S2 = best_S2
-        self.pk1 = best_pk1
-        # Using best estimated parameters from fit_movers(), run fit_stayers()
-        print('Running stayers')
-        self.fit_stayers(sdata, user_fit_stayers=params)
-
-    def generate_params(self):
-        np.random.seed() # Required for multiprocessing to ensure different seeds
-        nk = self.nk
-        nl = self.nl
-
-        # Model for Y1 | Y2, l, k for movers and stayers
-        A1 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
-        S1 = np.ones(shape=(nk, nl))
-        # Model for Y4 | Y3, l, k for movers and stayes
-        A2 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
-        S2 = np.ones(shape=(nk, nl))
-        # Model for p(K | l, l') for movers
-        pk1 = np.ones(shape=(nk * nk, nl)) / nl
-
-        for l in range(nl):
-            A1[:, l] = sorted(A1[:, l])
-            A2[:, l] = sorted(A2[:, l])
-
-        if self.fixb:
-            A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)
-
-        if self.stationary:
-            A2 = A1
-
-        return A1, S1, A2, S2, pk1
+        self.fit_movers(jdata)
 
     def plot_A1(self, dpi=None):
         '''
@@ -610,83 +543,33 @@ class BLMEstimator:
         plt.ylabel('A1')
         plt.show()
 
-    def sim_model(self, fixb=False, stationary=False, fsize=10, mmult=1, smult=1):
-        '''
-        Create a random model for EM with endogenous mobility with multinomial pr.
-
-        Returns:
-            sim (dict):
-                'jdata': movers
-                'sdata': stayers
-        '''
-        model = self._m2_mixt_new(fixb=fixb, stationary=stationary)
-        sim = self._m2_mixt_simulate_sim(self, model, fsize=fsize, mmult=mmult, smult=smult)
-        return sim
-
-    def _m2_mixt_new(self, fixb=False, stationary=False):
-        '''
-        Returns:
-            model (Pandas DataFrame):
-        '''
-        nl = self.nl
-        nk = self.nk
-
-        model = argparse.Namespace()
-
-        # model for Y1|Y2,l,k for movers and stayes
-        model.A1 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
-        model.S1 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
-        # model for Y4|Y3,l,k for movers and stayes
-        model.A2 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
-        model.S2 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
-        # model for p(K | l ,l') for movers
-        model.pk1 = np.random.dirichlet(alpha=[1] * nl, size=nk * nk)
-        # model for p(K | l ,l') for stayers
-        model.pk0 = np.random.dirichlet(alpha=np.ones(shape=nk), size=(nk, nl)) # np.random.dirichlet(alpha=[1] * nk, size=nl)
-        # model.pk0 = np.expand_dims(model.pk0, axis=0)
-
-        model.NNm = np.zeros(shape=(nk, nk)).astype(int) + 10 # Matrix of movers per group (nk x nk)
-        model.NNs = np.zeros(shape=nk).astype(int) + 10 # Matrix of stayers per group (nk)
-
-        for l in range(nl):
-            model.A1[:, l] = sorted(model.A1[:, l])
-            model.A2[:, l] = sorted(model.A2[:, l])
-
-        if fixb:
-            model.A2 = np.mean(model.A2, axis=0) + model.A1 - np.mean(model.A1, axis=0)
-
-        if stationary:
-            model.A2 = model.A1
-
-        return model
-
-    def _m2_mixt_simulate_movers(self, model, NNm):
+    def _m2_mixt_simulate_movers(self, NNm):
         '''
         Using the model, simulates a dataset of movers.
 
         Returns:
-            jdatae (Pandas DataFrame):
+            jdatae (Pandas DataFrame): movers
         '''
-        J1 = np.zeros(shape=np.sum(NNm)).astype(int) - 1
-        J2 = np.zeros(shape=np.sum(NNm)).astype(int) - 1
-        Y1 = np.zeros(shape=np.sum(NNm))
-        Y2 = np.zeros(shape=np.sum(NNm))
-        L = np.zeros(shape=np.sum(NNm)).astype(int) - 1
-
-        A1 = model.A1
-        A2 = model.A2
-        S1 = model.S1
-        S2 = model.S2
-        pk1 = model.pk1
+        A1 = self.A1
+        S1 = self.S1
+        A2 = self.A2
+        S2 = self.S2
+        pk1 = self.pk1
         nl = self.nl
         nk = self.nk
 
+        J1 = np.zeros(shape=np.sum(NNm)).astype(int)
+        J2 = np.zeros(shape=np.sum(NNm)).astype(int)
+        Y1 = np.zeros(shape=np.sum(NNm))
+        Y2 = np.zeros(shape=np.sum(NNm))
+        L = np.zeros(shape=np.sum(NNm)).astype(int)
+
         i = 0
-        for k1 in range(nk): # FIXME changed from nl to nk
-            for k2 in range(nk): # FIXME changed from nl to nk
+        for k1 in range(nk):
+            for k2 in range(nk):
                 I = np.arange(i, i + NNm[k1, k2])
                 ni = len(I)
-                jj = k1 + nk * k2 # k1 + nk * (k2 - 1)
+                jj = k1 + nk * k2
                 J1[I] = k1
                 J2[I] = k2
 
@@ -705,26 +588,26 @@ class BLMEstimator:
 
         return jdatae
 
-    def _m2_mixt_simulate_stayers(self, model, NNs):
+    def _m2_mixt_simulate_stayers(self, NNs):
         '''
         Using the model, simulates a dataset of stayers.
 
         Returns:
-            sdatae (Pandas DataFrame):
+            sdatae (Pandas DataFrame): stayers
         '''
-        J1 = np.zeros(shape=np.sum(NNs)).astype(int) - 1
-        J2 = np.zeros(shape=np.sum(NNs)).astype(int) - 1
-        Y1 = np.zeros(shape=np.sum(NNs))
-        Y2 = np.zeros(shape=np.sum(NNs))
-        K  = np.zeros(shape=np.sum(NNs)).astype(int) - 1
-
-        A1 = model.A1
-        A2 = model.A2
-        S1 = model.S1
-        S2 = model.S2
-        pk0 = model.pk0
+        A1 = self.A1
+        S1 = self.S1
+        A2 = self.A2
+        S2 = self.S2
+        pk0 = self.pk0
         nl = self.nl
         nk = self.nk
+
+        J1 = np.zeros(shape=np.sum(NNs)).astype(int)
+        J2 = np.zeros(shape=np.sum(NNs)).astype(int)
+        Y1 = np.zeros(shape=np.sum(NNs))
+        Y2 = np.zeros(shape=np.sum(NNs))
+        K  = np.zeros(shape=np.sum(NNs)).astype(int)
 
         # ------ Impute K, Y1, Y4 on jdata ------- #
         i = 0
@@ -735,7 +618,7 @@ class BLMEstimator:
 
             # Draw k
             draw_vals = np.arange(nl)
-            Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk0[0, k1, :])
+            Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk0[k1, :]) # FIXME changed from pk0[0, k1, :]
             K[I] = Ki
 
             # Draw Y2, Y3
@@ -748,7 +631,7 @@ class BLMEstimator:
 
         return sdatae
 
-    def _m2_mixt_simulate_sim(self, model, fsize, mmult=1, smult=1):
+    def _m2_mixt_simulate_sim(self, fsize=10, mmult=1, smult=1):
         '''
         Simulates data (movers and stayers) and attached firms ids. Firms have all same expected size.
 
@@ -757,11 +640,11 @@ class BLMEstimator:
                 'jdata': movers
                 'sdata': stayers
         '''
-        jdata = self._m2_mixt_simulate_movers(model, model.NNm * mmult)
-        sdata = self._m2_mixt_simulate_stayers(model, model.NNs * smult)
+        jdata = self._m2_mixt_simulate_movers(self.NNm * mmult)
+        sdata = self._m2_mixt_simulate_stayers(self.NNs * smult)
 
         # Create some firm ids
-        sdata['f1'] = np.hstack(np.roll(sdata.groupby('j1').apply(lambda df: np.random.randint(low=0, high=len(df) // fsize + 1, size=len(df))), -1)) # Random number generation, roll is required because f1 is -1 for empty rows but they appear at the end of the dataframe
+        sdata['f1'] = np.hstack(np.roll(sdata.groupby('j1').apply(lambda df: np.random.randint(low=0, high=len(df) // fsize + 1, size=len(df))), - 1)) # Random number generation, roll is required because f1 is - 1 for empty rows but they appear at the end of the dataframe
         sdata['f1'] = 'F' + (sdata['j1'].astype(int) + sdata['f1']).astype(str)
         sdata['j1b'] = sdata['j1']
         sdata['j1true'] = sdata['j1']
@@ -777,6 +660,59 @@ class BLMEstimator:
 
         sim = {'jdata': jdata, 'sdata': sdata}
         return sim
+
+class BLMEstimator:
+
+    def __init__(self):
+        '''
+            Initialize the model
+        '''
+        self.model = None # No initial model
+
+    def _sim_model(self, jdata, params):
+        '''
+        Generate model and run fit_movers_cstr_uncstr() given parameters.
+        '''
+        model = BLMModel(params)
+        model.fit_movers_cstr_uncstr(jdata)
+        return model
+
+    def fit(self, jdata, sdata, iter=10, ncore=1, user_params={}):
+        '''
+        Fit EM model for movers and stayers.
+        '''
+        # Run sim_model()
+        if ncore > 1:
+            with Pool(processes=ncore) as pool:
+                sim_model_lst = pool.starmap(self._sim_model, [(jdata, user_params) for _ in range(iter)])
+        else:
+            sim_model_lst = itertools.starmap(self._sim_model, [(jdata, user_params) for _ in range(iter)])
+
+        # Find best simulation
+        max_liks = 0
+        best_model = None
+
+        for model in sim_model_lst:
+            if model.liks1 > max_liks:
+                max_liks = model.liks1
+                best_model = model
+        print('max_liks:', max_liks)
+        self.model = best_model
+        # Using best estimated parameters from fit_movers(), run fit_stayers()
+        print('Running stayers')
+        self.model.fit_stayers(sdata)
+
+    def plot_A1(self, dpi=None):
+        '''
+        Plot self.model.A1.
+
+        Params:
+            dpi (float): dpi for plot
+        '''
+        if self.model is not None:
+            self.model.plot_A1(dpi)
+        else:
+            warnings.warn('Best model has not yet been estimated.')
 
 ####################
 ##### Old Code #####

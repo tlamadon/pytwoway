@@ -21,8 +21,8 @@
 
   internal
   TwoWay <class-twoway>
-  CRESolver <class-cresolver>
-  FESolver <class-fesolver>
+  CREEstimator <class-creestimator>
+  FEEstimator <class-feestimator>
   BipartiteData <class-bipartitedata>
   SimTwoWay <class-simtwoway>
   TwoWayMonteCarlo <class-twowaymontecarlo>

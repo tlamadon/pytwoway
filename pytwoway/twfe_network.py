@@ -117,7 +117,7 @@ class TwoWay:
 
         fe_params['data'] = self.b_net.get_cs() # Make sure to use up-to-date bipartite network
 
-        fe_solver = tw.FESolver(fe_params)
+        fe_solver = tw.FEEstimator(fe_params)
         fe_solver.fit_1()
         fe_solver.construct_Q() # Comment out this line and manually create Q if you want a custom Q matrix
         fe_solver.fit_2()
@@ -163,7 +163,7 @@ class TwoWay:
 
         cre_params['data'] = self.b_net.get_cs() # Make sure to use up-to-date data
 
-        cre_solver = tw.CRESolver(cre_params)
+        cre_solver = tw.CREEstimator(cre_params)
         cre_solver.fit()
 
         self.cre_res = cre_solver.res
