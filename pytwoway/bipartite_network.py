@@ -364,25 +364,24 @@ class BipartiteLong:
             self.col_dict['fid']: 'fid',
             self.col_dict['year']: 'year'
         }, axis=1)
-        if self.col_dict['j'] is None:
-            self.data = self.data[['wid', 'comp', 'fid', 'year']]
-            self.col_dict = {
-                'wid': 'wid',
-                'comp': 'comp',
-                'fid': 'fid',
-                'year': 'year',
-                'j': None
-            }
-        else:
+
+        keep_cols = ['wid', 'comp', 'fid', 'year']
+
+        col_dict = {
+            'wid': 'wid',
+            'comp': 'comp',
+            'fid': 'fid',
+            'year': 'year',
+            'j': None
+        }
+
+        if self.col_dict['j'] is not None:
             self.data = self.data.rename({self.col_dict['j']: 'j'}, axis=1)
-            self.data = self.data[['wid', 'comp', 'fid', 'year', 'j']]
-            self.col_dict = {
-                'wid': 'wid',
-                'comp': 'comp',
-                'fid': 'fid',
-                'year': 'year',
-                'j': 'j'
-            }
+            keep_cols += ['j']
+            col_dict['j'] = 'j'
+
+        self.data = self.data[keep_cols]
+        self.col_dict = col_dict
 
     def n_workers(self):
         '''
@@ -971,31 +970,27 @@ class BipartiteLongCollapsed:
             self.col_dict['weight']: 'weight',
             self.col_dict['m']: 'm'
         }, axis=1)
-        if self.col_dict['j'] is None:
-            self.data = self.data[['wid', 'comp', 'fid', 'year']]
-            self.col_dict = {
-                'wid': 'wid',
-                'comp': 'comp',
-                'fid': 'fid',
-                'year_start': 'year_start',
-                'year_end': 'year_end',
-                'weight': 'weight',
-                'm': 'm',
-                'j': None
-            }
-        else:
+
+        keep_cols = ['wid', 'comp', 'fid', 'year_start', 'year_end', 'weight', 'm']
+
+        col_dict = {
+            'wid': 'wid',
+            'comp': 'comp',
+            'fid': 'fid',
+            'year_start': 'year_start',
+            'year_end': 'year_end',
+            'weight': 'weight',
+            'm': 'm',
+            'j': None
+        }
+        
+        if self.col_dict['j'] is not None:
             self.data = self.data.rename({self.col_dict['j']: 'j'}, axis=1)
-            self.data = self.data[['wid', 'comp', 'fid', 'year', 'j']]
-            self.col_dict = {
-                'wid': 'wid',
-                'comp': 'comp',
-                'fid': 'fid',
-                'year_start': 'year_start',
-                'year_end': 'year_end',
-                'weight': 'weight',
-                'm': 'm',
-                'j': 'j'
-            }
+            keep_cols += ['j']
+            col_dict['j'] = 'j'
+
+        self.data = self.data[keep_cols]
+        self.col_dict = col_dict
 
     def n_workers(self):
         '''
@@ -1536,43 +1531,34 @@ class BipartiteEventStudy:
             self.col_dict['w2']: 'w2',
             self.col_dict['m']: 'm'
         }, axis=1)
-        if self.col_dict['j1'] is None or self.col_dict['j2'] is None:
-            self.data = self.data[['wid', 'f1i', 'f2i', 'y1', 'y2', 'year_start_1', 'year_start_2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm']]
-            self.col_dict = {
-                'wid': 'wid',
-                'f1i': 'f1i',
-                'f2i': 'f2i',
-                'y1': 'y1',
-                'y2': 'y2',
-                'year_start_1': 'year_start_1',
-                'year_start_2': 'year_start_2',
-                'year_end_1': 'year_end_1',
-                'year_end_2': 'year_end_2',
-                'w1': 'w1',
-                'w2': 'w2',
-                'm': 'm',
-                'j1': None,
-                'j2': None
-            }
-        else:
+
+        keep_cols = ['wid', 'f1i', 'f2i', 'y1', 'y2', 'year_start_1', 'year_start_2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm']
+
+        col_dict = {
+            'wid': 'wid',
+            'f1i': 'f1i',
+            'f2i': 'f2i',
+            'y1': 'y1',
+            'y2': 'y2',
+            'year_start_1': 'year_start_1',
+            'year_start_2': 'year_start_2',
+            'year_end_1': 'year_end_1',
+            'year_end_2': 'year_end_2',
+            'w1': 'w1',
+            'w2': 'w2',
+            'm': 'm',
+            'j1': None,
+            'j2': None
+        }
+
+        if self.col_dict['j1'] is not None and self.col_dict['j2'] is not None:
             self.data = self.data.rename({self.col_dict['j1']: 'j1', self.col_dict['j2']: 'j2'}, axis=1)
-            self.data = self.data[['wid', 'f1i', 'f2i', 'y1', 'y2', 'year_start_1', 'year_start_2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm', 'j1', 'j2']]
-            self.col_dict = {
-                'wid': 'wid',
-                'f1i': 'f1i',
-                'f2i': 'f2i',
-                'y1': 'y1',
-                'y2': 'y2',
-                'year_start_1': 'year_start_1',
-                'year_start_2': 'year_start_2',
-                'year_end_1': 'year_end_1',
-                'year_end_2': 'year_end_2',
-                'w1': 'w1',
-                'w2': 'w2',
-                'm': 'm',
-                'j1': 'j1',
-                'j2': 'j2'
-            }
+            keep_cols += ['j1', 'j2']
+            col_dict['j1'] = 'j1'
+            col_dict['j2'] = 'j2'
+
+        self.data = self.data[keep_cols]
+        self.col_dict = col_dict
 
     def n_workers(self):
         '''
@@ -1905,13 +1891,13 @@ class BipartiteEventStudy:
         clustered = self.col_dict['j1'] is not None and self.col_dict['j2'] is not None
         # Append the last row if a mover (this is because the last observation is only given as an f2i, never as an f1i)
         if clustered:
-            return self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'year_start_1': 'year_start_2', 'year_start_2': 'year_start_1', 'year_end_1': 'year_end_2', 'year_end_2': 'year_end_1', 'w1': 'w2', 'w2': 'w1', 'j1': 'j2', 'j2': 'j1'}, axis=1)) if a.iloc[0]['m'] == 1 else a) \
+            return self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'year_start_1': 'year_start_2', 'year_start_2': 'year_start_1', 'year_end_1': 'year_end_2', 'year_end_2': 'year_end_1', 'j1': 'j2', 'j2': 'j1'}, axis=1)) if a.iloc[0]['m'] == 1 else a) \
                 .reset_index(drop=True) \
                 .drop(['f2i', 'y2', 'year_start_2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm', 'j2'], axis=1) \
                 .rename({'f1i': 'fid', 'y1': 'comp', 'year_start_1': 'year', 'j1': 'j'}, axis=1) \
                 .astype({'wid': int, 'fid': int, 'year': int, 'j': int})
         else:
-            return self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'year_start_1': 'year_start_2', 'year_start_2': 'year_start_1', 'year_end_1': 'year_end_2', 'year_end_2': 'year_end_1', 'w1': 'w2', 'w2': 'w1'}, axis=1)) if a.iloc[0]['m'] == 1 else a) \
+            return self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'year_start_1': 'year_start_2', 'year_start_2': 'year_start_1', 'year_end_1': 'year_end_2', 'year_end_2': 'year_end_1'}, axis=1)) if a.iloc[0]['m'] == 1 else a) \
                 .reset_index(drop=True) \
                 .drop(['f2i', 'y2', 'year_start_2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm'], axis=1) \
                 .rename({'f1i': 'fid', 'y1': 'comp', 'year_start_1': 'year'}, axis=1) \
