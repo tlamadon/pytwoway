@@ -56,7 +56,8 @@ class TwoWay:
         Prepare bipartite network for running fit_fe.
         '''
         self.b_net.clean_data()
-        self.b_net.long_to_es()
+        self.b_net.long_to_collapsed_long()
+        self.b_net.collapsed_long_to_es()
 
     def __prep_cre(self, user_cluster={}):
         '''
@@ -76,7 +77,8 @@ class TwoWay:
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
         '''
         self.b_net.clean_data()
-        self.b_net.long_to_es()
+        self.b_net.long_to_collapsed_long()
+        self.b_net.collapsed_long_to_es()
         self.b_net.cluster(user_cluster=user_cluster)
 
     def fit_fe(self, user_fe={}):

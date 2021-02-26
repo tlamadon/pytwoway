@@ -232,6 +232,9 @@ class SimTwoWay:
         # Compute wages through the AKM formula
         data['comp'] = data['alpha'] + data['psi'] + w_sig * norm.rvs(size=num_ind * num_time)
 
+        data['wid'] -= 1 # Start at 0
+        data['fid'] -= 1 # Start at 0
+
         return data
 
 class TwoWayMonteCarlo:

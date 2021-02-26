@@ -113,7 +113,7 @@ class CREEstimator:
         # Add the handlers to the logger
         self.logger.addHandler(fh)
         self.logger.addHandler(ch)
-        self.logger.info('initializing CRESolver object')
+        self.logger.info('initializing CREEstimator object')
 
         self.params = params
         self.res = {} # Results dictionary
@@ -128,7 +128,7 @@ class CREEstimator:
         self.res['cores'] = self.ncore
         self.res['ndt'] = self.ndraw_trace
 
-        self.logger.info('CRESolver object initialized')
+        self.logger.info('CREEstimator object initialized')
 
     def fit(self):
         '''
@@ -142,7 +142,7 @@ class CREEstimator:
         # Generate stayers and movers, and set indices so they don't overlap
         jdata = self.adata[(self.adata['m'] == 1) & (self.adata['cs'] == 1)].reset_index(drop=True)
         self.mn = len(jdata) # Number of observations from movers # FIXME I renamed from nm to mn, since nm makes it seem like it's the number of movers, while mn gives movers, where n is the total number of observations
-        sdata = self.adata[(self.adata['m'] == 0) & (self.adata['cs'] == 1)].set_index(np.arange(self.ns) + 1 + self.mn)
+        sdata = self.adata[(self.adata['m'] == 0) & (self.adata['cs'] == 1)].set_index(np.arange(self.ns) + self.mn) # FIXME was np.arange(self.ns) + 1 + self.mn
         sdata, jdata = self.__estimate_between_cluster(sdata, jdata)
         self.__estimate_within_cluster(sdata, jdata)
         self.__estimate_within_parameters()
@@ -194,11 +194,11 @@ class CREEstimator:
         self.logger.info('preparing the data')
 
         self.adata = self.params['data']
-        self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1
+        # self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1 # FIXME wid should already be correct
 
-        self.nf = max(self.adata['f1i'].max(), self.adata['f2i'].max()) # Number of firms
-        self.nw = self.adata['wid'].max() # Number of workers
-        self.nc = max(self.adata['j1'].max(), self.adata['j2'].max()) # Number of clusters
+        self.nf = max(self.adata['f1i'].max(), self.adata['f2i'].max()) + 1 # Number of firms
+        self.nw = self.adata['wid'].max() + 1 # Number of workers
+        self.nc = max(self.adata['j1'].max(), self.adata['j2'].max()) + 1 # Number of clusters
         nn = len(self.adata) # Number of observations
         self.logger.info('data firms={} workers={} clusters={} observations={}'.format(self.nf, self.nw, self.nc, nn))
 
@@ -255,8 +255,8 @@ class CREEstimator:
             jdata (Pandas DataFrame): @ FIXME update this
         '''
         # Matrices for group level estimation
-        J1c = csc_matrix((np.ones(self.mn), (jdata.index, jdata['j1'] - 1)), shape=(self.mn, self.nc))
-        J2c = csc_matrix((np.ones(self.mn), (jdata.index, jdata['j2'] - 1)), shape=(self.mn, self.nc))
+        J1c = csc_matrix((np.ones(self.mn), (jdata.index, jdata['j1'])), shape=(self.mn, self.nc))
+        J2c = csc_matrix((np.ones(self.mn), (jdata.index, jdata['j2'])), shape=(self.mn, self.nc))
         Jc = J2c - J1c
         Jc = Jc[:, range(self.nc - 1)]  # Normalizing last group to 0
         Yc = jdata['y2'] - jdata['y1']
@@ -270,8 +270,8 @@ class CREEstimator:
             A = A * 0.0
         pb['Afill'] = np.append(A, 0)
 
-        jdata['psi1_tmp'] = pb['Afill'][jdata['j1'] - 1]
-        jdata['psi2_tmp'] = pb['Afill'][jdata['j2'] - 1]
+        jdata['psi1_tmp'] = pb['Afill'][jdata['j1']]
+        jdata['psi2_tmp'] = pb['Afill'][jdata['j2']]
 
         EEm = jdata.assign(mx=lambda df: 0.5 * (df['y2'] - df['psi2_tmp'] + df['y1'] - df['psi1_tmp'])).groupby(['j1', 'j2'])['mx'].agg('mean')
         if self.wo_btw:
@@ -281,7 +281,7 @@ class CREEstimator:
         #pb['EEm'] = np.array(EEm.values).reshape(self.nc, self.nc)
         #print(pd_to_np(EEm.reset_index(), 'j1', 'j2', 'mx', self.nc, self.nc) - np.array(EEm.values).reshape(self.nc, self.nc))
 
-        sdata['psi1_tmp'] = pb['Afill'][sdata['j1'] - 1]
+        sdata['psi1_tmp'] = pb['Afill'][sdata['j1']]
         Em = sdata.assign(mx = lambda df: df['y1'] - df['psi1_tmp']).groupby(['j1'])['mx'].agg('mean')
         if self.wo_btw:
             Em = Em * 0.0
@@ -491,7 +491,7 @@ class CREEstimator:
             jdata (Pandas DataFrame): movers
         '''
         jdata_f = pd.concat([jdata[['f1i', 'j1']], jdata[['f2i', 'j2']].rename(columns={'f2i': 'f1i', 'j2': 'j1'})]).drop_duplicates()
-        Jf = csc_matrix((np.ones(len(jdata_f)), (jdata_f['f1i'] - 1, jdata_f['j1'] - 1)), shape=(len(jdata_f), self.nc))
+        Jf = csc_matrix((np.ones(len(jdata_f)), (jdata_f['f1i'], jdata_f['j1'])), shape=(len(jdata_f), self.nc))
         self.Mud = Jf * self.between_params['Afill']
 
     def __prep_posterior_var(self, jdata, cdata):
@@ -503,15 +503,15 @@ class CREEstimator:
             cdata (Pandas DataFrame): movers and stayers, dataframe created when computing the between terms
         '''
         jdata['val'] = 1
-        J1 = csc_matrix((jdata['val'], (jdata.index, jdata['f1i'] - 1)), shape=(self.mn, self.nf))
-        J2 = csc_matrix((jdata['val'], (jdata.index, jdata['f2i'] - 1)), shape=(self.mn, self.nf))
+        J1 = csc_matrix((jdata['val'], (jdata.index, jdata['f1i'])), shape=(self.mn, self.nf))
+        J2 = csc_matrix((jdata['val'], (jdata.index, jdata['f2i'])), shape=(self.mn, self.nf))
         Jd = J2 - J1
         Yd = jdata.eval('y2 - y1') # Create the difference Y
         mdata = self.adata.query('cs == 1')
         mdata = mdata[~pd.isnull(mdata['f1i'])]
 
         nnq = len(mdata)
-        Jq = csc_matrix((np.ones(nnq), (range(nnq), mdata['f1i'] - 1)), shape=(nnq, self.nf)) # Get the weighting for the cross-section
+        Jq = csc_matrix((np.ones(nnq), (range(nnq), mdata['f1i'])), shape=(nnq, self.nf)) # Get the weighting for the cross-section
         # Yq = mdata['y1'] # FIXME commented this out
         # self.nnq = len(cdata) # FIXME commented this out
         self.Jd = Jd

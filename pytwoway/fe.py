@@ -223,10 +223,10 @@ class FEEstimator:
         self.logger.info('preparing the data')
 
         self.adata = self.params['data']
-        self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1
+        # self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1 # FIXME commented out because wid should already be correct
 
-        self.nf = len(set(list(self.adata['f1i'].unique()) + list(self.adata['f2i'].unique()))) # Number of firms
-        self.nw = self.adata['wid'].max() # Number of workers
+        self.nf = max(self.adata['f1i'].max(), self.adata['f2i'].max()) + 1 # Number of firms
+        self.nw = self.adata['wid'].max() + 1 # Number of workers
         self.nn = len(self.adata) # Number of observations
         self.logger.info('data firms={} workers={} observations={}'.format(self.nf, self.nw, self.nn))
 
@@ -256,10 +256,10 @@ class FEEstimator:
         Generate J, W, and M matrices.
         '''
         # Matrices for the cross-section
-        J = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata.f1i - 1)), shape=(self.nn, self.nf)) # Firms
+        J = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata.f1i)), shape=(self.nn, self.nf)) # Firms
         J = J[:, range(self.nf - 1)]  # Normalize one firm to 0
         self.J = J
-        W = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata.wid - 1)), shape=(self.nn, self.nw)) # Workers
+        W = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata.wid)), shape=(self.nn, self.nw)) # Workers
         self.W = W
         # Dw = diags((W.T * W).diagonal()) # FIXME changed from .transpose() to .T ALSO commented this out since it's not used
         Dwinv = diags(1.0 / ((W.T * W).diagonal())) # FIXME changed from .transpose() to .T
@@ -404,27 +404,27 @@ class FEEstimator:
             # Rows for csc_matrix
             self.adata['Jq_row'] = self.adata['Jq'].cumsum() - 1
             # Columns for csc_matrix
-            self.adata['Jq_col'] = self.adata['f1i'] - 1
+            self.adata['Jq_col'] = self.adata['f1i']
             self.adata['Wq'] = self.adata['cs'] == 1
             self.adata['Wq_row'] = self.adata['Wq'].cumsum() - 1
-            self.adata['Wq_col'] = self.adata['wid'] - 1
+            self.adata['Wq_col'] = self.adata['wid']
 
         elif self.params['Q'] == 'cov(psi_t, psi_{t+1})':
             self.adata['Jq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 1)
             self.adata['Jq_row'] = self.adata['Jq'].cumsum() - 1
-            self.adata['Jq_col'] = self.adata['f1i'] - 1
+            self.adata['Jq_col'] = self.adata['f1i']
             self.adata['Wq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 0)
             self.adata['Wq_row'] = self.adata['Wq'].cumsum() - 1
-            self.adata['Wq_col'] = self.adata['f1i'] - 1 # Recall f1i, f2i swapped for m==1 and cs==0
+            self.adata['Wq_col'] = self.adata['f1i'] # Recall f1i, f2i swapped for m==1 and cs==0
 
         elif self.params['Q'] == 'cov(psi_i, psi_j)': # Code doesn't work
             self.adata['Jq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 1)
-            self.adata['Jq_row'] = self.adata['f1i'] - 1
-            self.adata['Jq_col'] = self.adata['f1i'] - 1
+            self.adata['Jq_row'] = self.adata['f1i']
+            self.adata['Jq_col'] = self.adata['f1i']
             self.adata['Wq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 0)
             # Recall f1i, f2i swapped for m==1 and cs==0
-            self.adata['Wq_row'] = self.adata['f2i'] - 1
-            self.adata['Wq_col'] = self.adata['f1i'] - 1
+            self.adata['Wq_row'] = self.adata['f2i']
+            self.adata['Wq_col'] = self.adata['f1i']
 
     def __construct_Jq_Wq(self):
         '''
@@ -776,8 +776,8 @@ class FEEstimator:
             alpha_hat_dict (dict): dictionary linking firm ids to estimated firm fixed effects
             alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed effects
         '''
-        fids = np.arange(self.adata.f1i.max()) + 1
-        wids = np.arange(self.adata.wid.max()) + 1
+        fids = np.arange(self.nf) # np.arange(self.adata.f1i.max()) + 1
+        wids = np.arange(self.nw) # np.arange(self.adata.wid.max()) + 1
         psi_hat_dict = dict(zip(fids, np.concatenate([self.psi_hat, np.array([0])]))) # Add 0 for normalized firm
         alpha_hat_dict = dict(zip(wids, self.alpha_hat))
 

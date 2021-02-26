@@ -314,9 +314,9 @@ class BLMModel:
             self.A2 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
             self.S2 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
             # Model for p(K | l, l') for movers
-            self.pk1 = np.ones(shape=(nk * nk, nl)) / nl # np.random.dirichlet(alpha=[1] * nl, size=nk * nk)
+            self.pk1 = np.random.dirichlet(alpha=[1] * nl, size=nk * nk)
             # Model for p(K | l, l') for stayers
-            self.pk0 = np.ones(shape=(nk, nl)) / nl # np.random.dirichlet(alpha=[1] * nl, size=nk)
+            self.pk0 = np.random.dirichlet(alpha=[1] * nl, size=nk)
         else:
             # Model for Y1 | Y2, l, k for movers and stayers
             self.A1 = np.tile(sorted(np.random.normal(size=nl)), (nk, 1))
@@ -344,6 +344,20 @@ class BLMModel:
 
         if self.stationary:
             self.A2 = self.A1
+
+    def reset_params(self):
+        nl = self.nl
+        nk = self.nk
+        # Model for Y1 | Y2, l, k for movers and stayers
+        self.A1 = np.tile(sorted(np.random.normal(size=nl)), (nk, 1))
+        self.S1 = np.ones(shape=(nk, nl))
+        # Model for Y4 | Y3, l, k for movers and stayers
+        self.A2 = self.A1.copy()
+        self.S2 = np.ones(shape=(nk, nl))
+        # Model for p(K | l, l') for movers
+        self.pk1 = np.ones(shape=(nk * nk, nl)) / nl
+        # Model for p(K | l, l') for stayers
+        self.pk0 = np.ones(shape=(nk, nl)) / nl
 
     def fit_movers(self, jdata):
         '''
@@ -444,9 +458,9 @@ class BLMModel:
                 res_s = cons_s.res
                 S1 = np.sqrt(np.reshape(res_s, (2, nl, nk))[0, :, :]).T
                 S2 = np.sqrt(np.reshape(res_s, (2, nl, nk))[1, :, :]).T
-
-            for l in range(nl):
-                pk1[:, l] = JJ12.T * qi[:, l]
+            if params['update_pk']:
+                for l in range(nl):
+                    pk1[:, l] = JJ12.T * qi[:, l]
 
         self.A1 = A1
         self.S1 = S1
@@ -510,18 +524,20 @@ class BLMModel:
         # Second, use estimated parameters as starting point to run with A constrained to be linear
         # Finally use estimated parameters as starting point to run without constraints
         ##### Loop 1 #####
-        self.params['update_a'] = False # First run fixm = True, which fixes A but updates S and pk
+        self.params['update_a'] = True # First run fixm = True, which fixes A but updates S and pk
+        self.params['update_s'] = False
+        self.params['update_pk'] = False
         print('Running fixm movers')
         self.fit_movers(jdata)
-        ##### Loop 2 #####
-        self.params['update_a'] = True # Now update A
-        self.params['cons_a'] = (['lin'], {'n_periods': 2}) # Set constraints
-        print('Running constrained movers')
-        self.fit_movers(jdata)
-        ##### Loop 3 #####
-        self.params['cons_a'] = () # Remove constraints
-        print('Running unconstrained movers')
-        self.fit_movers(jdata)
+        # ##### Loop 2 #####
+        # self.params['update_a'] = True # Now update A
+        # self.params['cons_a'] = (['lin'], {'n_periods': 2}) # Set constraints
+        # print('Running constrained movers')
+        # self.fit_movers(jdata)
+        # ##### Loop 3 #####
+        # self.params['cons_a'] = () # Remove constraints
+        # print('Running unconstrained movers')
+        # self.fit_movers(jdata)
 
     def plot_A1(self, dpi=None):
         '''
@@ -618,7 +634,7 @@ class BLMModel:
 
             # Draw k
             draw_vals = np.arange(nl)
-            Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk0[k1, :]) # FIXME changed from pk0[0, k1, :]
+            Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk0[k1, :])
             K[I] = Ki
 
             # Draw Y2, Y3
