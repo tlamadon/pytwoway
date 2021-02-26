@@ -370,7 +370,8 @@ class BipartiteLong:
                 'wid': 'wid',
                 'comp': 'comp',
                 'fid': 'fid',
-                'year': 'year'
+                'year': 'year',
+                'j': None
             }
         else:
             self.data = self.data.rename({self.col_dict['j']: 'j'}, axis=1)
@@ -623,7 +624,7 @@ class BipartiteLong:
         data = data.sort_values(['wid', 'year'])
         self.logger.info('copied data sorted by wid and year')
         # Determine whether clustered
-        clustered = 'j' in self.data.columns
+        clustered = self.col_dict['j'] is not None
 
         # Introduce lagged fid and wid
         data['fid_l1'] = data['fid'].shift(periods=1)
@@ -741,7 +742,7 @@ class BipartiteLong:
             stayers['j2'] = stayers['j1']
             movers['j_l1'] = movers['j_l1'].astype(int)
             movers = movers.rename({'j': 'j2', 'j_l1': 'j1'}, axis=1)
-            keep_cols += ['j']
+            keep_cols += ['j1', 'j2']
 
         # Reorder and keep only relevant columns
         stayers = stayers[keep_cols]
@@ -749,7 +750,7 @@ class BipartiteLong:
         self.logger.info('columns updated')
 
         # Merge stayers and movers
-        data_es = pd.concat([stayers, movers])
+        data_es = pd.concat([stayers, movers]).reset_index(drop=True)
 
         self.logger.info('data reformatted as event study')
 
@@ -979,7 +980,8 @@ class BipartiteLongCollapsed:
                 'year_start': 'year_start',
                 'year_end': 'year_end',
                 'weight': 'weight',
-                'm': 'm'
+                'm': 'm',
+                'j': None
             }
         else:
             self.data = self.data.rename({self.col_dict['j']: 'j'}, axis=1)
@@ -1290,7 +1292,7 @@ class BipartiteLongCollapsed:
             stayers['j2'] = stayers['j1']
             movers['j_l1'] = movers['j_l1'].astype(int)
             movers = movers.rename({'j_l1': 'j1', 'j': 'j2'}, axis=1)
-            keep_cols += ['j']
+            keep_cols += ['j1', 'j2']
 
         # Reorder and keep only relevant columns
         stayers = stayers[keep_cols]
@@ -1884,7 +1886,7 @@ class BipartiteEventStudy:
                 .reset_index(drop=True) \
                 .drop(['f2i', 'y2', 'year_start_2', 'year_end_2', 'w2', 'j2'], axis=1) \
                 .rename({'f1i': 'fid', 'y1': 'comp', 'year_start_1': 'year_start', 'year_end_1': 'year_end', 'w1': 'weight', 'j1': 'j'}, axis=1) \
-                .astype({'wid': int, 'fid': int, 'year_start': int, 'year_end': int, 'weight': int, 'm': int})
+                .astype({'wid': int, 'fid': int, 'year_start': int, 'year_end': int, 'weight': int, 'm': int, 'j': int})
         else:
             return self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'year_start_1': 'year_start_2', 'year_start_2': 'year_start_1', 'year_end_1': 'year_end_2', 'year_end_2': 'year_end_1', 'w1': 'w2', 'w2': 'w1'}, axis=1)) if a.iloc[0]['m'] == 1 else a) \
                 .reset_index(drop=True) \
@@ -1907,7 +1909,7 @@ class BipartiteEventStudy:
                 .reset_index(drop=True) \
                 .drop(['f2i', 'y2', 'year_start_2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm', 'j2'], axis=1) \
                 .rename({'f1i': 'fid', 'y1': 'comp', 'year_start_1': 'year', 'j1': 'j'}, axis=1) \
-                .astype({'wid': int, 'fid': int, 'year': int})
+                .astype({'wid': int, 'fid': int, 'year': int, 'j': int})
         else:
             return self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'year_start_1': 'year_start_2', 'year_start_2': 'year_start_1', 'year_end_1': 'year_end_2', 'year_end_2': 'year_end_1', 'w1': 'w2', 'w2': 'w1'}, axis=1)) if a.iloc[0]['m'] == 1 else a) \
                 .reset_index(drop=True) \
