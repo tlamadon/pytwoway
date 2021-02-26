@@ -23,7 +23,8 @@ def test_twfe_refactor_1():
 
     b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.long_to_es()
+    b_net.long_to_collapsed_long()
+    b_net.collapsed_long_to_es()
 
     df_ES = b_net.data
 
@@ -60,7 +61,8 @@ def test_twfe_refactor_2():
 
     b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.long_to_es()
+    b_net.long_to_collapsed_long()
+    b_net.collapsed_long_to_es()
 
     df_ES = b_net.data
 
@@ -95,7 +97,8 @@ def test_twfe_refactor_3():
 
     b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.long_to_es()
+    b_net.long_to_collapsed_long()
+    b_net.collapsed_long_to_es()
 
     df_ES = b_net.data
 
@@ -137,7 +140,8 @@ def test_twfe_refactor_4():
 
     b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.long_to_es()
+    b_net.long_to_collapsed_long()
+    b_net.collapsed_long_to_es()
 
     df_ES = b_net.data
 
@@ -185,7 +189,8 @@ def test_twfe_refactor_5():
 
     b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.long_to_es()
+    b_net.long_to_collapsed_long()
+    b_net.collapsed_long_to_es()
 
     df_ES = b_net.data
 
@@ -234,7 +239,8 @@ def test_twfe_refactor_6():
 
     b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.long_to_es()
+    b_net.long_to_collapsed_long()
+    b_net.collapsed_long_to_es()
 
     df_ES = b_net.data
 
@@ -283,7 +289,8 @@ def test_twfe_refactor_7():
 
     b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.long_to_es()
+    b_net.long_to_collapsed_long()
+    b_net.collapsed_long_to_es()
 
     df_ES = b_net.data
 
@@ -332,7 +339,8 @@ def test_twfe_refactor_8():
 
     b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.long_to_es()
+    b_net.long_to_collapsed_long()
+    b_net.collapsed_long_to_es()
 
     df_ES = b_net.data
 
@@ -381,7 +389,8 @@ def test_twfe_refactor_9():
 
     b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.long_to_es()
+    b_net.long_to_collapsed_long()
+    b_net.collapsed_long_to_es()
 
     df_ES = b_net.data
 
@@ -428,7 +437,8 @@ def test_twfe_refactor_10():
 
     b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.long_to_es()
+    b_net.long_to_collapsed_long()
+    b_net.collapsed_long_to_es()
 
     df_ES = b_net.data
 
@@ -469,7 +479,8 @@ def test_twfe_refactor_11():
 
     b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.long_to_es()
+    b_net.long_to_collapsed_long()
+    b_net.collapsed_long_to_es()
 
     df_ES = b_net.data
 
@@ -512,7 +523,8 @@ def test_fe_ho_1():
 
     b_net = tw.BipartiteData(data=df, col_dict=col_dict)
     b_net.clean_data()
-    b_net.long_to_es()
+    b_net.long_to_collapsed_long()
+    b_net.collapsed_long_to_es()
 
     fe_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'ndraw_tr': 5, 'check': False, 'h2': False, 'out': 'res_fe.json', 'con': False, 'logfile': '', 'levfile': '', 'statsonly': False, 'Q': 'cov(alpha, psi)', 'data': b_net.get_cs()}
 
