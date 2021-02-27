@@ -288,11 +288,13 @@ class BLMModel:
             # fit_movers() and fit_stayers() parameters
             'maxiters': 1000, # Max number of iterations
             # fit_movers() parameters
+            'threshold': 1e-7, # Threshold to break fit_movers() and fit_stayers()
             'update_a': True, # If False, do not update A1 or A2
             'update_s': True, # If False, do not update S1 or S2
+            'update_pk1': True, # If False, do not update pk1
             'return_qi': False, # If True, return qi matrix after first loop
             'cons_a': (['lin'], {'n_periods': 2}), # Constraints on A1 and A2
-            'cons_s': (['biggerthan'], {'gap_bigger': 0, 'n_periods': 2}), # Constraints on S1 and S2
+            'cons_s': (['biggerthan'], {'gap_bigger': 1e-6, 'n_periods': 2}), # Constraints on S1 and S2
             # fit_stayers() parameters
             'return_qi': False # If True, return qi matrix after first loop
         }
@@ -373,6 +375,7 @@ class BLMModel:
         nk = self.nk
         ni = jdata.shape[0]
         liks1 = None # Log likelihood for movers
+        prev_liks = np.inf
 
         # Store wage outcomes and groups
         Y1 = jdata['y1'].to_numpy()
@@ -414,6 +417,10 @@ class BLMModel:
                 return qi
             liks1 = logsumexp(lp, axis=0).sum() # FIXME should this be returned?
             print('loop {}, liks {}'.format(iter, liks1))
+
+            if abs(liks1 - prev_liks) < params['threshold']:
+                break
+            prev_liks = liks1
 
             # --------- M-step ----------
             # For now we run a simple ols, however later we
@@ -458,9 +465,11 @@ class BLMModel:
                 res_s = cons_s.res
                 S1 = np.sqrt(np.reshape(res_s, (2, nl, nk))[0, :, :]).T
                 S2 = np.sqrt(np.reshape(res_s, (2, nl, nk))[1, :, :]).T
-            if params['update_pk']:
+            if params['update_pk1']:
                 for l in range(nl):
                     pk1[:, l] = JJ12.T * qi[:, l]
+                # Normalize rows to sum to 1
+                pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
 
         self.A1 = A1
         self.S1 = S1
@@ -481,6 +490,7 @@ class BLMModel:
         nk = self.nk
         ni = sdata.shape[0]
         liks0 = None # Log likelihood for stayers
+        prev_liks = np.inf
 
         # Store wage outcomes and groups
         Y1 = sdata['y1'].to_numpy()
@@ -509,6 +519,10 @@ class BLMModel:
             liks0 = logsumexp(lp, axis=0).sum() # FIXME should this be returned?
             print('loop {}, liks {}'.format(iter, liks0))
 
+            if abs(liks0 - prev_liks) < params['threshold']:
+                break
+            prev_liks = liks0
+
             # --------- M-step ----------
             for l in range(nl):
                 pk0[:, l] = JJ1.T * qi[:, l]
@@ -523,21 +537,53 @@ class BLMModel:
         # First, simulate parameters but keep A fixed
         # Second, use estimated parameters as starting point to run with A constrained to be linear
         # Finally use estimated parameters as starting point to run without constraints
+        self.reset_params() # New parameter guesses
         ##### Loop 1 #####
-        self.params['update_a'] = True # First run fixm = True, which fixes A but updates S and pk
-        self.params['update_s'] = False
-        self.params['update_pk'] = False
+        self.params['update_a'] = False # First run fixm = True, which fixes A but updates S and pk
         print('Running fixm movers')
         self.fit_movers(jdata)
-        # ##### Loop 2 #####
-        # self.params['update_a'] = True # Now update A
-        # self.params['cons_a'] = (['lin'], {'n_periods': 2}) # Set constraints
-        # print('Running constrained movers')
-        # self.fit_movers(jdata)
-        # ##### Loop 3 #####
-        # self.params['cons_a'] = () # Remove constraints
-        # print('Running unconstrained movers')
-        # self.fit_movers(jdata)
+        ##### Loop 2 #####
+        self.params['update_a'] = True # Now update A
+        self.params['cons_a'] = (['lin'], {'n_periods': 2}) # Set constraints
+        print('Running constrained movers')
+        self.fit_movers(jdata)
+        ##### Loop 3 #####
+        self.params['cons_a'] = () # Remove constraints
+        print('Running unconstrained movers')
+        self.fit_movers(jdata)
+
+    def fit_A(self, jdata):
+        '''
+        Run fit_movers() and update A while keeping S and pk1 fixed.
+        '''
+        self.reset_params() # New parameter guesses
+        self.params['update_a'] = True
+        self.params['update_s'] = False
+        self.params['update_pk1'] = False
+        print('Running fit_A')
+        self.fit_movers(jdata)
+
+    def fit_S(self, jdata):
+        '''
+        Run fit_movers() and update S while keeping A and pk1 fixed.
+        '''
+        self.reset_params() # New parameter guesses
+        self.params['update_a'] = False
+        self.params['update_s'] = True
+        self.params['update_pk1'] = False
+        print('Running fit_S')
+        self.fit_movers(jdata)
+
+    def fit_pk(self, jdata):
+        '''
+        Run fit_movers() and update pk1 while keeping A and S fixed.
+        '''
+        self.reset_params() # New parameter guesses
+        self.params['update_a'] = False
+        self.params['update_s'] = False
+        self.params['update_pk1'] = True
+        print('Running fit_pk')
+        self.fit_movers(jdata)
 
     def plot_A1(self, dpi=None):
         '''
