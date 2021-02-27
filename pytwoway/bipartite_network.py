@@ -12,6 +12,68 @@ from scipy.sparse.csgraph import connected_components
 import warnings
 from pytwoway import update_dict
 
+def col_dict_optional_cols(default_col_dict, user_col_dict, data_cols, optional_cols=()):
+    '''
+    Update col_dict to account for whether certain optional columns are included.
+
+    Arguments:
+        default_col_dict (dict): default col_dict values
+        user_col_dict (dict): user col_dict
+        data_cols (list): columns from user data
+        optional_cols (list of lists): optional columns to check if included in user data. If sub-list has multiple columns, all columns must be included in the data for them to be added to new_col_dict.
+
+    Returns:
+        new_col_dict (dict): updated col_dict
+    '''
+    if user_col_dict is None: # If columns already correct
+        new_col_dict = default_col_dict
+    else:
+        new_col_dict = update_dict(default_col_dict, user_col_dict)
+    # Add columns in 
+    for col_list in optional_cols:
+        include = True
+        for col in col_list:
+            exists_assigned = new_col_dict[col] is not None
+            exists_not_assigned = (col in data_cols) and (new_col_dict[col] is None) and (col not in new_col_dict.values()) # Last condition checks whether data has a different column with same name
+            if not exists_assigned and not exists_not_assigned:
+                include = False
+        if include:
+            for col in col_list:
+                if new_col_dict[col] is None:
+                    new_col_dict[col] = col
+        else: # Reset column names to None if not all essential columns included
+            for col in col_list:
+                new_col_dict[col] = None
+    return new_col_dict
+
+def update_cols(col_dict, data):
+    '''
+    Rename columns and keep only relevant columns.
+
+    Arguments:
+        col_dict (dict): col_dict
+        data (Pandas DataFrame): data
+
+    Returns:
+        new_col_dict (dict): updated col_dict
+        data (Pandas DataFrame): data with updated columns
+    '''
+    new_col_dict = {}
+    rename_dict = {} # For renaming columns in data
+    keep_cols = []
+
+    for key, val in col_dict.items():
+        if val is not None:
+            rename_dict[val] = key
+            new_col_dict[key] = key
+            keep_cols.append(key)
+        else:
+            new_col_dict[key] = None
+    data = data.rename(rename_dict, axis=1)
+    data = data[keep_cols]
+
+    return new_col_dict, data
+
 class BipartiteData:
     '''
     Class of BipartiteData, where BipartiteData gives a bipartite network of firms and workers. Subclasses include BipartiteLong which gives a bipartite network of firms and workers in long form, BipartiteLongCollapsed which gives a bipartite network of firms and workers in collapsed long form (i.e. employment spells are collapsed into a single observation), and BipartiteEventStudy which gives a bipartite network of firms and workers in event study form.
@@ -255,7 +317,9 @@ class BipartiteData:
 
                     grouping (str): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
 
-                    year (int or None): if None, uses entire dataset; if int, gives year of data to consider
+                    year (int or None): if None, uses entire dataset; if int, gives year of data to consider (only works with long form data)
+
+                    stayers_movers (str or None): if None, uses entire dataset; if 'stayers', uses only stayers; if 'movers', uses only movers
 
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
         '''
@@ -299,23 +363,15 @@ class BipartiteLong:
         self.no_na = False # If True, no NaN observations in the data
         self.no_duplicates = False # If True, no duplicate rows in the data
 
-        if col_dict is None: # If columns already correct
-            self.col_dict = {
-                'fid': 'fid',
-                'wid': 'wid',
-                'year': 'year',
-                'comp': 'comp'
-            }
-            if 'j' in data.columns:
-                self.col_dict['j'] = 'j'
-            else:
-                self.col_dict['j'] = None
-        else:
-            self.col_dict = col_dict
-            if 'j' not in col_dict.keys():
-                self.col_dict['j'] = None
-
         # Define default parameter dictionaries
+        default_col_dict = {
+            'wid': 'wid',
+            'fid': 'fid',
+            'comp': 'comp',
+            'year': 'year',
+            'm': None,
+            'j': None
+        }
         self.default_KMeans = {
             'n_clusters': 10,
             'init': 'k-means++',
@@ -334,8 +390,13 @@ class BipartiteLong:
             'cdf_resolution': 10,
             'grouping': 'quantile_all',
             'year': None,
+            'stayers_movers': None,
             'user_KMeans': self.default_KMeans
         }
+
+        # Create self.col_dict
+        optional_cols = [['m'], ['j']]
+        self.col_dict = col_dict_optional_cols(default_col_dict, col_dict, data.columns, optional_cols=optional_cols)
 
         self.logger.info('BipartiteLong object initialized')
 
@@ -353,35 +414,6 @@ class BipartiteLong:
         bd_copy.no_duplicates = self.no_duplicates
 
         return bd_copy
-
-    def update_cols(self):
-        '''
-        Rename columns and keep only relevant columns.
-        '''
-        self.data = self.data.rename({
-            self.col_dict['wid']: 'wid',
-            self.col_dict['comp']: 'comp',
-            self.col_dict['fid']: 'fid',
-            self.col_dict['year']: 'year'
-        }, axis=1)
-
-        keep_cols = ['wid', 'comp', 'fid', 'year']
-
-        col_dict = {
-            'wid': 'wid',
-            'comp': 'comp',
-            'fid': 'fid',
-            'year': 'year',
-            'j': None
-        }
-
-        if self.col_dict['j'] is not None:
-            self.data = self.data.rename({self.col_dict['j']: 'j'}, axis=1)
-            keep_cols += ['j']
-            col_dict['j'] = 'j'
-
-        self.data = self.data[keep_cols]
-        self.col_dict = col_dict
 
     def n_workers(self):
         '''
@@ -455,8 +487,12 @@ class BipartiteLong:
 
         all_cols = ['wid', 'comp', 'fid', 'year']
 
+        # Determine whether m, cluster columns exist
+        m = self.col_dict['m'] is not None
         clustered = self.col_dict['j'] is not None
 
+        if m:
+            all_cols += ['m']
         if clustered:
             all_cols += ['j']
 
@@ -467,7 +503,7 @@ class BipartiteLong:
                 self.logger.info(col, 'missing from data')
                 cols = False
             else:
-                if col in ['year', 'j']:
+                if col in ['year', 'm', 'j']:
                     if self.data[self.col_dict[col]].dtype not in ['int', 'int16', 'int32', 'int64']:
                         self.logger.info(self.col_dict[col], 'has wrong dtype, should be int but is', self.data[self.col_dict[col]].dtype)
                         cols = False
@@ -483,7 +519,7 @@ class BipartiteLong:
         else:
             # Correct column names
             self.logger.info('correcting column names')
-            self.update_cols()
+            self.col_dict, self.data = update_cols(self.col_dict, self.data)
 
         self.logger.info('--- checking worker-year observations ---')
         max_obs = self.data.groupby(['wid', 'year']).size().max()
@@ -610,6 +646,13 @@ class BipartiteLong:
             # Firm ids are now contiguous
             self.contiguous = True
 
+    def gen_m(self):
+        '''
+        Generate m column for data (m == 0 if stayer, m == 1 if mover).
+        '''
+        self.data['m'] = self.data.groupby('wid')['fid'].transform(lambda x: len(np.unique(x)) > 1)
+        self.col_dict['m'] = 'm'
+
     def get_collapsed_long(self):
         '''
         Collapse long data by job spells (so each spell for a particular worker at a particular firm is one observation).
@@ -622,7 +665,8 @@ class BipartiteLong:
         # Sort data by wid and year
         data = data.sort_values(['wid', 'year'])
         self.logger.info('copied data sorted by wid and year')
-        # Determine whether clustered
+        # Determine whether  m, cluster columns exist
+        m = self.col_dict['m'] is not None
         clustered = self.col_dict['j'] is not None
 
         # Introduce lagged fid and wid
@@ -638,7 +682,28 @@ class BipartiteLong:
 
         # Aggregate at the spell level
         spell = data.groupby(['spell_id'])
-        if clustered:
+        if m and clustered:
+            data_spell = spell.agg(
+                wid=pd.NamedAgg(column='wid', aggfunc='first'),
+                comp=pd.NamedAgg(column='comp', aggfunc='mean'),
+                fid=pd.NamedAgg(column='fid', aggfunc='first'),
+                year_start=pd.NamedAgg(column='year', aggfunc='min'),
+                year_end=pd.NamedAgg(column='year', aggfunc='max'),
+                weight=pd.NamedAgg(column='wid', aggfunc='size'),
+                m=pd.NamedAgg(column='m', aggfunc='first'),
+                j=pd.NamedAgg(column='j', aggfunc='first')
+            )
+        elif m:
+            data_spell = spell.agg(
+                wid=pd.NamedAgg(column='wid', aggfunc='first'),
+                comp=pd.NamedAgg(column='comp', aggfunc='mean'),
+                fid=pd.NamedAgg(column='fid', aggfunc='first'),
+                year_start=pd.NamedAgg(column='year', aggfunc='min'),
+                year_end=pd.NamedAgg(column='year', aggfunc='max'),
+                weight=pd.NamedAgg(column='wid', aggfunc='size'),
+                m=pd.NamedAgg(column='m', aggfunc='first')
+            )
+        elif clustered:
             data_spell = spell.agg(
                 wid=pd.NamedAgg(column='wid', aggfunc='first'),
                 comp=pd.NamedAgg(column='comp', aggfunc='mean'),
@@ -658,8 +723,9 @@ class BipartiteLong:
                 weight=pd.NamedAgg(column='wid', aggfunc='size')
             )
         # Classify movers and stayers
-        spell_count = data_spell.groupby(['wid']).transform('count')['fid'] # Choice of fid arbitrary
-        data_spell['m'] = (spell_count > 1).astype(int)
+        if not m:
+            spell_count = data_spell.groupby(['wid']).transform('count')['fid'] # Choice of fid arbitrary
+            data_spell['m'] = (spell_count > 1).astype(int)
         data = data_spell.reset_index(drop=True)
 
         self.logger.info('data aggregated at the spell level')
@@ -673,68 +739,48 @@ class BipartiteLong:
         Returns:
             data_es (Pandas DataFrame): event study data
         '''
-        # Compute movers
-        m = self.data.groupby('wid')['fid'].transform(lambda x: len(np.unique(x)) > 1)
-        # Split movers and stayers
-        stayers = self.data[m == 0]
-        movers = self.data[m == 1]
+        # Determine whether  m, cluster columns exist
+        m = self.col_dict['m'] is not None
+        clustered = self.col_dict['j'] is not None
+        if not m:
+            # Generate m column
+            self.gen_m()
+        # Split workers by movers and stayers
+        stayers = self.data[self.data['m'] == 0]
+        movers = self.data[self.data['m'] == 1]
         self.logger.info('workers split by movers and stayers')
 
-        # Determine whether clustered
-        clustered = self.col_dict['j'] is not None
-
-        # Rename year to year_start
-        movers = movers.rename({'year': 'year_start'}, axis=1)
-        stayers = stayers.rename({'year': 'year_start'}, axis=1)
-
         # Add lagged values
-        movers = movers.sort_values(['wid', 'year_start'])
+        movers = movers.sort_values(['wid', 'year'])
         movers['fid_l1'] = movers['fid'].shift(periods=1)
         movers['wid_l1'] = movers['wid'].shift(periods=1) # Used to mark consecutive observations as being for the same worker
         movers['comp_l1'] = movers['comp'].shift(periods=1)
-        movers['year_start_l1'] = movers['year_start'].shift(periods=1)
+        movers['year_l1'] = movers['year'].shift(periods=1)
         if clustered:
             movers['j_l1'] = movers['j'].shift(periods=1)
         movers = movers[movers['wid'] == movers['wid_l1']]
-        movers[['fid_l1', 'year_start_l1']] = movers[['fid_l1', 'year_start_l1']].astype(int) # Shifting adds nans which converts columns into float, but want int            
+        movers[['fid_l1', 'year_l1']] = movers[['fid_l1', 'year_l1']].astype(int) # Shifting adds nans which converts columns into float, but want int
 
         # Update columns
         stayers = stayers.rename({
             'fid': 'f1i',
             'comp': 'y1',
-            'year_start': 'year_start_1'
+            'year': 'year_1'
         }, axis=1)
         stayers['f2i'] = stayers['f1i']
         stayers['y2'] = stayers['y1']
-        # Since all data is 1 year, define year_end as year_start and weight as 1
-        movers['year_end'] = movers['year_start']
-        movers['year_end_l1'] = movers['year_start_l1']
-        movers['w1'] = 1
-        movers['w2'] = 1
-        stayers['year_start_2'] = stayers['year_start_1']
-        stayers['year_end_1'] = stayers['year_start_1']
-        stayers['year_end_2'] = stayers['year_start_1']
-        stayers['w1'] = 1
-        stayers['w2'] = 1
+        stayers['year_2'] = stayers['year_1']
         
         movers = movers.rename({
             'fid_l1': 'f1i',
             'fid': 'f2i',
             'comp_l1': 'y1',
             'comp': 'y2',
-            'year_start_l1': 'year_start_1',
-            'year_start': 'year_start_2',
-            'year_end_l1': 'year_end_1',
-            'year_end': 'year_end_2',
-            'weight_l1': 'w1',
-            'weight': 'w2'
+            'year': 'year_2',
+            'year_l1': 'year_1',
         }, axis=1)
 
-        # Mark movers and stayers
-        stayers['m'] = 0
-        movers['m'] = 1
-
-        keep_cols = ['wid', 'y1', 'y2', 'f1i', 'f2i', 'year_start_1', 'year_start_2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm']
+        keep_cols = ['wid', 'y1', 'y2', 'f1i', 'f2i', 'year_1', 'year_2', 'm']
 
         if clustered:
             stayers = stayers.rename({'j': 'j1'}, axis=1)
@@ -743,7 +789,7 @@ class BipartiteLong:
             movers = movers.rename({'j': 'j2', 'j_l1': 'j1'}, axis=1)
             keep_cols += ['j1', 'j2']
 
-        # Reorder and keep only relevant columns
+        # Keep only relevant columns
         stayers = stayers[keep_cols]
         movers = movers[keep_cols]
         self.logger.info('columns updated')
@@ -755,21 +801,35 @@ class BipartiteLong:
 
         return data_es
 
-    def approx_cdfs(self, cdf_resolution=10, grouping='quantile_all', year=None):
+    def approx_cdfs(self, cdf_resolution=10, grouping='quantile_all', stayers_movers=None, year=None):
         '''
         Generate cdfs of compensation for firms.
 
         Arguments:
             cdf_resolution (int): how many values to use to approximate the cdf
             grouping (str): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
+            stayers_movers (str or None): if None, uses entire dataset; if 'stayers', uses only stayers; if 'movers', uses only movers
             year (int or None): if None, uses entire dataset; if int, gives year of data to consider
 
         Returns:
             cdf_df (NumPy Array): NumPy array of firm cdfs
         '''
+        # Determine whether m column exists
+        m = self.col_dict['m'] is not None
+
+        if not m:
+            self.gen_m()
+
+        if stayers_movers == 'stayers':
+            data = self.data[self.data['m'] == 0]
+        elif stayers_movers == 'movers':
+            data = self.data[self.data['m'] == 1]
+        else:
+            data = self.data
+
         # If year-level, then only use data for that particular year
         if isinstance(year, int):
-            data = self.data[self.data['year'] == year]
+            data = data[data['year'] == year]
 
         # Create empty numpy array to fill with the cdfs
         n_firms = self.n_firms()
@@ -780,25 +840,25 @@ class BipartiteLong:
 
         if grouping == 'quantile_all':
             # Get quantiles from all data
-            quantile_groups = self.data['comp'].quantile(quantiles)
+            quantile_groups = data['comp'].quantile(quantiles)
 
             # Generate firm-level cdfs
             for i, quant in enumerate(quantile_groups):
-                cdfs[:, i] = self.data.assign(firm_quant=lambda d: d['comp'] <= quant).groupby('fid')['firm_quant'].agg(sum).to_numpy()
+                cdfs[:, i] = data.assign(firm_quant=lambda d: d['comp'] <= quant).groupby('fid')['firm_quant'].agg(sum).to_numpy()
 
             # Normalize by firm size (convert to cdf)
-            fsize = self.data.groupby('fid').size().to_numpy()
+            fsize = data.groupby('fid').size().to_numpy()
             cdfs /= np.expand_dims(fsize, 1)
 
         elif grouping in ['quantile_firm_small', 'quantile_firm_large']:
             # Sort data by compensation (do this once now, so that don't need to do it again later) (also note it is faster to sort then manually compute quantiles than to use built-in quantile functions)
-            self.data = self.data.sort_values(['comp'])
+            data = data.sort_values(['comp'])
 
             if grouping == 'quantile_firm_small':
                 # Convert pandas dataframe into a dictionary to access data faster
                 # Source for idea: https://stackoverflow.com/questions/57208997/looking-for-the-fastest-way-to-slice-a-row-in-a-huge-pandas-dataframe
                 # Source for how to actually format data correctly: https://stackoverflow.com/questions/56064677/pandas-series-to-dict-with-repeated-indices-make-dict-with-list-values
-                data_dict = self.data['comp'].groupby(level=0).agg(list).to_dict()
+                data_dict = data['comp'].groupby(level=0).agg(list).to_dict()
 
             # Generate the cdfs
             for fid in tqdm(range(n_firms)):
@@ -806,7 +866,7 @@ class BipartiteLong:
                 if grouping == 'quantile_firm_small':
                     comp = data_dict[fid]
                 elif grouping == 'quantile_firm_large':
-                    comp = self.data.loc[self.data['fid'] == fid, 'comp']
+                    comp = data.loc[data['fid'] == fid, 'comp']
                 # Generate the firm-level cdf
                 # Note: update numpy array element by element
                 # Source: https://stackoverflow.com/questions/30012362/faster-way-to-convert-list-of-objects-to-numpy-array/30012403
@@ -830,6 +890,8 @@ class BipartiteLong:
 
                     grouping (str): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
 
+                    stayers_movers (str or None): if None, uses entire dataset; if 'stayers', uses only stayers; if 'movers', uses only movers
+
                     year (int or None): if None, uses entire dataset; if int, gives year of data to consider
 
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
@@ -840,10 +902,12 @@ class BipartiteLong:
         # Unpack dictionary
         cdf_resolution = cluster_params['cdf_resolution']
         grouping = cluster_params['grouping']
+        year = cluster_params['year']
+        stayers_movers = cluster_params['stayers_movers']
         user_KMeans = cluster_params['user_KMeans']
 
         # Compute cdfs
-        cdfs = self.approx_cdfs(cdf_resolution=cdf_resolution, grouping=grouping)
+        cdfs = self.approx_cdfs(cdf_resolution=cdf_resolution, grouping=grouping, stayers_movers=stayers_movers, year=year)
         self.logger.info('firm cdfs computed')
 
         # Compute firm clusters
@@ -856,6 +920,10 @@ class BipartiteLong:
         clusters_dict = {'fid': fids, 'j': clusters}
         clusters_df = pd.DataFrame(clusters_dict, index=fids)
         self.logger.info('dataframe linking fids to clusters generated')
+
+        # Drop j column from data if it already exists
+        if self.col_dict['j'] is not None:
+            self.data = self.data.drop('j', axis=1)
 
         # Merge into event study data
         self.data = self.data.merge(clusters_df, how='left', on='fid')
@@ -899,26 +967,18 @@ class BipartiteLongCollapsed:
         self.no_na = False # If True, no NaN observations in the data
         self.no_duplicates = False # If True, no duplicate rows in the data
 
-        if col_dict is None: # If columns already correct
-            self.col_dict = {
-                'wid': 'wid',
-                'comp': 'comp',
-                'fid': 'fid',
-                'year_start': 'year_start',
-                'year_end': 'year_end',
-                'weight': 'weight',
-                'm': 'm'
-            }
-            if 'j' in data.columns:
-                self.col_dict['j'] = 'j'
-            else:
-                self.col_dict['j'] = None
-        else:
-            self.col_dict = col_dict
-            if 'j' not in col_dict.keys():
-                self.col_dict['j'] = None
-
         # Define default parameter dictionaries
+        default_col_dict = {
+            'wid': 'wid',
+            'fid': 'fid',
+            'comp': 'comp',
+            'year_start': 'year_start',
+            'year_end': 'year_end',
+            'm': None,
+            'weight': None,
+            'j': None
+        }
+
         self.default_KMeans = {
             'n_clusters': 10,
             'init': 'k-means++',
@@ -937,8 +997,13 @@ class BipartiteLongCollapsed:
             'cdf_resolution': 10,
             'grouping': 'quantile_all',
             'year': None,
+            'stayers_movers': None,
             'user_KMeans': self.default_KMeans
         }
+
+        # Create self.col_dict
+        optional_cols = [['m'], ['weight'], ['j']]
+        self.col_dict = col_dict_optional_cols(default_col_dict, col_dict, data.columns, optional_cols=optional_cols)
 
         self.logger.info('BipartiteLongCollapsed object initialized')
 
@@ -956,41 +1021,6 @@ class BipartiteLongCollapsed:
         bd_copy.no_duplicates = self.no_duplicates
 
         return bd_copy
-
-    def update_cols(self):
-        '''
-        Rename columns and keep only relevant columns.
-        '''
-        self.data = self.data.rename({
-            self.col_dict['wid']: 'wid',
-            self.col_dict['comp']: 'comp',
-            self.col_dict['fid']: 'fid',
-            self.col_dict['year_start']: 'year_start',
-            self.col_dict['year_end']: 'year_end',
-            self.col_dict['weight']: 'weight',
-            self.col_dict['m']: 'm'
-        }, axis=1)
-
-        keep_cols = ['wid', 'comp', 'fid', 'year_start', 'year_end', 'weight', 'm']
-
-        col_dict = {
-            'wid': 'wid',
-            'comp': 'comp',
-            'fid': 'fid',
-            'year_start': 'year_start',
-            'year_end': 'year_end',
-            'weight': 'weight',
-            'm': 'm',
-            'j': None
-        }
-        
-        if self.col_dict['j'] is not None:
-            self.data = self.data.rename({self.col_dict['j']: 'j'}, axis=1)
-            keep_cols += ['j']
-            col_dict['j'] = 'j'
-
-        self.data = self.data[keep_cols]
-        self.col_dict = col_dict
 
     def n_workers(self):
         '''
@@ -1062,10 +1092,17 @@ class BipartiteLongCollapsed:
         '''
         success = True
 
-        all_cols = ['wid', 'comp', 'fid', 'year_start', 'year_end', 'weight', 'm']
+        all_cols = ['wid', 'comp', 'fid', 'year_start', 'year_end']
 
+        # Determine whether weight, m, cluster columns exist
+        weighted = self.col_dict['weight'] is not None
+        m = self.col_dict['m'] is not None
         clustered = self.col_dict['j'] is not None
 
+        if weighted:
+            all_cols += ['weight']
+        if m:
+            all_cols += ['m']
         if clustered:
             all_cols += ['j']
 
@@ -1092,7 +1129,7 @@ class BipartiteLongCollapsed:
         else:
             # Correct column names
             self.logger.info('correcting column names')
-            self.update_cols()
+            self.col_dict, self.data = update_cols(self.col_dict, self.data)
 
         self.logger.info('--- checking worker-year observations ---')
         max_obs_start = self.data.groupby(['wid', 'year_start']).size().max()
@@ -1221,6 +1258,13 @@ class BipartiteLongCollapsed:
             # Firm ids are now contiguous
             self.contiguous = True
 
+    def gen_m(self):
+        '''
+        Generate m column for data (m == 0 if stayer, m == 1 if mover).
+        '''
+        self.data['m'] = self.data.groupby('wid')['fid'].transform(lambda x: len(np.unique(x)) > 1)
+        self.col_dict['m'] = 'm'
+
     def get_es(self):
         '''
         Return collapsed long form data reformatted into event study data.
@@ -1228,13 +1272,17 @@ class BipartiteLongCollapsed:
         Returns:
             data_es (Pandas DataFrame): event study data
         '''
+        # Determine whether m, cluster columns exist
+        weighted = self.col_dict['weight'] is not None
+        m = self.col_dict['m'] is not None
+        clustered = self.col_dict['j'] is not None
+        if not m:
+            # Generate m column
+            self.gen_m()
         # Split workers by movers and stayers
         stayers = self.data[self.data['m'] == 0]
         movers = self.data[self.data['m'] == 1]
         self.logger.info('workers split by movers and stayers')
-
-        # Determine whether clustered
-        clustered = self.col_dict['j'] is not None
 
         # Add lagged values
         movers = movers.sort_values(['wid', 'year_start'])
@@ -1243,11 +1291,12 @@ class BipartiteLongCollapsed:
         movers['comp_l1'] = movers['comp'].shift(periods=1)
         movers['year_start_l1'] = movers['year_start'].shift(periods=1)
         movers['year_end_l1'] = movers['year_end'].shift(periods=1)
-        movers['weight_l1'] = movers['weight'].shift(periods=1)
+        if weighted:
+            movers['weight_l1'] = movers['weight'].shift(periods=1)
         if clustered:
             movers['j_l1'] = movers['j'].shift(periods=1)
         movers = movers[movers['wid'] == movers['wid_l1']]
-        movers[['fid_l1', 'year_start_l1', 'year_end_l1', 'weight_l1']] = movers[['fid_l1', 'year_start_l1', 'year_end_l1', 'weight_l1']].astype(int) # Shifting adds nans which converts columns into float, but want int
+        movers[['fid_l1', 'year_start_l1', 'year_end_l1']] = movers[['fid_l1', 'year_start_l1', 'year_end_l1']].astype(int) # Shifting adds nans which converts columns into float, but want int
 
         # Update columns
         stayers = stayers.rename({
@@ -1255,14 +1304,14 @@ class BipartiteLongCollapsed:
             'comp': 'y1',
             'year_start': 'year_start_1',
             'year_end': 'year_end_1',
-            'weight': 'w1'
+            'weight': 'w1', # Optional
+            'j': 'j1' # Optional
         }, axis=1)
         stayers['f2i'] = stayers['f1i']
         stayers['y2'] = stayers['y1']
         stayers['year_start_2'] = stayers['year_start_1']
         stayers['year_end_2'] = stayers['year_end_1']
-        stayers['w2'] = stayers['w1']
-        
+
         movers = movers.rename({
             'fid_l1': 'f1i',
             'fid': 'f2i',
@@ -1272,24 +1321,24 @@ class BipartiteLongCollapsed:
             'year_start': 'year_start_2',
             'year_end_l1': 'year_end_1',
             'year_end': 'year_end_2',
-            'weight_l1': 'w1',
-            'weight': 'w2'
+            'weight_l1': 'w1', # Optional
+            'weight': 'w2', # Optional
+            'j_l1': 'j1', # Optional
+            'j': 'j2' # Optional
         }, axis=1)
 
-        # Mark movers and stayers
-        stayers['m'] = 0
-        movers['m'] = 1
+        keep_cols = ['wid', 'y1', 'y2', 'f1i', 'f2i', 'year_start_1', 'year_start_2', 'year_end_1', 'year_end_2', 'm']
 
-        keep_cols = ['wid', 'y1', 'y2', 'f1i', 'f2i', 'year_start_1', 'year_start_2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm']
-
+        if weighted:
+            stayers['w2'] = stayers['w1']
+            movers['w1'] = movers['w1'].astype(int)
+            keep_cols += ['w1', 'w2']
         if clustered:
-            stayers = stayers.rename({'j': 'j1'}, axis=1)
             stayers['j2'] = stayers['j1']
-            movers['j_l1'] = movers['j_l1'].astype(int)
-            movers = movers.rename({'j_l1': 'j1', 'j': 'j2'}, axis=1)
+            movers['j1'] = movers['j1'].astype(int)
             keep_cols += ['j1', 'j2']
 
-        # Reorder and keep only relevant columns
+        # Keep only relevant columns
         stayers = stayers[keep_cols]
         movers = movers[keep_cols]
         self.logger.info('columns updated')
@@ -1301,21 +1350,30 @@ class BipartiteLongCollapsed:
 
         return data_es
 
-    def approx_cdfs(self, cdf_resolution=10, grouping='quantile_all', year=None):
+    def approx_cdfs(self, cdf_resolution=10, grouping='quantile_all', stayers_movers=None):
         '''
         Generate cdfs of compensation for firms.
 
         Arguments:
             cdf_resolution (int): how many values to use to approximate the cdf
             grouping (str): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
-            year (int or None): if None, uses entire dataset; if int, gives year of data to consider
+            stayers_movers (str or None): if None, uses entire dataset; if 'stayers', uses only stayers; if 'movers', uses only movers
 
         Returns:
             cdf_df (NumPy Array): NumPy array of firm cdfs
         '''
-        # If year-level, then only use data for that particular year
-        if isinstance(year, int):
-            data = self.data[self.data['year_start'] == year]
+        # Determine whether m column exists
+        m = self.col_dict['m'] is not None
+
+        if not m:
+            self.gen_m()
+
+        if stayers_movers == 'stayers':
+            data = self.data[self.data['m'] == 0]
+        elif stayers_movers == 'movers':
+            data = self.data[self.data['m'] == 1]
+        else:
+            data = self.data
 
         # Create empty numpy array to fill with the cdfs
         n_firms = self.n_firms()
@@ -1326,25 +1384,25 @@ class BipartiteLongCollapsed:
 
         if grouping == 'quantile_all':
             # Get quantiles from all data
-            quantile_groups = self.data['comp'].quantile(quantiles)
+            quantile_groups = data['comp'].quantile(quantiles)
 
             # Generate firm-level cdfs
             for i, quant in enumerate(quantile_groups):
-                cdfs[:, i] = self.data.assign(firm_quant=lambda d: d['comp'] <= quant).groupby('fid')['firm_quant'].agg(sum).to_numpy()
+                cdfs[:, i] = data.assign(firm_quant=lambda d: d['comp'] <= quant).groupby('fid')['firm_quant'].agg(sum).to_numpy()
 
             # Normalize by firm size (convert to cdf)
-            fsize = self.data.groupby('fid').size().to_numpy()
+            fsize = data.groupby('fid').size().to_numpy()
             cdfs /= np.expand_dims(fsize, 1)
 
         elif grouping in ['quantile_firm_small', 'quantile_firm_large']:
             # Sort data by compensation (do this once now, so that don't need to do it again later) (also note it is faster to sort then manually compute quantiles than to use built-in quantile functions)
-            self.data = self.data.sort_values(['comp'])
+            data = data.sort_values(['comp'])
 
             if grouping == 'quantile_firm_small':
                 # Convert pandas dataframe into a dictionary to access data faster
                 # Source for idea: https://stackoverflow.com/questions/57208997/looking-for-the-fastest-way-to-slice-a-row-in-a-huge-pandas-dataframe
                 # Source for how to actually format data correctly: https://stackoverflow.com/questions/56064677/pandas-series-to-dict-with-repeated-indices-make-dict-with-list-values
-                data_dict = self.data['comp'].groupby(level=0).agg(list).to_dict()
+                data_dict = data['comp'].groupby(level=0).agg(list).to_dict()
 
             # Generate the cdfs
             for fid in tqdm(range(n_firms)):
@@ -1352,7 +1410,7 @@ class BipartiteLongCollapsed:
                 if grouping == 'quantile_firm_small':
                     comp = data_dict[fid]
                 elif grouping == 'quantile_firm_large':
-                    comp = self.data.loc[self.data['fid'] == fid, 'comp']
+                    comp = data.loc[data['fid'] == fid, 'comp']
                 # Generate the firm-level cdf
                 # Note: update numpy array element by element
                 # Source: https://stackoverflow.com/questions/30012362/faster-way-to-convert-list-of-objects-to-numpy-array/30012403
@@ -1376,20 +1434,25 @@ class BipartiteLongCollapsed:
 
                     grouping (str): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
 
-                    year (int or None): if None, uses entire dataset; if int, gives year of data to consider
+                    stayers_movers (str or None): if None, uses entire dataset; if 'stayers', uses only stayers; if 'movers', uses only movers
 
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
         '''
+        # Warn about selecting a year with event study data
+        if user_cluster['year'] is not None:
+            warnings.warn('Can only cluster on a particular year with long form data, but data is currently event study form.')
+
         # Update dictionary
         cluster_params = update_dict(self.default_cluster, user_cluster)
 
         # Unpack dictionary
         cdf_resolution = cluster_params['cdf_resolution']
         grouping = cluster_params['grouping']
+        stayers_movers = cluster_params['stayers_movers']
         user_KMeans = cluster_params['user_KMeans']
 
         # Compute cdfs
-        cdfs = self.approx_cdfs(cdf_resolution=cdf_resolution, grouping=grouping)
+        cdfs = self.approx_cdfs(cdf_resolution=cdf_resolution, grouping=grouping, stayers_movers=stayers_movers)
         self.logger.info('firm cdfs computed')
 
         # Compute firm clusters
@@ -1447,34 +1510,29 @@ class BipartiteEventStudy:
         self.no_duplicates = False # If True, no duplicate rows in the data
         self.collapsed = collapsed
 
-        if col_dict is None: # If columns already correct
-            self.col_dict = {
-                'wid': 'wid',
-                'f1i': 'f1i',
-                'f2i': 'f2i',
-                'y1': 'y1',
-                'y2': 'y2',
-                'year_start_1': 'year_start_1',
-                'year_start_2': 'year_start_2',
-                'year_end_1': 'year_end_1',
-                'year_end_2': 'year_end_2',
-                'w1': 'w1',
-                'w2': 'w2',
-                'm': 'm',
-            }
-            if 'j1' in data.columns and 'j2' in data.columns:
-                self.col_dict['j1'] = 'j1'
-                self.col_dict['j2'] = 'j2'
-            else:
-                self.col_dict['j1'] = None
-                self.col_dict['j2'] = None
-        else:
-            self.col_dict = col_dict
-            if 'j1' not in col_dict.keys() or 'j2' not in col_dict.keys():
-                self.col_dict['j1'] = None
-                self.col_dict['j2'] = None
-
         # Define default parameter dictionaries
+        default_col_dict = {
+            'wid': 'wid',
+            'f1i': 'f1i',
+            'f2i': 'f2i',
+            'y1': 'y1',
+            'y2': 'y2',
+            'w1': None,
+            'w2': None,
+            'm': None,
+            'j1': None,
+            'j2': None
+        }
+        if collapsed:
+            default_col_dict['year_start_1'] = 'year_start_1'
+            default_col_dict['year_start_2'] = 'year_start_2'
+            default_col_dict['year_end_1'] = 'year_end_1'
+            default_col_dict['year_end_2'] = 'year_end_2'
+            
+        else:
+            default_col_dict['year_1'] = 'year_1'
+            default_col_dict['year_2'] = 'year_2'
+
         self.default_KMeans = {
             'n_clusters': 10,
             'init': 'k-means++',
@@ -1493,8 +1551,13 @@ class BipartiteEventStudy:
             'cdf_resolution': 10,
             'grouping': 'quantile_all',
             'year': None,
+            'stayers_movers': None,
             'user_KMeans': self.default_KMeans
         }
+
+        # Create self.col_dict
+        optional_cols = [['w1', 'w2'], ['m'], ['j1', 'j2']]
+        self.col_dict = col_dict_optional_cols(default_col_dict, col_dict, data.columns, optional_cols=optional_cols)
 
         self.logger.info('BipartiteEventStudy object initialized')
 
@@ -1512,53 +1575,6 @@ class BipartiteEventStudy:
         bd_copy.no_duplicates = self.no_duplicates
 
         return bd_copy
-
-    def update_cols(self):
-        '''
-        Rename columns and keep only relevant columns.
-        '''
-        self.data = self.data.rename({
-            self.col_dict['wid']: 'wid',
-            self.col_dict['f1i']: 'f1i',
-            self.col_dict['f2i']: 'f2i',
-            self.col_dict['y1']: 'y1',
-            self.col_dict['y2']: 'y2',
-            self.col_dict['year_start_1']: 'year_start_1',
-            self.col_dict['year_start_2']: 'year_start_2',
-            self.col_dict['year_end_1']: 'year_end_1',
-            self.col_dict['year_end_2']: 'year_end_2',
-            self.col_dict['w1']: 'w1',
-            self.col_dict['w2']: 'w2',
-            self.col_dict['m']: 'm'
-        }, axis=1)
-
-        keep_cols = ['wid', 'f1i', 'f2i', 'y1', 'y2', 'year_start_1', 'year_start_2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm']
-
-        col_dict = {
-            'wid': 'wid',
-            'f1i': 'f1i',
-            'f2i': 'f2i',
-            'y1': 'y1',
-            'y2': 'y2',
-            'year_start_1': 'year_start_1',
-            'year_start_2': 'year_start_2',
-            'year_end_1': 'year_end_1',
-            'year_end_2': 'year_end_2',
-            'w1': 'w1',
-            'w2': 'w2',
-            'm': 'm',
-            'j1': None,
-            'j2': None
-        }
-
-        if self.col_dict['j1'] is not None and self.col_dict['j2'] is not None:
-            self.data = self.data.rename({self.col_dict['j1']: 'j1', self.col_dict['j2']: 'j2'}, axis=1)
-            keep_cols += ['j1', 'j2']
-            col_dict['j1'] = 'j1'
-            col_dict['j2'] = 'j2'
-
-        self.data = self.data[keep_cols]
-        self.col_dict = col_dict
 
     def n_workers(self):
         '''
@@ -1631,10 +1647,22 @@ class BipartiteEventStudy:
         success_stayers = True
         success_movers = True
 
-        all_cols = ['wid', 'y1', 'y2', 'f1i', 'f2i', 'year_start_1', 'year_start_2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm']
+        all_cols = ['wid', 'y1', 'y2', 'f1i', 'f2i']
 
+        # Determine whether weight, m, cluster columns exist
+        weighted = self.col_dict['w1'] is not None and self.col_dict['w2'] is not None
+        m = self.col_dict['m'] is not None
         clustered = self.col_dict['j1'] is not None and self.col_dict['j2'] is not None
 
+        if 'year_1' in self.col_dict.keys(): # From long
+            all_cols += ['year_1', 'year_2']
+        else: # From collapsed long
+            all_cols += ['year_start_1', 'year_start_2', 'year_end_1', 'year_end_2']
+
+        if weighted:
+            all_cols += ['w1', 'w2']
+        if m:
+            all_cols += ['m']
         if clustered:
             all_cols += ['j1', 'j2']
 
@@ -1649,7 +1677,7 @@ class BipartiteEventStudy:
                     if self.data[self.col_dict[col]].dtype not in ['float', 'float16', 'float32', 'float64', 'float128', 'int', 'int16', 'int32', 'int64']:
                         self.logger.info(col, 'column has wrong dtype, should be float or int but is', self.data[self.col_dict[col]].dtype)
                         cols = False
-                elif col in ['year_start_1', 'year_start_2', 'year_end_1', 'year_end_2', 'm', 'j1', 'j2']:
+                elif col in ['year_1', 'year_2', 'year_start_1', 'year_start_2', 'year_end_1', 'year_end_2', 'm', 'j1', 'j2']:
                     if self.data[self.col_dict[col]].dtype not in ['int', 'int16', 'int32', 'int64']:
                         self.logger.info(col, 'column has wrong dtype, should be int but is', self.data[self.col_dict[col]].dtype)
                         cols = False
@@ -1662,7 +1690,7 @@ class BipartiteEventStudy:
         else:
             # Correct column names
             self.logger.info('correcting column names')
-            self.update_cols()
+            self.col_dict, self.data = update_cols(self.col_dict, self.data)
 
         stayers = self.data[self.data['m'] == 0]
         movers = self.data[self.data['m'] == 1]
@@ -1823,6 +1851,13 @@ class BipartiteEventStudy:
             # Firm ids are now contiguous
             self.contiguous = True
 
+    def gen_m(self):
+        '''
+        Generate m column for data (m == 0 if stayer, m == 1 if mover).
+        '''
+        self.data['m'] = (self.data['f1i'] != self.data['f2i']).astype(int)
+        self.col_dict['m'] = 'm'
+
     def get_cs(self):
         '''
         Return event study data reformatted into cross section data.
@@ -1830,6 +1865,14 @@ class BipartiteEventStudy:
         Returns:
             data_cs (Pandas DataFrame): cross section data
         '''
+        # Determine whether weight, m, cluster columns exist
+        weighted = self.col_dict['w1'] is not None and self.col_dict['w2'] is not None
+        m = self.col_dict['m'] is not None
+        clustered = self.col_dict['j1'] is not None and self.col_dict['j2'] is not None
+
+        if not m:
+            self.gen_m()
+
         sdata = self.data[self.data['m'] == 0]
         jdata = self.data[self.data['m'] == 1]
 
@@ -1837,83 +1880,203 @@ class BipartiteEventStudy:
         ns = len(sdata)
         nm = len(jdata)
 
-        # Determine whether clustered
-        clustered = self.col_dict['j1'] is not None and self.col_dict['j2'] is not None
-
         # # Reset index
         # sdata.set_index(np.arange(ns) + 1 + nm)
         # jdata.set_index(np.arange(nm) + 1)
 
+        # Columns used for constructing cross section
+        cs_cols = ['wid', 'f1i', 'f2i', 'y1', 'y2']
+
+        if clustered:
+            cs_cols += ['j1', 'j2']
+        if 'year_1' in self.col_dict.keys():
+            cs_cols += ['year_1', 'year_2']
+        else:
+            cs_cols += ['year_start_1', 'year_start_2', 'year_end_1', 'year_end_2']
+        if weighted:
+            cs_cols += ['w1', 'w2']
+        cs_cols += ['m']
+
+        rename_dict = {
+            'f1i': 'f2i',
+            'f2i': 'f1i',
+            'y1': 'y2',
+            'y2': 'y1',
+            'year_1': 'year_2',
+            'year_2': 'year_1',
+            'year_start_1': 'year_start_2',
+            'year_start_2': 'year_start_1',
+            'year_end_1': 'year_end_2',
+            'year_end_2': 'year_end_1',
+            'w1': 'w2',
+            'w2': 'w1',
+            'j1': 'j2',
+            'j2': 'j1'
+        }
+
         # Combine the 2 data-sets
-        if clustered: # If clustering, include j1 and j2
-            data_cs = pd.concat([
-                sdata[['wid', 'f1i', 'f2i', 'y1', 'y2', 'j1', 'j2', 'year_start_1', 'year_start_2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm']].assign(cs=1), jdata[['wid', 'f1i', 'f2i', 'y1', 'y2', 'j1', 'j2', 'year_start_1', 'year_start_2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm']].assign(cs=1), jdata[['wid', 'f1i', 'f2i', 'y2', 'y1', 'j1', 'j2', 'year_start_2', 'year_start_1', 'year_end_2', 'year_end_1', 'w2', 'w1', 'm']].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'j1': 'j2', 'j2': 'j1', 'year_start_1': 'year_start_2', 'year_start_2': 'year_start_1', 'year_end_1': 'year_end_2', 'year_end_2': 'year_end_1', 'w1': 'w2', 'w2': 'w1'}, axis=1).assign(cs=0)], ignore_index=True)
-        else: # If not clustering, no j1 or j2
-            data_cs = pd.concat([
-                sdata[['wid', 'f1i', 'f2i', 'y1', 'y2', 'year_start_1', 'year_start_2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm']].assign(cs=1), jdata[['wid', 'f1i', 'f2i', 'y1', 'y2', 'year_start_1', 'year_start_2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm']].assign(cs=1), jdata[['wid', 'f1i', 'f2i', 'y2', 'y1', 'year_start_2', 'year_start_1', 'year_end_2', 'year_end_1', 'w2', 'w1', 'm']].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'year_start_1': 'year_start_2', 'year_start_2': 'year_start_1', 'year_end_1': 'year_end_2', 'year_end_2': 'year_end_1', 'w1': 'w2', 'w2': 'w1'}, axis=1).assign(cs=0)], ignore_index=True)
-        # self.data = self.data.reset_index(drop=True)
-        # self.data['wid'] = self.data['wid'].astype('category').cat.codes + 1
-        self.logger.info('mover and stayer long form datasets combined into cross section')
+        data_cs = pd.concat([
+            sdata[cs_cols].assign(cs=1),
+            jdata[cs_cols].assign(cs=1),
+            jdata[cs_cols].rename(rename_dict, axis=1).assign(cs=0)
+        ], ignore_index=True)
+
+        self.logger.info('mover and stayer event study datasets combined into cross section')
 
         return data_cs
 
-    def get_collapsed_long(self):
+    def get_long(self):
         '''
         Return event study data reformatted into collapsed long form.
 
         Returns:
             (Pandas DataFrame): collapsed long data
         '''
-        # Determine whether clustered
+        # Determine whether weight, m, cluster columns exist
+        weighted = self.col_dict['w1'] is not None and self.col_dict['w2'] is not None
+        m = self.col_dict['m'] is not None
         clustered = self.col_dict['j1'] is not None and self.col_dict['j2'] is not None
-        # Append the last row if a mover (this is because the last observation is only given as an f2i, never as an f1i)
-        if clustered:
-            return self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'year_start_1': 'year_start_2', 'year_start_2': 'year_start_1', 'year_end_1': 'year_end_2', 'year_end_2': 'year_end_1', 'w1': 'w2', 'w2': 'w1', 'j1': 'j2', 'j2': 'j1'}, axis=1)) if a.iloc[0]['m'] == 1 else a) \
-                .reset_index(drop=True) \
-                .drop(['f2i', 'y2', 'year_start_2', 'year_end_2', 'w2', 'j2'], axis=1) \
-                .rename({'f1i': 'fid', 'y1': 'comp', 'year_start_1': 'year_start', 'year_end_1': 'year_end', 'w1': 'weight', 'j1': 'j'}, axis=1) \
-                .astype({'wid': int, 'fid': int, 'year_start': int, 'year_end': int, 'weight': int, 'm': int, 'j': int})
-        else:
-            return self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'year_start_1': 'year_start_2', 'year_start_2': 'year_start_1', 'year_end_1': 'year_end_2', 'year_end_2': 'year_end_1', 'w1': 'w2', 'w2': 'w1'}, axis=1)) if a.iloc[0]['m'] == 1 else a) \
-                .reset_index(drop=True) \
-                .drop(['f2i', 'y2', 'year_start_2', 'year_end_2', 'w2'], axis=1) \
-                .rename({'f1i': 'fid', 'y1': 'comp', 'year_start_1': 'year_start', 'year_end_1': 'year_end', 'w1': 'weight'}, axis=1) \
-                .astype({'wid': int, 'fid': int, 'year_start': int, 'year_end': int, 'weight': int, 'm': int})
 
-    def get_long(self):
+        if not m:
+            self.gen_m()
+
+        # Columns to drop
+        drop_cols = ['f2i', 'y2', 'year_2', 'w2', 'j2']
+
+        rename_dict_1 = {
+            'f1i': 'f2i',
+            'f2i': 'f1i',
+            'y1': 'y2',
+            'y2': 'y1',
+            'year_start_1': 'year_start_2',
+            'year_start_2': 'year_start_1',
+            'year_end_1': 'year_end_2',
+            'year_end_2': 'year_end_1',
+            'w1': 'w2',
+            'w2': 'w1',
+            'j1': 'j2',
+            'j2': 'j1'
+        }
+
+        rename_dict_2 = {
+            'f1i': 'fid',
+            'y1': 'comp',
+            'year_start_1': 'year_start',
+            'year_end_1': 'year_end',
+            'w1': 'weight',
+            'j1': 'j'
+        }
+
+        astype_dict = {
+            'wid': int,
+            'fid': int,
+            'year': int,
+            'm': int
+        }
+
+        if clustered:
+            drop_cols += ['j2']
+            astype_dict['j'] = int
+        if weighted:
+            drop_cols += ['w2']
+            astype_dict['weight'] = int
+
+        # Append the last row if a mover (this is because the last observation is only given as an f2i, never as an f1i)
+        return self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename(rename_dict_1, axis=1)) if a.iloc[0]['m'] == 1 else a) \
+            .reset_index(drop=True) \
+            .drop(drop_cols, axis=1) \
+            .rename(rename_dict_2, axis=1) \
+            .astype(astype_dict)
+
+    def get_collapsed_long(self):
         '''
         Return event study data reformatted into long form.
 
         Returns:
             (Pandas DataFrame): long data
         '''
-        # Determine whether clustered
+        # Determine whether weight, m, cluster columns exist
+        weighted = self.col_dict['w1'] is not None and self.col_dict['w2'] is not None
+        m = self.col_dict['m'] is not None
         clustered = self.col_dict['j1'] is not None and self.col_dict['j2'] is not None
-        # Append the last row if a mover (this is because the last observation is only given as an f2i, never as an f1i)
-        if clustered:
-            return self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'year_start_1': 'year_start_2', 'year_start_2': 'year_start_1', 'year_end_1': 'year_end_2', 'year_end_2': 'year_end_1', 'j1': 'j2', 'j2': 'j1'}, axis=1)) if a.iloc[0]['m'] == 1 else a) \
-                .reset_index(drop=True) \
-                .drop(['f2i', 'y2', 'year_start_2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm', 'j2'], axis=1) \
-                .rename({'f1i': 'fid', 'y1': 'comp', 'year_start_1': 'year', 'j1': 'j'}, axis=1) \
-                .astype({'wid': int, 'fid': int, 'year': int, 'j': int})
-        else:
-            return self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y1': 'y2', 'y2': 'y1', 'year_start_1': 'year_start_2', 'year_start_2': 'year_start_1', 'year_end_1': 'year_end_2', 'year_end_2': 'year_end_1'}, axis=1)) if a.iloc[0]['m'] == 1 else a) \
-                .reset_index(drop=True) \
-                .drop(['f2i', 'y2', 'year_start_2', 'year_end_1', 'year_end_2', 'w1', 'w2', 'm'], axis=1) \
-                .rename({'f1i': 'fid', 'y1': 'comp', 'year_start_1': 'year'}, axis=1) \
-                .astype({'wid': int, 'fid': int, 'year': int})
 
-    def approx_cdfs(self, cdf_resolution=10, grouping='quantile_all'):
+        if not m:
+            self.gen_m()
+
+        # Columns to drop
+        drop_cols = ['f2i', 'y2', 'year_start_2', 'year_end_2', 'w2', 'j2']
+
+        rename_dict_1 = {
+            'f1i': 'f2i',
+            'f2i': 'f1i',
+            'y1': 'y2',
+            'y2': 'y1',
+            'year_start_1': 'year_start_2',
+            'year_start_2': 'year_start_1',
+            'year_end_1': 'year_end_2',
+            'year_end_2': 'year_end_1',
+            'w1': 'w2',
+            'w2': 'w1',
+            'j1': 'j2',
+            'j2': 'j1'
+        }
+
+        rename_dict_2 = {
+            'f1i': 'fid',
+            'y1': 'comp',
+            'year_start_1': 'year_start',
+            'year_end_1': 'year_end',
+            'w1': 'weight',
+            'j1': 'j'
+        }
+
+        astype_dict = {
+            'wid': int,
+            'fid': int,
+            'year_start': int,
+            'year_end': int,
+            'm': int
+        }
+
+        if clustered:
+            drop_cols += ['j2']
+            astype_dict['j'] = int
+        if weighted:
+            drop_cols += ['w2']
+            astype_dict['weight'] = int
+
+        # Append the last row if a mover (this is because the last observation is only given as an f2i, never as an f1i)
+        return self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename(rename_dict_1, axis=1)) if a.iloc[0]['m'] == 1 else a) \
+            .reset_index(drop=True) \
+            .drop(drop_cols, axis=1) \
+            .rename(rename_dict_2, axis=1) \
+            .astype(astype_dict)
+
+    def approx_cdfs(self, cdf_resolution=10, grouping='quantile_all', stayers_movers=None):
         '''
         Generate cdfs of compensation for firms.
 
         Arguments:
             cdf_resolution (int): how many values to use to approximate the cdf
             grouping (str): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
+            stayers_movers (str or None): if None, uses entire dataset; if 'stayers', uses only stayers; if 'movers', uses only movers
 
         Returns:
             cdf_df (NumPy Array): NumPy array of firm cdfs
         '''
+        # Determine whether m column exists
+        m = self.col_dict['m'] is not None
+
+        if not m:
+            self.gen_m()
+
+        if stayers_movers == 'stayers':
+            data = self.data[self.data['m'] == 0]
+        elif stayers_movers == 'movers':
+            data = self.data[self.data['m'] == 1]
+        else:
+            data = self.data
+
         # Create empty numpy array to fill with the cdfs
         n_firms = self.n_firms()
         cdfs = np.zeros([n_firms, cdf_resolution])
@@ -1922,30 +2085,30 @@ class BipartiteEventStudy:
         quantiles = np.linspace(1 / cdf_resolution, 1, cdf_resolution)
 
         # Re-arrange event study data to be in long format (temporarily)
-        self.data = self.data.rename({'f1i': 'fid', 'y1': 'comp'}, axis=1)
-        self.data = pd.concat([self.data, self.data.rename({'f2i': 'fid', 'y2': 'comp', 'fid': 'f2i', 'comp': 'y2'}, axis=1).assign(f2i = - 1)], axis=0) # Include irrelevant columns and rename f1i to f2i to prevent nans, which convert columns from int into float # FIXME duplicating both movers and stayers, should probably only be duplicating movers
+        data = data.rename({'f1i': 'fid', 'y1': 'comp'}, axis=1)
+        data = pd.concat([data, data.rename({'f2i': 'fid', 'y2': 'comp', 'fid': 'f2i', 'comp': 'y2'}, axis=1).assign(f2i = - 1)], axis=0) # Include irrelevant columns and rename f1i to f2i to prevent nans, which convert columns from int into float # FIXME duplicating both movers and stayers, should probably only be duplicating movers
 
         if grouping == 'quantile_all':
             # Get quantiles from all data
-            quantile_groups = self.data['comp'].quantile(quantiles)
+            quantile_groups = data['comp'].quantile(quantiles)
 
             # Generate firm-level cdfs
             for i, quant in enumerate(quantile_groups):
-                cdfs[:, i] = self.data.assign(firm_quant=lambda d: d['comp'] <= quant).groupby('fid')['firm_quant'].agg(sum).to_numpy()
+                cdfs[:, i] = data.assign(firm_quant=lambda d: d['comp'] <= quant).groupby('fid')['firm_quant'].agg(sum).to_numpy()
 
             # Normalize by firm size (convert to cdf)
-            fsize = self.data.groupby('fid').size().to_numpy()
+            fsize = data.groupby('fid').size().to_numpy()
             cdfs /= np.expand_dims(fsize, 1)
 
         elif grouping in ['quantile_firm_small', 'quantile_firm_large']:
             # Sort data by compensation (do this once now, so that don't need to do it again later) (also note it is faster to sort then manually compute quantiles than to use built-in quantile functions)
-            self.data = self.data.sort_values(['comp'])
+            data = data.sort_values(['comp'])
 
             if grouping == 'quantile_firm_small':
                 # Convert pandas dataframe into a dictionary to access data faster
                 # Source for idea: https://stackoverflow.com/questions/57208997/looking-for-the-fastest-way-to-slice-a-row-in-a-huge-pandas-dataframe
                 # Source for how to actually format data correctly: https://stackoverflow.com/questions/56064677/pandas-series-to-dict-with-repeated-indices-make-dict-with-list-values
-                data_dict = self.data['comp'].groupby(level=0).agg(list).to_dict()
+                data_dict = data['comp'].groupby(level=0).agg(list).to_dict()
 
             # Generate the cdfs
             for fid in tqdm(range(n_firms)):
@@ -1953,7 +2116,7 @@ class BipartiteEventStudy:
                 if grouping == 'quantile_firm_small':
                     comp = data_dict[fid]
                 elif grouping == 'quantile_firm_large':
-                    comp = self.data.loc[self.data['fid'] == fid, 'comp']
+                    comp = data.loc[data['fid'] == fid, 'comp']
                 # Generate the firm-level cdf
                 # Note: update numpy array element by element
                 # Source: https://stackoverflow.com/questions/30012362/faster-way-to-convert-list-of-objects-to-numpy-array/30012403
@@ -1963,8 +2126,8 @@ class BipartiteEventStudy:
                     cdfs[fid, i] = comp[index]
 
         # Drop rows that were appended earlier and rename columns
-        self.data = self.data[self.data['f2i'] >= 0]
-        self.data = self.data.rename({'fid': 'f1i', 'comp': 'y1'}, axis=1)
+        data = data[data['f2i'] >= 0]
+        data = data.rename({'fid': 'f1i', 'comp': 'y1'}, axis=1)
 
         return cdfs
 
@@ -1981,20 +2144,25 @@ class BipartiteEventStudy:
 
                     grouping (str): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
 
-                    year (int or None): if None, uses entire dataset; if int, gives year of data to consider
+                    stayers_movers (str or None): if None, uses entire dataset; if 'stayers', uses only stayers; if 'movers', uses only movers
 
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
         '''
+        # Warn about selecting a year with event study data
+        if user_cluster['year'] is not None:
+            warnings.warn('Can only cluster on a particular year with long form data, but data is currently event study form.')
+
         # Update dictionary
         cluster_params = update_dict(self.default_cluster, user_cluster)
 
         # Unpack dictionary
         cdf_resolution = cluster_params['cdf_resolution']
         grouping = cluster_params['grouping']
+        stayers_movers = cluster_params['stayers_movers']
         user_KMeans = cluster_params['user_KMeans']
 
         # Compute cdfs
-        cdfs = self.approx_cdfs(cdf_resolution=cdf_resolution, grouping=grouping)
+        cdfs = self.approx_cdfs(cdf_resolution=cdf_resolution, grouping=grouping, stayers_movers=stayers_movers)
         self.logger.info('firm cdfs computed')
 
         # Compute firm clusters
