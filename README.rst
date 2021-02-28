@@ -56,7 +56,7 @@ Example config.txt::
 Citation
 --------
 
-Please use following citation to cite pytwoway in academic publications:
+Please use the following citation to cite pytwoway in academic publications:
 
 Bibtex entry::
 
