@@ -650,7 +650,7 @@ class BipartiteLong:
         '''
         Generate m column for data (m == 0 if stayer, m == 1 if mover).
         '''
-        self.data['m'] = self.data.groupby('wid')['fid'].transform(lambda x: len(np.unique(x)) > 1)
+        self.data['m'] = self.data.groupby('wid')['fid'].transform(lambda x: len(np.unique(x)) > 1).astype(int)
         self.col_dict['m'] = 'm'
 
     def get_collapsed_long(self):
@@ -665,7 +665,7 @@ class BipartiteLong:
         # Sort data by wid and year
         data = data.sort_values(['wid', 'year'])
         self.logger.info('copied data sorted by wid and year')
-        # Determine whether  m, cluster columns exist
+        # Determine whether m, cluster columns exist
         m = self.col_dict['m'] is not None
         clustered = self.col_dict['j'] is not None
 
@@ -739,7 +739,7 @@ class BipartiteLong:
         Returns:
             data_es (Pandas DataFrame): event study data
         '''
-        # Determine whether  m, cluster columns exist
+        # Determine whether m, cluster columns exist
         m = self.col_dict['m'] is not None
         clustered = self.col_dict['j'] is not None
         if not m:
@@ -813,6 +813,7 @@ class BipartiteLong:
 
         Returns:
             cdf_df (NumPy Array): NumPy array of firm cdfs
+            n_firms (int): number of firms in subset of data used to cluster
         '''
         # Determine whether m column exists
         m = self.col_dict['m'] is not None
@@ -832,7 +833,8 @@ class BipartiteLong:
             data = data[data['year'] == year]
 
         # Create empty numpy array to fill with the cdfs
-        n_firms = self.n_firms()
+        # n_firms = self.n_firms()
+        n_firms = len(data['fid'].unique()) # Can't use self.n_firms() since data could be a subset of self.data
         cdfs = np.zeros([n_firms, cdf_resolution])
 
         # Create quantiles of interest
@@ -875,7 +877,7 @@ class BipartiteLong:
                     # Update cdfs with the firm-level cdf
                     cdfs[fid, i] = comp[index]
 
-        return cdfs
+        return cdfs, n_firms
 
     def cluster(self, user_cluster={}):
         '''
@@ -907,7 +909,7 @@ class BipartiteLong:
         user_KMeans = cluster_params['user_KMeans']
 
         # Compute cdfs
-        cdfs = self.approx_cdfs(cdf_resolution=cdf_resolution, grouping=grouping, stayers_movers=stayers_movers, year=year)
+        cdfs, n_firms = self.approx_cdfs(cdf_resolution=cdf_resolution, grouping=grouping, stayers_movers=stayers_movers, year=year)
         self.logger.info('firm cdfs computed')
 
         # Compute firm clusters
@@ -916,7 +918,7 @@ class BipartiteLong:
         self.logger.info('firm clusters computed')
 
         # Create Pandas dataframe linking fid to firm cluster
-        fids = np.arange(self.n_firms())
+        fids = np.arange(n_firms)
         clusters_dict = {'fid': fids, 'j': clusters}
         clusters_df = pd.DataFrame(clusters_dict, index=fids)
         self.logger.info('dataframe linking fids to clusters generated')
@@ -1262,7 +1264,7 @@ class BipartiteLongCollapsed:
         '''
         Generate m column for data (m == 0 if stayer, m == 1 if mover).
         '''
-        self.data['m'] = self.data.groupby('wid')['fid'].transform(lambda x: len(np.unique(x)) > 1)
+        self.data['m'] = self.data.groupby('wid')['fid'].transform(lambda x: len(np.unique(x)) > 1).astype(int)
         self.col_dict['m'] = 'm'
 
     def get_es(self):
@@ -1276,9 +1278,11 @@ class BipartiteLongCollapsed:
         weighted = self.col_dict['weight'] is not None
         m = self.col_dict['m'] is not None
         clustered = self.col_dict['j'] is not None
+
         if not m:
             # Generate m column
             self.gen_m()
+
         # Split workers by movers and stayers
         stayers = self.data[self.data['m'] == 0]
         movers = self.data[self.data['m'] == 1]
@@ -1361,6 +1365,7 @@ class BipartiteLongCollapsed:
 
         Returns:
             cdf_df (NumPy Array): NumPy array of firm cdfs
+            n_firms (int): number of firms in subset of data used to cluster
         '''
         # Determine whether m column exists
         m = self.col_dict['m'] is not None
@@ -1376,7 +1381,8 @@ class BipartiteLongCollapsed:
             data = self.data
 
         # Create empty numpy array to fill with the cdfs
-        n_firms = self.n_firms()
+        # n_firms = self.n_firms()
+        n_firms = len(data['fid'].unique()) # Can't use self.n_firms() since data could be a subset of self.data
         cdfs = np.zeros([n_firms, cdf_resolution])
 
         # Create quantiles of interest
@@ -1419,7 +1425,7 @@ class BipartiteLongCollapsed:
                     # Update cdfs with the firm-level cdf
                     cdfs[fid, i] = comp[index]
 
-        return cdfs
+        return cdfs, n_firms
 
     def cluster(self, user_cluster={}):
         '''
@@ -1452,7 +1458,7 @@ class BipartiteLongCollapsed:
         user_KMeans = cluster_params['user_KMeans']
 
         # Compute cdfs
-        cdfs = self.approx_cdfs(cdf_resolution=cdf_resolution, grouping=grouping, stayers_movers=stayers_movers)
+        cdfs, n_firms = self.approx_cdfs(cdf_resolution=cdf_resolution, grouping=grouping, stayers_movers=stayers_movers)
         self.logger.info('firm cdfs computed')
 
         # Compute firm clusters
@@ -1461,7 +1467,7 @@ class BipartiteLongCollapsed:
         self.logger.info('firm clusters computed')
 
         # Create Pandas dataframe linking fid to firm cluster
-        fids = np.arange(self.n_firms())
+        fids = np.arange(n_firms)
         clusters_dict = {'fid': fids, 'j': clusters}
         clusters_df = pd.DataFrame(clusters_dict, index=fids)
         self.logger.info('dataframe linking fids to clusters generated')
@@ -1941,17 +1947,15 @@ class BipartiteEventStudy:
             self.gen_m()
 
         # Columns to drop
-        drop_cols = ['f2i', 'y2', 'year_2', 'w2', 'j2']
+        drop_cols = ['f2i', 'y2', 'year_2']
 
         rename_dict_1 = {
             'f1i': 'f2i',
             'f2i': 'f1i',
             'y1': 'y2',
             'y2': 'y1',
-            'year_start_1': 'year_start_2',
-            'year_start_2': 'year_start_1',
-            'year_end_1': 'year_end_2',
-            'year_end_2': 'year_end_1',
+            'year_1': 'year_2',
+            'year_2': 'year_1',
             'w1': 'w2',
             'w2': 'w1',
             'j1': 'j2',
@@ -1961,8 +1965,7 @@ class BipartiteEventStudy:
         rename_dict_2 = {
             'f1i': 'fid',
             'y1': 'comp',
-            'year_start_1': 'year_start',
-            'year_end_1': 'year_end',
+            'year_1': 'year',
             'w1': 'weight',
             'j1': 'j'
         }
@@ -2004,7 +2007,7 @@ class BipartiteEventStudy:
             self.gen_m()
 
         # Columns to drop
-        drop_cols = ['f2i', 'y2', 'year_start_2', 'year_end_2', 'w2', 'j2']
+        drop_cols = ['f2i', 'y2', 'year_start_2', 'year_end_2']
 
         rename_dict_1 = {
             'f1i': 'f2i',
@@ -2063,6 +2066,7 @@ class BipartiteEventStudy:
 
         Returns:
             cdf_df (NumPy Array): NumPy array of firm cdfs
+            n_firms (int): number of firms in subset of data used to cluster
         '''
         # Determine whether m column exists
         m = self.col_dict['m'] is not None
@@ -2078,7 +2082,8 @@ class BipartiteEventStudy:
             data = self.data
 
         # Create empty numpy array to fill with the cdfs
-        n_firms = self.n_firms()
+        # n_firms = self.n_firms()
+        n_firms = len(set(list(data['f1i'].unique()) + list(data['f2i'].unique()))) # Can't use self.n_firms() since data could be a subset of self.data
         cdfs = np.zeros([n_firms, cdf_resolution])
 
         # Create quantiles of interest
@@ -2129,7 +2134,7 @@ class BipartiteEventStudy:
         data = data[data['f2i'] >= 0]
         data = data.rename({'fid': 'f1i', 'comp': 'y1'}, axis=1)
 
-        return cdfs
+        return cdfs, n_firms
 
     def cluster(self, user_cluster={}):
         '''
@@ -2162,7 +2167,7 @@ class BipartiteEventStudy:
         user_KMeans = cluster_params['user_KMeans']
 
         # Compute cdfs
-        cdfs = self.approx_cdfs(cdf_resolution=cdf_resolution, grouping=grouping, stayers_movers=stayers_movers)
+        cdfs, n_firms = self.approx_cdfs(cdf_resolution=cdf_resolution, grouping=grouping, stayers_movers=stayers_movers)
         self.logger.info('firm cdfs computed')
 
         # Compute firm clusters
@@ -2171,7 +2176,7 @@ class BipartiteEventStudy:
         self.logger.info('firm clusters computed')
 
         # Create Pandas dataframe linking fid to firm cluster
-        fids = np.arange(self.n_firms())
+        fids = np.arange(n_firms)
         clusters_dict_1 = {'f1i': fids, 'j1': clusters}
         clusters_dict_2 = {'f2i': fids, 'j2': clusters}
         clusters_df_1 = pd.DataFrame(clusters_dict_1, index=fids)
