@@ -564,10 +564,10 @@ class BipartiteLong:
         fid_max = self.data['fid'].max()
         n_firms = self.n_firms()
 
-        contig = (fid_max == n_firms)
+        contig_fids = (fid_max == n_firms - 1)
 
-        self.logger.info('contiguous firm ids (should be True):' + str(contig))
-        if not contig:
+        self.logger.info('contiguous firm ids (should be True):' + str(contig_fids))
+        if not contig_fids:
             success = False
         else:
             self.contiguous = True
@@ -1178,7 +1178,7 @@ class BipartiteLongCollapsed:
         fid_max = self.data['fid'].max()
         n_firms = self.n_firms()
 
-        contig_fids = (fid_max == n_firms)
+        contig_fids = (fid_max == n_firms - 1)
 
         self.logger.info('contiguous firm ids (should be True):' + str(contig_fids))
         if not contig_fids:
@@ -1765,7 +1765,7 @@ class BipartiteEventStudy:
         fid_max = max(self.data['f1i'].max(), self.data['f2i'].max())
         n_firms = self.n_firms()
 
-        contig_fids = (fid_max + 1 == n_firms)
+        contig_fids = (fid_max == n_firms - 1)
         self.logger.info('contiguous firm ids (should be True):' + str(contig_fids))
         self.contiguous = contig_fids
         if not contig_fids:
