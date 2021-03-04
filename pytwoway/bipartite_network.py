@@ -12,6 +12,8 @@ from scipy.sparse.csgraph import connected_components
 import warnings
 from pytwoway import update_dict
 
+col_order = ['wid', 'fid', 'f1i', 'f2i', 'comp', 'y1', 'y2', 'year', 'year_1', 'year_2', 'year_start', 'year_end', 'year_start_1', 'year_end_1', 'year_start_2', 'year_end_2', 'weight', 'w1', 'w2', 'j', 'j1', 'j2', 'm', 'cs'].index
+
 def col_dict_optional_cols(default_col_dict, user_col_dict, data_cols, optional_cols=()):
     '''
     Update col_dict to account for whether certain optional columns are included.
@@ -69,6 +71,7 @@ def update_cols(col_dict, data):
             keep_cols.append(key)
         else:
             new_col_dict[key] = None
+    keep_cols = sorted(keep_cols, key=col_order) # Sort columns
     data = data.rename(rename_dict, axis=1)
     data = data[keep_cols]
 
@@ -317,14 +320,89 @@ class BipartiteData:
 
                     grouping (str): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
 
+                    stayers_movers (str or None): if None, uses entire dataset; if 'stayers', uses only stayers; if 'movers', uses only movers
+
                     year (int or None): if None, uses entire dataset; if int, gives year of data to consider (only works with long form data)
 
-                    stayers_movers (str or None): if None, uses entire dataset; if 'stayers', uses only stayers; if 'movers', uses only movers
+                    dropna (bool): if True, drop observations where firms aren't clustered; if False, keep all observations
 
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
         '''
         self.bd.cluster(user_cluster=user_cluster)
         self.data = self.bd.data
+
+    def to_csv(self, filepath):
+        '''
+        Save data to csv.
+
+        Arguments:
+            filepath (str): filepath for saving file
+        '''
+        self.bd.data.to_csv(filepath)
+
+    def to_feather(self, filepath):
+        '''
+        Save data to feather.
+
+        Arguments:
+            filepath (str): filepath for saving file
+        '''
+        self.bd.data.to_feather(filepath)
+
+    def to_stata(self, filepath):
+        '''
+        Save data to dta.
+
+        Arguments:
+            filepath (str): filepath for saving file
+        '''
+        self.bd.data.to_stata(filepath)
+
+    def __repr__(self):
+        '''
+        Print statement.
+        '''
+        if self.formatting == 'long':
+            collapsed = False
+        elif self.formatting == 'long_collapsed':
+            collapsed = True
+        else:
+            collapsed = self.bd.collapsed
+        if self.formatting in ['long', 'long_collapsed']:
+            mean_wage = np.mean(self.data['comp'])
+            max_wage = self.data['comp'].max()
+            min_wage = self.data['comp'].min()
+        elif self.formatting == 'es':
+            mean_wage = np.mean(self.data[['y1', 'y2']].to_numpy().flatten())
+            max_wage = self.data[['y1', 'y2']].to_numpy().flatten().max()
+            min_wage = self.data[['y1', 'y2']].to_numpy().flatten().min()
+        ret_str = 'format: ' + self.formatting + '\n'
+        ret_str += 'number of workers: ' + str(self.bd.n_workers()) + '\n'
+        ret_str += 'number of firms: ' + str(self.bd.n_firms()) + '\n'
+        ret_str += 'number of observations: ' + str(len(self.bd.data)) + '\n'
+        ret_str += 'mean wage: ' + str(mean_wage) + '\n'
+        ret_str += 'max wage: ' + str(max_wage) + '\n'
+        ret_str += 'min wage: ' + str(min_wage) + '\n'
+        ret_str += 'collapsed by spell: ' + str(collapsed) + '\n'
+        ret_str += 'connected: ' + str(self.bd.connected) + '\n'
+        ret_str += 'contiguous firm and worker ids: ' + str(self.bd.contiguous) + '\n'
+        ret_str += 'no nans: ' + str(self.bd.no_na) + '\n'
+        ret_str += 'no duplicates: ' + str(self.bd.no_duplicates) + '\n'
+
+        return ret_str
+
+        # print('format:', self.formatting)
+        # print('number of workers:', self.bd.n_workers())
+        # print('number of firms:', self.bd.n_firms())
+        # print('number of observations:', len(self.bd.data))
+        # print('mean wage:', mean_wage)
+        # print('max wage:', max_wage)
+        # print('min wage:', min_wage)
+        # print('collapsed by spell:', collapsed)
+        # print('connected:', self.bd.connected)
+        # print('contiguous firm and worker ids:', self.bd.contiguous)
+        # print('no nans:', self.bd.no_na)
+        # print('no duplicates:', self.bd.no_duplicates)
 
 class BipartiteLong:
     '''
@@ -389,8 +467,9 @@ class BipartiteLong:
         self.default_cluster = {
             'cdf_resolution': 10,
             'grouping': 'quantile_all',
-            'year': None,
             'stayers_movers': None,
+            'year': None,
+            'dropna': False,
             'user_KMeans': self.default_KMeans
         }
 
@@ -533,6 +612,7 @@ class BipartiteLong:
 
         self.logger.info('data nans (should be 0):' + str(nans))
         if nans > 0:
+            self.no_na = False
             success = False
         else:
             self.no_na = True
@@ -542,6 +622,7 @@ class BipartiteLong:
 
         self.logger.info('duplicates (should be 0):' + str(duplicates))
         if duplicates > 0:
+            self.no_duplicates = False
             success = False
         else:
             self.no_duplicates = True
@@ -556,6 +637,7 @@ class BipartiteLong:
 
         self.logger.info('observations outside connected set (should be 0):' + str(outside_cc))
         if outside_cc > 0:
+            self.connected = False
             success = False
         else:
             self.connected = True
@@ -569,8 +651,17 @@ class BipartiteLong:
         self.logger.info('contiguous firm ids (should be True):' + str(contig_fids))
         if not contig_fids:
             success = False
-        else:
-            self.contiguous = True
+
+        self.logger.info('--- checking contiguous worker ids ---')
+        wid_max = self.data['wid'].max()
+        n_workers = self.n_workers()
+
+        contig_wids = (wid_max == n_workers - 1)
+
+        self.logger.info('contiguous worker ids (should be True):' + str(contig_wids))
+        self.contiguous = contig_fids and contig_wids
+        if not contig_wids:
+            success = False
         
         if clustered:
             self.logger.info('--- checking contiguous cluster ids ---')
@@ -642,6 +733,10 @@ class BipartiteLong:
         self.data = self.data.drop([id_col], axis=1)
         self.data = self.data.rename({'adj_' + id_col: id_col}, axis=1)
 
+        # Sort columns
+        sorted_cols = sorted(self.data.columns, key=col_order)
+        self.data = self.data[sorted_cols]
+
         if id_col == 'fid':
             # Firm ids are now contiguous
             self.contiguous = True
@@ -652,6 +747,9 @@ class BipartiteLong:
         '''
         self.data['m'] = self.data.groupby('wid')['fid'].transform(lambda x: len(np.unique(x)) > 1).astype(int)
         self.col_dict['m'] = 'm'
+        # Sort columns
+        sorted_cols = sorted(self.data.columns, key=col_order)
+        self.data = self.data[sorted_cols]
 
     def get_collapsed_long(self):
         '''
@@ -728,6 +826,10 @@ class BipartiteLong:
             data_spell['m'] = (spell_count > 1).astype(int)
         data = data_spell.reset_index(drop=True)
 
+        # Sort columns
+        sorted_cols = sorted(data.columns, key=col_order)
+        data = data[sorted_cols]
+
         self.logger.info('data aggregated at the spell level')
 
         return data
@@ -796,6 +898,10 @@ class BipartiteLong:
 
         # Merge stayers and movers
         data_es = pd.concat([stayers, movers]).reset_index(drop=True)
+
+        # Sort columns
+        sorted_cols = sorted(data_es.columns, key=col_order)
+        data_es = data_es[sorted_cols]
 
         self.logger.info('data reformatted as event study')
 
@@ -896,6 +1002,8 @@ class BipartiteLong:
 
                     year (int or None): if None, uses entire dataset; if int, gives year of data to consider
 
+                    dropna (bool): if True, drop observations where firms aren't clustered; if False, keep all observations
+
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
         '''
         # Update dictionary
@@ -930,6 +1038,17 @@ class BipartiteLong:
         # Merge into event study data
         self.data = self.data.merge(clusters_df, how='left', on='fid')
         self.col_dict['j'] = 'j'
+
+        # Sort columns
+        sorted_cols = sorted(self.data.columns, key=col_order)
+        self.data = self.data[sorted_cols]
+
+        if cluster_params['dropna']:
+            # Drop firms that don't get clustered
+            self.data = self.data.dropna().reset_index(drop=True)
+            self.data['j'] = self.data['j'].astype(int)
+            self.clean_data()
+
         self.logger.info('clusters merged into event study data')
 
 class BipartiteLongCollapsed:
@@ -998,8 +1117,9 @@ class BipartiteLongCollapsed:
         self.default_cluster = {
             'cdf_resolution': 10,
             'grouping': 'quantile_all',
-            'year': None,
             'stayers_movers': None,
+            'year': None,
+            'dropna': False,
             'user_KMeans': self.default_KMeans
         }
 
@@ -1147,6 +1267,7 @@ class BipartiteLongCollapsed:
 
         self.logger.info('data nans (should be 0):' + str(nans))
         if nans > 0:
+            self.no_na = False
             success = False
         else:
             self.no_na = True
@@ -1156,6 +1277,7 @@ class BipartiteLongCollapsed:
 
         self.logger.info('duplicates (should be 0):' + str(duplicates))
         if duplicates > 0:
+            self.no_duplicates = False
             success = False
         else:
             self.no_duplicates = True
@@ -1170,6 +1292,7 @@ class BipartiteLongCollapsed:
 
         self.logger.info('observations outside connected set (should be 0):' + str(outside_cc))
         if outside_cc > 0:
+            self.connected = False
             success = False
         else:
             self.connected = True
@@ -1183,8 +1306,16 @@ class BipartiteLongCollapsed:
         self.logger.info('contiguous firm ids (should be True):' + str(contig_fids))
         if not contig_fids:
             success = False
-        else:
-            self.contiguous = True
+
+        self.logger.info('--- checking contiguous worker ids ---')
+        wid_max = max(self.data['wid'].max())
+        n_workers = self.n_workers()
+
+        contig_wids = (wid_max == n_workers - 1)
+        self.logger.info('contiguous worker ids (should be True):' + str(contig_wids))
+        self.contiguous = contig_fids and contig_wids
+        if not contig_wids:
+            success = False
 
         if clustered:
             self.logger.info('--- checking contiguous cluster ids ---')
@@ -1256,6 +1387,10 @@ class BipartiteLongCollapsed:
         self.data = self.data.drop([id_col], axis=1)
         self.data = self.data.rename({'adj_' + id_col: id_col}, axis=1)
 
+        # Sort columns
+        sorted_cols = sorted(self.data.columns, key=col_order)
+        self.data = self.data[sorted_cols]
+
         if id_col == 'fid':
             # Firm ids are now contiguous
             self.contiguous = True
@@ -1266,6 +1401,9 @@ class BipartiteLongCollapsed:
         '''
         self.data['m'] = self.data.groupby('wid')['fid'].transform(lambda x: len(np.unique(x)) > 1).astype(int)
         self.col_dict['m'] = 'm'
+        # Sort columns
+        sorted_cols = sorted(self.data.columns, key=col_order)
+        self.data = self.data[sorted_cols]
 
     def get_es(self):
         '''
@@ -1349,6 +1487,10 @@ class BipartiteLongCollapsed:
 
         # Merge stayers and movers
         data_es = pd.concat([stayers, movers]).reset_index(drop=True)
+
+        # Sort columns
+        sorted_cols = sorted(data_es.columns, key=col_order)
+        data_es = data_es[sorted_cols]
 
         self.logger.info('data reformatted as event study')
 
@@ -1442,6 +1584,8 @@ class BipartiteLongCollapsed:
 
                     stayers_movers (str or None): if None, uses entire dataset; if 'stayers', uses only stayers; if 'movers', uses only movers
 
+                    dropna (bool): if True, drop observations where firms aren't clustered; if False, keep all observations
+
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
         '''
         # Warn about selecting a year with event study data
@@ -1475,6 +1619,17 @@ class BipartiteLongCollapsed:
         # Merge into event study data
         self.data = self.data.merge(clusters_df, how='left', on='fid')
         self.col_dict['j'] = 'j'
+
+        # Sort columns
+        sorted_cols = sorted(self.data.columns, key=col_order)
+        self.data = self.data[sorted_cols]
+
+        if cluster_params['dropna']:
+            # Drop firms that don't get clustered
+            self.data = self.data.dropna().reset_index(drop=True)
+            self.data['j'] = self.data['j'].astype(int)
+            self.clean_data()
+
         self.logger.info('clusters merged into event study data')
 
 class BipartiteEventStudy:
@@ -1556,8 +1711,9 @@ class BipartiteEventStudy:
         self.default_cluster = {
             'cdf_resolution': 10,
             'grouping': 'quantile_all',
-            'year': None,
             'stayers_movers': None,
+            'year': None,
+            'dropna': False,
             'user_KMeans': self.default_KMeans
         }
 
@@ -1708,8 +1864,10 @@ class BipartiteEventStudy:
         self.logger.info('stayers nans (should be 0):' + str(na_stayers))
         self.logger.info('movers nans (should be 0):' + str(na_movers))
         if na_stayers > 0:
+            self.no_na = False
             success_stayers = False
         if na_movers > 0:
+            self.no_na = False
             success_movers = False
         if (na_stayers == 0) and (na_movers == 0):
             self.no_na = True
@@ -1721,8 +1879,10 @@ class BipartiteEventStudy:
         self.logger.info('stayers duplicates (should be 0):' + str(duplicates_stayers))
         self.logger.info('movers duplicates (should be 0):' + str(duplicates_movers))
         if duplicates_stayers > 0:
+            self.no_duplicates = False
             success_stayers = False
         if duplicates_movers > 0:
+            self.no_duplicates = False
             success_movers = False
         if (duplicates_stayers == 0) and (duplicates_movers == 0):
             self.no_duplicates = True
@@ -1755,8 +1915,10 @@ class BipartiteEventStudy:
         self.logger.info('stayers outside connected set (should be 0):' + str(cc_stayers))
         self.logger.info('movers outside connected set (should be 0):' + str(cc_movers))
         if cc_stayers > 0:
+            self.connected = False
             success_stayers = False
         if cc_movers > 0:
+            self.connected = False
             success_movers = False
         if (cc_stayers == 0) and (cc_movers == 0):
             self.connected = True
@@ -1766,9 +1928,20 @@ class BipartiteEventStudy:
         n_firms = self.n_firms()
 
         contig_fids = (fid_max == n_firms - 1)
+
         self.logger.info('contiguous firm ids (should be True):' + str(contig_fids))
-        self.contiguous = contig_fids
         if not contig_fids:
+            success_stayers = False
+            success_movers = False
+
+        self.logger.info('--- checking contiguous worker ids ---')
+        wid_max = max(self.data['wid'].max())
+        n_workers = self.n_workers()
+
+        contig_wids = (wid_max == n_workers - 1)
+        self.logger.info('contiguous worker ids (should be True):' + str(contig_wids))
+        self.contiguous = contig_fids and contig_wids
+        if not contig_wids:
             success_stayers = False
             success_movers = False
 
@@ -1853,6 +2026,10 @@ class BipartiteEventStudy:
             self.data = self.data.drop([id], axis=1)
             self.data = self.data.rename({'adj_' + id: id}, axis=1)
 
+        # Sort columns
+        sorted_cols = sorted(self.data.columns, key=col_order)
+        self.data = self.data[sorted_cols]
+
         if id_col == 'fid':
             # Firm ids are now contiguous
             self.contiguous = True
@@ -1863,6 +2040,9 @@ class BipartiteEventStudy:
         '''
         self.data['m'] = (self.data['f1i'] != self.data['f2i']).astype(int)
         self.col_dict['m'] = 'm'
+        # Sort columns
+        sorted_cols = sorted(self.data.columns, key=col_order)
+        self.data = self.data[sorted_cols]
 
     def get_cs(self):
         '''
@@ -1927,6 +2107,10 @@ class BipartiteEventStudy:
             jdata[cs_cols].rename(rename_dict, axis=1).assign(cs=0)
         ], ignore_index=True)
 
+        # Sort columns
+        sorted_cols = sorted(data_cs.columns, key=col_order)
+        data_cs = data_cs[sorted_cols]
+
         self.logger.info('mover and stayer event study datasets combined into cross section')
 
         return data_cs
@@ -1985,11 +2169,17 @@ class BipartiteEventStudy:
             astype_dict['weight'] = int
 
         # Append the last row if a mover (this is because the last observation is only given as an f2i, never as an f1i)
-        return self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename(rename_dict_1, axis=1)) if a.iloc[0]['m'] == 1 else a) \
+        data_long = self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename(rename_dict_1, axis=1)) if a.iloc[0]['m'] == 1 else a) \
             .reset_index(drop=True) \
             .drop(drop_cols, axis=1) \
             .rename(rename_dict_2, axis=1) \
             .astype(astype_dict)
+
+        # Sort columns
+        sorted_cols = sorted(data_long.columns, key=col_order)
+        data_long = data_long[sorted_cols]
+
+        return data_long
 
     def get_collapsed_long(self):
         '''
@@ -2049,11 +2239,17 @@ class BipartiteEventStudy:
             astype_dict['weight'] = int
 
         # Append the last row if a mover (this is because the last observation is only given as an f2i, never as an f1i)
-        return self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename(rename_dict_1, axis=1)) if a.iloc[0]['m'] == 1 else a) \
+        data_collapsed_long = self.data.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename(rename_dict_1, axis=1)) if a.iloc[0]['m'] == 1 else a) \
             .reset_index(drop=True) \
             .drop(drop_cols, axis=1) \
             .rename(rename_dict_2, axis=1) \
             .astype(astype_dict)
+
+        # Sort columns
+        sorted_cols = sorted(data_collapsed_long.columns, key=col_order)
+        data_collapsed_long = data_collapsed_long[sorted_cols]
+
+        return data_collapsed_long
 
     def approx_cdfs(self, cdf_resolution=10, grouping='quantile_all', stayers_movers=None):
         '''
@@ -2151,6 +2347,8 @@ class BipartiteEventStudy:
 
                     stayers_movers (str or None): if None, uses entire dataset; if 'stayers', uses only stayers; if 'movers', uses only movers
 
+                    dropna (bool): if True, drop observations where firms aren't clustered; if False, keep all observations
+
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
         '''
         # Warn about selecting a year with event study data
@@ -2188,4 +2386,16 @@ class BipartiteEventStudy:
         self.data = self.data.merge(clusters_df_2, how='left', on='f2i')
         self.col_dict['j1'] = 'j1'
         self.col_dict['j2'] = 'j2'
+
+        # Sort columns
+        sorted_cols = sorted(self.data.columns, key=col_order)
+        self.data = self.data[sorted_cols]
+
+        if cluster_params['dropna']:
+            # Drop firms that don't get clustered
+            self.data = self.data.dropna().reset_index(drop=True)
+            self.data['j1'] = self.data['j1'].astype(int)
+            self.data['j2'] = self.data['j2'].astype(int)
+            self.clean_data()
+
         self.logger.info('clusters merged into event study data')

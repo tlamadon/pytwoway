@@ -132,7 +132,7 @@ class QPConstrained:
             G = np.eye(n_periods * nk * nl)
             h = gap * np.ones(shape=n_periods * nk * nl)
 
-        elif constraint == 'lin_para':
+        elif constraint == 'stationary':
             LL = np.zeros(shape=(nl - 1, nl))
             for l in range(nl - 1):
                 LL[l, l] = 1
@@ -334,8 +334,12 @@ class BLMModel:
         self.NNm = np.zeros(shape=(nk, nk)).astype(int) + 10
         self.NNs = np.zeros(shape=nk).astype(int) + 10
 
-        self.liks1 = None # Log likelihood for movers
-        self.liks0 = None # Log likelihood for stayers
+        self.lik1 = None # Log likelihood for movers
+        self.liks1 = np.array([]) # Path of log likelihoods for movers
+        self.lik0 = None # Log likelihood for stayers
+        self.liks0 = np.array([]) # Path of log likelihoods for stayers
+
+        self.connectedness = None
 
         for l in range(nl):
             self.A1[:, l] = sorted(self.A1[:, l])
@@ -361,6 +365,47 @@ class BLMModel:
         # Model for p(K | l, l') for stayers
         self.pk0 = np.ones(shape=(nk, nl)) / nl
 
+    def compute_connectedness(self, all=False):
+        '''
+        Computes graph connectedness among the movers within each type and updates self.connectedness to be the smallest value.
+        '''
+        pd.options.mode.chained_assignment = None
+        nl = self.nl
+        nk = self.nk
+        EV = np.zeros(shape=nl)
+        pk1 = np.reshape(self.pk1, (nk, nk, nl))
+        # dd_post = data.table(melt(pk1,c('j1','j2','k')))
+        # Source for the following:
+        # https://stackoverflow.com/a/65996547
+        dd_post = pd.DataFrame(np.hstack((list(np.ndindex(pk1.shape)), pk1.reshape((-1, 1)))))
+        dd_post = dd_post.rename({0: 'j1', 1: 'j2', 2: 'k', 3: 'value'}, axis=1)
+        dd_post[['j1', 'j2', 'k']] = dd_post[['j1', 'j2', 'k']].astype(int)
+        pp = self.NNm / np.sum(self.NNm)
+        dd_post['pr_j1j2'] = dd_post.apply(lambda x: pp[int(x['j1']), int(x['j2'])], axis=1)
+        dd_post['pr_j1j2k'] = dd_post['pr_j1j2'] * dd_post['value']
+
+        for kk in range(nl):
+            # Compute adjacency matrix
+            A = dd_post[dd_post['k'] == kk]
+            A['pr'] = A['pr_j1j2k'] / np.sum(A['pr_j1j2k'])
+            A = A[['pr', 'j2', 'j1']]
+            A1 = A.pivot(index='j1', columns='j2', values='pr')
+            A1 = A1[sorted(A1.columns)]
+            A1 = np.array(A1)
+            A2 = A.pivot(index='j2', columns='j1', values='pr')
+            A2 = A2[sorted(A2.columns)]
+            A2 = np.array(A2)
+            # Construct Laplacian
+            A = 0.5 * A1 + 0.5 * A2
+            D = np.diag(np.sum(A, axis=1) ** (- 0.5))
+            L = np.eye(nk) - D @ A @ D
+            evals, evects = np.linalg.eig(L)
+            EV[kk] = sorted(evals)[1]
+        pd.options.mode.chained_assignment = 'warn'
+        if all:
+            self.connectedness = EV
+        self.connectedness = np.abs(EV).min()
+
     def fit_movers(self, jdata):
         '''
             EM algorithm for movers.
@@ -374,8 +419,9 @@ class BLMModel:
         nl = self.nl
         nk = self.nk
         ni = jdata.shape[0]
-        liks1 = None # Log likelihood for movers
-        prev_liks = np.inf
+        lik1 = None # Log likelihood for movers
+        liks1 = [] # Path of log likelihoods for movers
+        prev_lik = np.inf
 
         # Store wage outcomes and groups
         Y1 = jdata['y1'].to_numpy()
@@ -415,12 +461,13 @@ class BLMModel:
             qi = np.exp(lp.T - logsumexp(lp, axis=1)).T
             if params['return_qi']:
                 return qi
-            liks1 = logsumexp(lp, axis=0).sum() # FIXME should this be returned?
-            print('loop {}, liks {}'.format(iter, liks1))
+            lik1 = logsumexp(lp, axis=1).mean() # FIXME should this be returned?
+            liks1.append(lik1)
+            print('loop {}, liks {}'.format(iter, lik1))
 
-            if abs(liks1 - prev_liks) < params['threshold']:
+            if abs(lik1 - prev_lik) < params['threshold']:
                 break
-            prev_liks = liks1
+            prev_lik = lik1
 
             # --------- M-step ----------
             # For now we run a simple ols, however later we
@@ -447,10 +494,14 @@ class BLMModel:
             # We solve the system to get all the parameters
             XwX = np.diag(XwXd)
             if params['update_a']:
-                cons_a.solve(XwX, - XwY)
-                res_a = cons_a.res
-                A1 = np.reshape(res_a, (2, nl, nk))[0, :, :].T
-                A2 = np.reshape(res_a, (2, nl, nk))[1, :, :].T
+                try:
+                    cons_a.solve(XwX, - XwY)
+                    res_a = cons_a.res
+                    A1 = np.reshape(res_a, (2, nl, nk))[0, :, :].T
+                    A2 = np.reshape(res_a, (2, nl, nk))[1, :, :].T
+                except ValueError: # If constraints inconsistent, keep A1 and A2 the same
+                    print('passing 1')
+                    pass
 
             if params['update_s']:
                 XwS = np.zeros(shape=2 * ts)
@@ -461,10 +512,14 @@ class BLMModel:
                     XwS[l_index: r_index] = JJ1.T @ (diags(qi[:, l] / S1[J1, l]) @ ((Y1 - A1[J1, l]) ** 2))
                     XwS[l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / S2[J2, l]) @ ((Y2 - A2[J2, l]) ** 2))
 
-                cons_s.solve(XwX, - XwS)
-                res_s = cons_s.res
-                S1 = np.sqrt(np.reshape(res_s, (2, nl, nk))[0, :, :]).T
-                S2 = np.sqrt(np.reshape(res_s, (2, nl, nk))[1, :, :]).T
+                try:
+                    cons_s.solve(XwX, - XwS)
+                    res_s = cons_s.res
+                    S1 = np.sqrt(np.reshape(res_s, (2, nl, nk))[0, :, :]).T
+                    S2 = np.sqrt(np.reshape(res_s, (2, nl, nk))[1, :, :]).T
+                except ValueError: # If constraints inconsistent, keep S1 and S2 the same
+                    print('passing 2')
+                    pass
             if params['update_pk1']:
                 for l in range(nl):
                     pk1[:, l] = JJ12.T * qi[:, l]
@@ -476,7 +531,8 @@ class BLMModel:
         self.A2 = A2
         self.S2 = S2
         self.pk1 = pk1
-        self.liks1 = liks1
+        self.lik1 = lik1
+        self.liks1 = np.array(liks1)
 
     def fit_stayers(self, sdata):
         '''
@@ -489,8 +545,9 @@ class BLMModel:
         nl = self.nl
         nk = self.nk
         ni = sdata.shape[0]
-        liks0 = None # Log likelihood for stayers
-        prev_liks = np.inf
+        lik0 = None # Log likelihood for stayers
+        liks0 = [] # Path of log likelihoods for stayers
+        prev_lik = np.inf
 
         # Store wage outcomes and groups
         Y1 = sdata['y1'].to_numpy()
@@ -516,19 +573,23 @@ class BLMModel:
             qi = np.exp(lp.T - logsumexp(lp, axis=1)).T
             if params['return_qi']:
                 return qi
-            liks0 = logsumexp(lp, axis=0).sum() # FIXME should this be returned?
-            print('loop {}, liks {}'.format(iter, liks0))
+            lik0 = logsumexp(lp, axis=1).sum() # FIXME should this be returned?
+            liks0.append(lik0)
+            print('loop {}, liks {}'.format(iter, lik0))
 
-            if abs(liks0 - prev_liks) < params['threshold']:
+            if abs(lik0 - prev_lik) < params['threshold']:
                 break
-            prev_liks = liks0
+            prev_lik = lik0
 
             # --------- M-step ----------
             for l in range(nl):
                 pk0[:, l] = JJ1.T * qi[:, l]
+            # Normalize rows to sum to 1
+            pk0 = (pk0.T / np.sum(pk0, axis=1).T).T
 
         self.pk0 = pk0
-        self.liks0 = liks0
+        self.lik0 = lik0
+        self.liks0 = np.array(liks0)
 
     def fit_movers_cstr_uncstr(self, jdata):
         '''
@@ -540,6 +601,8 @@ class BLMModel:
         self.reset_params() # New parameter guesses
         ##### Loop 1 #####
         self.params['update_a'] = False # First run fixm = True, which fixes A but updates S and pk
+        self.params['update_s'] = True
+        self.params['update_pk1'] = True
         print('Running fixm movers')
         self.fit_movers(jdata)
         ##### Loop 2 #####
@@ -551,15 +614,18 @@ class BLMModel:
         self.params['cons_a'] = () # Remove constraints
         print('Running unconstrained movers')
         self.fit_movers(jdata)
+        ##### Compute connectedness #####
+        self.compute_connectedness()
 
     def fit_A(self, jdata):
         '''
         Run fit_movers() and update A while keeping S and pk1 fixed.
         '''
-        self.reset_params() # New parameter guesses
+        # self.reset_params() # New parameter guesses
         self.params['update_a'] = True
         self.params['update_s'] = False
         self.params['update_pk1'] = False
+        self.params['cons_a'] = ()
         print('Running fit_A')
         self.fit_movers(jdata)
 
@@ -567,10 +633,11 @@ class BLMModel:
         '''
         Run fit_movers() and update S while keeping A and pk1 fixed.
         '''
-        self.reset_params() # New parameter guesses
+        # self.reset_params() # New parameter guesses
         self.params['update_a'] = False
         self.params['update_s'] = True
         self.params['update_pk1'] = False
+        self.params['cons_a'] = ()
         print('Running fit_S')
         self.fit_movers(jdata)
 
@@ -578,10 +645,11 @@ class BLMModel:
         '''
         Run fit_movers() and update pk1 while keeping A and S fixed.
         '''
-        self.reset_params() # New parameter guesses
+        # self.reset_params() # New parameter guesses
         self.params['update_a'] = False
         self.params['update_s'] = False
         self.params['update_pk1'] = True
+        self.params['cons_a'] = ()
         print('Running fit_pk')
         self.fit_movers(jdata)
 
@@ -755,8 +823,8 @@ class BLMEstimator:
         best_model = None
 
         for model in sim_model_lst:
-            if model.liks1 > max_liks:
-                max_liks = model.liks1
+            if model.lik1 > max_liks:
+                max_liks = model.lik1
                 best_model = model
         print('max_liks:', max_liks)
         self.model = best_model
