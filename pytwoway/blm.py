@@ -15,7 +15,7 @@ import itertools
 import time
 import argparse
 import warnings
-from pytwoway import update_dict
+from pytwoway import update_dict, melt
 
 ####################
 ##### New Code #####
@@ -265,7 +265,7 @@ class QPConstrained:
         elif len(self.G) > 0:
             self.res = solve_qp(P=P, q=q, G=self.G, h=self.h)
         elif len(self.A) > 0:
-            self.res = solve_qp(P=P, q=q, A=self.A, b=self.b)
+            self.res = solve_qp(P=P, q=q, A=self.A, b=self.b, solver='quadprog')
         else:
             self.res = solve_qp(P=P, q=q)
 
@@ -296,7 +296,8 @@ class BLMModel:
             'cons_a': (['lin'], {'n_periods': 2}), # Constraints on A1 and A2
             'cons_s': (['biggerthan'], {'gap_bigger': 1e-6, 'n_periods': 2}), # Constraints on S1 and S2
             # fit_stayers() parameters
-            'return_qi': False # If True, return qi matrix after first loop
+            'return_qi': False, # If True, return qi matrix after first loop
+            'd_prior': 1.0001 # Account for probabilities being too small
         }
         params = update_dict(default_params, user_params)
         self.params = params
@@ -327,7 +328,7 @@ class BLMModel:
             self.A2 = self.A1.copy()
             self.S2 = np.ones(shape=(nk, nl))
             # Model for p(K | l, l') for movers
-            self.pk1 = np.ones(shape=(nk * nk, nl)) / nl
+            self.pk1 = np.random.dirichlet(alpha=[1] * nl, size=nk * nk) # np.ones(shape=(nk * nk, nl)) / nl
             # Model for p(K | l, l') for stayers
             self.pk0 = np.ones(shape=(nk, nl)) / nl
 
@@ -365,43 +366,26 @@ class BLMModel:
         # Model for p(K | l, l') for stayers
         self.pk0 = np.ones(shape=(nk, nl)) / nl
 
-    def compute_connectedness(self, all=False):
+    def compute_connectedness_measure(self, all=False):
         '''
-        Computes graph connectedness among the movers within each type and updates self.connectedness to be the smallest value.
+        Computes graph connectedness measure among the movers within each type and updates self.connectedness to be the smallest value.
         '''
-        pd.options.mode.chained_assignment = None
         nl = self.nl
         nk = self.nk
         EV = np.zeros(shape=nl)
         pk1 = np.reshape(self.pk1, (nk, nk, nl))
-        # dd_post = data.table(melt(pk1,c('j1','j2','k')))
-        # Source for the following:
-        # https://stackoverflow.com/a/65996547
-        dd_post = pd.DataFrame(np.hstack((list(np.ndindex(pk1.shape)), pk1.reshape((-1, 1)))))
-        dd_post = dd_post.rename({0: 'j1', 1: 'j2', 2: 'k', 3: 'value'}, axis=1)
-        dd_post[['j1', 'j2', 'k']] = dd_post[['j1', 'j2', 'k']].astype(int)
-        pp = self.NNm / np.sum(self.NNm)
-        dd_post['pr_j1j2'] = dd_post.apply(lambda x: pp[int(x['j1']), int(x['j2'])], axis=1)
-        dd_post['pr_j1j2k'] = dd_post['pr_j1j2'] * dd_post['value']
+        pr = (self.NNm.T * pk1.T).T
 
         for kk in range(nl):
             # Compute adjacency matrix
-            A = dd_post[dd_post['k'] == kk]
-            A['pr'] = A['pr_j1j2k'] / np.sum(A['pr_j1j2k'])
-            A = A[['pr', 'j2', 'j1']]
-            A1 = A.pivot(index='j1', columns='j2', values='pr')
-            A1 = A1[sorted(A1.columns)]
-            A1 = np.array(A1)
-            A2 = A.pivot(index='j2', columns='j1', values='pr')
-            A2 = A2[sorted(A2.columns)]
-            A2 = np.array(A2)
-            # Construct Laplacian
-            A = 0.5 * A1 + 0.5 * A2
+            A = pr[:, :, kk]
+            A /= A.sum()
+            A = 0.5 * A + 0.5 * A.T
             D = np.diag(np.sum(A, axis=1) ** (- 0.5))
             L = np.eye(nk) - D @ A @ D
             evals, evects = np.linalg.eig(L)
             EV[kk] = sorted(evals)[1]
-        pd.options.mode.chained_assignment = 'warn'
+
         if all:
             self.connectedness = EV
         self.connectedness = np.abs(EV).min()
@@ -440,6 +424,7 @@ class BLMModel:
         if len(params['cons_s']) > 0:
             cons_s.add_constraints_builtin(params['cons_s'][0], params['cons_s'][1])
 
+        d_prior = params['d_prior'] # Fix error from bad initial guesses causing probabilities to be too low
         lp = np.zeros(shape=(ni, nl))
         JJ1 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), J1)), shape=(ni, nk))
         JJ2 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), J2)), shape=(ni, nk))
@@ -462,6 +447,8 @@ class BLMModel:
             if params['return_qi']:
                 return qi
             lik1 = logsumexp(lp, axis=1).mean() # FIXME should this be returned?
+            # lik_prior = (params['d_prior'] - 1) * np.sum(np.log(pk1))
+            # lik1 += lik_prior
             liks1.append(lik1)
             print('loop {}, liks {}'.format(iter, lik1))
 
@@ -523,7 +510,8 @@ class BLMModel:
             if params['update_pk1']:
                 for l in range(nl):
                     pk1[:, l] = JJ12.T * qi[:, l]
-                # Normalize rows to sum to 1
+                # Normalize rows to sum to 1, and add dirichlet prior
+                pk1 += d_prior - 1
                 pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
 
         self.A1 = A1
@@ -606,8 +594,8 @@ class BLMModel:
         print('Running fixm movers')
         self.fit_movers(jdata)
         ##### Loop 2 #####
-        self.params['update_a'] = True # Now update A
-        self.params['cons_a'] = (['lin'], {'n_periods': 2}) # Set constraints
+        # self.params['update_a'] = True # Now update A
+        # self.params['cons_a'] = (['lin'], {'n_periods': 2}) # Set constraints
         print('Running constrained movers')
         self.fit_movers(jdata)
         ##### Loop 3 #####
@@ -615,7 +603,7 @@ class BLMModel:
         print('Running unconstrained movers')
         self.fit_movers(jdata)
         ##### Compute connectedness #####
-        self.compute_connectedness()
+        self.compute_connectedness_measure()
 
     def fit_A(self, jdata):
         '''

@@ -1,5 +1,5 @@
 
-from .util import update_dict
+from .util import update_dict, melt
 from .bipartite_network import BipartiteData
 from .cre import CREEstimator
 from .fe import FEEstimator
