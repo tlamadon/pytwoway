@@ -140,6 +140,17 @@ class BipartiteData:
 
         return bd_copy
 
+    def drop_col(self, col):
+        '''
+        Drop a column.
+
+        Arguments:
+            col (str): column to drop
+        '''
+        self.bd.drop_col(col)
+        self.data = self.bd.data
+        self.col_dict = self.bd.col_dict
+
     def clean_data(self):
         '''
         Clean data.
@@ -155,14 +166,18 @@ class BipartiteData:
         if self.formatting == 'long':
             # Save attributes
             connected = self.bd.connected
-            contiguous = self.bd.contiguous
+            contiguous_fids = self.bd.contiguous_fids
+            contiguous_wids = self.bd.contiguous_wids
+            contiguous_cids = self.bd.contiguous_cids
             no_na = self.bd.no_na
             no_duplicates = self.bd.no_duplicates
             # Update bipartite network
             self.bd = BipartiteLongCollapsed(self.bd.get_collapsed_long())
             # Use attributes from before
             self.bd.connected = connected
-            self.bd.contiguous = contiguous
+            self.bd.contiguous_fids = contiguous_fids
+            self.bd.contiguous_wids = contiguous_wids
+            self.bd.contiguous_cids = contiguous_cids
             self.bd.no_na = no_na
             self.bd.no_duplicates = no_duplicates
             # Update superclass attributes
@@ -183,14 +198,18 @@ class BipartiteData:
         if self.formatting == 'long':
             # Save attributes
             connected = self.bd.connected
-            contiguous = self.bd.contiguous
+            contiguous_fids = self.bd.contiguous_fids
+            contiguous_wids = self.bd.contiguous_wids
+            contiguous_cids = self.bd.contiguous_cids
             no_na = self.bd.no_na
             no_duplicates = self.bd.no_duplicates
             # Update bipartite network
             self.bd = BipartiteEventStudy(self.bd.get_es(), collapsed=False)
             # Use attributes from before
             self.bd.connected = connected
-            self.bd.contiguous = contiguous
+            self.bd.contiguous_fids = contiguous_fids
+            self.bd.contiguous_wids = contiguous_wids
+            self.bd.contiguous_cids = contiguous_cids
             self.bd.no_na = no_na
             self.bd.no_duplicates = no_duplicates
             # Update superclass attributes
@@ -211,14 +230,18 @@ class BipartiteData:
         if self.formatting == 'long_collapsed':
             # Save attributes
             connected = self.bd.connected
-            contiguous = self.bd.contiguous
+            contiguous_fids = self.bd.contiguous_fids
+            contiguous_wids = self.bd.contiguous_wids
+            contiguous_cids = self.bd.contiguous_cids
             no_na = self.bd.no_na
             no_duplicates = self.bd.no_duplicates
             # Update bipartite network
             self.bd = BipartiteEventStudy(self.bd.get_es(), collapsed=True)
             # Use attributes from before
             self.bd.connected = connected
-            self.bd.contiguous = contiguous
+            self.bd.contiguous_fids = contiguous_fids
+            self.bd.contiguous_wids = contiguous_wids
+            self.bd.contiguous_cids = contiguous_cids
             self.bd.no_na = no_na
             self.bd.no_duplicates = no_duplicates
             # Update superclass attributes
@@ -240,14 +263,18 @@ class BipartiteData:
             if self.bd.collapsed:
                 # Save attributes
                 connected = self.bd.connected
-                contiguous = self.bd.contiguous
+                contiguous_fids = self.bd.contiguous_fids
+                contiguous_wids = self.bd.contiguous_wids
+                contiguous_cids = self.bd.contiguous_cids
                 no_na = self.bd.no_na
                 no_duplicates = self.bd.no_duplicates
                 # Update bipartite network
                 self.bd = BipartiteLongCollapsed(self.bd.get_collapsed_long())
                 # Use attributes from before
                 self.bd.connected = connected
-                self.bd.contiguous = contiguous
+                self.bd.contiguous_fids = contiguous_fids
+                self.bd.contiguous_wids = contiguous_wids
+                self.bd.contiguous_cids = contiguous_cids
                 self.bd.no_na = no_na
                 self.bd.no_duplicates = no_duplicates
                 # Update superclass attributes
@@ -271,14 +298,18 @@ class BipartiteData:
             if not self.bd.collapsed:
                 # Save attributes
                 connected = self.bd.connected
-                contiguous = self.bd.contiguous
+                contiguous_fids = self.bd.contiguous_fids
+                contiguous_wids = self.bd.contiguous_wids
+                contiguous_cids = self.bd.contiguous_cids
                 no_na = self.bd.no_na
                 no_duplicates = self.bd.no_duplicates
                 # Update bipartite network
                 self.bd = BipartiteLong(self.bd.get_long())
                 # Use attributes from before
                 self.bd.connected = connected
-                self.bd.contiguous = contiguous
+                self.bd.contiguous_fids = contiguous_fids
+                self.bd.contiguous_wids = contiguous_wids
+                self.bd.contiguous_cids = contiguous_cids
                 self.bd.no_na = no_na
                 self.bd.no_duplicates = no_duplicates
                 # Update superclass attributes
@@ -330,6 +361,7 @@ class BipartiteData:
         '''
         self.bd.cluster(user_cluster=user_cluster)
         self.data = self.bd.data
+        self.col_dict = self.bd.col_dict
 
     def to_csv(self, filepath):
         '''
@@ -385,24 +417,13 @@ class BipartiteData:
         ret_str += 'min wage: ' + str(min_wage) + '\n'
         ret_str += 'collapsed by spell: ' + str(collapsed) + '\n'
         ret_str += 'connected: ' + str(self.bd.connected) + '\n'
-        ret_str += 'contiguous firm and worker ids: ' + str(self.bd.contiguous) + '\n'
+        ret_str += 'contiguous firm ids: ' + str(self.bd.contiguous_fids) + '\n'
+        ret_str += 'contiguous worker ids: ' + str(self.bd.contiguous_wids) + '\n'
+        ret_str += 'contiguous cluster ids (None if not clustered): ' + str(self.bd.contiguous_cids) + '\n'
         ret_str += 'no nans: ' + str(self.bd.no_na) + '\n'
         ret_str += 'no duplicates: ' + str(self.bd.no_duplicates) + '\n'
 
         return ret_str
-
-        # print('format:', self.formatting)
-        # print('number of workers:', self.bd.n_workers())
-        # print('number of firms:', self.bd.n_firms())
-        # print('number of observations:', len(self.bd.data))
-        # print('mean wage:', mean_wage)
-        # print('max wage:', max_wage)
-        # print('min wage:', min_wage)
-        # print('collapsed by spell:', collapsed)
-        # print('connected:', self.bd.connected)
-        # print('contiguous firm and worker ids:', self.bd.contiguous)
-        # print('no nans:', self.bd.no_na)
-        # print('no duplicates:', self.bd.no_duplicates)
 
 class BipartiteLong:
     '''
@@ -437,7 +458,9 @@ class BipartiteLong:
         # Define some attributes
         self.data = data
         self.connected = False # If True, all firms are connected by movers
-        self.contiguous = False # If True, firm ids are contiguous
+        self.contiguous_fids = False # If True, firm ids are contiguous
+        self.contiguous_wids = False # If True, worker ids are contiguous
+        self.contiguous_cids = None # If True, cluster ids are contiguous; if None, data not clustered
         self.no_na = False # If True, no NaN observations in the data
         self.no_duplicates = False # If True, no duplicate rows in the data
 
@@ -477,6 +500,9 @@ class BipartiteLong:
         optional_cols = [['m'], ['j']]
         self.col_dict = col_dict_optional_cols(default_col_dict, col_dict, data.columns, optional_cols=optional_cols)
 
+        if self.col_dict['j'] is not None:
+            self.contiguous_cids = False
+
         self.logger.info('BipartiteLong object initialized')
 
     def copy(self):
@@ -488,7 +514,9 @@ class BipartiteLong:
         '''
         bd_copy = BipartiteLong(self.data, self.col_dict)
         bd_copy.connected = self.connected
-        bd_copy.contiguous = self.contiguous
+        bd_copy.contiguous_fids = self.contiguous_fids
+        bd_copy.contiguous_wids = self.contiguous_wids
+        bd_copy.contiguous_cids = self.contiguous_cids
         bd_copy.no_na = self.no_na
         bd_copy.no_duplicates = self.no_duplicates
 
@@ -511,6 +539,35 @@ class BipartiteLong:
             (int): number of unique firms
         '''
         return len(self.data['fid'].unique())
+
+    def n_clusters(self):
+        '''
+        Get the number of unique clusters.
+
+        Returns:
+            (int): number of unique clusters
+        '''
+        if self.col_dict['j'] is not None:
+            return len(self.data['j'].unique())
+        return 0
+
+    def drop_col(self, col):
+        '''
+        Drop a column.
+
+        Arguments:
+            col (str): column to drop
+        '''
+        if col in self.data.columns:
+            if col in ['m', 'j']:
+                self.data = self.data.drop(col, axis=1)
+                self.col_dict[col] = None
+                if col == 'j':
+                    self.contiguous_cids = None
+            else:
+                warnings.warn('{} is an essential column and cannot be dropped')
+        else:
+            warnings.warn('{} is not in data columns')
 
     def clean_data(self):
         '''
@@ -543,14 +600,20 @@ class BipartiteLong:
             self.logger.info('generating largest connected set')
             self.conset()
 
-        # Next, make firm and worker ids contiguous
-        if not self.contiguous:
-            # Make firm ids contiguous
+        # Next, make firm ids contiguous
+        if not self.contiguous_fids:
             self.logger.info('making firm ids contiguous')
             self.contiguous_ids('fid')
-            # Make worker ids contiguous
-            self.logger.info('making worker ids contiguous')
+
+        # Next, make worker ids contiguous
+        if not self.contiguous_wids:
+            self.logger.info('making firm ids contiguous')
             self.contiguous_ids('wid')
+
+        # Next, make cluster ids contiguous
+        if self.contiguous_cids is not None and not self.contiguous_cids:
+            self.logger.info('making cluster ids contiguous')
+            self.contiguous_ids('j')
 
         # Using contiguous fids, get NetworkX Graph of largest connected set (note that this must be done even if firms already connected and contiguous)
         self.logger.info('generating NetworkX Graph of largest connected set')
@@ -583,11 +646,11 @@ class BipartiteLong:
                 cols = False
             else:
                 if col in ['year', 'm', 'j']:
-                    if self.data[self.col_dict[col]].dtype not in ['int', 'int16', 'int32', 'int64']:
+                    if self.data[self.col_dict[col]].dtype not in ['int', 'int16', 'int32', 'int64', 'Int64']:
                         self.logger.info(self.col_dict[col], 'has wrong dtype, should be int but is', self.data[self.col_dict[col]].dtype)
                         cols = False
                 elif col == 'comp':
-                    if self.data[self.col_dict[col]].dtype not in ['float', 'float16', 'float32', 'float64', 'float128', 'int', 'int16', 'int32', 'int64']:
+                    if self.data[self.col_dict[col]].dtype not in ['float', 'float16', 'float32', 'float64', 'float128', 'int', 'int16', 'int32', 'int64', 'Int64']:
                         self.logger.info(self.col_dict[col], 'has wrong dtype, should be float or int but is', self.data[self.col_dict[col]].dtype)
                         cols = False
 
@@ -647,6 +710,7 @@ class BipartiteLong:
         n_firms = self.n_firms()
 
         contig_fids = (fid_max == n_firms - 1)
+        self.contiguous_fids = contig_fids
 
         self.logger.info('contiguous firm ids (should be True):' + str(contig_fids))
         if not contig_fids:
@@ -657,9 +721,9 @@ class BipartiteLong:
         n_workers = self.n_workers()
 
         contig_wids = (wid_max == n_workers - 1)
+        self.contiguous_wids = contig_wids
 
         self.logger.info('contiguous worker ids (should be True):' + str(contig_wids))
-        self.contiguous = contig_fids and contig_wids
         if not contig_wids:
             success = False
         
@@ -669,6 +733,7 @@ class BipartiteLong:
             n_cids = len(self.data['j'].unique())
 
             contig_cids = (cid_max == n_cids)
+            self.contiguous_cids = contig_cids
 
             self.logger.info('contiguous cluster ids (should be True):' + str(contig_cids))
             if not contig_cids:
@@ -684,6 +749,8 @@ class BipartiteLong:
             G (NetworkX Graph): largest connected set of movers (only returns if firm ids are contiguous, otherwise returns None)
         '''
         prev_workers = self.n_workers()
+        prev_firms = self.n_firms()
+        prev_clusters = self.n_clusters()
         # Add max firm id per worker to serve as a central node for the worker
         # self.data['fid_f1'] = self.data.groupby('wid')['fid'].transform(lambda a: a.shift(-1)) # FIXME - this is directed but is much slower
         self.data['fid_max'] = self.data.groupby(['wid'])['fid'].transform(max) # FIXME - this is undirected but is much faster
@@ -703,11 +770,16 @@ class BipartiteLong:
         self.connected = True
 
         # If connected data != full data, set contiguous to False
+        if prev_firms != self.n_firms():
+            self.contiguous_fids = False
         if prev_workers != self.n_workers():
-            self.contiguous = False
+            self.contiguous_wids = False
+        if prev_clusters != self.n_clusters():
+            if self.col_dict['j'] is not None:
+                self.contiguous_cids = False
 
-        # Return G if firm ids are contiguous (if they're not contiguous, they have to be updated first)
-        if self.contiguous:
+        # Return G if all ids are contiguous (if they're not contiguous, they have to be updated first)
+        if self.contiguous_fids and self.contiguous_wids and (self.col_dict['j'] is None or self.contiguous_cids):
             return G
 
         return None
@@ -739,7 +811,13 @@ class BipartiteLong:
 
         if id_col == 'fid':
             # Firm ids are now contiguous
-            self.contiguous = True
+            self.contiguous_fids = True
+        elif id_col == 'wid':
+            # Worker ids are now contiguous
+            self.contiguous_wids = True
+        elif id_col == 'j':
+            # Cluster ids are now contiguous
+            self.contiguous_cids = True
 
     def gen_m(self):
         '''
@@ -1037,6 +1115,8 @@ class BipartiteLong:
 
         # Merge into event study data
         self.data = self.data.merge(clusters_df, how='left', on='fid')
+        # Keep column as int even with nans
+        self.data['j'] = self.data['j'].astype('Int64')
         self.col_dict['j'] = 'j'
 
         # Sort columns
@@ -1084,7 +1164,9 @@ class BipartiteLongCollapsed:
         # Define some attributes
         self.data = data
         self.connected = False # If True, all firms are connected by movers
-        self.contiguous = False # If True, firm ids are contiguous
+        self.contiguous_fids = False # If True, firm ids are contiguous
+        self.contiguous_wids = False # If True, worker ids are contiguous
+        self.contiguous_cids = None # If True, cluster ids are contiguous; if None, data not clustered
         self.no_na = False # If True, no NaN observations in the data
         self.no_duplicates = False # If True, no duplicate rows in the data
 
@@ -1127,6 +1209,9 @@ class BipartiteLongCollapsed:
         optional_cols = [['m'], ['weight'], ['j']]
         self.col_dict = col_dict_optional_cols(default_col_dict, col_dict, data.columns, optional_cols=optional_cols)
 
+        if self.col_dict['j'] is not None:
+            self.contiguous_cids = False
+
         self.logger.info('BipartiteLongCollapsed object initialized')
 
     def copy(self):
@@ -1138,7 +1223,9 @@ class BipartiteLongCollapsed:
         '''
         bd_copy = BipartiteLongCollapsed(self.data, self.col_dict)
         bd_copy.connected = self.connected
-        bd_copy.contiguous = self.contiguous
+        bd_copy.contiguous_fids = self.contiguous_fids
+        bd_copy.contiguous_wids = self.contiguous_wids
+        bd_copy.contiguous_cids = self.contiguous_cids
         bd_copy.no_na = self.no_na
         bd_copy.no_duplicates = self.no_duplicates
 
@@ -1161,6 +1248,35 @@ class BipartiteLongCollapsed:
             (int): number of unique firms
         '''
         return len(self.data['fid'].unique())
+
+    def n_clusters(self):
+        '''
+        Get the number of unique clusters.
+
+        Returns:
+            (int): number of unique clusters
+        '''
+        if self.col_dict['j'] is not None:
+            return len(self.data['j'].unique())
+        return 0
+
+    def drop_col(self, col):
+        '''
+        Drop a column.
+
+        Arguments:
+            col (str): column to drop
+        '''
+        if col in self.data.columns:
+            if col in ['m', 'weight', 'j']:
+                self.data = self.data.drop(col, axis=1)
+                self.col_dict[col] = None
+                if col == 'j':
+                    self.contiguous_cids = None
+            else:
+                warnings.warn('{} is an essential column and cannot be dropped')
+        else:
+            warnings.warn('{} is not in data columns')
 
     def clean_data(self):
         '''
@@ -1193,14 +1309,20 @@ class BipartiteLongCollapsed:
             self.logger.info('generating largest connected set')
             self.conset()
 
-        # Next, make firm and worker ids contiguous
-        if not self.contiguous:
-            # Make firm ids contiguous
+        # Next, make firm ids contiguous
+        if not self.contiguous_fids:
             self.logger.info('making firm ids contiguous')
             self.contiguous_ids('fid')
-            # Make worker ids contiguous
-            self.logger.info('making worker ids contiguous')
+
+        # Next, make worker ids contiguous
+        if not self.contiguous_wids:
+            self.logger.info('making firm ids contiguous')
             self.contiguous_ids('wid')
+
+        # Next, make cluster ids contiguous
+        if self.contiguous_cids is not None and not self.contiguous_cids:
+            self.logger.info('making cluster ids contiguous')
+            self.contiguous_ids('j')
 
         # Using contiguous fids, get NetworkX Graph of largest connected set (note that this must be done even if firms already connected and contiguous)
         self.logger.info('generating NetworkX Graph of largest connected set')
@@ -1236,11 +1358,11 @@ class BipartiteLongCollapsed:
                 cols = False
             else:
                 if col in ['year_start', 'year_end', 'm', 'j']:
-                    if self.data[self.col_dict[col]].dtype not in ['int', 'int16', 'int32', 'int64']:
+                    if self.data[self.col_dict[col]].dtype not in ['int', 'int16', 'int32', 'int64', 'Int64']:
                         self.logger.info(self.col_dict[col], 'has wrong dtype, should be int but is', self.data[self.col_dict[col]].dtype)
                         cols = False
                 elif col in ['comp', 'weight']:
-                    if self.data[self.col_dict[col]].dtype not in ['float', 'float16', 'float32', 'float64', 'float128', 'int', 'int16', 'int32', 'int64']:
+                    if self.data[self.col_dict[col]].dtype not in ['float', 'float16', 'float32', 'float64', 'float128', 'int', 'int16', 'int32', 'int64', 'Int64']:
                         self.logger.info(self.col_dict[col], 'has wrong dtype, should be float or int but is', self.data[self.col_dict[col]].dtype)
                         cols = False
 
@@ -1302,6 +1424,7 @@ class BipartiteLongCollapsed:
         n_firms = self.n_firms()
 
         contig_fids = (fid_max == n_firms - 1)
+        self.contiguous_fids = contig_fids
 
         self.logger.info('contiguous firm ids (should be True):' + str(contig_fids))
         if not contig_fids:
@@ -1312,8 +1435,9 @@ class BipartiteLongCollapsed:
         n_workers = self.n_workers()
 
         contig_wids = (wid_max == n_workers - 1)
+        self.contiguous_wids = contig_wids
+
         self.logger.info('contiguous worker ids (should be True):' + str(contig_wids))
-        self.contiguous = contig_fids and contig_wids
         if not contig_wids:
             success = False
 
@@ -1323,6 +1447,7 @@ class BipartiteLongCollapsed:
             n_cids = len(self.data['j'].unique())
 
             contig_cids = (cid_max == n_cids)
+            self.contiguous_cids = contig_cids
 
             self.logger.info('contiguous cluster ids (should be True):' + str(contig_cids))
             if not contig_cids:
@@ -1338,6 +1463,8 @@ class BipartiteLongCollapsed:
             G (NetworkX Graph): largest connected set of movers (only returns if firm ids are contiguous, otherwise returns None)
         '''
         prev_workers = self.n_workers()
+        prev_firms = self.n_firms()
+        prev_clusters = self.n_clusters()
         # Add max firm id per worker to serve as a central node for the worker
         # self.data['fid_f1'] = self.data.groupby('wid')['fid'].transform(lambda a: a.shift(-1)) # FIXME - this is directed but is much slower
         self.data['fid_max'] = self.data.groupby(['wid'])['fid'].transform(max) # FIXME - this is undirected but is much faster
@@ -1357,11 +1484,16 @@ class BipartiteLongCollapsed:
         self.connected = True
 
         # If connected data != full data, set contiguous to False
+        if prev_firms != self.n_firms():
+            self.contiguous_fids = False
         if prev_workers != self.n_workers():
-            self.contiguous = False
+            self.contiguous_wids = False
+        if prev_clusters != self.n_clusters():
+            if self.col_dict['j'] is not None:
+                self.contiguous_cids = False
 
-        # Return G if firm ids are contiguous (if they're not contiguous, they have to be updated first)
-        if self.contiguous:
+        # Return G if all ids are contiguous (if they're not contiguous, they have to be updated first)
+        if self.contiguous_fids and self.contiguous_wids and (self.col_dict['j'] is None or self.contiguous_cids):
             return G
 
         return None
@@ -1393,7 +1525,13 @@ class BipartiteLongCollapsed:
 
         if id_col == 'fid':
             # Firm ids are now contiguous
-            self.contiguous = True
+            self.contiguous_fids = True
+        elif id_col == 'wid':
+            # Worker ids are now contiguous
+            self.contiguous_wids = True
+        elif id_col == 'j':
+            # Cluster ids are now contiguous
+            self.contiguous_cids = True
 
     def gen_m(self):
         '''
@@ -1618,6 +1756,8 @@ class BipartiteLongCollapsed:
 
         # Merge into event study data
         self.data = self.data.merge(clusters_df, how='left', on='fid')
+        # Keep column as int even with nans
+        self.data['j'] = self.data['j'].astype('Int64')
         self.col_dict['j'] = 'j'
 
         # Sort columns
@@ -1666,7 +1806,9 @@ class BipartiteEventStudy:
         # Define some attributes
         self.data = data
         self.connected = False # If True, all firms are connected by movers
-        self.contiguous = False # If True, firm ids are contiguous
+        self.contiguous_fids = False # If True, firm ids are contiguous
+        self.contiguous_wids = False # If True, worker ids are contiguous
+        self.contiguous_cids = None # If True, cluster ids are contiguous; if None, data not clustered
         self.no_na = False # If True, no NaN observations in the data
         self.no_duplicates = False # If True, no duplicate rows in the data
         self.collapsed = collapsed
@@ -1721,6 +1863,9 @@ class BipartiteEventStudy:
         optional_cols = [['w1', 'w2'], ['m'], ['j1', 'j2']]
         self.col_dict = col_dict_optional_cols(default_col_dict, col_dict, data.columns, optional_cols=optional_cols)
 
+        if self.col_dict['j1'] is not None and self.col_dict['j2'] is not None:
+            self.contiguous_cids = False
+
         self.logger.info('BipartiteEventStudy object initialized')
 
     def copy(self):
@@ -1732,7 +1877,9 @@ class BipartiteEventStudy:
         '''
         bd_copy = BipartiteEventStudy(self.data, self.col_dict)
         bd_copy.connected = self.connected
-        bd_copy.contiguous = self.contiguous
+        bd_copy.contiguous_fids = self.contiguous_fids
+        bd_copy.contiguous_wids = self.contiguous_wids
+        bd_copy.contiguous_cids = self.contiguous_cids
         bd_copy.no_na = self.no_na
         bd_copy.no_duplicates = self.no_duplicates
 
@@ -1755,6 +1902,42 @@ class BipartiteEventStudy:
             (int): number of unique firms
         '''
         return len(set(list(self.data['f1i'].unique()) + list(self.data['f2i'].unique())))
+
+    def n_clusters(self):
+        '''
+        Get the number of unique clusters.
+
+        Returns:
+            (int): number of unique clusters
+        '''
+        if self.col_dict['j1'] is not None and self.col_dict['j2'] is not None:
+            return len(set(list(self.data['j1'].unique()) + list(self.data['j2'].unique())))
+        return None
+
+    def drop_col(self, col):
+        '''
+        Drop a column. To drop weights or cluster ids, specify 'weight' or 'j', respectively.
+
+        Arguments:
+            col (str): column to drop
+        '''
+        if col in self.data.columns or (col == 'weight' and self.col_dict['w1'] is not None and self.col_dict['w2'] is not None) or (col == 'j' and self.col_dict['j1'] is not None and self.col_dict['j2'] is not None):
+            if col == 'm':
+                self.data = self.data.drop(col, axis=1)
+                self.col_dict[col] = None
+            elif col == 'weight':
+                self.data = self.data.drop(['w1', 'w2'], axis=1)
+                self.col_dict['w1'] = None
+                self.col_dict['w2'] = None
+            elif col == 'j':
+                self.data = self.data.drop(['j1', 'j2'], axis=1)
+                self.col_dict['j1'] = None
+                self.col_dict['j2'] = None
+                self.contiguous_cids = None
+            else:
+                warnings.warn("{} is either (a) an essential column and cannot be dropped or (b) you specified 'w1'/'w2' instead of 'weight' or 'j1'/'j2' instead of 'j'")
+        else:
+            warnings.warn('{} is not in data columns')
 
     def clean_data(self):
         '''
@@ -1787,14 +1970,20 @@ class BipartiteEventStudy:
             self.logger.info('generating largest connected set')
             self.conset()
 
-        # Next, make firm and worker ids contiguous
-        if not self.contiguous:
-            # Make firm ids contiguous
+        # Next, make firm ids contiguous
+        if not self.contiguous_fids:
             self.logger.info('making firm ids contiguous')
             self.contiguous_ids('fid')
-            # Make worker ids contiguous
-            self.logger.info('making worker ids contiguous')
+
+        # Next, make worker ids contiguous
+        if not self.contiguous_wids:
+            self.logger.info('making firm ids contiguous')
             self.contiguous_ids('wid')
+
+        # Next, make cluster ids contiguous
+        if self.contiguous_cids is not None and not self.contiguous_cids:
+            self.logger.info('making cluster ids contiguous')
+            self.contiguous_ids('j')
 
         # Using contiguous fids, get NetworkX Graph of largest connected set (note that this must be done even if firms already connected and contiguous)
         self.logger.info('generating NetworkX Graph of largest connected set')
@@ -1836,11 +2025,11 @@ class BipartiteEventStudy:
                 cols = False
             else:
                 if col in ['y1', 'y2', 'w1', 'w2']:
-                    if self.data[self.col_dict[col]].dtype not in ['float', 'float16', 'float32', 'float64', 'float128', 'int', 'int16', 'int32', 'int64']:
+                    if self.data[self.col_dict[col]].dtype not in ['float', 'float16', 'float32', 'float64', 'float128', 'int', 'int16', 'int32', 'int64', 'Int64']:
                         self.logger.info(col, 'column has wrong dtype, should be float or int but is', self.data[self.col_dict[col]].dtype)
                         cols = False
                 elif col in ['year_1', 'year_2', 'year_start_1', 'year_start_2', 'year_end_1', 'year_end_2', 'm', 'j1', 'j2']:
-                    if self.data[self.col_dict[col]].dtype not in ['int', 'int16', 'int32', 'int64']:
+                    if self.data[self.col_dict[col]].dtype not in ['int', 'int16', 'int32', 'int64', 'Int64']:
                         self.logger.info(col, 'column has wrong dtype, should be int but is', self.data[self.col_dict[col]].dtype)
                         cols = False
 
@@ -1928,6 +2117,7 @@ class BipartiteEventStudy:
         n_firms = self.n_firms()
 
         contig_fids = (fid_max == n_firms - 1)
+        self.contiguous_fids = contig_fids
 
         self.logger.info('contiguous firm ids (should be True):' + str(contig_fids))
         if not contig_fids:
@@ -1939,8 +2129,9 @@ class BipartiteEventStudy:
         n_workers = self.n_workers()
 
         contig_wids = (wid_max == n_workers - 1)
+        self.contiguous_wids = contig_wids
+
         self.logger.info('contiguous worker ids (should be True):' + str(contig_wids))
-        self.contiguous = contig_fids and contig_wids
         if not contig_wids:
             success_stayers = False
             success_movers = False
@@ -1951,6 +2142,8 @@ class BipartiteEventStudy:
             n_cids = len(set(list(self.data['j1'].unique()) + list(self.data['j2'].unique())))
 
             contig_cids = (cid_max + 1 == n_cids)
+            self.contiguous_cids = contig_cids
+
             self.logger.info('contiguous cluster ids (should be True):' + str(contig_cids))
 
             if not contig_cids:
@@ -1968,6 +2161,8 @@ class BipartiteEventStudy:
             G (NetworkX Graph): largest connected set of movers (only returns if firm ids are contiguous, otherwise returns None)
         '''
         prev_workers = self.n_workers()
+        prev_firms = self.n_firms()
+        prev_clusters = self.n_clusters()
         # Find largest connected set
         # Source: https://networkx.github.io/documentation/stable/reference/algorithms/generated/networkx.algorithms.components.connected_components.html
         G = nx.from_pandas_edgelist(self.data, 'f1i', 'f2i')
@@ -1981,11 +2176,16 @@ class BipartiteEventStudy:
         self.connected = True
 
         # If connected data != full data, set contiguous to False
+        if prev_firms != self.n_firms():
+            self.contiguous_fids = False
         if prev_workers != self.n_workers():
-            self.contiguous = False
+            self.contiguous_wids = False
+        if prev_clusters != self.n_clusters():
+            if self.col_dict['j'] is not None:
+                self.contiguous_cids = False
 
         # Return G if firm ids are contiguous (if they're not contiguous, they have to be updated first)
-        if self.contiguous:
+        if self.contiguous_fids and self.contiguous_wids and (self.col_dict['j1'] is None or self.col_dict['j2'] is None or self.contiguous_cids):
             return G
 
         return None
@@ -2000,10 +2200,10 @@ class BipartiteEventStudy:
         # Generate id_list (note that all columns listed in id_list are included in the set of ids, and all columns are adjusted to have the new, contiguous ids)
         if id_col == 'fid':
             id_list = ['f1i', 'f2i']
-        elif id_col == 'j':
-            id_list = ['j1', 'j2']
         elif id_col == 'wid':
             id_list = ['wid']
+        elif id_col == 'j':
+            id_list = ['j1', 'j2']
         # Create sorted set of unique ids
         ids = []
         for id in id_list:
@@ -2032,7 +2232,13 @@ class BipartiteEventStudy:
 
         if id_col == 'fid':
             # Firm ids are now contiguous
-            self.contiguous = True
+            self.contiguous_fids = True
+        elif id_col == 'wid':
+            # Worker ids are now contiguous
+            self.contiguous_wids = True
+        elif id_col == 'j':
+            # Cluster ids are now contiguous
+            self.contiguous_cids = True
 
     def gen_m(self):
         '''
@@ -2384,6 +2590,8 @@ class BipartiteEventStudy:
         # Merge into event study data
         self.data = self.data.merge(clusters_df_1, how='left', on='f1i')
         self.data = self.data.merge(clusters_df_2, how='left', on='f2i')
+        # Keep column as int even with nans
+        self.data[['j1', 'j2']] = self.data[['j1', 'j2']].astype('Int64')
         self.col_dict['j1'] = 'j1'
         self.col_dict['j2'] = 'j2'
 

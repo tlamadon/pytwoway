@@ -237,9 +237,9 @@ class QPConstrained:
         k = 10
         # parameters
 
-        x = np.random.normal(size=k)
+        x = np.random.RandomState().normal(size=k)
         # regressors
-        M = np.random.normal(size=(n, k))
+        M = np.random.RandomState().normal(size=(n, k))
         # dependent
         Y = M @ x
 
@@ -286,7 +286,7 @@ class BLMModel:
             'stationary': False, # Set A1 = A2
             'simulation': False, # If True, using model to simulate data
             # fit_movers() and fit_stayers() parameters
-            'maxiters': 1000, # Max number of iterations
+            'maxiters': 100, # Max number of iterations
             # fit_movers() parameters
             'threshold': 1e-7, # Threshold to break fit_movers() and fit_stayers()
             'update_a': True, # If False, do not update A1 or A2
@@ -308,27 +308,27 @@ class BLMModel:
         self.fixb = params['fixb']
         self.stationary = params['stationary']
 
-        # np.random.seed() # Required for multiprocessing to ensure different seeds
+        # np.random.RandomState().seed() # Required for multiprocessing to ensure different seeds
         if params['simulation']:
             # Model for Y1 | Y2, l, k for movers and stayers
-            self.A1 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
-            self.S1 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
+            self.A1 = 0.9 * (1 + 0.5 * np.random.RandomState().normal(size=(nk, nl)))
+            self.S1 = 0.3 * (1 + 0.5 * np.random.RandomState().uniform(size=(nk, nl)))
             # Model for Y4 | Y3, l, k for movers and stayers
-            self.A2 = 0.9 * (1 + 0.5 * np.random.normal(size=(nk, nl)))
-            self.S2 = 0.3 * (1 + 0.5 * np.random.uniform(size=(nk, nl)))
+            self.A2 = 0.9 * (1 + 0.5 * np.random.RandomState().normal(size=(nk, nl)))
+            self.S2 = 0.3 * (1 + 0.5 * np.random.RandomState().uniform(size=(nk, nl)))
             # Model for p(K | l, l') for movers
-            self.pk1 = np.random.dirichlet(alpha=[1] * nl, size=nk * nk)
+            self.pk1 = np.random.RandomState().dirichlet(alpha=[1] * nl, size=nk * nk)
             # Model for p(K | l, l') for stayers
-            self.pk0 = np.random.dirichlet(alpha=[1] * nl, size=nk)
+            self.pk0 = np.random.RandomState().dirichlet(alpha=[1] * nl, size=nk)
         else:
             # Model for Y1 | Y2, l, k for movers and stayers
-            self.A1 = np.tile(sorted(np.random.normal(size=nl)), (nk, 1))
+            self.A1 = np.tile(sorted(np.random.RandomState().normal(size=nl)), (nk, 1))
             self.S1 = np.ones(shape=(nk, nl))
             # Model for Y4 | Y3, l, k for movers and stayers
             self.A2 = self.A1.copy()
             self.S2 = np.ones(shape=(nk, nl))
             # Model for p(K | l, l') for movers
-            self.pk1 = np.random.dirichlet(alpha=[1] * nl, size=nk * nk) # np.ones(shape=(nk * nk, nl)) / nl
+            self.pk1 = np.random.RandomState().dirichlet(alpha=[1] * nl, size=nk * nk) # np.ones(shape=(nk * nk, nl)) / nl
             # Model for p(K | l, l') for stayers
             self.pk0 = np.ones(shape=(nk, nl)) / nl
 
@@ -356,7 +356,7 @@ class BLMModel:
         nl = self.nl
         nk = self.nk
         # Model for Y1 | Y2, l, k for movers and stayers
-        self.A1 = np.tile(sorted(np.random.normal(size=nl)), (nk, 1))
+        self.A1 = np.tile(sorted(np.random.RandomState().normal(size=nl)), (nk, 1))
         self.S1 = np.ones(shape=(nk, nl))
         # Model for Y4 | Y3, l, k for movers and stayers
         self.A2 = self.A1.copy()
@@ -693,12 +693,12 @@ class BLMModel:
 
                 # Draw k
                 draw_vals = np.arange(nl)
-                Li = np.random.choice(draw_vals, size=ni, replace=True, p=pk1[jj, :])
+                Li = np.random.RandomState().choice(draw_vals, size=ni, replace=True, p=pk1[jj, :])
                 L[I] = Li
 
                 # Draw Y2, Y3
-                Y1[I] = A1[k1, Li] + S1[k1, Li] * np.random.normal(size=ni)
-                Y2[I] = A2[k2, Li] + S2[k2, Li] * np.random.normal(size=ni)
+                Y1[I] = A1[k1, Li] + S1[k1, Li] * np.random.RandomState().normal(size=ni)
+                Y2[I] = A2[k2, Li] + S2[k2, Li] * np.random.RandomState().normal(size=ni)
 
                 i += NNm[k1, k2]
 
@@ -736,12 +736,12 @@ class BLMModel:
 
             # Draw k
             draw_vals = np.arange(nl)
-            Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk0[k1, :])
+            Ki = np.random.RandomState().choice(draw_vals, size=ni, replace=True, p=pk0[k1, :])
             K[I] = Ki
 
             # Draw Y2, Y3
-            Y1[I] = A1[k1, Ki] + S1[k1, Ki] * np.random.normal(size=ni)
-            Y2[I] = A2[k1, Ki] + S2[k1, Ki] * np.random.normal(size=ni)
+            Y1[I] = A1[k1, Ki] + S1[k1, Ki] * np.random.RandomState().normal(size=ni)
+            Y2[I] = A2[k1, Ki] + S2[k1, Ki] * np.random.RandomState().normal(size=ni)
 
             i += NNs[k1]
 
@@ -762,16 +762,16 @@ class BLMModel:
         sdata = self._m2_mixt_simulate_stayers(self.NNs * smult)
 
         # Create some firm ids
-        sdata['f1'] = np.hstack(np.roll(sdata.groupby('j1').apply(lambda df: np.random.randint(low=0, high=len(df) // fsize + 1, size=len(df))), - 1)) # Random number generation, roll is required because f1 is - 1 for empty rows but they appear at the end of the dataframe
+        sdata['f1'] = np.hstack(np.roll(sdata.groupby('j1').apply(lambda df: np.random.RandomState().randint(low=0, high=len(df) // fsize + 1, size=len(df))), - 1)) # Random number generation, roll is required because f1 is - 1 for empty rows but they appear at the end of the dataframe
         sdata['f1'] = 'F' + (sdata['j1'].astype(int) + sdata['f1']).astype(str)
         sdata['j1b'] = sdata['j1']
         sdata['j1true'] = sdata['j1']
         jdata['j1c'] = jdata['j1']
         jdata['j1true'] = jdata['j1']
         jdata['j2true'] = jdata['j2']
-        jdata['f1'] = np.hstack(jdata.groupby('j1c').apply(lambda df: np.random.choice(sdata.loc[sdata['j1b'].isin(jdata['j1c']), 'f1'].unique(), size=len(df))))
+        jdata['f1'] = np.hstack(jdata.groupby('j1c').apply(lambda df: np.random.RandomState().choice(sdata.loc[sdata['j1b'].isin(jdata['j1c']), 'f1'].unique(), size=len(df))))
         jdata['j2c'] = jdata['j2']
-        jdata['f2'] = np.hstack(jdata.groupby('j2c').apply(lambda df: np.random.choice(sdata.loc[sdata['j1b'].isin(jdata['j2c']), 'f1'].unique(), size=len(df))))
+        jdata['f2'] = np.hstack(jdata.groupby('j2c').apply(lambda df: np.random.RandomState().choice(sdata.loc[sdata['j1b'].isin(jdata['j2c']), 'f1'].unique(), size=len(df))))
         jdata = jdata.drop(['j1c', 'j2c'], axis=1)
         sdata = sdata.drop(['j1b'], axis=1)
         sdata['f2'] = sdata['f1']
@@ -807,7 +807,7 @@ class BLMEstimator:
             sim_model_lst = itertools.starmap(self._sim_model, [(jdata, user_params) for _ in range(iter)])
 
         # Find best simulation
-        max_liks = 0
+        max_liks = - np.inf
         best_model = None
 
         for model in sim_model_lst:
@@ -868,13 +868,13 @@ class BLMEstimator:
 
 #             # Draw k
 #             draw_vals = np.arange(nk)
-#             Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk0[x, l1, :])
+#             Ki = np.random.RandomState().choice(draw_vals, size=ni, replace=True, p=pk0[x, l1, :])
 #             K[I] = Ki
 #             X[I] = x
 
 #             # Draw Y2, Y3
-#             Y1[I] = A1[l1, Ki] + S1[l1, Ki] * np.random.normal(size=ni)
-#             Y2[I] = A2[l1, Ki] + S2[l1, Ki] * np.random.normal(size=ni)
+#             Y1[I] = A1[l1, Ki] + S1[l1, Ki] * np.random.RandomState().normal(size=ni)
+#             Y2[I] = A2[l1, Ki] + S2[l1, Ki] * np.random.RandomState().normal(size=ni)
 
 #             i = i + NNsx[x,l1]
 
@@ -900,10 +900,10 @@ class BLMEstimator:
 #     ni = len(jdatae)
 #     jj = jdatae['j1'] + nf * (jdatae['j2'] - 1)
 #     draw_vals = np.arange(nk)
-#     Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk1[jj, :])
+#     Ki = np.random.RandomState().choice(draw_vals, size=ni, replace=True, p=pk1[jj, :])
 #     # Draw Y1, Y4
-#     Y1 = A1[jdatae['j1'], Ki] + S1[jdatae['j1'], Ki] * np.random.normal(size=ni)
-#     Y2 = A2[jdatae['j2'], Ki] + S2[jdatae['j2'], Ki] * np.random.normal(size=ni)
+#     Y1 = A1[jdatae['j1'], Ki] + S1[jdatae['j1'], Ki] * np.random.RandomState().normal(size=ni)
+#     Y2 = A2[jdatae['j2'], Ki] + S2[jdatae['j2'], Ki] * np.random.RandomState().normal(size=ni)
 #     # Append Ki, Y1, Y4 to jdatae.sim
 #     jdatae.sim[['k_imp', 'y1_imp', 'y2_imp']] = [Ki, Y1, Y2]
 
@@ -926,10 +926,10 @@ class BLMEstimator:
 #     # FIXME the follow code probably doesn't run
 #     ni = len(sdatae)
 #     draw_vals = np.arange(nk)
-#     Ki = np.random.choice(draw_vals, size=ni, replace=True, p=pk0[sdatae['x'], sdatae['j1'], :])
+#     Ki = np.random.RandomState().choice(draw_vals, size=ni, replace=True, p=pk0[sdatae['x'], sdatae['j1'], :])
 #     # Draw Y2, Y3
-#     Y1 = A1[sdatae['j1'], Ki] + S1[sdatae['j1'], Ki] * np.random.normal(size=ni)
-#     Y2 = A2[sdatae['j1'], Ki] + S2[sdatae['j1'], Ki] * np.random.normal(size=ni) # False for movers
+#     Y1 = A1[sdatae['j1'], Ki] + S1[sdatae['j1'], Ki] * np.random.RandomState().normal(size=ni)
+#     Y2 = A2[sdatae['j1'], Ki] + S2[sdatae['j1'], Ki] * np.random.RandomState().normal(size=ni) # False for movers
 #     # Append Ki, Y2, Y3 to sdatae.sim
 #     sdatae.sim[['k_imp', 'y1_imp', 'y2_imp']] = [Ki, Y1, Y2]
 
