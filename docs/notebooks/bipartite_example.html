@@ -92,11 +92,9 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="pytwoway_example.html">Simple</a></li>
 <li class="toctree-l1"><a class="reference internal" href="monte_carlo_example.html">Monte Carlo</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">BipartiteData example</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">BipartiteData</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#Simulate-some-data">Simulate some data</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="#BipartiteData">BipartiteData</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#BipartiteData">BipartiteData</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Converting-formats">Converting formats</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Clustering">Clustering</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#Clustering-options">Clustering options</a></li>
@@ -441,24 +439,14 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
-<span class="o">%</span><span class="k">autoreload</span> 2
+<span></span><span class="c1"># Add pytwoway to system path, do not run this</span>
+<span class="c1"># import sys</span>
+<span class="c1"># sys.path.append(&#39;../../..&#39;)</span>
 </pre></div>
 </div>
 </div>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># Add pytwoway to system path, do not run this</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;../../..&#39;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -472,7 +460,7 @@ div.rendered_html tbody tr:hover {
 <h2>Simulate some data<a class="headerlink" href="#Simulate-some-data" title="Permalink to this headline">¶</a></h2>
 <p>The package contains functions to simulate data. We use this here to keep things simple.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -514,36 +502,36 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>102</td>
-      <td>1.263203</td>
+      <td>75</td>
+      <td>-0.309731</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>135</td>
-      <td>2.590265</td>
+      <td>14</td>
+      <td>-1.207119</td>
       <td>2</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>135</td>
-      <td>0.569600</td>
+      <td>14</td>
+      <td>-2.163811</td>
       <td>3</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>159</td>
-      <td>0.124857</td>
+      <td>22</td>
+      <td>-1.553568</td>
       <td>4</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>159</td>
-      <td>1.341585</td>
+      <td>84</td>
+      <td>0.086559</td>
       <td>5</td>
     </tr>
     <tr>
@@ -556,36 +544,36 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>83</td>
-      <td>0.579729</td>
+      <td>171</td>
+      <td>0.302781</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>52</td>
-      <td>2.797090</td>
+      <td>181</td>
+      <td>1.820684</td>
       <td>2</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>52</td>
-      <td>0.194544</td>
+      <td>181</td>
+      <td>1.685579</td>
       <td>3</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>52</td>
-      <td>-0.525812</td>
+      <td>181</td>
+      <td>1.533217</td>
       <td>4</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>105</td>
-      <td>-0.428109</td>
+      <td>181</td>
+      <td>2.105582</td>
       <td>5</td>
     </tr>
   </tbody>
@@ -594,13 +582,12 @@ div.rendered_html tbody tr:hover {
 </div></div>
 </div>
 </div>
-</div>
 <div class="section" id="BipartiteData">
-<h1>BipartiteData<a class="headerlink" href="#BipartiteData" title="Permalink to this headline">¶</a></h1>
+<h2>BipartiteData<a class="headerlink" href="#BipartiteData" title="Permalink to this headline">¶</a></h2>
 <p>BipartiteData is a superclass with 3 subclasses: - BipartiteLong - BipartiteLongCollapsed - BipartiteEventStudy</p>
 <p>The user interfaces with BipartiteData which converts between the 3 subclasses.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -611,7 +598,7 @@ div.rendered_html tbody tr:hover {
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -652,36 +639,36 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>102</td>
-      <td>1.263203</td>
+      <td>75</td>
+      <td>-0.309731</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>135</td>
-      <td>2.590265</td>
+      <td>14</td>
+      <td>-1.207119</td>
       <td>2</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>135</td>
-      <td>0.569600</td>
+      <td>14</td>
+      <td>-2.163811</td>
       <td>3</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>159</td>
-      <td>0.124857</td>
+      <td>22</td>
+      <td>-1.553568</td>
       <td>4</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>159</td>
-      <td>1.341585</td>
+      <td>84</td>
+      <td>0.086559</td>
       <td>5</td>
     </tr>
     <tr>
@@ -694,36 +681,36 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>83</td>
-      <td>0.579729</td>
+      <td>171</td>
+      <td>0.302781</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>52</td>
-      <td>2.797090</td>
+      <td>181</td>
+      <td>1.820684</td>
       <td>2</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>52</td>
-      <td>0.194544</td>
+      <td>181</td>
+      <td>1.685579</td>
       <td>3</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>52</td>
-      <td>-0.525812</td>
+      <td>181</td>
+      <td>1.533217</td>
       <td>4</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>105</td>
-      <td>-0.428109</td>
+      <td>181</td>
+      <td>2.105582</td>
       <td>5</td>
     </tr>
   </tbody>
@@ -731,10 +718,11 @@ div.rendered_html tbody tr:hover {
 <p>50000 rows × 4 columns</p>
 </div></div>
 </div>
+</div>
 <div class="section" id="Converting-formats">
 <h2>Converting formats<a class="headerlink" href="#Converting-formats" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -779,55 +767,55 @@ div.rendered_html tbody tr:hover {
   <tbody>
     <tr>
       <th>0</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>3.066470</td>
-      <td>3.066470</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>-1.151285</td>
+      <td>-1.151285</td>
       <td>1</td>
       <td>1</td>
       <td>0</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>1.157194</td>
-      <td>1.157194</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>1.654527</td>
+      <td>1.654527</td>
       <td>2</td>
       <td>2</td>
       <td>0</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>2.357543</td>
-      <td>2.357543</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>-0.294581</td>
+      <td>-0.294581</td>
       <td>3</td>
       <td>3</td>
       <td>0</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>2.784566</td>
-      <td>2.784566</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>-0.468204</td>
+      <td>-0.468204</td>
       <td>4</td>
       <td>4</td>
       <td>0</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>0.628180</td>
-      <td>0.628180</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>0.418363</td>
+      <td>0.418363</td>
       <td>5</td>
       <td>5</td>
       <td>0</td>
@@ -844,67 +832,67 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>40675</th>
+      <th>40646</th>
       <td>9998</td>
-      <td>81</td>
-      <td>81</td>
-      <td>0.292275</td>
-      <td>-1.869291</td>
+      <td>93</td>
+      <td>85</td>
+      <td>0.941243</td>
+      <td>0.449756</td>
       <td>4</td>
       <td>5</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>40676</th>
+      <th>40647</th>
       <td>9999</td>
-      <td>83</td>
-      <td>52</td>
-      <td>0.579729</td>
-      <td>2.797090</td>
+      <td>171</td>
+      <td>181</td>
+      <td>0.302781</td>
+      <td>1.820684</td>
       <td>1</td>
       <td>2</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>40677</th>
+      <th>40648</th>
       <td>9999</td>
-      <td>52</td>
-      <td>52</td>
-      <td>2.797090</td>
-      <td>0.194544</td>
+      <td>181</td>
+      <td>181</td>
+      <td>1.820684</td>
+      <td>1.685579</td>
       <td>2</td>
       <td>3</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>40678</th>
+      <th>40649</th>
       <td>9999</td>
-      <td>52</td>
-      <td>52</td>
-      <td>0.194544</td>
-      <td>-0.525812</td>
+      <td>181</td>
+      <td>181</td>
+      <td>1.685579</td>
+      <td>1.533217</td>
       <td>3</td>
       <td>4</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>40679</th>
+      <th>40650</th>
       <td>9999</td>
-      <td>52</td>
-      <td>105</td>
-      <td>-0.525812</td>
-      <td>-0.428109</td>
+      <td>181</td>
+      <td>181</td>
+      <td>1.533217</td>
+      <td>2.105582</td>
       <td>4</td>
       <td>5</td>
       <td>1</td>
     </tr>
   </tbody>
 </table>
-<p>40680 rows × 8 columns</p>
+<p>40651 rows × 8 columns</p>
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -949,11 +937,11 @@ div.rendered_html tbody tr:hover {
   <tbody>
     <tr>
       <th>0</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>3.066470</td>
-      <td>3.066470</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>-1.151285</td>
+      <td>-1.151285</td>
       <td>1</td>
       <td>1</td>
       <td>0</td>
@@ -961,11 +949,11 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>1</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>1.157194</td>
-      <td>1.157194</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>1.654527</td>
+      <td>1.654527</td>
       <td>2</td>
       <td>2</td>
       <td>0</td>
@@ -973,11 +961,11 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>2</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>2.357543</td>
-      <td>2.357543</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>-0.294581</td>
+      <td>-0.294581</td>
       <td>3</td>
       <td>3</td>
       <td>0</td>
@@ -985,11 +973,11 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>3</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>2.784566</td>
-      <td>2.784566</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>-0.468204</td>
+      <td>-0.468204</td>
       <td>4</td>
       <td>4</td>
       <td>0</td>
@@ -997,11 +985,11 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>4</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>0.628180</td>
-      <td>0.628180</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>0.418363</td>
+      <td>0.418363</td>
       <td>5</td>
       <td>5</td>
       <td>0</td>
@@ -1020,60 +1008,60 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>77955</th>
+      <th>78042</th>
       <td>9998</td>
-      <td>81</td>
-      <td>81</td>
-      <td>-1.869291</td>
-      <td>0.292275</td>
+      <td>85</td>
+      <td>93</td>
+      <td>0.449756</td>
+      <td>0.941243</td>
       <td>5</td>
       <td>4</td>
       <td>1</td>
       <td>0</td>
     </tr>
     <tr>
-      <th>77956</th>
+      <th>78043</th>
       <td>9999</td>
-      <td>52</td>
-      <td>83</td>
-      <td>2.797090</td>
-      <td>0.579729</td>
+      <td>181</td>
+      <td>171</td>
+      <td>1.820684</td>
+      <td>0.302781</td>
       <td>2</td>
       <td>1</td>
       <td>1</td>
       <td>0</td>
     </tr>
     <tr>
-      <th>77957</th>
+      <th>78044</th>
       <td>9999</td>
-      <td>52</td>
-      <td>52</td>
-      <td>0.194544</td>
-      <td>2.797090</td>
+      <td>181</td>
+      <td>181</td>
+      <td>1.685579</td>
+      <td>1.820684</td>
       <td>3</td>
       <td>2</td>
       <td>1</td>
       <td>0</td>
     </tr>
     <tr>
-      <th>77958</th>
+      <th>78045</th>
       <td>9999</td>
-      <td>52</td>
-      <td>52</td>
-      <td>-0.525812</td>
-      <td>0.194544</td>
+      <td>181</td>
+      <td>181</td>
+      <td>1.533217</td>
+      <td>1.685579</td>
       <td>4</td>
       <td>3</td>
       <td>1</td>
       <td>0</td>
     </tr>
     <tr>
-      <th>77959</th>
+      <th>78046</th>
       <td>9999</td>
-      <td>105</td>
-      <td>52</td>
-      <td>-0.428109</td>
-      <td>-0.525812</td>
+      <td>181</td>
+      <td>181</td>
+      <td>2.105582</td>
+      <td>1.533217</td>
       <td>5</td>
       <td>4</td>
       <td>1</td>
@@ -1081,11 +1069,11 @@ div.rendered_html tbody tr:hover {
     </tr>
   </tbody>
 </table>
-<p>77960 rows × 9 columns</p>
+<p>78047 rows × 9 columns</p>
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -1128,40 +1116,40 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>102</td>
-      <td>1.263203</td>
+      <td>75</td>
+      <td>-0.309731</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>135</td>
-      <td>2.590265</td>
+      <td>14</td>
+      <td>-1.207119</td>
       <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>135</td>
-      <td>0.569600</td>
+      <td>14</td>
+      <td>-2.163811</td>
       <td>3</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>159</td>
-      <td>0.124857</td>
+      <td>22</td>
+      <td>-1.553568</td>
       <td>4</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>159</td>
-      <td>1.341585</td>
+      <td>84</td>
+      <td>0.086559</td>
       <td>5</td>
       <td>1</td>
     </tr>
@@ -1176,40 +1164,40 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>83</td>
-      <td>0.579729</td>
+      <td>171</td>
+      <td>0.302781</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>52</td>
-      <td>2.797090</td>
+      <td>181</td>
+      <td>1.820684</td>
       <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>52</td>
-      <td>0.194544</td>
+      <td>181</td>
+      <td>1.685579</td>
       <td>3</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>52</td>
-      <td>-0.525812</td>
+      <td>181</td>
+      <td>1.533217</td>
       <td>4</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>105</td>
-      <td>-0.428109</td>
+      <td>181</td>
+      <td>2.105582</td>
       <td>5</td>
       <td>1</td>
     </tr>
@@ -1219,7 +1207,7 @@ div.rendered_html tbody tr:hover {
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -1264,8 +1252,8 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>102</td>
-      <td>1.263203</td>
+      <td>75</td>
+      <td>-0.309731</td>
       <td>1</td>
       <td>1</td>
       <td>1</td>
@@ -1274,8 +1262,8 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>135</td>
-      <td>1.579932</td>
+      <td>14</td>
+      <td>-1.685465</td>
       <td>2</td>
       <td>3</td>
       <td>2</td>
@@ -1284,31 +1272,31 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>159</td>
-      <td>0.733221</td>
+      <td>22</td>
+      <td>-1.553568</td>
       <td>4</td>
-      <td>5</td>
-      <td>2</td>
+      <td>4</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
+      <td>0</td>
+      <td>84</td>
+      <td>0.086559</td>
+      <td>5</td>
+      <td>5</td>
       <td>1</td>
-      <td>77</td>
-      <td>0.324798</td>
-      <td>1</td>
-      <td>3</td>
-      <td>3</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>1</td>
-      <td>47</td>
-      <td>0.094475</td>
-      <td>4</td>
-      <td>5</td>
-      <td>2</td>
+      <td>178</td>
+      <td>2.587676</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
@@ -1322,62 +1310,62 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>29653</th>
+      <th>29732</th>
       <td>9998</td>
-      <td>82</td>
-      <td>1.403510</td>
+      <td>45</td>
+      <td>-1.700584</td>
       <td>3</td>
       <td>3</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>29654</th>
+      <th>29733</th>
       <td>9998</td>
-      <td>81</td>
-      <td>-0.788508</td>
+      <td>93</td>
+      <td>0.941243</td>
       <td>4</td>
-      <td>5</td>
-      <td>2</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>29655</th>
-      <td>9999</td>
-      <td>83</td>
-      <td>0.579729</td>
-      <td>1</td>
-      <td>1</td>
-      <td>1</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>29656</th>
-      <td>9999</td>
-      <td>52</td>
-      <td>0.821941</td>
-      <td>2</td>
       <td>4</td>
-      <td>3</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>29657</th>
-      <td>9999</td>
-      <td>105</td>
-      <td>-0.428109</td>
+      <th>29734</th>
+      <td>9998</td>
+      <td>85</td>
+      <td>0.449756</td>
       <td>5</td>
       <td>5</td>
       <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>29735</th>
+      <td>9999</td>
+      <td>171</td>
+      <td>0.302781</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>29736</th>
+      <td>9999</td>
+      <td>181</td>
+      <td>1.786265</td>
+      <td>2</td>
+      <td>5</td>
+      <td>4</td>
       <td>1</td>
     </tr>
   </tbody>
 </table>
-<p>29658 rows × 7 columns</p>
+<p>29737 rows × 7 columns</p>
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -1426,11 +1414,11 @@ div.rendered_html tbody tr:hover {
   <tbody>
     <tr>
       <th>0</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>1.998791</td>
-      <td>1.998791</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>0.031764</td>
+      <td>0.031764</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
@@ -1441,11 +1429,11 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>1</th>
-      <td>66</td>
-      <td>129</td>
-      <td>129</td>
-      <td>0.570509</td>
-      <td>0.570509</td>
+      <td>24</td>
+      <td>102</td>
+      <td>102</td>
+      <td>0.181221</td>
+      <td>0.181221</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
@@ -1456,11 +1444,11 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>2</th>
-      <td>88</td>
-      <td>155</td>
-      <td>155</td>
-      <td>1.071188</td>
-      <td>1.071188</td>
+      <td>38</td>
+      <td>29</td>
+      <td>29</td>
+      <td>-0.999334</td>
+      <td>-0.999334</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
@@ -1471,11 +1459,11 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>3</th>
-      <td>97</td>
-      <td>162</td>
-      <td>162</td>
-      <td>0.870287</td>
-      <td>0.870287</td>
+      <td>49</td>
+      <td>52</td>
+      <td>52</td>
+      <td>0.186486</td>
+      <td>0.186486</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
@@ -1486,11 +1474,11 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>4</th>
-      <td>100</td>
-      <td>181</td>
-      <td>181</td>
-      <td>2.932914</td>
-      <td>2.932914</td>
+      <td>60</td>
+      <td>116</td>
+      <td>116</td>
+      <td>1.307871</td>
+      <td>1.307871</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
@@ -1515,87 +1503,87 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>20333</th>
-      <td>9998</td>
-      <td>78</td>
-      <td>58</td>
-      <td>-0.231991</td>
-      <td>1.031316</td>
-      <td>1</td>
-      <td>1</td>
-      <td>2</td>
-      <td>2</td>
-      <td>1</td>
-      <td>1</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>20334</th>
-      <td>9998</td>
-      <td>58</td>
-      <td>82</td>
-      <td>1.031316</td>
-      <td>1.403510</td>
-      <td>2</td>
-      <td>2</td>
-      <td>3</td>
-      <td>3</td>
+      <th>20383</th>
+      <td>9997</td>
+      <td>33</td>
+      <td>48</td>
+      <td>-0.192398</td>
+      <td>-0.928684</td>
+      <td>4</td>
+      <td>4</td>
+      <td>5</td>
+      <td>5</td>
       <td>1</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>20335</th>
+      <th>20384</th>
       <td>9998</td>
-      <td>82</td>
-      <td>81</td>
-      <td>1.403510</td>
-      <td>-0.788508</td>
+      <td>90</td>
+      <td>45</td>
+      <td>-0.030269</td>
+      <td>-1.700584</td>
+      <td>1</td>
+      <td>2</td>
+      <td>3</td>
+      <td>3</td>
+      <td>2</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>20385</th>
+      <td>9998</td>
+      <td>45</td>
+      <td>93</td>
+      <td>-1.700584</td>
+      <td>0.941243</td>
       <td>3</td>
       <td>3</td>
       <td>4</td>
-      <td>5</td>
+      <td>4</td>
       <td>1</td>
-      <td>2</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>20336</th>
+      <th>20386</th>
+      <td>9998</td>
+      <td>93</td>
+      <td>85</td>
+      <td>0.941243</td>
+      <td>0.449756</td>
+      <td>4</td>
+      <td>4</td>
+      <td>5</td>
+      <td>5</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>20387</th>
       <td>9999</td>
-      <td>83</td>
-      <td>52</td>
-      <td>0.579729</td>
-      <td>0.821941</td>
+      <td>171</td>
+      <td>181</td>
+      <td>0.302781</td>
+      <td>1.786265</td>
       <td>1</td>
       <td>1</td>
       <td>2</td>
-      <td>4</td>
-      <td>1</td>
-      <td>3</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>20337</th>
-      <td>9999</td>
-      <td>52</td>
-      <td>105</td>
-      <td>0.821941</td>
-      <td>-0.428109</td>
-      <td>2</td>
-      <td>4</td>
       <td>5</td>
-      <td>5</td>
-      <td>3</td>
       <td>1</td>
+      <td>4</td>
       <td>1</td>
     </tr>
   </tbody>
 </table>
-<p>20338 rows × 12 columns</p>
+<p>20388 rows × 12 columns</p>
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -1640,8 +1628,8 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>102</td>
-      <td>1.263203</td>
+      <td>75</td>
+      <td>-0.309731</td>
       <td>1</td>
       <td>1</td>
       <td>1</td>
@@ -1650,8 +1638,8 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>135</td>
-      <td>1.579932</td>
+      <td>14</td>
+      <td>-1.685465</td>
       <td>2</td>
       <td>3</td>
       <td>2</td>
@@ -1660,31 +1648,31 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>159</td>
-      <td>0.733221</td>
+      <td>22</td>
+      <td>-1.553568</td>
       <td>4</td>
-      <td>5</td>
-      <td>2</td>
+      <td>4</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
+      <td>0</td>
+      <td>84</td>
+      <td>0.086559</td>
+      <td>5</td>
+      <td>5</td>
       <td>1</td>
-      <td>77</td>
-      <td>0.324798</td>
-      <td>1</td>
-      <td>3</td>
-      <td>3</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>1</td>
-      <td>47</td>
-      <td>0.094475</td>
-      <td>4</td>
-      <td>5</td>
-      <td>2</td>
+      <td>178</td>
+      <td>2.587676</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
@@ -1698,65 +1686,65 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>29653</th>
+      <th>29732</th>
       <td>9998</td>
-      <td>82</td>
-      <td>1.403510</td>
+      <td>45</td>
+      <td>-1.700584</td>
       <td>3</td>
       <td>3</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>29654</th>
+      <th>29733</th>
       <td>9998</td>
-      <td>81</td>
-      <td>-0.788508</td>
+      <td>93</td>
+      <td>0.941243</td>
       <td>4</td>
-      <td>5</td>
-      <td>2</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>29655</th>
-      <td>9999</td>
-      <td>83</td>
-      <td>0.579729</td>
-      <td>1</td>
-      <td>1</td>
-      <td>1</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>29656</th>
-      <td>9999</td>
-      <td>52</td>
-      <td>0.821941</td>
-      <td>2</td>
       <td>4</td>
-      <td>3</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>29657</th>
-      <td>9999</td>
-      <td>105</td>
-      <td>-0.428109</td>
+      <th>29734</th>
+      <td>9998</td>
+      <td>85</td>
+      <td>0.449756</td>
       <td>5</td>
       <td>5</td>
       <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>29735</th>
+      <td>9999</td>
+      <td>171</td>
+      <td>0.302781</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>29736</th>
+      <td>9999</td>
+      <td>181</td>
+      <td>1.786265</td>
+      <td>2</td>
+      <td>5</td>
+      <td>4</td>
       <td>1</td>
     </tr>
   </tbody>
 </table>
-<p>29658 rows × 7 columns</p>
+<p>29737 rows × 7 columns</p>
 </div></div>
 </div>
 </div>
 <div class="section" id="Clustering">
 <h2>Clustering<a class="headerlink" href="#Clustering" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -1799,36 +1787,36 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>102</td>
-      <td>1.263203</td>
+      <td>75</td>
+      <td>-0.309731</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>135</td>
-      <td>2.590265</td>
+      <td>14</td>
+      <td>-1.207119</td>
       <td>2</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>135</td>
-      <td>0.569600</td>
+      <td>14</td>
+      <td>-2.163811</td>
       <td>3</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>159</td>
-      <td>0.124857</td>
+      <td>22</td>
+      <td>-1.553568</td>
       <td>4</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>159</td>
-      <td>1.341585</td>
+      <td>84</td>
+      <td>0.086559</td>
       <td>5</td>
     </tr>
     <tr>
@@ -1841,36 +1829,36 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>83</td>
-      <td>0.579729</td>
+      <td>171</td>
+      <td>0.302781</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>52</td>
-      <td>2.797090</td>
+      <td>181</td>
+      <td>1.820684</td>
       <td>2</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>52</td>
-      <td>0.194544</td>
+      <td>181</td>
+      <td>1.685579</td>
       <td>3</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>52</td>
-      <td>-0.525812</td>
+      <td>181</td>
+      <td>1.533217</td>
       <td>4</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>105</td>
-      <td>-0.428109</td>
+      <td>181</td>
+      <td>2.105582</td>
       <td>5</td>
     </tr>
   </tbody>
@@ -1879,7 +1867,7 @@ div.rendered_html tbody tr:hover {
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -1923,35 +1911,35 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>102</td>
-      <td>1.263203</td>
+      <td>75</td>
+      <td>-0.309731</td>
       <td>1</td>
-      <td>3</td>
+      <td>9</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>135</td>
-      <td>2.590265</td>
+      <td>14</td>
+      <td>-1.207119</td>
       <td>2</td>
-      <td>7</td>
+      <td>0</td>
       <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>135</td>
-      <td>0.569600</td>
+      <td>14</td>
+      <td>-2.163811</td>
       <td>3</td>
-      <td>7</td>
+      <td>0</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>159</td>
-      <td>0.124857</td>
+      <td>22</td>
+      <td>-1.553568</td>
       <td>4</td>
       <td>0</td>
       <td>1</td>
@@ -1959,10 +1947,10 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>159</td>
-      <td>1.341585</td>
+      <td>84</td>
+      <td>0.086559</td>
       <td>5</td>
-      <td>0</td>
+      <td>8</td>
       <td>1</td>
     </tr>
     <tr>
@@ -1977,46 +1965,46 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>83</td>
-      <td>0.579729</td>
+      <td>171</td>
+      <td>0.302781</td>
       <td>1</td>
-      <td>6</td>
+      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>52</td>
-      <td>2.797090</td>
+      <td>181</td>
+      <td>1.820684</td>
       <td>2</td>
-      <td>9</td>
+      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>52</td>
-      <td>0.194544</td>
+      <td>181</td>
+      <td>1.685579</td>
       <td>3</td>
-      <td>9</td>
+      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>52</td>
-      <td>-0.525812</td>
+      <td>181</td>
+      <td>1.533217</td>
       <td>4</td>
-      <td>9</td>
+      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>105</td>
-      <td>-0.428109</td>
+      <td>181</td>
+      <td>2.105582</td>
       <td>5</td>
-      <td>3</td>
+      <td>2</td>
       <td>1</td>
     </tr>
   </tbody>
@@ -2025,7 +2013,7 @@ div.rendered_html tbody tr:hover {
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -2071,67 +2059,67 @@ div.rendered_html tbody tr:hover {
   <tbody>
     <tr>
       <th>0</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>3.066470</td>
-      <td>3.066470</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>-1.151285</td>
+      <td>-1.151285</td>
       <td>1</td>
       <td>1</td>
-      <td>5</td>
-      <td>5</td>
+      <td>6</td>
+      <td>6</td>
       <td>0</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>1.157194</td>
-      <td>1.157194</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>1.654527</td>
+      <td>1.654527</td>
       <td>2</td>
       <td>2</td>
-      <td>5</td>
-      <td>5</td>
+      <td>6</td>
+      <td>6</td>
       <td>0</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>2.357543</td>
-      <td>2.357543</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>-0.294581</td>
+      <td>-0.294581</td>
       <td>3</td>
       <td>3</td>
-      <td>5</td>
-      <td>5</td>
+      <td>6</td>
+      <td>6</td>
       <td>0</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>2.784566</td>
-      <td>2.784566</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>-0.468204</td>
+      <td>-0.468204</td>
       <td>4</td>
       <td>4</td>
-      <td>5</td>
-      <td>5</td>
+      <td>6</td>
+      <td>6</td>
       <td>0</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>0.628180</td>
-      <td>0.628180</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>0.418363</td>
+      <td>0.418363</td>
       <td>5</td>
       <td>5</td>
-      <td>5</td>
-      <td>5</td>
+      <td>6</td>
+      <td>6</td>
       <td>0</td>
     </tr>
     <tr>
@@ -2148,77 +2136,77 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>40675</th>
+      <th>40646</th>
       <td>9998</td>
-      <td>81</td>
-      <td>81</td>
-      <td>0.292275</td>
-      <td>-1.869291</td>
+      <td>93</td>
+      <td>85</td>
+      <td>0.941243</td>
+      <td>0.449756</td>
       <td>4</td>
       <td>5</td>
-      <td>6</td>
-      <td>6</td>
+      <td>4</td>
+      <td>4</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>40676</th>
+      <th>40647</th>
       <td>9999</td>
-      <td>83</td>
-      <td>52</td>
-      <td>0.579729</td>
-      <td>2.797090</td>
+      <td>171</td>
+      <td>181</td>
+      <td>0.302781</td>
+      <td>1.820684</td>
       <td>1</td>
       <td>2</td>
-      <td>6</td>
-      <td>9</td>
+      <td>2</td>
+      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>40677</th>
+      <th>40648</th>
       <td>9999</td>
-      <td>52</td>
-      <td>52</td>
-      <td>2.797090</td>
-      <td>0.194544</td>
+      <td>181</td>
+      <td>181</td>
+      <td>1.820684</td>
+      <td>1.685579</td>
       <td>2</td>
       <td>3</td>
-      <td>9</td>
-      <td>9</td>
+      <td>2</td>
+      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>40678</th>
+      <th>40649</th>
       <td>9999</td>
-      <td>52</td>
-      <td>52</td>
-      <td>0.194544</td>
-      <td>-0.525812</td>
+      <td>181</td>
+      <td>181</td>
+      <td>1.685579</td>
+      <td>1.533217</td>
       <td>3</td>
       <td>4</td>
-      <td>9</td>
-      <td>9</td>
+      <td>2</td>
+      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>40679</th>
+      <th>40650</th>
       <td>9999</td>
-      <td>52</td>
-      <td>105</td>
-      <td>-0.525812</td>
-      <td>-0.428109</td>
+      <td>181</td>
+      <td>181</td>
+      <td>1.533217</td>
+      <td>2.105582</td>
       <td>4</td>
       <td>5</td>
-      <td>9</td>
-      <td>3</td>
+      <td>2</td>
+      <td>2</td>
       <td>1</td>
     </tr>
   </tbody>
 </table>
-<p>40680 rows × 10 columns</p>
+<p>40651 rows × 10 columns</p>
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -2264,56 +2252,56 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>102</td>
-      <td>1.263203</td>
+      <td>75</td>
+      <td>-0.309731</td>
       <td>1</td>
       <td>1</td>
       <td>1</td>
-      <td>3</td>
+      <td>9</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>135</td>
-      <td>1.579932</td>
+      <td>14</td>
+      <td>-1.685465</td>
       <td>2</td>
       <td>3</td>
       <td>2</td>
-      <td>7</td>
+      <td>0</td>
       <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>159</td>
-      <td>0.733221</td>
+      <td>22</td>
+      <td>-1.553568</td>
       <td>4</td>
-      <td>5</td>
-      <td>2</td>
+      <td>4</td>
+      <td>1</td>
       <td>0</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
+      <td>0</td>
+      <td>84</td>
+      <td>0.086559</td>
+      <td>5</td>
+      <td>5</td>
       <td>1</td>
-      <td>77</td>
-      <td>0.324798</td>
-      <td>1</td>
-      <td>3</td>
-      <td>3</td>
-      <td>1</td>
+      <td>8</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>1</td>
-      <td>47</td>
-      <td>0.094475</td>
-      <td>4</td>
-      <td>5</td>
+      <td>178</td>
+      <td>2.587676</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
       <td>2</td>
-      <td>9</td>
       <td>1</td>
     </tr>
     <tr>
@@ -2328,67 +2316,67 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>29653</th>
+      <th>29732</th>
       <td>9998</td>
-      <td>82</td>
-      <td>1.403510</td>
+      <td>45</td>
+      <td>-1.700584</td>
       <td>3</td>
       <td>3</td>
       <td>1</td>
-      <td>6</td>
+      <td>3</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>29654</th>
+      <th>29733</th>
       <td>9998</td>
-      <td>81</td>
-      <td>-0.788508</td>
+      <td>93</td>
+      <td>0.941243</td>
       <td>4</td>
-      <td>5</td>
-      <td>2</td>
-      <td>6</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>29655</th>
-      <td>9999</td>
-      <td>83</td>
-      <td>0.579729</td>
-      <td>1</td>
-      <td>1</td>
-      <td>1</td>
-      <td>6</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>29656</th>
-      <td>9999</td>
-      <td>52</td>
-      <td>0.821941</td>
-      <td>2</td>
       <td>4</td>
-      <td>3</td>
-      <td>9</td>
+      <td>1</td>
+      <td>4</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>29657</th>
-      <td>9999</td>
-      <td>105</td>
-      <td>-0.428109</td>
+      <th>29734</th>
+      <td>9998</td>
+      <td>85</td>
+      <td>0.449756</td>
       <td>5</td>
       <td>5</td>
       <td>1</td>
-      <td>3</td>
+      <td>4</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>29735</th>
+      <td>9999</td>
+      <td>171</td>
+      <td>0.302781</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>29736</th>
+      <td>9999</td>
+      <td>181</td>
+      <td>1.786265</td>
+      <td>2</td>
+      <td>5</td>
+      <td>4</td>
+      <td>2</td>
       <td>1</td>
     </tr>
   </tbody>
 </table>
-<p>29658 rows × 8 columns</p>
+<p>29737 rows × 8 columns</p>
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -2438,87 +2426,87 @@ div.rendered_html tbody tr:hover {
   <tbody>
     <tr>
       <th>0</th>
-      <td>40</td>
-      <td>177</td>
-      <td>177</td>
-      <td>1.998791</td>
-      <td>1.998791</td>
+      <td>21</td>
+      <td>39</td>
+      <td>39</td>
+      <td>0.031764</td>
+      <td>0.031764</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
       <td>5</td>
       <td>5</td>
       <td>5</td>
-      <td>5</td>
-      <td>5</td>
+      <td>6</td>
+      <td>6</td>
       <td>0</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>66</td>
-      <td>129</td>
-      <td>129</td>
-      <td>0.570509</td>
-      <td>0.570509</td>
+      <td>24</td>
+      <td>102</td>
+      <td>102</td>
+      <td>0.181221</td>
+      <td>0.181221</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
       <td>5</td>
       <td>5</td>
       <td>5</td>
-      <td>7</td>
-      <td>7</td>
+      <td>8</td>
+      <td>8</td>
       <td>0</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>88</td>
-      <td>155</td>
-      <td>155</td>
-      <td>1.071188</td>
-      <td>1.071188</td>
+      <td>38</td>
+      <td>29</td>
+      <td>29</td>
+      <td>-0.999334</td>
+      <td>-0.999334</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
       <td>5</td>
       <td>5</td>
       <td>5</td>
-      <td>0</td>
-      <td>0</td>
+      <td>6</td>
+      <td>6</td>
       <td>0</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>97</td>
-      <td>162</td>
-      <td>162</td>
-      <td>0.870287</td>
-      <td>0.870287</td>
+      <td>49</td>
+      <td>52</td>
+      <td>52</td>
+      <td>0.186486</td>
+      <td>0.186486</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
       <td>5</td>
       <td>5</td>
       <td>5</td>
-      <td>0</td>
-      <td>0</td>
+      <td>3</td>
+      <td>3</td>
       <td>0</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>100</td>
-      <td>181</td>
-      <td>181</td>
-      <td>2.932914</td>
-      <td>2.932914</td>
+      <td>60</td>
+      <td>116</td>
+      <td>116</td>
+      <td>1.307871</td>
+      <td>1.307871</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
       <td>5</td>
       <td>5</td>
       <td>5</td>
-      <td>5</td>
-      <td>5</td>
+      <td>8</td>
+      <td>8</td>
       <td>0</td>
     </tr>
     <tr>
@@ -2539,100 +2527,100 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>20333</th>
-      <td>9998</td>
-      <td>78</td>
-      <td>58</td>
-      <td>-0.231991</td>
-      <td>1.031316</td>
+      <th>20383</th>
+      <td>9997</td>
+      <td>33</td>
+      <td>48</td>
+      <td>-0.192398</td>
+      <td>-0.928684</td>
+      <td>4</td>
+      <td>4</td>
+      <td>5</td>
+      <td>5</td>
       <td>1</td>
       <td>1</td>
-      <td>2</td>
-      <td>2</td>
-      <td>1</td>
-      <td>1</td>
-      <td>9</td>
-      <td>9</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>20334</th>
-      <td>9998</td>
-      <td>58</td>
-      <td>82</td>
-      <td>1.031316</td>
-      <td>1.403510</td>
-      <td>2</td>
-      <td>2</td>
-      <td>3</td>
-      <td>3</td>
-      <td>1</td>
-      <td>1</td>
-      <td>9</td>
       <td>6</td>
+      <td>3</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>20335</th>
+      <th>20384</th>
       <td>9998</td>
-      <td>82</td>
-      <td>81</td>
-      <td>1.403510</td>
-      <td>-0.788508</td>
+      <td>90</td>
+      <td>45</td>
+      <td>-0.030269</td>
+      <td>-1.700584</td>
+      <td>1</td>
+      <td>2</td>
+      <td>3</td>
+      <td>3</td>
+      <td>2</td>
+      <td>1</td>
+      <td>4</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>20385</th>
+      <td>9998</td>
+      <td>45</td>
+      <td>93</td>
+      <td>-1.700584</td>
+      <td>0.941243</td>
       <td>3</td>
       <td>3</td>
       <td>4</td>
-      <td>5</td>
+      <td>4</td>
       <td>1</td>
-      <td>2</td>
-      <td>6</td>
-      <td>6</td>
+      <td>1</td>
+      <td>3</td>
+      <td>4</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>20336</th>
+      <th>20386</th>
+      <td>9998</td>
+      <td>93</td>
+      <td>85</td>
+      <td>0.941243</td>
+      <td>0.449756</td>
+      <td>4</td>
+      <td>4</td>
+      <td>5</td>
+      <td>5</td>
+      <td>1</td>
+      <td>1</td>
+      <td>4</td>
+      <td>4</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>20387</th>
       <td>9999</td>
-      <td>83</td>
-      <td>52</td>
-      <td>0.579729</td>
-      <td>0.821941</td>
+      <td>171</td>
+      <td>181</td>
+      <td>0.302781</td>
+      <td>1.786265</td>
       <td>1</td>
       <td>1</td>
       <td>2</td>
+      <td>5</td>
+      <td>1</td>
       <td>4</td>
-      <td>1</td>
-      <td>3</td>
-      <td>6</td>
-      <td>9</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>20337</th>
-      <td>9999</td>
-      <td>52</td>
-      <td>105</td>
-      <td>0.821941</td>
-      <td>-0.428109</td>
       <td>2</td>
-      <td>4</td>
-      <td>5</td>
-      <td>5</td>
-      <td>3</td>
-      <td>1</td>
-      <td>9</td>
-      <td>3</td>
+      <td>2</td>
       <td>1</td>
     </tr>
   </tbody>
 </table>
-<p>20338 rows × 14 columns</p>
+<p>20388 rows × 14 columns</p>
 </div></div>
 </div>
 </div>
 <div class="section" id="Clustering-options">
 <h2>Clustering options<a class="headerlink" href="#Clustering-options" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -2678,46 +2666,46 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>102</td>
-      <td>1.263203</td>
+      <td>75</td>
+      <td>-0.309731</td>
       <td>1</td>
-      <td>0</td>
+      <td>9</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>135</td>
-      <td>2.590265</td>
+      <td>14</td>
+      <td>-1.207119</td>
       <td>2</td>
-      <td>6</td>
+      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>135</td>
-      <td>0.569600</td>
+      <td>14</td>
+      <td>-2.163811</td>
       <td>3</td>
-      <td>6</td>
+      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>159</td>
-      <td>0.124857</td>
+      <td>22</td>
+      <td>-1.553568</td>
       <td>4</td>
-      <td>5</td>
+      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>159</td>
-      <td>1.341585</td>
+      <td>84</td>
+      <td>0.086559</td>
       <td>5</td>
-      <td>5</td>
+      <td>0</td>
       <td>1</td>
     </tr>
     <tr>
@@ -2732,46 +2720,46 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>83</td>
-      <td>0.579729</td>
+      <td>171</td>
+      <td>0.302781</td>
       <td>1</td>
-      <td>9</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>52</td>
-      <td>2.797090</td>
+      <td>181</td>
+      <td>1.820684</td>
       <td>2</td>
-      <td>8</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>52</td>
-      <td>0.194544</td>
+      <td>181</td>
+      <td>1.685579</td>
       <td>3</td>
-      <td>8</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>52</td>
-      <td>-0.525812</td>
+      <td>181</td>
+      <td>1.533217</td>
       <td>4</td>
-      <td>8</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>105</td>
-      <td>-0.428109</td>
+      <td>181</td>
+      <td>2.105582</td>
       <td>5</td>
-      <td>0</td>
+      <td>1</td>
       <td>1</td>
     </tr>
   </tbody>
@@ -2780,7 +2768,7 @@ div.rendered_html tbody tr:hover {
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -2827,8 +2815,8 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>102</td>
-      <td>1.263203</td>
+      <td>75</td>
+      <td>-0.309731</td>
       <td>1</td>
       <td>0</td>
       <td>1</td>
@@ -2836,37 +2824,37 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>135</td>
-      <td>2.590265</td>
+      <td>14</td>
+      <td>-1.207119</td>
       <td>2</td>
-      <td>9</td>
+      <td>7</td>
       <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>135</td>
-      <td>0.569600</td>
+      <td>14</td>
+      <td>-2.163811</td>
       <td>3</td>
-      <td>9</td>
+      <td>7</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>159</td>
-      <td>0.124857</td>
+      <td>22</td>
+      <td>-1.553568</td>
       <td>4</td>
-      <td>4</td>
+      <td>6</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>159</td>
-      <td>1.341585</td>
+      <td>84</td>
+      <td>0.086559</td>
       <td>5</td>
-      <td>4</td>
+      <td>3</td>
       <td>1</td>
     </tr>
     <tr>
@@ -2881,46 +2869,46 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>83</td>
-      <td>0.579729</td>
+      <td>171</td>
+      <td>0.302781</td>
       <td>1</td>
-      <td>7</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>52</td>
-      <td>2.797090</td>
+      <td>181</td>
+      <td>1.820684</td>
       <td>2</td>
-      <td>8</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>52</td>
-      <td>0.194544</td>
+      <td>181</td>
+      <td>1.685579</td>
       <td>3</td>
-      <td>8</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>52</td>
-      <td>-0.525812</td>
+      <td>181</td>
+      <td>1.533217</td>
       <td>4</td>
-      <td>8</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>105</td>
-      <td>-0.428109</td>
+      <td>181</td>
+      <td>2.105582</td>
       <td>5</td>
-      <td>0</td>
+      <td>1</td>
       <td>1</td>
     </tr>
   </tbody>
@@ -2929,7 +2917,7 @@ div.rendered_html tbody tr:hover {
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -2976,8 +2964,8 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>102</td>
-      <td>1.263203</td>
+      <td>75</td>
+      <td>-0.309731</td>
       <td>1</td>
       <td>2</td>
       <td>1</td>
@@ -2985,35 +2973,35 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>135</td>
-      <td>2.590265</td>
+      <td>14</td>
+      <td>-1.207119</td>
       <td>2</td>
-      <td>0</td>
+      <td>7</td>
       <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>135</td>
-      <td>0.569600</td>
+      <td>14</td>
+      <td>-2.163811</td>
       <td>3</td>
-      <td>0</td>
+      <td>7</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>159</td>
-      <td>0.124857</td>
+      <td>22</td>
+      <td>-1.553568</td>
       <td>4</td>
-      <td>8</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>159</td>
-      <td>1.341585</td>
+      <td>84</td>
+      <td>0.086559</td>
       <td>5</td>
       <td>8</td>
       <td>1</td>
@@ -3028,57 +3016,57 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>49198</th>
-      <td>9979</td>
-      <td>83</td>
-      <td>0.579729</td>
+      <th>47957</th>
+      <td>9960</td>
+      <td>171</td>
+      <td>0.302781</td>
       <td>1</td>
-      <td>4</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>49199</th>
-      <td>9979</td>
-      <td>52</td>
-      <td>2.797090</td>
-      <td>2</td>
-      <td>4</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>49200</th>
-      <td>9979</td>
-      <td>52</td>
-      <td>0.194544</td>
       <td>3</td>
-      <td>4</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>49201</th>
-      <td>9979</td>
-      <td>52</td>
-      <td>-0.525812</td>
-      <td>4</td>
-      <td>4</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>49202</th>
-      <td>9979</td>
-      <td>105</td>
-      <td>-0.428109</td>
-      <td>5</td>
+      <th>47958</th>
+      <td>9960</td>
+      <td>181</td>
+      <td>1.820684</td>
       <td>2</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>47959</th>
+      <td>9960</td>
+      <td>181</td>
+      <td>1.685579</td>
+      <td>3</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>47960</th>
+      <td>9960</td>
+      <td>181</td>
+      <td>1.533217</td>
+      <td>4</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>47961</th>
+      <td>9960</td>
+      <td>181</td>
+      <td>2.105582</td>
+      <td>5</td>
+      <td>3</td>
       <td>1</td>
     </tr>
   </tbody>
 </table>
-<p>49203 rows × 6 columns</p>
+<p>47962 rows × 6 columns</p>
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -3124,46 +3112,46 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>102</td>
-      <td>1.263203</td>
+      <td>75</td>
+      <td>-0.309731</td>
       <td>1</td>
-      <td>8</td>
+      <td>7</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>135</td>
-      <td>2.590265</td>
+      <td>14</td>
+      <td>-1.207119</td>
       <td>2</td>
-      <td>0</td>
+      <td>8</td>
       <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>135</td>
-      <td>0.569600</td>
+      <td>14</td>
+      <td>-2.163811</td>
       <td>3</td>
-      <td>0</td>
+      <td>8</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>159</td>
-      <td>0.124857</td>
+      <td>22</td>
+      <td>-1.553568</td>
       <td>4</td>
-      <td>4</td>
+      <td>8</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>159</td>
-      <td>1.341585</td>
+      <td>84</td>
+      <td>0.086559</td>
       <td>5</td>
-      <td>4</td>
+      <td>9</td>
       <td>1</td>
     </tr>
     <tr>
@@ -3178,17 +3166,17 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>83</td>
-      <td>0.579729</td>
+      <td>171</td>
+      <td>0.302781</td>
       <td>1</td>
-      <td>5</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>52</td>
-      <td>2.797090</td>
+      <td>181</td>
+      <td>1.820684</td>
       <td>2</td>
       <td>1</td>
       <td>1</td>
@@ -3196,8 +3184,8 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>52</td>
-      <td>0.194544</td>
+      <td>181</td>
+      <td>1.685579</td>
       <td>3</td>
       <td>1</td>
       <td>1</td>
@@ -3205,8 +3193,8 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>52</td>
-      <td>-0.525812</td>
+      <td>181</td>
+      <td>1.533217</td>
       <td>4</td>
       <td>1</td>
       <td>1</td>
@@ -3214,10 +3202,10 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>105</td>
-      <td>-0.428109</td>
+      <td>181</td>
+      <td>2.105582</td>
       <td>5</td>
-      <td>8</td>
+      <td>1</td>
       <td>1</td>
     </tr>
   </tbody>
@@ -3229,7 +3217,7 @@ div.rendered_html tbody tr:hover {
 <div class="section" id="Some-extra-features">
 <h2>Some extra features<a class="headerlink" href="#Some-extra-features" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -3251,9 +3239,9 @@ format: long
 number of workers: 10000
 number of firms: 195
 number of observations: 50000
-mean wage: 0.4144532138107295
-max wage: 5.715876169579387
-min wage: -4.948064524931356
+mean wage: 0.3862867070374669
+max wage: 5.7617660677298925
+min wage: -5.285373932814096
 collapsed by spell: False
 connected: True
 contiguous firm ids: True
@@ -3264,7 +3252,7 @@ no duplicates: True
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -3310,36 +3298,36 @@ no duplicates: True
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>7</td>
-      <td>-0.707990</td>
+      <td>87</td>
+      <td>1.422830</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>19</td>
-      <td>-3.724078</td>
+      <td>87</td>
+      <td>1.661140</td>
       <td>2</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>10</td>
-      <td>-2.704726</td>
+      <td>87</td>
+      <td>1.267665</td>
       <td>3</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>86</td>
-      <td>-0.640119</td>
+      <td>87</td>
+      <td>2.550360</td>
       <td>4</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>25</td>
-      <td>-0.962090</td>
+      <td>118</td>
+      <td>0.599082</td>
       <td>5</td>
     </tr>
     <tr>
@@ -3352,36 +3340,36 @@ no duplicates: True
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>84</td>
-      <td>0.743839</td>
+      <td>21</td>
+      <td>-0.672321</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>84</td>
-      <td>3.032545</td>
+      <td>21</td>
+      <td>-1.377369</td>
       <td>2</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>185</td>
-      <td>2.302304</td>
+      <td>21</td>
+      <td>-0.970314</td>
       <td>3</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>167</td>
-      <td>2.108992</td>
+      <td>21</td>
+      <td>-0.593032</td>
       <td>4</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>178</td>
-      <td>3.714946</td>
+      <td>21</td>
+      <td>-0.825281</td>
       <td>5</td>
     </tr>
   </tbody>
@@ -3390,7 +3378,7 @@ no duplicates: True
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -3436,40 +3424,40 @@ no duplicates: True
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>26</td>
-      <td>-0.303407</td>
+      <td>162</td>
+      <td>2.896741</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>4</td>
-      <td>0.076905</td>
+      <td>63</td>
+      <td>2.465399</td>
       <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>4</td>
-      <td>-0.732369</td>
+      <td>63</td>
+      <td>1.037162</td>
       <td>3</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>12</td>
-      <td>-0.059508</td>
+      <td>193</td>
+      <td>1.818901</td>
       <td>4</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>12</td>
-      <td>-1.741744</td>
+      <td>127</td>
+      <td>0.645893</td>
       <td>5</td>
       <td>1</td>
     </tr>
@@ -3484,40 +3472,40 @@ no duplicates: True
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>52</td>
-      <td>1.170714</td>
+      <td>163</td>
+      <td>1.556137</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>79</td>
-      <td>-0.457676</td>
+      <td>163</td>
+      <td>0.798808</td>
       <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>0</td>
-      <td>-1.204434</td>
+      <td>163</td>
+      <td>1.662931</td>
       <td>3</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>0</td>
-      <td>-0.999952</td>
+      <td>149</td>
+      <td>1.522641</td>
       <td>4</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>63</td>
-      <td>-0.890078</td>
+      <td>94</td>
+      <td>0.553134</td>
       <td>5</td>
       <td>1</td>
     </tr>
@@ -3527,7 +3515,7 @@ no duplicates: True
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -3572,36 +3560,36 @@ no duplicates: True
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>113</td>
-      <td>-1.713209</td>
+      <td>173</td>
+      <td>1.123302</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>172</td>
-      <td>1.697403</td>
+      <td>173</td>
+      <td>1.362065</td>
       <td>2</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>50</td>
-      <td>0.735158</td>
+      <td>173</td>
+      <td>2.285556</td>
       <td>3</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>50</td>
-      <td>0.651481</td>
+      <td>64</td>
+      <td>0.097504</td>
       <td>4</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>117</td>
-      <td>-1.422329</td>
+      <td>28</td>
+      <td>-1.346189</td>
       <td>5</td>
     </tr>
     <tr>
@@ -3614,36 +3602,36 @@ no duplicates: True
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>48</td>
-      <td>-0.261936</td>
+      <td>151</td>
+      <td>2.957512</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>11</td>
-      <td>-2.202080</td>
+      <td>84</td>
+      <td>0.708481</td>
       <td>2</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>11</td>
-      <td>-0.532521</td>
+      <td>152</td>
+      <td>1.265314</td>
       <td>3</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>30</td>
-      <td>-2.195167</td>
+      <td>63</td>
+      <td>1.052698</td>
       <td>4</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>51</td>
-      <td>-0.532528</td>
+      <td>117</td>
+      <td>0.904571</td>
       <td>5</td>
     </tr>
   </tbody>
@@ -3652,7 +3640,7 @@ no duplicates: True
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -3699,39 +3687,39 @@ no duplicates: True
       <th>0</th>
       <td>0</td>
       <td>7</td>
-      <td>-1.685520</td>
+      <td>-1.670336</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>7</td>
-      <td>-0.326119</td>
+      <td>135</td>
+      <td>0.047628</td>
       <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>7</td>
-      <td>-1.184396</td>
+      <td>135</td>
+      <td>-0.065207</td>
       <td>3</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>7</td>
-      <td>-0.036116</td>
+      <td>119</td>
+      <td>0.985969</td>
       <td>4</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>10</td>
-      <td>-0.497782</td>
+      <td>119</td>
+      <td>1.923032</td>
       <td>5</td>
       <td>1</td>
     </tr>
@@ -3746,40 +3734,40 @@ no duplicates: True
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>62</td>
-      <td>-1.622194</td>
+      <td>168</td>
+      <td>3.703281</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>62</td>
-      <td>1.016790</td>
+      <td>139</td>
+      <td>1.040093</td>
       <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>62</td>
-      <td>-0.899086</td>
+      <td>139</td>
+      <td>1.721457</td>
       <td>3</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>160</td>
-      <td>2.305416</td>
+      <td>139</td>
+      <td>-0.024310</td>
       <td>4</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>160</td>
-      <td>1.054446</td>
+      <td>104</td>
+      <td>-0.223421</td>
       <td>5</td>
       <td>1</td>
     </tr>
@@ -3789,7 +3777,7 @@ no duplicates: True
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -3835,36 +3823,36 @@ no duplicates: True
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>82</td>
-      <td>0.826855</td>
+      <td>101</td>
+      <td>-0.495414</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>82</td>
-      <td>-1.033550</td>
+      <td>29</td>
+      <td>-0.445265</td>
       <td>2</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>82</td>
-      <td>0.644517</td>
+      <td>29</td>
+      <td>-0.513969</td>
       <td>3</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>124</td>
-      <td>-0.840115</td>
+      <td>0</td>
+      <td>-1.435105</td>
       <td>4</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>124</td>
-      <td>1.053086</td>
+      <td>37</td>
+      <td>0.530158</td>
       <td>5</td>
     </tr>
     <tr>
@@ -3877,36 +3865,36 @@ no duplicates: True
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>115</td>
-      <td>2.079980</td>
+      <td>57</td>
+      <td>-0.751823</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>137</td>
-      <td>0.963429</td>
+      <td>57</td>
+      <td>-1.241723</td>
       <td>2</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>137</td>
-      <td>0.300774</td>
+      <td>57</td>
+      <td>1.111050</td>
       <td>3</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>137</td>
-      <td>1.330409</td>
+      <td>25</td>
+      <td>-1.414595</td>
       <td>4</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>137</td>
-      <td>0.924389</td>
+      <td>75</td>
+      <td>0.471232</td>
       <td>5</td>
     </tr>
   </tbody>

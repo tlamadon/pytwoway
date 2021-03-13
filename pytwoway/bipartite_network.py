@@ -14,7 +14,7 @@ from pytwoway import update_dict
 
 col_order = ['wid', 'fid', 'f1i', 'f2i', 'comp', 'y1', 'y2', 'year', 'year_1', 'year_2', 'year_start', 'year_end', 'year_start_1', 'year_end_1', 'year_start_2', 'year_end_2', 'weight', 'w1', 'w2', 'j', 'j1', 'j2', 'm', 'cs'].index
 
-def __col_dict_optional_cols(default_col_dict, user_col_dict, data_cols, optional_cols=()):
+def _col_dict_optional_cols(default_col_dict, user_col_dict, data_cols, optional_cols=()):
     '''
     Update col_dict to account for whether certain optional columns are included.
 
@@ -48,7 +48,7 @@ def __col_dict_optional_cols(default_col_dict, user_col_dict, data_cols, optiona
                 new_col_dict[col] = None
     return new_col_dict
 
-def __update_cols(col_dict, data):
+def _update_cols(col_dict, data):
     '''
     Rename columns and keep only relevant columns.
 
@@ -498,7 +498,7 @@ class BipartiteLong:
 
         # Create self.col_dict
         optional_cols = [['m'], ['j']]
-        self.col_dict = __col_dict_optional_cols(default_col_dict, col_dict, data.columns, optional_cols=optional_cols)
+        self.col_dict = _col_dict_optional_cols(default_col_dict, col_dict, data.columns, optional_cols=optional_cols)
 
         if self.col_dict['j'] is not None:
             self.contiguous_cids = False
@@ -661,7 +661,7 @@ class BipartiteLong:
         else:
             # Correct column names
             self.logger.info('correcting column names')
-            self.col_dict, self.data = __update_cols(self.col_dict, self.data)
+            self.col_dict, self.data = _update_cols(self.col_dict, self.data)
 
         self.logger.info('--- checking worker-year observations ---')
         max_obs = self.data.groupby(['wid', 'year']).size().max()
@@ -1207,7 +1207,7 @@ class BipartiteLongCollapsed:
 
         # Create self.col_dict
         optional_cols = [['m'], ['weight'], ['j']]
-        self.col_dict = __col_dict_optional_cols(default_col_dict, col_dict, data.columns, optional_cols=optional_cols)
+        self.col_dict = _col_dict_optional_cols(default_col_dict, col_dict, data.columns, optional_cols=optional_cols)
 
         if self.col_dict['j'] is not None:
             self.contiguous_cids = False
@@ -1373,7 +1373,7 @@ class BipartiteLongCollapsed:
         else:
             # Correct column names
             self.logger.info('correcting column names')
-            self.col_dict, self.data = __update_cols(self.col_dict, self.data)
+            self.col_dict, self.data = _update_cols(self.col_dict, self.data)
 
         self.logger.info('--- checking worker-year observations ---')
         max_obs_start = self.data.groupby(['wid', 'year_start']).size().max()
@@ -1861,7 +1861,7 @@ class BipartiteEventStudy:
 
         # Create self.col_dict
         optional_cols = [['w1', 'w2'], ['m'], ['j1', 'j2']]
-        self.col_dict = __col_dict_optional_cols(default_col_dict, col_dict, data.columns, optional_cols=optional_cols)
+        self.col_dict = _col_dict_optional_cols(default_col_dict, col_dict, data.columns, optional_cols=optional_cols)
 
         if self.col_dict['j1'] is not None and self.col_dict['j2'] is not None:
             self.contiguous_cids = False
@@ -2041,7 +2041,7 @@ class BipartiteEventStudy:
         else:
             # Correct column names
             self.logger.info('correcting column names')
-            self.col_dict, self.data = __update_cols(self.col_dict, self.data)
+            self.col_dict, self.data = _update_cols(self.col_dict, self.data)
 
         stayers = self.data[self.data['m'] == 0]
         movers = self.data[self.data['m'] == 1]
