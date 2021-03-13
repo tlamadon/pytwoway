@@ -642,6 +642,18 @@ class BLMModel:
         print('Running fit_pk')
         self.fit_movers(jdata)
 
+    def sort_matrices(self):
+        '''
+        Sort matrices by cluster means.
+        '''
+        worker_effect_order = np.mean(self.A1, axis=0).argsort()
+        self.A1 = self.A1[:, worker_effect_order]
+        self.A2 = self.A2[:, worker_effect_order]
+        self.S1 = self.S1[:, worker_effect_order]
+        self.S2 = self.S2[:, worker_effect_order]
+        self.pk1 = self.pk1[:, worker_effect_order]
+        self.pk0 = self.pk0[:, worker_effect_order]
+
     def plot_A1(self, dpi=None):
         '''
         Plot self.A1.
