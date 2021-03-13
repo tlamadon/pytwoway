@@ -14,6 +14,7 @@
 
   Simple <notebooks/pytwoway_example>
   Monte Carlo <notebooks/monte_carlo_example>
+  BipartiteData <notebooks/bipartite_example>
 
 .. toctree::
   :caption: Under the hood
@@ -21,6 +22,7 @@
 
   internal
   TwoWay <class-twoway>
+  BLMEstimator <class-blmestimator>
   CREEstimator <class-creestimator>
   FEEstimator <class-feestimator>
   BipartiteData <class-bipartitedata>

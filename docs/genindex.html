@@ -90,11 +90,14 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/pytwoway_example.html">Simple</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/bipartite_example.html">BipartiteData example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/bipartite_example.html#BipartiteData">BipartiteData</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="internal.html">Python API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-twoway.html">TwoWay</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmestimator.html">BLMEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-feestimator.html">FEEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-bipartitedata.html">BipartiteData</a></li>
@@ -169,6 +172,7 @@
 <div class="genindex-jumpbox">
  <a href="#B"><strong>B</strong></a>
  | <a href="#C"><strong>C</strong></a>
+ | <a href="#D"><strong>D</strong></a>
  | <a href="#E"><strong>E</strong></a>
  | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
@@ -184,6 +188,10 @@
       <li><a href="class-bipartitedata.html#pytwoway.bipartite_network.BipartiteData">BipartiteData (class in pytwoway.bipartite_network)</a>
 </li>
   </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="class-blmestimator.html#pytwoway.blm.BLMEstimator">BLMEstimator (class in pytwoway.blm)</a>
+</li>
+  </ul></td>
 </tr></table>
 
 <h2 id="C">C</h2>
@@ -192,6 +200,8 @@
       <li><a href="class-bipartitedata.html#pytwoway.bipartite_network.BipartiteData.clean_data">clean_data() (pytwoway.bipartite_network.BipartiteData method)</a>
 </li>
       <li><a href="class-bipartitedata.html#pytwoway.bipartite_network.BipartiteData.cluster">cluster() (pytwoway.bipartite_network.BipartiteData method)</a>
+</li>
+      <li><a href="class-bipartitedata.html#pytwoway.bipartite_network.BipartiteData.collapsed_long_to_es">collapsed_long_to_es() (pytwoway.bipartite_network.BipartiteData method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -204,8 +214,20 @@
   </ul></td>
 </tr></table>
 
+<h2 id="D">D</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="class-bipartitedata.html#pytwoway.bipartite_network.BipartiteData.drop_col">drop_col() (pytwoway.bipartite_network.BipartiteData method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
 <h2 id="E">E</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="class-bipartitedata.html#pytwoway.bipartite_network.BipartiteData.es_to_collapsed_long">es_to_collapsed_long() (pytwoway.bipartite_network.BipartiteData method)</a>
+</li>
+  </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="class-bipartitedata.html#pytwoway.bipartite_network.BipartiteData.es_to_long">es_to_long() (pytwoway.bipartite_network.BipartiteData method)</a>
 </li>
@@ -217,12 +239,16 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="class-feestimator.html#pytwoway.fe.FEEstimator">FEEstimator (class in pytwoway.fe)</a>
 </li>
-      <li><a href="class-creestimator.html#pytwoway.cre.CREEstimator.fit">fit() (pytwoway.cre.CREEstimator method)</a>
+      <li><a href="class-blmestimator.html#pytwoway.blm.BLMEstimator.fit">fit() (pytwoway.blm.BLMEstimator method)</a>
+
+      <ul>
+        <li><a href="class-creestimator.html#pytwoway.cre.CREEstimator.fit">(pytwoway.cre.CREEstimator method)</a>
 </li>
-      <li><a href="class-feestimator.html#pytwoway.fe.FEEstimator.fit_1">fit_1() (pytwoway.fe.FEEstimator method)</a>
-</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="class-feestimator.html#pytwoway.fe.FEEstimator.fit_1">fit_1() (pytwoway.fe.FEEstimator method)</a>
+</li>
       <li><a href="class-feestimator.html#pytwoway.fe.FEEstimator.fit_2">fit_2() (pytwoway.fe.FEEstimator method)</a>
 </li>
       <li><a href="class-twoway.html#pytwoway.twfe_network.TwoWay.fit_cre">fit_cre() (pytwoway.twfe_network.TwoWay method)</a>
@@ -247,6 +273,10 @@
 <h2 id="L">L</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="class-bipartitedata.html#pytwoway.bipartite_network.BipartiteData.long_to_collapsed_long">long_to_collapsed_long() (pytwoway.bipartite_network.BipartiteData method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="class-bipartitedata.html#pytwoway.bipartite_network.BipartiteData.long_to_es">long_to_es() (pytwoway.bipartite_network.BipartiteData method)</a>
 </li>
   </ul></td>
@@ -254,6 +284,10 @@
 
 <h2 id="P">P</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="class-blmestimator.html#pytwoway.blm.BLMEstimator.plot_A1">plot_A1() (pytwoway.blm.BLMEstimator method)</a>
+</li>
+  </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="class-twowaymontecarlo.html#pytwoway.sim_twfe_network.TwoWayMonteCarlo.plot_monte_carlo">plot_monte_carlo() (pytwoway.sim_twfe_network.TwoWayMonteCarlo method)</a>
 </li>
@@ -279,10 +313,16 @@
 <h2 id="T">T</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="class-twowaymontecarlo.html#pytwoway.sim_twfe_network.TwoWayMonteCarlo.twfe_monte_carlo">twfe_monte_carlo() (pytwoway.sim_twfe_network.TwoWayMonteCarlo method)</a>
+      <li><a href="class-bipartitedata.html#pytwoway.bipartite_network.BipartiteData.to_csv">to_csv() (pytwoway.bipartite_network.BipartiteData method)</a>
+</li>
+      <li><a href="class-bipartitedata.html#pytwoway.bipartite_network.BipartiteData.to_feather">to_feather() (pytwoway.bipartite_network.BipartiteData method)</a>
+</li>
+      <li><a href="class-bipartitedata.html#pytwoway.bipartite_network.BipartiteData.to_stata">to_stata() (pytwoway.bipartite_network.BipartiteData method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="class-twowaymontecarlo.html#pytwoway.sim_twfe_network.TwoWayMonteCarlo.twfe_monte_carlo">twfe_monte_carlo() (pytwoway.sim_twfe_network.TwoWayMonteCarlo method)</a>
+</li>
       <li><a href="class-twoway.html#pytwoway.twfe_network.TwoWay">TwoWay (class in pytwoway.twfe_network)</a>
 </li>
       <li><a href="class-twowaymontecarlo.html#pytwoway.sim_twfe_network.TwoWayMonteCarlo">TwoWayMonteCarlo (class in pytwoway.sim_twfe_network)</a>
@@ -305,7 +345,7 @@
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Feb 25, 2021.
+        Last updated on Mar 13, 2021.
       </span>
 
     </p>

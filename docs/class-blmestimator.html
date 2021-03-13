@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>FEEstimator class &mdash; pytwoway 0.0.3 documentation</title>
+  <title>BLMEstimator class &mdash; pytwoway 0.0.3 documentation</title>
   
 
   
@@ -36,8 +36,8 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="BipartiteData class" href="class-bipartitedata.html" />
-    <link rel="prev" title="CREEstimator class" href="class-creestimator.html" /> 
+    <link rel="next" title="CREEstimator class" href="class-creestimator.html" />
+    <link rel="prev" title="TwoWay class" href="class-twoway.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -99,9 +99,9 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="internal.html">Python API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-twoway.html">TwoWay</a></li>
-<li class="toctree-l1"><a class="reference internal" href="class-blmestimator.html">BLMEstimator</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">BLMEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">FEEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-feestimator.html">FEEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-bipartitedata.html">BipartiteData</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-simtwoway.html">SimTwoWay</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-twowaymontecarlo.html">TwoWayMonteCarlo</a></li>
@@ -151,13 +151,13 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li>FEEstimator class</li>
+      <li>BLMEstimator class</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="_sources/class-feestimator.rst.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/class-blmestimator.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -194,46 +194,24 @@
     text-align: unset;
 }
 </style>
-<div class="section" id="feestimator-class">
-<h1>FEEstimator class<a class="headerlink" href="#feestimator-class" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="blmestimator-class">
+<h1>BLMEstimator class<a class="headerlink" href="#blmestimator-class" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
-<dt id="pytwoway.fe.FEEstimator">
-<em class="property">class </em><code class="sig-prename descclassname">pytwoway.fe.</code><code class="sig-name descname">FEEstimator</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FEEstimator" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.blm.BLMEstimator">
+<em class="property">class </em><code class="sig-prename descclassname">pytwoway.blm.</code><code class="sig-name descname">BLMEstimator</code><a class="headerlink" href="#pytwoway.blm.BLMEstimator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Uses multigrid and partialing out to solve two way fixed effect model.</p>
-<p>&#64; FIXME I think delete everything below this, it’s basically contained in the class/functions within the class</p>
-<p>takes as an input this adata
-and creates associated A = [J W] matrix which are AKM dummies</p>
-<p>provides methods to do A x Y but also (A’A)^-1 A’Y solve method</p>
 <dl class="py method">
-<dt id="pytwoway.fe.FEEstimator.construct_Q">
-<code class="sig-name descname">construct_Q</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FEEstimator.construct_Q" title="Permalink to this definition">¶</a></dt>
-<dd><p>Generate columns in adata necessary to construct Q.</p>
+<dt id="pytwoway.blm.BLMEstimator.fit">
+<code class="sig-name descname">fit</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">jdata</span></em>, <em class="sig-param"><span class="n">sdata</span></em>, <em class="sig-param"><span class="n">n_init</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">ncore</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">user_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.blm.BLMEstimator.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit EM model for movers and stayers.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.fe.FEEstimator.fit_1">
-<code class="sig-name descname">fit_1</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FEEstimator.fit_1" title="Permalink to this definition">¶</a></dt>
-<dd><p>Run FE solver, part 1. Before fit_2(), modify adata to allow creation of Q matrix.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FEEstimator.fit_2">
-<code class="sig-name descname">fit_2</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FEEstimator.fit_2" title="Permalink to this definition">¶</a></dt>
-<dd><p>Run FE solver, part 2.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt id="pytwoway.fe.FEEstimator.get_fe_estimates">
-<code class="sig-name descname">get_fe_estimates</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FEEstimator.get_fe_estimates" title="Permalink to this definition">¶</a></dt>
-<dd><p>Return estimated psi_hats linked to firm ids and alpha_hats linked to worker ids.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns</dt>
-<dd class="field-odd"><p>dictionary linking firm ids to estimated firm fixed effects
-alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed effects</p>
-</dd>
-<dt class="field-even">Return type</dt>
-<dd class="field-even"><p>alpha_hat_dict (dict)</p>
+<dt id="pytwoway.blm.BLMEstimator.plot_A1">
+<code class="sig-name descname">plot_A1</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dpi</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.blm.BLMEstimator.plot_A1" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plot self.model.A1.</p>
+<dl class="simple">
+<dt>Params:</dt><dd><p>dpi (float): dpi for plot</p>
 </dd>
 </dl>
 </dd></dl>
@@ -250,10 +228,10 @@ alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed e
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="class-bipartitedata.html" class="btn btn-neutral float-right" title="BipartiteData class" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="class-creestimator.html" class="btn btn-neutral float-right" title="CREEstimator class" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="class-creestimator.html" class="btn btn-neutral float-left" title="CREEstimator class" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="class-twoway.html" class="btn btn-neutral float-left" title="TwoWay class" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   

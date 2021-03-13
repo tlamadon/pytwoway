@@ -37,7 +37,7 @@
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="TwoWay class" href="class-twoway.html" />
-    <link rel="prev" title="Monte Carlo example" href="notebooks/monte_carlo_example.html" /> 
+    <link rel="prev" title="BipartiteData example" href="notebooks/bipartite_example.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -92,6 +92,8 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/pytwoway_example.html">Simple</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/bipartite_example.html">BipartiteData example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/bipartite_example.html#BipartiteData">BipartiteData</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul class="current">
@@ -99,6 +101,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#modules-and-methods">Modules and Methods</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#pytwoway-twoway"><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWay</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-blmestimator"><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMEstimator</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pytwoway-creestimator"><code class="docutils literal notranslate"><span class="pre">pytwoway.CREEstimator</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pytwoway-feestimator"><code class="docutils literal notranslate"><span class="pre">pytwoway.FEEstimator</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pytwoway-bipartitedata"><code class="docutils literal notranslate"><span class="pre">pytwoway.BipartiteData</span></code></a></li>
@@ -109,6 +112,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="class-twoway.html">TwoWay</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmestimator.html">BLMEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-feestimator.html">FEEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-bipartitedata.html">BipartiteData</a></li>
@@ -207,7 +211,7 @@
 <h1>Python API<a class="headerlink" href="#python-api" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="overview">
 <h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
-<p>The main pytwoway API is split into six classes. pytwoway is canonically imported using</p>
+<p>The main pytwoway API is split into seven classes. pytwoway is canonically imported using</p>
 <blockquote>
 <div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
 </pre></div>
@@ -215,6 +219,7 @@
 </div></blockquote>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWay</span></code>: Class for formatting data and running CRE and FE estimators.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMEstimator</span></code>: Class for BLM estimator.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.CREEstimator</span></code>: Class for CRE estimator.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.FEEstimator</span></code>: Class for FE estimators.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.BipartiteData</span></code>: Class for formatting bipartite networks (usually of firms and workers).</p></li>
@@ -246,6 +251,26 @@
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">summary_fe</span></code>()</p></td>
 <td><p>Return summary results for FE estimator.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="pytwoway-blmestimator">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMEstimator</span></code><a class="headerlink" href="#pytwoway-blmestimator" title="Permalink to this headline">¶</a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BLMEstimator</span></code>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>(jdata, sdata[, n_init, ncore, user_params])</p></td>
+<td><p>Fit EM model for movers and stayers.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_A1</span></code>([dpi])</p></td>
+<td><p>Plot self.model.A1.</p></td>
 </tr>
 </tbody>
 </table>
@@ -310,20 +335,44 @@
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BipartiteData</span></code>(data[, formatting, col_dict])</p></td>
 <td><p>Class of BipartiteData, where BipartiteData gives a bipartite network of firms and workers.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">clean_data</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code>()</p></td>
+<td><p>Copy the current instance of BipartiteData.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">clean_data</span></code>()</p></td>
 <td><p>Clean data.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">cluster</span></code>([user_cluster])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">cluster</span></code>([user_cluster])</p></td>
 <td><p>Cluster data and assign a new column giving the cluster for each firm.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">drop_col</span></code>(col)</p></td>
+<td><p>Drop a column.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_cs</span></code>()</p></td>
 <td><p>Return event study data reformatted into cross section data.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">es_to_long</span></code>()</p></td>
-<td><p>Refactor event study data into long data.</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">long_to_collapsed_long</span></code>()</p></td>
+<td><p>Refactor long data into collapsed long data.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">long_to_es</span></code>()</p></td>
 <td><p>Refactor long data into event study data.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">collapsed_long_to_es</span></code>()</p></td>
+<td><p>Refactor collapsed long data into event study data.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">es_to_long</span></code>()</p></td>
+<td><p>Refactor event study data into long data.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">es_to_collapsed_long</span></code>()</p></td>
+<td><p>Refactor event study data into collapsed long data.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_csv</span></code>(filepath)</p></td>
+<td><p>Save data to csv.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_feather</span></code>(filepath)</p></td>
+<td><p>Save data to feather.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_stata</span></code>(filepath)</p></td>
+<td><p>Save data to dta.</p></td>
 </tr>
 </tbody>
 </table>
@@ -379,7 +428,7 @@
         <a href="class-twoway.html" class="btn btn-neutral float-right" title="TwoWay class" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="notebooks/monte_carlo_example.html" class="btn btn-neutral float-left" title="Monte Carlo example" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="notebooks/bipartite_example.html" class="btn btn-neutral float-left" title="BipartiteData example" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -391,7 +440,7 @@
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Feb 25, 2021.
+        Last updated on Mar 13, 2021.
       </span>
 
     </p>

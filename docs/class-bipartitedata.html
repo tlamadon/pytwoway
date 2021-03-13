@@ -92,11 +92,14 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/pytwoway_example.html">Simple</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/bipartite_example.html">BipartiteData example</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/bipartite_example.html#BipartiteData">BipartiteData</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="internal.html">Python API</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-twoway.html">TwoWay</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmestimator.html">BLMEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-feestimator.html">FEEstimator</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">BipartiteData</a></li>
@@ -197,14 +200,15 @@
 <dt id="pytwoway.bipartite_network.BipartiteData">
 <em class="property">class </em><code class="sig-prename descclassname">pytwoway.bipartite_network.</code><code class="sig-name descname">BipartiteData</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">formatting</span><span class="o">=</span><span class="default_value">'long'</span></em>, <em class="sig-param"><span class="n">col_dict</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Class of BipartiteData, where BipartiteData gives a bipartite network of firms and workers. Subclasses include BipartiteLong which gives a bipartite network of firms and workers in long form and BipartiteEventStudy which gives a bipartite network of firms and workers in event study form.</p>
+<p>Class of BipartiteData, where BipartiteData gives a bipartite network of firms and workers. Subclasses include BipartiteLong which gives a bipartite network of firms and workers in long form, BipartiteLongCollapsed which gives a bipartite network of firms and workers in collapsed long form (i.e. employment spells are collapsed into a single observation), and BipartiteEventStudy which gives a bipartite network of firms and workers in event study form.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>data</strong> (<em>Pandas DataFrame</em>) – bipartite network data</p></li>
-<li><p><strong>formatting</strong> (<em>str</em>) – if ‘long’, then data in long format; if ‘es’, then data in event study format.</p></li>
+<li><p><strong>formatting</strong> (<em>str</em>) – if ‘long’, then data in long format; if ‘long_collapsed’, then data in collapsed long format; if ‘es’, then data in event study format.</p></li>
 <li><p><strong>col_dict</strong> (<em>dict</em>) – <p>make data columns readable (requires:
 if long: wid (worker id), comp (compensation), fid (firm id), year;
+if collapsed long: wid (worker id), comp (compensation), fid (firm id), year_start (first year of employment spell), year_end (last year of employment spell);
 if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover);</p>
 <blockquote>
 <div><p>optionally include: year_end_1 (last year of observation 1), year_end_2 (last year of observation 2), w1 (weight 1), w2 (weight 2)).</p>
@@ -231,12 +235,20 @@ if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (
 <blockquote>
 <div><p>cdf_resolution (int): how many values to use to approximate the cdf</p>
 <p>grouping (str): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)</p>
-<p>year (int or None): if None, uses entire dataset; if int, gives year of data to consider</p>
+<p>stayers_movers (str or None): if None, uses entire dataset; if ‘stayers’, uses only stayers; if ‘movers’, uses only movers</p>
+<p>year (int or None): if None, uses entire dataset; if int, gives year of data to consider (only works with long form data)</p>
+<p>dropna (bool): if True, drop observations where firms aren’t clustered; if False, keep all observations</p>
 <p>user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>), and use default parameters defined in class attribute default_KMeans for any parameters not specified</p>
 </div></blockquote>
 </p>
 </dd>
 </dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.collapsed_long_to_es">
+<code class="sig-name descname">collapsed_long_to_es</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.collapsed_long_to_es" title="Permalink to this definition">¶</a></dt>
+<dd><p>Refactor collapsed long data into event study data.</p>
 </dd></dl>
 
 <dl class="py method">
@@ -254,6 +266,23 @@ if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (
 </dd></dl>
 
 <dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.drop_col">
+<code class="sig-name descname">drop_col</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">col</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.drop_col" title="Permalink to this definition">¶</a></dt>
+<dd><p>Drop a column.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>col</strong> (<em>str</em>) – column to drop</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.es_to_collapsed_long">
+<code class="sig-name descname">es_to_collapsed_long</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.es_to_collapsed_long" title="Permalink to this definition">¶</a></dt>
+<dd><p>Refactor event study data into collapsed long data.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt id="pytwoway.bipartite_network.BipartiteData.es_to_long">
 <code class="sig-name descname">es_to_long</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.es_to_long" title="Permalink to this definition">¶</a></dt>
 <dd><p>Refactor event study data into long data.</p>
@@ -266,9 +295,48 @@ if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (
 </dd></dl>
 
 <dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.long_to_collapsed_long">
+<code class="sig-name descname">long_to_collapsed_long</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.long_to_collapsed_long" title="Permalink to this definition">¶</a></dt>
+<dd><p>Refactor long data into collapsed long data.</p>
+</dd></dl>
+
+<dl class="py method">
 <dt id="pytwoway.bipartite_network.BipartiteData.long_to_es">
 <code class="sig-name descname">long_to_es</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.long_to_es" title="Permalink to this definition">¶</a></dt>
 <dd><p>Refactor long data into event study data.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.to_csv">
+<code class="sig-name descname">to_csv</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.to_csv" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save data to csv.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filepath</strong> (<em>str</em>) – filepath for saving file</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.to_feather">
+<code class="sig-name descname">to_feather</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.to_feather" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save data to feather.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filepath</strong> (<em>str</em>) – filepath for saving file</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.bipartite_network.BipartiteData.to_stata">
+<code class="sig-name descname">to_stata</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.bipartite_network.BipartiteData.to_stata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save data to dta.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filepath</strong> (<em>str</em>) – filepath for saving file</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -298,7 +366,7 @@ if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Feb 25, 2021.
+        Last updated on Mar 13, 2021.
       </span>
 
     </p>

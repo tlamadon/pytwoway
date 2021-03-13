@@ -16,6 +16,7 @@ import time
 import argparse
 import warnings
 from pytwoway import update_dict, melt
+import pdb
 
 ####################
 ##### New Code #####
@@ -294,7 +295,7 @@ class BLMModel:
             'update_pk1': True, # If False, do not update pk1
             'return_qi': False, # If True, return qi matrix after first loop
             'cons_a': (['lin'], {'n_periods': 2}), # Constraints on A1 and A2
-            'cons_s': (['biggerthan'], {'gap_bigger': 1e-6, 'n_periods': 2}), # Constraints on S1 and S2
+            'cons_s': (['biggerthan'], {'gap_bigger': 1e-7, 'n_periods': 2}), # Constraints on S1 and S2
             # fit_stayers() parameters
             'return_qi': False, # If True, return qi matrix after first loop
             'd_prior': 1.0001 # Account for probabilities being too small
@@ -486,8 +487,8 @@ class BLMModel:
                     res_a = cons_a.res
                     A1 = np.reshape(res_a, (2, nl, nk))[0, :, :].T
                     A2 = np.reshape(res_a, (2, nl, nk))[1, :, :].T
-                except ValueError: # If constraints inconsistent, keep A1 and A2 the same
-                    print('passing 1')
+                except ValueError as e: # If constraints inconsistent, keep A1 and A2 the same
+                    print(str(e) + 'passing 1')
                     pass
 
             if params['update_s']:
@@ -504,8 +505,8 @@ class BLMModel:
                     res_s = cons_s.res
                     S1 = np.sqrt(np.reshape(res_s, (2, nl, nk))[0, :, :]).T
                     S2 = np.sqrt(np.reshape(res_s, (2, nl, nk))[1, :, :]).T
-                except ValueError: # If constraints inconsistent, keep S1 and S2 the same
-                    print('passing 2')
+                except ValueError as e: # If constraints inconsistent, keep S1 and S2 the same
+                    print(str(e) + 'passing 2')
                     pass
             if params['update_pk1']:
                 for l in range(nl):
@@ -586,7 +587,7 @@ class BLMModel:
         # First, simulate parameters but keep A fixed
         # Second, use estimated parameters as starting point to run with A constrained to be linear
         # Finally use estimated parameters as starting point to run without constraints
-        self.reset_params() # New parameter guesses
+        # self.reset_params() # New parameter guesses
         ##### Loop 1 #####
         self.params['update_a'] = False # First run fixm = True, which fixes A but updates S and pk
         self.params['update_s'] = True
@@ -594,8 +595,8 @@ class BLMModel:
         print('Running fixm movers')
         self.fit_movers(jdata)
         ##### Loop 2 #####
-        # self.params['update_a'] = True # Now update A
-        # self.params['cons_a'] = (['lin'], {'n_periods': 2}) # Set constraints
+        self.params['update_a'] = True # Now update A
+        self.params['cons_a'] = (['lin'], {'n_periods': 2}) # Set constraints
         print('Running constrained movers')
         self.fit_movers(jdata)
         ##### Loop 3 #####
@@ -795,16 +796,16 @@ class BLMEstimator:
         model.fit_movers_cstr_uncstr(jdata)
         return model
 
-    def fit(self, jdata, sdata, iter=10, ncore=1, user_params={}):
+    def fit(self, jdata, sdata, n_init=10, ncore=1, user_params={}):
         '''
         Fit EM model for movers and stayers.
         '''
         # Run sim_model()
         if ncore > 1:
             with Pool(processes=ncore) as pool:
-                sim_model_lst = pool.starmap(self._sim_model, [(jdata, user_params) for _ in range(iter)])
+                sim_model_lst = pool.starmap(self._sim_model, [(jdata, user_params) for _ in range(n_init)])
         else:
-            sim_model_lst = itertools.starmap(self._sim_model, [(jdata, user_params) for _ in range(iter)])
+            sim_model_lst = itertools.starmap(self._sim_model, [(jdata, user_params) for _ in range(n_init)])
 
         # Find best simulation
         max_liks = - np.inf
