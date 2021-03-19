@@ -27,7 +27,7 @@ class QPConstrained:
         s.t.    Gx <= h
                 Ax = b
 
-    Params:
+    Arguments:
         nl (int): number of worker types
         nk (int): number of firm types
     '''
@@ -54,7 +54,7 @@ class QPConstrained:
         '''
         Add a built-in constraint.
 
-        Params:
+        Arguments:
             constraint (str): name of constraint to add
             constraint_params (dict): parameters
         '''
@@ -159,7 +159,7 @@ class QPConstrained:
         '''
         Add a built-in constraint.
 
-        Params:
+        Arguments:
             constraints (list of str): names of constraint to add
             constraint_params (dict): parameters
         '''
@@ -170,7 +170,7 @@ class QPConstrained:
         '''
         Manually add a constraint. If setting inequality constraints, must set both G and h to have the same dimension 0. If setting equality constraints, must set both A and b to have the same dimension 0.
 
-        Params:
+        Arguments:
             G (NumPy Array): inequality constraint matrix
             h (NumPy Array): inequality constraint bound
             A (NumPy Array): equality constraint matrix
@@ -195,7 +195,7 @@ class QPConstrained:
         '''
         Add padding to the left and/or right of C matrix.
 
-        Params:
+        Arguments:
             l (int): how many columns to add on left
             r (int): how many columns to add on right
         '''
@@ -725,7 +725,7 @@ class BLMModel:
         '''
         Plot self.A1.
 
-        Params:
+        Arguments:
             dpi (float): dpi for plot
         '''
         # Sort A1 by average effect over firms
@@ -960,7 +960,7 @@ class BLMEstimator:
         '''
         Plot self.model.A1.
 
-        Params:
+        Arguments:
             dpi (float): dpi for plot
         '''
         if self.model is not None:
@@ -972,7 +972,7 @@ class BLMEstimator:
         '''
         Plot likelihoods vs. connectedness for the estimations run.
 
-        Params:
+        Arguments:
             dpi (float): dpi for plot
         '''
         if self.liks_all is not None and self.connectedness_all is not None:
