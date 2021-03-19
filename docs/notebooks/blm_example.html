@@ -90,8 +90,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="pytwoway_example.html">Simple</a></li>
 <li class="toctree-l1"><a class="reference internal" href="monte_carlo_example.html">Monte Carlo</a></li>
-<li class="toctree-l1"><a class="reference internal" href="bipartite_example.html">BipartiteData example</a></li>
-<li class="toctree-l1"><a class="reference internal" href="bipartite_example.html#BipartiteData">BipartiteData</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bipartite_example.html">BipartiteData</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul>
@@ -430,8 +429,9 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="o">%</span><span class="k">load_ext</span> autoreload
-<span class="o">%</span><span class="k">autoreload</span> 2
+<span></span><span class="c1"># Add pytwoway to system path, do not run this</span>
+<span class="c1"># import sys</span>
+<span class="c1"># sys.path.append(&#39;../../..&#39;)</span>
 </pre></div>
 </div>
 </div>
@@ -440,21 +440,11 @@ div.rendered_html tbody tr:hover {
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># Add pytwoway to system path, do not run this</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;../../..&#39;</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># Import the pytwoway package</span>
 <span class="c1"># (Make sure you have installed it using pip install pytwoway)</span>
 <span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
 </pre></div>
 </div>
 </div>
@@ -462,17 +452,23 @@ div.rendered_html tbody tr:hover {
 <h2>Simulate some data<a class="headerlink" href="#Simulate-some-data" title="Permalink to this headline">¶</a></h2>
 <p>The package contains functions to simulate data. We use this here to keep things simple.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># For the example, we simulate data</span>
-<span class="n">sim_model</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BLMModel</span><span class="p">({</span>
-    <span class="s1">&#39;nl&#39;</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span class="c1"># Number of worker types</span>
-    <span class="s1">&#39;nk&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="c1"># Number of firm types</span>
+<span class="c1"># Set parameter choices</span>
+<span class="n">nl</span> <span class="o">=</span> <span class="mi">2</span> <span class="c1"># Number of worker types</span>
+<span class="n">nk</span> <span class="o">=</span> <span class="mi">3</span> <span class="c1"># Number of firm types</span>
+<span class="n">fsize</span> <span class="o">=</span> <span class="mi">10</span> <span class="c1"># Max number of employees at a firm</span>
+<span class="n">mmult</span> <span class="o">=</span> <span class="mi">100</span> <span class="c1"># Increase observations for movers x100</span>
+<span class="n">smult</span> <span class="o">=</span> <span class="mi">100</span> <span class="c1"># Increase observations for stayers x100</span>
+<span class="n">blm_true</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BLMModel</span><span class="p">({</span>
+    <span class="s1">&#39;nl&#39;</span><span class="p">:</span> <span class="n">nl</span><span class="p">,</span> <span class="c1"># Number of worker types</span>
+    <span class="s1">&#39;nk&#39;</span><span class="p">:</span> <span class="n">nk</span><span class="p">,</span> <span class="c1"># Number of firm types</span>
     <span class="s1">&#39;simulation&#39;</span><span class="p">:</span> <span class="kc">True</span> <span class="c1"># Simulating data</span>
 <span class="p">})</span>
-<span class="n">sim_data</span> <span class="o">=</span> <span class="n">sim_model</span><span class="o">.</span><span class="n">_m2_mixt_simulate_sim</span><span class="p">()</span>
+<span class="n">sim_data</span> <span class="o">=</span> <span class="n">blm_true</span><span class="o">.</span><span class="n">_m2_mixt_simulate_sim</span><span class="p">(</span><span class="n">fsize</span><span class="o">=</span><span class="n">fsize</span><span class="p">,</span> <span class="n">mmult</span><span class="o">=</span><span class="n">mmult</span><span class="p">,</span> <span class="n">smult</span><span class="o">=</span><span class="n">smult</span><span class="p">)</span>
 <span class="n">display</span><span class="p">(</span><span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;jdata&#39;</span><span class="p">])</span>
 <span class="n">display</span><span class="p">(</span><span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;sdata&#39;</span><span class="p">])</span>
 </pre></div>
@@ -514,63 +510,63 @@ div.rendered_html tbody tr:hover {
   <tbody>
     <tr>
       <th>0</th>
-      <td>2</td>
-      <td>0.939358</td>
-      <td>-0.083104</td>
+      <td>0</td>
+      <td>0.641603</td>
+      <td>0.231993</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
-      <td>F9</td>
-      <td>F7</td>
+      <td>F66</td>
+      <td>F68</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>4</td>
-      <td>0.619736</td>
-      <td>0.583263</td>
+      <td>0</td>
+      <td>0.654136</td>
+      <td>-0.048505</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
-      <td>F6</td>
-      <td>F8</td>
+      <td>F86</td>
+      <td>F94</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>3</td>
-      <td>0.117834</td>
-      <td>0.614182</td>
+      <td>0</td>
+      <td>0.252469</td>
+      <td>0.383205</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
-      <td>F2</td>
-      <td>F4</td>
+      <td>F57</td>
+      <td>F62</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>4</td>
-      <td>0.609042</td>
-      <td>-0.071186</td>
+      <td>1</td>
+      <td>0.157884</td>
+      <td>0.837490</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
-      <td>F8</td>
-      <td>F1</td>
+      <td>F18</td>
+      <td>F53</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>3</td>
-      <td>0.228321</td>
-      <td>0.343327</td>
+      <td>0</td>
+      <td>0.599868</td>
+      <td>0.245138</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
       <td>F0</td>
-      <td>F9</td>
+      <td>F92</td>
     </tr>
     <tr>
       <th>...</th>
@@ -585,68 +581,68 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>995</th>
-      <td>4</td>
-      <td>1.769518</td>
-      <td>1.787442</td>
-      <td>9</td>
-      <td>9</td>
-      <td>9</td>
-      <td>9</td>
-      <td>F1</td>
-      <td>F2</td>
-    </tr>
-    <tr>
-      <th>996</th>
-      <td>4</td>
-      <td>1.035244</td>
-      <td>1.813854</td>
-      <td>9</td>
-      <td>9</td>
-      <td>9</td>
-      <td>9</td>
-      <td>F2</td>
-      <td>F2</td>
-    </tr>
-    <tr>
-      <th>997</th>
+      <th>8995</th>
       <td>0</td>
-      <td>1.180423</td>
-      <td>1.358983</td>
-      <td>9</td>
-      <td>9</td>
-      <td>9</td>
-      <td>9</td>
-      <td>F7</td>
-      <td>F7</td>
-    </tr>
-    <tr>
-      <th>998</th>
+      <td>0.388565</td>
+      <td>0.080482</td>
       <td>2</td>
-      <td>1.803204</td>
-      <td>1.612185</td>
-      <td>9</td>
-      <td>9</td>
-      <td>9</td>
-      <td>9</td>
-      <td>F10</td>
-      <td>F1</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2</td>
+      <td>F15</td>
+      <td>F37</td>
     </tr>
     <tr>
-      <th>999</th>
-      <td>5</td>
-      <td>1.274533</td>
-      <td>1.238269</td>
-      <td>9</td>
-      <td>9</td>
-      <td>9</td>
-      <td>9</td>
-      <td>F6</td>
-      <td>F4</td>
+      <th>8996</th>
+      <td>0</td>
+      <td>1.228420</td>
+      <td>1.047240</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2</td>
+      <td>F32</td>
+      <td>F90</td>
+    </tr>
+    <tr>
+      <th>8997</th>
+      <td>0</td>
+      <td>0.513434</td>
+      <td>0.902969</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2</td>
+      <td>F47</td>
+      <td>F45</td>
+    </tr>
+    <tr>
+      <th>8998</th>
+      <td>0</td>
+      <td>1.156718</td>
+      <td>0.741670</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2</td>
+      <td>F5</td>
+      <td>F102</td>
+    </tr>
+    <tr>
+      <th>8999</th>
+      <td>0</td>
+      <td>0.544880</td>
+      <td>0.917308</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2</td>
+      <td>F84</td>
+      <td>F67</td>
     </tr>
   </tbody>
 </table>
-<p>1000 rows × 9 columns</p>
+<p>9000 rows × 9 columns</p>
 </div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -685,63 +681,63 @@ div.rendered_html tbody tr:hover {
   <tbody>
     <tr>
       <th>0</th>
-      <td>2</td>
-      <td>0.335828</td>
-      <td>-0.020957</td>
+      <td>1</td>
+      <td>0.496445</td>
+      <td>0.450143</td>
       <td>0</td>
       <td>0</td>
       <td>1</td>
-      <td>F0</td>
+      <td>F68</td>
       <td>0</td>
-      <td>F0</td>
+      <td>F68</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>2</td>
-      <td>0.881205</td>
-      <td>0.065839</td>
+      <td>1</td>
+      <td>1.163346</td>
+      <td>0.281585</td>
       <td>0</td>
       <td>0</td>
       <td>1</td>
-      <td>F0</td>
+      <td>F71</td>
       <td>0</td>
-      <td>F0</td>
+      <td>F71</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>2</td>
-      <td>0.101196</td>
-      <td>0.000027</td>
+      <td>0</td>
+      <td>0.213269</td>
+      <td>0.259737</td>
       <td>0</td>
       <td>0</td>
       <td>1</td>
-      <td>F0</td>
+      <td>F27</td>
       <td>0</td>
-      <td>F0</td>
+      <td>F27</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>2</td>
-      <td>0.922686</td>
-      <td>-0.232553</td>
+      <td>0</td>
+      <td>0.544546</td>
+      <td>0.657220</td>
       <td>0</td>
       <td>0</td>
       <td>1</td>
-      <td>F0</td>
+      <td>F70</td>
       <td>0</td>
-      <td>F0</td>
+      <td>F70</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>2</td>
-      <td>0.748841</td>
-      <td>0.068157</td>
+      <td>1</td>
+      <td>0.802393</td>
+      <td>0.676595</td>
       <td>0</td>
       <td>0</td>
       <td>1</td>
-      <td>F0</td>
+      <td>F87</td>
       <td>0</td>
-      <td>F0</td>
+      <td>F87</td>
     </tr>
     <tr>
       <th>...</th>
@@ -756,526 +752,175 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>95</th>
-      <td>3</td>
-      <td>1.700670</td>
-      <td>0.791410</td>
-      <td>9</td>
-      <td>9</td>
+      <th>2995</th>
       <td>1</td>
-      <td>F10</td>
-      <td>9</td>
-      <td>F10</td>
+      <td>1.222266</td>
+      <td>0.649494</td>
+      <td>2</td>
+      <td>2</td>
+      <td>1</td>
+      <td>F93</td>
+      <td>2</td>
+      <td>F93</td>
     </tr>
     <tr>
-      <th>96</th>
-      <td>3</td>
-      <td>2.333197</td>
-      <td>2.187891</td>
-      <td>9</td>
-      <td>9</td>
+      <th>2996</th>
       <td>1</td>
-      <td>F10</td>
-      <td>9</td>
-      <td>F10</td>
+      <td>1.329100</td>
+      <td>0.966668</td>
+      <td>2</td>
+      <td>2</td>
+      <td>1</td>
+      <td>F90</td>
+      <td>2</td>
+      <td>F90</td>
     </tr>
     <tr>
-      <th>97</th>
-      <td>3</td>
-      <td>1.481109</td>
-      <td>1.603104</td>
-      <td>9</td>
-      <td>9</td>
+      <th>2997</th>
       <td>1</td>
-      <td>F9</td>
-      <td>9</td>
-      <td>F9</td>
+      <td>1.678331</td>
+      <td>1.271155</td>
+      <td>2</td>
+      <td>2</td>
+      <td>1</td>
+      <td>F4</td>
+      <td>2</td>
+      <td>F4</td>
     </tr>
     <tr>
-      <th>98</th>
+      <th>2998</th>
+      <td>1</td>
+      <td>1.264477</td>
+      <td>0.994830</td>
+      <td>2</td>
+      <td>2</td>
+      <td>1</td>
+      <td>F99</td>
+      <td>2</td>
+      <td>F99</td>
+    </tr>
+    <tr>
+      <th>2999</th>
       <td>0</td>
-      <td>1.384499</td>
-      <td>1.370829</td>
-      <td>9</td>
-      <td>9</td>
+      <td>0.591912</td>
+      <td>1.443388</td>
+      <td>2</td>
+      <td>2</td>
       <td>1</td>
-      <td>F9</td>
-      <td>9</td>
-      <td>F9</td>
-    </tr>
-    <tr>
-      <th>99</th>
-      <td>1</td>
-      <td>1.065609</td>
-      <td>1.151035</td>
-      <td>9</td>
-      <td>9</td>
-      <td>1</td>
-      <td>F10</td>
-      <td>9</td>
-      <td>F10</td>
+      <td>F94</td>
+      <td>2</td>
+      <td>F94</td>
     </tr>
   </tbody>
 </table>
-<p>100 rows × 9 columns</p>
+<p>3000 rows × 9 columns</p>
 </div></div>
 </div>
 </div>
-</div>
 <div class="section" id="Initialize-and-run-BLMEstimator">
-<h1>Initialize and run BLMEstimator<a class="headerlink" href="#Initialize-and-run-BLMEstimator" title="Permalink to this headline">¶</a></h1>
+<h2>Initialize and run BLMEstimator<a class="headerlink" href="#Initialize-and-run-BLMEstimator" title="Permalink to this headline">¶</a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1">## Optional Parameters ##</span>
+<span class="n">user_blm</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="c1"># Class parameters</span>
+    <span class="s1">&#39;nl&#39;</span><span class="p">:</span> <span class="n">nl</span><span class="p">,</span> <span class="c1"># Number of worker types</span>
+    <span class="s1">&#39;nk&#39;</span><span class="p">:</span> <span class="n">nk</span><span class="p">,</span> <span class="c1"># Number of firm types</span>
+    <span class="s1">&#39;fixb&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)</span>
+    <span class="s1">&#39;stationary&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Set A1 = A2</span>
+    <span class="c1"># fit() parameters</span>
+    <span class="s1">&#39;n_iters&#39;</span><span class="p">:</span> <span class="mi">10000</span><span class="p">,</span> <span class="c1"># Max number of iterations</span>
+    <span class="s1">&#39;threshold&#39;</span><span class="p">:</span> <span class="mf">1e-7</span><span class="p">,</span> <span class="c1"># Threshold to break EM loop</span>
+    <span class="s1">&#39;d_prior&#39;</span><span class="p">:</span> <span class="mf">1.0001</span><span class="p">,</span> <span class="c1"># Value &gt;= 1, account for probabilities being too small</span>
+    <span class="s1">&#39;verbose&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="c1"># If 0, print no output; if 1, print additional output; if 2, print maximum output</span>
+<span class="p">}</span>
+<span class="c1"># Initialize BLM estimator</span>
+<span class="n">blm_fit</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BLMEstimator</span><span class="p">(</span><span class="n">user_blm</span><span class="p">)</span>
+<span class="c1"># Fit BLM estimator</span>
+<span class="n">blm_fit</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">jdata</span><span class="o">=</span><span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;jdata&#39;</span><span class="p">],</span> <span class="n">sdata</span><span class="o">=</span><span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;sdata&#39;</span><span class="p">],</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">n_best</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">ncore</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+100%|██████████| 10/10 [00:06&lt;00:00,  1.53it/s]
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Finally,-we-can-investigate-the-results">
+<h2>Finally, we can investigate the results<a class="headerlink" href="#Finally,-we-can-investigate-the-results" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1">## Optional Parameters ##</span>
-<span class="n">fit_params</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="c1"># Class parameters</span>
-    <span class="s1">&#39;nl&#39;</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span> <span class="c1"># Number of worker types</span>
-    <span class="s1">&#39;nk&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="c1"># Number of firm types</span>
-    <span class="s1">&#39;fixb&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)</span>
-    <span class="s1">&#39;stationary&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Set A1 = A2</span>
-    <span class="s1">&#39;simulation&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># If True, using model to simulate data</span>
-    <span class="c1"># fit_movers() and fit_stayers() parameters</span>
-    <span class="s1">&#39;maxiters&#39;</span><span class="p">:</span> <span class="mi">100</span><span class="p">,</span> <span class="c1"># Max number of iterations</span>
-    <span class="c1"># fit_movers() parameters</span>
-    <span class="s1">&#39;update_a&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="c1"># If False, do not update A1 or A2</span>
-    <span class="s1">&#39;update_s&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="c1"># If False, do not update S1 or S2</span>
-    <span class="s1">&#39;return_qi&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># If True, return qi matrix after first loop</span>
-    <span class="s1">&#39;cons_a&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s1">&#39;lin&#39;</span><span class="p">],</span> <span class="p">{</span><span class="s1">&#39;n_periods&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">}),</span> <span class="c1"># Constraints on A1 and A2</span>
-    <span class="s1">&#39;cons_s&#39;</span><span class="p">:</span> <span class="p">([</span><span class="s1">&#39;biggerthan&#39;</span><span class="p">],</span> <span class="p">{</span><span class="s1">&#39;gap_bigger&#39;</span><span class="p">:</span> <span class="mf">1e-4</span><span class="p">,</span> <span class="s1">&#39;n_periods&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">}),</span> <span class="c1"># Constraints on S1 and S2</span>
-    <span class="c1"># fit_stayers() parameters</span>
-    <span class="s1">&#39;return_qi&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># If True, return qi matrix after first loop</span>
-<span class="p">}</span>
-<span class="c1"># Initialize BLM estimator</span>
-<span class="n">BLM</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BLMEstimator</span><span class="p">()</span>
-<span class="c1"># Fit BLM estimator</span>
-<span class="n">BLM</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">jdata</span><span class="o">=</span><span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;jdata&#39;</span><span class="p">],</span> <span class="n">sdata</span><span class="o">=</span><span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;sdata&#39;</span><span class="p">],</span> <span class="nb">iter</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">ncore</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">user_params</span><span class="o">=</span><span class="n">fit_params</span><span class="p">)</span>
+<span></span><span class="c1"># Plot likelihood vs. connectedness</span>
+<span class="n">blm_fit</span><span class="o">.</span><span class="n">plot_liks_connectedness</span><span class="p">()</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Running fixm movers
-loop 0, liks -3.082252641958272
-loop 1, liks -2.0479188557771413
-loop 2, liks -1.8227456991795639
-loop 3, liks -1.7460760284333536
-loop 4, liks -1.7152312675575623
-loop 5, liks -1.7010408946115667
-loop 6, liks -1.6936786107719985
-loop 7, liks -1.689414387234413
-loop 8, liks -1.6866978806046051
-loop 9, liks -1.6848258566932208
-loop 10, liks -1.6834518658638704
-loop 11, liks -1.6823930448912048
-loop 12, liks -1.6815487421229018
-loop 13, liks -1.680862397649159
-loop 14, liks -1.680300043254483
-loop 15, liks -1.6798360529722276
-loop 16, liks -1.6794412969742665
-loop 17, liks -1.6790204178231665
-loop 18, liks -1.676896257122597
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-../../../pytwoway/blm.py:458: RuntimeWarning: divide by zero encountered in log
-  lp[:, l] = np.log(pk1[KK, l]) + lp1 + lp2
-</pre></div></div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-loop 19, liks -1.675223391879888
-loop 20, liks -1.6749140934480464
-loop 21, liks -1.6747103527523537
-loop 22, liks -1.6745463330188728
-loop 23, liks -1.6744047503978567
-loop 24, liks -1.6742791958668835
-loop 25, liks -1.6741663830031293
-loop 26, liks -1.6740640265524662
-loop 27, liks -1.673970177189632
-loop 28, liks -1.6738830017712776
-loop 29, liks -1.6738008629944061
-loop 30, liks -1.6737226875502493
-loop 31, liks -1.6736484254148891
-loop 32, liks -1.6735790082013757
-loop 33, liks -1.6735154637523926
-loop 34, liks -1.6734579922653487
-loop 35, liks -1.673405903619675
-loop 36, liks -1.6733581730547498
-loop 37, liks -1.673313850014999
-loop 38, liks -1.6732720622608908
-loop 39, liks -1.6732318143438587
-loop 40, liks -1.673191739328956
-loop 41, liks -1.6731497307008594
-loop 42, liks -1.673102129708916
-loop 43, liks -1.6730417964415123
-loop 44, liks -1.6729544690939664
-loop 45, liks -1.6728193092001455
-loop 46, liks -1.672637850384554
-loop 47, liks -1.6724525864739161
-loop 48, liks -1.6722760219556778
-loop 49, liks -1.6720898990871669
-loop 50, liks -1.6719134372072622
-loop 51, liks -1.6717940520721548
-loop 52, liks -1.6717266819026377
-loop 53, liks -1.6716807949318004
-loop 54, liks -1.6716421161904167
-loop 55, liks -1.6716069949102088
-loop 56, liks -1.671574490783892
-loop 57, liks -1.6715441869370822
-loop 58, liks -1.6715157818949786
-loop 59, liks -1.6714890130253148
-loop 60, liks -1.6714636301434198
-loop 61, liks -1.6714393718615628
-loop 62, liks -1.6714159345862896
-loop 63, liks -1.6713929293535135
-loop 64, liks -1.6713698231947787
-loop 65, liks -1.6713458675349928
-loop 66, liks -1.6713200382300046
-loop 67, liks -1.6712910759986281
-loop 68, liks -1.6712578487754235
-loop 69, liks -1.6712203487456334
-loop 70, liks -1.671181090198354
-loop 71, liks -1.6711450025958952
-loop 72, liks -1.6711162225956933
-loop 73, liks -1.671095342923977
-loop 74, liks -1.6710805601955607
-loop 75, liks -1.6710698284621242
-loop 76, liks -1.6710616640359253
-loop 77, liks -1.6710551287568747
-loop 78, liks -1.6710496551615424
-loop 79, liks -1.6710449039258068
-loop 80, liks -1.6710406712664652
-loop 81, liks -1.671036832883787
-loop 82, liks -1.671033310973532
-loop 83, liks -1.6710300550270714
-loop 84, liks -1.6710270306714314
-loop 85, liks -1.6710242131487199
-loop 86, liks -1.6710215834671875
-loop 87, liks -1.6710191260971639
-loop 88, liks -1.6710168275693076
-loop 89, liks -1.6710146756085869
-loop 90, liks -1.671012658593555
-loop 91, liks -1.6710107652181916
-loop 92, liks -1.6710089842823854
-loop 93, liks -1.6710073045639677
-loop 94, liks -1.6710057147398434
-loop 95, liks -1.6710042033317132
-loop 96, liks -1.6710027586561613
-loop 97, liks -1.6710013687610763
-loop 98, liks -1.6710000213310214
-loop 99, liks -1.6709987035432712
-Running constrained movers
-loop 0, liks -1.670997401853272
-loop 1, liks -0.9969133841505565
-loop 2, liks -1.0264601790742023
-loop 3, liks -1.0086903662137996
-loop 4, liks -1.2039791143111382
-loop 5, liks -1.052449694171596
-loop 6, liks -1.0771043930266038
-loop 7, liks -1.2514561815075627
-loop 8, liks -34.12976868518193
-loop 9, liks -1.2328480981560197
-loop 10, liks -34.85777578515907
-loop 11, liks -1.0057225406752994
-loop 12, liks -1.511085984549845
-loop 13, liks -1.0156912487504508
-loop 14, liks -1.3966990131167076
-loop 15, liks -1.2018497101781336
-loop 16, liks -1.17451632739946
-loop 17, liks -1.0881374549026706
-loop 18, liks -1.3562671919266054
-loop 19, liks -1.2075253072195797
-loop 20, liks -1.0996808859249037
-loop 21, liks -1.0982950866349888
-loop 22, liks -1.56909405939335
-loop 23, liks -1.112616990945353
-loop 24, liks -1.164135214434068
-loop 25, liks -1.1640522560757858
-loop 26, liks -1.2621698835852384
-loop 27, liks -59.927281648877404
-loop 28, liks -4.046001765475793
-loop 29, liks -1.3707730569105807
-passing 1
-loop 30, liks -1.3582851219569836
-loop 31, liks -0.9936954694241164
-loop 32, liks -1.2138791453307374
-passing 1
-loop 33, liks -1.210940762020576
-passing 1
-loop 34, liks -1.2094748598806306
-passing 1
-loop 35, liks -1.208654690169633
-loop 36, liks -21.615710098309187
-passing 1
-loop 37, liks -21.541445287781084
-passing 1
-loop 38, liks -21.458079310511785
-loop 39, liks -1.1687427447492493
-passing 1
-loop 40, liks -1.1653354210424318
-passing 1
-loop 41, liks -1.1625032476758497
-passing 1
-loop 42, liks -1.1609517984566335
-passing 1
-loop 43, liks -1.1601364690894589
-passing 1
-loop 44, liks -1.1593660378325135
-passing 1
-loop 45, liks -1.1585635217269368
-loop 46, liks -31.43114942375754
-loop 47, liks -1.3876427374712692
-passing 1
-loop 48, liks -1.3831371961709038
-passing 1
-loop 49, liks -1.3818161037512027
-passing 1
-loop 50, liks -1.3812025169762787
-passing 1
-loop 51, liks -1.380720737302444
-loop 52, liks nan
-loop 53, liks nan
-loop 54, liks nan
-loop 55, liks nan
-loop 56, liks nan
-loop 57, liks nan
-loop 58, liks nan
-loop 59, liks nan
-loop 60, liks nan
-loop 61, liks nan
-loop 62, liks nan
-loop 63, liks nan
-loop 64, liks nan
-loop 65, liks nan
-loop 66, liks nan
-loop 67, liks nan
-loop 68, liks nan
-loop 69, liks nan
-loop 70, liks nan
-loop 71, liks nan
-loop 72, liks nan
-loop 73, liks nan
-loop 74, liks nan
-loop 75, liks nan
-loop 76, liks nan
-loop 77, liks nan
-loop 78, liks nan
-loop 79, liks nan
-loop 80, liks nan
-loop 81, liks nan
-loop 82, liks nan
-loop 83, liks nan
-loop 84, liks nan
-loop 85, liks nan
-loop 86, liks nan
-loop 87, liks nan
-loop 88, liks nan
-loop 89, liks nan
-loop 90, liks nan
-loop 91, liks nan
-loop 92, liks nan
-loop 93, liks nan
-loop 94, liks nan
-loop 95, liks nan
-loop 96, liks nan
-loop 97, liks nan
-loop 98, liks nan
-loop 99, liks nan
-Running unconstrained movers
-loop 0, liks nan
-loop 1, liks nan
-loop 2, liks nan
-loop 3, liks nan
-loop 4, liks nan
-loop 5, liks nan
-loop 6, liks nan
-loop 7, liks nan
-loop 8, liks nan
-loop 9, liks nan
-loop 10, liks nan
-loop 11, liks nan
-loop 12, liks nan
-loop 13, liks nan
-loop 14, liks nan
-loop 15, liks nan
-loop 16, liks nan
-loop 17, liks nan
-loop 18, liks nan
-loop 19, liks nan
-loop 20, liks nan
-loop 21, liks nan
-loop 22, liks nan
-loop 23, liks nan
-loop 24, liks nan
-loop 25, liks nan
-loop 26, liks nan
-loop 27, liks nan
-loop 28, liks nan
-loop 29, liks nan
-loop 30, liks nan
-loop 31, liks nan
-loop 32, liks nan
-loop 33, liks nan
-loop 34, liks nan
-loop 35, liks nan
-loop 36, liks nan
-loop 37, liks nan
-loop 38, liks nan
-loop 39, liks nan
-loop 40, liks nan
-loop 41, liks nan
-loop 42, liks nan
-loop 43, liks nan
-loop 44, liks nan
-loop 45, liks nan
-loop 46, liks nan
-loop 47, liks nan
-loop 48, liks nan
-loop 49, liks nan
-loop 50, liks nan
-loop 51, liks nan
-loop 52, liks nan
-loop 53, liks nan
-loop 54, liks nan
-loop 55, liks nan
-loop 56, liks nan
-loop 57, liks nan
-loop 58, liks nan
-loop 59, liks nan
-loop 60, liks nan
-loop 61, liks nan
-loop 62, liks nan
-loop 63, liks nan
-loop 64, liks nan
-loop 65, liks nan
-loop 66, liks nan
-loop 67, liks nan
-loop 68, liks nan
-loop 69, liks nan
-loop 70, liks nan
-loop 71, liks nan
-loop 72, liks nan
-loop 73, liks nan
-loop 74, liks nan
-loop 75, liks nan
-loop 76, liks nan
-loop 77, liks nan
-loop 78, liks nan
-loop 79, liks nan
-loop 80, liks nan
-loop 81, liks nan
-loop 82, liks nan
-loop 83, liks nan
-loop 84, liks nan
-loop 85, liks nan
-loop 86, liks nan
-loop 87, liks nan
-loop 88, liks nan
-loop 89, liks nan
-loop 90, liks nan
-loop 91, liks nan
-loop 92, liks nan
-loop 93, liks nan
-loop 94, liks nan
-loop 95, liks nan
-loop 96, liks nan
-loop 97, liks nan
-loop 98, liks nan
-loop 99, liks nan
-</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<div class="highlight"><pre>
-<span class="ansi-red-fg">---------------------------------------------------------------------------</span>
-<span class="ansi-red-fg">LinAlgError</span>                               Traceback (most recent call last)
-<span class="ansi-green-fg">&lt;ipython-input-5-076033861ba0&gt;</span> in <span class="ansi-cyan-fg">&lt;module&gt;</span>
-<span class="ansi-green-intense-fg ansi-bold">     21</span> BLM <span class="ansi-blue-fg">=</span> tw<span class="ansi-blue-fg">.</span>BLMEstimator<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">     22</span> <span class="ansi-red-fg"># Fit BLM estimator</span>
-<span class="ansi-green-fg">---&gt; 23</span><span class="ansi-red-fg"> </span>BLM<span class="ansi-blue-fg">.</span>fit<span class="ansi-blue-fg">(</span>jdata<span class="ansi-blue-fg">=</span>sim_data<span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">&#39;jdata&#39;</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span> sdata<span class="ansi-blue-fg">=</span>sim_data<span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">&#39;sdata&#39;</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">,</span> iter<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">10</span><span class="ansi-blue-fg">,</span> ncore<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">,</span> user_params<span class="ansi-blue-fg">=</span>fit_params<span class="ansi-blue-fg">)</span>
-
-<span class="ansi-green-fg">~/Desktop/pytwoway/pytwoway/blm.py</span> in <span class="ansi-cyan-fg">fit</span><span class="ansi-blue-fg">(self, jdata, sdata, iter, ncore, user_params)</span>
-<span class="ansi-green-intense-fg ansi-bold">    823</span>         best_model <span class="ansi-blue-fg">=</span> <span class="ansi-green-fg">None</span>
-<span class="ansi-green-intense-fg ansi-bold">    824</span>
-<span class="ansi-green-fg">--&gt; 825</span><span class="ansi-red-fg">         </span><span class="ansi-green-fg">for</span> model <span class="ansi-green-fg">in</span> sim_model_lst<span class="ansi-blue-fg">:</span>
-<span class="ansi-green-intense-fg ansi-bold">    826</span>             <span class="ansi-green-fg">if</span> model<span class="ansi-blue-fg">.</span>lik1 <span class="ansi-blue-fg">&gt;</span> max_liks<span class="ansi-blue-fg">:</span>
-<span class="ansi-green-intense-fg ansi-bold">    827</span>                 max_liks <span class="ansi-blue-fg">=</span> model<span class="ansi-blue-fg">.</span>lik1
-
-<span class="ansi-green-fg">~/Desktop/pytwoway/pytwoway/blm.py</span> in <span class="ansi-cyan-fg">_sim_model</span><span class="ansi-blue-fg">(self, jdata, params)</span>
-<span class="ansi-green-intense-fg ansi-bold">    805</span>         &#39;&#39;&#39;
-<span class="ansi-green-intense-fg ansi-bold">    806</span>         model <span class="ansi-blue-fg">=</span> BLMModel<span class="ansi-blue-fg">(</span>params<span class="ansi-blue-fg">)</span>
-<span class="ansi-green-fg">--&gt; 807</span><span class="ansi-red-fg">         </span>model<span class="ansi-blue-fg">.</span>fit_movers_cstr_uncstr<span class="ansi-blue-fg">(</span>jdata<span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    808</span>         <span class="ansi-green-fg">return</span> model
-<span class="ansi-green-intense-fg ansi-bold">    809</span>
-
-<span class="ansi-green-fg">~/Desktop/pytwoway/pytwoway/blm.py</span> in <span class="ansi-cyan-fg">fit_movers_cstr_uncstr</span><span class="ansi-blue-fg">(self, jdata)</span>
-<span class="ansi-green-intense-fg ansi-bold">    616</span>         self<span class="ansi-blue-fg">.</span>fit_movers<span class="ansi-blue-fg">(</span>jdata<span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    617</span>         <span class="ansi-red-fg">##### Compute connectedness #####</span>
-<span class="ansi-green-fg">--&gt; 618</span><span class="ansi-red-fg">         </span>self<span class="ansi-blue-fg">.</span>compute_connectedness<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    619</span>
-<span class="ansi-green-intense-fg ansi-bold">    620</span>     <span class="ansi-green-fg">def</span> fit_A<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> jdata<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
-
-<span class="ansi-green-fg">~/Desktop/pytwoway/pytwoway/blm.py</span> in <span class="ansi-cyan-fg">compute_connectedness</span><span class="ansi-blue-fg">(self, all)</span>
-<span class="ansi-green-intense-fg ansi-bold">    400</span>             D <span class="ansi-blue-fg">=</span> np<span class="ansi-blue-fg">.</span>diag<span class="ansi-blue-fg">(</span>np<span class="ansi-blue-fg">.</span>sum<span class="ansi-blue-fg">(</span>A<span class="ansi-blue-fg">,</span> axis<span class="ansi-blue-fg">=</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">)</span> <span class="ansi-blue-fg">**</span> <span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">-</span> <span class="ansi-cyan-fg">0.5</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    401</span>             L <span class="ansi-blue-fg">=</span> np<span class="ansi-blue-fg">.</span>eye<span class="ansi-blue-fg">(</span>nk<span class="ansi-blue-fg">)</span> <span class="ansi-blue-fg">-</span> D <span class="ansi-blue-fg">@</span> A <span class="ansi-blue-fg">@</span> D
-<span class="ansi-green-fg">--&gt; 402</span><span class="ansi-red-fg">             </span>evals<span class="ansi-blue-fg">,</span> evects <span class="ansi-blue-fg">=</span> np<span class="ansi-blue-fg">.</span>linalg<span class="ansi-blue-fg">.</span>eig<span class="ansi-blue-fg">(</span>L<span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    403</span>             EV<span class="ansi-blue-fg">[</span>kk<span class="ansi-blue-fg">]</span> <span class="ansi-blue-fg">=</span> sorted<span class="ansi-blue-fg">(</span>evals<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">[</span><span class="ansi-cyan-fg">1</span><span class="ansi-blue-fg">]</span>
-<span class="ansi-green-intense-fg ansi-bold">    404</span>         pd<span class="ansi-blue-fg">.</span>options<span class="ansi-blue-fg">.</span>mode<span class="ansi-blue-fg">.</span>chained_assignment <span class="ansi-blue-fg">=</span> <span class="ansi-blue-fg">&#39;warn&#39;</span>
-
-<span class="ansi-green-fg">&lt;__array_function__ internals&gt;</span> in <span class="ansi-cyan-fg">eig</span><span class="ansi-blue-fg">(*args, **kwargs)</span>
-
-<span class="ansi-green-fg">~/opt/anaconda3/envs/twfe-env/lib/python3.7/site-packages/numpy/linalg/linalg.py</span> in <span class="ansi-cyan-fg">eig</span><span class="ansi-blue-fg">(a)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1316</span>     _assert_stacked_2d<span class="ansi-blue-fg">(</span>a<span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1317</span>     _assert_stacked_square<span class="ansi-blue-fg">(</span>a<span class="ansi-blue-fg">)</span>
-<span class="ansi-green-fg">-&gt; 1318</span><span class="ansi-red-fg">     </span>_assert_finite<span class="ansi-blue-fg">(</span>a<span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1319</span>     t<span class="ansi-blue-fg">,</span> result_t <span class="ansi-blue-fg">=</span> _commonType<span class="ansi-blue-fg">(</span>a<span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">   1320</span>
-
-<span class="ansi-green-fg">~/opt/anaconda3/envs/twfe-env/lib/python3.7/site-packages/numpy/linalg/linalg.py</span> in <span class="ansi-cyan-fg">_assert_finite</span><span class="ansi-blue-fg">(*arrays)</span>
-<span class="ansi-green-intense-fg ansi-bold">    207</span>     <span class="ansi-green-fg">for</span> a <span class="ansi-green-fg">in</span> arrays<span class="ansi-blue-fg">:</span>
-<span class="ansi-green-intense-fg ansi-bold">    208</span>         <span class="ansi-green-fg">if</span> <span class="ansi-green-fg">not</span> isfinite<span class="ansi-blue-fg">(</span>a<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">.</span>all<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
-<span class="ansi-green-fg">--&gt; 209</span><span class="ansi-red-fg">             </span><span class="ansi-green-fg">raise</span> LinAlgError<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">&#34;Array must not contain infs or NaNs&#34;</span><span class="ansi-blue-fg">)</span>
-<span class="ansi-green-intense-fg ansi-bold">    210</span>
-<span class="ansi-green-intense-fg ansi-bold">    211</span> <span class="ansi-green-fg">def</span> _is_empty_2d<span class="ansi-blue-fg">(</span>arr<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
-
-<span class="ansi-red-fg">LinAlgError</span>: Array must not contain infs or NaNs
-</pre></div></div>
+<img alt="../_images/notebooks_blm_example_8_0.png" src="../_images/notebooks_blm_example_8_0.png" />
 </div>
 </div>
-<div class="section" id="Finally,-we-can-investigate-the-results">
-<h1>Finally, we can investigate the results<a class="headerlink" href="#Finally,-we-can-investigate-the-results" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">BLM</span><span class="o">.</span><span class="n">plot_A1</span><span class="p">()</span>
+<span></span><span class="c1"># Plot parameter truth vs. estimates</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">blm_true</span><span class="o">.</span><span class="n">S1</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_fit</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">S1</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;S1&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">blm_true</span><span class="o">.</span><span class="n">S2</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_fit</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">S2</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;S2&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Estimator&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">blm_true</span><span class="o">.</span><span class="n">A1</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_fit</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">A1</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;A1&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">blm_true</span><span class="o">.</span><span class="n">A2</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_fit</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">A2</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;A2&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Estimator&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">blm_true</span><span class="o">.</span><span class="n">pk1</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_fit</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">pk1</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;pk1&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Estimator&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_9_0.png" src="../_images/notebooks_blm_example_9_0.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_9_1.png" src="../_images/notebooks_blm_example_9_1.png" />
 </div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
-<div class="output_area stderr docutils container">
-<div class="highlight"><pre>
-../../../pytwoway/blm.py:845: UserWarning: Best model has not yet been estimated.
-  warnings.warn(&#39;Best model has not yet been estimated.&#39;)
-</pre></div></div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_9_2.png" src="../_images/notebooks_blm_example_9_2.png" />
+</div>
+</div>
 </div>
 </div>
 
@@ -1293,7 +938,7 @@ loop 99, liks nan
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Mar 13, 2021.
+        Last updated on Mar 19, 2021.
       </span>
 
     </p>

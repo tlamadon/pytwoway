@@ -47,6 +47,7 @@ Modules and Methods
    ~pytwoway.BLMEstimator
    ~pytwoway.BLMEstimator.fit
    ~pytwoway.BLMEstimator.plot_A1
+   ~pytwoway.BLMEstimator.plot_liks_connectedness
 
 ``pytwoway.CREEstimator``
 ~~~~~~~~~~~~~~~~~~~~~~~~~

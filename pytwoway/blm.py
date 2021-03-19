@@ -1,5 +1,5 @@
 '''
-    We implement the non-linear estimator from Bonhomme Lamadon & Manresa
+We implement the non-linear estimator from Bonhomme Lamadon & Manresa
 '''
 
 import numpy as np
@@ -13,10 +13,9 @@ from matplotlib import pyplot as plt
 from multiprocessing import Pool
 import itertools
 import time
-import argparse
 import warnings
-from pytwoway import update_dict, melt
-import pdb
+from pytwoway import update_dict, melt #, istarmap # To allow tqdm + starmap
+from tqdm import tqdm, trange
 
 ####################
 ##### New Code #####
@@ -275,11 +274,46 @@ def lognormpdf(x, mu, sd):
 
 class BLMModel:
     '''
-    Class for storing the parameters used in BLMEstimator.
+    Class for solving the BLM model using a single set of starting values.
+
+    Arguments:
+        user_blm (dict): dictionary of parameters for BLM estimation
+
+                Dictionary parameters:
+
+                    nl (int): number of worker types
+
+                    nk (int): number of firm types
+
+                    fixb (bool): if True, set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)
+
+                    stationary (bool): if True, set A1 = A2
+
+                    simulation (bool): if True, using model to simulate data
+
+                    n_iters (int): number of iterations for EM
+
+                    threshold (float): threshold to break EM loop
+
+                    update_a (bool): if False, do not update A1 or A2
+
+                    update_s (bool): if False, do not update S1 or S2
+
+                    update_pk1 (bool): if False, do not update pk1
+
+                    return_qi (bool): if True, return qi matrix after first loop
+
+                    cons_a (tuple): constraints on A1 and A2, where first entry gives list of constraints and second entry gives a parameter dictionary
+
+                    cons_s (tuple): constraints on S1 and S2, where first entry gives list of constraints and second entry gives a parameter dictionary
+
+                    d_prior (float): value >= 1, account for probabilities being too small
+
+                    verbose (int): if 0, print no output; if 1, print additional output; if 2, print maximum output
     '''
-    def __init__(self, user_params={}):
+    def __init__(self, user_blm={}):
         # Default parameters
-        default_params = {
+        default_blm = {
             # Class parameters
             'nl': 6, # Number of worker types
             'nk': 10, # Number of firm types
@@ -287,7 +321,7 @@ class BLMModel:
             'stationary': False, # Set A1 = A2
             'simulation': False, # If True, using model to simulate data
             # fit_movers() and fit_stayers() parameters
-            'maxiters': 100, # Max number of iterations
+            'n_iters': 100, # Max number of iterations
             # fit_movers() parameters
             'threshold': 1e-7, # Threshold to break fit_movers() and fit_stayers()
             'update_a': True, # If False, do not update A1 or A2
@@ -297,10 +331,10 @@ class BLMModel:
             'cons_a': (['lin'], {'n_periods': 2}), # Constraints on A1 and A2
             'cons_s': (['biggerthan'], {'gap_bigger': 1e-7, 'n_periods': 2}), # Constraints on S1 and S2
             # fit_stayers() parameters
-            'return_qi': False, # If True, return qi matrix after first loop
-            'd_prior': 1.0001 # Account for probabilities being too small
+            'd_prior': 1.0001, # Account for probabilities being too small
+            'verbose': 0 # If 0, print no output; if 1, print additional output; if 2, print maximum output
         }
-        params = update_dict(default_params, user_params)
+        params = update_dict(default_blm, user_blm)
         self.params = params
         nl = params['nl']
         nk = params['nk']
@@ -321,6 +355,8 @@ class BLMModel:
             self.pk1 = np.random.RandomState().dirichlet(alpha=[1] * nl, size=nk * nk)
             # Model for p(K | l, l') for stayers
             self.pk0 = np.random.RandomState().dirichlet(alpha=[1] * nl, size=nk)
+            # Sort
+            self._sort_matrices()
         else:
             # Model for Y1 | Y2, l, k for movers and stayers
             self.A1 = np.tile(sorted(np.random.RandomState().normal(size=nl)), (nk, 1))
@@ -353,23 +389,26 @@ class BLMModel:
         if self.stationary:
             self.A2 = self.A1
 
-    def reset_params(self):
-        nl = self.nl
-        nk = self.nk
-        # Model for Y1 | Y2, l, k for movers and stayers
-        self.A1 = np.tile(sorted(np.random.RandomState().normal(size=nl)), (nk, 1))
-        self.S1 = np.ones(shape=(nk, nl))
-        # Model for Y4 | Y3, l, k for movers and stayers
-        self.A2 = self.A1.copy()
-        self.S2 = np.ones(shape=(nk, nl))
-        # Model for p(K | l, l') for movers
-        self.pk1 = np.ones(shape=(nk * nk, nl)) / nl
-        # Model for p(K | l, l') for stayers
-        self.pk0 = np.ones(shape=(nk, nl)) / nl
+    # def reset_params(self):
+    #     nl = self.nl
+    #     nk = self.nk
+    #     # Model for Y1 | Y2, l, k for movers and stayers
+    #     self.A1 = np.tile(sorted(np.random.RandomState().normal(size=nl)), (nk, 1))
+    #     self.S1 = np.ones(shape=(nk, nl))
+    #     # Model for Y4 | Y3, l, k for movers and stayers
+    #     self.A2 = self.A1.copy()
+    #     self.S2 = np.ones(shape=(nk, nl))
+    #     # Model for p(K | l, l') for movers
+    #     self.pk1 = np.ones(shape=(nk * nk, nl)) / nl
+    #     # Model for p(K | l, l') for stayers
+    #     self.pk0 = np.ones(shape=(nk, nl)) / nl
 
     def compute_connectedness_measure(self, all=False):
         '''
         Computes graph connectedness measure among the movers within each type and updates self.connectedness to be the smallest value.
+
+        Arguments:
+            all (bool): if True, set self.connectedness to be the vector of connectedness for all worker types instead of the minimum
         '''
         nl = self.nl
         nk = self.nk
@@ -393,7 +432,10 @@ class BLMModel:
 
     def fit_movers(self, jdata):
         '''
-            EM algorithm for movers.
+        EM algorithm for movers.
+
+        Arguments:
+            jdata (Pandas DataFrame): movers
         '''
         params = self.params
         A1 = self.A1
@@ -431,7 +473,7 @@ class BLMModel:
         JJ2 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), J2)), shape=(ni, nk))
         JJ12 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), J1 + nk * J2)), shape=(ni, nk * nk))
 
-        for iter in range(params['maxiters']):
+        for iter in range(params['n_iters']):
 
             # -------- E-Step ---------
             # We compute the posterior probabilities for each row
@@ -451,7 +493,8 @@ class BLMModel:
             # lik_prior = (params['d_prior'] - 1) * np.sum(np.log(pk1))
             # lik1 += lik_prior
             liks1.append(lik1)
-            print('loop {}, liks {}'.format(iter, lik1))
+            if params['verbose'] == 2:
+                print('loop {}, liks {}'.format(iter, lik1))
 
             if abs(lik1 - prev_lik) < params['threshold']:
                 break
@@ -488,7 +531,8 @@ class BLMModel:
                     A1 = np.reshape(res_a, (2, nl, nk))[0, :, :].T
                     A2 = np.reshape(res_a, (2, nl, nk))[1, :, :].T
                 except ValueError as e: # If constraints inconsistent, keep A1 and A2 the same
-                    print(str(e) + 'passing 1')
+                    if params['verbose'] in [1, 2]:
+                        print(str(e) + 'passing 1')
                     pass
 
             if params['update_s']:
@@ -506,7 +550,8 @@ class BLMModel:
                     S1 = np.sqrt(np.reshape(res_s, (2, nl, nk))[0, :, :]).T
                     S2 = np.sqrt(np.reshape(res_s, (2, nl, nk))[1, :, :]).T
                 except ValueError as e: # If constraints inconsistent, keep S1 and S2 the same
-                    print(str(e) + 'passing 2')
+                    if params['verbose'] in [1, 2]:
+                        print(str(e) + 'passing 2')
                     pass
             if params['update_pk1']:
                 for l in range(nl):
@@ -525,7 +570,10 @@ class BLMModel:
 
     def fit_stayers(self, sdata):
         '''
-            We write the EM algorithm for the movers
+        EM algorithm for stayers.
+
+        Arguments:
+            sdata (Pandas DataFrame): stayers
         '''
         params = self.params
         A1 = self.A1
@@ -548,7 +596,7 @@ class BLMModel:
         lp = np.zeros(shape=(ni, nl))
         JJ1 = csc_matrix((np.ones(ni), (range(sdata.shape[0]), J1)), shape=(ni, nk))
 
-        for iter in range(params['maxiters']):
+        for iter in range(params['n_iters']):
 
             # -------- E-Step ---------
             # We compute the posterior probabilities for each row
@@ -564,7 +612,8 @@ class BLMModel:
                 return qi
             lik0 = logsumexp(lp, axis=1).sum() # FIXME should this be returned?
             liks0.append(lik0)
-            print('loop {}, liks {}'.format(iter, lik0))
+            if params['verbose'] == 2:
+                print('loop {}, liks {}'.format(iter, lik0))
 
             if abs(lik0 - prev_lik) < params['threshold']:
                 break
@@ -583,6 +632,9 @@ class BLMModel:
     def fit_movers_cstr_uncstr(self, jdata):
         '''
         Run fit_movers(), first constrained, then using results as starting values, run unconstrained.
+
+        Arguments:
+            jdata (Pandas DataFrame): movers
         '''
         # First, simulate parameters but keep A fixed
         # Second, use estimated parameters as starting point to run with A constrained to be linear
@@ -592,16 +644,19 @@ class BLMModel:
         self.params['update_a'] = False # First run fixm = True, which fixes A but updates S and pk
         self.params['update_s'] = True
         self.params['update_pk1'] = True
-        print('Running fixm movers')
+        if self.params['verbose'] in [1, 2]:
+            print('Running fixm movers')
         self.fit_movers(jdata)
         ##### Loop 2 #####
         self.params['update_a'] = True # Now update A
         self.params['cons_a'] = (['lin'], {'n_periods': 2}) # Set constraints
-        print('Running constrained movers')
+        if self.params['verbose'] in [1, 2]:
+            print('Running constrained movers')
         self.fit_movers(jdata)
         ##### Loop 3 #####
         self.params['cons_a'] = () # Remove constraints
-        print('Running unconstrained movers')
+        if self.params['verbose'] in [1, 2]:
+            print('Running unconstrained movers')
         self.fit_movers(jdata)
         ##### Compute connectedness #####
         self.compute_connectedness_measure()
@@ -609,40 +664,52 @@ class BLMModel:
     def fit_A(self, jdata):
         '''
         Run fit_movers() and update A while keeping S and pk1 fixed.
+
+        Arguments:
+            jdata (Pandas DataFrame): movers
         '''
         # self.reset_params() # New parameter guesses
         self.params['update_a'] = True
         self.params['update_s'] = False
         self.params['update_pk1'] = False
         self.params['cons_a'] = ()
-        print('Running fit_A')
+        if self.params['verbose'] in [1, 2]:
+            print('Running fit_A')
         self.fit_movers(jdata)
 
     def fit_S(self, jdata):
         '''
         Run fit_movers() and update S while keeping A and pk1 fixed.
+
+        Arguments:
+            jdata (Pandas DataFrame): movers
         '''
         # self.reset_params() # New parameter guesses
         self.params['update_a'] = False
         self.params['update_s'] = True
         self.params['update_pk1'] = False
         self.params['cons_a'] = ()
-        print('Running fit_S')
+        if self.params['verbose'] in [1, 2]:
+            print('Running fit_S')
         self.fit_movers(jdata)
 
     def fit_pk(self, jdata):
         '''
         Run fit_movers() and update pk1 while keeping A and S fixed.
+
+        Arguments:
+            jdata (Pandas DataFrame): movers
         '''
         # self.reset_params() # New parameter guesses
         self.params['update_a'] = False
         self.params['update_s'] = False
         self.params['update_pk1'] = True
         self.params['cons_a'] = ()
-        print('Running fit_pk')
+        if self.params['verbose'] in [1, 2]:
+            print('Running fit_pk')
         self.fit_movers(jdata)
 
-    def sort_matrices(self):
+    def _sort_matrices(self):
         '''
         Sort matrices by cluster means.
         '''
@@ -677,6 +744,9 @@ class BLMModel:
     def _m2_mixt_simulate_movers(self, NNm):
         '''
         Using the model, simulates a dataset of movers.
+
+        Arguments:
+            NNm (NumPy Array): FIXME
 
         Returns:
             jdatae (Pandas DataFrame): movers
@@ -723,6 +793,9 @@ class BLMModel:
         '''
         Using the model, simulates a dataset of stayers.
 
+        Arguments:
+            NNs (NumPy Array): FIXME
+
         Returns:
             sdatae (Pandas DataFrame): stayers
         '''
@@ -766,10 +839,13 @@ class BLMModel:
         '''
         Simulates data (movers and stayers) and attached firms ids. Firms have all same expected size.
 
+        Arguments:
+            fsize (int): max number of employees at a firm
+            mmult (int): factor by which to increase observations for movers
+            smult (int): factor by which to increase observations for stayers
+
         Returns:
-            sim (dict):
-                'jdata': movers
-                'sdata': stayers
+            sim (dict): {'jdata': movers, 'sdata': stayers}
         '''
         jdata = self._m2_mixt_simulate_movers(self.NNm * mmult)
         sdata = self._m2_mixt_simulate_stayers(self.NNs * smult)
@@ -793,45 +869,92 @@ class BLMModel:
         return sim
 
 class BLMEstimator:
+    '''
+    Class for solving the BLM model using multiple sets of starting values.
 
-    def __init__(self):
-        '''
-            Initialize the model
-        '''
+    Arguments:
+        user_blm (dict): dictionary of parameters for BLM estimation
+
+            Dictionary parameters:
+
+                nl (int): number of worker types
+
+                nk (int): number of firm types
+
+                fixb (bool): if True, set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)
+
+                stationary (bool): if True, set A1 = A2
+
+                n_iters (int): number of iterations for EM
+
+                threshold (float): threshold to break EM loop
+
+                d_prior (float): value >= 1, account for probabilities being too small
+
+                verbose (int): if 0, print no output; if 1, print additional output; if 2, print maximum output
+    '''
+
+    def __init__(self, user_blm={}):
+        self.blm_params = user_blm
         self.model = None # No initial model
+        self.liks_all = None # No likelihoods yet
+        self.connectedness_all = None # No connectedness yet
 
-    def _sim_model(self, jdata, params):
+    def _sim_model(self, jdata):
         '''
         Generate model and run fit_movers_cstr_uncstr() given parameters.
+
+        Arguments:
+            jdata (Pandas DataFrame): movers
         '''
-        model = BLMModel(params)
+        model = BLMModel(self.blm_params)
         model.fit_movers_cstr_uncstr(jdata)
         return model
 
-    def fit(self, jdata, sdata, n_init=10, ncore=1, user_params={}):
+    def fit(self, jdata, sdata, n_init=10, n_best=1, ncore=1):
         '''
-        Fit EM model for movers and stayers.
+        EM model for movers and stayers.
+
+        Arguments:
+            jdata (Pandas DataFrame): movers
+            sdata (Pandas DataFrame): stayers
+            n_init (int): number of starting values
+            n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness
+            ncore (int): number of cores for multiprocessing
         '''
         # Run sim_model()
         if ncore > 1:
             with Pool(processes=ncore) as pool:
-                sim_model_lst = pool.starmap(self._sim_model, [(jdata, user_params) for _ in range(n_init)])
+                sim_model_lst = pool.map(self._sim_model, tqdm([jdata for _ in range(n_init)], total=n_init)) # pool.starmap
         else:
-            sim_model_lst = itertools.starmap(self._sim_model, [(jdata, user_params) for _ in range(n_init)])
+            sim_model_lst = map(self._sim_model, tqdm([jdata for _ in range(n_init)], total=n_init)) # itertools.starmap
 
-        # Find best simulation
-        max_liks = - np.inf
-        best_model = None
+        # Sort by likelihoods
+        sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst], reverse=True)
+        sorted_lik_models = [model for _, model in sorted_zipped_models]
 
-        for model in sim_model_lst:
-            if model.lik1 > max_liks:
-                max_liks = model.lik1
-                best_model = model
-        print('max_liks:', max_liks)
+        # Save likelihood vs. connectedness for all models
+        liks_all = np.zeros(shape=n_init) # Save all likelihoods
+        connectedness_all = np.zeros(shape=n_init) # Save all connectedness
+        for i, model in enumerate(sorted_lik_models):
+            liks_all[i] = model.lik1
+            connectedness_all[i] = model.connectedness
+        self.liks_all = liks_all
+        self.connectedness_all = connectedness_all
+
+        # Take the n_best best estimates and find the lowest connectedness
+        best_lik_models = sorted_lik_models[: min(n_best, n_init)]
+        sorted_zipped_models = sorted([(model.connectedness, model) for model in best_lik_models])
+        best_model = sorted_zipped_models[0][1]
+
+        if self.blm_params['verbose'] in [1, 2]:
+            print('liks_max:', best_model.lik1)
         self.model = best_model
         # Using best estimated parameters from fit_movers(), run fit_stayers()
-        print('Running stayers')
+        if self.blm_params['verbose'] in [1, 2]:
+            print('Running stayers')
         self.model.fit_stayers(sdata)
+        self.model._sort_matrices()
 
     def plot_A1(self, dpi=None):
         '''
@@ -843,7 +966,24 @@ class BLMEstimator:
         if self.model is not None:
             self.model.plot_A1(dpi)
         else:
-            warnings.warn('Best model has not yet been estimated.')
+            warnings.warn('Estimation has not yet been run.')
+
+    def plot_liks_connectedness(self, dpi=None):
+        '''
+        Plot likelihoods vs. connectedness for the estimations run.
+
+        Params:
+            dpi (float): dpi for plot
+        '''
+        if self.liks_all is not None and self.connectedness_all is not None:
+            if dpi is not None:
+                plt.figure(dpi=dpi)
+            plt.scatter(self.liks_all, self.connectedness_all)
+            plt.xlabel('Likelihood')
+            plt.ylabel('Connectedness')
+            plt.show()
+        else:
+            warnings.warn('Estimation has not yet been run.')
 
 ####################
 ##### Old Code #####

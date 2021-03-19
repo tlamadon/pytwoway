@@ -92,8 +92,7 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/pytwoway_example.html">Simple</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/bipartite_example.html">BipartiteData example</a></li>
-<li class="toctree-l1"><a class="reference internal" href="notebooks/bipartite_example.html#BipartiteData">BipartiteData</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/bipartite_example.html">BipartiteData</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul class="current">
@@ -263,14 +262,17 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BLMEstimator</span></code>()</p></td>
-<td><p></p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BLMEstimator</span></code>([user_blm])</p></td>
+<td><p>Class for solving the BLM model using multiple sets of starting values.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>(jdata, sdata[, n_init, ncore, user_params])</p></td>
-<td><p>Fit EM model for movers and stayers.</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>(jdata, sdata[, n_init, n_best, ncore])</p></td>
+<td><p>EM model for movers and stayers.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_A1</span></code>([dpi])</p></td>
 <td><p>Plot self.model.A1.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_liks_connectedness</span></code>([dpi])</p></td>
+<td><p>Plot likelihoods vs.</p></td>
 </tr>
 </tbody>
 </table>
@@ -440,7 +442,7 @@
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Mar 13, 2021.
+        Last updated on Mar 19, 2021.
       </span>
 
     </p>

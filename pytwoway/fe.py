@@ -51,7 +51,7 @@ class FEEstimator:
     def __init__(self, params):
         '''
         Arguments:
-            params (dictionary): dictionary of parameters for FE estimation
+            params (dict): dictionary of parameters for FE estimation
 
                 Dictionary parameters:
 
@@ -146,7 +146,7 @@ class FEEstimator:
         Defines how the model is unpickled.
 
         Arguments:
-            d (dictionary): attribute dictionary
+            d (dict): attribute dictionary
         '''
         # Need to recreate the simple model and the search representation
         self.__dict__ = d # Make d the attribute dictionary
