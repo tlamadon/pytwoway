@@ -155,6 +155,9 @@ class BipartitePandas(DataFrame):
     '''
 
     def __init__(self, *args, col_dict=None, **kwargs):
+        # Initialize DataFrame
+        super().__init__(*args, **kwargs)
+
         # Begin logging
         self.logger = logging.getLogger('bipartite')
         self.logger.setLevel(logging.DEBUG)
@@ -174,9 +177,6 @@ class BipartitePandas(DataFrame):
         self.logger.addHandler(fh)
         self.logger.addHandler(ch)
         self.logger.info('initializing BipartitePandas object')
-
-        # Initialize DataFrame
-        super().__init__(*args, **kwargs)
 
         # Define some attributes
         self.connected = False # If True, all firms are connected by movers
@@ -979,7 +979,10 @@ class BipartitePandas(DataFrame):
             DataFrame.drop(frame, 'j', axis=1, inplace=True)
 
         # Merge into event study data
+        print(type(frame))
         frame = frame.merge(clusters_df, how='left', on='fid')
+        print(type(frame))
+        stop
         # Keep column as int even with nans
         frame['j'] = frame['j'].astype('Int64')
         frame.col_dict['j'] = 'j'
@@ -1009,6 +1012,9 @@ class BipartiteCollapsed(DataFrame):
     '''
 
     def __init__(self, *args, col_dict=None, **kwargs):
+        # Initialize DataFrame
+        super().__init__(*args, **kwargs)
+
         # Begin logging
         self.logger = logging.getLogger('bipartite')
         self.logger.setLevel(logging.DEBUG)
@@ -1028,9 +1034,6 @@ class BipartiteCollapsed(DataFrame):
         self.logger.addHandler(fh)
         self.logger.addHandler(ch)
         self.logger.info('initializing BipartiteCollapsed object')
-
-        # Initialize DataFrame
-        super().__init__(*args, **kwargs)
 
         # Define some attributes
         self.connected = False # If True, all firms are connected by movers
@@ -1790,6 +1793,9 @@ class BipartiteEventStudy(DataFrame):
     '''
 
     def __init__(self, *args, collapsed, col_dict=None, **kwargs):
+        # Initialize DataFrame
+        super().__init__(*args, **kwargs)
+
         # Begin logging
         self.logger = logging.getLogger('bipartite')
         self.logger.setLevel(logging.DEBUG)
@@ -1809,9 +1815,6 @@ class BipartiteEventStudy(DataFrame):
         self.logger.addHandler(fh)
         self.logger.addHandler(ch)
         self.logger.info('initializing BipartiteEventStudy object')
-
-        # Initialize DataFrame
-        super().__init__(*args, **kwargs)
 
         # Define some attributes
         self.connected = False # If True, all firms are connected by movers
