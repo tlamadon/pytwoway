@@ -1,6 +1,7 @@
 
 from .util import update_dict, melt
 from .bipartite_network import BipartiteData
+from .bipartite_pandas import BipartitePandas, BipartiteCollapsed, BipartiteEventStudy
 from .cre import CREEstimator
 from .fe import FEEstimator
 from .twfe_network import TwoWay

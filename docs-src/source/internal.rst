@@ -79,7 +79,8 @@ Modules and Methods
    ~pytwoway.BipartiteData.copy
    ~pytwoway.BipartiteData.clean_data
    ~pytwoway.BipartiteData.cluster
-   ~pytwoway.BipartiteData.drop_col
+   ~pytwoway.BipartiteData.drop
+   ~pytwoway.BipartiteData.rename
    ~pytwoway.BipartiteData.get_cs
    ~pytwoway.BipartiteData.long_to_collapsed_long
    ~pytwoway.BipartiteData.long_to_es
