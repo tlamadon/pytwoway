@@ -90,9 +90,10 @@ class BipartiteData:
             if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover);
                 optionally include: year_end_1 (last year of observation 1), year_end_2 (last year of observation 2), w1 (weight 1), w2 (weight 2)).
             Keep None if column names already correct
+        collapsed (bool): if True, data collapsed by employment spells. Used for event study data
     '''
 
-    def __init__(self, data, formatting='long', col_dict=None):
+    def __init__(self, data, formatting='long', col_dict=None, collapsed=False):
         # Begin logging
         self.logger = logging.getLogger('bipartite')
         self.logger.setLevel(logging.DEBUG)
@@ -124,7 +125,7 @@ class BipartiteData:
         if self.formatting == 'long_collapsed':
             self.bd = BipartiteLongCollapsed(self.data, self.col_dict)
         elif self.formatting == 'es':
-            self.bd = BipartiteEventStudy(self.data, self.col_dict)
+            self.bd = BipartiteEventStudy(self.data, collapsed, self.col_dict)
 
         self.logger.info('BipartiteData object initialized')
 
@@ -351,7 +352,7 @@ class BipartiteData:
 
     def cluster(self, user_cluster={}):
         '''
-        Cluster data and assign a new column giving the cluster for each firm. Only works if data is formatted as event study.
+        Cluster data and assign a new column giving the cluster for each firm.
 
         Arguments:
             user_cluster (dict): dictionary of parameters for clustering
@@ -672,16 +673,16 @@ class BipartiteLong:
         cols = True
         for col in all_cols:
             if self.col_dict[col] not in self.data.columns:
-                self.logger.info(col, 'missing from data')
+                self.logger.info('{} missing from data'.format(self.col_dict[col]))
                 cols = False
             else:
                 if col in ['year', 'm', 'j']:
                     if self.data[self.col_dict[col]].dtype not in ['int', 'int16', 'int32', 'int64', 'Int64']:
-                        self.logger.info(self.col_dict[col], 'has wrong dtype, should be int but is', self.data[self.col_dict[col]].dtype)
+                        self.logger.info('{} has wrong dtype, should be int but is {}'.format(self.col_dict[col], self.data[self.col_dict[col]].dtype))
                         cols = False
                 elif col == 'comp':
                     if self.data[self.col_dict[col]].dtype not in ['float', 'float16', 'float32', 'float64', 'float128', 'int', 'int16', 'int32', 'int64', 'Int64']:
-                        self.logger.info(self.col_dict[col], 'has wrong dtype, should be float or int but is', self.data[self.col_dict[col]].dtype)
+                        self.logger.info('{} has wrong dtype, should be float or int but is {}'.format(self.col_dict[col], self.data[self.col_dict[col]].dtype))
                         cols = False
 
         self.logger.info('columns correct:' + str(cols))
@@ -1159,6 +1160,8 @@ class BipartiteLong:
             self.data['j'] = self.data['j'].astype(int)
             self.clean_data()
 
+        self.contiguous_cids = True
+
         self.logger.info('clusters merged into event study data')
 
 class BipartiteLongCollapsed:
@@ -1403,16 +1406,16 @@ class BipartiteLongCollapsed:
         cols = True
         for col in all_cols:
             if self.col_dict[col] not in self.data.columns:
-                self.logger.info(col, 'missing from data')
+                self.logger.info('{} missing from data'.format(self.col_dict[col]))
                 cols = False
             else:
                 if col in ['year_start', 'year_end', 'm', 'j']:
                     if self.data[self.col_dict[col]].dtype not in ['int', 'int16', 'int32', 'int64', 'Int64']:
-                        self.logger.info(self.col_dict[col], 'has wrong dtype, should be int but is', self.data[self.col_dict[col]].dtype)
+                        self.logger.info('{} has wrong dtype, should be int but is {}'.format(self.col_dict[col], self.data[self.col_dict[col]].dtype))
                         cols = False
                 elif col in ['comp', 'weight']:
                     if self.data[self.col_dict[col]].dtype not in ['float', 'float16', 'float32', 'float64', 'float128', 'int', 'int16', 'int32', 'int64', 'Int64']:
-                        self.logger.info(self.col_dict[col], 'has wrong dtype, should be float or int but is', self.data[self.col_dict[col]].dtype)
+                        self.logger.info('{} has wrong dtype, should be float or int but is {}'.format(self.col_dict[col], self.data[self.col_dict[col]].dtype))
                         cols = False
 
         self.logger.info('columns correct:' + str(cols))
@@ -1775,12 +1778,12 @@ class BipartiteLongCollapsed:
 
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
         '''
-        # Warn about selecting a year with event study data
-        if user_cluster['year'] is not None:
-            warnings.warn('Can only cluster on a particular year with long form data, but data is currently event study form.')
-
         # Update dictionary
         cluster_params = update_dict(self.default_cluster, user_cluster)
+
+        # Warn about selecting a year with event study data
+        if cluster_params['year'] is not None:
+            warnings.warn('Can only cluster on a particular year with long form data, but data is currently event study form.')
 
         # Unpack dictionary
         cdf_resolution = cluster_params['cdf_resolution']
@@ -1818,6 +1821,8 @@ class BipartiteLongCollapsed:
             self.data = self.data.dropna().reset_index(drop=True)
             self.data['j'] = self.data['j'].astype(int)
             self.clean_data()
+
+        self.contiguous_cids = True
 
         self.logger.info('clusters merged into event study data')
 
@@ -1924,7 +1929,7 @@ class BipartiteEventStudy:
         Returns:
             bd_copy (BipartiteEventStudy): copy of the current instance of BipartiteEventStudy.
         '''
-        bd_copy = BipartiteEventStudy(self.data, self.col_dict)
+        bd_copy = BipartiteEventStudy(self.data, self.collapsed, self.col_dict)
         bd_copy.connected = self.connected
         bd_copy.contiguous_fids = self.contiguous_fids
         bd_copy.contiguous_wids = self.contiguous_wids
@@ -2096,16 +2101,16 @@ class BipartiteEventStudy:
         cols = True
         for col in all_cols:
             if self.col_dict[col] not in self.data.columns:
-                self.logger.info(col, 'column missing from data')
+                self.logger.info('{} column missing from data'.format(self.col_dict[col]))
                 cols = False
             else:
                 if col in ['y1', 'y2', 'w1', 'w2']:
                     if self.data[self.col_dict[col]].dtype not in ['float', 'float16', 'float32', 'float64', 'float128', 'int', 'int16', 'int32', 'int64', 'Int64']:
-                        self.logger.info(col, 'column has wrong dtype, should be float or int but is', self.data[self.col_dict[col]].dtype)
+                        self.logger.info('{} column has wrong dtype, should be float or int but is {}'.format(self.col_dict[col], self.data[self.col_dict[col]].dtype))
                         cols = False
                 elif col in ['year_1', 'year_2', 'year_start_1', 'year_start_2', 'year_end_1', 'year_end_2', 'm', 'j1', 'j2']:
                     if self.data[self.col_dict[col]].dtype not in ['int', 'int16', 'int32', 'int64', 'Int64']:
-                        self.logger.info(col, 'column has wrong dtype, should be int but is', self.data[self.col_dict[col]].dtype)
+                        self.logger.info('{} column has wrong dtype, should be int but is {}'.format(self.col_dict[col], self.data[self.col_dict[col]].dtype))
                         cols = False
 
         self.logger.info('columns correct:' + str(cols))
@@ -2200,7 +2205,7 @@ class BipartiteEventStudy:
             success_movers = False
 
         self.logger.info('--- checking contiguous worker ids ---')
-        wid_max = max(self.data['wid'].max())
+        wid_max = self.data['wid'].max()
         n_workers = self.n_workers()
 
         contig_wids = (wid_max == n_workers - 1)
@@ -2632,12 +2637,12 @@ class BipartiteEventStudy:
 
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
         '''
-        # Warn about selecting a year with event study data
-        if user_cluster['year'] is not None:
-            warnings.warn('Can only cluster on a particular year with long form data, but data is currently event study form.')
-
         # Update dictionary
         cluster_params = update_dict(self.default_cluster, user_cluster)
+
+        # Warn about selecting a year with event study data
+        if cluster_params['year'] is not None:
+            warnings.warn('Can only cluster on a particular year with long form data, but data is currently event study form.')
 
         # Unpack dictionary
         cdf_resolution = cluster_params['cdf_resolution']
@@ -2680,5 +2685,7 @@ class BipartiteEventStudy:
             self.data['j1'] = self.data['j1'].astype(int)
             self.data['j2'] = self.data['j2'].astype(int)
             self.clean_data()
+
+        self.contiguous_cids = True
 
         self.logger.info('clusters merged into event study data')

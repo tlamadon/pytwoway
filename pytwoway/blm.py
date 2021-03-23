@@ -453,8 +453,8 @@ class BLMModel:
         # Store wage outcomes and groups
         Y1 = jdata['y1'].to_numpy()
         Y2 = jdata['y2'].to_numpy()
-        J1 = jdata['j1'].to_numpy()
-        J2 = jdata['j2'].to_numpy()
+        J1 = jdata['j1'].to_numpy().astype(int)
+        J2 = jdata['j2'].to_numpy().astype(int)
 
         # Matrix of posterior probabilities
         qi = np.ones(shape=(ni, nl))
@@ -944,7 +944,7 @@ class BLMEstimator:
 
         # Take the n_best best estimates and find the lowest connectedness
         best_lik_models = sorted_lik_models[: min(n_best, n_init)]
-        sorted_zipped_models = sorted([(model.connectedness, model) for model in best_lik_models])
+        sorted_zipped_models = sorted([(model.connectedness, model) for model in best_lik_models], reverse=True)
         best_model = sorted_zipped_models[0][1]
 
         if self.blm_params['verbose'] in [1, 2]:

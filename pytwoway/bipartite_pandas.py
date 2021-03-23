@@ -9,7 +9,7 @@ import networkx as nx
 from sklearn.cluster import KMeans
 from scipy.sparse.csgraph import connected_components
 import warnings
-from pytwoway import update_dict, start_logger
+from pytwoway import update_dict, logger_init
 
 col_order = ['wid', 'fid', 'f1i', 'f2i', 'comp', 'y1', 'y2', 'year', 'year_1', 'year_2', 'year_start', 'year_end', 'year_start_1', 'year_end_1', 'year_start_2', 'year_end_2', 'weight', 'w1', 'w2', 'j', 'j1', 'j2', 'm', 'cs'].index
 
@@ -116,13 +116,13 @@ class BipartiteBase(DataFrame):
         super().__init__(*args, **kwargs)
 
         # Start logger
-        start_logger(self)
+        logger_init(self)
         self.logger.info('initializing BipartiteBase object')
 
         if len(args) > 0 and isinstance(args[0], (BipartiteBase, BipartiteLongBase)): # FIXME add all subclasses to this tuple
             self.set_attributes(args[0])
         else:
-            self.columns_req = columns_req + ['wid', 'fid', 'comp', 'year']
+            self.columns_req = columns_req + ['wid', 'fid', 'comp']
             self.columns_opt = columns_opt + ['m', 'j']
             self.reference_dict = update_dict({'wid': 'wid', 'm': 'm'}, reference_dict)
             self.col_dtype_dict = update_dict({'wid': 'int', 'fid': 'int', 'comp': 'float', 'year': 'int', 'm': 'int', 'j': 'int'}, col_dtype_dict)
@@ -573,13 +573,13 @@ class BipartiteBase(DataFrame):
         for col in all_cols:
             for subcol in _to_list(self.reference_dict[col]):
                 if frame.col_dict[subcol] not in frame.columns:
-                    frame.logger.info(subcol, 'missing from data')
+                    frame.logger.info('{} missing from data'.format(frame.col_dict[subcol]))
                     col_dtypes = False
                 else:
                     col_type = frame[frame.col_dict[subcol]].dtype
                     valid_types = _to_list(frame.dtype_dict[frame.col_dtype_dict[col]])
                     if col_type not in valid_types:
-                        frame.logger.info(frame.col_dict[subcol], 'has wrong dtype, should be', frame.col_dtype_dict[col], 'but is', col_type)
+                        frame.logger.info('{} has wrong dtype, should be {} but is {}'.format(frame.col_dict[subcol], frame.col_dtype_dict[col], col_type))
                         col_dtypes = False
 
         frame.logger.info('column datatypes correct:' + str(col_dtypes))
@@ -954,6 +954,7 @@ class BipartiteLongBase(BipartiteBase):
     '''
 
     def __init__(self, *args, columns_req=[], columns_opt=[], reference_dict={}, col_dtype_dict={}, col_dict=None, **kwargs):
+        columns_req += ['year']
         reference_dict = update_dict({'fid': 'fid', 'comp': 'comp', 'j': 'j'}, reference_dict)
         # Initialize DataFrame
         super().__init__(*args, columns_req=columns_req, columns_opt=columns_opt, reference_dict=reference_dict, col_dtype_dict=col_dtype_dict, col_dict=col_dict, **kwargs)
@@ -1397,64 +1398,10 @@ class BipartiteEventStudyBase(BipartiteBase):
     '''
 
     def __init__(self, *args, columns_req=[], columns_opt=[], reference_dict={}, col_dtype_dict={}, col_dict=None, **kwargs):
-        columns_opt += ['weight']
-        reference_dict = update_dict({'fid': ['f1i', 'f2i'], 'comp': ['y1', 'y2'], 'weight': ['w1', 'w2'], 'j': ['j1', 'j2']}, reference_dict)
-        col_dtype_dict = update_dict({'weight': 'weight'}, col_dtype_dict)
+        columns_opt += ['year']
+        reference_dict = update_dict({'fid': ['f1i', 'f2i'], 'comp': ['y1', 'y2'], 'j': ['j1', 'j2']}, reference_dict)
         # Initialize DataFrame
         super().__init__(*args, columns_req=columns_req, columns_opt=columns_opt, reference_dict=reference_dict, col_dtype_dict=col_dtype_dict, col_dict=col_dict, **kwargs)
-
-        # Define default parameter dictionaries
-        default_col_dict = {
-            'wid': 'wid',
-            'f1i': 'f1i',
-            'f2i': 'f2i',
-            'y1': 'y1',
-            'y2': 'y2',
-            'w1': None,
-            'w2': None,
-            'm': None,
-            'j1': None,
-            'j2': None
-        }
-        if collapsed:
-            default_col_dict['year_start_1'] = 'year_start_1'
-            default_col_dict['year_start_2'] = 'year_start_2'
-            default_col_dict['year_end_1'] = 'year_end_1'
-            default_col_dict['year_end_2'] = 'year_end_2'
-            
-        else:
-            default_col_dict['year_1'] = 'year_1'
-            default_col_dict['year_2'] = 'year_2'
-
-        self.default_KMeans = {
-            'n_clusters': 10,
-            'init': 'k-means++',
-            'n_init': 500,
-            'max_iter': 300,
-            'tol': 0.0001,
-            'precompute_distances': 'deprecated',
-            'verbose': 0,
-            'random_state': None,
-            'copy_x': True,
-            'n_jobs': 'deprecated',
-            'algorithm': 'auto'
-        }
-
-        self.default_cluster = {
-            'cdf_resolution': 10,
-            'grouping': 'quantile_all',
-            'stayers_movers': None,
-            'year': None,
-            'dropna': False,
-            'user_KMeans': self.default_KMeans
-        }
-
-        # Create self.col_dict
-        optional_cols = [['w1', 'w2'], ['m'], ['j1', 'j2']]
-        self.col_dict = _col_dict_optional_cols(default_col_dict, col_dict, self.columns, optional_cols=optional_cols)
-
-        if self.col_dict['j1'] is not None and self.col_dict['j2'] is not None:
-            self.contiguous_cids = False
 
         self.logger.info('BipartiteEventStudy object initialized')
 
@@ -1463,24 +1410,7 @@ class BipartiteEventStudyBase(BipartiteBase):
         '''
         For inheritance from Pandas.
         '''
-        return BipartiteEventStudy
-
-    def copy(self):
-        '''
-        Copy the current instance of BipartiteEventStudy.
-
-        Returns:
-            bd_copy (BipartiteEventStudy): copy of the current instance of BipartiteEventStudy.
-        '''
-        bd_copy = BipartiteEventStudy(DataFrame.copy(self), col_dict=self.col_dict)
-        bd_copy.connected = self.connected
-        bd_copy.contiguous_fids = self.contiguous_fids
-        bd_copy.contiguous_wids = self.contiguous_wids
-        bd_copy.contiguous_cids = self.contiguous_cids
-        bd_copy.no_na = self.no_na
-        bd_copy.no_duplicates = self.no_duplicates
-
-        return bd_copy
+        return BipartiteEventStudyBase
 
     def clean_data(self, inplace=True):
         '''
@@ -1490,60 +1420,20 @@ class BipartiteEventStudyBase(BipartiteBase):
             inplace (bool): if True, modify in-place
 
         Returns:
-            frame (BipartiteEventStudy): BipartiteEventStudy with cleaned data
+            frame (BipartiteEventStudyBase): BipartiteEventStudyBase with cleaned data
         '''
         if inplace:
             frame = self
         else:
             frame = self.copy()
 
-        frame.logger.info('beginning data cleaning')
+        frame.logger.info('beginning BipartiteEventStudyBase data cleaning')
         frame.logger.info('checking quality of data')
-        # Make sure data is valid - computes no_na, no_duplicates, connected, and contiguous, along with other checks (note that column names are corrected in data_validity() if all columns are in the data)
         frame.data_validity()
 
-        # Next, drop NaN observations
-        if not frame.no_na:
-            frame.logger.info('dropping NaN observations')
-            frame.dropna(inplace=True)
+        frame.logger.info('BipartiteEventStudyBase data cleaning complete')
 
-            # Update no_na
-            frame.no_na = True
-
-        # Next, drop duplicate observations
-        if not frame.no_duplicates:
-            frame.logger.info('dropping duplicate observations')
-            frame.drop_duplicates(inplace=True)
-
-            # Update no_duplicates
-            frame.no_duplicates = True
-
-        # Next, find largest set of firms connected by movers
-        if not frame.connected:
-            # Generate largest connected set
-            frame.logger.info('generating largest connected set')
-            frame.conset()
-
-        # Next, make firm ids contiguous
-        if not frame.contiguous_fids:
-            frame.logger.info('making firm ids contiguous')
-            frame.contiguous_ids('fid')
-
-        # Next, make worker ids contiguous
-        if not frame.contiguous_wids:
-            frame.logger.info('making firm ids contiguous')
-            frame.contiguous_ids('wid')
-
-        # Next, make cluster ids contiguous
-        if frame.contiguous_cids is not None and not frame.contiguous_cids:
-            frame.logger.info('making cluster ids contiguous')
-            frame.contiguous_ids('j')
-
-        # Using contiguous fids, get NetworkX Graph of largest connected set (note that this must be done even if firms already connected and contiguous)
-        frame.logger.info('generating NetworkX Graph of largest connected set')
-        # frame.G = frame.conset() # FIXME currently not used
-
-        frame.logger.info('data cleaning complete')
+        BipartiteBase.clean_data(self)
 
         return frame
 
@@ -1555,7 +1445,7 @@ class BipartiteEventStudyBase(BipartiteBase):
             inplace (bool): if True, modify in-place
 
         Returns:
-            frame (BipartiteEventStudy): BipartiteEventStudy with corrected columns and attributes
+            frame (BipartiteEventStudyBase): BipartiteEventStudyBase with corrected columns and attributes
         '''
         if inplace:
             frame = self
@@ -1598,37 +1488,23 @@ class BipartiteEventStudyBase(BipartiteBase):
         Returns:
             data_cs (Pandas DataFrame): cross section data
         '''
-        # Determine whether weight, m, cluster columns exist
-        weighted = self.col_dict['w1'] is not None and self.col_dict['w2'] is not None
-        m = self.col_dict['m'] is not None
-        clustered = self.col_dict['j1'] is not None and self.col_dict['j2'] is not None
-
-        if not m:
+        # Determine whether m column exists
+        if not self.col_included('m'):
             self.gen_m()
 
         sdata = self[self['m'] == 0]
         jdata = self[self['m'] == 1]
 
-        # Assign some values
-        ns = len(sdata)
-        nm = len(jdata)
+        # # Assign some values
+        # ns = len(sdata)
+        # nm = len(jdata)
 
         # # Reset index
         # sdata.set_index(np.arange(ns) + 1 + nm)
         # jdata.set_index(np.arange(nm) + 1)
 
         # Columns used for constructing cross section
-        cs_cols = ['wid', 'f1i', 'f2i', 'y1', 'y2']
-
-        if clustered:
-            cs_cols += ['j1', 'j2']
-        if 'year_1' in self.col_dict.keys():
-            cs_cols += ['year_1', 'year_2']
-        else:
-            cs_cols += ['year_start_1', 'year_start_2', 'year_end_1', 'year_end_2']
-        if weighted:
-            cs_cols += ['w1', 'w2']
-        cs_cols += ['m']
+        cs_cols = self.included_cols()
 
         rename_dict = {
             'f1i': 'f2i',
@@ -1662,6 +1538,30 @@ class BipartiteEventStudyBase(BipartiteBase):
 
         return data_cs
 
+class BipartiteEventStudy(BipartiteEventStudyBase):
+    '''
+    Class for bipartite networks of firms and workers in event study form. Inherits from BipartiteEventStudyBase.
+
+    Arguments:
+        *args: arguments for Pandas DataFrame
+        col_dict (dict): make data columns readable (requires: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover); optionally include: year_1 (year of observation 1), year_2 (year of observation 2)). Keep None if column names already correct
+        **kwargs: keyword arguments for Pandas DataFrame
+    '''
+
+    def __init__(self, *args, col_dict=None, **kwargs):
+        reference_dict = {'year': ['year_1', 'year_2']}
+        # Initialize DataFrame
+        super().__init__(*args, reference_dict=reference_dict, col_dict=col_dict, **kwargs)
+
+        self.logger.info('BipartiteEventStudy object initialized')
+
+    @property
+    def _constructor(self):
+        '''
+        For inheritance from Pandas.
+        '''
+        return BipartiteEventStudy
+
     def get_long(self):
         '''
         Return event study data reformatted into long form.
@@ -1669,153 +1569,168 @@ class BipartiteEventStudyBase(BipartiteBase):
         Returns:
             long_frame (BipartiteLong): BipartiteLong object generated from event study data
         '''
-        if not self.collapsed:
-            # Determine whether weight, m, cluster columns exist
-            weighted = self.col_dict['w1'] is not None and self.col_dict['w2'] is not None
-            m = self.col_dict['m'] is not None
-            clustered = self.col_dict['j1'] is not None and self.col_dict['j2'] is not None
+        # Determine whether weight, m, cluster, year columns exist
+        weighted = self.col_included('weight')
+        m = self.col_included('m')
+        clustered = self.col_included('j')
+        years = self.col_included('year')
 
-            if not m:
-                self.gen_m()
+        if not m:
+            self.gen_m()
 
-            # Columns to drop
-            drops = ['f2i', 'y2', 'year_2']
+        # Columns to drop
+        drops = ['f2i', 'y2']
 
-            rename_dict_1 = {
-                'f1i': 'f2i',
-                'f2i': 'f1i',
-                'y1': 'y2',
-                'y2': 'y1',
-                'year_1': 'year_2',
-                'year_2': 'year_1',
-                'w1': 'w2',
-                'w2': 'w1',
-                'j1': 'j2',
-                'j2': 'j1'
-            }
+        rename_dict_1 = {
+            'f1i': 'f2i',
+            'f2i': 'f1i',
+            'y1': 'y2',
+            'y2': 'y1',
+            'year_1': 'year_2',
+            'year_2': 'year_1',
+            'w1': 'w2',
+            'w2': 'w1',
+            'j1': 'j2',
+            'j2': 'j1'
+        }
 
-            rename_dict_2 = {
-                'f1i': 'fid',
-                'y1': 'comp',
-                'year_1': 'year',
-                'w1': 'weight',
-                'j1': 'j'
-            }
+        rename_dict_2 = {
+            'f1i': 'fid',
+            'y1': 'comp',
+            'year_1': 'year',
+            'w1': 'weight',
+            'j1': 'j'
+        }
 
-            astype_dict = {
-                'wid': int,
-                'fid': int,
-                'year': int,
-                'm': int
-            }
+        astype_dict = {
+            'wid': int,
+            'fid': int,
+            'm': int
+        }
 
-            if clustered:
-                drops += ['j2']
-                astype_dict['j'] = int
-            if weighted:
-                drops += ['w2']
-                astype_dict['weight'] = int
+        if clustered:
+            drops += ['j2']
+            astype_dict['j'] = int
+        if weighted:
+            drops += ['w2']
+            astype_dict['weight'] = int
+        if years:
+            drops += ['year_2']
+            astype_dict['year'] = int
 
-            # Append the last row if a mover (this is because the last observation is only given as an f2i, never as an f1i)
-            data_long = self.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename(rename_dict_1, axis=1)) if a.iloc[0]['m'] == 1 else a) \
-                .reset_index(drop=True) \
-                .drop(drops, axis=1) \
-                .rename(rename_dict_2, axis=1) \
-                .astype(astype_dict)
+        # Append the last row if a mover (this is because the last observation is only given as an f2i, never as an f1i)
+        data_long = pd.DataFrame(self).groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename(rename_dict_1, axis=1)) if a.iloc[0]['m'] == 1 else a) \
+            .reset_index(drop=True) \
+            .drop(drops, axis=1) \
+            .rename(rename_dict_2, axis=1) \
+            .astype(astype_dict)
 
-            # Sort columns
-            sorted_cols = sorted(data_long.columns, key=col_order)
-            data_long = data_long[sorted_cols]
+        # Sort columns
+        sorted_cols = sorted(data_long.columns, key=col_order)
+        data_long = data_long[sorted_cols]
 
-            long_frame = BipartiteLong(data_long)
-            long_frame.connected = self.connected
-            long_frame.contiguous_fids = self.contiguous_fids
-            long_frame.contiguous_wids = self.contiguous_wids
-            long_frame.contiguous_cids = self.contiguous_cids
-            long_frame.no_na = self.no_na
-            long_frame.no_duplicates = self.no_duplicates
+        long_frame = BipartiteLong(data_long)
+        long_frame.set_attributes(self, no_dict=True)
 
-            return long_frame
-        else:
-            warnings.warn('Data is formatted as collapsed long, cannot un-collapse data. Try running es_to_collapsed_long() to convert your data into collapsed long form.')
+        return long_frame
+
+class BipartiteEventStudyCollapsed(BipartiteEventStudyBase):
+    '''
+    Class for bipartite networks of firms and workers in collapsed event study form (i.e. employment spells are collapsed into a single observation). Inherits from BipartiteEventStudyBase.
+
+    Arguments:
+        *args: arguments for Pandas DataFrame
+        col_dict (dict): make data columns readable (requires: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover); optionally include: year_start_1 (first year of observation 1 spell), year_end_1 (last year of observation 1 spell), year_start_2 (first year of observation 2 spell), year_end_2 (last year of observation 2 spell)). Keep None if column names already correct
+        **kwargs: keyword arguments for Pandas DataFrame
+    '''
+
+    def __init__(self, *args, col_dict=None, **kwargs):
+        columns_opt = ['weight']
+        reference_dict = {'year': ['year_start_1', 'year_end_1', 'year_start_2', 'year_end_2']}
+        # Initialize DataFrame
+        super().__init__(*args, columns_opt=columns_opt, reference_dict=reference_dict, col_dict=col_dict, **kwargs)
+
+        self.logger.info('BipartiteEventStudyCollapsed object initialized')
+
+    @property
+    def _constructor(self):
+        '''
+        For inheritance from Pandas.
+        '''
+        return BipartiteEventStudyCollapsed
 
     def get_collapsed_long(self):
         '''
-        Return event study data reformatted into collapsed long form.
+        Return collapsed event study data reformatted into collapsed long form.
 
         Returns:
             collapsedlong_frame (BipartiteCollapsed): BipartiteCollapsed object generated from event study data
         '''
-        if self.collapsed:
-            # Determine whether weight, m, cluster columns exist
-            weighted = self.col_dict['w1'] is not None and self.col_dict['w2'] is not None
-            m = self.col_dict['m'] is not None
-            clustered = self.col_dict['j1'] is not None and self.col_dict['j2'] is not None
+        # Determine whether weight, m, cluster, year columns exist
+        weighted = self.col_included('weight')
+        m = self.col_included('m')
+        clustered = self.col_included('j')
+        years = self.col_included('year')
 
-            if not m:
-                self.gen_m()
+        if not m:
+            self.gen_m()
 
-            # Columns to drop
-            drops = ['f2i', 'y2', 'year_start_2', 'year_end_2']
+        # Columns to drop
+        drops = ['f2i', 'y2']
 
-            rename_dict_1 = {
-                'f1i': 'f2i',
-                'f2i': 'f1i',
-                'y1': 'y2',
-                'y2': 'y1',
-                'year_start_1': 'year_start_2',
-                'year_start_2': 'year_start_1',
-                'year_end_1': 'year_end_2',
-                'year_end_2': 'year_end_1',
-                'w1': 'w2',
-                'w2': 'w1',
-                'j1': 'j2',
-                'j2': 'j1'
-            }
+        rename_dict_1 = {
+            'f1i': 'f2i',
+            'f2i': 'f1i',
+            'y1': 'y2',
+            'y2': 'y1',
+            'year_start_1': 'year_start_2',
+            'year_start_2': 'year_start_1',
+            'year_end_1': 'year_end_2',
+            'year_end_2': 'year_end_1',
+            'w1': 'w2',
+            'w2': 'w1',
+            'j1': 'j2',
+            'j2': 'j1'
+        }
 
-            rename_dict_2 = {
-                'f1i': 'fid',
-                'y1': 'comp',
-                'year_start_1': 'year_start',
-                'year_end_1': 'year_end',
-                'w1': 'weight',
-                'j1': 'j'
-            }
+        rename_dict_2 = {
+            'f1i': 'fid',
+            'y1': 'comp',
+            'year_start_1': 'year_start',
+            'year_end_1': 'year_end',
+            'w1': 'weight',
+            'j1': 'j'
+        }
 
-            astype_dict = {
-                'wid': int,
-                'fid': int,
-                'year_start': int,
-                'year_end': int,
-                'm': int
-            }
+        astype_dict = {
+            'wid': int,
+            'fid': int,
+            'm': int
+        }
 
-            if clustered:
-                drops += ['j2']
-                astype_dict['j'] = int
-            if weighted:
-                drops += ['w2']
-                astype_dict['weight'] = int
+        if clustered:
+            drops += ['j2']
+            astype_dict['j'] = int
+        if weighted:
+            drops += ['w2']
+            astype_dict['weight'] = int
+        if years:
+            drops += ['year_start_2', 'year_end_2']
+            astype_dict['year_start'] = int
+            astype_dict['year_end'] = int
 
-            # Append the last row if a mover (this is because the last observation is only given as an f2i, never as an f1i)
-            data_collapsed_long = self.groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename(rename_dict_1, axis=1)) if a.iloc[0]['m'] == 1 else a) \
-                .reset_index(drop=True) \
-                .drop(drops, axis=1) \
-                .rename(rename_dict_2, axis=1) \
-                .astype(astype_dict)
+        # Append the last row if a mover (this is because the last observation is only given as an f2i, never as an f1i)
+        data_collapsed_long = pd.DataFrame(self).groupby('wid').apply(lambda a: a.append(a.iloc[-1].rename(rename_dict_1, axis=1)) if a.iloc[0]['m'] == 1 else a) \
+            .reset_index(drop=True) \
+            .drop(drops, axis=1) \
+            .rename(rename_dict_2, axis=1) \
+            .astype(astype_dict)
 
-            # Sort columns
-            sorted_cols = sorted(data_collapsed_long.columns, key=col_order)
-            data_collapsed_long = data_collapsed_long[sorted_cols]
+        # Sort columns
+        sorted_cols = sorted(data_collapsed_long.columns, key=col_order)
+        data_collapsed_long = data_collapsed_long[sorted_cols]
 
-            collapsedlong_frame = BipartiteCollapsed(data_collapsed_long)
-            collapsedlong_frame.connected = self.connected
-            collapsedlong_frame.contiguous_fids = self.contiguous_fids
-            collapsedlong_frame.contiguous_wids = self.contiguous_wids
-            collapsedlong_frame.contiguous_cids = self.contiguous_cids
-            collapsedlong_frame.no_na = self.no_na
-            collapsedlong_frame.no_duplicates = self.no_duplicates
+        collapsedlong_frame = BipartiteLongCollapsed(data_collapsed_long)
+        collapsedlong_frame.set_attributes(self, no_dict=True)
 
-            return collapsedlong_frame
-        else:
-            warnings.warn('Event study data is not collapsed, cannot refactor into collapsed long form. Try running es_to_long(), then long_to_collapsed_long() to convert your data into collapsed long form.')
+        return collapsedlong_frame

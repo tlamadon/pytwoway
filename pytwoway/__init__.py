@@ -1,7 +1,7 @@
 
-from .util import update_dict, melt, start_logger
+from .util import update_dict, melt, logger_init
 from .bipartite_network import BipartiteData
-from .bipartite_pandas import BipartiteBase, BipartiteCollapsed, BipartiteEventStudy
+# from .bipartite_pandas import BipartiteBase, BipartiteCollapsed, BipartiteEventStudy
 from .cre import CREEstimator
 from .fe import FEEstimator
 from .twfe_network import TwoWay
