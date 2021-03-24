@@ -14,7 +14,7 @@ from multiprocessing import Pool
 import itertools
 import time
 import warnings
-from pytwoway import update_dict, melt #, istarmap # To allow tqdm + starmap
+from pytwoway import update_dict, jitter_scatter #, istarmap # To allow tqdm + starmap
 from tqdm import tqdm, trange
 
 ####################
@@ -895,10 +895,15 @@ class BLMEstimator:
     '''
 
     def __init__(self, user_blm={}):
-        self.blm_params = user_blm
+        default_blm = {
+            'verbose': 0 # If 0, print no output; if 1, print additional output; if 2, print maximum output
+        }
+        self.blm_params = update_dict(default_blm, user_blm)
         self.model = None # No initial model
-        self.liks_all = None # No likelihoods yet
-        self.connectedness_all = None # No connectedness yet
+        self.liks_high = None # No likelihoods yet
+        self.connectedness_high = None # No connectedness yet
+        self.liks_low = None # No likelihoods yet
+        self.connectedness_low = None # No connectedness yet
 
     def _sim_model(self, jdata):
         '''
@@ -934,16 +939,24 @@ class BLMEstimator:
         sorted_lik_models = [model for _, model in sorted_zipped_models]
 
         # Save likelihood vs. connectedness for all models
-        liks_all = np.zeros(shape=n_init) # Save all likelihoods
-        connectedness_all = np.zeros(shape=n_init) # Save all connectedness
+        liks_high = np.zeros(shape=n_best) # Save likelihoods for n_best
+        connectedness_high = np.zeros(shape=n_best) # Save connectedness for n_best
+        liks_low = np.zeros(shape=n_init - n_best) # Save likelihoods for not n_best
+        connectedness_low = np.zeros(shape=n_init - n_best) # Save connectedness for not n_best
         for i, model in enumerate(sorted_lik_models):
-            liks_all[i] = model.lik1
-            connectedness_all[i] = model.connectedness
-        self.liks_all = liks_all
-        self.connectedness_all = connectedness_all
+            if i < n_best:
+                liks_high[i] = model.lik1
+                connectedness_high[i] = model.connectedness
+            else:
+                liks_low[i - n_best] = model.lik1
+                connectedness_low[i - n_best] = model.connectedness
+        self.liks_high = liks_high
+        self.connectedness_high = connectedness_high
+        self.liks_low = liks_low
+        self.connectedness_low = connectedness_low
 
         # Take the n_best best estimates and find the lowest connectedness
-        best_lik_models = sorted_lik_models[: min(n_best, n_init)]
+        best_lik_models = sorted_lik_models[: n_best]
         sorted_zipped_models = sorted([(model.connectedness, model) for model in best_lik_models], reverse=True)
         best_model = sorted_zipped_models[0][1]
 
@@ -968,17 +981,31 @@ class BLMEstimator:
         else:
             warnings.warn('Estimation has not yet been run.')
 
-    def plot_liks_connectedness(self, dpi=None):
+    def plot_liks_connectedness(self, jitter=False, dpi=None):
         '''
         Plot likelihoods vs. connectedness for the estimations run.
 
         Arguments:
+            jitter (bool): if True, jitter points to prevent overlap
             dpi (float): dpi for plot
         '''
-        if self.liks_all is not None and self.connectedness_all is not None:
+        if self.model is not None and self.liks_high is not None and self.connectedness_high is not None and self.liks_low is not None and self.connectedness_low is not None:
             if dpi is not None:
                 plt.figure(dpi=dpi)
-            plt.scatter(self.liks_all, self.connectedness_all)
+            # So best estimation only graphed once, drop index from liks_high and connectedness_high
+            liks_high_lst = list(self.liks_high)
+            connectedness_high_lst = list(self.connectedness_high)
+            drop_index = list(zip(liks_high_lst, connectedness_high_lst)).index((self.model.lik1, self.model.connectedness))
+            del liks_high_lst[drop_index]
+            del connectedness_high_lst[drop_index]
+            # Now graph
+            if jitter:
+                plot = jitter_scatter
+            else:
+                plot = plt.scatter
+            plot(self.liks_low, self.connectedness_low, marker='o', facecolors='None', edgecolors='C0')
+            plot(liks_high_lst, connectedness_high_lst, marker='^', facecolors='None', edgecolors='C1')
+            plt.scatter(self.model.lik1, self.model.connectedness, marker=(6, 2, 45), facecolors='C2')
             plt.xlabel('Likelihood')
             plt.ylabel('Connectedness')
             plt.show()

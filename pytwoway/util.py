@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 
 def update_dict(default_params, user_params):
     '''
@@ -62,3 +63,12 @@ def logger_init(obj):
     # Add the handlers to the logger
     obj.logger.addHandler(fh)
     obj.logger.addHandler(ch)
+
+# Source for the following 2 functions:
+# https://stackoverflow.com/a/21276920
+def _rand_jitter(arr):
+    stdev = .01 * (max(arr) - min(arr))
+    return arr + np.random.randn(len(arr)) * stdev
+
+def jitter_scatter(x, y, **kwargs):
+    return plt.scatter(_rand_jitter(x), _rand_jitter(y), **kwargs)

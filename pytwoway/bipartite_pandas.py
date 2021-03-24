@@ -21,7 +21,7 @@ def _col_dict_optional_cols(default_col_dict, user_col_dict, data_cols, optional
         default_col_dict (dict): default col_dict values
         user_col_dict (dict): user col_dict
         data_cols (list): columns from user data
-        optional_cols (list of lists): optional columns to check if included in user data. If sub-list has multiple columns, all columns must be included in the data for them to be added to new_col_dict.
+        optional_cols (list of lists): optional columns to check if included in user data. If sub-list has multiple columns, all columns must be included in the data for them to be added to new_col_dict
 
     Returns:
         new_col_dict (dict): updated col_dict
@@ -61,41 +61,6 @@ def _to_list(data):
         return [data]
     return data
 
-# def __repr__(self):
-#     '''
-#     Print statement.
-#     '''
-#     if self.formatting == 'long':
-#         collapsed = False
-#     elif self.formatting == 'long_collapsed':
-#         collapsed = True
-#     else:
-#         collapsed = self.bd.collapsed
-#     if self.formatting in ['long', 'long_collapsed']:
-#         mean_wage = np.mean(self.data['comp'])
-#         max_wage = self.data['comp'].max()
-#         min_wage = self.data['comp'].min()
-#     elif self.formatting == 'es':
-#         mean_wage = np.mean(self.data[['y1', 'y2']].to_numpy().flatten())
-#         max_wage = self.data[['y1', 'y2']].to_numpy().flatten().max()
-#         min_wage = self.data[['y1', 'y2']].to_numpy().flatten().min()
-#     ret_str = 'format: ' + self.formatting + '\n'
-#     ret_str += 'number of workers: ' + str(self.bd.n_workers()) + '\n'
-#     ret_str += 'number of firms: ' + str(self.bd.n_firms()) + '\n'
-#     ret_str += 'number of observations: ' + str(len(self.bd.data)) + '\n'
-#     ret_str += 'mean wage: ' + str(mean_wage) + '\n'
-#     ret_str += 'max wage: ' + str(max_wage) + '\n'
-#     ret_str += 'min wage: ' + str(min_wage) + '\n'
-#     ret_str += 'collapsed by spell: ' + str(collapsed) + '\n'
-#     ret_str += 'connected: ' + str(self.bd.connected) + '\n'
-#     ret_str += 'contiguous firm ids: ' + str(self.bd.contiguous_fids) + '\n'
-#     ret_str += 'contiguous worker ids: ' + str(self.bd.contiguous_wids) + '\n'
-#     ret_str += 'contiguous cluster ids (None if not clustered): ' + str(self.bd.contiguous_cids) + '\n'
-#     ret_str += 'no nans: ' + str(self.bd.no_na) + '\n'
-#     ret_str += 'no duplicates: ' + str(self.bd.no_duplicates) + '\n'
-
-#     return ret_str
-
 class BipartiteBase(DataFrame):
     '''
     Base class for BipartitePandas, where BipartitePandas gives a bipartite network of firms and workers. Contains generalized methods. Inherits from DataFrame.
@@ -127,15 +92,15 @@ class BipartiteBase(DataFrame):
             self.reference_dict = update_dict({'wid': 'wid', 'm': 'm'}, reference_dict)
             self.col_dtype_dict = update_dict({'wid': 'int', 'fid': 'int', 'comp': 'float', 'year': 'int', 'm': 'int', 'j': 'int'}, col_dtype_dict)
             default_col_dict = {}
-            for col in _to_list(columns_req):
-                for subcol in _to_list(reference_dict[col]):
+            for col in _to_list(self.columns_req):
+                for subcol in _to_list(self.reference_dict[col]):
                     default_col_dict[subcol] = subcol
-            for col in _to_list(columns_opt):
-                for subcol in _to_list(reference_dict[col]):
+            for col in _to_list(self.columns_opt):
+                for subcol in _to_list(self.reference_dict[col]):
                     default_col_dict[subcol] = None
 
             # Create self.col_dict
-            self.col_dict = _col_dict_optional_cols(default_col_dict, col_dict, self.columns, optional_cols=columns_opt)
+            self.col_dict = _col_dict_optional_cols(default_col_dict, col_dict, self.columns, optional_cols=[self.reference_dict[col] for col in self.columns_opt])
 
             # Set attributes
             self.reset_attributes()
@@ -179,6 +144,30 @@ class BipartiteBase(DataFrame):
         '''
         return BipartiteBase
 
+    def summary(self):
+        '''
+        Print summary statistics.
+        '''
+        mean_wage = np.mean(self[self.reference_dict['comp']])
+        max_wage = np.max(self[self.reference_dict['comp']])
+        min_wage = np.min(self[self.reference_dict['comp']])
+        ret_str = 'format: ' + type(self).__name__ + '\n'
+        ret_str += 'number of workers: ' + str(self.n_workers()) + '\n'
+        ret_str += 'number of firms: ' + str(self.n_firms()) + '\n'
+        ret_str += 'number of observations: ' + str(len(self)) + '\n'
+        ret_str += 'mean wage: ' + str(mean_wage) + '\n'
+        ret_str += 'max wage: ' + str(max_wage) + '\n'
+        ret_str += 'min wage: ' + str(min_wage) + '\n'
+        ret_str += 'connected: ' + str(self.connected) + '\n'
+        ret_str += 'contiguous firm ids: ' + str(self.contiguous_fids) + '\n'
+        ret_str += 'contiguous worker ids: ' + str(self.contiguous_wids) + '\n'
+        ret_str += 'contiguous cluster ids (None if not clustered): ' + str(self.contiguous_cids) + '\n'
+        ret_str += 'correct column names and types: ' + str(self.correct_cols) + '\n'
+        ret_str += 'no nans: ' + str(self.no_na) + '\n'
+        ret_str += 'no duplicates: ' + str(self.no_duplicates) + '\n'
+
+        print(ret_str)
+
     def n_workers(self):
         '''
         Get the number of unique workers.
@@ -196,7 +185,7 @@ class BipartiteBase(DataFrame):
             (int): number of unique firms
         '''
         fid_lst = []
-        for fid_col in self.reference_dict['fid']:
+        for fid_col in _to_list(self.reference_dict['fid']):
             fid_lst += list(self[fid_col].unique())
         return len(set(fid_lst))
 
@@ -279,9 +268,12 @@ class BipartiteBase(DataFrame):
             return True
         return False
 
-    def included_cols(self):
+    def included_cols(self, flat=False):
         '''
-        Get all columns included from the pre-established required/optional lists. Uses general column names for joint columns, e.g. returns 'j' instead of 'j1', 'j2'.
+        Get all columns included from the pre-established required/optional lists.
+        
+        Arguments:
+            flat (bool): if False, uses general column names for joint columns, e.g. returns 'j' instead of 'j1', 'j2'.
 
         Returns:
             all_cols (list): included columns
@@ -294,7 +286,10 @@ class BipartiteBase(DataFrame):
                     include = False
                     break
             if include:
-                all_cols.append(col)
+                if flat:
+                    all_cols += _to_list(self.reference_dict[col])
+                else:
+                    all_cols.append(col)
         return all_cols
 
     def drop(self, indices, axis=1, inplace=True):
@@ -326,9 +321,9 @@ class BipartiteBase(DataFrame):
                     elif col not in self.columns_req and col not in self.columns_opt: # If column is not pre-established
                         DataFrame.drop(frame, col, axis=1, inplace=True)
                     else:
-                        warnings.warn('{} is a required column and cannot be dropped')
+                        warnings.warn('{} is a required column and cannot be dropped'.format(col))
                 else:
-                    warnings.warn('{} is not in data columns')
+                    warnings.warn('{} is not in data columns'.format(col))
         elif axis == 0:
             DataFrame.drop(frame, indices, axis=0, inplace=True)
             frame.reset_attributes()
@@ -367,9 +362,9 @@ class BipartiteBase(DataFrame):
                 elif col_cur not in self.columns_req and col_cur not in self.columns_opt: # If column is not pre-established
                         DataFrame.rename(frame, {col_cur: col_new}, axis=1, inplace=True)
                 else:
-                    warnings.warn('{} is a required column and cannot be renamed')
+                    warnings.warn('{} is a required column and cannot be renamed'.format(col_cur))
             else:
-                warnings.warn('{} is not in data columns')
+                warnings.warn('{} is not in data columns'.format(col_cur))
 
         return frame
 
@@ -385,10 +380,8 @@ class BipartiteBase(DataFrame):
             frame (BipartiteBase): merged dataframe
         '''
         frame = DataFrame.merge(self, *args, **kwargs)
-        frame = BipartiteBase(frame) # Use correct constructor
-        if kwargs['how'] == 'left':
-            frame.set_attributes(self)
-        else: # Non-left merge could cause issues with data
+        frame = self._constructor(frame) # Use correct constructor
+        if kwargs['how'] != 'left': # Non-left merge could cause issues with data
             frame.reset_attributes()
         return frame
 
@@ -426,9 +419,10 @@ class BipartiteBase(DataFrame):
             # Merge new, contiguous ids into event study data
             frame = frame.merge(ids_df, how='left', on=id)
 
-            # Drop old id column and rename contiguous id column
-            frame.drop(id, axis=1, inplace=True)
-            frame.rename({'adj_' + id: id}, axis=1, inplace=True)
+            # Adjust id column to use new contiguous id
+            frame[id] = frame['adj_' + id]
+            # print(type(frame))
+            frame.drop('adj_' + id)
 
         # Sort columns
         sorted_cols = sorted(frame.columns, key=col_order)
@@ -475,7 +469,9 @@ class BipartiteBase(DataFrame):
         frame.col_dict = new_col_dict
         keep_cols = sorted(keep_cols, key=col_order) # Sort columns
         DataFrame.rename(frame, rename_dict, axis=1, inplace=True)
-        frame = frame[keep_cols]
+        for col in frame.columns:
+            if col not in keep_cols:
+                frame.drop(col)
 
         return frame
 
@@ -497,12 +493,7 @@ class BipartiteBase(DataFrame):
         frame.logger.info('beginning BipartiteBase data cleaning')
         frame.logger.info('checking quality of data')
         # Make sure data is valid - computes correct_cols, no_na, no_duplicates, connected, and contiguous, along with other checks (note that column names are corrected in data_validity() if all columns are in the data)
-        frame.data_validity()
-
-        # Next, correct column names
-        if not frame.correct_cols:
-            frame.logger.info('correcting column names')
-            frame.update_cols()
+        BipartiteBase.data_validity(frame) # Shared data_validity
 
         # Next, drop NaN observations
         if not frame.no_na:
@@ -524,7 +515,7 @@ class BipartiteBase(DataFrame):
         if not frame.connected:
             # Generate largest connected set
             frame.logger.info('generating largest connected set')
-            frame.conset()
+            frame.conset(frame)
 
         # Next, make firm ids contiguous
         if not frame.contiguous_fids:
@@ -568,6 +559,7 @@ class BipartiteBase(DataFrame):
 
         frame.logger.info('--- checking columns ---')
         all_cols = self.included_cols()
+        cols = True
         frame.logger.info('--- checking column datatypes ---')
         col_dtypes = True
         for col in all_cols:
@@ -575,12 +567,14 @@ class BipartiteBase(DataFrame):
                 if frame.col_dict[subcol] not in frame.columns:
                     frame.logger.info('{} missing from data'.format(frame.col_dict[subcol]))
                     col_dtypes = False
+                    cols = False
                 else:
                     col_type = frame[frame.col_dict[subcol]].dtype
                     valid_types = _to_list(frame.dtype_dict[frame.col_dtype_dict[col]])
                     if col_type not in valid_types:
                         frame.logger.info('{} has wrong dtype, should be {} but is {}'.format(frame.col_dict[subcol], frame.col_dtype_dict[col], col_type))
                         col_dtypes = False
+                        cols = False
 
         frame.logger.info('column datatypes correct:' + str(col_dtypes))
         if not col_dtypes:
@@ -593,6 +587,7 @@ class BipartiteBase(DataFrame):
             for subcol in _to_list(self.reference_dict[col]):
                 if frame.col_dict[subcol] != subcol:
                     col_names = False
+                    cols = False
                     break
         frame.logger.info('column names correct:' + str(col_names))
         if col_names:
@@ -600,6 +595,17 @@ class BipartiteBase(DataFrame):
         if not col_names:
             self.correct_cols = False
             success = False
+
+        frame.logger.info('--- checking non-pre-established columns ---')
+        all_cols = self.included_cols(flat=True)
+        for col in self.columns:
+            if col not in all_cols:
+                cols = False
+                break
+
+        if not cols:
+            self.logger.info('correcting column names')
+            self.update_cols()
 
         frame.logger.info('--- checking nan data ---')
         nans = frame.shape[0] - frame.dropna().shape[0]
@@ -859,7 +865,7 @@ class BipartiteBase(DataFrame):
 
         return cdfs, n_firms
 
-    def cluster(self, user_cluster={}, inplace=True):
+    def cluster(self, user_cluster={}):
         '''
         Cluster data and assign a new column giving the cluster for each firm.
 
@@ -880,14 +886,10 @@ class BipartiteBase(DataFrame):
 
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
 
-                inplace (bool): if True, modify in-place
         Returns:
             frame (BipartiteLong): BipartiteLong with clusters
         '''
-        if inplace:
-            frame = self
-        else:
-            frame = self.copy()
+        frame = self.copy()
 
         # Update dictionary
         cluster_params = update_dict(frame.default_cluster, user_cluster)
@@ -907,6 +909,10 @@ class BipartiteBase(DataFrame):
         KMeans_params = update_dict(frame.default_KMeans, user_KMeans)
         clusters = KMeans(**KMeans_params).fit(cdfs).labels_
         frame.logger.info('firm clusters computed')
+        
+        # Drop existing clusters
+        if frame.col_included('j'):
+            frame.drop('j')
 
         # Create Pandas dataframe linking fid to firm cluster
         fids = np.arange(n_firms)
@@ -935,7 +941,7 @@ class BipartiteBase(DataFrame):
             frame[self.reference_dict['j']] = frame[self.reference_dict['j']].astype(int)
             frame.clean_data()
 
-        frame.logger.info('clusters merged into event study data')
+        frame.logger.info('clusters merged into data')
 
         return frame
 
@@ -1012,7 +1018,7 @@ class BipartiteLong(BipartiteLongBase):
 
         frame.logger.info('BipartiteLong data cleaning complete')
 
-        BipartiteBase.clean_data(self)
+        BipartiteBase.clean_data(frame)
 
         return frame
 
@@ -1255,7 +1261,7 @@ class BipartiteLongCollapsed(BipartiteLongBase):
 
         frame.logger.info('BipartiteLongCollapsed data cleaning complete')
 
-        BipartiteBase.clean_data(self)
+        BipartiteBase.clean_data(frame)
 
         return frame
 
@@ -1433,7 +1439,7 @@ class BipartiteEventStudyBase(BipartiteBase):
 
         frame.logger.info('BipartiteEventStudyBase data cleaning complete')
 
-        BipartiteBase.clean_data(self)
+        BipartiteBase.clean_data(frame)
 
         return frame
 
@@ -1492,8 +1498,8 @@ class BipartiteEventStudyBase(BipartiteBase):
         if not self.col_included('m'):
             self.gen_m()
 
-        sdata = self[self['m'] == 0]
-        jdata = self[self['m'] == 1]
+        sdata = pd.DataFrame(self[self['m'] == 0])
+        jdata = pd.DataFrame(self[self['m'] == 1])
 
         # # Assign some values
         # ns = len(sdata)
@@ -1504,7 +1510,7 @@ class BipartiteEventStudyBase(BipartiteBase):
         # jdata.set_index(np.arange(nm) + 1)
 
         # Columns used for constructing cross section
-        cs_cols = self.included_cols()
+        cs_cols = self.included_cols(flat=True)
 
         rename_dict = {
             'f1i': 'f2i',
@@ -1646,7 +1652,7 @@ class BipartiteEventStudyCollapsed(BipartiteEventStudyBase):
 
     def __init__(self, *args, col_dict=None, **kwargs):
         columns_opt = ['weight']
-        reference_dict = {'year': ['year_start_1', 'year_end_1', 'year_start_2', 'year_end_2']}
+        reference_dict = {'year': ['year_start_1', 'year_end_1', 'year_start_2', 'year_end_2'], 'weight': ['w1', 'w2']}
         # Initialize DataFrame
         super().__init__(*args, columns_opt=columns_opt, reference_dict=reference_dict, col_dict=col_dict, **kwargs)
 
