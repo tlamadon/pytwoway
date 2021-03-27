@@ -904,6 +904,7 @@ class BLMEstimator:
         self.connectedness_high = None # No connectedness yet
         self.liks_low = None # No likelihoods yet
         self.connectedness_low = None # No connectedness yet
+        self.liks_all = None # No paths of likelihoods yet
 
     def _sim_model(self, jdata):
         '''
@@ -943,7 +944,9 @@ class BLMEstimator:
         connectedness_high = np.zeros(shape=n_best) # Save connectedness for n_best
         liks_low = np.zeros(shape=n_init - n_best) # Save likelihoods for not n_best
         connectedness_low = np.zeros(shape=n_init - n_best) # Save connectedness for not n_best
+        liks_all = np.zeros(shape=n_init) # Save paths of likelihoods
         for i, model in enumerate(sorted_lik_models):
+            liks_all[i] = model.liks1
             if i < n_best:
                 liks_high[i] = model.lik1
                 connectedness_high[i] = model.connectedness
@@ -954,6 +957,7 @@ class BLMEstimator:
         self.connectedness_high = connectedness_high
         self.liks_low = liks_low
         self.connectedness_low = connectedness_low
+        self.liks_all = liks_all
 
         # Take the n_best best estimates and find the lowest connectedness
         best_lik_models = sorted_lik_models[: n_best]
