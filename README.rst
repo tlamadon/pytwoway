@@ -10,7 +10,7 @@ pytwoway
 .. image:: https://img.shields.io/badge/doc-latest-blue
     :target: https://tlamadon.github.io/pytwoway/
 
-`pytwoway` is the Python package associated with the following paper:
+`pytwoway` is the python package associated with the following paper:
 
 "`How Much Should we Trust Estimates of Firm Effects and Worker Sorting?. <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" 
 by Stéphane Bonhomme, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler.  
@@ -29,7 +29,7 @@ The package provides implementations for a series of estimators for models with 
 
 If you want to give it a try, you can start the example notebook here: |binder|. This starts a fully interactive notebook with a simple example that generates data and runs the estimators.
 
-The code is relatively efficient. Solving large sparse linear models relies on using `pyamg <https://github.com/pyamg/pyamg>`_. This is the code we used to estimate the different decompositions on the US data. 
+The code is relatively efficient. Solving large sparse linear models relies on `pyamg <https://github.com/pyamg/pyamg>`_. This is the code we used to estimate the different decompositions on the US data. 
 
 The package provides a python interface as well as an intuitive command line interface. Installation is handled by `pip` or `conda` (TBD). The source of the package is available on github at `pytwoway <https://github.com/tlamadon/pytwoway>`_. The online documentation is hosted  `here <https://tlamadon.github.io/pytwoway/>`_.
 
@@ -51,7 +51,6 @@ Example config.txt::
     data = file.csv
     filetype = csv
     col_dict = "{'fid': 'your_firmid_col', 'wid': 'your_workerid_col', 'year': 'your_year_col', 'comp': 'your_compensation_col'}"
-
 
 Citation
 --------

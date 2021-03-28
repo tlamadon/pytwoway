@@ -6,11 +6,10 @@ from pathlib import Path
 import pytwoway as tw
 import bipartitepandas as bpd
 
-class TwoWay(bpd.BipartiteLong, bpd.BipartiteLongCollapsed, bpd.BipartiteEventStudy, bpd.BipartiteEventStudyCollapsed):
+class TwoWay():
     '''
     Class of TwoWay, where TwoWay gives a network of firms and workers. Inherits from bipartitepandas.
     '''
-    _metadata = ['formatting', 'default_fe', 'default_cre'] # Attributes, required for Pandas inheritance
 
     def __init__(self, data, formatting='long', col_dict=None):
         '''
@@ -28,15 +27,16 @@ class TwoWay(bpd.BipartiteLong, bpd.BipartiteLongCollapsed, bpd.BipartiteEventSt
         # self.logger.info('initializing TwoWay object')
 
         if formatting == 'long':
-            bpd.BipartiteLong.__init__(data, col_dict=col_dict)
+            self.data = bpd.BipartiteLong(data, col_dict=col_dict)
         elif formatting == 'long_collapsed':
-            bpd.BipartiteLongCollapsed.__init__(data, col_dict=col_dict)
+            self.data = bpd.BipartiteLongCollapsed(data, col_dict=col_dict)
         if formatting == 'es':
-            bpd.BipartiteEventStudy.__init__(data, col_dict=col_dict)
+            self.data = bpd.BipartiteEventStudy(data, col_dict=col_dict)
         elif formatting == 'es_collapsed':
-            bpd.BipartiteEventStudyCollapsed.__init__(data, col_dict=col_dict)
+            self.data = bpd.BipartiteEventStudyCollapsed(data, col_dict=col_dict)
 
         self.formatting = formatting
+        self.clean = False # Whether data is clean
 
         # Define default parameter dictionaries
         self.default_fe = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'levfile': '', 'ndraw_tr': 5, 'h2': False, 'out': 'res_fe.json', 'statsonly': False, 'Q': 'cov(alpha, psi)', 'con': False, 'logfile': '', 'check': False} # Do not define 'data' because will be updated later
@@ -45,25 +45,21 @@ class TwoWay(bpd.BipartiteLong, bpd.BipartiteLongCollapsed, bpd.BipartiteEventSt
 
         # self.logger.info('TwoWay object initialized')
 
-    @property
-    def _constructor(self):
-        '''
-        For inheritance from Pandas.
-        '''
-        return TwoWay
-
     def __prep_fe(self):
         '''
         Prepare bipartite network for running fit_fe.
 
         Returns:
-            frame (TwoWay): prepared frame
+            frame (BipartitePandas): prepared data
         '''
-        frame = self.copy()
+        if not self.clean:
+            self.data = self.data.clean_data()
+            self.clean = True
+
+        frame = self.data.copy()
 
         if self.formatting == 'es':
             frame = frame.get_long()
-        frame = frame.clean_data()
         if self.formatting in ['es', 'long']:
             frame = frame.get_collapsed_long()
         if self.formatting in ['es', 'long', 'long_collapsed']:
@@ -89,13 +85,16 @@ class TwoWay(bpd.BipartiteLong, bpd.BipartiteLongCollapsed, bpd.BipartiteEventSt
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
 
         Returns:
-            frame (TwoWay): prepared frame
+            frame (BipartitePandas): prepared data
         '''
-        frame = self.copy()
+        if not self.clean:
+            self.data = self.data.clean_data()
+            self.clean = True
+
+        frame = self.data.copy()
 
         if self.formatting == 'es':
             frame = frame.get_long()
-        frame = frame.clean_data()
         if self.formatting in ['es', 'long']:
             frame = frame.get_collapsed_long()
         if self.formatting in ['es', 'long', 'long_collapsed']:

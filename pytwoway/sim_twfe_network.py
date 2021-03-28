@@ -13,8 +13,8 @@ from scipy.stats import mode, norm
 from scipy.linalg import eig
 ax = np.newaxis
 from matplotlib import pyplot as plt
-from pytwoway import TwoWay as tw
-from bipartitepandas import update_dict
+import pytwoway as tw
+from bipartitepandas import update_dict, logger_init
 
 class SimTwoWay:
     '''
@@ -51,25 +51,9 @@ class SimTwoWay:
     '''
 
     def __init__(self, sim_params={}):
-        # Begin logging
-        self.logger = logging.getLogger('simtwoway')
-        self.logger.setLevel(logging.DEBUG)
-        # Create logs folder
-        Path('twoway_logs').mkdir(parents=True, exist_ok=True)
-        # Create file handler which logs even debug messages
-        fh = logging.FileHandler('twoway_logs/simtwoway_spam.log')
-        fh.setLevel(logging.DEBUG)
-        # Create console handler with a higher log level
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.ERROR)
-        # Create formatter and add it to the handlers
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        ch.setFormatter(formatter)
-        # Add the handlers to the logger
-        self.logger.addHandler(fh)
-        self.logger.addHandler(ch)
-        self.logger.info('initializing SimTwoWay object')
+        # Start logger
+        logger_init(self)
+        # self.logger.info('initializing SimTwoWay object')
 
         # Define default parameter dictionaries
         self.default_sim_params = {'num_ind': 10000, 'num_time': 5, 'firm_size': 50, 'nk': 10, 'nl': 5, 'alpha_sig': 1, 'psi_sig': 1, 'w_sig': 1, 'csort': 1, 'cnetw': 1, 'csig': 1, 'p_move': 0.5}
@@ -272,32 +256,16 @@ class TwoWayMonteCarlo:
     '''
 
     def __init__(self, sim_params={}):
-        # Begin logging
-        self.logger = logging.getLogger('twowaymontecarlo')
-        self.logger.setLevel(logging.DEBUG)
-        # Create logs folder
-        Path('twoway_logs').mkdir(parents=True, exist_ok=True)
-        # Create file handler which logs even debug messages
-        fh = logging.FileHandler('twoway_logs/twowaymontecarlo.log')
-        fh.setLevel(logging.DEBUG)
-        # Create console handler with a higher log level
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.ERROR)
-        # Create formatter and add it to the handlers
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        ch.setFormatter(formatter)
-        # Add the handlers to the logger
-        self.logger.addHandler(fh)
-        self.logger.addHandler(ch)
-        self.logger.info('initializing TwoWayMonteCarlo object')
+        # Start logger
+        # logger_init(self)
+        # self.logger.info('initializing TwoWayMonteCarlo object')
 
         self.stw_net = SimTwoWay(sim_params)
 
         # Prevent plotting unless results exist
         self.monte_carlo_res = False
 
-        self.logger.info('TwoWayMonteCarlo object initialized')
+        # self.logger.info('TwoWayMonteCarlo object initialized')
 
     # Cannot include two underscores because isn't compatible with starmap for multiprocessing
     # Source: https://stackoverflow.com/questions/27054963/python-attribute-error-object-has-no-attribute
@@ -371,7 +339,7 @@ class TwoWayMonteCarlo:
         psi_var = np.var(sim_data['psi'])
         psi_alpha_cov = np.cov(sim_data['psi'], sim_data['alpha'])[0, 1]
         # Use data to create TwoWay object
-        tw_net = tw(data=sim_data)
+        tw_net = tw.TwoWay(sim_data)
         # Estimate FE model
         tw_net.fit_fe(user_fe=fe_params)
         # Save results

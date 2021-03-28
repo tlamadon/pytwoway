@@ -195,6 +195,7 @@ class CREEstimator:
 
         self.adata = self.params['data']
         # self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1 # FIXME wid should already be correct
+        self.adata[['j1', 'j2']] = self.adata[['j1', 'j2']].astype(int) # Clusters generated as Int64 which isn't compatible with indexing
 
         self.nf = max(self.adata['f1i'].max(), self.adata['f2i'].max()) + 1 # Number of firms
         self.nw = self.adata['wid'].max() + 1 # Number of workers
