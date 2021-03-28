@@ -4,60 +4,72 @@ Class for a two-way fixed effect network
 import logging
 from pathlib import Path
 import pytwoway as tw
+import bipartitepandas as bpd
 
-class TwoWay:
+class TwoWay(bpd.BipartiteLong, bpd.BipartiteLongCollapsed, bpd.BipartiteEventStudy, bpd.BipartiteEventStudyCollapsed):
     '''
-    Class of TwoWay, where TwoWay gives a network of firms and workers.
+    Class of TwoWay, where TwoWay gives a network of firms and workers. Inherits from bipartitepandas.
     '''
+    _metadata = ['formatting', 'default_fe', 'default_cre'] # Attributes, required for Pandas inheritance
 
     def __init__(self, data, formatting='long', col_dict=None):
         '''
         Arguments:
             data (Pandas DataFrame): data giving firms, workers, and compensation
-            formatting (str): if 'long', then data in long format; if 'es', then data in event study format. If simulating data, keep default value of 'long'
+            formatting (str): if 'long', then data in long format; if 'long_collapsed' then in collapsed long format; if 'es', then data in event study format; if 'es_collapsed' then in collapsed event study format. If simulating data, keep default value of 'long'
             col_dict (dict): make data columns readable (requires:
                 if long: wid (worker id), comp (compensation), fid (firm id), year;
                 if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover);
                     optionally include: year_end_1 (last year of observation 1), year_end_2 (last year of observation 2), w1 (weight 1), w2 (weight 2)).
                 Keep None if column names already correct
         '''
-        # Begin logging
-        self.logger = logging.getLogger('twoway')
-        self.logger.setLevel(logging.DEBUG)
-        # Create logs folder
-        Path('twoway_logs').mkdir(parents=True, exist_ok=True)
-        # Create file handler which logs even debug messages
-        fh = logging.FileHandler('twoway_logs/twoway_spam.log')
-        fh.setLevel(logging.DEBUG)
-        # Create console handler with a higher log level
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.ERROR)
-        # Create formatter and add it to the handlers
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        ch.setFormatter(formatter)
-        # Add the handlers to the logger
-        self.logger.addHandler(fh)
-        self.logger.addHandler(ch)
-        self.logger.info('initializing TwoWay object')
+        # Start logger
+        bpd.logger_init(self)
+        # self.logger.info('initializing TwoWay object')
 
-        # Define some attributes
-        self.b_net = tw.BipartiteData(data, formatting, col_dict)
+        if formatting == 'long':
+            bpd.BipartiteLong.__init__(data, col_dict=col_dict)
+        elif formatting == 'long_collapsed':
+            bpd.BipartiteLongCollapsed.__init__(data, col_dict=col_dict)
+        if formatting == 'es':
+            bpd.BipartiteEventStudy.__init__(data, col_dict=col_dict)
+        elif formatting == 'es_collapsed':
+            bpd.BipartiteEventStudyCollapsed.__init__(data, col_dict=col_dict)
+
+        self.formatting = formatting
 
         # Define default parameter dictionaries
         self.default_fe = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'levfile': '', 'ndraw_tr': 5, 'h2': False, 'out': 'res_fe.json', 'statsonly': False, 'Q': 'cov(alpha, psi)', 'con': False, 'logfile': '', 'check': False} # Do not define 'data' because will be updated later
 
         self.default_cre = {'ncore': 1, 'ndraw_tr': 5, 'ndp': 50, 'out': 'res_cre.json', 'posterior': False, 'wo_btw': False} # Do not define 'data' because will be updated later
 
-        self.logger.info('TwoWay object initialized')
+        # self.logger.info('TwoWay object initialized')
+
+    @property
+    def _constructor(self):
+        '''
+        For inheritance from Pandas.
+        '''
+        return TwoWay
 
     def __prep_fe(self):
         '''
         Prepare bipartite network for running fit_fe.
+
+        Returns:
+            frame (TwoWay): prepared frame
         '''
-        self.b_net.clean_data()
-        self.b_net.long_to_collapsed_long()
-        self.b_net.collapsed_long_to_es()
+        frame = self.copy()
+
+        if self.formatting == 'es':
+            frame = frame.get_long()
+        frame = frame.clean_data()
+        if self.formatting in ['es', 'long']:
+            frame = frame.get_collapsed_long()
+        if self.formatting in ['es', 'long', 'long_collapsed']:
+            frame = frame.get_es()
+
+        return frame
 
     def __prep_cre(self, user_cluster={}):
         '''
@@ -75,11 +87,22 @@ class TwoWay:
                     year (int or None): if None, uses entire dataset; if int, gives year of data to consider
 
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
+
+        Returns:
+            frame (TwoWay): prepared frame
         '''
-        self.b_net.clean_data()
-        self.b_net.long_to_collapsed_long()
-        self.b_net.collapsed_long_to_es()
-        self.b_net.cluster(user_cluster=user_cluster)
+        frame = self.copy()
+
+        if self.formatting == 'es':
+            frame = frame.get_long()
+        frame = frame.clean_data()
+        if self.formatting in ['es', 'long']:
+            frame = frame.get_collapsed_long()
+        if self.formatting in ['es', 'long', 'long_collapsed']:
+            frame = frame.get_es()
+        frame = frame.cluster(user_cluster=user_cluster)
+
+        return frame
 
     def fit_fe(self, user_fe={}):
         '''
@@ -114,10 +137,10 @@ class TwoWay:
 
                     check (bool): whether to compute the non-approximated estimates as well @ FIXME I don't think this is used
         '''
-        self.__prep_fe()
-        fe_params = tw.update_dict(self.default_fe, user_fe)
+        frame = self.__prep_fe()
+        fe_params = bpd.update_dict(self.default_fe, user_fe)
 
-        fe_params['data'] = self.b_net.get_cs() # Make sure to use up-to-date bipartite network
+        fe_params['data'] = frame.get_cs() # Make sure to use up-to-date bipartite network
 
         fe_solver = tw.FEEstimator(fe_params)
         fe_solver.fit_1()
@@ -160,10 +183,10 @@ class TwoWay:
 
                     user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
         '''
-        self.__prep_cre(user_cluster=user_cluster)
-        cre_params = tw.update_dict(self.default_cre, user_cre)
+        frame = self.__prep_cre(user_cluster=user_cluster)
+        cre_params = bpd.update_dict(self.default_cre, user_cre)
 
-        cre_params['data'] = self.b_net.get_cs() # Make sure to use up-to-date data
+        cre_params['data'] = frame.get_cs() # Make sure to use up-to-date data
 
         cre_solver = tw.CREEstimator(cre_params)
         cre_solver.fit()

@@ -12,13 +12,14 @@ dependencies:
   - pytest
   - numpy
   - pandas
+  - bipartitepandas
   - scipy
   - matplotlib
   - tqdm
   - networkx
   - scikit-learn
   - pyamg
-  - pyreadr
+  # - pyreadr
   - configargparse
   # - sphinx
   - nbsphinx

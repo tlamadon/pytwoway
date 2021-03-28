@@ -16,14 +16,13 @@ setuptools.setup(
     install_requires=[
         'numpy',
         'pandas',
+        'bipartitepandas',
         'scipy',
-        'matplotlib',
-        'tqdm',
-        'networkx',
-        'scikit-learn',
         'pyamg',
+        'qpsolvers',
         'ConfigArgParse',
-        'qpsolvers'
+        'matplotlib',
+        'tqdm'
       ],
     entry_points = {
         'console_scripts': ['pytw=pytwoway.command_line:main'],
