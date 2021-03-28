@@ -14,7 +14,8 @@ from multiprocessing import Pool
 import itertools
 import time
 import warnings
-from pytwoway import update_dict, jitter_scatter #, istarmap # To allow tqdm + starmap
+from pytwoway import jitter_scatter
+from bipartitepandas import update_dict
 from tqdm import tqdm, trange
 
 ####################

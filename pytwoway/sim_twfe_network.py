@@ -14,7 +14,7 @@ from scipy.linalg import eig
 ax = np.newaxis
 from matplotlib import pyplot as plt
 from pytwoway import TwoWay as tw
-from pytwoway import update_dict
+from bipartitepandas import update_dict
 
 class SimTwoWay:
     '''
