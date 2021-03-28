@@ -100,7 +100,7 @@ def main():
     p.add('--ndp', required=False, help=' number of draw to use in approximation for leverages when computing cre')
     p.add('--out_cre', required=False, help='filepath for cre results')
     p.add('--posterior', required=False, help='whether to compute the posterior variance when computing cre')
-    p.add('--wo_btw', required=False, help='sets between variation to 0, pure RE when computing cre')
+    p.add('--wobtw', required=False, help='sets between variation to 0, pure RE when computing cre')
     ##### CRE end #####
 
     params = p.parse_args()
