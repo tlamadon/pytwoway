@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>BipartiteData example &mdash; pytwoway 0.1.3 documentation</title>
+  <title>BipartitePandas example &mdash; pytwoway 0.1.3 documentation</title>
   
 
   
@@ -35,9 +35,7 @@
 
     
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Python API" href="../internal.html" />
-    <link rel="prev" title="Monte Carlo example" href="monte_carlo_example.html" /> 
+    <link rel="search" title="Search" href="../search.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -89,18 +87,10 @@
 <li class="toctree-l1"><a class="reference internal" href="../doc-python.html">From python</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Notebook examples</span></p>
-<ul class="current">
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="pytwoway_example.html">Simple</a></li>
 <li class="toctree-l1"><a class="reference internal" href="monte_carlo_example.html">Monte Carlo</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">BipartiteData</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#Simulate-some-data">Simulate some data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#BipartiteData">BipartiteData</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Converting-formats">Converting formats</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Clustering">Clustering</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Clustering-options">Clustering options</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Some-extra-features">Some extra features</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="bipartite_example.html">BipartiteData</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul>
@@ -157,13 +147,13 @@
     
       <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li>BipartiteData example</li>
+      <li>BipartitePandas example</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
             
-            <a href="../_sources/notebooks/bipartite_example.ipynb.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/notebooks/bipartitepandas_example.ipynb.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -431,16 +421,16 @@ div.rendered_html tbody tr:hover {
     text-align: unset;
 }
 </style>
-<div class="section" id="BipartiteData-example">
-<h1>BipartiteData example<a class="headerlink" href="#BipartiteData-example" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="BipartitePandas-example">
+<h1>BipartitePandas example<a class="headerlink" href="#BipartitePandas-example" title="Permalink to this headline">¶</a></h1>
 <div class="nbinput nblast docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># Add pytwoway to system path, do not run this</span>
-<span class="c1"># import sys</span>
-<span class="c1"># sys.path.append(&#39;../../..&#39;)</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;../../..&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -501,36 +491,36 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>75</td>
-      <td>-0.309731</td>
+      <td>113</td>
+      <td>0.445394</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>14</td>
-      <td>-1.207119</td>
+      <td>131</td>
+      <td>2.093489</td>
       <td>2</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>14</td>
-      <td>-2.163811</td>
+      <td>131</td>
+      <td>0.186537</td>
       <td>3</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>22</td>
-      <td>-1.553568</td>
+      <td>131</td>
+      <td>1.925646</td>
       <td>4</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>84</td>
-      <td>0.086559</td>
+      <td>185</td>
+      <td>1.984892</td>
       <td>5</td>
     </tr>
     <tr>
@@ -543,36 +533,36 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>171</td>
-      <td>0.302781</td>
+      <td>35</td>
+      <td>-1.777569</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.820684</td>
+      <td>35</td>
+      <td>0.378292</td>
       <td>2</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.685579</td>
+      <td>35</td>
+      <td>-2.925798</td>
       <td>3</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.533217</td>
+      <td>74</td>
+      <td>0.145590</td>
       <td>4</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>181</td>
-      <td>2.105582</td>
+      <td>74</td>
+      <td>-3.035109</td>
       <td>5</td>
     </tr>
   </tbody>
@@ -581,32 +571,25 @@ div.rendered_html tbody tr:hover {
 </div></div>
 </div>
 </div>
-<div class="section" id="BipartiteData">
-<h2>BipartiteData<a class="headerlink" href="#BipartiteData" title="Permalink to this headline">¶</a></h2>
-<p>BipartiteData is a superclass with 3 subclasses: - BipartiteLong - BipartiteLongCollapsed - BipartiteEventStudy</p>
-<p>The user interfaces with BipartiteData which converts between the 3 subclasses.</p>
-<div class="nbinput nblast docutils container">
+<div class="section" id="BipartitePandas">
+<h2>BipartitePandas<a class="headerlink" href="#BipartitePandas" title="Permalink to this headline">¶</a></h2>
+<p>BipartitePandas includes 4 classes: - BipartiteLong - BipartiteLongCollapsed - BipartiteEventStudy - BipartiteEventStudyCollapsed</p>
+<p>For long data, each row gives a single observation. For collapsed long data, each row gives a single observation where employment spells at the same firm are collapsed into that observation. For event study data, each row gives the firms and salaries for a single employee over two consecutive years (this is created from BipartiteEventStudy). For collapsed event study data, each row gives the firms and salaries for a single employee over two consecutive employment spells (this is created from
+BipartiteLongCollapsed).</p>
+<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># Our data is in long form (each row gives a single observation)</span>
-<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteData</span><span class="p">(</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">&#39;long&#39;</span><span class="p">)</span> <span class="c1"># Long is default formatting, most data is long</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span> <span class="c1"># Should always clean data after initializing</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteLong</span><span class="p">(</span><span class="n">sim_data</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
+<span class="c1"># Note the type</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">bd</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># Let&#39;s see how our data looks</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
+<div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area rendered_html docutils container">
@@ -638,36 +621,36 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>75</td>
-      <td>-0.309731</td>
+      <td>113</td>
+      <td>0.445394</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>14</td>
-      <td>-1.207119</td>
+      <td>131</td>
+      <td>2.093489</td>
       <td>2</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>14</td>
-      <td>-2.163811</td>
+      <td>131</td>
+      <td>0.186537</td>
       <td>3</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>22</td>
-      <td>-1.553568</td>
+      <td>131</td>
+      <td>1.925646</td>
       <td>4</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>84</td>
-      <td>0.086559</td>
+      <td>185</td>
+      <td>1.984892</td>
       <td>5</td>
     </tr>
     <tr>
@@ -680,36 +663,188 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>171</td>
-      <td>0.302781</td>
+      <td>35</td>
+      <td>-1.777569</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.820684</td>
+      <td>35</td>
+      <td>0.378292</td>
       <td>2</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.685579</td>
+      <td>35</td>
+      <td>-2.925798</td>
       <td>3</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.533217</td>
+      <td>74</td>
+      <td>0.145590</td>
       <td>4</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>181</td>
-      <td>2.105582</td>
+      <td>74</td>
+      <td>-3.035109</td>
+      <td>5</td>
+    </tr>
+  </tbody>
+</table>
+<p>50000 rows × 4 columns</p>
+</div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;class &#39;pytwoway.bipartite_pandas.BipartiteLong&#39;&gt;
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># We can check the number of workers, firms, and clusters (which is None because the data is not clustered)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">n_workers</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">n_firms</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">n_clusters</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+10000
+196
+None
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Whenever we want to use the data, we need to clean it</span>
+<span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>wid</th>
+      <th>fid</th>
+      <th>comp</th>
+      <th>year</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>113</td>
+      <td>0.445394</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0</td>
+      <td>131</td>
+      <td>2.093489</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0</td>
+      <td>131</td>
+      <td>0.186537</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0</td>
+      <td>131</td>
+      <td>1.925646</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0</td>
+      <td>185</td>
+      <td>1.984892</td>
+      <td>5</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>49995</th>
+      <td>9999</td>
+      <td>35</td>
+      <td>-1.777569</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>49996</th>
+      <td>9999</td>
+      <td>35</td>
+      <td>0.378292</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>49997</th>
+      <td>9999</td>
+      <td>35</td>
+      <td>-2.925798</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>49998</th>
+      <td>9999</td>
+      <td>74</td>
+      <td>0.145590</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <th>49999</th>
+      <td>9999</td>
+      <td>74</td>
+      <td>-3.035109</td>
       <td>5</td>
     </tr>
   </tbody>
@@ -721,17 +856,19 @@ div.rendered_html tbody tr:hover {
 <div class="section" id="Converting-formats">
 <h2>Converting formats<a class="headerlink" href="#Converting-formats" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># While our original data is long, we might want it to be in event study form (each row gives two consecutive observations)</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">long_to_es</span><span class="p">()</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">bd</span><span class="o">.</span><span class="n">get_es</span><span class="p">()</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
+<span class="c1"># Note the type</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">bd</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
+<div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area rendered_html docutils container">
@@ -766,55 +903,55 @@ div.rendered_html tbody tr:hover {
   <tbody>
     <tr>
       <th>0</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>-1.151285</td>
-      <td>-1.151285</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>-3.407073</td>
+      <td>-3.407073</td>
       <td>1</td>
       <td>1</td>
       <td>0</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>1.654527</td>
-      <td>1.654527</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>-1.316057</td>
+      <td>-1.316057</td>
       <td>2</td>
       <td>2</td>
       <td>0</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>-0.294581</td>
-      <td>-0.294581</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>0.714426</td>
+      <td>0.714426</td>
       <td>3</td>
       <td>3</td>
       <td>0</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>-0.468204</td>
-      <td>-0.468204</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>-1.892804</td>
+      <td>-1.892804</td>
       <td>4</td>
       <td>4</td>
       <td>0</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>0.418363</td>
-      <td>0.418363</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>-2.257470</td>
+      <td>-2.257470</td>
       <td>5</td>
       <td>5</td>
       <td>0</td>
@@ -831,67 +968,75 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>40646</th>
+      <th>40633</th>
       <td>9998</td>
-      <td>93</td>
-      <td>85</td>
-      <td>0.941243</td>
-      <td>0.449756</td>
+      <td>100</td>
+      <td>100</td>
+      <td>0.878803</td>
+      <td>-0.491500</td>
       <td>4</td>
       <td>5</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>40647</th>
+      <th>40634</th>
       <td>9999</td>
-      <td>171</td>
-      <td>181</td>
-      <td>0.302781</td>
-      <td>1.820684</td>
+      <td>35</td>
+      <td>35</td>
+      <td>-1.777569</td>
+      <td>0.378292</td>
       <td>1</td>
       <td>2</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>40648</th>
+      <th>40635</th>
       <td>9999</td>
-      <td>181</td>
-      <td>181</td>
-      <td>1.820684</td>
-      <td>1.685579</td>
+      <td>35</td>
+      <td>35</td>
+      <td>0.378292</td>
+      <td>-2.925798</td>
       <td>2</td>
       <td>3</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>40649</th>
+      <th>40636</th>
       <td>9999</td>
-      <td>181</td>
-      <td>181</td>
-      <td>1.685579</td>
-      <td>1.533217</td>
+      <td>35</td>
+      <td>74</td>
+      <td>-2.925798</td>
+      <td>0.145590</td>
       <td>3</td>
       <td>4</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>40650</th>
+      <th>40637</th>
       <td>9999</td>
-      <td>181</td>
-      <td>181</td>
-      <td>1.533217</td>
-      <td>2.105582</td>
+      <td>74</td>
+      <td>74</td>
+      <td>0.145590</td>
+      <td>-3.035109</td>
       <td>4</td>
       <td>5</td>
       <td>1</td>
     </tr>
   </tbody>
 </table>
-<p>40651 rows × 8 columns</p>
+<p>40638 rows × 8 columns</p>
 </div></div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;class &#39;pytwoway.bipartite_pandas.BipartiteEventStudy&#39;&gt;
+</pre></div></div>
+</div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -936,11 +1081,11 @@ div.rendered_html tbody tr:hover {
   <tbody>
     <tr>
       <th>0</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>-1.151285</td>
-      <td>-1.151285</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>-3.407073</td>
+      <td>-3.407073</td>
       <td>1</td>
       <td>1</td>
       <td>0</td>
@@ -948,11 +1093,11 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>1</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>1.654527</td>
-      <td>1.654527</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>-1.316057</td>
+      <td>-1.316057</td>
       <td>2</td>
       <td>2</td>
       <td>0</td>
@@ -960,11 +1105,11 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>2</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>-0.294581</td>
-      <td>-0.294581</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>0.714426</td>
+      <td>0.714426</td>
       <td>3</td>
       <td>3</td>
       <td>0</td>
@@ -972,11 +1117,11 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>3</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>-0.468204</td>
-      <td>-0.468204</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>-1.892804</td>
+      <td>-1.892804</td>
       <td>4</td>
       <td>4</td>
       <td>0</td>
@@ -984,11 +1129,11 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>4</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>0.418363</td>
-      <td>0.418363</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>-2.257470</td>
+      <td>-2.257470</td>
       <td>5</td>
       <td>5</td>
       <td>0</td>
@@ -1007,60 +1152,60 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>78042</th>
+      <th>78081</th>
       <td>9998</td>
-      <td>85</td>
-      <td>93</td>
-      <td>0.449756</td>
-      <td>0.941243</td>
+      <td>100</td>
+      <td>100</td>
+      <td>-0.491500</td>
+      <td>0.878803</td>
       <td>5</td>
       <td>4</td>
       <td>1</td>
       <td>0</td>
     </tr>
     <tr>
-      <th>78043</th>
+      <th>78082</th>
       <td>9999</td>
-      <td>181</td>
-      <td>171</td>
-      <td>1.820684</td>
-      <td>0.302781</td>
+      <td>35</td>
+      <td>35</td>
+      <td>0.378292</td>
+      <td>-1.777569</td>
       <td>2</td>
       <td>1</td>
       <td>1</td>
       <td>0</td>
     </tr>
     <tr>
-      <th>78044</th>
+      <th>78083</th>
       <td>9999</td>
-      <td>181</td>
-      <td>181</td>
-      <td>1.685579</td>
-      <td>1.820684</td>
+      <td>35</td>
+      <td>35</td>
+      <td>-2.925798</td>
+      <td>0.378292</td>
       <td>3</td>
       <td>2</td>
       <td>1</td>
       <td>0</td>
     </tr>
     <tr>
-      <th>78045</th>
+      <th>78084</th>
       <td>9999</td>
-      <td>181</td>
-      <td>181</td>
-      <td>1.533217</td>
-      <td>1.685579</td>
+      <td>74</td>
+      <td>35</td>
+      <td>0.145590</td>
+      <td>-2.925798</td>
       <td>4</td>
       <td>3</td>
       <td>1</td>
       <td>0</td>
     </tr>
     <tr>
-      <th>78046</th>
+      <th>78085</th>
       <td>9999</td>
-      <td>181</td>
-      <td>181</td>
-      <td>2.105582</td>
-      <td>1.533217</td>
+      <td>74</td>
+      <td>74</td>
+      <td>-3.035109</td>
+      <td>0.145590</td>
       <td>5</td>
       <td>4</td>
       <td>1</td>
@@ -1068,21 +1213,23 @@ div.rendered_html tbody tr:hover {
     </tr>
   </tbody>
 </table>
-<p>78047 rows × 9 columns</p>
+<p>78086 rows × 9 columns</p>
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># Maybe we want to convert back into long form</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">es_to_long</span><span class="p">()</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">bd</span><span class="o">.</span><span class="n">get_long</span><span class="p">()</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
+<span class="c1"># Note the type</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">bd</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
+<div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area rendered_html docutils container">
@@ -1115,40 +1262,40 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>75</td>
-      <td>-0.309731</td>
+      <td>113</td>
+      <td>0.445394</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>14</td>
-      <td>-1.207119</td>
+      <td>131</td>
+      <td>2.093489</td>
       <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>14</td>
-      <td>-2.163811</td>
+      <td>131</td>
+      <td>0.186537</td>
       <td>3</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>22</td>
-      <td>-1.553568</td>
+      <td>131</td>
+      <td>1.925646</td>
       <td>4</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>84</td>
-      <td>0.086559</td>
+      <td>185</td>
+      <td>1.984892</td>
       <td>5</td>
       <td>1</td>
     </tr>
@@ -1163,40 +1310,40 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>171</td>
-      <td>0.302781</td>
+      <td>35</td>
+      <td>-1.777569</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.820684</td>
+      <td>35</td>
+      <td>0.378292</td>
       <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.685579</td>
+      <td>35</td>
+      <td>-2.925798</td>
       <td>3</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.533217</td>
+      <td>74</td>
+      <td>0.145590</td>
       <td>4</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>181</td>
-      <td>2.105582</td>
+      <td>74</td>
+      <td>-3.035109</td>
       <td>5</td>
       <td>1</td>
     </tr>
@@ -1205,18 +1352,28 @@ div.rendered_html tbody tr:hover {
 <p>50000 rows × 5 columns</p>
 </div></div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;class &#39;pytwoway.bipartite_pandas.BipartiteLong&#39;&gt;
+</pre></div></div>
+</div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># Now suppose we want to collapse by employment spells (so any consecutive observations with the same worker in the same firm are collapsed into 1 observation)</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">long_to_collapsed_long</span><span class="p">()</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">bd</span><span class="o">.</span><span class="n">get_collapsed_long</span><span class="p">()</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
+<span class="c1"># Note the type</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">bd</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
+<div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area rendered_html docutils container">
@@ -1251,8 +1408,8 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>75</td>
-      <td>-0.309731</td>
+      <td>113</td>
+      <td>0.445394</td>
       <td>1</td>
       <td>1</td>
       <td>1</td>
@@ -1261,40 +1418,40 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>14</td>
-      <td>-1.685465</td>
+      <td>131</td>
+      <td>1.401891</td>
       <td>2</td>
+      <td>4</td>
       <td>3</td>
-      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>22</td>
-      <td>-1.553568</td>
-      <td>4</td>
-      <td>4</td>
+      <td>185</td>
+      <td>1.984892</td>
+      <td>5</td>
+      <td>5</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>0</td>
-      <td>84</td>
-      <td>0.086559</td>
-      <td>5</td>
-      <td>5</td>
       <td>1</td>
+      <td>72</td>
+      <td>-0.340153</td>
+      <td>1</td>
+      <td>2</td>
+      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>1</td>
-      <td>178</td>
-      <td>2.587676</td>
-      <td>1</td>
-      <td>1</td>
+      <td>113</td>
+      <td>2.497030</td>
+      <td>3</td>
+      <td>3</td>
       <td>1</td>
       <td>1</td>
     </tr>
@@ -1309,72 +1466,82 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>29732</th>
+      <th>29811</th>
       <td>9998</td>
-      <td>45</td>
-      <td>-1.700584</td>
-      <td>3</td>
-      <td>3</td>
+      <td>178</td>
+      <td>0.431457</td>
+      <td>1</td>
+      <td>1</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>29733</th>
+      <th>29812</th>
       <td>9998</td>
-      <td>93</td>
-      <td>0.941243</td>
-      <td>4</td>
-      <td>4</td>
-      <td>1</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>29734</th>
-      <td>9998</td>
-      <td>85</td>
-      <td>0.449756</td>
-      <td>5</td>
-      <td>5</td>
-      <td>1</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>29735</th>
-      <td>9999</td>
-      <td>171</td>
-      <td>0.302781</td>
-      <td>1</td>
-      <td>1</td>
-      <td>1</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>29736</th>
-      <td>9999</td>
-      <td>181</td>
-      <td>1.786265</td>
+      <td>126</td>
+      <td>0.003084</td>
       <td>2</td>
+      <td>2</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>29813</th>
+      <td>9998</td>
+      <td>100</td>
+      <td>0.580192</td>
+      <td>3</td>
       <td>5</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>29814</th>
+      <td>9999</td>
+      <td>35</td>
+      <td>-1.441692</td>
+      <td>1</td>
+      <td>3</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>29815</th>
+      <td>9999</td>
+      <td>74</td>
+      <td>-1.444760</td>
       <td>4</td>
+      <td>5</td>
+      <td>2</td>
       <td>1</td>
     </tr>
   </tbody>
 </table>
-<p>29737 rows × 7 columns</p>
+<p>29816 rows × 7 columns</p>
 </div></div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;class &#39;pytwoway.bipartite_pandas.BipartiteLongCollapsed&#39;&gt;
+</pre></div></div>
+</div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># We can then check out the event study using collapsed data</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">collapsed_long_to_es</span><span class="p">()</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">bd</span><span class="o">.</span><span class="n">get_es</span><span class="p">()</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
+<span class="c1"># Note the type</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">bd</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
+<div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area rendered_html docutils container">
@@ -1413,11 +1580,11 @@ div.rendered_html tbody tr:hover {
   <tbody>
     <tr>
       <th>0</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>0.031764</td>
-      <td>0.031764</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>-1.631796</td>
+      <td>-1.631796</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
@@ -1428,11 +1595,11 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>1</th>
-      <td>24</td>
-      <td>102</td>
-      <td>102</td>
-      <td>0.181221</td>
-      <td>0.181221</td>
+      <td>27</td>
+      <td>49</td>
+      <td>49</td>
+      <td>0.704600</td>
+      <td>0.704600</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
@@ -1443,11 +1610,11 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>2</th>
-      <td>38</td>
-      <td>29</td>
-      <td>29</td>
-      <td>-0.999334</td>
-      <td>-0.999334</td>
+      <td>41</td>
+      <td>70</td>
+      <td>70</td>
+      <td>0.305096</td>
+      <td>0.305096</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
@@ -1458,11 +1625,11 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>3</th>
-      <td>49</td>
-      <td>52</td>
-      <td>52</td>
-      <td>0.186486</td>
-      <td>0.186486</td>
+      <td>44</td>
+      <td>162</td>
+      <td>162</td>
+      <td>2.157609</td>
+      <td>2.157609</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
@@ -1473,11 +1640,11 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>4</th>
-      <td>60</td>
-      <td>116</td>
-      <td>116</td>
-      <td>1.307871</td>
-      <td>1.307871</td>
+      <td>59</td>
+      <td>163</td>
+      <td>163</td>
+      <td>2.611192</td>
+      <td>2.611192</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
@@ -1502,97 +1669,107 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>20383</th>
+      <th>20449</th>
+      <td>9996</td>
+      <td>187</td>
+      <td>166</td>
+      <td>2.584873</td>
+      <td>2.358368</td>
+      <td>4</td>
+      <td>4</td>
+      <td>5</td>
+      <td>5</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>20450</th>
       <td>9997</td>
-      <td>33</td>
-      <td>48</td>
-      <td>-0.192398</td>
-      <td>-0.928684</td>
-      <td>4</td>
-      <td>4</td>
-      <td>5</td>
-      <td>5</td>
+      <td>51</td>
+      <td>64</td>
+      <td>-0.688550</td>
+      <td>-2.225336</td>
       <td>1</td>
+      <td>4</td>
+      <td>5</td>
+      <td>5</td>
+      <td>4</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>20384</th>
+      <th>20451</th>
       <td>9998</td>
-      <td>90</td>
-      <td>45</td>
-      <td>-0.030269</td>
-      <td>-1.700584</td>
+      <td>178</td>
+      <td>126</td>
+      <td>0.431457</td>
+      <td>0.003084</td>
+      <td>1</td>
       <td>1</td>
       <td>2</td>
-      <td>3</td>
-      <td>3</td>
       <td>2</td>
       <td>1</td>
       <td>1</td>
-    </tr>
-    <tr>
-      <th>20385</th>
-      <td>9998</td>
-      <td>45</td>
-      <td>93</td>
-      <td>-1.700584</td>
-      <td>0.941243</td>
-      <td>3</td>
-      <td>3</td>
-      <td>4</td>
-      <td>4</td>
-      <td>1</td>
-      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>20386</th>
+      <th>20452</th>
       <td>9998</td>
-      <td>93</td>
-      <td>85</td>
-      <td>0.941243</td>
-      <td>0.449756</td>
-      <td>4</td>
-      <td>4</td>
-      <td>5</td>
+      <td>126</td>
+      <td>100</td>
+      <td>0.003084</td>
+      <td>0.580192</td>
+      <td>2</td>
+      <td>2</td>
+      <td>3</td>
       <td>5</td>
       <td>1</td>
-      <td>1</td>
+      <td>3</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>20387</th>
+      <th>20453</th>
       <td>9999</td>
-      <td>171</td>
-      <td>181</td>
-      <td>0.302781</td>
-      <td>1.786265</td>
+      <td>35</td>
+      <td>74</td>
+      <td>-1.441692</td>
+      <td>-1.444760</td>
       <td>1</td>
-      <td>1</td>
-      <td>2</td>
-      <td>5</td>
-      <td>1</td>
+      <td>3</td>
       <td>4</td>
+      <td>5</td>
+      <td>3</td>
+      <td>2</td>
       <td>1</td>
     </tr>
   </tbody>
 </table>
-<p>20388 rows × 12 columns</p>
+<p>20454 rows × 12 columns</p>
 </div></div>
 </div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;class &#39;pytwoway.bipartite_pandas.BipartiteEventStudyCollapsed&#39;&gt;
+</pre></div></div>
+</div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># We can then go back to collapsed long</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">es_to_collapsed_long</span><span class="p">()</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">bd</span><span class="o">.</span><span class="n">get_collapsed_long</span><span class="p">()</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
+<span class="c1"># Note the type</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">bd</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
-<div class="nboutput nblast docutils container">
+<div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area rendered_html docutils container">
@@ -1627,8 +1804,8 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>75</td>
-      <td>-0.309731</td>
+      <td>113</td>
+      <td>0.445394</td>
       <td>1</td>
       <td>1</td>
       <td>1</td>
@@ -1637,40 +1814,40 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>14</td>
-      <td>-1.685465</td>
+      <td>131</td>
+      <td>1.401891</td>
       <td>2</td>
+      <td>4</td>
       <td>3</td>
-      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>22</td>
-      <td>-1.553568</td>
-      <td>4</td>
-      <td>4</td>
+      <td>185</td>
+      <td>1.984892</td>
+      <td>5</td>
+      <td>5</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>0</td>
-      <td>84</td>
-      <td>0.086559</td>
-      <td>5</td>
-      <td>5</td>
       <td>1</td>
+      <td>72</td>
+      <td>-0.340153</td>
+      <td>1</td>
+      <td>2</td>
+      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>1</td>
-      <td>178</td>
-      <td>2.587676</td>
-      <td>1</td>
-      <td>1</td>
+      <td>113</td>
+      <td>2.497030</td>
+      <td>3</td>
+      <td>3</td>
       <td>1</td>
       <td>1</td>
     </tr>
@@ -1685,72 +1862,80 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>29732</th>
+      <th>29811</th>
       <td>9998</td>
-      <td>45</td>
-      <td>-1.700584</td>
-      <td>3</td>
-      <td>3</td>
+      <td>178</td>
+      <td>0.431457</td>
+      <td>1</td>
+      <td>1</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>29733</th>
+      <th>29812</th>
       <td>9998</td>
-      <td>93</td>
-      <td>0.941243</td>
-      <td>4</td>
-      <td>4</td>
-      <td>1</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>29734</th>
-      <td>9998</td>
-      <td>85</td>
-      <td>0.449756</td>
-      <td>5</td>
-      <td>5</td>
-      <td>1</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>29735</th>
-      <td>9999</td>
-      <td>171</td>
-      <td>0.302781</td>
-      <td>1</td>
-      <td>1</td>
-      <td>1</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>29736</th>
-      <td>9999</td>
-      <td>181</td>
-      <td>1.786265</td>
+      <td>126</td>
+      <td>0.003084</td>
       <td>2</td>
+      <td>2</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>29813</th>
+      <td>9998</td>
+      <td>100</td>
+      <td>0.580192</td>
+      <td>3</td>
       <td>5</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>29814</th>
+      <td>9999</td>
+      <td>35</td>
+      <td>-1.441692</td>
+      <td>1</td>
+      <td>3</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>29815</th>
+      <td>9999</td>
+      <td>74</td>
+      <td>-1.444760</td>
       <td>4</td>
+      <td>5</td>
+      <td>2</td>
       <td>1</td>
     </tr>
   </tbody>
 </table>
-<p>29737 rows × 7 columns</p>
+<p>29816 rows × 7 columns</p>
 </div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;class &#39;pytwoway.bipartite_pandas.BipartiteLongCollapsed&#39;&gt;
+</pre></div></div>
 </div>
 </div>
 <div class="section" id="Clustering">
 <h2>Clustering<a class="headerlink" href="#Clustering" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># Starting over</span>
-<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteData</span><span class="p">(</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">&#39;long&#39;</span><span class="p">)</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteLong</span><span class="p">(</span><span class="n">sim_data</span><span class="p">)</span>
 <span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1786,36 +1971,36 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>75</td>
-      <td>-0.309731</td>
+      <td>113</td>
+      <td>0.445394</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>14</td>
-      <td>-1.207119</td>
+      <td>131</td>
+      <td>2.093489</td>
       <td>2</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>14</td>
-      <td>-2.163811</td>
+      <td>131</td>
+      <td>0.186537</td>
       <td>3</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>22</td>
-      <td>-1.553568</td>
+      <td>131</td>
+      <td>1.925646</td>
       <td>4</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>84</td>
-      <td>0.086559</td>
+      <td>185</td>
+      <td>1.984892</td>
       <td>5</td>
     </tr>
     <tr>
@@ -1828,36 +2013,36 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>171</td>
-      <td>0.302781</td>
+      <td>35</td>
+      <td>-1.777569</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.820684</td>
+      <td>35</td>
+      <td>0.378292</td>
       <td>2</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.685579</td>
+      <td>35</td>
+      <td>-2.925798</td>
       <td>3</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.533217</td>
+      <td>74</td>
+      <td>0.145590</td>
       <td>4</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>181</td>
-      <td>2.105582</td>
+      <td>74</td>
+      <td>-3.035109</td>
       <td>5</td>
     </tr>
   </tbody>
@@ -1866,13 +2051,13 @@ div.rendered_html tbody tr:hover {
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># We can cluster from any format and clusters stay when reformatting</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">cluster</span><span class="p">()</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">bd</span><span class="o">.</span><span class="n">cluster</span><span class="p">()</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1903,58 +2088,51 @@ div.rendered_html tbody tr:hover {
       <th>comp</th>
       <th>year</th>
       <th>j</th>
-      <th>m</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>75</td>
-      <td>-0.309731</td>
+      <td>113</td>
+      <td>0.445394</td>
       <td>1</td>
-      <td>9</td>
-      <td>1</td>
+      <td>5</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>14</td>
-      <td>-1.207119</td>
+      <td>131</td>
+      <td>2.093489</td>
       <td>2</td>
       <td>0</td>
-      <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>14</td>
-      <td>-2.163811</td>
+      <td>131</td>
+      <td>0.186537</td>
       <td>3</td>
       <td>0</td>
-      <td>1</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>22</td>
-      <td>-1.553568</td>
+      <td>131</td>
+      <td>1.925646</td>
       <td>4</td>
       <td>0</td>
-      <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>84</td>
-      <td>0.086559</td>
+      <td>185</td>
+      <td>1.984892</td>
       <td>5</td>
-      <td>8</td>
-      <td>1</td>
+      <td>2</td>
     </tr>
     <tr>
       <th>...</th>
-      <td>...</td>
       <td>...</td>
       <td>...</td>
       <td>...</td>
@@ -1964,60 +2142,55 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>171</td>
-      <td>0.302781</td>
+      <td>35</td>
+      <td>-1.777569</td>
       <td>1</td>
-      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.820684</td>
-      <td>2</td>
+      <td>35</td>
+      <td>0.378292</td>
       <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.685579</td>
+      <td>35</td>
+      <td>-2.925798</td>
       <td>3</td>
-      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.533217</td>
+      <td>74</td>
+      <td>0.145590</td>
       <td>4</td>
-      <td>2</td>
-      <td>1</td>
+      <td>6</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>181</td>
-      <td>2.105582</td>
+      <td>74</td>
+      <td>-3.035109</td>
       <td>5</td>
-      <td>2</td>
-      <td>1</td>
+      <td>6</td>
     </tr>
   </tbody>
 </table>
-<p>50000 rows × 6 columns</p>
+<p>50000 rows × 5 columns</p>
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">bd</span><span class="o">.</span><span class="n">long_to_es</span><span class="p">()</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<span></span><span class="n">bd</span> <span class="o">=</span> <span class="n">bd</span><span class="o">.</span><span class="n">get_es</span><span class="p">()</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -2058,67 +2231,67 @@ div.rendered_html tbody tr:hover {
   <tbody>
     <tr>
       <th>0</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>-1.151285</td>
-      <td>-1.151285</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>-3.407073</td>
+      <td>-3.407073</td>
       <td>1</td>
       <td>1</td>
-      <td>6</td>
-      <td>6</td>
+      <td>7</td>
+      <td>7</td>
       <td>0</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>1.654527</td>
-      <td>1.654527</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>-1.316057</td>
+      <td>-1.316057</td>
       <td>2</td>
       <td>2</td>
-      <td>6</td>
-      <td>6</td>
+      <td>7</td>
+      <td>7</td>
       <td>0</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>-0.294581</td>
-      <td>-0.294581</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>0.714426</td>
+      <td>0.714426</td>
       <td>3</td>
       <td>3</td>
-      <td>6</td>
-      <td>6</td>
+      <td>7</td>
+      <td>7</td>
       <td>0</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>-0.468204</td>
-      <td>-0.468204</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>-1.892804</td>
+      <td>-1.892804</td>
       <td>4</td>
       <td>4</td>
-      <td>6</td>
-      <td>6</td>
+      <td>7</td>
+      <td>7</td>
       <td>0</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>0.418363</td>
-      <td>0.418363</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>-2.257470</td>
+      <td>-2.257470</td>
       <td>5</td>
       <td>5</td>
-      <td>6</td>
-      <td>6</td>
+      <td>7</td>
+      <td>7</td>
       <td>0</td>
     </tr>
     <tr>
@@ -2135,83 +2308,83 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>40646</th>
+      <th>40633</th>
       <td>9998</td>
-      <td>93</td>
-      <td>85</td>
-      <td>0.941243</td>
-      <td>0.449756</td>
+      <td>100</td>
+      <td>100</td>
+      <td>0.878803</td>
+      <td>-0.491500</td>
       <td>4</td>
       <td>5</td>
-      <td>4</td>
-      <td>4</td>
+      <td>3</td>
+      <td>3</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>40647</th>
+      <th>40634</th>
       <td>9999</td>
-      <td>171</td>
-      <td>181</td>
-      <td>0.302781</td>
-      <td>1.820684</td>
+      <td>35</td>
+      <td>35</td>
+      <td>-1.777569</td>
+      <td>0.378292</td>
       <td>1</td>
       <td>2</td>
-      <td>2</td>
-      <td>2</td>
+      <td>1</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>40648</th>
+      <th>40635</th>
       <td>9999</td>
-      <td>181</td>
-      <td>181</td>
-      <td>1.820684</td>
-      <td>1.685579</td>
+      <td>35</td>
+      <td>35</td>
+      <td>0.378292</td>
+      <td>-2.925798</td>
       <td>2</td>
       <td>3</td>
-      <td>2</td>
-      <td>2</td>
+      <td>1</td>
+      <td>1</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>40649</th>
+      <th>40636</th>
       <td>9999</td>
-      <td>181</td>
-      <td>181</td>
-      <td>1.685579</td>
-      <td>1.533217</td>
+      <td>35</td>
+      <td>74</td>
+      <td>-2.925798</td>
+      <td>0.145590</td>
       <td>3</td>
       <td>4</td>
-      <td>2</td>
-      <td>2</td>
+      <td>1</td>
+      <td>6</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>40650</th>
+      <th>40637</th>
       <td>9999</td>
-      <td>181</td>
-      <td>181</td>
-      <td>1.533217</td>
-      <td>2.105582</td>
+      <td>74</td>
+      <td>74</td>
+      <td>0.145590</td>
+      <td>-3.035109</td>
       <td>4</td>
       <td>5</td>
-      <td>2</td>
-      <td>2</td>
+      <td>6</td>
+      <td>6</td>
       <td>1</td>
     </tr>
   </tbody>
 </table>
-<p>40651 rows × 10 columns</p>
+<p>40638 rows × 10 columns</p>
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">bd</span><span class="o">.</span><span class="n">es_to_long</span><span class="p">()</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">long_to_collapsed_long</span><span class="p">()</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<span></span><span class="n">bd</span> <span class="o">=</span> <span class="n">bd</span><span class="o">.</span><span class="n">get_long</span><span class="p">()</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">bd</span><span class="o">.</span><span class="n">get_collapsed_long</span><span class="p">()</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -2251,56 +2424,56 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>75</td>
-      <td>-0.309731</td>
+      <td>113</td>
+      <td>0.445394</td>
       <td>1</td>
       <td>1</td>
       <td>1</td>
-      <td>9</td>
+      <td>5</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>14</td>
-      <td>-1.685465</td>
+      <td>131</td>
+      <td>1.401891</td>
       <td>2</td>
+      <td>4</td>
       <td>3</td>
-      <td>2</td>
       <td>0</td>
       <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>22</td>
-      <td>-1.553568</td>
-      <td>4</td>
-      <td>4</td>
+      <td>185</td>
+      <td>1.984892</td>
+      <td>5</td>
+      <td>5</td>
       <td>1</td>
-      <td>0</td>
+      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>0</td>
-      <td>84</td>
-      <td>0.086559</td>
-      <td>5</td>
-      <td>5</td>
       <td>1</td>
-      <td>8</td>
+      <td>72</td>
+      <td>-0.340153</td>
+      <td>1</td>
+      <td>2</td>
+      <td>2</td>
+      <td>6</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>1</td>
-      <td>178</td>
-      <td>2.587676</td>
+      <td>113</td>
+      <td>2.497030</td>
+      <td>3</td>
+      <td>3</td>
       <td>1</td>
-      <td>1</td>
-      <td>1</td>
-      <td>2</td>
+      <td>5</td>
       <td>1</td>
     </tr>
     <tr>
@@ -2315,72 +2488,72 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>29732</th>
+      <th>29811</th>
       <td>9998</td>
-      <td>45</td>
-      <td>-1.700584</td>
-      <td>3</td>
-      <td>3</td>
+      <td>178</td>
+      <td>0.431457</td>
       <td>1</td>
-      <td>3</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>29733</th>
+      <th>29812</th>
       <td>9998</td>
-      <td>93</td>
-      <td>0.941243</td>
-      <td>4</td>
-      <td>4</td>
+      <td>126</td>
+      <td>0.003084</td>
+      <td>2</td>
+      <td>2</td>
       <td>1</td>
-      <td>4</td>
+      <td>0</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>29734</th>
+      <th>29813</th>
       <td>9998</td>
-      <td>85</td>
-      <td>0.449756</td>
+      <td>100</td>
+      <td>0.580192</td>
+      <td>3</td>
       <td>5</td>
-      <td>5</td>
-      <td>1</td>
-      <td>4</td>
+      <td>3</td>
+      <td>3</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>29735</th>
+      <th>29814</th>
       <td>9999</td>
-      <td>171</td>
-      <td>0.302781</td>
+      <td>35</td>
+      <td>-1.441692</td>
       <td>1</td>
+      <td>3</td>
+      <td>3</td>
       <td>1</td>
-      <td>1</td>
-      <td>2</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>29736</th>
+      <th>29815</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.786265</td>
-      <td>2</td>
-      <td>5</td>
+      <td>74</td>
+      <td>-1.444760</td>
       <td>4</td>
+      <td>5</td>
       <td>2</td>
+      <td>6</td>
       <td>1</td>
     </tr>
   </tbody>
 </table>
-<p>29737 rows × 8 columns</p>
+<p>29816 rows × 8 columns</p>
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">bd</span><span class="o">.</span><span class="n">collapsed_long_to_es</span><span class="p">()</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<span></span><span class="n">bd</span> <span class="o">=</span> <span class="n">bd</span><span class="o">.</span><span class="n">get_es</span><span class="p">()</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -2425,79 +2598,79 @@ div.rendered_html tbody tr:hover {
   <tbody>
     <tr>
       <th>0</th>
-      <td>21</td>
-      <td>39</td>
-      <td>39</td>
-      <td>0.031764</td>
-      <td>0.031764</td>
+      <td>23</td>
+      <td>22</td>
+      <td>22</td>
+      <td>-1.631796</td>
+      <td>-1.631796</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
       <td>5</td>
       <td>5</td>
       <td>5</td>
-      <td>6</td>
-      <td>6</td>
+      <td>7</td>
+      <td>7</td>
       <td>0</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>24</td>
-      <td>102</td>
-      <td>102</td>
-      <td>0.181221</td>
-      <td>0.181221</td>
+      <td>27</td>
+      <td>49</td>
+      <td>49</td>
+      <td>0.704600</td>
+      <td>0.704600</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
       <td>5</td>
       <td>5</td>
       <td>5</td>
-      <td>8</td>
-      <td>8</td>
+      <td>9</td>
+      <td>9</td>
       <td>0</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>38</td>
-      <td>29</td>
-      <td>29</td>
-      <td>-0.999334</td>
-      <td>-0.999334</td>
+      <td>41</td>
+      <td>70</td>
+      <td>70</td>
+      <td>0.305096</td>
+      <td>0.305096</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
       <td>5</td>
       <td>5</td>
       <td>5</td>
-      <td>6</td>
-      <td>6</td>
+      <td>9</td>
+      <td>9</td>
       <td>0</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>49</td>
-      <td>52</td>
-      <td>52</td>
-      <td>0.186486</td>
-      <td>0.186486</td>
+      <td>44</td>
+      <td>162</td>
+      <td>162</td>
+      <td>2.157609</td>
+      <td>2.157609</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
       <td>5</td>
       <td>5</td>
       <td>5</td>
-      <td>3</td>
-      <td>3</td>
+      <td>8</td>
+      <td>8</td>
       <td>0</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>60</td>
-      <td>116</td>
-      <td>116</td>
-      <td>1.307871</td>
-      <td>1.307871</td>
+      <td>59</td>
+      <td>163</td>
+      <td>163</td>
+      <td>2.611192</td>
+      <td>2.611192</td>
       <td>1</td>
       <td>5</td>
       <td>1</td>
@@ -2526,257 +2699,108 @@ div.rendered_html tbody tr:hover {
       <td>...</td>
     </tr>
     <tr>
-      <th>20383</th>
+      <th>20449</th>
+      <td>9996</td>
+      <td>187</td>
+      <td>166</td>
+      <td>2.584873</td>
+      <td>2.358368</td>
+      <td>4</td>
+      <td>4</td>
+      <td>5</td>
+      <td>5</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2</td>
+      <td>8</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>20450</th>
       <td>9997</td>
-      <td>33</td>
-      <td>48</td>
-      <td>-0.192398</td>
-      <td>-0.928684</td>
-      <td>4</td>
+      <td>51</td>
+      <td>64</td>
+      <td>-0.688550</td>
+      <td>-2.225336</td>
+      <td>1</td>
       <td>4</td>
       <td>5</td>
       <td>5</td>
+      <td>4</td>
       <td>1</td>
       <td>1</td>
       <td>6</td>
-      <td>3</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>20384</th>
+      <th>20451</th>
       <td>9998</td>
-      <td>90</td>
-      <td>45</td>
-      <td>-0.030269</td>
-      <td>-1.700584</td>
+      <td>178</td>
+      <td>126</td>
+      <td>0.431457</td>
+      <td>0.003084</td>
+      <td>1</td>
       <td>1</td>
       <td>2</td>
-      <td>3</td>
-      <td>3</td>
       <td>2</td>
       <td>1</td>
-      <td>4</td>
-      <td>3</td>
+      <td>1</td>
+      <td>2</td>
+      <td>0</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>20385</th>
+      <th>20452</th>
       <td>9998</td>
-      <td>45</td>
-      <td>93</td>
-      <td>-1.700584</td>
-      <td>0.941243</td>
+      <td>126</td>
+      <td>100</td>
+      <td>0.003084</td>
+      <td>0.580192</td>
+      <td>2</td>
+      <td>2</td>
       <td>3</td>
-      <td>3</td>
-      <td>4</td>
-      <td>4</td>
-      <td>1</td>
-      <td>1</td>
-      <td>3</td>
-      <td>4</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>20386</th>
-      <td>9998</td>
-      <td>93</td>
-      <td>85</td>
-      <td>0.941243</td>
-      <td>0.449756</td>
-      <td>4</td>
-      <td>4</td>
-      <td>5</td>
       <td>5</td>
       <td>1</td>
-      <td>1</td>
-      <td>4</td>
-      <td>4</td>
+      <td>3</td>
+      <td>0</td>
+      <td>3</td>
       <td>1</td>
     </tr>
     <tr>
-      <th>20387</th>
+      <th>20453</th>
       <td>9999</td>
-      <td>171</td>
-      <td>181</td>
-      <td>0.302781</td>
-      <td>1.786265</td>
+      <td>35</td>
+      <td>74</td>
+      <td>-1.441692</td>
+      <td>-1.444760</td>
       <td>1</td>
-      <td>1</td>
-      <td>2</td>
-      <td>5</td>
-      <td>1</td>
+      <td>3</td>
       <td>4</td>
+      <td>5</td>
+      <td>3</td>
       <td>2</td>
-      <td>2</td>
+      <td>1</td>
+      <td>6</td>
       <td>1</td>
     </tr>
   </tbody>
 </table>
-<p>20388 rows × 14 columns</p>
+<p>20454 rows × 14 columns</p>
 </div></div>
 </div>
 </div>
 <div class="section" id="Clustering-options">
 <h2>Clustering options<a class="headerlink" href="#Clustering-options" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># We can cluster on a specific year in long form</span>
-<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteData</span><span class="p">(</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">&#39;long&#39;</span><span class="p">)</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">cluster</span><span class="p">({</span><span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">})</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area rendered_html docutils container">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>wid</th>
-      <th>fid</th>
-      <th>comp</th>
-      <th>year</th>
-      <th>j</th>
-      <th>m</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>0</td>
-      <td>75</td>
-      <td>-0.309731</td>
-      <td>1</td>
-      <td>9</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>0</td>
-      <td>14</td>
-      <td>-1.207119</td>
-      <td>2</td>
-      <td>2</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>0</td>
-      <td>14</td>
-      <td>-2.163811</td>
-      <td>3</td>
-      <td>2</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>0</td>
-      <td>22</td>
-      <td>-1.553568</td>
-      <td>4</td>
-      <td>2</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>0</td>
-      <td>84</td>
-      <td>0.086559</td>
-      <td>5</td>
-      <td>0</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>49995</th>
-      <td>9999</td>
-      <td>171</td>
-      <td>0.302781</td>
-      <td>1</td>
-      <td>1</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>49996</th>
-      <td>9999</td>
-      <td>181</td>
-      <td>1.820684</td>
-      <td>2</td>
-      <td>1</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>49997</th>
-      <td>9999</td>
-      <td>181</td>
-      <td>1.685579</td>
-      <td>3</td>
-      <td>1</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>49998</th>
-      <td>9999</td>
-      <td>181</td>
-      <td>1.533217</td>
-      <td>4</td>
-      <td>1</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>49999</th>
-      <td>9999</td>
-      <td>181</td>
-      <td>2.105582</td>
-      <td>5</td>
-      <td>1</td>
-      <td>1</td>
-    </tr>
-  </tbody>
-</table>
-<p>50000 rows × 6 columns</p>
-</div></div>
-</div>
-<div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># We can cluster on movers or stayers in any form</span>
-<span class="c1"># Note that not all firms are clustered, so some rows have NaNs</span>
-<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteData</span><span class="p">(</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">&#39;long&#39;</span><span class="p">)</span>
+<span></span><span class="c1"># We can cluster on a specific year in long form</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteLong</span><span class="p">(</span><span class="n">sim_data</span><span class="p">)</span>
 <span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">cluster</span><span class="p">({</span><span class="s1">&#39;stayers_movers&#39;</span><span class="p">:</span> <span class="s1">&#39;stayers&#39;</span><span class="p">})</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">bd</span><span class="o">.</span><span class="n">cluster</span><span class="p">({</span><span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">})</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -2807,58 +2831,51 @@ div.rendered_html tbody tr:hover {
       <th>comp</th>
       <th>year</th>
       <th>j</th>
-      <th>m</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>75</td>
-      <td>-0.309731</td>
+      <td>113</td>
+      <td>0.445394</td>
       <td>1</td>
-      <td>0</td>
-      <td>1</td>
+      <td>4</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>14</td>
-      <td>-1.207119</td>
+      <td>131</td>
+      <td>2.093489</td>
       <td>2</td>
-      <td>7</td>
       <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>14</td>
-      <td>-2.163811</td>
+      <td>131</td>
+      <td>0.186537</td>
       <td>3</td>
-      <td>7</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>22</td>
-      <td>-1.553568</td>
+      <td>131</td>
+      <td>1.925646</td>
       <td>4</td>
-      <td>6</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>84</td>
-      <td>0.086559</td>
+      <td>185</td>
+      <td>1.984892</td>
       <td>5</td>
-      <td>3</td>
-      <td>1</td>
+      <td>2</td>
     </tr>
     <tr>
       <th>...</th>
-      <td>...</td>
       <td>...</td>
       <td>...</td>
       <td>...</td>
@@ -2868,51 +2885,46 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>171</td>
-      <td>0.302781</td>
+      <td>35</td>
+      <td>-1.777569</td>
       <td>1</td>
-      <td>1</td>
-      <td>1</td>
+      <td>3</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.820684</td>
+      <td>35</td>
+      <td>0.378292</td>
       <td>2</td>
-      <td>1</td>
-      <td>1</td>
+      <td>3</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.685579</td>
+      <td>35</td>
+      <td>-2.925798</td>
       <td>3</td>
-      <td>1</td>
-      <td>1</td>
+      <td>3</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.533217</td>
+      <td>74</td>
+      <td>0.145590</td>
       <td>4</td>
-      <td>1</td>
-      <td>1</td>
+      <td>9</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>181</td>
-      <td>2.105582</td>
+      <td>74</td>
+      <td>-3.035109</td>
       <td>5</td>
-      <td>1</td>
-      <td>1</td>
+      <td>9</td>
     </tr>
   </tbody>
 </table>
-<p>50000 rows × 6 columns</p>
+<p>50000 rows × 5 columns</p>
 </div></div>
 </div>
 <div class="nbinput docutils container">
@@ -2921,11 +2933,11 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># We can cluster on movers or stayers in any form</span>
-<span class="c1"># Set &#39;dropna&#39;: True if you want to drop firms that don&#39;t get clustered (note that this fully resets firm and worker ids, since they must be contiguous for the FE/CRE/BLM estimators to work)</span>
-<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteData</span><span class="p">(</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">&#39;long&#39;</span><span class="p">)</span>
+<span class="c1"># Note that not all firms are clustered, so some rows have NaNs</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteLong</span><span class="p">(</span><span class="n">sim_data</span><span class="p">)</span>
 <span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">cluster</span><span class="p">({</span><span class="s1">&#39;stayers_movers&#39;</span><span class="p">:</span> <span class="s1">&#39;stayers&#39;</span><span class="p">,</span> <span class="s1">&#39;dropna&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">bd</span><span class="o">.</span><span class="n">cluster</span><span class="p">({</span><span class="s1">&#39;stayers_movers&#39;</span><span class="p">:</span> <span class="s1">&#39;stayers&#39;</span><span class="p">})</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -2963,194 +2975,46 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>75</td>
-      <td>-0.309731</td>
+      <td>113</td>
+      <td>0.445394</td>
       <td>1</td>
-      <td>2</td>
+      <td>0</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>14</td>
-      <td>-1.207119</td>
+      <td>131</td>
+      <td>2.093489</td>
       <td>2</td>
-      <td>7</td>
+      <td>6</td>
       <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>14</td>
-      <td>-2.163811</td>
+      <td>131</td>
+      <td>0.186537</td>
       <td>3</td>
-      <td>7</td>
+      <td>6</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>22</td>
-      <td>-1.553568</td>
+      <td>131</td>
+      <td>1.925646</td>
       <td>4</td>
-      <td>1</td>
+      <td>6</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>84</td>
-      <td>0.086559</td>
+      <td>185</td>
+      <td>1.984892</td>
       <td>5</td>
-      <td>8</td>
       <td>1</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>47957</th>
-      <td>9960</td>
-      <td>171</td>
-      <td>0.302781</td>
-      <td>1</td>
-      <td>3</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>47958</th>
-      <td>9960</td>
-      <td>181</td>
-      <td>1.820684</td>
-      <td>2</td>
-      <td>3</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>47959</th>
-      <td>9960</td>
-      <td>181</td>
-      <td>1.685579</td>
-      <td>3</td>
-      <td>3</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>47960</th>
-      <td>9960</td>
-      <td>181</td>
-      <td>1.533217</td>
-      <td>4</td>
-      <td>3</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>47961</th>
-      <td>9960</td>
-      <td>181</td>
-      <td>2.105582</td>
-      <td>5</td>
-      <td>3</td>
-      <td>1</td>
-    </tr>
-  </tbody>
-</table>
-<p>47962 rows × 6 columns</p>
-</div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># We can cluster on movers or stayers in any form</span>
-<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteData</span><span class="p">(</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">&#39;long&#39;</span><span class="p">)</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">cluster</span><span class="p">({</span><span class="s1">&#39;stayers_movers&#39;</span><span class="p">:</span> <span class="s1">&#39;movers&#39;</span><span class="p">})</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area rendered_html docutils container">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>wid</th>
-      <th>fid</th>
-      <th>comp</th>
-      <th>year</th>
-      <th>j</th>
-      <th>m</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>0</td>
-      <td>75</td>
-      <td>-0.309731</td>
-      <td>1</td>
-      <td>7</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>0</td>
-      <td>14</td>
-      <td>-1.207119</td>
-      <td>2</td>
-      <td>8</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>0</td>
-      <td>14</td>
-      <td>-2.163811</td>
-      <td>3</td>
-      <td>8</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>0</td>
-      <td>22</td>
-      <td>-1.553568</td>
-      <td>4</td>
-      <td>8</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>0</td>
-      <td>84</td>
-      <td>0.086559</td>
-      <td>5</td>
-      <td>9</td>
       <td>1</td>
     </tr>
     <tr>
@@ -3165,8 +3029,305 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>171</td>
-      <td>0.302781</td>
+      <td>35</td>
+      <td>-1.777569</td>
+      <td>1</td>
+      <td>7</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>49996</th>
+      <td>9999</td>
+      <td>35</td>
+      <td>0.378292</td>
+      <td>2</td>
+      <td>7</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>49997</th>
+      <td>9999</td>
+      <td>35</td>
+      <td>-2.925798</td>
+      <td>3</td>
+      <td>7</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>49998</th>
+      <td>9999</td>
+      <td>74</td>
+      <td>0.145590</td>
+      <td>4</td>
+      <td>0</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>49999</th>
+      <td>9999</td>
+      <td>74</td>
+      <td>-3.035109</td>
+      <td>5</td>
+      <td>0</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+<p>50000 rows × 6 columns</p>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># We can cluster on movers or stayers in any form</span>
+<span class="c1"># Set &#39;dropna&#39;: True if you want to drop firms that don&#39;t get clustered (note that this fully resets firm and worker ids, since they must be contiguous for the FE/CRE/BLM estimators to work)</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteLong</span><span class="p">(</span><span class="n">sim_data</span><span class="p">)</span>
+<span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">bd</span><span class="o">.</span><span class="n">cluster</span><span class="p">({</span><span class="s1">&#39;stayers_movers&#39;</span><span class="p">:</span> <span class="s1">&#39;stayers&#39;</span><span class="p">,</span> <span class="s1">&#39;dropna&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">})</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>wid</th>
+      <th>fid</th>
+      <th>comp</th>
+      <th>year</th>
+      <th>j</th>
+      <th>m</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>113</td>
+      <td>0.445394</td>
+      <td>1</td>
+      <td>7</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0</td>
+      <td>131</td>
+      <td>2.093489</td>
+      <td>2</td>
+      <td>7</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0</td>
+      <td>131</td>
+      <td>0.186537</td>
+      <td>3</td>
+      <td>7</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0</td>
+      <td>131</td>
+      <td>1.925646</td>
+      <td>4</td>
+      <td>7</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0</td>
+      <td>185</td>
+      <td>1.984892</td>
+      <td>5</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>48286</th>
+      <td>9999</td>
+      <td>35</td>
+      <td>-1.777569</td>
+      <td>1</td>
+      <td>4</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>48287</th>
+      <td>9999</td>
+      <td>35</td>
+      <td>0.378292</td>
+      <td>2</td>
+      <td>4</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>48288</th>
+      <td>9999</td>
+      <td>35</td>
+      <td>-2.925798</td>
+      <td>3</td>
+      <td>4</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>48289</th>
+      <td>9999</td>
+      <td>74</td>
+      <td>0.145590</td>
+      <td>4</td>
+      <td>0</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>48290</th>
+      <td>9999</td>
+      <td>74</td>
+      <td>-3.035109</td>
+      <td>5</td>
+      <td>0</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+<p>48291 rows × 6 columns</p>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># We can cluster on movers or stayers in any form</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteLong</span><span class="p">(</span><span class="n">sim_data</span><span class="p">)</span>
+<span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">bd</span><span class="o">.</span><span class="n">cluster</span><span class="p">({</span><span class="s1">&#39;stayers_movers&#39;</span><span class="p">:</span> <span class="s1">&#39;movers&#39;</span><span class="p">})</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>wid</th>
+      <th>fid</th>
+      <th>comp</th>
+      <th>year</th>
+      <th>j</th>
+      <th>m</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>113</td>
+      <td>0.445394</td>
+      <td>1</td>
+      <td>0</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0</td>
+      <td>131</td>
+      <td>2.093489</td>
+      <td>2</td>
+      <td>6</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0</td>
+      <td>131</td>
+      <td>0.186537</td>
+      <td>3</td>
+      <td>6</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0</td>
+      <td>131</td>
+      <td>1.925646</td>
+      <td>4</td>
+      <td>6</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0</td>
+      <td>185</td>
+      <td>1.984892</td>
+      <td>5</td>
+      <td>2</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>49995</th>
+      <td>9999</td>
+      <td>35</td>
+      <td>-1.777569</td>
       <td>1</td>
       <td>1</td>
       <td>1</td>
@@ -3174,8 +3335,8 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.820684</td>
+      <td>35</td>
+      <td>0.378292</td>
       <td>2</td>
       <td>1</td>
       <td>1</td>
@@ -3183,8 +3344,8 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.685579</td>
+      <td>35</td>
+      <td>-2.925798</td>
       <td>3</td>
       <td>1</td>
       <td>1</td>
@@ -3192,19 +3353,19 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>181</td>
-      <td>1.533217</td>
+      <td>74</td>
+      <td>0.145590</td>
       <td>4</td>
-      <td>1</td>
+      <td>3</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>181</td>
-      <td>2.105582</td>
+      <td>74</td>
+      <td>-3.035109</td>
       <td>5</td>
-      <td>1</td>
+      <td>3</td>
       <td>1</td>
     </tr>
   </tbody>
@@ -3216,16 +3377,16 @@ div.rendered_html tbody tr:hover {
 <div class="section" id="Some-extra-features">
 <h2>Some extra features<a class="headerlink" href="#Some-extra-features" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># We can get some summary statistics by printing the BipartiteData object</span>
+<span></span><span class="c1"># We can get some summary statistics by running .summary()</span>
 <span class="n">sim_data</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">SimTwoWay</span><span class="p">()</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()[[</span><span class="s1">&#39;wid&#39;</span><span class="p">,</span> <span class="s1">&#39;fid&#39;</span><span class="p">,</span> <span class="s1">&#39;comp&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">]]</span>
-<span class="n">sim_data</span> <span class="o">=</span> <span class="n">sim_data</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s1">&#39;fid&#39;</span><span class="p">:</span> <span class="s1">&#39;f1i&#39;</span><span class="p">},</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteData</span><span class="p">(</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;fid&#39;</span><span class="p">:</span> <span class="s1">&#39;f1i&#39;</span><span class="p">},</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">&#39;long&#39;</span><span class="p">)</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteLong</span><span class="p">(</span><span class="n">sim_data</span><span class="p">)</span>
+<span class="n">bd</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
 <span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
+<span class="n">bd</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -3234,24 +3395,40 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-format: long
+format: BipartiteLong
 number of workers: 10000
 number of firms: 195
 number of observations: 50000
-mean wage: 0.3862867070374669
-max wage: 5.7617660677298925
-min wage: -5.285373932814096
-collapsed by spell: False
+mean wage: 0.4013159142403359
+max wage: 5.580774910105806
+min wage: -4.978342649482517
+connected: False
+contiguous firm ids: False
+contiguous worker ids: False
+contiguous cluster ids (None if not clustered): None
+correct column names and types: False
+no nans: False
+no duplicates: False
+
+format: BipartiteLong
+number of workers: 10000
+number of firms: 195
+number of observations: 50000
+mean wage: 0.4013159142403359
+max wage: 5.580774910105806
+min wage: -4.978342649482517
 connected: True
 contiguous firm ids: True
 contiguous worker ids: True
 contiguous cluster ids (None if not clustered): None
+correct column names and types: True
 no nans: True
 no duplicates: True
+
 </pre></div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -3259,9 +3436,9 @@ no duplicates: True
 <span class="c1"># Suppose some of our columns are mislabeled - create a col_dict to clarify which columns to correct</span>
 <span class="n">sim_data</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">SimTwoWay</span><span class="p">()</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()[[</span><span class="s1">&#39;wid&#39;</span><span class="p">,</span> <span class="s1">&#39;fid&#39;</span><span class="p">,</span> <span class="s1">&#39;comp&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">]]</span>
 <span class="n">sim_data</span> <span class="o">=</span> <span class="n">sim_data</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s1">&#39;fid&#39;</span><span class="p">:</span> <span class="s1">&#39;f1i&#39;</span><span class="p">},</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteData</span><span class="p">(</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;fid&#39;</span><span class="p">:</span> <span class="s1">&#39;f1i&#39;</span><span class="p">},</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">&#39;long&#39;</span><span class="p">)</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteLong</span><span class="p">(</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;fid&#39;</span><span class="p">:</span> <span class="s1">&#39;f1i&#39;</span><span class="p">})</span>
 <span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -3297,36 +3474,36 @@ no duplicates: True
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>87</td>
-      <td>1.422830</td>
+      <td>100</td>
+      <td>1.386291</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>87</td>
-      <td>1.661140</td>
+      <td>78</td>
+      <td>-1.804047</td>
       <td>2</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>87</td>
-      <td>1.267665</td>
+      <td>92</td>
+      <td>-0.925588</td>
       <td>3</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>87</td>
-      <td>2.550360</td>
+      <td>92</td>
+      <td>-1.173242</td>
       <td>4</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>118</td>
-      <td>0.599082</td>
+      <td>30</td>
+      <td>0.004835</td>
       <td>5</td>
     </tr>
     <tr>
@@ -3339,178 +3516,41 @@ no duplicates: True
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>21</td>
-      <td>-0.672321</td>
+      <td>125</td>
+      <td>0.843797</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>21</td>
-      <td>-1.377369</td>
+      <td>52</td>
+      <td>0.698797</td>
       <td>2</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>21</td>
-      <td>-0.970314</td>
+      <td>39</td>
+      <td>-0.403950</td>
       <td>3</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>21</td>
-      <td>-0.593032</td>
+      <td>39</td>
+      <td>-1.076814</td>
       <td>4</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>21</td>
-      <td>-0.825281</td>
+      <td>42</td>
+      <td>1.018228</td>
       <td>5</td>
     </tr>
   </tbody>
 </table>
 <p>50000 rows × 4 columns</p>
-</div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># Suppose we have already clustered - the class determines this automatically</span>
-<span class="n">sim_data</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">SimTwoWay</span><span class="p">()</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()[[</span><span class="s1">&#39;wid&#39;</span><span class="p">,</span> <span class="s1">&#39;fid&#39;</span><span class="p">,</span> <span class="s1">&#39;comp&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">]]</span>
-<span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;j&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteData</span><span class="p">(</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">&#39;long&#39;</span><span class="p">)</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area rendered_html docutils container">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>wid</th>
-      <th>fid</th>
-      <th>comp</th>
-      <th>year</th>
-      <th>j</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>0</td>
-      <td>162</td>
-      <td>2.896741</td>
-      <td>1</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>0</td>
-      <td>63</td>
-      <td>2.465399</td>
-      <td>2</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>0</td>
-      <td>63</td>
-      <td>1.037162</td>
-      <td>3</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>0</td>
-      <td>193</td>
-      <td>1.818901</td>
-      <td>4</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>0</td>
-      <td>127</td>
-      <td>0.645893</td>
-      <td>5</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>49995</th>
-      <td>9999</td>
-      <td>163</td>
-      <td>1.556137</td>
-      <td>1</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>49996</th>
-      <td>9999</td>
-      <td>163</td>
-      <td>0.798808</td>
-      <td>2</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>49997</th>
-      <td>9999</td>
-      <td>163</td>
-      <td>1.662931</td>
-      <td>3</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>49998</th>
-      <td>9999</td>
-      <td>149</td>
-      <td>1.522641</td>
-      <td>4</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>49999</th>
-      <td>9999</td>
-      <td>94</td>
-      <td>0.553134</td>
-      <td>5</td>
-      <td>1</td>
-    </tr>
-  </tbody>
-</table>
-<p>50000 rows × 5 columns</p>
 </div></div>
 </div>
 <div class="nbinput docutils container">
@@ -3518,137 +3558,12 @@ no duplicates: True
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># Now suppose we mislabeled our clusters - the class drops this column</span>
+<span></span><span class="c1"># Suppose we have already clustered - the class determines this automatically</span>
 <span class="n">sim_data</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">SimTwoWay</span><span class="p">()</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()[[</span><span class="s1">&#39;wid&#39;</span><span class="p">,</span> <span class="s1">&#39;fid&#39;</span><span class="p">,</span> <span class="s1">&#39;comp&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">]]</span>
-<span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;j1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteData</span><span class="p">(</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">&#39;long&#39;</span><span class="p">)</span>
+<span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;j&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteLong</span><span class="p">(</span><span class="n">sim_data</span><span class="p">)</span>
 <span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area rendered_html docutils container">
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>wid</th>
-      <th>fid</th>
-      <th>comp</th>
-      <th>year</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>0</td>
-      <td>173</td>
-      <td>1.123302</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>0</td>
-      <td>173</td>
-      <td>1.362065</td>
-      <td>2</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>0</td>
-      <td>173</td>
-      <td>2.285556</td>
-      <td>3</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>0</td>
-      <td>64</td>
-      <td>0.097504</td>
-      <td>4</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>0</td>
-      <td>28</td>
-      <td>-1.346189</td>
-      <td>5</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>49995</th>
-      <td>9999</td>
-      <td>151</td>
-      <td>2.957512</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>49996</th>
-      <td>9999</td>
-      <td>84</td>
-      <td>0.708481</td>
-      <td>2</td>
-    </tr>
-    <tr>
-      <th>49997</th>
-      <td>9999</td>
-      <td>152</td>
-      <td>1.265314</td>
-      <td>3</td>
-    </tr>
-    <tr>
-      <th>49998</th>
-      <td>9999</td>
-      <td>63</td>
-      <td>1.052698</td>
-      <td>4</td>
-    </tr>
-    <tr>
-      <th>49999</th>
-      <td>9999</td>
-      <td>117</td>
-      <td>0.904571</td>
-      <td>5</td>
-    </tr>
-  </tbody>
-</table>
-<p>50000 rows × 4 columns</p>
-</div></div>
-</div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># We can make sure our columns are included by specifying the corrected labels in col_dict (note that if the variable of interest requires 2 columns, e.g. weight 1 and weight 2 for event study data, BOTH columns are required - if only one column is included, it is automatically dropped.)</span>
-<span class="n">sim_data</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">SimTwoWay</span><span class="p">()</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()[[</span><span class="s1">&#39;wid&#39;</span><span class="p">,</span> <span class="s1">&#39;fid&#39;</span><span class="p">,</span> <span class="s1">&#39;comp&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">]]</span>
-<span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;j1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
-<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteData</span><span class="p">(</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;j&#39;</span><span class="p">:</span> <span class="s1">&#39;j1&#39;</span><span class="p">},</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">&#39;long&#39;</span><span class="p">)</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -3685,40 +3600,40 @@ no duplicates: True
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>7</td>
-      <td>-1.670336</td>
+      <td>12</td>
+      <td>-3.455616</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>135</td>
-      <td>0.047628</td>
+      <td>12</td>
+      <td>-3.075479</td>
       <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>135</td>
-      <td>-0.065207</td>
+      <td>23</td>
+      <td>-1.737707</td>
       <td>3</td>
       <td>1</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>119</td>
-      <td>0.985969</td>
+      <td>37</td>
+      <td>-1.496512</td>
       <td>4</td>
       <td>1</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>119</td>
-      <td>1.923032</td>
+      <td>37</td>
+      <td>0.525453</td>
       <td>5</td>
       <td>1</td>
     </tr>
@@ -3733,40 +3648,40 @@ no duplicates: True
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>168</td>
-      <td>3.703281</td>
+      <td>125</td>
+      <td>0.111549</td>
       <td>1</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>139</td>
-      <td>1.040093</td>
+      <td>125</td>
+      <td>0.227130</td>
       <td>2</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>139</td>
-      <td>1.721457</td>
+      <td>125</td>
+      <td>0.952326</td>
       <td>3</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>139</td>
-      <td>-0.024310</td>
+      <td>54</td>
+      <td>-0.412935</td>
       <td>4</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
-      <td>104</td>
-      <td>-0.223421</td>
+      <td>54</td>
+      <td>-1.570001</td>
       <td>5</td>
       <td>1</td>
     </tr>
@@ -3776,17 +3691,16 @@ no duplicates: True
 </div></div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="c1"># We may also specify a col_dict that overwrites a column label that would normally be inferred, and inference is skipped</span>
+<span></span><span class="c1"># Now suppose we mislabeled our clusters - the class drops this column</span>
 <span class="n">sim_data</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">SimTwoWay</span><span class="p">()</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()[[</span><span class="s1">&#39;wid&#39;</span><span class="p">,</span> <span class="s1">&#39;fid&#39;</span><span class="p">,</span> <span class="s1">&#39;comp&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">]]</span>
-<span class="n">sim_data</span> <span class="o">=</span> <span class="n">sim_data</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s1">&#39;fid&#39;</span><span class="p">:</span> <span class="s1">&#39;j&#39;</span><span class="p">},</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteData</span><span class="p">(</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;fid&#39;</span><span class="p">:</span> <span class="s1">&#39;j&#39;</span><span class="p">},</span> <span class="n">formatting</span><span class="o">=</span><span class="s1">&#39;long&#39;</span><span class="p">)</span>
-<span class="c1"># Note that even though we have a column named j, because we specify it is the &#39;fid&#39; column it is not inferred as the cluster values</span>
-<span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
-<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+<span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;j1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteLong</span><span class="p">(</span><span class="n">sim_data</span><span class="p">)</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -3822,36 +3736,36 @@ no duplicates: True
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>101</td>
-      <td>-0.495414</td>
+      <td>56</td>
+      <td>-0.085441</td>
       <td>1</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
-      <td>29</td>
-      <td>-0.445265</td>
+      <td>56</td>
+      <td>1.996593</td>
       <td>2</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
-      <td>29</td>
-      <td>-0.513969</td>
+      <td>115</td>
+      <td>-0.107398</td>
       <td>3</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
-      <td>0</td>
-      <td>-1.435105</td>
+      <td>115</td>
+      <td>3.389542</td>
       <td>4</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
-      <td>37</td>
-      <td>0.530158</td>
+      <td>157</td>
+      <td>1.586202</td>
       <td>5</td>
     </tr>
     <tr>
@@ -3864,36 +3778,690 @@ no duplicates: True
     <tr>
       <th>49995</th>
       <td>9999</td>
-      <td>57</td>
-      <td>-0.751823</td>
+      <td>46</td>
+      <td>3.564147</td>
       <td>1</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
-      <td>57</td>
-      <td>-1.241723</td>
+      <td>46</td>
+      <td>-1.277925</td>
       <td>2</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
-      <td>57</td>
-      <td>1.111050</td>
+      <td>46</td>
+      <td>1.071586</td>
       <td>3</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
-      <td>25</td>
-      <td>-1.414595</td>
+      <td>168</td>
+      <td>2.631237</td>
       <td>4</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
+      <td>168</td>
+      <td>3.070884</td>
+      <td>5</td>
+    </tr>
+  </tbody>
+</table>
+<p>50000 rows × 4 columns</p>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># We can make sure our columns are included by specifying the corrected labels in col_dict (note that if the variable of interest requires 2 columns, e.g. weight 1 and weight 2 for event study data, BOTH columns are required - if only one column is included, it is automatically dropped.)</span>
+<span class="n">sim_data</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">SimTwoWay</span><span class="p">()</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()[[</span><span class="s1">&#39;wid&#39;</span><span class="p">,</span> <span class="s1">&#39;fid&#39;</span><span class="p">,</span> <span class="s1">&#39;comp&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">]]</span>
+<span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;j1&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteLong</span><span class="p">(</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;j&#39;</span><span class="p">:</span> <span class="s1">&#39;j1&#39;</span><span class="p">})</span>
+<span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>wid</th>
+      <th>fid</th>
+      <th>comp</th>
+      <th>year</th>
+      <th>j</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>111</td>
+      <td>0.527545</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0</td>
+      <td>78</td>
+      <td>-0.937719</td>
+      <td>2</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0</td>
+      <td>78</td>
+      <td>-0.645656</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0</td>
+      <td>118</td>
+      <td>0.526164</td>
+      <td>4</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0</td>
+      <td>163</td>
+      <td>3.130551</td>
+      <td>5</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>49995</th>
+      <td>9999</td>
+      <td>64</td>
+      <td>0.247145</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>49996</th>
+      <td>9999</td>
+      <td>18</td>
+      <td>-0.776968</td>
+      <td>2</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>49997</th>
+      <td>9999</td>
+      <td>100</td>
+      <td>0.959637</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>49998</th>
+      <td>9999</td>
+      <td>100</td>
+      <td>1.470325</td>
+      <td>4</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>49999</th>
+      <td>9999</td>
+      <td>70</td>
+      <td>0.241538</td>
+      <td>5</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+<p>50000 rows × 5 columns</p>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># We may also specify a col_dict that overwrites a column label that would normally be inferred, and inference is skipped</span>
+<span class="n">sim_data</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">SimTwoWay</span><span class="p">()</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()[[</span><span class="s1">&#39;wid&#39;</span><span class="p">,</span> <span class="s1">&#39;fid&#39;</span><span class="p">,</span> <span class="s1">&#39;comp&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">]]</span>
+<span class="n">sim_data</span> <span class="o">=</span> <span class="n">sim_data</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s1">&#39;fid&#39;</span><span class="p">:</span> <span class="s1">&#39;j&#39;</span><span class="p">},</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteLong</span><span class="p">(</span><span class="n">sim_data</span><span class="p">,</span> <span class="n">col_dict</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;fid&#39;</span><span class="p">:</span> <span class="s1">&#39;j&#39;</span><span class="p">})</span>
+<span class="c1"># Note that even though we have a column named j, because we specify it is the &#39;fid&#39; column it is not inferred as the cluster values</span>
+<span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>wid</th>
+      <th>fid</th>
+      <th>comp</th>
+      <th>year</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>47</td>
+      <td>0.980005</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0</td>
+      <td>47</td>
+      <td>0.550097</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0</td>
+      <td>47</td>
+      <td>1.020063</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0</td>
       <td>75</td>
-      <td>0.471232</td>
+      <td>0.654739</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0</td>
+      <td>75</td>
+      <td>-0.047614</td>
+      <td>5</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>49995</th>
+      <td>9999</td>
+      <td>95</td>
+      <td>-0.468151</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>49996</th>
+      <td>9999</td>
+      <td>95</td>
+      <td>0.838850</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>49997</th>
+      <td>9999</td>
+      <td>95</td>
+      <td>0.661866</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>49998</th>
+      <td>9999</td>
+      <td>95</td>
+      <td>2.374607</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <th>49999</th>
+      <td>9999</td>
+      <td>26</td>
+      <td>2.088308</td>
+      <td>5</td>
+    </tr>
+  </tbody>
+</table>
+<p>50000 rows × 4 columns</p>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># We can drop and rename optional columns (but not required columns)</span>
+<span class="n">sim_data</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">SimTwoWay</span><span class="p">()</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()[[</span><span class="s1">&#39;wid&#39;</span><span class="p">,</span> <span class="s1">&#39;fid&#39;</span><span class="p">,</span> <span class="s1">&#39;comp&#39;</span><span class="p">,</span> <span class="s1">&#39;year&#39;</span><span class="p">]]</span>
+<span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;j&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">bd</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BipartiteLong</span><span class="p">(</span><span class="n">sim_data</span><span class="p">)</span>
+<span class="n">bd</span><span class="o">.</span><span class="n">clean_data</span><span class="p">()</span>
+<span class="n">bd</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s1">&#39;j&#39;</span><span class="p">:</span> <span class="s1">&#39;j1&#39;</span><span class="p">})</span>
+<span class="n">display</span><span class="p">(</span><span class="n">bd</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>wid</th>
+      <th>fid</th>
+      <th>comp</th>
+      <th>year</th>
+      <th>j1</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>142</td>
+      <td>1.187834</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0</td>
+      <td>162</td>
+      <td>3.377437</td>
+      <td>2</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0</td>
+      <td>162</td>
+      <td>1.334530</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0</td>
+      <td>162</td>
+      <td>4.904663</td>
+      <td>4</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0</td>
+      <td>162</td>
+      <td>3.694761</td>
+      <td>5</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>49995</th>
+      <td>9999</td>
+      <td>60</td>
+      <td>-0.708935</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>49996</th>
+      <td>9999</td>
+      <td>60</td>
+      <td>-0.379562</td>
+      <td>2</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>49997</th>
+      <td>9999</td>
+      <td>60</td>
+      <td>-0.799783</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>49998</th>
+      <td>9999</td>
+      <td>60</td>
+      <td>0.261037</td>
+      <td>4</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>49999</th>
+      <td>9999</td>
+      <td>60</td>
+      <td>0.854560</td>
+      <td>5</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+<p>50000 rows × 5 columns</p>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[29]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Dropping an optional column</span>
+<span class="n">bd</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s1">&#39;j1&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[29]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>wid</th>
+      <th>fid</th>
+      <th>comp</th>
+      <th>year</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>142</td>
+      <td>1.187834</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0</td>
+      <td>162</td>
+      <td>3.377437</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0</td>
+      <td>162</td>
+      <td>1.334530</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0</td>
+      <td>162</td>
+      <td>4.904663</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0</td>
+      <td>162</td>
+      <td>3.694761</td>
+      <td>5</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>49995</th>
+      <td>9999</td>
+      <td>60</td>
+      <td>-0.708935</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>49996</th>
+      <td>9999</td>
+      <td>60</td>
+      <td>-0.379562</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>49997</th>
+      <td>9999</td>
+      <td>60</td>
+      <td>-0.799783</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>49998</th>
+      <td>9999</td>
+      <td>60</td>
+      <td>0.261037</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <th>49999</th>
+      <td>9999</td>
+      <td>60</td>
+      <td>0.854560</td>
+      <td>5</td>
+    </tr>
+  </tbody>
+</table>
+<p>50000 rows × 4 columns</p>
+</div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Dropping a required column is prevented</span>
+<span class="n">bd</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="s1">&#39;wid&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+../../../pytwoway/bipartite_pandas.py:324: UserWarning: wid is a required column and cannot be dropped
+  warnings.warn(&#39;{} is a required column and cannot be dropped&#39;.format(col))
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>wid</th>
+      <th>fid</th>
+      <th>comp</th>
+      <th>year</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>142</td>
+      <td>1.187834</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0</td>
+      <td>162</td>
+      <td>3.377437</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0</td>
+      <td>162</td>
+      <td>1.334530</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0</td>
+      <td>162</td>
+      <td>4.904663</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>0</td>
+      <td>162</td>
+      <td>3.694761</td>
+      <td>5</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>49995</th>
+      <td>9999</td>
+      <td>60</td>
+      <td>-0.708935</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>49996</th>
+      <td>9999</td>
+      <td>60</td>
+      <td>-0.379562</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>49997</th>
+      <td>9999</td>
+      <td>60</td>
+      <td>-0.799783</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>49998</th>
+      <td>9999</td>
+      <td>60</td>
+      <td>0.261037</td>
+      <td>4</td>
+    </tr>
+    <tr>
+      <th>49999</th>
+      <td>9999</td>
+      <td>60</td>
+      <td>0.854560</td>
       <td>5</td>
     </tr>
   </tbody>
@@ -3909,15 +4477,6 @@ no duplicates: True
            
           </div>
           <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="../internal.html" class="btn btn-neutral float-right" title="Python API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="monte_carlo_example.html" class="btn btn-neutral float-left" title="Monte Carlo example" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
-    </div>
   
 
   <hr/>

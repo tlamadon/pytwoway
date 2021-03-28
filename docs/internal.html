@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Python API &mdash; pytwoway 0.0.3 documentation</title>
+  <title>Python API &mdash; pytwoway 0.1.3 documentation</title>
   
 
   
@@ -103,7 +103,6 @@
 <li class="toctree-l3"><a class="reference internal" href="#pytwoway-blmestimator"><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMEstimator</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pytwoway-creestimator"><code class="docutils literal notranslate"><span class="pre">pytwoway.CREEstimator</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pytwoway-feestimator"><code class="docutils literal notranslate"><span class="pre">pytwoway.FEEstimator</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#pytwoway-bipartitedata"><code class="docutils literal notranslate"><span class="pre">pytwoway.BipartiteData</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pytwoway-simtwoway"><code class="docutils literal notranslate"><span class="pre">pytwoway.SimTwoWay</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pytwoway-twowaymontecarlo"><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWayMonteCarlo</span></code></a></li>
 </ul>
@@ -114,7 +113,6 @@
 <li class="toctree-l1"><a class="reference internal" href="class-blmestimator.html">BLMEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-feestimator.html">FEEstimator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="class-bipartitedata.html">BipartiteData</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-simtwoway.html">SimTwoWay</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-twowaymontecarlo.html">TwoWayMonteCarlo</a></li>
 </ul>
@@ -210,7 +208,7 @@
 <h1>Python API<a class="headerlink" href="#python-api" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="overview">
 <h2>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h2>
-<p>The main pytwoway API is split into seven classes. pytwoway is canonically imported using</p>
+<p>The main pytwoway API is split into six classes. pytwoway is canonically imported using</p>
 <blockquote>
 <div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
 </pre></div>
@@ -221,7 +219,6 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMEstimator</span></code>: Class for BLM estimator.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.CREEstimator</span></code>: Class for CRE estimator.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.FEEstimator</span></code>: Class for FE estimators.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.BipartiteData</span></code>: Class for formatting bipartite networks (usually of firms and workers).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.SimTwoWay</span></code>: Class to simulate labor data.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.TwoWayMonteCarlo</span></code>: Class to run Monte Carlo simulations.</p></li>
 </ul>
@@ -271,7 +268,7 @@
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_A1</span></code>([dpi])</p></td>
 <td><p>Plot self.model.A1.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_liks_connectedness</span></code>([dpi])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_liks_connectedness</span></code>([jitter, dpi])</p></td>
 <td><p>Plot likelihoods vs.</p></td>
 </tr>
 </tbody>
@@ -322,59 +319,6 @@
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_fe_estimates</span></code>()</p></td>
 <td><p>Return estimated psi_hats linked to firm ids and alpha_hats linked to worker ids.</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<div class="section" id="pytwoway-bipartitedata">
-<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.BipartiteData</span></code><a class="headerlink" href="#pytwoway-bipartitedata" title="Permalink to this headline">¶</a></h3>
-<table class="longtable docutils align-default">
-<colgroup>
-<col style="width: 10%" />
-<col style="width: 90%" />
-</colgroup>
-<tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BipartiteData</span></code>(data[, formatting, col_dict])</p></td>
-<td><p>Class of BipartiteData, where BipartiteData gives a bipartite network of firms and workers.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code>()</p></td>
-<td><p>Copy the current instance of BipartiteData.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">clean_data</span></code>()</p></td>
-<td><p>Clean data.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">cluster</span></code>([user_cluster])</p></td>
-<td><p>Cluster data and assign a new column giving the cluster for each firm.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">drop_col</span></code>(col)</p></td>
-<td><p>Drop a column.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_cs</span></code>()</p></td>
-<td><p>Return event study data reformatted into cross section data.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">long_to_collapsed_long</span></code>()</p></td>
-<td><p>Refactor long data into collapsed long data.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">long_to_es</span></code>()</p></td>
-<td><p>Refactor long data into event study data.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">collapsed_long_to_es</span></code>()</p></td>
-<td><p>Refactor collapsed long data into event study data.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">es_to_long</span></code>()</p></td>
-<td><p>Refactor event study data into long data.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">es_to_collapsed_long</span></code>()</p></td>
-<td><p>Refactor event study data into collapsed long data.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_csv</span></code>(filepath)</p></td>
-<td><p>Save data to csv.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_feather</span></code>(filepath)</p></td>
-<td><p>Save data to feather.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_stata</span></code>(filepath)</p></td>
-<td><p>Save data to dta.</p></td>
 </tr>
 </tbody>
 </table>
@@ -442,7 +386,7 @@
         
         &copy; Copyright 2020, Thibaut Lamadon
       <span class="lastupdated">
-        Last updated on Mar 19, 2021.
+        Last updated on Mar 28, 2021.
       </span>
 
     </p>

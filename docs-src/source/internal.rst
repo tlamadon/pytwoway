@@ -5,7 +5,7 @@ Python API
 Overview
 ---------
 
-The main pytwoway API is split into seven classes. pytwoway is canonically imported using
+The main pytwoway API is split into six classes. pytwoway is canonically imported using
 
   .. code-block:: python
 
@@ -18,8 +18,6 @@ The main pytwoway API is split into seven classes. pytwoway is canonically impor
 * ``pytwoway.CREEstimator``: Class for CRE estimator.
 
 * ``pytwoway.FEEstimator``: Class for FE estimators.
-
-* ``pytwoway.BipartiteData``: Class for formatting bipartite networks (usually of firms and workers).
 
 * ``pytwoway.SimTwoWay``: Class to simulate labor data.
 
@@ -69,27 +67,6 @@ Modules and Methods
    ~pytwoway.FEEstimator.fit_1
    ~pytwoway.FEEstimator.fit_2
    ~pytwoway.FEEstimator.get_fe_estimates
-
-``pytwoway.BipartiteData``
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autosummary::
-
-   ~pytwoway.BipartiteData
-   ~pytwoway.BipartiteData.copy
-   ~pytwoway.BipartiteData.clean_data
-   ~pytwoway.BipartiteData.cluster
-   ~pytwoway.BipartiteData.drop
-   ~pytwoway.BipartiteData.rename
-   ~pytwoway.BipartiteData.get_cs
-   ~pytwoway.BipartiteData.long_to_collapsed_long
-   ~pytwoway.BipartiteData.long_to_es
-   ~pytwoway.BipartiteData.collapsed_long_to_es
-   ~pytwoway.BipartiteData.es_to_long
-   ~pytwoway.BipartiteData.es_to_collapsed_long
-   ~pytwoway.BipartiteData.to_csv
-   ~pytwoway.BipartiteData.to_feather
-   ~pytwoway.BipartiteData.to_stata
 
 ``pytwoway.SimTwoWay``
 ~~~~~~~~~~~~~~~~~~~~~~
