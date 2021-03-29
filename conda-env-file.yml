@@ -3,7 +3,7 @@ channels:
   - defaults
   - conda-forge
 dependencies:
-  # - python   # or 2.7 if you are feeling nostalgic
+  - python=3.7
   - pip
   - pybind11
   - ipython
