@@ -20,11 +20,11 @@ import sphinx_rtd_theme
 # -- Project information -----------------------------------------------------
 
 project = 'pytwoway'
-copyright = '2020, Thibaut Lamadon'
+copyright = '2021, Thibaut Lamadon.'
 author = 'Thibaut Lamadon'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.3'
+release = '0.1.4'
 
 
 # -- General configuration ---------------------------------------------------
