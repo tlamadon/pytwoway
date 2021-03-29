@@ -12,7 +12,7 @@ dependencies:
   - pytest
   - numpy
   - pandas
-  - bipartitepandas
+#  - bipartitepandas
   - scipy
   - matplotlib
   - tqdm
