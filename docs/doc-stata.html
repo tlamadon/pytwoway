@@ -198,13 +198,14 @@
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ssc</span> <span class="n">install</span> <span class="n">statatwoway</span>
 </pre></div>
 </div>
-<p>The most efficient way to run statatwoway is through python. Please read <a class="reference internal" href="doc-python.html"><span class="doc">Using from python</span></a> on how to install pytwoway for python.</p>
+<p>The most efficient way to run statatwoway is through python. Please read <a class="reference internal" href="doc-python.html"><span class="doc">From python</span></a> on how to install pytwoway for python.</p>
 <p>Sample data: <a class="reference download internal" download="" href="_downloads/8585cbc63df53436d69d3cb66b5ad2c6/twoway_sample_data.csv"><code class="xref download docutils literal notranslate"><span class="pre">download</span></code></a></p>
 <p>To run in stata:</p>
 <div class="highlight-stata notranslate"><div class="highlight"><pre><span></span>statatwoway fe cre, config(<span class="s">&quot;config.txt&quot;</span>) env(<span class="s">&quot;stata-env&quot;</span>)
 </pre></div>
 </div>
-<p>You can choose to run fe, cre, or both. Additionally, while a config file is required, an environment is not. However, setting up an environment is recommended. Read about setting up environments in Anaconda <a class="reference external" href="https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html">here</a>. Use the following example config file as a template. DO NOT CHANGE THE DATA OR FILETYPE OPTIONS. statatwoway generates a temporary datafile using that name and datatype, so changing either of those options will cause the package to crash. Read the documentation about the <a class="reference internal" href="class-creestimator.html"><span class="doc">CREEstimator class</span></a> and <a class="reference internal" href="class-feestimator.html"><span class="doc">FEEstimator class</span></a> to discover all the potential options you can include.</p>
+<p>You can choose to run fe, cre, or both. Additionally, while a config file is required, an environment is not. However, setting up an environment is recommended. Read about setting up environments in Anaconda <a class="reference external" href="https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html">here</a>.</p>
+<p>Use the following example config file as a template. DO NOT CHANGE THE DATA OR FILETYPE OPTIONS. statatwoway generates a temporary datafile using that name and datatype, so changing either of those options will cause the package to crash. Read the documentation about the <a class="reference internal" href="class-creestimator.html"><span class="doc">CREEstimator class</span></a> and <a class="reference internal" href="class-feestimator.html"><span class="doc">FEEstimator class</span></a> to discover all the potential options you can include.</p>
 <p>Example config.txt:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="n">statatwoway</span><span class="o">.</span><span class="n">dta</span>
 <span class="n">filetype</span> <span class="o">=</span> <span class="n">dta</span>
