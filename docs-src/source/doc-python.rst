@@ -7,7 +7,7 @@ To install from pip, from the command line run::
 
 Sample data: :download:`download <twoway_sample_data.csv>`
 
-To run in Python:
+To run in python:
 
 - If you want to run estimators on your own data:
 

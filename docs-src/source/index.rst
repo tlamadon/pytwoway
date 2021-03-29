@@ -7,6 +7,7 @@
   Home <self>
   From terminal <doc-cli>
   From python <doc-python>
+  From stata <doc-stata>
 
 .. toctree::
   :caption: Notebook examples
