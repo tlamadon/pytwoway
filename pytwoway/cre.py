@@ -7,6 +7,7 @@ from pathlib import Path
 import pyamg
 import numpy as np
 import pandas as pd
+from bipartitepandas import logger_init
 from scipy.sparse import csc_matrix, coo_matrix, diags, linalg, eye
 import time
 # import pyreadr
@@ -95,25 +96,9 @@ class CREEstimator:
 
                     wo_btw (bool): sets between variation to 0, pure RE
         '''
-        # Begin logging
-        self.logger = logging.getLogger('cre')
-        self.logger.setLevel(logging.DEBUG)
-        # Create logs folder
-        Path('twoway_logs').mkdir(parents=True, exist_ok=True)
-        # Create file handler which logs even debug messages
-        fh = logging.FileHandler('twoway_logs/cre_spam.log')
-        fh.setLevel(logging.DEBUG)
-        # Create console handler with a higher log level
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.ERROR)
-        # Create formatter and add it to the handlers
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        ch.setFormatter(formatter)
-        # Add the handlers to the logger
-        self.logger.addHandler(fh)
-        self.logger.addHandler(ch)
-        self.logger.info('initializing CREEstimator object')
+        # Start logger
+        logger_init(self)
+        # self.logger.info('initializing CREEstimator object')
 
         self.params = params
         self.res = {} # Results dictionary
@@ -128,7 +113,7 @@ class CREEstimator:
         self.res['cores'] = self.ncore
         self.res['ndt'] = self.ndraw_trace
 
-        self.logger.info('CREEstimator object initialized')
+        # self.logger.info('CREEstimator object initialized')
 
     def fit(self):
         '''

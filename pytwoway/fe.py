@@ -12,6 +12,7 @@ from pathlib import Path
 import pyamg
 import numpy as np
 import pandas as pd
+from bipartitepandas import logger_init
 from scipy.sparse import csc_matrix, coo_matrix, diags, linalg
 import time
 # import pyreadr
@@ -97,25 +98,9 @@ class FEEstimator:
 
                     Q (str): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
         '''
-        # Begin logging
-        self.logger = logging.getLogger('fe')
-        self.logger.setLevel(logging.DEBUG)
-        # Create logs folder
-        Path('twoway_logs').mkdir(parents=True, exist_ok=True)
-        # Create file handler which logs even debug messages
-        fh = logging.FileHandler('twoway_logs/fe_spam.log')
-        fh.setLevel(logging.DEBUG)
-        # Create console handler with a higher log level
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.ERROR)
-        # Create formatter and add it to the handlers
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-        ch.setFormatter(formatter)
-        # Add the handlers to the logger
-        self.logger.addHandler(fh)
-        self.logger.addHandler(ch)
-        self.logger.info('initializing FEEstimator object')
+        # Start logger
+        logger_init(self)
+        # self.logger.info('initializing FEEstimator object')
 
         self.params = params
         self.res = {} # Results dictionary
@@ -132,7 +117,7 @@ class FEEstimator:
         self.res['ndp'] = self.ndraw_pii
         self.res['ndt'] = self.ndraw_trace
 
-        self.logger.info('FEEstimator object initialized')
+        # self.logger.info('FEEstimator object initialized')
 
     def __getstate__(self):
         '''
