@@ -15,7 +15,7 @@ ax = np.newaxis
 from matplotlib import pyplot as plt
 import pytwoway as tw
 from bipartitepandas import update_dict, logger_init
-from tqdm import tqdm, trange
+from tqdm import trange
 
 class SimTwoWay:
     '''
