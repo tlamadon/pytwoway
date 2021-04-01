@@ -1,7 +1,5 @@
 '''
-Tests for pytwoway.
-
-DATE: October 2020
+Tests for pytwoway
 '''
 import pytest
 import pandas as pd
