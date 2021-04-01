@@ -1,5 +1,5 @@
 '''
-Tests for twfe_network.py
+Tests for pytwoway.
 
 DATE: October 2020
 '''

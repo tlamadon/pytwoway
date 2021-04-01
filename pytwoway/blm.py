@@ -17,7 +17,6 @@ import warnings
 from pytwoway import jitter_scatter
 from bipartitepandas import update_dict
 from tqdm import tqdm, trange
-from operator import itemgetter # For faster sorting by element of tuple
 
 ####################
 ##### New Code #####
