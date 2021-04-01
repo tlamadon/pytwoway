@@ -27,10 +27,10 @@ To run in python:
 
 .. note::
    Your data must include the following columns:
-    - ``i``: the worker identifier
-    - ``j``: the firm identifier
-    - ``y``: the compensation variable
-    - ``t``: the time
+    - ``i``: worker identifier
+    - ``j``: firm identifier
+    - ``y``: compensation
+    - ``t``: time
    .. list-table:: Example data
       :widths: 25 25 25 25
       :header-rows: 1
