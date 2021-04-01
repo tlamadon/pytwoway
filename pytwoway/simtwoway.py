@@ -357,24 +357,23 @@ class TwoWayMonteCarlo:
 
     def twfe_monte_carlo(self, N=10, ncore=1, fe_params={}, cre_params={}, cluster_params={}):
         '''
-        Purpose:
-            Run Monte Carlo simulations of TwoWay to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:
+        Run Monte Carlo simulations of TwoWay to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:
 
-                true_psi_var (NumPy Array): true simulated sample variance of psi
+            true_psi_var (NumPy Array): true simulated sample variance of psi
 
-                true_psi_alpha_cov (NumPy Array): true simulated sample covariance of psi and alpha
+            true_psi_alpha_cov (NumPy Array): true simulated sample covariance of psi and alpha
 
-                fe_psi_var (NumPy Array): AKM estimate of variance of psi
+            fe_psi_var (NumPy Array): AKM estimate of variance of psi
 
-                fe_psi_alpha_cov (NumPy Array): AKM estimate of covariance of psi and alpha
+            fe_psi_alpha_cov (NumPy Array): AKM estimate of covariance of psi and alpha
 
-                fe_corr_psi_var (NumPy Array): bias-corrected AKM estimate of variance of psi
+            fe_corr_psi_var (NumPy Array): bias-corrected AKM estimate of variance of psi
 
-                fe_corr_psi_alpha_cov (NumPy Array): bias-corrected AKM estimate of covariance of psi and alpha
+            fe_corr_psi_alpha_cov (NumPy Array): bias-corrected AKM estimate of covariance of psi and alpha
 
-                cre_psi_var (NumPy Array): CRE estimate of variance of psi
+            cre_psi_var (NumPy Array): CRE estimate of variance of psi
 
-                cre_psi_alpha_cov (NumPy Array): CRE estimate of covariance of psi and alpha
+            cre_psi_alpha_cov (NumPy Array): CRE estimate of covariance of psi and alpha
 
         Arguments:
             N (int): number of simulations

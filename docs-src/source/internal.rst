@@ -11,17 +11,17 @@ The main pytwoway API is split into six classes. pytwoway is canonically importe
 
     import pytwoway as tw
 
-* ``pytwoway.TwoWay``: Class for formatting data and running CRE and FE estimators.
+* ``pytwoway.TwoWay``: Class for formatting data and running estimators
 
-* ``pytwoway.BLMEstimator``: Class for BLM estimator.
+* ``pytwoway.BLMEstimator``: Class for BLM estimator
 
-* ``pytwoway.CREEstimator``: Class for CRE estimator.
+* ``pytwoway.CREEstimator``: Class for CRE estimator
 
-* ``pytwoway.FEEstimator``: Class for FE estimators.
+* ``pytwoway.FEEstimator``: Class for FE estimators
 
-* ``pytwoway.SimTwoWay``: Class to simulate labor data.
+* ``pytwoway.SimTwoWay``: Class for simulating labor data
 
-* ``pytwoway.TwoWayMonteCarlo``: Class to run Monte Carlo simulations.
+* ``pytwoway.TwoWayMonteCarlo``: Class for running Monte Carlo simulations
 
 Modules and Methods
 -------------------

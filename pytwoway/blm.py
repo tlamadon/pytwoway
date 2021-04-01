@@ -989,7 +989,7 @@ class BLMEstimator:
 
     def plot_liks_connectedness(self, jitter=False, dpi=None):
         '''
-        Plot likelihoods vs. connectedness for the estimations run.
+        Plot likelihoods vs connectedness for the estimations run.
 
         Arguments:
             jitter (bool): if True, jitter points to prevent overlap
