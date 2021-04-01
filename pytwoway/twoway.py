@@ -30,14 +30,14 @@ class TwoWay():
         bpd.logger_init(self)
         # self.logger.info('initializing TwoWay object')
 
-        if formatting == 'long':
-            self.data = bpd.BipartiteLong(data, col_dict=col_dict)
-        elif formatting == 'long_collapsed':
-            self.data = bpd.BipartiteLongCollapsed(data, col_dict=col_dict)
-        if formatting == 'es':
-            self.data = bpd.BipartiteEventStudy(data, col_dict=col_dict)
-        elif formatting == 'es_collapsed':
-            self.data = bpd.BipartiteEventStudyCollapsed(data, col_dict=col_dict)
+        type_dict = { # Determine type based on formatting
+            'long': bpd.BipartiteLong,
+            'long_collapsed': bpd.BipartiteLongCollapsed,
+            'es': bpd.BipartiteEventStudy,
+            'es_collapsed': bpd.BipartiteEventStudyCollapsed
+        }
+
+        self.data = type_dict[formatting](data, col_dict=col_dict)
 
         self.formatting = formatting
         self.clean = False # Whether data is clean

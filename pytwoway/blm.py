@@ -17,6 +17,7 @@ import warnings
 from pytwoway import jitter_scatter
 from bipartitepandas import update_dict
 from tqdm import tqdm, trange
+from operator import itemgetter # For faster sorting by element of tuple
 
 ####################
 ##### New Code #####
@@ -454,8 +455,8 @@ class BLMModel:
         # Store wage outcomes and groups
         Y1 = jdata['y1'].to_numpy()
         Y2 = jdata['y2'].to_numpy()
-        J1 = jdata['j1'].to_numpy().astype(int)
-        J2 = jdata['j2'].to_numpy().astype(int)
+        G1 = jdata['g1'].to_numpy().astype(int)
+        G2 = jdata['g2'].to_numpy().astype(int)
 
         # Matrix of posterior probabilities
         qi = np.ones(shape=(ni, nl))
@@ -470,9 +471,9 @@ class BLMModel:
 
         d_prior = params['d_prior'] # Fix error from bad initial guesses causing probabilities to be too low
         lp = np.zeros(shape=(ni, nl))
-        JJ1 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), J1)), shape=(ni, nk))
-        JJ2 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), J2)), shape=(ni, nk))
-        JJ12 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), J1 + nk * J2)), shape=(ni, nk * nk))
+        GG1 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), G1)), shape=(ni, nk))
+        GG2 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), G2)), shape=(ni, nk))
+        GG12 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), G1 + nk * G2)), shape=(ni, nk * nk))
 
         for iter in range(params['n_iters']):
 
@@ -481,9 +482,9 @@ class BLMModel:
             # We iterate over the worker types, should not be be
             # too costly since the vector is quite large within each iteration
             for l in range(nl):
-                lp1 = lognormpdf(Y1, A1[J1, l], S1[J1, l])
-                lp2 = lognormpdf(Y2, A2[J2, l], S2[J2, l])
-                KK = J1 + nk * J2
+                lp1 = lognormpdf(Y1, A1[G1, l], S1[G1, l])
+                lp2 = lognormpdf(Y2, A2[G2, l], S2[G2, l])
+                KK = G1 + nk * G2
                 lp[:, l] = np.log(pk1[KK, l]) + lp1 + lp2
 
             # We compute log sum exp to get likelihoods and probabilities
@@ -517,11 +518,11 @@ class BLMModel:
                 l_index, r_index = l * nk, (l + 1) * nk
                 # We compute the terms for period 1
                 # (We might be better off trying this within numba or something)
-                XwXd[l_index: r_index] = (JJ1.T @ (diags(qi[:, l] / S1[J1, l]) @ JJ1)).diagonal()
-                XwY [l_index: r_index] = JJ1.T @ (diags(qi[:, l] / S1[J1, l]) @ Y1)
+                XwXd[l_index: r_index] = (GG1.T @ (diags(qi[:, l] / S1[G1, l]) @ GG1)).diagonal()
+                XwY [l_index: r_index] = GG1.T @ (diags(qi[:, l] / S1[G1, l]) @ Y1)
                 # We do the same for period 2
-                XwXd[l_index + ts: r_index + ts] = (JJ2.T @ (diags(qi[:, l] / S2[J2, l]) @ JJ2)).diagonal()
-                XwY [l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / S2[J2, l]) @ Y2)
+                XwXd[l_index + ts: r_index + ts] = (GG2.T @ (diags(qi[:, l] / S2[G2, l]) @ GG2)).diagonal()
+                XwY [l_index + ts: r_index + ts] = GG2.T @ (diags(qi[:, l] / S2[G2, l]) @ Y2)
 
             # We solve the system to get all the parameters
             XwX = np.diag(XwXd)
@@ -542,8 +543,8 @@ class BLMModel:
                 for l in range(nl):
                     l_index = l * nk
                     r_index = (l + 1) * nk
-                    XwS[l_index: r_index] = JJ1.T @ (diags(qi[:, l] / S1[J1, l]) @ ((Y1 - A1[J1, l]) ** 2))
-                    XwS[l_index + ts: r_index + ts] = JJ2.T @ (diags(qi[:, l] / S2[J2, l]) @ ((Y2 - A2[J2, l]) ** 2))
+                    XwS[l_index: r_index] = GG1.T @ (diags(qi[:, l] / S1[G1, l]) @ ((Y1 - A1[G1, l]) ** 2))
+                    XwS[l_index + ts: r_index + ts] = GG2.T @ (diags(qi[:, l] / S2[G2, l]) @ ((Y2 - A2[G2, l]) ** 2))
 
                 try:
                     cons_s.solve(XwX, - XwS)
@@ -556,7 +557,7 @@ class BLMModel:
                     pass
             if params['update_pk1']:
                 for l in range(nl):
-                    pk1[:, l] = JJ12.T * qi[:, l]
+                    pk1[:, l] = GG12.T * qi[:, l]
                 # Normalize rows to sum to 1, and add dirichlet prior
                 pk1 += d_prior - 1
                 pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
@@ -589,13 +590,13 @@ class BLMModel:
 
         # Store wage outcomes and groups
         Y1 = sdata['y1'].to_numpy()
-        J1 = sdata['j1'].to_numpy()
+        G1 = sdata['g1'].to_numpy()
 
         # Matrix of posterior probabilities
         qi = np.ones(shape=(ni, nl))
 
         lp = np.zeros(shape=(ni, nl))
-        JJ1 = csc_matrix((np.ones(ni), (range(sdata.shape[0]), J1)), shape=(ni, nk))
+        GG1 = csc_matrix((np.ones(ni), (range(sdata.shape[0]), G1)), shape=(ni, nk))
 
         for iter in range(params['n_iters']):
 
@@ -604,8 +605,8 @@ class BLMModel:
             # We iterate over the worker types, should not be be
             # too costly since the vector is quite large within each iteration
             for l in range(nl):
-                lp1 = lognormpdf(Y1, A1[J1, l], S1[J1, l])
-                lp[:, l] = np.log(pk0[J1, l]) + lp1
+                lp1 = lognormpdf(Y1, A1[G1, l], S1[G1, l])
+                lp[:, l] = np.log(pk0[G1, l]) + lp1
 
             # We compute log sum exp to get likelihoods and probabilities
             qi = np.exp(lp.T - logsumexp(lp, axis=1)).T
@@ -622,7 +623,7 @@ class BLMModel:
 
             # --------- M-step ----------
             for l in range(nl):
-                pk0[:, l] = JJ1.T * qi[:, l]
+                pk0[:, l] = GG1.T * qi[:, l]
             # Normalize rows to sum to 1
             pk0 = (pk0.T / np.sum(pk0, axis=1).T).T
 
@@ -760,8 +761,8 @@ class BLMModel:
         nl = self.nl
         nk = self.nk
 
-        J1 = np.zeros(shape=np.sum(NNm)).astype(int)
-        J2 = np.zeros(shape=np.sum(NNm)).astype(int)
+        G1 = np.zeros(shape=np.sum(NNm)).astype(int)
+        G2 = np.zeros(shape=np.sum(NNm)).astype(int)
         Y1 = np.zeros(shape=np.sum(NNm))
         Y2 = np.zeros(shape=np.sum(NNm))
         L = np.zeros(shape=np.sum(NNm)).astype(int)
@@ -772,8 +773,8 @@ class BLMModel:
                 I = np.arange(i, i + NNm[k1, k2])
                 ni = len(I)
                 jj = k1 + nk * k2
-                J1[I] = k1
-                J2[I] = k2
+                G1[I] = k1
+                G2[I] = k2
 
                 # Draw k
                 draw_vals = np.arange(nl)
@@ -786,7 +787,7 @@ class BLMModel:
 
                 i += NNm[k1, k2]
 
-        jdatae = pd.DataFrame(data={'l': L, 'y1': Y1, 'y2': Y2, 'j1': J1, 'j2': J2})
+        jdatae = pd.DataFrame(data={'l': L, 'y1': Y1, 'y2': Y2, 'g1': G1, 'g2': G2})
 
         return jdatae
 
@@ -808,8 +809,8 @@ class BLMModel:
         nl = self.nl
         nk = self.nk
 
-        J1 = np.zeros(shape=np.sum(NNs)).astype(int)
-        J2 = np.zeros(shape=np.sum(NNs)).astype(int)
+        G1 = np.zeros(shape=np.sum(NNs)).astype(int)
+        G2 = np.zeros(shape=np.sum(NNs)).astype(int)
         Y1 = np.zeros(shape=np.sum(NNs))
         Y2 = np.zeros(shape=np.sum(NNs))
         K  = np.zeros(shape=np.sum(NNs)).astype(int)
@@ -819,7 +820,7 @@ class BLMModel:
         for k1 in range(nk):
             I = np.arange(i, i + NNs[k1])
             ni = len(I)
-            J1[I] = k1
+            G1[I] = k1
 
             # Draw k
             draw_vals = np.arange(nl)
@@ -832,7 +833,7 @@ class BLMModel:
 
             i += NNs[k1]
 
-        sdatae = pd.DataFrame(data={'k': K, 'y1': Y1, 'y2': Y2, 'j1': J1, 'j2': J1, 'x': 1})
+        sdatae = pd.DataFrame(data={'k': K, 'y1': Y1, 'y2': Y2, 'g1': G1, 'g2': G1, 'x': 1})
 
         return sdatae
 
@@ -852,19 +853,19 @@ class BLMModel:
         sdata = self._m2_mixt_simulate_stayers(self.NNs * smult)
 
         # Create some firm ids
-        sdata['f1'] = np.hstack(np.roll(sdata.groupby('j1').apply(lambda df: np.random.RandomState().randint(low=0, high=len(df) // fsize + 1, size=len(df))), - 1)) # Random number generation, roll is required because f1 is - 1 for empty rows but they appear at the end of the dataframe
-        sdata['f1'] = 'F' + (sdata['j1'].astype(int) + sdata['f1']).astype(str)
-        sdata['j1b'] = sdata['j1']
-        sdata['j1true'] = sdata['j1']
-        jdata['j1c'] = jdata['j1']
-        jdata['j1true'] = jdata['j1']
-        jdata['j2true'] = jdata['j2']
-        jdata['f1'] = np.hstack(jdata.groupby('j1c').apply(lambda df: np.random.RandomState().choice(sdata.loc[sdata['j1b'].isin(jdata['j1c']), 'f1'].unique(), size=len(df))))
-        jdata['j2c'] = jdata['j2']
-        jdata['f2'] = np.hstack(jdata.groupby('j2c').apply(lambda df: np.random.RandomState().choice(sdata.loc[sdata['j1b'].isin(jdata['j2c']), 'f1'].unique(), size=len(df))))
-        jdata = jdata.drop(['j1c', 'j2c'], axis=1)
-        sdata = sdata.drop(['j1b'], axis=1)
-        sdata['f2'] = sdata['f1']
+        sdata['j1'] = np.hstack(np.roll(sdata.groupby('g1').apply(lambda df: np.random.RandomState().randint(low=0, high=len(df) // fsize + 1, size=len(df))), - 1)) # Random number generation, roll is required because j1 is - 1 for empty rows but they appear at the end of the dataframe
+        sdata['j1'] = 'F' + (sdata['g1'].astype(int) + sdata['j1']).astype(str)
+        sdata['g1b'] = sdata['g1']
+        sdata['g1true'] = sdata['g1']
+        jdata['g1c'] = jdata['g1']
+        jdata['g1true'] = jdata['g1']
+        jdata['g2true'] = jdata['g2']
+        jdata['j1'] = np.hstack(jdata.groupby('g1c').apply(lambda df: np.random.RandomState().choice(sdata.loc[sdata['g1b'].isin(jdata['g1c']), 'j1'].unique(), size=len(df))))
+        jdata['g2c'] = jdata['g2']
+        jdata['j2'] = np.hstack(jdata.groupby('g2c').apply(lambda df: np.random.RandomState().choice(sdata.loc[sdata['g1b'].isin(jdata['g2c']), 'j1'].unique(), size=len(df))))
+        jdata = jdata.drop(['g1c', 'g2c'], axis=1)
+        sdata = sdata.drop(['g1b'], axis=1)
+        sdata['j2'] = sdata['j1']
 
         sim = {'jdata': jdata, 'sdata': sdata}
         return sim
@@ -945,9 +946,9 @@ class BLMEstimator:
         connectedness_high = np.zeros(shape=n_best) # Save connectedness for n_best
         liks_low = np.zeros(shape=n_init - n_best) # Save likelihoods for not n_best
         connectedness_low = np.zeros(shape=n_init - n_best) # Save connectedness for not n_best
-        liks_all = np.zeros(shape=n_init) # Save paths of likelihoods
+        liks_all = [] # Save paths of likelihoods
         for i, model in enumerate(sorted_lik_models):
-            liks_all[i] = model.liks1
+            liks_all.append(model.liks1)
             if i < n_best:
                 liks_high[i] = model.lik1
                 connectedness_high[i] = model.connectedness
@@ -1027,8 +1028,8 @@ class BLMEstimator:
 #     Returns:
 #         sdatae (Pandas DataFrame):
 #     '''
-#     J1 = np.zeros(shape=np.sum(NNsx)) - 1
-#     J2 = np.zeros(shape=np.sum(NNsx)) - 1
+#     G1 = np.zeros(shape=np.sum(NNsx)) - 1
+#     G2 = np.zeros(shape=np.sum(NNsx)) - 1
 #     Y1 = np.zeros(shape=np.sum(NNsx)) - 1
 #     Y2 = np.zeros(shape=np.sum(NNsx)) - 1
 #     K = np.zeros(shape=np.sum(NNsx)) - 1
@@ -1049,7 +1050,7 @@ class BLMEstimator:
 #         for x in range(nx):
 #             I = np.arange(i, i + NNsx[x, l1])
 #             ni = len(I)
-#             J1[I] = l1
+#             G1[I] = l1
 
 #             # Draw k
 #             draw_vals = np.arange(nk)
@@ -1063,7 +1064,7 @@ class BLMEstimator:
 
 #             i = i + NNsx[x,l1]
 
-#     sdatae = pd.DataFrame(data={'k': K, 'y1': Y1, 'y2': Y2, 'j1': J1, 'j2': J1, 'x': X})
+#     sdatae = pd.DataFrame(data={'k': K, 'y1': Y1, 'y2': Y2, 'g1': G1, 'g2': G1, 'x': X})
 
 #     return sdatae
 
@@ -1083,12 +1084,12 @@ class BLMEstimator:
 #     # Generate Ki, Y1, Y4
 #     # FIXME the follow code probably doesn't run
 #     ni = len(jdatae)
-#     jj = jdatae['j1'] + nf * (jdatae['j2'] - 1)
+#     jj = jdatae['g1'] + nf * (jdatae['g2'] - 1)
 #     draw_vals = np.arange(nk)
 #     Ki = np.random.RandomState().choice(draw_vals, size=ni, replace=True, p=pk1[jj, :])
 #     # Draw Y1, Y4
-#     Y1 = A1[jdatae['j1'], Ki] + S1[jdatae['j1'], Ki] * np.random.RandomState().normal(size=ni)
-#     Y2 = A2[jdatae['j2'], Ki] + S2[jdatae['j2'], Ki] * np.random.RandomState().normal(size=ni)
+#     Y1 = A1[jdatae['g1'], Ki] + S1[jdatae['g1'], Ki] * np.random.RandomState().normal(size=ni)
+#     Y2 = A2[jdatae['g2'], Ki] + S2[jdatae['g2'], Ki] * np.random.RandomState().normal(size=ni)
 #     # Append Ki, Y1, Y4 to jdatae.sim
 #     jdatae.sim[['k_imp', 'y1_imp', 'y2_imp']] = [Ki, Y1, Y2]
 
@@ -1111,10 +1112,10 @@ class BLMEstimator:
 #     # FIXME the follow code probably doesn't run
 #     ni = len(sdatae)
 #     draw_vals = np.arange(nk)
-#     Ki = np.random.RandomState().choice(draw_vals, size=ni, replace=True, p=pk0[sdatae['x'], sdatae['j1'], :])
+#     Ki = np.random.RandomState().choice(draw_vals, size=ni, replace=True, p=pk0[sdatae['x'], sdatae['g1'], :])
 #     # Draw Y2, Y3
-#     Y1 = A1[sdatae['j1'], Ki] + S1[sdatae['j1'], Ki] * np.random.RandomState().normal(size=ni)
-#     Y2 = A2[sdatae['j1'], Ki] + S2[sdatae['j1'], Ki] * np.random.RandomState().normal(size=ni) # False for movers
+#     Y1 = A1[sdatae['g1'], Ki] + S1[sdatae['g1'], Ki] * np.random.RandomState().normal(size=ni)
+#     Y2 = A2[sdatae['g1'], Ki] + S2[sdatae['g1'], Ki] * np.random.RandomState().normal(size=ni) # False for movers
 #     # Append Ki, Y2, Y3 to sdatae.sim
 #     sdatae.sim[['k_imp', 'y1_imp', 'y2_imp']] = [Ki, Y1, Y2]
 
@@ -1147,9 +1148,9 @@ class BLMEstimator:
 #     # Movers
 #     Y1m = jdatae.y1
 #     Y2m = jdatae.y2
-#     J1m = jdatae.j1
-#     J2m = jdatae.j2
-#     JJm = J1m + nf * (J2m - 1)
+#     G1m = jdatae.g1
+#     G2m = jdatae.g2
+#     GGm = G1m + nf * (G2m - 1)
 #     Nm = len(jdatae)
 
 #     # Get the constraints
@@ -1173,8 +1174,8 @@ class BLMEstimator:
 #         CSw.meq = len(CSw.H)
 
 #     # Prepare matrices aggregated at the type level
-#     Dkj1f = np.kron(np.kron(np.eye(nf), np.ones((nf, 1))), np.eye(nk)) # A[k,l] coefficients for j1
-#     Dkj2f = np.kron(np.kron(np.ones((nf, 1)), np.eye(nf)), np.eye(nk)) # A[k,l] coefficients for j2
+#     Dkj1f = np.kron(np.kron(np.eye(nf), np.ones((nf, 1))), np.eye(nk)) # A[k,l] coefficients for g1
+#     Dkj2f = np.kron(np.kron(np.ones((nf, 1)), np.eye(nf)), np.eye(nk)) # A[k,l] coefficients for g2
 
 #     # Regression matrix for the variance
 #     XX = pd.append([
@@ -1205,7 +1206,7 @@ class BLMEstimator:
 #             # For efficiency we want to group by (l1,l2)
 #             for l1 in range(nf):
 #                 for l2 in range(nf):
-#                     I = (J1m == l1) & (J2m == l2)
+#                     I = (G1m == l1) & (G2m == l2)
 #                     ll = l1 + nf * (l2 - 1)
 #                     if np.sum(I) > 0:
 #                         for k in range(nk):
@@ -1242,7 +1243,7 @@ class BLMEstimator:
 
 #             for l1 in range(nf):
 #                 for l2 in range(nf):
-#                     I = (J1m == l1) & (J2m == l2)
+#                     I = (G1m == l1) & (G2m == l2)
 #                     if np.sum(I) > 0:
 #                         for k in range(nk):
 #                             # Compute the posterior weight, it's not time specific
@@ -1271,7 +1272,7 @@ class BLMEstimator:
 
 #             for l1 in range(nf):
 #                 for l2 in range(nf):
-#                     I = (J1m == l1) & (J2m == l2)
+#                     I = (G1m == l1) & (G2m == l2)
 #                     if np.sum(I) > 0:
 #                         for k in range(nk):
 #                             # Construct dependent for each time period k, l2, l1
@@ -1293,7 +1294,7 @@ class BLMEstimator:
 #         for l1 in range(nf):
 #             for l2 in range(nf):
 #                 jj = l1 + nf * (l2 - 1)
-#                 I = (JJm == jj)
+#                 I = (GGm == jj)
 #                 if np.sum(I) > 1:
 #                     pk1[jj, :] = np.sum(taum[I, :], axis=0)
 #                 elif np.sum(I) == 0: # This deals with the case where the cell is empty
@@ -1347,7 +1348,7 @@ class BLMEstimator:
     # ## -- Movers --
     # model.pk1 = pk1
 
-    # model.NNm = acast(jdatae[:, .N, list(j1, j2)], j1~j2, fill=0, value.var='N') # FIXME
+    # model.NNm = acast(jdatae[:, .N, list(g1, g2)], g1~g2, fill=0, value.var='N') # FIXME
     # model.likm = lik
 
     # end_time = time.time()
@@ -1376,7 +1377,7 @@ def m2_mixt_stayers(model, sdata, ctrl):
     nk  = model.nk
     nf  = model.nf
     Y1  = sdata.y1   # Firm id in period 1
-    J1  = sdata.j1   # Wage in period 1
+    G1  = sdata.g1   # Wage in period 1
     X   = sdata.x    # Observable category
     # @todo add code in case X is missing, just set it to one
     nx = len(np.unique(X))
@@ -1386,11 +1387,11 @@ def m2_mixt_stayers(model, sdata, ctrl):
 
     # We create the index for the movement
     # This needs to take into account the observable X
-    J1x = X + nx * (J1 - 1) # Joint in index for movement
-    J1s = csc_matrix(np.zeros(shape=nf * nx), shape=(N, nf * nx))
-    II = np.arange(N * J1x) # FIXME was 1:N + N * (J1x - 1)
-    J1s[II] = 1
-    tot_count = spread(np.sum(J1s, axis=0), 2, nk).T # FIXME
+    G1x = X + nx * (G1 - 1) # Joint in index for movement
+    G1s = csc_matrix(np.zeros(shape=nf * nx), shape=(N, nf * nx))
+    II = np.arange(N * G1x) # FIXME was 1:N + N * (G1x - 1)
+    G1s[II] = 1
+    tot_count = spread(np.sum(G1s, axis=0), 2, nk).T # FIXME
     empty_cells = tot_count[1, :] == 0
 
     #PI = rdirichlet(nf*nx,rep(1,nk))
@@ -1402,13 +1403,13 @@ def m2_mixt_stayers(model, sdata, ctrl):
 
     for count in range(iter_start, ctrl.maxiter):
         # The coeffs on the pis are the sum of the norm pdf
-        norm1 = norm.ppf(spread(Y1, 2, nk), Wmu[:, J1].T, Wsg[:, J1].T) # FIXME
-        tau = PI[J1x, :] * norm1
+        norm1 = norm.ppf(spread(Y1, 2, nk), Wmu[:, G1].T, Wsg[:, G1].T) # FIXME
+        tau = PI[G1x, :] * norm1
         tsum = np.sum(tau, axis=1)
         tau = tau / spread(tsum, 2, nk) # FIXME
         lik = - np.sum(np.log(tsum))
 
-        PI = (tau.T @ J1s / tot_count).T
+        PI = (tau.T @ G1s / tot_count).T
         PI[empty_cells, :] = 1 / nk * np.ones(shape=(np.sum(empty_cells), nk))
 
         dPI = np.abs(PI - PI_old)
@@ -1435,6 +1436,6 @@ def m2_mixt_stayers(model, sdata, ctrl):
 
     model.pk0 = rdim(PI, nx, nf, nk) # FIXME
     model.liks = lik
-    model.NNs = sdata[:, len(sdata) - 1, j1][sorted(j1)][:, N - 1] # FIXME j1 is not defined
+    model.NNs = sdata[:, len(sdata) - 1, g1][sorted(g1)][:, N - 1] # FIXME g1 is not defined
 
     return model

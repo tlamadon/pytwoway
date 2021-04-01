@@ -429,8 +429,8 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># Add pytwoway to system path, do not run this</span>
-<span class="kn">import</span> <span class="nn">sys</span>
-<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;../../..&#39;</span><span class="p">)</span>
+<span class="c1"># import sys</span>
+<span class="c1"># sys.path.append(&#39;../../..&#39;)</span>
 </pre></div>
 </div>
 </div>
@@ -442,7 +442,6 @@ div.rendered_html tbody tr:hover {
 <span></span><span class="c1"># Import the pytwoway package</span>
 <span class="c1"># (Make sure you have installed it using pip install pytwoway)</span>
 <span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
-<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
 </pre></div>
 </div>
@@ -498,74 +497,74 @@ div.rendered_html tbody tr:hover {
       <th>l</th>
       <th>y1</th>
       <th>y2</th>
+      <th>g1</th>
+      <th>g2</th>
+      <th>g1true</th>
+      <th>g2true</th>
       <th>j1</th>
       <th>j2</th>
-      <th>j1true</th>
-      <th>j2true</th>
-      <th>f1</th>
-      <th>f2</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
-      <td>0</td>
-      <td>1.169089</td>
-      <td>0.692001</td>
-      <td>0</td>
-      <td>0</td>
+      <td>1</td>
+      <td>0.463652</td>
+      <td>1.554466</td>
       <td>0</td>
       <td>0</td>
-      <td>F90</td>
-      <td>F70</td>
+      <td>0</td>
+      <td>0</td>
+      <td>F53</td>
+      <td>F81</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>0</td>
-      <td>0.218219</td>
-      <td>0.403516</td>
-      <td>0</td>
-      <td>0</td>
+      <td>1</td>
+      <td>1.324198</td>
+      <td>0.457572</td>
       <td>0</td>
       <td>0</td>
-      <td>F62</td>
-      <td>F39</td>
+      <td>0</td>
+      <td>0</td>
+      <td>F49</td>
+      <td>F99</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>0</td>
-      <td>0.529001</td>
-      <td>0.562833</td>
-      <td>0</td>
-      <td>0</td>
+      <td>1</td>
+      <td>0.631847</td>
+      <td>0.674330</td>
       <td>0</td>
       <td>0</td>
-      <td>F16</td>
-      <td>F100</td>
+      <td>0</td>
+      <td>0</td>
+      <td>F101</td>
+      <td>F97</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>0</td>
-      <td>0.834612</td>
-      <td>-0.013236</td>
-      <td>0</td>
-      <td>0</td>
+      <td>1</td>
+      <td>0.874247</td>
+      <td>0.834825</td>
       <td>0</td>
       <td>0</td>
-      <td>F32</td>
-      <td>F87</td>
+      <td>0</td>
+      <td>0</td>
+      <td>F39</td>
+      <td>F27</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>0</td>
-      <td>-0.441192</td>
-      <td>0.992421</td>
-      <td>0</td>
-      <td>0</td>
+      <td>1</td>
+      <td>0.584503</td>
+      <td>1.504783</td>
       <td>0</td>
       <td>0</td>
-      <td>F75</td>
-      <td>F73</td>
+      <td>0</td>
+      <td>0</td>
+      <td>F20</td>
+      <td>F11</td>
     </tr>
     <tr>
       <th>...</th>
@@ -582,62 +581,62 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>8995</th>
       <td>0</td>
-      <td>0.782915</td>
-      <td>1.718563</td>
+      <td>1.288463</td>
+      <td>1.142129</td>
       <td>2</td>
       <td>2</td>
       <td>2</td>
       <td>2</td>
-      <td>F79</td>
-      <td>F45</td>
+      <td>F88</td>
+      <td>F38</td>
     </tr>
     <tr>
       <th>8996</th>
-      <td>1</td>
-      <td>0.824797</td>
-      <td>1.746390</td>
+      <td>0</td>
+      <td>1.208359</td>
+      <td>0.538587</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2</td>
+      <td>F64</td>
+      <td>F25</td>
+    </tr>
+    <tr>
+      <th>8997</th>
+      <td>0</td>
+      <td>0.978188</td>
+      <td>0.984181</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2</td>
+      <td>2</td>
+      <td>F44</td>
+      <td>F29</td>
+    </tr>
+    <tr>
+      <th>8998</th>
+      <td>0</td>
+      <td>1.296872</td>
+      <td>1.405704</td>
       <td>2</td>
       <td>2</td>
       <td>2</td>
       <td>2</td>
       <td>F69</td>
-      <td>F38</td>
-    </tr>
-    <tr>
-      <th>8997</th>
-      <td>0</td>
-      <td>1.162404</td>
-      <td>1.674061</td>
-      <td>2</td>
-      <td>2</td>
-      <td>2</td>
-      <td>2</td>
-      <td>F85</td>
-      <td>F27</td>
-    </tr>
-    <tr>
-      <th>8998</th>
-      <td>1</td>
-      <td>1.891313</td>
-      <td>1.751884</td>
-      <td>2</td>
-      <td>2</td>
-      <td>2</td>
-      <td>2</td>
-      <td>F61</td>
-      <td>F20</td>
+      <td>F46</td>
     </tr>
     <tr>
       <th>8999</th>
-      <td>1</td>
-      <td>1.276341</td>
-      <td>1.021080</td>
+      <td>0</td>
+      <td>1.411911</td>
+      <td>0.940909</td>
       <td>2</td>
       <td>2</td>
       <td>2</td>
       <td>2</td>
-      <td>F51</td>
-      <td>F44</td>
+      <td>F101</td>
+      <td>F66</td>
     </tr>
   </tbody>
 </table>
@@ -669,74 +668,74 @@ div.rendered_html tbody tr:hover {
       <th>k</th>
       <th>y1</th>
       <th>y2</th>
-      <th>j1</th>
-      <th>j2</th>
+      <th>g1</th>
+      <th>g2</th>
       <th>x</th>
-      <th>f1</th>
-      <th>j1true</th>
-      <th>f2</th>
+      <th>j1</th>
+      <th>g1true</th>
+      <th>j2</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <th>0</th>
-      <td>1</td>
-      <td>0.688641</td>
-      <td>0.479007</td>
+      <td>0</td>
+      <td>0.500026</td>
+      <td>1.191067</td>
       <td>0</td>
       <td>0</td>
       <td>1</td>
-      <td>F26</td>
+      <td>F71</td>
       <td>0</td>
-      <td>F26</td>
+      <td>F71</td>
     </tr>
     <tr>
       <th>1</th>
       <td>1</td>
-      <td>1.032119</td>
-      <td>0.949913</td>
+      <td>0.399829</td>
+      <td>0.915988</td>
       <td>0</td>
       <td>0</td>
       <td>1</td>
-      <td>F23</td>
+      <td>F44</td>
       <td>0</td>
-      <td>F23</td>
+      <td>F44</td>
     </tr>
     <tr>
       <th>2</th>
       <td>1</td>
-      <td>0.336394</td>
-      <td>0.420970</td>
+      <td>0.957044</td>
+      <td>0.355539</td>
       <td>0</td>
       <td>0</td>
       <td>1</td>
-      <td>F22</td>
+      <td>F18</td>
       <td>0</td>
-      <td>F22</td>
+      <td>F18</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>0</td>
-      <td>0.396887</td>
-      <td>1.151061</td>
+      <td>1</td>
+      <td>0.879591</td>
+      <td>0.468131</td>
       <td>0</td>
       <td>0</td>
       <td>1</td>
-      <td>F65</td>
+      <td>F87</td>
       <td>0</td>
-      <td>F65</td>
+      <td>F87</td>
     </tr>
     <tr>
       <th>4</th>
       <td>1</td>
-      <td>0.338132</td>
-      <td>0.427093</td>
+      <td>0.829408</td>
+      <td>-0.123937</td>
       <td>0</td>
       <td>0</td>
       <td>1</td>
-      <td>F12</td>
+      <td>F82</td>
       <td>0</td>
-      <td>F12</td>
+      <td>F82</td>
     </tr>
     <tr>
       <th>...</th>
@@ -753,62 +752,62 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>2995</th>
       <td>1</td>
-      <td>1.489740</td>
-      <td>0.562589</td>
+      <td>0.782145</td>
+      <td>2.004921</td>
       <td>2</td>
       <td>2</td>
       <td>1</td>
-      <td>F92</td>
+      <td>F57</td>
       <td>2</td>
-      <td>F92</td>
+      <td>F57</td>
     </tr>
     <tr>
       <th>2996</th>
-      <td>1</td>
-      <td>0.162369</td>
-      <td>1.282093</td>
+      <td>0</td>
+      <td>1.354498</td>
+      <td>1.953662</td>
       <td>2</td>
       <td>2</td>
       <td>1</td>
-      <td>F26</td>
+      <td>F42</td>
       <td>2</td>
-      <td>F26</td>
+      <td>F42</td>
     </tr>
     <tr>
       <th>2997</th>
       <td>1</td>
-      <td>1.920471</td>
-      <td>0.443843</td>
+      <td>1.393122</td>
+      <td>1.033156</td>
       <td>2</td>
       <td>2</td>
       <td>1</td>
-      <td>F58</td>
+      <td>F98</td>
       <td>2</td>
-      <td>F58</td>
+      <td>F98</td>
     </tr>
     <tr>
       <th>2998</th>
       <td>1</td>
-      <td>1.317292</td>
-      <td>1.600152</td>
+      <td>0.725057</td>
+      <td>1.627661</td>
       <td>2</td>
       <td>2</td>
       <td>1</td>
-      <td>F43</td>
+      <td>F77</td>
       <td>2</td>
-      <td>F43</td>
+      <td>F77</td>
     </tr>
     <tr>
       <th>2999</th>
       <td>1</td>
-      <td>0.782759</td>
-      <td>1.320312</td>
+      <td>1.092797</td>
+      <td>1.623057</td>
       <td>2</td>
       <td>2</td>
       <td>1</td>
-      <td>F19</td>
+      <td>F28</td>
       <td>2</td>
-      <td>F19</td>
+      <td>F28</td>
     </tr>
   </tbody>
 </table>
@@ -848,14 +847,14 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|██████████| 20/20 [00:04&lt;00:00,  4.93it/s]
+100%|██████████| 20/20 [00:06&lt;00:00,  3.17it/s]
 </pre></div></div>
 </div>
 </div>
 <div class="section" id="Finally,-we-can-investigate-the-results">
 <h2>Finally, we can investigate the results<a class="headerlink" href="#Finally,-we-can-investigate-the-results" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>

@@ -128,7 +128,7 @@ set maxvar 10000
 cd "/Users/adamalexanderoppenheimer/Desktop/pytwoway/stata"
 import delimited "twoway_sample_data.csv", clear
 
-zigzag_mata, tolerance(1e-15) max_iters(10000)
+zigzag_mata, tolerance(1e-15) max_iters(1000)
 zigzag
 clean_data 6 10
 */
@@ -199,6 +199,7 @@ void zigzag(real scalar tolerance, real scalar max_iters) {
         alpha_psi_hat[i, 1] = alpha_new[Y[i, 1] + 1, 1]
         alpha_psi_hat[i, 2] = psi_new[Y[i, 2] + 1, 1]
     }
+    // Save into Stata
     idx = st_addvar("float", ("alpha_hat", "psi_hat"))
     st_store(., idx, alpha_psi_hat)
 }

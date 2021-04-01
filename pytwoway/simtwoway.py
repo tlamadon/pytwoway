@@ -15,6 +15,7 @@ ax = np.newaxis
 from matplotlib import pyplot as plt
 import pytwoway as tw
 from bipartitepandas import update_dict, logger_init
+from tqdm import tqdm, trange
 
 class SimTwoWay:
     '''
@@ -442,11 +443,11 @@ class TwoWayMonteCarlo:
         if ncore > 1:
             # Simulate networks
             with Pool(processes=ncore) as pool:
-                V = pool.starmap(self._twfe_monte_carlo_interior, [[fe_params, cre_params, cluster_params] for _ in range(N)])
+                V = pool.starmap(self._twfe_monte_carlo_interior, [(fe_params, cre_params, cluster_params) for _ in range(N)])
             for i, res in enumerate(V):
                 true_psi_var[i], true_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_corr_psi_var[i], fe_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = res
         else:
-            for i in range(N):
+            for i in trange(N):
                 # Simulate a network
                 true_psi_var[i], true_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_corr_psi_var[i], fe_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = self._twfe_monte_carlo_interior(fe_params=fe_params, cre_params=cre_params, cluster_params=cluster_params)
 
