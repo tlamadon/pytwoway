@@ -27,36 +27,36 @@ To run in python:
 
 .. note::
    Your data must include the following columns:
-    - ``wid``: the worker identifier
-    - ``fid``: the firm identifier
-    - ``year``: the time
-    - ``comp``: the outcome variable, in our case compensation
+    - ``i``: the worker identifier
+    - ``j``: the firm identifier
+    - ``y``: the compensation variable
+    - ``t``: the time
    .. list-table:: Example data
       :widths: 25 25 25 25
       :header-rows: 1
       :align: center
 
-      * - wid
-        - fid
-        - year
-        - comp
+      * - i
+        - j
+        - y
+        - t
 
       * - 1
         - 1
-        - 2019
         - 1000
+        - 2019
       * - 1
         - 2
-        - 2020
         - 1500
-      * - 2
-        - 3
-        - 2019
-        - 500
-      * - 2
-        - 3
         - 2020
+      * - 2
+        - 3
+        - 500
+        - 2019
+      * - 2
+        - 3
         - 550
+        - 2020
 
 - If you want to run estimators on simulated data:
 

@@ -47,7 +47,7 @@ Example config.txt::
 
     data = file.csv
     filetype = csv
-    col_dict = "{'fid': 'your_firmid_col', 'wid': 'your_workerid_col', 'year': 'your_year_col', 'comp': 'your_compensation_col'}"
+    col_dict = "{'i': 'your_workerid_col', 'j': 'your_firmid_col', 'y': 'your_compensation_col', 't': 'your_year_col'}"
 
 Citation
 --------

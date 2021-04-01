@@ -141,7 +141,7 @@ class SimTwoWay:
         Returns:
             (NumPy Array): random firms for each group
         '''
-        max_int = np.int(np.maximum(1, freq.sum() / (firm_size * num_time)))
+        max_int = int(np.maximum(1, freq.sum() / (firm_size * num_time)))
         return np.array(np.random.choice(max_int, size=freq.count()) + 1)
 
     def sim_network(self):
@@ -197,27 +197,27 @@ class SimTwoWay:
         spell_data = np.reshape(spellcount, (num_time * num_ind, 1))[:, 0]
 
         # Merging all columns into a dataframe
-        data = pd.DataFrame(data={'wid': ids, 'year': ts, 'k': k_data,
+        data = pd.DataFrame(data={'i': ids, 't': ts, 'k': k_data,
                                 'alpha': alpha_data, 'psi': psi_data,
                                 'spell': spell_data.astype(int)})
 
         # Generate size of spells
-        dspell = data.groupby(['wid', 'spell', 'k']).size().to_frame(name='freq').reset_index()
+        dspell = data.groupby(['i', 'spell', 'k']).size().to_frame(name='freq').reset_index()
         # Draw firm ids
-        dspell['fid'] = dspell.groupby(['k'])['freq'].transform(self.__sim_network_draw_fids, *[num_time, firm_size])
+        dspell['j'] = dspell.groupby(['k'])['freq'].transform(self.__sim_network_draw_fids, *[num_time, firm_size])
         # Make firm ids contiguous (and have them start at 1)
-        dspell['fid'] = dspell.groupby(['k', 'fid'])['freq'].ngroup() + 1
+        dspell['j'] = dspell.groupby(['k', 'j'])['freq'].ngroup() + 1
 
         # Merge spells into panel
-        data = data.merge(dspell, on=['wid', 'spell', 'k'])
+        data = data.merge(dspell, on=['i', 'spell', 'k'])
 
-        data['move'] = (data['fid'] != data['fid'].shift(1)) & (data['wid'] == data['wid'].shift(1))
+        data['move'] = (data['j'] != data['j'].shift(1)) & (data['i'] == data['i'].shift(1))
 
         # Compute wages through the AKM formula
-        data['comp'] = data['alpha'] + data['psi'] + w_sig * norm.rvs(size=num_ind * num_time)
+        data['y'] = data['alpha'] + data['psi'] + w_sig * norm.rvs(size=num_ind * num_time)
 
-        data['wid'] -= 1 # Start at 0
-        data['fid'] -= 1 # Start at 0
+        data['i'] -= 1 # Start at 0
+        data['j'] -= 1 # Start at 0
 
         return data
 
@@ -319,7 +319,7 @@ class TwoWayMonteCarlo:
                     cdf_resolution (int): how many values to use to approximate the cdf
                     grouping (string): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
 
-                    year (int): if None, uses entire dataset; if int, gives year of data to consider
+                    year (int): if None, uses entire dataset; if int, gives period of data to consider
 
                     KMeans_params (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
 

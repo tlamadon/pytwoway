@@ -62,19 +62,19 @@ class CREEstimator:
 
                     data (Pandas DataFrame): cross-section labor data. Data contains the following columns:
 
-                        wid (worker id)
+                        i (worker id)
 
-                        f1i (firm id 1)
+                        j1 (firm id 1)
 
-                        f2i (firm id 2)
+                        j2 (firm id 2)
 
                         y1 (compensation 1)
 
                         y2 (compensation 2)
 
-                        year_end_1 (last year of observation 1)
+                        t1 (last period of observation 1)
 
-                        year_end_2 (last year of observation 2)
+                        t2 (last period of observation 2)
 
                         w1 (weight 1)
 
@@ -132,7 +132,7 @@ class CREEstimator:
         self.__estimate_within_cluster(sdata, jdata)
         self.__estimate_within_parameters()
 
-        cdata = pd.concat([sdata[['y1', 'psi1_tmp', 'mx', 'f1i']], jdata[['y1', 'psi1_tmp', 'mx', 'f1i']]], axis=0)
+        cdata = pd.concat([sdata[['y1', 'psi1_tmp', 'mx', 'j1']], jdata[['y1', 'psi1_tmp', 'mx', 'j1']]], axis=0)
         Yq = self.__get_Yq() # Pandas series with the cross-section income
 
         self.__collect_res(cdata, Yq) # Collect results
@@ -165,11 +165,11 @@ class CREEstimator:
             fids = data.table(f1=f1s,nfid=1:length(f1s))
             setkey(fids,f1)
             setkey(jdata,f1)
-            jdata[,f1i := fids[jdata,nfid]]
+            jdata[,j1 := fids[jdata,nfid]]
             setkey(sdata,f1)
-            sdata[,f1i := fids[sdata,nfid]]
+            sdata[,j1 := fids[sdata,nfid]]
             setkey(jdata,f2)
-            jdata[,f2i := fids[jdata,nfid]]
+            jdata[,j2 := fids[jdata,nfid]]
 
             jdata = as.data.frame(jdata)
             sdata = as.data.frame(sdata)
@@ -179,16 +179,16 @@ class CREEstimator:
         self.logger.info('preparing the data')
 
         self.adata = self.params['data']
-        # self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1 # FIXME wid should already be correct
-        self.adata[['j1', 'j2']] = self.adata[['j1', 'j2']].astype(int) # Clusters generated as Int64 which isn't compatible with indexing
+        # self.adata['i'] = self.adata['i'].astype('category').cat.codes + 1 # FIXME i should already be correct
+        self.adata[['g1', 'g2']] = self.adata[['g1', 'g2']].astype(int) # Clusters generated as Int64 which isn't compatible with indexing
 
-        self.nf = max(self.adata['f1i'].max(), self.adata['f2i'].max()) + 1 # Number of firms
-        self.nw = self.adata['wid'].max() + 1 # Number of workers
-        self.nc = max(self.adata['j1'].max(), self.adata['j2'].max()) + 1 # Number of clusters
+        self.nf = max(self.adata['j1'].max(), self.adata['j2'].max()) + 1 # Number of firms
+        self.nw = self.adata['i'].max() + 1 # Number of workers
+        self.nc = max(self.adata['g1'].max(), self.adata['g2'].max()) + 1 # Number of clusters
         nn = len(self.adata) # Number of observations
         self.logger.info('data firms={} workers={} clusters={} observations={}'.format(self.nf, self.nw, self.nc, nn))
 
-        nm = len(np.unique(self.adata[self.adata['m'] == 1]['wid'])) # Number of movers
+        nm = len(np.unique(self.adata[self.adata['m'] == 1]['i'])) # Number of movers
         self.ns = self.nw - nm # Number of stayers
         self.logger.info('data movers={} stayers={}'.format(nm, self.ns))
 
@@ -201,10 +201,10 @@ class CREEstimator:
         # sdata = self.adata[(self.adata['m'] == 0) & (self.adata['cs'] == 1)].reset_index(drop=True)
         # jdata = self.adata[(self.adata['m'] == 1) & (self.adata['cs'] == 1)].reset_index(drop=True)
 
-        # sdata['j1'] = sdata['j1'].astype(int)
-        # sdata['j2'] = sdata['j2'].astype(int)
-        # jdata['j1'] = jdata['j1'].astype(int)
-        # jdata['j2'] = jdata['j2'].astype(int)
+        # sdata['g1'] = sdata['g1'].astype(int)
+        # sdata['g2'] = sdata['g2'].astype(int)
+        # jdata['g1'] = jdata['g1'].astype(int)
+        # jdata['g2'] = jdata['g2'].astype(int)
 
         # self.jdata = jdata
         # self.sdata = sdata
@@ -217,14 +217,14 @@ class CREEstimator:
         # self.sdata = sdata
 
         # # Combine the 2 data-sets
-        # self.adata = pd.concat([sdata[['wid', 'f1i', 'y1']].assign(cs=1, m=0),
-        #                         jdata[['wid', 'f1i', 'y1']].assign(cs=1, m=1),
-        #                         jdata[['wid', 'f2i', 'y2']].rename(columns={'f2i': 'f1i', 'y2': 'y1'}).assign(cs=0, m=1)])
+        # self.adata = pd.concat([sdata[['i', 'j1', 'y1']].assign(cs=1, m=0),
+        #                         jdata[['i', 'j1', 'y1']].assign(cs=1, m=1),
+        #                         jdata[['i', 'j2', 'y2']].rename(columns={'j2': 'j1', 'y2': 'y1'}).assign(cs=0, m=1)])
         # self.adata = self.adata.set_index(pd.Series(range(len(self.adata))))
-        # self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1
+        # self.adata['i'] = self.adata['i'].astype('category').cat.codes + 1
 
         # self.nf = self.res['n_firms']
-        # self.nc = max(jdata.j1.max(), jdata.j2.max())
+        # self.nc = max(jdata.g1.max(), jdata.g2.max())
         # self.nw = self.res['n_workers']
         # self.nn = len(self.adata)
 
@@ -241,8 +241,8 @@ class CREEstimator:
             jdata (Pandas DataFrame): @ FIXME update this
         '''
         # Matrices for group level estimation
-        J1c = csc_matrix((np.ones(self.mn), (jdata.index, jdata['j1'])), shape=(self.mn, self.nc))
-        J2c = csc_matrix((np.ones(self.mn), (jdata.index, jdata['j2'])), shape=(self.mn, self.nc))
+        J1c = csc_matrix((np.ones(self.mn), (jdata.index, jdata['g1'])), shape=(self.mn, self.nc))
+        J2c = csc_matrix((np.ones(self.mn), (jdata.index, jdata['g2'])), shape=(self.mn, self.nc))
         Jc = J2c - J1c
         Jc = Jc[:, range(self.nc - 1)]  # Normalizing last group to 0
         Yc = jdata['y2'] - jdata['y1']
@@ -256,25 +256,25 @@ class CREEstimator:
             A = A * 0.0
         pb['Afill'] = np.append(A, 0)
 
-        jdata['psi1_tmp'] = pb['Afill'][jdata['j1']]
-        jdata['psi2_tmp'] = pb['Afill'][jdata['j2']]
+        jdata['psi1_tmp'] = pb['Afill'][jdata['g1']]
+        jdata['psi2_tmp'] = pb['Afill'][jdata['g2']]
 
-        EEm = jdata.assign(mx=lambda df: 0.5 * (df['y2'] - df['psi2_tmp'] + df['y1'] - df['psi1_tmp'])).groupby(['j1', 'j2'])['mx'].agg('mean')
+        EEm = jdata.assign(mx=lambda df: 0.5 * (df['y2'] - df['psi2_tmp'] + df['y1'] - df['psi1_tmp'])).groupby(['g1', 'g2'])['mx'].agg('mean')
         if self.wo_btw:
             EEm = EEm * 0.0
-        jdata = pd.merge(jdata, EEm, on=('j1', 'j2'))
-        pb['EEm'] = pd_to_np(EEm.reset_index(), 'j1', 'j2', 'mx', self.nc, self.nc)
+        jdata = pd.merge(jdata, EEm, on=('g1', 'g2'))
+        pb['EEm'] = pd_to_np(EEm.reset_index(), 'g1', 'g2', 'mx', self.nc, self.nc)
         #pb['EEm'] = np.array(EEm.values).reshape(self.nc, self.nc)
-        #print(pd_to_np(EEm.reset_index(), 'j1', 'j2', 'mx', self.nc, self.nc) - np.array(EEm.values).reshape(self.nc, self.nc))
+        #print(pd_to_np(EEm.reset_index(), 'g1', 'g2', 'mx', self.nc, self.nc) - np.array(EEm.values).reshape(self.nc, self.nc))
 
-        sdata['psi1_tmp'] = pb['Afill'][sdata['j1']]
-        Em = sdata.assign(mx = lambda df: df['y1'] - df['psi1_tmp']).groupby(['j1'])['mx'].agg('mean')
+        sdata['psi1_tmp'] = pb['Afill'][sdata['g1']]
+        Em = sdata.assign(mx = lambda df: df['y1'] - df['psi1_tmp']).groupby(['g1'])['mx'].agg('mean')
         if self.wo_btw:
             Em = Em * 0.0
-        sdata = pd.merge(sdata, Em, on=('j1'))
+        sdata = pd.merge(sdata, Em, on=('g1'))
         pb['Em'] = np.array(Em.values)
 
-        # # Let's also regress residuals on j1,j2
+        # # Let's also regress residuals on g1,g2
         # Ed = Yc - Jc * A
         # Jcv = J2c + J1c
         # Mcv = Jcv.transpose() * Jcv
@@ -298,28 +298,28 @@ class CREEstimator:
         # We construct wages net of between group means
         dm = jdata.eval('y1n = y1 - psi1_tmp - mx') \
                   .eval('y2n =  y2 - psi2_tmp - mx') \
-                  [['y1n', 'y2n', 'j1', 'j2', 'f1i', 'f2i']]
-        ds  = sdata.eval('y1n = y1 - psi1_tmp - mx')[['y1n', 'j1', 'f1i']]
+                  [['y1n', 'y2n', 'g1', 'g2', 'j1', 'j2']]
+        ds  = sdata.eval('y1n = y1 - psi1_tmp - mx')[['y1n', 'g1', 'j1']]
 
         # Get averages by firms for stayers
-        dsf  = ds.groupby('f1i').agg(y1sj=('y1n', 'mean'), nsj=('y1n', 'count'))
+        dsf  = ds.groupby('j1').agg(y1sj=('y1n', 'mean'), nsj=('y1n', 'count'))
         # Get averages by firms for movers leaving the firm
-        dm1f = dm.groupby('f1i').agg(y1m1j=('y1n', 'mean'), y2m1j=('y2n', 'mean'), nm1j=('y1n', 'count'))
+        dm1f = dm.groupby('j1').agg(y1m1j=('y1n', 'mean'), y2m1j=('y2n', 'mean'), nm1j=('y1n', 'count'))
         # Get averages by firms for movers joining the firm
-        dm2f = dm.groupby('f2i').agg(y1m2j=('y1n', 'mean'), y2m2j=('y2n', 'mean'), nm2j=('y2n', 'count'))
+        dm2f = dm.groupby('j2').agg(y1m2j=('y1n', 'mean'), y2m2j=('y2n', 'mean'), nm2j=('y2n', 'count'))
 
         # Get averages by firms and jo (cluster worker moves to) to create leave same cluster destination out
-        dm1c = dm.groupby(['f1i', 'j2']).agg(y1m1c=('y1n', 'mean'), y2m1c=('y2n', 'mean'), nm1c= ('y1n', 'count'))
-        dm2c = dm.groupby(['f2i', 'j1']).agg(y1m2c=('y1n', 'mean'), y2m2c=('y2n', 'mean'), nm2c= ('y2n', 'count'))
+        dm1c = dm.groupby(['j1', 'g2']).agg(y1m1c=('y1n', 'mean'), y2m1c=('y2n', 'mean'), nm1c= ('y1n', 'count'))
+        dm2c = dm.groupby(['j2', 'g1']).agg(y1m2c=('y1n', 'mean'), y2m2c=('y2n', 'mean'), nm2c= ('y2n', 'count'))
 
         # Merge averages back into data
-        ds = pd.merge(ds, dsf, on='f1i')
-        ds = pd.merge(ds, dm1f, on='f1i')
-        ds = pd.merge(ds, dm2f, left_on='f1i', right_on='f2i')
-        dm = pd.merge(dm, dm1f, on='f1i')
-        dm = pd.merge(dm, dm2f, on='f2i')
-        dm = pd.merge(dm, dm1c, on=['f1i', 'j2'])
-        dm = pd.merge(dm, dm2c, on=['f2i', 'j1'])
+        ds = pd.merge(ds, dsf, on='j1')
+        ds = pd.merge(ds, dm1f, on='j1')
+        ds = pd.merge(ds, dm2f, left_on='j1', right_on='j2')
+        dm = pd.merge(dm, dm1f, on='j1')
+        dm = pd.merge(dm, dm2f, on='j2')
+        dm = pd.merge(dm, dm1c, on=['j1', 'g2'])
+        dm = pd.merge(dm, dm2c, on=['j2', 'g1'])
 
         # Create leaveout means
         ds.eval('y1s_lo = (nsj * y1sj - y1n) / (nsj - 1)', inplace=True)
@@ -367,10 +367,10 @@ class CREEstimator:
         res['y2m2_y2m2_count'] = dm.query('nm2j > nm2c').shape[0]
 
         # Total variance of wages in differences for movers
-        res['dym_dym'] = dm.query('j1 != j2').eval('y2n-y1n').var()
-        res['dym_dym_count'] = dm.query('j1 != j2').shape[0]
-        res['y1m_y2m'] = dm.query('j1 != j2').pipe(pipe_qcov, 'y1n', 'y2n')
-        res['y1m_y2m_count'] = dm.query('j1 != j2').shape[0]
+        res['dym_dym'] = dm.query('g1 != g2').eval('y2n-y1n').var()
+        res['dym_dym_count'] = dm.query('g1 != g2').shape[0]
+        res['y1m_y2m'] = dm.query('g1 != g2').pipe(pipe_qcov, 'y1n', 'y2n')
+        res['y1m_y2m_count'] = dm.query('g1 != g2').shape[0]
 
         self.moments_within = res
         self.res.update(self.moments_within)
@@ -476,8 +476,8 @@ class CREEstimator:
         Arguments:
             jdata (Pandas DataFrame): movers
         '''
-        jdata_f = pd.concat([jdata[['f1i', 'j1']], jdata[['f2i', 'j2']].rename(columns={'f2i': 'f1i', 'j2': 'j1'})]).drop_duplicates()
-        Jf = csc_matrix((np.ones(len(jdata_f)), (jdata_f['f1i'], jdata_f['j1'])), shape=(len(jdata_f), self.nc))
+        jdata_f = pd.concat([jdata[['j1', 'g1']], jdata[['j2', 'g2']].rename(columns={'j2': 'j1', 'g2': 'g1'})]).drop_duplicates()
+        Jf = csc_matrix((np.ones(len(jdata_f)), (jdata_f['j1'], jdata_f['g1'])), shape=(len(jdata_f), self.nc))
         self.Mud = Jf * self.between_params['Afill']
 
     def __prep_posterior_var(self, jdata, cdata):
@@ -489,15 +489,15 @@ class CREEstimator:
             cdata (Pandas DataFrame): movers and stayers, dataframe created when computing the between terms
         '''
         jdata['val'] = 1
-        J1 = csc_matrix((jdata['val'], (jdata.index, jdata['f1i'])), shape=(self.mn, self.nf))
-        J2 = csc_matrix((jdata['val'], (jdata.index, jdata['f2i'])), shape=(self.mn, self.nf))
+        J1 = csc_matrix((jdata['val'], (jdata.index, jdata['j1'])), shape=(self.mn, self.nf))
+        J2 = csc_matrix((jdata['val'], (jdata.index, jdata['j2'])), shape=(self.mn, self.nf))
         Jd = J2 - J1
         Yd = jdata.eval('y2 - y1') # Create the difference Y
         mdata = self.adata.query('cs == 1')
-        mdata = mdata[~pd.isnull(mdata['f1i'])]
+        mdata = mdata[~pd.isnull(mdata['j1'])]
 
         nnq = len(mdata)
-        Jq = csc_matrix((np.ones(nnq), (range(nnq), mdata['f1i'])), shape=(nnq, self.nf)) # Get the weighting for the cross-section
+        Jq = csc_matrix((np.ones(nnq), (range(nnq), mdata['j1'])), shape=(nnq, self.nf)) # Get the weighting for the cross-section
         # Yq = mdata['y1'] # FIXME commented this out
         # self.nnq = len(cdata) # FIXME commented this out
         self.Jd = Jd

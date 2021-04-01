@@ -1,7 +1,7 @@
 SimTwoWay class
 ===============
 
-.. autoclass:: pytwoway.sim_twfe_network.SimTwoWay
+.. autoclass:: pytwoway.simtwoway.SimTwoWay
    :members:
    :undoc-members:
    :show-inheritance:

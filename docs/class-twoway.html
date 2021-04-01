@@ -195,13 +195,13 @@
 <div class="section" id="twoway-class">
 <h1>TwoWay class<a class="headerlink" href="#twoway-class" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
-<dt id="pytwoway.twfe_network.TwoWay">
-<em class="property">class </em><code class="sig-prename descclassname">pytwoway.twfe_network.</code><code class="sig-name descname">TwoWay</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">formatting</span><span class="o">=</span><span class="default_value">'long'</span></em>, <em class="sig-param"><span class="n">col_dict</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.twoway.TwoWay">
+<em class="property">class </em><code class="sig-prename descclassname">pytwoway.twoway.</code><code class="sig-name descname">TwoWay</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">formatting</span><span class="o">=</span><span class="default_value">'long'</span></em>, <em class="sig-param"><span class="n">col_dict</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Class of TwoWay, where TwoWay gives a network of firms and workers. Inherits from bipartitepandas.</p>
 <dl class="py method">
-<dt id="pytwoway.twfe_network.TwoWay.fit_cre">
-<code class="sig-name descname">fit_cre</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cre</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">user_cluster</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay.fit_cre" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.twoway.TwoWay.fit_cre">
+<code class="sig-name descname">fit_cre</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cre</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">user_cluster</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.fit_cre" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fit the CRE estimator. Saves two dictionary attributes: self.cre_res (complete results) and self.cre_summary (summary results).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -232,8 +232,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.twfe_network.TwoWay.fit_fe">
-<code class="sig-name descname">fit_fe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_fe</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay.fit_fe" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.twoway.TwoWay.fit_fe">
+<code class="sig-name descname">fit_fe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_fe</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.fit_fe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fit the bias-corrected FE estimator. Saves two dictionary attributes: self.fe_res (complete results) and self.fe_summary (summary results).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -259,8 +259,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.twfe_network.TwoWay.summary_cre">
-<code class="sig-name descname">summary_cre</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay.summary_cre" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.twoway.TwoWay.summary_cre">
+<code class="sig-name descname">summary_cre</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.summary_cre" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return summary results for CRE estimator.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -273,8 +273,8 @@
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.twfe_network.TwoWay.summary_fe">
-<code class="sig-name descname">summary_fe</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twfe_network.TwoWay.summary_fe" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.twoway.TwoWay.summary_fe">
+<code class="sig-name descname">summary_fe</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.summary_fe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Return summary results for FE estimator.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns</dt>
@@ -313,7 +313,7 @@
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Mar 31, 2021.
+        Last updated on Apr 01, 2021.
       </span>
 
     </p>

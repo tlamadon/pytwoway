@@ -1,7 +1,7 @@
 TwoWay class
 ============
 
-.. autoclass:: pytwoway.twfe_network.TwoWay
+.. autoclass:: pytwoway.twoway.TwoWay
    :members:
    :undoc-members:
    :show-inheritance:

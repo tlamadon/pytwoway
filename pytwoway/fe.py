@@ -58,19 +58,19 @@ class FEEstimator:
 
                     data (Pandas DataFrame): cross-section labor data. Data contains the following columns:
 
-                        wid (worker id)
+                        i (worker id)
 
-                        f1i (firm id 1)
+                        j1 (firm id 1)
 
-                        f2i (firm id 2)
+                        j2 (firm id 2)
 
                         y1 (compensation 1)
 
                         y2 (compensation 2)
 
-                        year_end_1 (last year of observation 1)
+                        t1 (last period of observation 1)
 
-                        year_end_2 (last year of observation 2)
+                        t2 (last period of observation 2)
 
                         w1 (weight 1)
 
@@ -208,43 +208,43 @@ class FEEstimator:
         self.logger.info('preparing the data')
 
         self.adata = self.params['data']
-        # self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1 # FIXME commented out because wid should already be correct
+        # self.adata['i'] = self.adata['i'].astype('category').cat.codes + 1 # FIXME commented out because i should already be correct
 
-        self.nf = max(self.adata['f1i'].max(), self.adata['f2i'].max()) + 1 # Number of firms
-        self.nw = self.adata['wid'].max() + 1 # Number of workers
+        self.nf = max(self.adata['j1'].max(), self.adata['j2'].max()) + 1 # Number of firms
+        self.nw = self.adata['i'].max() + 1 # Number of workers
         self.nn = len(self.adata) # Number of observations
         self.logger.info('data firms={} workers={} observations={}'.format(self.nf, self.nw, self.nn))
 
         self.res['n_firms'] = self.nf
         self.res['n_workers'] = self.nw
-        self.res['n_movers'] = len(np.unique(self.adata[self.adata['m'] == 1]['wid']))
+        self.res['n_movers'] = len(np.unique(self.adata[self.adata['m'] == 1]['i']))
         self.res['n_stayers'] = self.res['n_workers'] - self.res['n_movers']
         self.logger.info('data movers={} stayers={}'.format(self.res['n_movers'], self.res['n_stayers']))
 
         #res['year_max'] = int(sdata['year'].max())
         #res['year_min'] = int(sdata['year'].min())
 
-        # # Make wids unique per row
+        # # Make j values unique per row
         # jdata.set_index(np.arange(self.res['nm']) + 1)
         # sdata.set_index(np.arange(self.res['ns']) + 1 + self.res['nm'])
-        # jdata['wid'] = np.arange(self.res['nm']) + 1
-        # sdata['wid'] = np.arange(self.res['ns']) + 1 + self.res['nm']
+        # jdata['i'] = np.arange(self.res['nm']) + 1
+        # sdata['i'] = np.arange(self.res['ns']) + 1 + self.res['nm']
 
         # # Combine the 2 data-sets
-        # # self.adata = pd.concat([sdata[['wid', 'f1i', 'y1']].assign(cs=1, m=0), jdata[['wid', 'f1i', 'y1']].assign(cs=1, m=1), jdata[['wid', 'f2i', 'y2']].rename(columns={'f2i': 'f1i', 'y2': 'y1'}).assign(cs=0, m=1)]) # FIXME updated below
-        # self.adata = pd.concat([sdata[['wid', 'f1i', 'f2i', 'y1']].assign(cs=1, m=0), jdata[['wid', 'f1i', 'f2i', 'y1']].assign(cs=1, m=1), jdata[['wid', 'f1i', 'f2i', 'y2']].rename({'f1i': 'f2i', 'f2i': 'f1i', 'y2': 'y1'}, axis=1).assign(cs=0, m=1)]) # FIXME For some reason I didn't rename the last group's y2 to y1 before, but I'm changing it from y2 to y1 because it isn't working otherwise - make sure in the future to confirm this is the right thing to do (note that y2 is never used anywhere else in the code so it almost certainly is supposed to be labeled as y1, especially given that is how it was done in the original code above)
+        # # self.adata = pd.concat([sdata[['i', 'j1', 'y1']].assign(cs=1, m=0), jdata[['i', 'j1', 'y1']].assign(cs=1, m=1), jdata[['i', 'j2', 'y2']].rename(columns={'j2': 'j1', 'y2': 'y1'}).assign(cs=0, m=1)]) # FIXME updated below
+        # self.adata = pd.concat([sdata[['i', 'j1', 'j2', 'y1']].assign(cs=1, m=0), jdata[['i', 'j1', 'j2', 'y1']].assign(cs=1, m=1), jdata[['i', 'j1', 'j2', 'y2']].rename({'j1': 'j2', 'j2': 'j1', 'y2': 'y1'}, axis=1).assign(cs=0, m=1)]) # FIXME For some reason I didn't rename the last group's y2 to y1 before, but I'm changing it from y2 to y1 because it isn't working otherwise - make sure in the future to confirm this is the right thing to do (note that y2 is never used anywhere else in the code so it almost certainly is supposed to be labeled as y1, especially given that is how it was done in the original code above)
         # self.adata = self.adata.reset_index(drop=True) # FIXME changed from set_index(pd.Series(range(len(self.adata))))
-        # self.adata['wid'] = self.adata['wid'].astype('category').cat.codes + 1
+        # self.adata['i'] = self.adata['i'].astype('category').cat.codes + 1
 
     def __prep_JWM(self):
         '''
         Generate J, W, and M matrices.
         '''
         # Matrices for the cross-section
-        J = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata.f1i)), shape=(self.nn, self.nf)) # Firms
+        J = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata.j1)), shape=(self.nn, self.nf)) # Firms
         J = J[:, range(self.nf - 1)]  # Normalize one firm to 0
         self.J = J
-        W = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata.wid)), shape=(self.nn, self.nw)) # Workers
+        W = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata.i)), shape=(self.nn, self.nw)) # Workers
         self.W = W
         # Dw = diags((W.T * W).diagonal()) # FIXME changed from .transpose() to .T ALSO commented this out since it's not used
         Dwinv = diags(1.0 / ((W.T * W).diagonal())) # FIXME changed from .transpose() to .T
@@ -269,9 +269,9 @@ class FEEstimator:
 
         #     nnq = len(mdata) # Number of observations
         #     self.nnq = nnq
-        #     Jq = csc_matrix((np.ones(nnq), (mdata.index, mdata.f1i - 1)), shape=(nnq, nf))
+        #     Jq = csc_matrix((np.ones(nnq), (mdata.index, mdata.j1 - 1)), shape=(nnq, nf))
         #     self.Jq = Jq[:, range(nf - 1)]  # Normalizing one firm to 0
-        #     self.Wq = csc_matrix((np.ones(nnq), (mdata.index, mdata.wid - 1)), shape=(nnq, nw))
+        #     self.Wq = csc_matrix((np.ones(nnq), (mdata.index, mdata.i - 1)), shape=(nnq, nw))
         #     self.Yq = mdata['y1']
         # elif self.params['Q'] == 'cov(psi_t, psi_{t+1})':
         #     mdata = self.adata[self.adata['m'] == 1] # FIXME changed from adata.query('cs==1') (I ran %timeit and slicing is faster)
@@ -280,11 +280,11 @@ class FEEstimator:
         #     mdata_2 = mdata[mdata['cs'] == 0].reset_index(drop=True) # Firm 2 for movers
 
         #     nnq = len(mdata_1) # Number of observations
-        #     nm = len(mdata_1['wid'].unique()) # Number of movers
+        #     nm = len(mdata_1['i'].unique()) # Number of movers
         #     self.nnq = nnq
-        #     J1 = csc_matrix((np.ones(nnq), (mdata_1.index, mdata_1.f1i - 1)), shape=(nnq, nf))
+        #     J1 = csc_matrix((np.ones(nnq), (mdata_1.index, mdata_1.j1 - 1)), shape=(nnq, nf))
         #     self.J1 = J1[:, range(nf - 1)]  # Normalizing one firm to 0
-        #     J2 = csc_matrix((np.ones(nnq), (mdata_2.index, mdata_2.f1i - 1)), shape=(nnq, nf))
+        #     J2 = csc_matrix((np.ones(nnq), (mdata_2.index, mdata_2.j1 - 1)), shape=(nnq, nf))
         #     self.J2 = J2[:, range(nf - 1)]  # Normalizing one firm to 0
         #     self.Yq = mdata_1['y1']
 
@@ -349,17 +349,17 @@ class FEEstimator:
         '''
         Compute some early statistics.
         '''
-        fdata = self.adata.groupby('f1i').agg({'m':'sum', 'y1':'mean', 'wid':'count' })
-        self.res['mover_quantiles'] = self.__weighted_quantile(fdata['m'], np.linspace(0, 1, 11), fdata['wid']).tolist()
-        self.res['size_quantiles'] = self.__weighted_quantile(fdata['wid'], np.linspace(0, 1, 11), fdata['wid']).tolist()
-        self.res['between_firm_var'] = self.__weighted_var(fdata['y1'], fdata['wid'])
+        fdata = self.adata.groupby('j1').agg({'m':'sum', 'y1':'mean', 'i':'count' })
+        self.res['mover_quantiles'] = self.__weighted_quantile(fdata['m'], np.linspace(0, 1, 11), fdata['i']).tolist()
+        self.res['size_quantiles'] = self.__weighted_quantile(fdata['i'], np.linspace(0, 1, 11), fdata['i']).tolist()
+        self.res['between_firm_var'] = self.__weighted_var(fdata['y1'], fdata['i'])
         self.res['var_y'] = self.adata[self.adata['cs'] == 1]['y1'].var() # FIXME changed from adata.query('cs==1') (I ran %timeit and slicing is faster)
         self.logger.info('total variance: {:0.4f}'.format(self.res['var_y']))
 
         # extract woodcock moments using sdata and jdata
         # get averages by firms for stayers
-        #dsf  = adata.query('cs==1').groupby('f1i').agg(y1sj=('y1','mean'), nsj=('y1','count'))
-        #ds   = pd.merge(adata.query('cs==1'), dsf, on="f1i")
+        #dsf  = adata.query('cs==1').groupby('j1').agg(y1sj=('y1','mean'), nsj=('y1','count'))
+        #ds   = pd.merge(adata.query('cs==1'), dsf, on="j1")
         #ds.eval("y1s_lo    = (nsj * y1sj - y1) / (nsj - 1)",inplace=True)
         #res['woodcock_var_psi']   = ds.query('nsj  > 1').pipe(pipe_qcov, 'y1', 'y1s_lo')
         #res['woodcock_var_alpha'] = np.minimum( jdata.pipe(pipe_qcov, 'y1','y2'), adata.query('cs==1')['y1'].var() - res['woodcock_var_psi'] )
@@ -389,27 +389,27 @@ class FEEstimator:
             # Rows for csc_matrix
             self.adata['Jq_row'] = self.adata['Jq'].cumsum() - 1
             # Columns for csc_matrix
-            self.adata['Jq_col'] = self.adata['f1i']
+            self.adata['Jq_col'] = self.adata['j1']
             self.adata['Wq'] = self.adata['cs'] == 1
             self.adata['Wq_row'] = self.adata['Wq'].cumsum() - 1
-            self.adata['Wq_col'] = self.adata['wid']
+            self.adata['Wq_col'] = self.adata['i']
 
         elif self.params['Q'] == 'cov(psi_t, psi_{t+1})':
             self.adata['Jq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 1)
             self.adata['Jq_row'] = self.adata['Jq'].cumsum() - 1
-            self.adata['Jq_col'] = self.adata['f1i']
+            self.adata['Jq_col'] = self.adata['j1']
             self.adata['Wq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 0)
             self.adata['Wq_row'] = self.adata['Wq'].cumsum() - 1
-            self.adata['Wq_col'] = self.adata['f1i'] # Recall f1i, f2i swapped for m==1 and cs==0
+            self.adata['Wq_col'] = self.adata['j1'] # Recall j1, j2 swapped for m==1 and cs==0
 
         elif self.params['Q'] == 'cov(psi_i, psi_j)': # Code doesn't work
             self.adata['Jq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 1)
-            self.adata['Jq_row'] = self.adata['f1i']
-            self.adata['Jq_col'] = self.adata['f1i']
+            self.adata['Jq_row'] = self.adata['j1']
+            self.adata['Jq_col'] = self.adata['j1']
             self.adata['Wq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 0)
-            # Recall f1i, f2i swapped for m==1 and cs==0
-            self.adata['Wq_row'] = self.adata['f2i']
-            self.adata['Wq_col'] = self.adata['f1i']
+            # Recall j1, j2 swapped for m==1 and cs==0
+            self.adata['Wq_row'] = self.adata['j2']
+            self.adata['Wq_col'] = self.adata['j1']
 
     def __construct_Jq_Wq(self):
         '''
@@ -516,9 +516,9 @@ class FEEstimator:
 
         # Give stayers the variance estimate at the firm level
         self.adata['Sii'] = self.Y * self.E / (1 - self.Pii)
-        S_j = self.adata.query('m == 1').rename(columns={'Sii': 'Sii_j'}).groupby('f1i')['Sii_j'].agg('mean')
+        S_j = self.adata.query('m == 1').rename(columns={'Sii': 'Sii_j'}).groupby('j1')['Sii_j'].agg('mean')
 
-        self.adata = pd.merge(self.adata, S_j, on='f1i')
+        self.adata = pd.merge(self.adata, S_j, on='j1')
         self.adata['Sii'] = np.where(self.adata['m'] == 1, self.adata['Sii'], self.adata['Sii_j'])
         self.Sii = self.adata['Sii']
 
@@ -761,10 +761,10 @@ class FEEstimator:
             alpha_hat_dict (dict): dictionary linking firm ids to estimated firm fixed effects
             alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed effects
         '''
-        fids = np.arange(self.nf) # np.arange(self.adata.f1i.max()) + 1
-        wids = np.arange(self.nw) # np.arange(self.adata.wid.max()) + 1
-        psi_hat_dict = dict(zip(fids, np.concatenate([self.psi_hat, np.array([0])]))) # Add 0 for normalized firm
-        alpha_hat_dict = dict(zip(wids, self.alpha_hat))
+        j_vals = np.arange(self.nf) # np.arange(self.adata.j1.max()) + 1
+        i_vals = np.arange(self.nw) # np.arange(self.adata.i.max()) + 1
+        psi_hat_dict = dict(zip(j_vals, np.concatenate([self.psi_hat, np.array([0])]))) # Add 0 for normalized firm
+        alpha_hat_dict = dict(zip(i_vals, self.alpha_hat))
 
         return psi_hat_dict, alpha_hat_dict
 

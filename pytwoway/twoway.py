@@ -16,11 +16,15 @@ class TwoWay():
         Arguments:
             data (Pandas DataFrame): data giving firms, workers, and compensation
             formatting (str): if 'long', then data in long format; if 'long_collapsed' then in collapsed long format; if 'es', then data in event study format; if 'es_collapsed' then in collapsed event study format. If simulating data, keep default value of 'long'
-            col_dict (dict): make data columns readable (requires:
-                if long: wid (worker id), comp (compensation), fid (firm id), year;
-                if event study: wid (worker id), y1 (compensation 1), y2 (compensation 2), f1i (firm id 1), f2i (firm id 2), m (0 if stayer, 1 if mover);
-                    optionally include: year_end_1 (last year of observation 1), year_end_2 (last year of observation 2), w1 (weight 1), w2 (weight 2)).
-                Keep None if column names already correct
+            col_dict (dict): make data columns readable. Keep None if column names already correct. Options for:
+
+                long: requires: i (worker id), j (firm id), y (compensation), t (period); optional: g (firm cluster), m (0 if stayer, 1 if mover)
+
+                collapsed long: requires: i (worker id), j (firm id), y (compensation), t1 (first period in spell), t2 (last period in spell); optional: w (weight), g (firm cluster), m (0 if stayer, 1 if mover)
+
+                event study: requires: i (worker id), j1 (firm 1 id), j2 (firm 2 id), y1 (compensation 1), y2 (compensation 2); optional: t1 (time of observation 1), t2 (time of observation 2), g1 (firm 1 cluster), g2 (firm 2 cluster), m (0 if stayer, 1 if mover)
+
+                collapsed event study: requires: i (worker id), j1 (firm 1 id), j2 (firm 1 id), y1 (compensation 1), y2 (compensation 2); optional: t11 (first period in observation 1 spell), t12 (last period in observation 1 spell), t21 (first period in observation 2 spell), t22 (last period in observation 2 spell), w1 (weight 1), w2 (weight 2), g1 (firm 1 cluster), g2 (firm 2 cluster), m (0 if stayer, 1 if mover)
         '''
         # Start logger
         bpd.logger_init(self)
