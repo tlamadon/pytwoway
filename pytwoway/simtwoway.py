@@ -317,13 +317,13 @@ class TwoWayMonteCarlo:
 
                 Dictionary parameters:
 
-                    cdf_resolution (int): how many values to use to approximate the cdf
+                    cdf_resolution (int): how many values to use to approximate the cdfs
 
                     grouping (str): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
 
-                    stayers_movers (str or None): if None, uses entire dataset; if 'stayers', uses only stayers; if 'movers', uses only movers
+                    stayers_movers (str or None): if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers
 
-                    t (int or None): if None, uses entire dataset; if int, gives time in data to consider (only valid for non-collapsed data)
+                    t (int or None): if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)
 
                     weighted (bool): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)
 
@@ -427,13 +427,13 @@ class TwoWayMonteCarlo:
 
                 Dictionary parameters:
 
-                    cdf_resolution (int): how many values to use to approximate the cdf
+                    cdf_resolution (int): how many values to use to approximate the cdfs
 
                     grouping (str): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
 
-                    stayers_movers (str or None): if None, uses entire dataset; if 'stayers', uses only stayers; if 'movers', uses only movers
+                    stayers_movers (str or None): if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers
 
-                    t (int or None): if None, uses entire dataset; if int, gives time in data to consider (only valid for non-collapsed data)
+                    t (int or None): if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)
 
                     weighted (bool): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)
 

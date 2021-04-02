@@ -1,5 +1,5 @@
 '''
-Script to run twfe_network through the command line
+Script to run pytwoway through the command line
 
 Usage example:
 pytw --my-config config.txt --fe --cre
@@ -26,6 +26,21 @@ def clear_dict(d):
             new_d[key] = val
     return new_d
 
+def str2bool(v):
+    '''
+    Allows bools to be input as strings.
+    Source: https://stackoverflow.com/a/43357954
+    Note: replace all "action='store_true'" with 'type=str2bool'
+    '''
+    if isinstance(v, bool):
+       return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise configargparse.ArgumentTypeError('Boolean value expected.')
+
 def main():
     p = configargparse.ArgParser()
     p.add('-c', '--my-config', required=False, is_config_file=True, help='config file path')
@@ -34,14 +49,19 @@ def main():
     p.add('--filetype', required=False, help='file format of data')
 
     # Options to run FE or CRE
-    p.add('--fe', action='store_true', help='run FE estimation') # this option can be set in a config file because it starts with '--'
-    p.add('--cre', action='store_true', help='run CRE estimation')
+    p.add('--fe', type=str2bool, help='run FE estimation') # This option can be set in a config file because it starts with '--'
+    p.add('--cre', type=str2bool, help='run CRE estimation')
 
-    ##### twfe_network start #####
-    p.add('--data', required=True, help='path to labor data file')
-    p.add('--format', required=False, help="labor data format ('long' or 'es' for event study)")
+    ##### TwoWay start #####
+    p.add('--data', required=False, help='path to labor data file')
+    p.add('--format', required=False, help="labor data format ('long' for long; 'long_collapsed' for collapsed long; 'es' for event study; or 'es_collapsed' for collapsed event study)")
     p.add('--col_dict', required=False, help='dictionary to correct column names')
-    ##### twfe_network end #####
+    p.add('--collapsed', type=str2bool, required=False, help='if True, run estimators on collapsed data', default=True)
+    ##### TwoWay end #####
+
+    ##### Stata start #####
+    p.add('--stata', type=str2bool, required=False, help='if True, running estimators on Stata')
+    ##### Stata end #####
 
     ##### KMeans start #####
     p.add('--n_clusters', required=False, help='the number of clusters to form as well as the number of centroids to generate for the k-means algorithm.')
@@ -76,7 +96,10 @@ def main():
     p.add('--grouping', required=False, help='''
     how to group the cdfs when clustering ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
     ''')
-    p.add('--year', required=False, help='if None, uses entire dataset when clustering; if int, gives year of data to consider when clustering')
+    p.add('--stayers_movers', required=False, help="if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers")
+    p.add('--t', required=False, help='if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)')
+    p.add('--weighted', type=str2bool, required=False, help='if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)')
+    p.add('--dropna', type=str2bool, required=False, help="if True, drop observations where firms aren't clustered; if False, keep all observations")
     ##### Cluster end #####
 
     ##### FE start #####
@@ -84,13 +107,13 @@ def main():
     p.add('--batch', required=False, help='batch size to send in parallel when computing fe')
     p.add('--ndraw_pii', required=False, help='number of draw to use in approximation for leverages when computing fe')
     p.add('--ndraw_tr_fe', required=False, help='number of draws to use in approximation for traces when computing fe')
-    p.add('--check', required=False, help='whether to compute the non-approximated estimates as well when computing fe')
-    p.add('--hetero', required=False, help='whether to compute the heteroskedastic estimates when computing fe')
+    p.add('--check', type=str2bool, required=False, help='whether to compute the non-approximated estimates as well when computing fe')
+    p.add('--hetero', type=str2bool, required=False, help='whether to compute the heteroskedastic estimates when computing fe')
     p.add('--out_fe', required=False, help='filepath for fe results')
     p.add('--con', required=False, help='computes the smallest eigen values when computing fe, this is the filepath where these results are saved')
     p.add('--logfile', required=False, help='log output to a logfile when computing fe')
     p.add('--levfile', required=False, help='file to load precomputed leverages when computing fe')
-    p.add('--statsonly', required=False, help='save data statistics only when computing fe')
+    p.add('--statsonly', type=str2bool, required=False, help='save data statistics only when computing fe')
     p.add('--Q', required=False, help="which Q matrix to consider when computing fe. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'")
     ##### FE end #####
 
@@ -99,28 +122,34 @@ def main():
     p.add('--ndraw_tr_cre', required=False, help='number of draws to use in approximation for traces when computing cre')
     p.add('--ndp', required=False, help=' number of draw to use in approximation for leverages when computing cre')
     p.add('--out_cre', required=False, help='filepath for cre results')
-    p.add('--posterior', required=False, help='whether to compute the posterior variance when computing cre')
+    p.add('--posterior', type=str2bool, required=False, help='whether to compute the posterior variance when computing cre')
     p.add('--wo_btw', required=False, help='sets between variation to 0, pure RE when computing cre')
     ##### CRE end #####
 
     params = p.parse_args()
 
-    ##### twfe_network start #####
+    ##### TwoWay start #####
     if params.col_dict is not None:
         # Have to do ast.literal_eval twice for it to work properly
         col_dict = ast.literal_eval(ast.literal_eval(params.col_dict))
     else:
         col_dict = params.col_dict
 
-    # Generate twfe_params dictionary
+    ##### Stata start #####
+    if params.stata:
+        params.data = 'statatwoway.dta'
+        params.filetype = 'dta'
+    ##### Stata end #####
+
+    # Generate TwoWay dictionary
     if params.filetype == 'csv':
-        twfe_params = {'data': pd.read_csv(params.data), 'formatting': params.format, 'col_dict': col_dict}
+        tw_params = {'data': pd.read_csv(params.data), 'formatting': params.format, 'col_dict': col_dict}
     elif params.filetype == 'ftr':
-        twfe_params = {'data': pd.read_feather(params.data), 'formatting': params.format, 'col_dict': col_dict}
+        tw_params = {'data': pd.read_feather(params.data), 'formatting': params.format, 'col_dict': col_dict}
     elif params.filetype == 'dta':
-        twfe_params = {'data': pd.read_stata(params.data), 'formatting': params.format, 'col_dict': col_dict}
-    twfe_params = clear_dict(twfe_params)
-    ##### twfe_network end #####
+        tw_params = {'data': pd.read_stata(params.data), 'formatting': params.format, 'col_dict': col_dict}
+    tw_params = clear_dict(tw_params)
+    ##### TwoWay end #####
 
     ##### KMeans start #####
     KMeans_params = {'n_clusters': params.n_clusters, 'init': params.init, 'n_init': params.n_init, 'max_iter': params.max_iter, 'tol': params.tol, 'precompute_distances': params.precompute_distances, 'verbose': params.verbose, 'random_state': params.random_state, 'copy_x': params.copy_x, 'n_jobs': params.n_jobs, 'algorithm': params.algorithm}
@@ -128,7 +157,7 @@ def main():
     ##### KMeans end #####
 
     ##### Cluster start #####
-    cluster_params = {'cdf_resolution': params.cdf_resolution, 'grouping': params.grouping, 'year': params.year, 'user_KMeans': KMeans_params}
+    cluster_params = {'cdf_resolution': params.cdf_resolution, 'grouping': params.grouping, 'stayers_movers': params.stayers_movers, 't': params.t, 'weighted': params.weighted, 'dropna': params.dropna, 'user_KMeans': KMeans_params}
     cluster_params = clear_dict(cluster_params)
     ##### Cluster end #####
 
@@ -144,10 +173,10 @@ def main():
 
     # Run estimation
     if params.fe or params.cre:
-        tw_net = tw(**twfe_params)
+        tw_net = tw(**tw_params)
 
         if params.fe:
-            tw_net.fit_fe(user_fe=fe_params)
+            tw_net.fit_fe(user_fe=fe_params, collapsed=params.collapsed)
 
         if params.cre:
-            tw_net.fit_cre(user_cre=cre_params, user_cluster=cluster_params)
+            tw_net.fit_cre(user_cre=cre_params, user_cluster=cluster_params, collapsed=params.collapsed)
