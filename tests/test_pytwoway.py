@@ -20,7 +20,7 @@ def test_fe_ho_1():
 
     df = pd.concat([pd.DataFrame(worker, index=[worker['index']]) for worker in worker_data])
 
-    col_dict = {'fid': 'firm', 'wid': 'id', 'year': 'time', 'comp': 'comp'}
+    col_dict = {'i': 'id', 'j': 'firm', 'y': 'comp', 't': 'time'}
 
     bdf = bpd.BipartiteLong(df, col_dict=col_dict)
     bdf = bdf.clean_data()
