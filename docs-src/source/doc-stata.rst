@@ -23,12 +23,13 @@ To see all available results, type:
 
 You can choose to run fe, cre, or both. Additionally, while a config file is required, an environment is not. However, setting up an environment is recommended. Read about setting up environments in Anaconda `here <https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>`_.
 
-Use the following example config file as a template. DO NOT CHANGE THE DATA OR FILETYPE OPTIONS. statatwoway generates a temporary datafile using that name and datatype, so changing either of those options will cause the package to crash. Read the documentation about the :doc:`class-creestimator` and :doc:`class-feestimator` to discover all the potential options you can include.
+Use the following example config file as a template. Including `stata=True` automatically sets the correct data and filetypes. statatwoway generates a temporary datafile, and the `stata` option automatically inputs those values. For help about all the options that can be included in your config file, run the following in Terminal::
+
+  pytw -h
 
 Example config.txt::
 
-    data = statatwoway.dta
-    filetype = dta
+    stata = True
     col_dict = "{'i': 'your_workerid_col', 'j': 'your_firmid_col', 'y': 'your_compensation_col', 't': 'your_year_col'}"
 
 .. note::
