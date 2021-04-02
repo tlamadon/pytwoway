@@ -201,7 +201,7 @@
 <p>Class of TwoWay, where TwoWay gives a network of firms and workers. Inherits from bipartitepandas.</p>
 <dl class="py method">
 <dt id="pytwoway.twoway.TwoWay.fit_cre">
-<code class="sig-name descname">fit_cre</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cre</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">user_cluster</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.fit_cre" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">fit_cre</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cre</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">user_cluster</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">collapsed</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.fit_cre" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fit the CRE estimator. Saves two dictionary attributes: self.cre_res (complete results) and self.cre_summary (summary results).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -222,10 +222,14 @@
 <blockquote>
 <div><p>cdf_resolution (int): how many values to use to approximate the cdf</p>
 <p>grouping (str): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)</p>
-<p>year (int or None): if None, uses entire dataset; if int, gives year of data to consider</p>
+<p>stayers_movers (str or None): if None, uses entire dataset; if ‘stayers’, uses only stayers; if ‘movers’, uses only movers</p>
+<p>t (int or None): if None, uses entire dataset; if int, gives time in data to consider (only valid for non-collapsed data)</p>
+<p>weighted (bool): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)</p>
+<p>dropna (bool): if True, drop observations where firms aren’t clustered; if False, keep all observations</p>
 <p>user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>), and use default parameters defined in class attribute default_KMeans for any parameters not specified</p>
 </div></blockquote>
 </p></li>
+<li><p><strong>collapsed</strong> (<em>bool</em>) – if True, run estimators on collapsed data</p></li>
 </ul>
 </dd>
 </dl>
@@ -233,11 +237,12 @@
 
 <dl class="py method">
 <dt id="pytwoway.twoway.TwoWay.fit_fe">
-<code class="sig-name descname">fit_fe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_fe</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.fit_fe" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">fit_fe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_fe</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">collapsed</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.fit_fe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fit the bias-corrected FE estimator. Saves two dictionary attributes: self.fe_res (complete results) and self.fe_summary (summary results).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><p><strong>user_fe</strong> (<em>dict</em>) – <p>dictionary of parameters for bias-corrected FE estimation</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>user_fe</strong> (<em>dict</em>) – <p>dictionary of parameters for bias-corrected FE estimation</p>
 <p>Dictionary parameters:</p>
 <blockquote>
 <div><p>ncore (int): number of cores to use</p>
@@ -253,7 +258,9 @@
 <p>logfile (str): log output to a logfile &#64; FIXME I don’t think this is used</p>
 <p>check (bool): whether to compute the non-approximated estimates as well &#64; FIXME I don’t think this is used</p>
 </div></blockquote>
-</p>
+</p></li>
+<li><p><strong>collapsed</strong> (<em>bool</em>) – if True, run estimators on collapsed data</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -313,7 +320,7 @@
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Apr 01, 2021.
+        Last updated on Apr 02, 2021.
       </span>
 
     </p>
