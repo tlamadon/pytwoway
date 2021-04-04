@@ -115,9 +115,9 @@ class QPConstrained:
                 KK[k, k + 1] = - 1
             A = - np.kron(np.eye(nl), KK)
             MM = np.zeros(shape=(nt - 1, nt))
-            for i in range(nt - 1):
-                MM[i, i] = 1
-                MM[i, i + 1] = - 1
+            for m in range(nt - 1):
+                MM[m, m] = 1
+                MM[m, m + 1] = - 1
             A = - np.kron(MM, A)
             b = - np.zeros(shape=nl * (nk - 1) * (nt - 1))
 
