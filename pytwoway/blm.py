@@ -266,7 +266,7 @@ class QPConstrained:
         elif len(self.G) > 0:
             self.res = solve_qp(P=P, q=q, G=self.G, h=self.h)
         elif len(self.A) > 0:
-            self.res = solve_qp(P=P, q=q, A=self.A, b=self.b, solver='quadprog')
+            self.res = solve_qp(P=P, q=q, A=self.A, b=self.b)
         else:
             self.res = solve_qp(P=P, q=q)
 
