@@ -126,6 +126,10 @@ def main():
     p.add('--wo_btw', required=False, help='sets between variation to 0, pure RE when computing cre')
     ##### CRE end #####
 
+    ##### Clean start #####
+    p.add('--i_t_how', required=False, help="if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids")
+    ##### Clean end #####
+
     params = p.parse_args()
 
     ##### TwoWay start #####
@@ -171,12 +175,17 @@ def main():
     cre_params = clear_dict(cre_params)
     ##### CRE end #####
 
+    ##### Clean start #####
+    clean_params = {'i_t_how': params.i_t_how}
+    clean_params = clear_dict(clean_params)
+    ##### Clean end #####
+
     # Run estimation
     if params.fe or params.cre:
         tw_net = tw(**tw_params)
 
         if params.fe:
-            tw_net.fit_fe(user_fe=fe_params, collapsed=params.collapsed)
+            tw_net.fit_fe(user_fe=fe_params, collapsed=params.collapsed, user_clean=clean_params)
 
         if params.cre:
-            tw_net.fit_cre(user_cre=cre_params, user_cluster=cluster_params, collapsed=params.collapsed)
+            tw_net.fit_cre(user_cre=cre_params, user_cluster=cluster_params, collapsed=params.collapsed, user_clean=clean_params)

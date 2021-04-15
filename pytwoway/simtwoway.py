@@ -16,6 +16,7 @@ from matplotlib import pyplot as plt
 import pytwoway as tw
 from bipartitepandas import update_dict, logger_init
 from tqdm import trange
+import warnings
 
 class SimTwoWay:
     '''
@@ -57,7 +58,20 @@ class SimTwoWay:
         # self.logger.info('initializing SimTwoWay object')
 
         # Define default parameter dictionaries
-        self.default_sim_params = {'num_ind': 10000, 'num_time': 5, 'firm_size': 50, 'nk': 10, 'nl': 5, 'alpha_sig': 1, 'psi_sig': 1, 'w_sig': 1, 'csort': 1, 'cnetw': 1, 'csig': 1, 'p_move': 0.5}
+        self.default_sim_params = {
+            'num_ind': 10000, # Number of workers
+            'num_time': 5, # Time length of panel
+            'firm_size': 50, # Max number of individuals per firm
+            'nk': 10, # Number of firm types
+            'nl': 5, # Number of worker types
+            'alpha_sig': 1, # Standard error of individual fixed effect (volatility of worker effects)
+            'psi_sig': 1, # Standard error of firm fixed effect (volatility of firm effects)
+            'w_sig': 1, # Standard error of residual in AKM wage equation (volatility of wage shocks)
+            'csort': 1, # Sorting effect
+            'cnetw': 1, # Network effect
+            'csig': 1, # Standard error of sorting/network effects
+            'p_move': 0.5 # Probability a worker moves firms in any period
+        }
 
         # Update parameters to include user parameters
         self.sim_params = update_dict(self.default_sim_params, sim_params)
@@ -270,7 +284,7 @@ class TwoWayMonteCarlo:
 
     # Cannot include two underscores because isn't compatible with starmap for multiprocessing
     # Source: https://stackoverflow.com/questions/27054963/python-attribute-error-object-has-no-attribute
-    def _twfe_monte_carlo_interior(self, fe_params={}, cre_params={}, cluster_params={}):
+    def _twfe_monte_carlo_interior(self, fe_params={}, cre_params={}, cluster_params={}, collapsed_fe=True, collapsed_cre=True, clean_params={}):
         '''
         Run Monte Carlo simulations of TwoWay to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to twfe_monte_carlo.
 
@@ -331,6 +345,14 @@ class TwoWayMonteCarlo:
 
                     user_KMeans (dict): parameters for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html)
 
+            collapsed_fe (bool): if True, run FE estimator on collapsed data
+            collapsed_cre (bool): if True, run CRE estimator on collapsed data
+            clean_params (dict): dictionary of parameters for cleaning
+
+                Dictionary parameters:
+
+                    i_t_how (str): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
+
         Returns:
             true_psi_var (float): true simulated sample variance of psi
             true_psi_alpha_cov (float): true simulated sample covariance of psi and alpha
@@ -349,11 +371,11 @@ class TwoWayMonteCarlo:
         # Use data to create TwoWay object
         tw_net = tw.TwoWay(sim_data)
         # Estimate FE model
-        tw_net.fit_fe(user_fe=fe_params)
+        tw_net.fit_fe(user_fe=fe_params, collapsed=collapsed_fe, user_clean=clean_params)
         # Save results
         fe_res = tw_net.fe_res
         # Estimate CRE model
-        tw_net.fit_cre(user_cre=cre_params, user_cluster=cluster_params)
+        tw_net.fit_cre(user_cre=cre_params, user_cluster=cluster_params, collapsed=collapsed_cre, user_clean=clean_params)
         # Save results
         cre_res = tw_net.cre_res
 
@@ -362,7 +384,7 @@ class TwoWayMonteCarlo:
                 fe_res['var_ho'], fe_res['cov_ho'], \
                 cre_res['tot_var'], cre_res['tot_cov']
 
-    def twfe_monte_carlo(self, N=10, ncore=1, fe_params={}, cre_params={}, cluster_params={}):
+    def twfe_monte_carlo(self, N=10, ncore=1, fe_params={}, cre_params={}, cluster_params={}, collapsed_fe=True, collapsed_cre=True, clean_params={}):
         '''
         Run Monte Carlo simulations of TwoWay to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:
 
@@ -440,6 +462,14 @@ class TwoWayMonteCarlo:
                     dropna (bool): if True, drop observations where firms aren't clustered; if False, keep all observations
 
                     user_KMeans (dict): parameters for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html)
+
+            collapsed_fe (bool): if True, run FE estimator on collapsed data
+            collapsed_cre (bool): if True, run CRE estimator on collapsed data
+            clean_params (dict): dictionary of parameters for cleaning
+
+                Dictionary parameters:
+
+                    i_t_how (str): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
         '''
         # Initialize NumPy arrays to store results
         true_psi_var = np.zeros(N)
@@ -455,13 +485,13 @@ class TwoWayMonteCarlo:
         if ncore > 1:
             # Simulate networks
             with Pool(processes=ncore) as pool:
-                V = pool.starmap(self._twfe_monte_carlo_interior, [(fe_params, cre_params, cluster_params) for _ in range(N)])
+                V = pool.starmap(self._twfe_monte_carlo_interior, [(fe_params, cre_params, cluster_params, collapsed_fe, collapsed_cre, clean_params) for _ in range(N)])
             for i, res in enumerate(V):
                 true_psi_var[i], true_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_corr_psi_var[i], fe_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = res
         else:
             for i in trange(N):
                 # Simulate a network
-                true_psi_var[i], true_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_corr_psi_var[i], fe_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = self._twfe_monte_carlo_interior(fe_params=fe_params, cre_params=cre_params, cluster_params=cluster_params)
+                true_psi_var[i], true_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_corr_psi_var[i], fe_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = self._twfe_monte_carlo_interior(fe_params=fe_params, cre_params=cre_params, cluster_params=cluster_params, collapsed_fe=collapsed_fe, collapsed_cre=collapsed_cre, clean_params=clean_params)
 
         res = {}
 
@@ -482,7 +512,7 @@ class TwoWayMonteCarlo:
         Plot results from Monte Carlo simulations.
         '''
         if not self.monte_carlo_res:
-            print('Must run Monte Carlo simulations before results can be plotted. This can be done by running network_name.twfe_monte_carlo(self, N=10, ncore=1, fe_params={}, cre_params={}, cluster_params={})')
+            warnings.warn('Must run Monte Carlo simulations before results can be plotted. This can be done by running .twfe_monte_carlo(self, N=10, ncore=1, fe_params={}, cre_params={}, cluster_params={})')
 
         else:
             # Extract results
