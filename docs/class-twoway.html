@@ -201,7 +201,7 @@
 <p>Class of TwoWay, where TwoWay gives a network of firms and workers. Inherits from bipartitepandas.</p>
 <dl class="py method">
 <dt id="pytwoway.twoway.TwoWay.fit_cre">
-<code class="sig-name descname">fit_cre</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cre</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">user_cluster</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">collapsed</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.fit_cre" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">fit_cre</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cre</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">user_cluster</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">collapsed</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">user_clean</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.fit_cre" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fit the CRE estimator. Saves two dictionary attributes: self.cre_res (complete results) and self.cre_summary (summary results).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -230,6 +230,12 @@
 </div></blockquote>
 </p></li>
 <li><p><strong>collapsed</strong> (<em>bool</em>) – if True, run estimators on collapsed data</p></li>
+<li><p><strong>user_clean</strong> (<em>dict</em>) – <p>dictionary of parameters for cleaning</p>
+<p>Dictionary parameters:</p>
+<blockquote>
+<div><p>i_t_how (str): if ‘max’, keep max paying job; if ‘sum’, sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if ‘mean’, average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids</p>
+</div></blockquote>
+</p></li>
 </ul>
 </dd>
 </dl>
@@ -237,7 +243,7 @@
 
 <dl class="py method">
 <dt id="pytwoway.twoway.TwoWay.fit_fe">
-<code class="sig-name descname">fit_fe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_fe</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">collapsed</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.fit_fe" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">fit_fe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_fe</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">collapsed</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">user_clean</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.fit_fe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fit the bias-corrected FE estimator. Saves two dictionary attributes: self.fe_res (complete results) and self.fe_summary (summary results).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -260,6 +266,12 @@
 </div></blockquote>
 </p></li>
 <li><p><strong>collapsed</strong> (<em>bool</em>) – if True, run estimators on collapsed data</p></li>
+<li><p><strong>user_clean</strong> (<em>dict</em>) – <p>dictionary of parameters for cleaning</p>
+<p>Dictionary parameters:</p>
+<blockquote>
+<div><p>i_t_how (str): if ‘max’, keep max paying job; if ‘sum’, sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if ‘mean’, average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids</p>
+</div></blockquote>
+</p></li>
 </ul>
 </dd>
 </dl>
@@ -320,7 +332,7 @@
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Apr 02, 2021.
+        Last updated on Apr 15, 2021.
       </span>
 
     </p>

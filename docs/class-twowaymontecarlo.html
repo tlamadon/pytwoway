@@ -227,7 +227,7 @@
 
 <dl class="py method">
 <dt id="pytwoway.simtwoway.TwoWayMonteCarlo.twfe_monte_carlo">
-<code class="sig-name descname">twfe_monte_carlo</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">N</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">ncore</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">fe_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cre_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cluster_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.simtwoway.TwoWayMonteCarlo.twfe_monte_carlo" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">twfe_monte_carlo</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">N</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">ncore</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">fe_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cre_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cluster_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">collapsed_fe</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">collapsed_cre</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">clean_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.simtwoway.TwoWayMonteCarlo.twfe_monte_carlo" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run Monte Carlo simulations of TwoWay to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:</p>
 <blockquote>
 <div><p>true_psi_var (NumPy Array): true simulated sample variance of psi</p>
@@ -281,6 +281,14 @@
 <p>user_KMeans (dict): parameters for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>)</p>
 </div></blockquote>
 </p></li>
+<li><p><strong>collapsed_fe</strong> (<em>bool</em>) – if True, run FE estimator on collapsed data</p></li>
+<li><p><strong>collapsed_cre</strong> (<em>bool</em>) – if True, run CRE estimator on collapsed data</p></li>
+<li><p><strong>clean_params</strong> (<em>dict</em>) – <p>dictionary of parameters for cleaning</p>
+<p>Dictionary parameters:</p>
+<blockquote>
+<div><p>i_t_how (str): if ‘max’, keep max paying job; if ‘sum’, sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if ‘mean’, average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids</p>
+</div></blockquote>
+</p></li>
 </ul>
 </dd>
 </dl>
@@ -311,7 +319,7 @@
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Apr 02, 2021.
+        Last updated on Apr 15, 2021.
       </span>
 
     </p>

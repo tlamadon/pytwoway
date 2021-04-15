@@ -233,21 +233,6 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">TwoWay</span></code>(data[, formatting, col_dict])</p></td>
-<td><p>Class of TwoWay, where TwoWay gives a network of firms and workers.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_cre</span></code>([user_cre, user_cluster, collapsed])</p></td>
-<td><p>Fit the CRE estimator.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_fe</span></code>([user_fe, collapsed])</p></td>
-<td><p>Fit the bias-corrected FE estimator.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">summary_cre</span></code>()</p></td>
-<td><p>Return summary results for CRE estimator.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">summary_fe</span></code>()</p></td>
-<td><p>Return summary results for FE estimator.</p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -259,18 +244,6 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BLMEstimator</span></code>([user_blm])</p></td>
-<td><p>Class for solving the BLM model using multiple sets of starting values.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>(jdata, sdata[, n_init, n_best, ncore])</p></td>
-<td><p>EM model for movers and stayers.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_A1</span></code>([dpi])</p></td>
-<td><p>Plot self.model.A1.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_liks_connectedness</span></code>([jitter, dpi])</p></td>
-<td><p>Plot likelihoods vs connectedness for the estimations run.</p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -282,18 +255,6 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CREEstimator</span></code>(params)</p></td>
-<td><p>Uses multigrid and partialing out to solve two way Fixed Effect model.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>()</p></td>
-<td><p>Run CRE solver.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">pd_to_np</span></code>(df, colr, colc, colv, nr, nc)</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">pipe_qcov</span></code>(df, e1, e2)</p></td>
-<td><p></p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -305,21 +266,6 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">FEEstimator</span></code>(params)</p></td>
-<td><p>Uses multigrid and partialing out to solve two way fixed effect model.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">construct_Q</span></code>()</p></td>
-<td><p>Generate columns in adata necessary to construct Q.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_1</span></code>()</p></td>
-<td><p>Run FE solver, part 1.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_2</span></code>()</p></td>
-<td><p>Run FE solver, part 2.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_fe_estimates</span></code>()</p></td>
-<td><p>Return estimated psi_hats linked to firm ids and alpha_hats linked to worker ids.</p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -331,12 +277,6 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SimTwoWay</span></code>([sim_params])</p></td>
-<td><p>Class of SimTwoWay, where SimTwoWay simulates a network of firms and workers.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">sim_network</span></code>()</p></td>
-<td><p>Simulate panel data corresponding to the calibrated model.</p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -348,15 +288,6 @@
 <col style="width: 90%" />
 </colgroup>
 <tbody>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">TwoWayMonteCarlo</span></code>([sim_params])</p></td>
-<td><p>Class of TwoWayMonteCarlo, where TwoWayMonteCarlo runs a Monte Carlo estimate by simulating networks of firms and workers.</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_monte_carlo</span></code>()</p></td>
-<td><p>Plot results from Monte Carlo simulations.</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">twfe_monte_carlo</span></code>([N, ncore, fe_params, …])</p></td>
-<td><p>Run Monte Carlo simulations of TwoWay to see the distribution of the true vs.</p></td>
-</tr>
 </tbody>
 </table>
 </div>
@@ -386,7 +317,7 @@
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Apr 02, 2021.
+        Last updated on Apr 15, 2021.
       </span>
 
     </p>
