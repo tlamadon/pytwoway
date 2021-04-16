@@ -4,5 +4,9 @@ python:
 cache: pip
 install:
   - pip install .
+  - pip install pytest-cov
+  - pip install codecov
 script:
-  - python -m pytest
+  - python -m pytest --cov-report term --cov=pytwoway/
+after_success:
+  - codecov
