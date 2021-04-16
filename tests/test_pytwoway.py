@@ -54,7 +54,7 @@ def test_fe_ho_1():
 def test_fe_cre_1():
     # Use Monte Carlo to test FE, FE-HO, and CRE estimators.
     twmc_net = tw.TwoWayMonteCarlo()
-    twmc_net.twfe_monte_carlo(N=50, ncore=4)
+    twmc_net.twfe_monte_carlo(N=50, ncore=1) # Can't do multiprocessing with Travis
 
     # Extract results
     true_psi_var = twmc_net.res['true_psi_var']
@@ -78,8 +78,8 @@ def test_fe_cre_1():
     assert fe_psi_alpha_diff < 0.03
     assert fe_corr_psi_diff < 0.025
     assert fe_corr_psi_alpha_diff < 0.025
-    assert cre_psi_diff < 0.02
-    assert cre_psi_alpha_diff < 0.02
+    assert cre_psi_diff < 0.025
+    assert cre_psi_alpha_diff < 0.025
 
 ###############
 ##### BLM #####
@@ -137,7 +137,7 @@ def test_blm_A_2():
     min_1 = np.inf
     min_2 = np.inf
     lik = - np.inf
-    for i in range(5):
+    for i in range(6):
         # Initiate BLMModel object
         blm_true = tw.BLMModel({'nl': nl, 'nk': nk, 'simulation': True})
         # Make variance of worker types small
@@ -176,7 +176,7 @@ def test_blm_S_3():
     min_1 = np.inf
     min_2 = np.inf
     lik = - np.inf
-    for i in range(5):
+    for i in range(6):
         # Initiate BLMModel object
         blm_true = tw.BLMModel({'nl': nl, 'nk': nk, 'simulation': True})
         # Make variance of worker types small
@@ -217,7 +217,7 @@ def test_blm_pk_3():
     min_2 = np.inf
     lik1 = - np.inf
     lik0 = - np.inf
-    for i in range(5):
+    for i in range(6):
         # Initiate BLMModel object
         blm_true = tw.BLMModel({'nl': nl, 'nk': nk, 'simulation': True})
         # Make variance of worker types small
