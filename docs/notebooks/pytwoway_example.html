@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>pytwoway example &mdash; pytwoway 0.1.4 documentation</title>
+  <title>pytwoway example &mdash; PyTwoWay 0.1.6 documentation</title>
   
 
   
@@ -37,7 +37,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Monte Carlo example" href="monte_carlo_example.html" />
-    <link rel="prev" title="Using from stata" href="../doc-stata.html" /> 
+    <link rel="prev" title="Using from Stata" href="../doc-stata.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> pytwoway
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> PyTwoWay
           
 
           
@@ -85,9 +85,9 @@
               <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../doc-cli.html">From terminal</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../doc-python.html">From python</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../doc-stata.html">From stata</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-cli.html">From Terminal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-python.html">From Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-stata.html">From Stata</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Notebook examples</span></p>
 <ul class="current">
@@ -100,6 +100,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="monte_carlo_example.html">Monte Carlo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="blm_example.html">BLM</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul>
@@ -108,7 +109,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../class-blmestimator.html">BLMEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../class-creestimator.html">CREEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../class-feestimator.html">FEEstimator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../class-simtwoway.html">SimTwoWay</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../class-twowaymontecarlo.html">TwoWayMonteCarlo</a></li>
 </ul>
 
@@ -125,7 +125,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../index.html">pytwoway</a>
+          <a href="../index.html">PyTwoWay</a>
         
       </nav>
 
@@ -438,8 +438,8 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># Add pytwoway to system path, do not run this</span>
-<span class="c1"># import sys</span>
-<span class="c1"># sys.path.append(&#39;../../..&#39;)</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;../../..&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -451,6 +451,7 @@ div.rendered_html tbody tr:hover {
 <span></span><span class="c1"># Import the pytwoway package</span>
 <span class="c1"># (Make sure you have installed it using pip install pytwoway)</span>
 <span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
+<span class="kn">from</span> <span class="nn">bipartitepandas</span> <span class="kn">import</span> <span class="n">SimBipartite</span>
 </pre></div>
 </div>
 </div>
@@ -470,7 +471,7 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># For the example, we simulate data</span>
-<span class="n">sim_data</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">SimTwoWay</span><span class="p">()</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()</span>
+<span class="n">sim_data</span> <span class="o">=</span> <span class="n">SimBipartite</span><span class="p">()</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()</span>
 <span class="n">display</span><span class="p">(</span><span class="n">sim_data</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -514,66 +515,66 @@ div.rendered_html tbody tr:hover {
       <th>0</th>
       <td>0</td>
       <td>1</td>
+      <td>6</td>
+      <td>0.000000</td>
+      <td>0.348756</td>
       <td>1</td>
-      <td>-0.430727</td>
-      <td>-0.908458</td>
-      <td>1</td>
-      <td>2</td>
-      <td>17</td>
+      <td>3</td>
+      <td>122</td>
       <td>False</td>
-      <td>-0.004062</td>
+      <td>1.324643</td>
     </tr>
     <tr>
       <th>1</th>
       <td>0</td>
       <td>2</td>
+      <td>6</td>
+      <td>0.000000</td>
+      <td>0.348756</td>
       <td>1</td>
-      <td>-0.430727</td>
-      <td>-0.908458</td>
-      <td>1</td>
-      <td>2</td>
-      <td>17</td>
+      <td>3</td>
+      <td>122</td>
       <td>False</td>
-      <td>-0.293843</td>
+      <td>0.094003</td>
     </tr>
     <tr>
       <th>2</th>
       <td>0</td>
       <td>3</td>
-      <td>0</td>
-      <td>-0.430727</td>
-      <td>-1.335178</td>
-      <td>2</td>
-      <td>2</td>
-      <td>7</td>
-      <td>True</td>
-      <td>-2.475346</td>
+      <td>6</td>
+      <td>0.000000</td>
+      <td>0.348756</td>
+      <td>1</td>
+      <td>3</td>
+      <td>122</td>
+      <td>False</td>
+      <td>0.619061</td>
     </tr>
     <tr>
       <th>3</th>
       <td>0</td>
       <td>4</td>
-      <td>0</td>
-      <td>-0.430727</td>
-      <td>-1.335178</td>
+      <td>6</td>
+      <td>0.000000</td>
+      <td>0.348756</td>
       <td>2</td>
-      <td>2</td>
-      <td>7</td>
-      <td>False</td>
-      <td>-3.363936</td>
+      <td>1</td>
+      <td>109</td>
+      <td>True</td>
+      <td>-0.353818</td>
     </tr>
     <tr>
       <th>4</th>
       <td>0</td>
       <td>5</td>
-      <td>2</td>
-      <td>-0.430727</td>
-      <td>-0.604585</td>
+      <td>5</td>
+      <td>0.000000</td>
+      <td>0.114185</td>
       <td>3</td>
       <td>1</td>
-      <td>36</td>
+      <td>95</td>
       <td>True</td>
-      <td>-2.608726</td>
+      <td>-0.915972</td>
     </tr>
     <tr>
       <th>...</th>
@@ -592,66 +593,66 @@ div.rendered_html tbody tr:hover {
       <th>49995</th>
       <td>9999</td>
       <td>1</td>
-      <td>3</td>
+      <td>4</td>
       <td>-0.430727</td>
-      <td>-0.348756</td>
+      <td>-0.114185</td>
       <td>1</td>
-      <td>2</td>
-      <td>58</td>
+      <td>3</td>
+      <td>69</td>
       <td>False</td>
-      <td>-0.353585</td>
+      <td>-2.295000</td>
     </tr>
     <tr>
       <th>49996</th>
       <td>9999</td>
       <td>2</td>
-      <td>3</td>
+      <td>4</td>
       <td>-0.430727</td>
-      <td>-0.348756</td>
+      <td>-0.114185</td>
       <td>1</td>
-      <td>2</td>
-      <td>58</td>
+      <td>3</td>
+      <td>69</td>
       <td>False</td>
-      <td>-1.366538</td>
+      <td>0.164724</td>
     </tr>
     <tr>
       <th>49997</th>
       <td>9999</td>
       <td>3</td>
-      <td>1</td>
+      <td>4</td>
       <td>-0.430727</td>
-      <td>-0.908458</td>
-      <td>2</td>
+      <td>-0.114185</td>
       <td>1</td>
-      <td>20</td>
-      <td>True</td>
-      <td>-2.436596</td>
+      <td>3</td>
+      <td>69</td>
+      <td>False</td>
+      <td>-1.264234</td>
     </tr>
     <tr>
       <th>49998</th>
       <td>9999</td>
       <td>4</td>
-      <td>1</td>
+      <td>7</td>
       <td>-0.430727</td>
-      <td>-0.908458</td>
-      <td>3</td>
+      <td>0.604585</td>
+      <td>2</td>
       <td>1</td>
-      <td>19</td>
+      <td>136</td>
       <td>True</td>
-      <td>-1.700477</td>
+      <td>-0.320706</td>
     </tr>
     <tr>
       <th>49999</th>
       <td>9999</td>
       <td>5</td>
-      <td>1</td>
+      <td>9</td>
       <td>-0.430727</td>
-      <td>-0.908458</td>
-      <td>4</td>
+      <td>1.335178</td>
+      <td>3</td>
       <td>1</td>
-      <td>23</td>
+      <td>184</td>
       <td>True</td>
-      <td>0.096165</td>
+      <td>1.350492</td>
     </tr>
   </tbody>
 </table>
@@ -692,15 +693,13 @@ div.rendered_html tbody tr:hover {
 <span class="n">fe_params</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Number of cores to use</span>
     <span class="s1">&#39;batch&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Batch size to send in parallel</span>
-    <span class="s1">&#39;ndraw_pii&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="c1"># Number of draw to use in approximation for leverages</span>
-    <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of draws to use in approximation for traces</span>
-    <span class="s1">&#39;check&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Whether to compute the non-approximated estimates as well</span>
-    <span class="s1">&#39;hetero&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Whether to compute the heteroskedastic estimates</span>
-    <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_fe.json&#39;</span><span class="p">,</span> <span class="c1"># Filepath for fe results</span>
-    <span class="s1">&#39;con&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Computes the smallest eigen values, this is the filepath where these results are saved</span>
-    <span class="s1">&#39;logfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="c1"># Log output to a logfile</span>
+    <span class="s1">&#39;ndraw_pii&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="c1"># Number of draws to use in approximation for leverages</span>
     <span class="s1">&#39;levfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="c1"># File to load precomputed leverages</span>
-    <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># Save data statistics only</span>
+    <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of draws to use in approximation for traces</span>
+    <span class="s1">&#39;h2&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># If True, compute h2 correction</span>
+    <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_fe.json&#39;</span><span class="p">,</span> <span class="c1"># Outputfile where results are saved</span>
+    <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># If True, return only basic statistics</span>
+    <span class="s1">&#39;Q&#39;</span><span class="p">:</span> <span class="s1">&#39;cov(alpha, psi)&#39;</span> <span class="c1"># Which Q matrix to consider. Options include &#39;cov(alpha, psi)&#39; and &#39;cov(psi_t, psi_{t+1})&#39;</span>
 <span class="p">}</span>
 
 <span class="c1"># Estimate the fixed effect decomposition</span>
@@ -713,7 +712,7 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|██████████| 5/5 [00:00&lt;00:00, 242.93it/s]
+100%|██████████| 5/5 [00:00&lt;00:00, 231.19it/s]
 </pre></div></div>
 </div>
 </div>
@@ -729,9 +728,9 @@ div.rendered_html tbody tr:hover {
     <span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Number of cores to use</span>
     <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of draws to use in approximation for traces</span>
     <span class="s1">&#39;ndp&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="c1"># Number of draw to use in approximation for leverages</span>
-    <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_cre.json&#39;</span><span class="p">,</span> <span class="c1"># Filepath for cre results</span>
-    <span class="s1">&#39;posterior&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Whether to compute the posterior variance</span>
-    <span class="s1">&#39;wobtw&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># Sets between variation to 0, pure RE when computing cre</span>
+    <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_cre.json&#39;</span><span class="p">,</span> <span class="c1"># Outputfile where results are saved</span>
+    <span class="s1">&#39;posterior&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># If True, compute posterior variance</span>
+    <span class="s1">&#39;wo_btw&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># If True, sets between variation to 0, pure RE</span>
 <span class="p">}</span>
 <span class="n">KMeans_params</span> <span class="o">=</span> <span class="p">{</span> <span class="c1"># These parameters are specifically for the KMeans algorithm</span>
                   <span class="c1"># Read more at https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</span>
@@ -749,20 +748,25 @@ div.rendered_html tbody tr:hover {
 <span class="p">}</span>
 <span class="n">cluster_params</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s1">&#39;cdf_resolution&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="c1"># How many values to use to approximate the cdf when clustering</span>
-    <span class="s1">&#39;grouping&#39;</span><span class="p">:</span> <span class="s1">&#39;quantile_all&#39;</span><span class="p">,</span>
-        <span class="c1"># How to group the cdfs when clustering</span>
-        <span class="c1"># (&#39;quantile_all&#39; to get quantiles from entire set of data,</span>
-        <span class="c1">#     then have firm-level values between 0 and 1;</span>
-        <span class="c1"># &#39;quantile_firm_small&#39; to get quantiles at the firm-level</span>
-        <span class="c1">#     and have values be compensations if small data;</span>
-        <span class="c1"># &#39;quantile_firm_large&#39; to get quantiles at the firm-level</span>
-        <span class="c1">#     and have values be compensations if large data,</span>
-        <span class="c1">#     note that this is up to 50 times slower than &#39;quantile_firm_small&#39;</span>
-        <span class="c1">#     and should only be used if the dataset is too large to copy</span>
-        <span class="c1">#     into a dictionary)</span>
-    <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># If None, uses entire dataset when clustering;</span>
-                  <span class="c1"># If int, gives year of data to consider when clustering</span>
-    <span class="s1">&#39;user_KMeans&#39;</span><span class="p">:</span> <span class="n">KMeans_params</span>
+    <span class="s1">&#39;grouping&#39;</span><span class="p">:</span> <span class="s1">&#39;quantile_all&#39;</span><span class="p">,</span> <span class="c1"># How to group the cdfs when clustering</span>
+                                <span class="c1"># (&#39;quantile_all&#39; to get quantiles from entire set of data,</span>
+                                <span class="c1">#     then have firm-level values between 0 and 1;</span>
+                                <span class="c1"># &#39;quantile_firm_small&#39; to get quantiles at the firm-level</span>
+                                <span class="c1">#     and have values be compensations if small data;</span>
+                                <span class="c1"># &#39;quantile_firm_large&#39; to get quantiles at the firm-level</span>
+                                <span class="c1">#     and have values be compensations if large data,</span>
+                                <span class="c1">#     note that this is up to 50 times slower than &#39;quantile_firm_small&#39;</span>
+                                <span class="c1">#     and should only be used if the dataset is too large to copy</span>
+                                <span class="c1">#     into a dictionary)</span>
+        <span class="s1">&#39;stayers_movers&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># If None, clusters on entire dataset</span>
+                                <span class="c1"># If &#39;stayers&#39;, clusters on only stayers</span>
+                                <span class="c1"># If &#39;movers&#39;, clusters on only movers</span>
+        <span class="s1">&#39;t&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># If None, clusters on entire dataset</span>
+                   <span class="c1"># If int, gives period in data to consider (only valid for non-collapsed data)</span>
+        <span class="s1">&#39;weighted&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="c1"># If True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)</span>
+        <span class="s1">&#39;dropna&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># If True, drop observations where firms aren&#39;t clustered</span>
+                         <span class="c1"># If False, keep all observations</span>
+        <span class="s1">&#39;user_KMeans&#39;</span><span class="p">:</span> <span class="n">KMeans_params</span>
 <span class="p">}</span>
 
 <span class="c1"># Estimate the cre model</span>
@@ -788,11 +792,11 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;var_fe&#39;: 0.5997301987660023,
- &#39;cov_fe&#39;: 0.17580097176675977,
- &#39;var_ho&#39;: 0.5938941220301615,
- &#39;cov_ho&#39;: 0.1783081225830144,
- &#39;var_y&#39;: 1.9801317055315406}
+{&#39;var_fe&#39;: 0.5982717199250484,
+ &#39;cov_fe&#39;: 0.16661408133027297,
+ &#39;var_ho&#39;: 0.5938896845212178,
+ &#39;cov_ho&#39;: 0.16738561210485078,
+ &#39;var_y&#39;: 1.9579456470100542}
 </pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
@@ -800,11 +804,11 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-{&#39;var_y&#39;: 1.9801317055315406,
- &#39;var_bw&#39;: 0.5833941085601263,
- &#39;cov_bw&#39;: 0.18293340911401856,
- &#39;var_tot&#39;: 0.5812933186878522,
- &#39;cov_tot&#39;: 0.18263757032833403}
+{&#39;var_y&#39;: 1.9579456470100542,
+ &#39;var_bw&#39;: 0.5875425925447757,
+ &#39;cov_bw&#39;: 0.1726795021993911,
+ &#39;var_tot&#39;: 0.5875706667091098,
+ &#39;cov_tot&#39;: 0.173072058799131}
 </pre></div></div>
 </div>
 </div>
@@ -821,7 +825,7 @@ div.rendered_html tbody tr:hover {
         <a href="monte_carlo_example.html" class="btn btn-neutral float-right" title="Monte Carlo example" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
-        <a href="../doc-stata.html" class="btn btn-neutral float-left" title="Using from stata" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="../doc-stata.html" class="btn btn-neutral float-left" title="Using from Stata" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -833,7 +837,7 @@ div.rendered_html tbody tr:hover {
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Apr 15, 2021.
+        Last updated on Apr 21, 2021.
       </span>
 
     </p>

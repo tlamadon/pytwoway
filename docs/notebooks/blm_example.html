@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>BLM example &mdash; pytwoway 0.1.4 documentation</title>
+  <title>BLM example &mdash; PyTwoWay 0.1.6 documentation</title>
   
 
   
@@ -35,7 +35,9 @@
 
     
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" /> 
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Python API" href="../internal.html" />
+    <link rel="prev" title="Monte Carlo example" href="monte_carlo_example.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -49,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> pytwoway
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> PyTwoWay
           
 
           
@@ -83,14 +85,20 @@
               <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../doc-cli.html">From terminal</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../doc-python.html">From python</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../doc-stata.html">From stata</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-cli.html">From Terminal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-python.html">From Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-stata.html">From Stata</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Notebook examples</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="pytwoway_example.html">Simple</a></li>
 <li class="toctree-l1"><a class="reference internal" href="monte_carlo_example.html">Monte Carlo</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">BLM</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Simulate-some-data">Simulate some data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Initialize-and-run-BLMEstimator">Initialize and run BLMEstimator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Finally,-we-can-investigate-the-results">Finally, we can investigate the results</a></li>
+</ul>
+</li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul>
@@ -99,7 +107,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../class-blmestimator.html">BLMEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../class-creestimator.html">CREEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../class-feestimator.html">FEEstimator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../class-simtwoway.html">SimTwoWay</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../class-twowaymontecarlo.html">TwoWayMonteCarlo</a></li>
 </ul>
 
@@ -116,7 +123,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../index.html">pytwoway</a>
+          <a href="../index.html">PyTwoWay</a>
         
       </nav>
 
@@ -508,63 +515,63 @@ div.rendered_html tbody tr:hover {
   <tbody>
     <tr>
       <th>0</th>
-      <td>1</td>
-      <td>0.463652</td>
-      <td>1.554466</td>
+      <td>0</td>
+      <td>-0.204997</td>
+      <td>0.162597</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
-      <td>F53</td>
-      <td>F81</td>
+      <td>F79</td>
+      <td>F62</td>
     </tr>
     <tr>
       <th>1</th>
-      <td>1</td>
-      <td>1.324198</td>
-      <td>0.457572</td>
+      <td>0</td>
+      <td>0.596359</td>
+      <td>0.145901</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
-      <td>F49</td>
-      <td>F99</td>
+      <td>F94</td>
+      <td>F22</td>
     </tr>
     <tr>
       <th>2</th>
-      <td>1</td>
-      <td>0.631847</td>
-      <td>0.674330</td>
+      <td>0</td>
+      <td>0.241762</td>
+      <td>-0.436507</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
-      <td>F101</td>
-      <td>F97</td>
+      <td>F45</td>
+      <td>F55</td>
     </tr>
     <tr>
       <th>3</th>
-      <td>1</td>
-      <td>0.874247</td>
-      <td>0.834825</td>
+      <td>0</td>
+      <td>-0.267093</td>
+      <td>-0.465321</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
-      <td>F39</td>
-      <td>F27</td>
+      <td>F77</td>
+      <td>F94</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>1</td>
-      <td>0.584503</td>
-      <td>1.504783</td>
+      <td>0</td>
+      <td>-0.433961</td>
+      <td>0.453097</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
       <td>0</td>
-      <td>F20</td>
-      <td>F11</td>
+      <td>F10</td>
+      <td>F23</td>
     </tr>
     <tr>
       <th>...</th>
@@ -580,63 +587,63 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>8995</th>
-      <td>0</td>
-      <td>1.288463</td>
-      <td>1.142129</td>
+      <td>1</td>
+      <td>1.442152</td>
+      <td>2.486254</td>
       <td>2</td>
       <td>2</td>
       <td>2</td>
       <td>2</td>
-      <td>F88</td>
-      <td>F38</td>
+      <td>F2</td>
+      <td>F97</td>
     </tr>
     <tr>
       <th>8996</th>
-      <td>0</td>
-      <td>1.208359</td>
-      <td>0.538587</td>
+      <td>1</td>
+      <td>1.033829</td>
+      <td>1.805655</td>
       <td>2</td>
       <td>2</td>
       <td>2</td>
       <td>2</td>
-      <td>F64</td>
-      <td>F25</td>
+      <td>F86</td>
+      <td>F88</td>
     </tr>
     <tr>
       <th>8997</th>
-      <td>0</td>
-      <td>0.978188</td>
-      <td>0.984181</td>
+      <td>1</td>
+      <td>1.520521</td>
+      <td>2.104295</td>
       <td>2</td>
       <td>2</td>
       <td>2</td>
       <td>2</td>
-      <td>F44</td>
-      <td>F29</td>
+      <td>F92</td>
+      <td>F101</td>
     </tr>
     <tr>
       <th>8998</th>
-      <td>0</td>
-      <td>1.296872</td>
-      <td>1.405704</td>
+      <td>1</td>
+      <td>0.531664</td>
+      <td>2.451577</td>
       <td>2</td>
       <td>2</td>
       <td>2</td>
       <td>2</td>
-      <td>F69</td>
-      <td>F46</td>
+      <td>F16</td>
+      <td>F53</td>
     </tr>
     <tr>
       <th>8999</th>
-      <td>0</td>
-      <td>1.411911</td>
-      <td>0.940909</td>
+      <td>1</td>
+      <td>1.020300</td>
+      <td>1.909180</td>
       <td>2</td>
       <td>2</td>
       <td>2</td>
       <td>2</td>
-      <td>F101</td>
-      <td>F66</td>
+      <td>F29</td>
+      <td>F11</td>
     </tr>
   </tbody>
 </table>
@@ -680,62 +687,62 @@ div.rendered_html tbody tr:hover {
     <tr>
       <th>0</th>
       <td>0</td>
-      <td>0.500026</td>
-      <td>1.191067</td>
+      <td>0.748584</td>
+      <td>0.640799</td>
       <td>0</td>
       <td>0</td>
       <td>1</td>
-      <td>F71</td>
+      <td>F60</td>
       <td>0</td>
-      <td>F71</td>
+      <td>F60</td>
     </tr>
     <tr>
       <th>1</th>
       <td>1</td>
-      <td>0.399829</td>
-      <td>0.915988</td>
+      <td>0.563338</td>
+      <td>1.085478</td>
       <td>0</td>
       <td>0</td>
       <td>1</td>
-      <td>F44</td>
+      <td>F1</td>
       <td>0</td>
-      <td>F44</td>
+      <td>F1</td>
     </tr>
     <tr>
       <th>2</th>
       <td>1</td>
-      <td>0.957044</td>
-      <td>0.355539</td>
+      <td>0.144916</td>
+      <td>1.039482</td>
       <td>0</td>
       <td>0</td>
       <td>1</td>
-      <td>F18</td>
+      <td>F24</td>
       <td>0</td>
-      <td>F18</td>
+      <td>F24</td>
     </tr>
     <tr>
       <th>3</th>
       <td>1</td>
-      <td>0.879591</td>
-      <td>0.468131</td>
+      <td>0.800272</td>
+      <td>0.715033</td>
       <td>0</td>
       <td>0</td>
       <td>1</td>
-      <td>F87</td>
+      <td>F50</td>
       <td>0</td>
-      <td>F87</td>
+      <td>F50</td>
     </tr>
     <tr>
       <th>4</th>
-      <td>1</td>
-      <td>0.829408</td>
-      <td>-0.123937</td>
+      <td>0</td>
+      <td>0.191230</td>
+      <td>0.791316</td>
       <td>0</td>
       <td>0</td>
       <td>1</td>
-      <td>F82</td>
+      <td>F47</td>
       <td>0</td>
-      <td>F82</td>
+      <td>F47</td>
     </tr>
     <tr>
       <th>...</th>
@@ -751,63 +758,63 @@ div.rendered_html tbody tr:hover {
     </tr>
     <tr>
       <th>2995</th>
-      <td>1</td>
-      <td>0.782145</td>
-      <td>2.004921</td>
+      <td>0</td>
+      <td>1.280293</td>
+      <td>0.516505</td>
       <td>2</td>
       <td>2</td>
       <td>1</td>
-      <td>F57</td>
+      <td>F14</td>
       <td>2</td>
-      <td>F57</td>
+      <td>F14</td>
     </tr>
     <tr>
       <th>2996</th>
       <td>0</td>
-      <td>1.354498</td>
-      <td>1.953662</td>
+      <td>0.380551</td>
+      <td>1.293276</td>
       <td>2</td>
       <td>2</td>
       <td>1</td>
-      <td>F42</td>
+      <td>F44</td>
       <td>2</td>
-      <td>F42</td>
+      <td>F44</td>
     </tr>
     <tr>
       <th>2997</th>
-      <td>1</td>
-      <td>1.393122</td>
-      <td>1.033156</td>
+      <td>0</td>
+      <td>1.653189</td>
+      <td>1.368964</td>
       <td>2</td>
       <td>2</td>
       <td>1</td>
-      <td>F98</td>
+      <td>F4</td>
       <td>2</td>
-      <td>F98</td>
+      <td>F4</td>
     </tr>
     <tr>
       <th>2998</th>
-      <td>1</td>
-      <td>0.725057</td>
-      <td>1.627661</td>
+      <td>0</td>
+      <td>1.770214</td>
+      <td>1.727462</td>
       <td>2</td>
       <td>2</td>
       <td>1</td>
-      <td>F77</td>
+      <td>F15</td>
       <td>2</td>
-      <td>F77</td>
+      <td>F15</td>
     </tr>
     <tr>
       <th>2999</th>
-      <td>1</td>
-      <td>1.092797</td>
-      <td>1.623057</td>
+      <td>0</td>
+      <td>1.381628</td>
+      <td>0.977030</td>
       <td>2</td>
       <td>2</td>
       <td>1</td>
-      <td>F28</td>
+      <td>F17</td>
       <td>2</td>
-      <td>F28</td>
+      <td>F17</td>
     </tr>
   </tbody>
 </table>
@@ -847,7 +854,7 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-100%|██████████| 20/20 [00:06&lt;00:00,  3.17it/s]
+100%|██████████| 20/20 [00:07&lt;00:00,  2.67it/s]
 </pre></div></div>
 </div>
 </div>
@@ -928,6 +935,15 @@ div.rendered_html tbody tr:hover {
           </div>
           <footer>
   
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../internal.html" class="btn btn-neutral float-right" title="Python API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="monte_carlo_example.html" class="btn btn-neutral float-left" title="Monte Carlo example" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
 
   <hr/>
 
@@ -936,7 +952,7 @@ div.rendered_html tbody tr:hover {
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Apr 15, 2021.
+        Last updated on Apr 21, 2021.
       </span>
 
     </p>

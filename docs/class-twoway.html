@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>TwoWay class &mdash; pytwoway 0.1.4 documentation</title>
+  <title>TwoWay class &mdash; PyTwoWay 0.1.6 documentation</title>
   
 
   
@@ -51,7 +51,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home" alt="Documentation Home"> pytwoway
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> PyTwoWay
           
 
           
@@ -85,14 +85,15 @@
               <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
-<li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From terminal</a></li>
-<li class="toctree-l1"><a class="reference internal" href="doc-python.html">From python</a></li>
-<li class="toctree-l1"><a class="reference internal" href="doc-stata.html">From stata</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From Terminal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-python.html">From Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-stata.html">From Stata</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Notebook examples</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/pytwoway_example.html">Simple</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/blm_example.html">BLM</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul class="current">
@@ -101,7 +102,6 @@
 <li class="toctree-l1"><a class="reference internal" href="class-blmestimator.html">BLMEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-feestimator.html">FEEstimator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="class-simtwoway.html">SimTwoWay</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-twowaymontecarlo.html">TwoWayMonteCarlo</a></li>
 </ul>
 
@@ -118,7 +118,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">pytwoway</a>
+          <a href="index.html">PyTwoWay</a>
         
       </nav>
 
@@ -209,31 +209,31 @@
 <li><p><strong>user_cre</strong> (<em>dict</em>) – <p>dictionary of parameters for CRE estimation</p>
 <p>Dictionary parameters:</p>
 <blockquote>
-<div><p>ncore (int): number of cores to use</p>
-<p>ndraw_tr (int): number of draws to use in approximation for traces</p>
-<p>ndp (int): number of draw to use in approximation for leverages</p>
-<p>out (str): outputfile</p>
-<p>posterior (bool): compute posterior variance</p>
-<p>wo_btw (bool): sets between variation to 0, pure RE</p>
+<div><p>ncore (int, default=1): number of cores to use</p>
+<p>ndraw_tr (int, default=5): number of draws to use in approximation for traces</p>
+<p>ndp (int, default=50): number of draw to use in approximation for leverages</p>
+<p>out (str, default=’res_cre.json’): outputfile where results are saved</p>
+<p>posterior (bool, default=False): if True, compute posterior variance</p>
+<p>wo_btw (bool, default=False): if True, sets between variation to 0, pure RE</p>
 </div></blockquote>
 </p></li>
 <li><p><strong>user_cluster</strong> (<em>dict</em>) – <p>dictionary of parameters for clustering</p>
 <p>Dictionary parameters:</p>
 <blockquote>
-<div><p>cdf_resolution (int): how many values to use to approximate the cdfs</p>
-<p>grouping (str): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)</p>
-<p>stayers_movers (str or None): if None, clusters on entire dataset; if ‘stayers’, clusters on only stayers; if ‘movers’, clusters on only movers</p>
-<p>t (int or None): if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)</p>
-<p>weighted (bool): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)</p>
-<p>dropna (bool): if True, drop observations where firms aren’t clustered; if False, keep all observations</p>
-<p>user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>), and use default parameters defined in class attribute default_KMeans for any parameters not specified</p>
+<div><p>cdf_resolution (int, default=10): how many values to use to approximate the cdfs</p>
+<p>grouping (str, default=’quantile_all’): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)</p>
+<p>stayers_movers (str or None, default=None): if None, clusters on entire dataset; if ‘stayers’, clusters on only stayers; if ‘movers’, clusters on only movers</p>
+<p>t (int or None, default=None): if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)</p>
+<p>weighted (bool, default=True): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)</p>
+<p>dropna (bool, default=False): if True, drop observations where firms aren’t clustered; if False, keep all observations</p>
+<p>user_KMeans (dict): parameters for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>)</p>
 </div></blockquote>
 </p></li>
 <li><p><strong>collapsed</strong> (<em>bool</em>) – if True, run estimators on collapsed data</p></li>
 <li><p><strong>user_clean</strong> (<em>dict</em>) – <p>dictionary of parameters for cleaning</p>
 <p>Dictionary parameters:</p>
 <blockquote>
-<div><p>i_t_how (str): if ‘max’, keep max paying job; if ‘sum’, sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if ‘mean’, average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids</p>
+<div><p>i_t_how (str, default=’max’): if ‘max’, keep max paying job; if ‘sum’, sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if ‘mean’, average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids</p>
 </div></blockquote>
 </p></li>
 </ul>
@@ -251,25 +251,22 @@
 <li><p><strong>user_fe</strong> (<em>dict</em>) – <p>dictionary of parameters for bias-corrected FE estimation</p>
 <p>Dictionary parameters:</p>
 <blockquote>
-<div><p>ncore (int): number of cores to use</p>
-<p>batch (int): batch size to send in parallel</p>
-<p>ndraw_pii (int): number of draws to use in approximation for leverages</p>
-<p>levfile (str): file to load precomputed leverages</p>
-<p>ndraw_tr (int): number of draws to use in approximation for traces</p>
-<p>h2 (bool): if True, compute h2 correction</p>
-<p>out (str): outputfile where results are saved</p>
-<p>statsonly (bool): if True, return only basic statistics</p>
-<p>Q (str): which Q matrix to consider. Options include ‘cov(alpha, psi)’ and ‘cov(psi_t, psi_{t+1})’</p>
-<p>con (str): computes the smallest eigen values, this is the filepath where these results are saved &#64; FIXME I don’t think this is used</p>
-<p>logfile (str): log output to a logfile &#64; FIXME I don’t think this is used</p>
-<p>check (bool): whether to compute the non-approximated estimates as well &#64; FIXME I don’t think this is used</p>
+<div><p>ncore (int, default=1): number of cores to use</p>
+<p>batch (int, default=1): batch size to send in parallel</p>
+<p>ndraw_pii (int, default=50): number of draws to use in approximation for leverages</p>
+<p>levfile (str, default=’’): file to load precomputed leverages</p>
+<p>ndraw_tr (int, default=5): number of draws to use in approximation for traces</p>
+<p>h2 (bool, default=False): if True, compute h2 correction</p>
+<p>out (str, default=’res_fe.json’): outputfile where results are saved</p>
+<p>statsonly (bool, default=False): if True, return only basic statistics</p>
+<p>Q (str, default=’cov(alpha, psi)’): which Q matrix to consider. Options include ‘cov(alpha, psi)’ and ‘cov(psi_t, psi_{t+1})’</p>
 </div></blockquote>
 </p></li>
 <li><p><strong>collapsed</strong> (<em>bool</em>) – if True, run estimators on collapsed data</p></li>
 <li><p><strong>user_clean</strong> (<em>dict</em>) – <p>dictionary of parameters for cleaning</p>
 <p>Dictionary parameters:</p>
 <blockquote>
-<div><p>i_t_how (str): if ‘max’, keep max paying job; if ‘sum’, sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if ‘mean’, average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids</p>
+<div><p>i_t_how (str, default=’max’): if ‘max’, keep max paying job; if ‘sum’, sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if ‘mean’, average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids</p>
 </div></blockquote>
 </p></li>
 </ul>
@@ -332,7 +329,7 @@
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Apr 15, 2021.
+        Last updated on Apr 21, 2021.
       </span>
 
     </p>

@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>TwoWayMonteCarlo class &mdash; pytwoway 0.1.4 documentation</title>
+  <title>TwoWayMonteCarlo class &mdash; PyTwoWay 0.1.6 documentation</title>
   
 
   
@@ -36,7 +36,7 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="SimTwoWay class" href="class-simtwoway.html" /> 
+    <link rel="prev" title="FEEstimator class" href="class-feestimator.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -50,7 +50,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home" alt="Documentation Home"> pytwoway
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> PyTwoWay
           
 
           
@@ -84,14 +84,15 @@
               <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
-<li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From terminal</a></li>
-<li class="toctree-l1"><a class="reference internal" href="doc-python.html">From python</a></li>
-<li class="toctree-l1"><a class="reference internal" href="doc-stata.html">From stata</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From Terminal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-python.html">From Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-stata.html">From Stata</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Notebook examples</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/pytwoway_example.html">Simple</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/blm_example.html">BLM</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul class="current">
@@ -100,7 +101,6 @@
 <li class="toctree-l1"><a class="reference internal" href="class-blmestimator.html">BLMEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-feestimator.html">FEEstimator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="class-simtwoway.html">SimTwoWay</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">TwoWayMonteCarlo</a></li>
 </ul>
 
@@ -117,7 +117,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">pytwoway</a>
+          <a href="index.html">PyTwoWay</a>
         
       </nav>
 
@@ -194,40 +194,40 @@
 <div class="section" id="twowaymontecarlo-class">
 <h1>TwoWayMonteCarlo class<a class="headerlink" href="#twowaymontecarlo-class" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
-<dt id="pytwoway.simtwoway.TwoWayMonteCarlo">
-<em class="property">class </em><code class="sig-prename descclassname">pytwoway.simtwoway.</code><code class="sig-name descname">TwoWayMonteCarlo</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sim_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.simtwoway.TwoWayMonteCarlo" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.twowaymontecarlo.TwoWayMonteCarlo">
+<em class="property">class </em><code class="sig-prename descclassname">pytwoway.twowaymontecarlo.</code><code class="sig-name descname">TwoWayMonteCarlo</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">sim_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twowaymontecarlo.TwoWayMonteCarlo" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Class of TwoWayMonteCarlo, where TwoWayMonteCarlo runs a Monte Carlo estimate by simulating networks of firms and workers.</p>
+<p>Class of TwoWayMonteCarlo, where TwoWayMonteCarlo runs a Monte Carlo estimation by simulating bipartite networks of firms and workers.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>sim_params</strong> (<em>dict</em>) – <p>parameters for simulated data</p>
 <p>Dictionary parameters:</p>
 <blockquote>
-<div><p>num_ind (int): number of workers</p>
-<p>num_time (int): time length of panel</p>
-<p>firm_size (int): max number of individuals per firm</p>
-<p>nk (int): number of firm types</p>
-<p>nl (int): number of worker types</p>
-<p>alpha_sig (float): standard error of individual fixed effect (volatility of worker effects)</p>
-<p>psi_sig (float): standard error of firm fixed effect (volatility of firm effects)</p>
-<p>w_sig (float): standard error of residual in AKM wage equation (volatility of wage shocks)</p>
-<p>csort (float): sorting effect</p>
-<p>cnetw (float): network effect</p>
-<p>csig (float): standard error of sorting/network effects</p>
-<p>p_move (float): probability a worker moves firms in any period</p>
+<div><p>num_ind (int, default=10000): number of workers</p>
+<p>num_time (int, default=5): time length of panel</p>
+<p>firm_size (int, default=50): max number of individuals per firm</p>
+<p>nk (int, default=10): number of firm types</p>
+<p>nl (int, default=5): number of worker types</p>
+<p>alpha_sig (float, default=1): standard error of individual fixed effect (volatility of worker effects)</p>
+<p>psi_sig (float, default=1): standard error of firm fixed effect (volatility of firm effects)</p>
+<p>w_sig (float, default=1): standard error of residual in AKM wage equation (volatility of wage shocks)</p>
+<p>csort (float, default=1): sorting effect</p>
+<p>cnetw (float, default=1): network effect</p>
+<p>csig (float, default=1): standard error of sorting/network effects</p>
+<p>p_move (float, default=0.5): probability a worker moves firms in each period</p>
 </div></blockquote>
 </p>
 </dd>
 </dl>
 <dl class="py method">
-<dt id="pytwoway.simtwoway.TwoWayMonteCarlo.plot_monte_carlo">
-<code class="sig-name descname">plot_monte_carlo</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.simtwoway.TwoWayMonteCarlo.plot_monte_carlo" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.twowaymontecarlo.TwoWayMonteCarlo.plot_monte_carlo">
+<code class="sig-name descname">plot_monte_carlo</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twowaymontecarlo.TwoWayMonteCarlo.plot_monte_carlo" title="Permalink to this definition">¶</a></dt>
 <dd><p>Plot results from Monte Carlo simulations.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt id="pytwoway.simtwoway.TwoWayMonteCarlo.twfe_monte_carlo">
-<code class="sig-name descname">twfe_monte_carlo</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">N</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">ncore</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">fe_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cre_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cluster_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">collapsed_fe</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">collapsed_cre</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">clean_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.simtwoway.TwoWayMonteCarlo.twfe_monte_carlo" title="Permalink to this definition">¶</a></dt>
+<dt id="pytwoway.twowaymontecarlo.TwoWayMonteCarlo.twfe_monte_carlo">
+<code class="sig-name descname">twfe_monte_carlo</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">N</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="n">ncore</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">fe_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cre_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">cluster_params</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">collapsed_fe</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">collapsed_cre</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">clean_params</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twowaymontecarlo.TwoWayMonteCarlo.twfe_monte_carlo" title="Permalink to this definition">¶</a></dt>
 <dd><p>Run Monte Carlo simulations of TwoWay to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:</p>
 <blockquote>
 <div><p>true_psi_var (NumPy Array): true simulated sample variance of psi</p>
@@ -247,37 +247,37 @@
 <li><p><strong>fe_params</strong> (<em>dict</em>) – <p>dictionary of parameters for FE estimation</p>
 <p>Dictionary parameters:</p>
 <blockquote>
-<div><p>ncore (int): number of cores to use</p>
-<p>batch (int): batch size to send in parallel</p>
-<p>ndraw_pii (int): number of draws to use in approximation for leverages</p>
-<p>levfile (str): file to load precomputed leverages</p>
-<p>ndraw_tr (int): number of draws to use in approximation for traces</p>
-<p>h2 (bool): if True, compute h2 correction</p>
-<p>out (str): outputfile where results are saved</p>
-<p>statsonly (bool): if True, return only basic statistics</p>
-<p>Q (str): which Q matrix to consider. Options include ‘cov(alpha, psi)’ and ‘cov(psi_t, psi_{t+1})’</p>
+<div><p>ncore (int, default=1): number of cores to use</p>
+<p>batch (int, default=1): batch size to send in parallel</p>
+<p>ndraw_pii (int, default=50): number of draws to use in approximation for leverages</p>
+<p>levfile (str, default=’’): file to load precomputed leverages</p>
+<p>ndraw_tr (int, default=5): number of draws to use in approximation for traces</p>
+<p>h2 (bool, default=False): if True, compute h2 correction</p>
+<p>out (str, default=’res_fe.json’): outputfile where results are saved</p>
+<p>statsonly (bool, default=False): if True, return only basic statistics</p>
+<p>Q (str, default=’cov(alpha, psi)’): which Q matrix to consider. Options include ‘cov(alpha, psi)’ and ‘cov(psi_t, psi_{t+1})’</p>
 </div></blockquote>
 </p></li>
 <li><p><strong>cre_params</strong> (<em>dict</em>) – <p>dictionary of parameters for CRE estimation</p>
 <p>Dictionary parameters:</p>
 <blockquote>
-<div><p>ncore (int): number of cores to use</p>
-<p>ndraw_tr (int): number of draws to use in approximation for traces</p>
-<p>ndp (int): number of draw to use in approximation for leverages</p>
-<p>out (string): outputfile</p>
-<p>posterior (bool): compute posterior variance</p>
-<p>wo_btw (bool): sets between variation to 0, pure RE</p>
+<div><p>ncore (int, default=1): number of cores to use</p>
+<p>ndraw_tr (int, default=5): number of draws to use in approximation for traces</p>
+<p>ndp (int, default=50): number of draw to use in approximation for leverages</p>
+<p>out (str, default=’res_cre.json’): outputfile where results are saved</p>
+<p>posterior (bool, default=False): if True, compute posterior variance</p>
+<p>wo_btw (bool, default=False): if True, sets between variation to 0, pure RE</p>
 </div></blockquote>
 </p></li>
 <li><p><strong>cluster_params</strong> (<em>dict</em>) – <p>dictionary of parameters for clustering in CRE estimation</p>
 <p>Dictionary parameters:</p>
 <blockquote>
-<div><p>cdf_resolution (int): how many values to use to approximate the cdfs</p>
-<p>grouping (str): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)</p>
-<p>stayers_movers (str or None): if None, clusters on entire dataset; if ‘stayers’, clusters on only stayers; if ‘movers’, clusters on only movers</p>
-<p>t (int or None): if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)</p>
-<p>weighted (bool): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)</p>
-<p>dropna (bool): if True, drop observations where firms aren’t clustered; if False, keep all observations</p>
+<div><p>cdf_resolution (int, default=10): how many values to use to approximate the cdfs</p>
+<p>grouping (str, default=’quantile_all’): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary)</p>
+<p>stayers_movers (str or None, default=None): if None, clusters on entire dataset; if ‘stayers’, clusters on only stayers; if ‘movers’, clusters on only movers</p>
+<p>t (int or None, default=None): if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)</p>
+<p>weighted (bool, default=True): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)</p>
+<p>dropna (bool, default=False): if True, drop observations where firms aren’t clustered; if False, keep all observations</p>
 <p>user_KMeans (dict): parameters for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>)</p>
 </div></blockquote>
 </p></li>
@@ -286,7 +286,7 @@
 <li><p><strong>clean_params</strong> (<em>dict</em>) – <p>dictionary of parameters for cleaning</p>
 <p>Dictionary parameters:</p>
 <blockquote>
-<div><p>i_t_how (str): if ‘max’, keep max paying job; if ‘sum’, sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if ‘mean’, average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids</p>
+<div><p>i_t_how (str, default=’max’): if ‘max’, keep max paying job; if ‘sum’, sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if ‘mean’, average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids</p>
 </div></blockquote>
 </p></li>
 </ul>
@@ -307,7 +307,7 @@
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
       
-        <a href="class-simtwoway.html" class="btn btn-neutral float-left" title="SimTwoWay class" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+        <a href="class-feestimator.html" class="btn btn-neutral float-left" title="FEEstimator class" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
       
     </div>
   
@@ -319,7 +319,7 @@
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Apr 15, 2021.
+        Last updated on Apr 21, 2021.
       </span>
 
     </p>

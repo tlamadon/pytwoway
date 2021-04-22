@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Monte Carlo example &mdash; pytwoway 0.1.4 documentation</title>
+  <title>Monte Carlo example &mdash; PyTwoWay 0.1.6 documentation</title>
   
 
   
@@ -36,7 +36,7 @@
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Python API" href="../internal.html" />
+    <link rel="next" title="BLM example" href="blm_example.html" />
     <link rel="prev" title="pytwoway example" href="pytwoway_example.html" /> 
 </head>
 
@@ -51,7 +51,7 @@
           
 
           
-            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> pytwoway
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> PyTwoWay
           
 
           
@@ -85,9 +85,9 @@
               <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../doc-cli.html">From terminal</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../doc-python.html">From python</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../doc-stata.html">From stata</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-cli.html">From Terminal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-python.html">From Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-stata.html">From Stata</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Notebook examples</span></p>
 <ul class="current">
@@ -100,6 +100,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#Fifth-and-finally,-plot-parameter-estimates-(plots-show-the-difference-from-the-truth)">Fifth and finally, plot parameter estimates (plots show the difference from the truth)</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="blm_example.html">BLM</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul>
@@ -108,7 +109,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../class-blmestimator.html">BLMEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../class-creestimator.html">CREEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../class-feestimator.html">FEEstimator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../class-simtwoway.html">SimTwoWay</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../class-twowaymontecarlo.html">TwoWayMonteCarlo</a></li>
 </ul>
 
@@ -125,7 +125,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../index.html">pytwoway</a>
+          <a href="../index.html">PyTwoWay</a>
         
       </nav>
 
@@ -506,23 +506,21 @@ div.rendered_html tbody tr:hover {
     <span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Number of cores to use</span>
     <span class="s1">&#39;batch&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Batch size to send in parallel</span>
     <span class="s1">&#39;ndraw_pii&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="c1"># Number of draw to use in approximation for leverages</span>
-    <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of draws to use in approximation for traces</span>
-    <span class="s1">&#39;check&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Whether to compute the non-approximated estimates as well</span>
-    <span class="s1">&#39;hetero&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Whether to compute the heteroskedastic estimates</span>
-    <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_fe.json&#39;</span><span class="p">,</span> <span class="c1"># Filepath for fe results</span>
-    <span class="s1">&#39;con&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Computes the smallest eigen values, this is the filepath where these results are saved</span>
-    <span class="s1">&#39;logfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="c1"># Log output to a logfile</span>
     <span class="s1">&#39;levfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="c1"># File to load precomputed leverages</span>
-    <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># Save data statistics only</span>
+    <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of draws to use in approximation for traces</span>
+    <span class="s1">&#39;h2&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># If True, compute h2 correction</span>
+    <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_fe.json&#39;</span><span class="p">,</span> <span class="c1"># Outputfile where FE results are saved</span>
+    <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># If True, return only basic statistics</span>
+    <span class="s1">&#39;Q&#39;</span><span class="p">:</span> <span class="s1">&#39;cov(alpha, psi)&#39;</span> <span class="c1"># Which Q matrix to consider. Options include &#39;cov(alpha, psi)&#39; and &#39;cov(psi_t, psi_{t+1})&#39;</span>
 <span class="p">}</span>
 <span class="c1"># For CRE estimation</span>
 <span class="n">cre_params</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s1">&#39;ncore&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="c1"># Number of cores to use</span>
     <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of draws to use in approximation for traces</span>
     <span class="s1">&#39;ndp&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="c1"># Number of draw to use in approximation for leverages</span>
-    <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_cre.json&#39;</span><span class="p">,</span> <span class="c1"># Filepath for cre results</span>
-    <span class="s1">&#39;posterior&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># Whether to compute the posterior variance</span>
-    <span class="s1">&#39;wobtw&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># Sets between variation to 0, pure RE when computing cre</span>
+    <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_cre.json&#39;</span><span class="p">,</span> <span class="c1"># Outputfile where CRE results are saved</span>
+    <span class="s1">&#39;posterior&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># If True, compute posterior variance</span>
+    <span class="s1">&#39;wobtw&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># If True, sets between variation to 0, pure RE</span>
 <span class="p">}</span>
 <span class="c1"># For clustering (specifically for the KMeans algorithm)</span>
 <span class="n">KMeans_params</span> <span class="o">=</span> <span class="p">{</span> <span class="c1"># These parameters are specifically for the KMeans algorithm</span>
@@ -553,11 +551,16 @@ div.rendered_html tbody tr:hover {
         <span class="c1">#     note that this is up to 50 times slower than &#39;quantile_firm_small&#39;</span>
         <span class="c1">#     and should only be used if the dataset is too large to copy</span>
         <span class="c1">#     into a dictionary)</span>
-    <span class="s1">&#39;year&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># If None, uses entire dataset when clustering;</span>
-                  <span class="c1"># If int, gives year of data to consider when clustering</span>
+    <span class="s1">&#39;stayers_movers&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># If None, clusters on entire dataset</span>
+                           <span class="c1"># If &#39;stayers&#39;, clusters on only stayers</span>
+                           <span class="c1"># If &#39;movers&#39;, clusters on only movers</span>
+    <span class="s1">&#39;t&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># If None, clusters on entire dataset</span>
+               <span class="c1"># If int, gives period in data to consider (only valid for non-collapsed data)</span>
+    <span class="s1">&#39;weighted&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="c1"># If True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)</span>
+    <span class="s1">&#39;dropna&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># If True, drop observations where firms aren&#39;t clustered</span>
+                     <span class="c1"># If False, keep all observations</span>
     <span class="s1">&#39;user_KMeans&#39;</span><span class="p">:</span> <span class="n">KMeans_params</span>
 <span class="p">}</span>
-<span class="c1"># For data cleaning</span>
 <span class="n">clean_params</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s1">&#39;i_t_how&#39;</span><span class="p">:</span> <span class="s1">&#39;max&#39;</span> <span class="c1"># How to handle worker-year duplicates</span>
         <span class="c1"># If &#39;max&#39;, keep max paying job;</span>
@@ -630,7 +633,7 @@ div.rendered_html tbody tr:hover {
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="../internal.html" class="btn btn-neutral float-right" title="Python API" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="blm_example.html" class="btn btn-neutral float-right" title="BLM example" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="pytwoway_example.html" class="btn btn-neutral float-left" title="pytwoway example" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -645,7 +648,7 @@ div.rendered_html tbody tr:hover {
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Apr 15, 2021.
+        Last updated on Apr 21, 2021.
       </span>
 
     </p>

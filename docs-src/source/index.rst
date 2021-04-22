@@ -5,9 +5,9 @@
   :maxdepth: 2
 
   Home <self>
-  From terminal <doc-cli>
-  From python <doc-python>
-  From stata <doc-stata>
+  From Terminal <doc-cli>
+  From Python <doc-python>
+  From Stata <doc-stata>
 
 .. toctree::
   :caption: Notebook examples
@@ -15,6 +15,7 @@
 
   Simple <notebooks/pytwoway_example>
   Monte Carlo <notebooks/monte_carlo_example>
+  BLM <notebooks/blm_example>
 
 .. toctree::
   :caption: Under the hood
@@ -25,5 +26,4 @@
   BLMEstimator <class-blmestimator>
   CREEstimator <class-creestimator>
   FEEstimator <class-feestimator>
-  SimTwoWay <class-simtwoway>
   TwoWayMonteCarlo <class-twowaymontecarlo>

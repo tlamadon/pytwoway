@@ -23,7 +23,7 @@ program define statatwoway, rclass
     foreach name in `namelist' {
         if "`name'" == "fe" {
             di "fe"
-            qui local command_fe = "`command'; pytw --my-config `config' --fe"
+            qui local command_fe = "`command'; pytw --my-config `config' --stata --fe"
             `command_fe'
             qui gen str240 var_fe = ""
             qui gen str240 cov_fe = ""
@@ -40,7 +40,7 @@ program define statatwoway, rclass
         }
         else if "`name'" == "cre" {
             di "cre"
-            qui local command_cre = "`command'; pytw --my-config `config' --cre"
+            qui local command_cre = "`command'; pytw --my-config `config' --stata --cre"
             `command_cre'
             qui gen str240 var_cre = ""
             qui gen str240 cov_cre = ""

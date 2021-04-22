@@ -41,11 +41,6 @@ class TwoWay():
         self.formatting = formatting
         self.clean = False # Whether data is clean
 
-        # Define default parameter dictionaries
-        self.default_fe = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'levfile': '', 'ndraw_tr': 5, 'h2': False, 'out': 'res_fe.json', 'statsonly': False, 'Q': 'cov(alpha, psi)', 'con': False, 'logfile': '', 'check': False} # Do not define 'data' because will be updated later
-
-        self.default_cre = {'ncore': 1, 'ndraw_tr': 5, 'ndp': 50, 'out': 'res_cre.json', 'posterior': False, 'wo_btw': False} # Do not define 'data' because will be updated later
-
         # self.logger.info('TwoWay object initialized')
 
     def __prep_data(self, collapsed=True, user_clean={}):
@@ -58,7 +53,7 @@ class TwoWay():
 
                 Dictionary parameters:
 
-                    i_t_how (str): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
+                    i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
 
         Returns:
             frame (BipartitePandas): prepared data
@@ -94,43 +89,36 @@ class TwoWay():
 
                 Dictionary parameters:
 
-                    ncore (int): number of cores to use
+                    ncore (int, default=1): number of cores to use
 
-                    batch (int): batch size to send in parallel
+                    batch (int, default=1): batch size to send in parallel
 
-                    ndraw_pii (int): number of draws to use in approximation for leverages
+                    ndraw_pii (int, default=50): number of draws to use in approximation for leverages
 
-                    levfile (str): file to load precomputed leverages
+                    levfile (str, default=''): file to load precomputed leverages
 
-                    ndraw_tr (int): number of draws to use in approximation for traces
+                    ndraw_tr (int, default=5): number of draws to use in approximation for traces
 
-                    h2 (bool): if True, compute h2 correction
+                    h2 (bool, default=False): if True, compute h2 correction
 
-                    out (str): outputfile where results are saved
+                    out (str, default='res_fe.json'): outputfile where results are saved
 
-                    statsonly (bool): if True, return only basic statistics
+                    statsonly (bool, default=False): if True, return only basic statistics
 
-                    Q (str): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
-
-                    con (str): computes the smallest eigen values, this is the filepath where these results are saved @ FIXME I don't think this is used
-
-                    logfile (str): log output to a logfile @ FIXME I don't think this is used
-
-                    check (bool): whether to compute the non-approximated estimates as well @ FIXME I don't think this is used
+                    Q (str, default='cov(alpha, psi)'): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
 
             collapsed (bool): if True, run estimators on collapsed data
             user_clean (dict): dictionary of parameters for cleaning
 
                 Dictionary parameters:
 
-                    i_t_how (str): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
+                    i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
         '''
+        # Prepare data
         frame = self.__prep_data(collapsed=collapsed, user_clean=user_clean)
-        fe_params = bpd.update_dict(self.default_fe, user_fe)
 
-        fe_params['data'] = frame.get_cs() # Make sure to use up-to-date bipartite network
-
-        fe_solver = tw.FEEstimator(fe_params)
+        # Run estimator
+        fe_solver = tw.FEEstimator(frame.get_cs(), user_fe)
         fe_solver.fit_1()
         fe_solver.construct_Q() # Comment out this line and manually create Q if you want a custom Q matrix
         fe_solver.fit_2()
@@ -147,51 +135,49 @@ class TwoWay():
 
                 Dictionary parameters:
 
-                    ncore (int): number of cores to use
+                    ncore (int, default=1): number of cores to use
 
-                    ndraw_tr (int): number of draws to use in approximation for traces
+                    ndraw_tr (int, default=5): number of draws to use in approximation for traces
 
-                    ndp (int): number of draw to use in approximation for leverages
+                    ndp (int, default=50): number of draw to use in approximation for leverages
 
-                    out (str): outputfile
+                    out (str, default='res_cre.json'): outputfile where results are saved
 
-                    posterior (bool): compute posterior variance
+                    posterior (bool, default=False): if True, compute posterior variance
 
-                    wo_btw (bool): sets between variation to 0, pure RE
+                    wo_btw (bool, default=False): if True, sets between variation to 0, pure RE
 
             user_cluster (dict): dictionary of parameters for clustering
 
                 Dictionary parameters:
 
-                    cdf_resolution (int): how many values to use to approximate the cdfs
+                    cdf_resolution (int, default=10): how many values to use to approximate the cdfs
 
-                    grouping (str): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
+                    grouping (str, default='quantile_all'): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary)
 
-                    stayers_movers (str or None): if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers
+                    stayers_movers (str or None, default=None): if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers
 
-                    t (int or None): if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)
+                    t (int or None, default=None): if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)
 
-                    weighted (bool): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)
+                    weighted (bool, default=True): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)
 
-                    dropna (bool): if True, drop observations where firms aren't clustered; if False, keep all observations
+                    dropna (bool, default=False): if True, drop observations where firms aren't clustered; if False, keep all observations
 
-                    user_KMeans (dict): use parameters defined in KMeans_dict for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html), and use default parameters defined in class attribute default_KMeans for any parameters not specified
+                    user_KMeans (dict): parameters for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html)
 
             collapsed (bool): if True, run estimators on collapsed data
             user_clean (dict): dictionary of parameters for cleaning
 
                 Dictionary parameters:
 
-                    i_t_how (str): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
+                    i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
         '''
+        # Prepare data
         frame = self.__prep_data(collapsed=collapsed, user_clean=user_clean)
         frame = frame.cluster(user_cluster=user_cluster)
 
-        cre_params = bpd.update_dict(self.default_cre, user_cre)
-
-        cre_params['data'] = frame.get_cs() # Make sure to use up-to-date data
-
-        cre_solver = tw.CREEstimator(cre_params)
+        # Run estimator
+        cre_solver = tw.CREEstimator(frame.get_cs(), user_cre)
         cre_solver.fit()
 
         self.cre_res = cre_solver.res

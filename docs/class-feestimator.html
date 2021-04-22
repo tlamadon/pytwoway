@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>FEEstimator class &mdash; pytwoway 0.1.4 documentation</title>
+  <title>FEEstimator class &mdash; PyTwoWay 0.1.6 documentation</title>
   
 
   
@@ -36,7 +36,7 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="SimTwoWay class" href="class-simtwoway.html" />
+    <link rel="next" title="TwoWayMonteCarlo class" href="class-twowaymontecarlo.html" />
     <link rel="prev" title="CREEstimator class" href="class-creestimator.html" /> 
 </head>
 
@@ -51,7 +51,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home" alt="Documentation Home"> pytwoway
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> PyTwoWay
           
 
           
@@ -85,14 +85,15 @@
               <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
-<li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From terminal</a></li>
-<li class="toctree-l1"><a class="reference internal" href="doc-python.html">From python</a></li>
-<li class="toctree-l1"><a class="reference internal" href="doc-stata.html">From stata</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From Terminal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-python.html">From Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-stata.html">From Stata</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Notebook examples</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/pytwoway_example.html">Simple</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/blm_example.html">BLM</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul class="current">
@@ -101,7 +102,6 @@
 <li class="toctree-l1"><a class="reference internal" href="class-blmestimator.html">BLMEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">FEEstimator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="class-simtwoway.html">SimTwoWay</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-twowaymontecarlo.html">TwoWayMonteCarlo</a></li>
 </ul>
 
@@ -118,7 +118,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">pytwoway</a>
+          <a href="index.html">PyTwoWay</a>
         
       </nav>
 
@@ -196,7 +196,7 @@
 <h1>FEEstimator class<a class="headerlink" href="#feestimator-class" title="Permalink to this headline">¶</a></h1>
 <dl class="py class">
 <dt id="pytwoway.fe.FEEstimator">
-<em class="property">class </em><code class="sig-prename descclassname">pytwoway.fe.</code><code class="sig-name descname">FEEstimator</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FEEstimator" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">pytwoway.fe.</code><code class="sig-name descname">FEEstimator</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">params</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.fe.FEEstimator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Uses multigrid and partialing out to solve two way fixed effect model.</p>
 <p>&#64; FIXME I think delete everything below this, it’s basically contained in the class/functions within the class</p>
@@ -248,7 +248,7 @@ alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed e
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="class-simtwoway.html" class="btn btn-neutral float-right" title="SimTwoWay class" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="class-twowaymontecarlo.html" class="btn btn-neutral float-right" title="TwoWayMonteCarlo class" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="class-creestimator.html" class="btn btn-neutral float-left" title="CREEstimator class" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -263,7 +263,7 @@ alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed e
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Apr 15, 2021.
+        Last updated on Apr 21, 2021.
       </span>
 
     </p>

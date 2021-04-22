@@ -1,6 +1,3 @@
-pytwoway
---------
-
 .. image:: https://badge.fury.io/py/pytwoway.svg
     :target: https://badge.fury.io/py/pytwoway
 
@@ -10,9 +7,9 @@ pytwoway
 .. image:: https://img.shields.io/badge/doc-latest-blue
     :target: https://tlamadon.github.io/pytwoway/
 
-`pytwoway` is the python package associated with the following paper:
+`PyTwoWay` is the Python package associated with the following paper:
 
-"`How Much Should we Trust Estimates of Firm Effects and Worker Sorting?. <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" 
+"`How Much Should we Trust Estimates of Firm Effects and Worker Sorting? <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" 
 by Stéphane Bonhomme, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler.  
 No. w27368. National Bureau of Economic Research, 2020.
 
@@ -29,19 +26,19 @@ The package provides implementations for a series of estimators for models with 
 
 If you want to give it a try, you can start the example notebook here: |binder|. This starts a fully interactive notebook with a simple example that generates data and runs the estimators.
 
-The code is relatively efficient. Solving large sparse linear models relies on `pyamg <https://github.com/pyamg/pyamg>`_. This is the code we used to estimate the different decompositions on the US data. 
+The code is relatively efficient. Solving large sparse linear models relies on `PyAMG <https://github.com/pyamg/pyamg>`_. This is the code we use to estimate the different decompositions on US data. 
 
-The package provides a python interface as well as an intuitive command line interface. Installation is handled by `pip` or `conda` (TBD). The source of the package is available on github at `pytwoway <https://github.com/tlamadon/pytwoway>`_. The online documentation is hosted  `here <https://tlamadon.github.io/pytwoway/>`_.
+The package provides a Python interface as well as an intuitive command line interface. Installation is handled by `pip` or `Conda` (TBD). The source of the package is available on GitHub at `PyTwoWay <https://github.com/tlamadon/pytwoway>`_. The online documentation is hosted  `here <https://tlamadon.github.io/pytwoway/>`_.
 
 Quick Start
 -----------
 
-To install from pip, run::
+To install via pip, from the command line run::
 
     pip install pytwoway
 
 
-To run using the command line interface::
+To run PyTwoWay via the command line interface, run::
 
     pytw --my-config config.txt --fe --cre
 
@@ -50,12 +47,12 @@ Example config.txt::
 
     data = file.csv
     filetype = csv
-    col_dict = col_dict = "{'i': 'your_workerid_col', 'j': 'your_firmid_col', 'y': 'your_compensation_col', 't': 'your_year_col'}"
+    col_dict = "{'i': 'your_workerid_col', 'j': 'your_firmid_col', 'y': 'your_compensation_col', 't': 'your_year_col'}"
 
 Citation
 --------
 
-Please use the following citation to cite pytwoway in academic publications:
+Please use following citation to cite PyTwoWay in academic publications:
 
 Bibtex entry::
 

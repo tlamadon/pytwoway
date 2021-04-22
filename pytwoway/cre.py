@@ -2,22 +2,22 @@
     Estimates the CRE model and computes posterior using Trace
     Approximation.
 '''
-import logging
-from pathlib import Path
+# import logging
+# from pathlib import Path
 import pyamg
 import numpy as np
 import pandas as pd
-from bipartitepandas import logger_init
+from bipartitepandas import update_dict, logger_init
 from scipy.sparse import csc_matrix, coo_matrix, diags, linalg, eye
 import time
 # import pyreadr
-import os
-from multiprocessing import Pool, TimeoutError
-from timeit import default_timer as timer
+# import os
+# from multiprocessing import Pool, TimeoutError
+# from timeit import default_timer as timer
 
-import argparse
+# import argparse
 import json
-import itertools
+# import itertools
 
 # try to use tqdm
 try:
@@ -53,54 +53,65 @@ class CREEstimator:
     '''
     Uses multigrid and partialing out to solve two way Fixed Effect model.
     '''
-    def __init__(self, params):
+    def __init__(self, data, params):
         '''
         Arguments:
+            data (Pandas DataFrame): cross-section labor data. Data contains the following columns:
+
+                i (worker id)
+
+                j1 (firm id 1)
+
+                j2 (firm id 2)
+
+                y1 (compensation 1)
+
+                y2 (compensation 2)
+
+                t1 (last period of observation 1)
+
+                t2 (last period of observation 2)
+
+                w1 (weight 1)
+
+                w2 (weight 2)
+
+                m (0 if stayer, 1 if mover)
+
+                cs (0 if not in cross section, 1 if in cross section)
             params (dict): dictionary of parameters for CRE estimation
 
                 Dictionary parameters:
 
-                    data (Pandas DataFrame): cross-section labor data. Data contains the following columns:
+                    ncore (int, default=1): number of cores to use
 
-                        i (worker id)
+                    ndraw_tr (int, default=5): number of draws to use in approximation for traces
 
-                        j1 (firm id 1)
+                    ndp (int, default=50): number of draw to use in approximation for leverages
 
-                        j2 (firm id 2)
+                    out (str, default='res_cre.json'): outputfile where results are saved
 
-                        y1 (compensation 1)
+                    posterior (bool, default=False): if True, compute posterior variance
 
-                        y2 (compensation 2)
-
-                        t1 (last period of observation 1)
-
-                        t2 (last period of observation 2)
-
-                        w1 (weight 1)
-
-                        w2 (weight 2)
-
-                        m (0 if stayer, 1 if mover)
-
-                        cs (0 if not in cross section, 1 if in cross section)
-
-                    ncore (int): number of cores to use
-
-                    ndraw_tr (int): number of draws to use in approximation for traces
-
-                    ndp (int): number of draw to use in approximation for leverages
-
-                    out (str): outputfile
-
-                    posterior (bool): compute posterior variance
-
-                    wo_btw (bool): sets between variation to 0, pure RE
+                    wo_btw (bool, default=False): if True, sets between variation to 0, pure RE
         '''
         # Start logger
         logger_init(self)
         # self.logger.info('initializing CREEstimator object')
 
-        self.params = params
+        self.adata = data
+
+        # Define default parameter dictionaries
+        default_params = {
+            'ncore': 1, # Number of cores to use
+            'ndraw_tr': 5, # Number of draws to use in approximation for traces
+            'ndp': 50, # Number of draw to use in approximation for leverages
+            'out': 'res_cre.json', # Outputfile where results are saved
+            'posterior': False, # If True, compute posterior variance
+            'wo_btw': False # If True, sets between variation to 0, pure RE
+        }
+
+        self.params = update_dict(default_params, params)
         self.res = {} # Results dictionary
         self.summary = {} # Summary results dictionary
 
@@ -178,7 +189,7 @@ class CREEstimator:
         '''
         self.logger.info('preparing the data')
 
-        self.adata = self.params['data']
+        # self.adata = self.params['data']
         # self.adata['i'] = self.adata['i'].astype('category').cat.codes + 1 # FIXME i should already be correct
         self.adata[['g1', 'g2']] = self.adata[['g1', 'g2']].astype(int) # Clusters generated as Int64 which isn't compatible with indexing
 

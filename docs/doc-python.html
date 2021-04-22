@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Using from python &mdash; pytwoway 0.1.4 documentation</title>
+  <title>Using from Python &mdash; PyTwoWay 0.1.6 documentation</title>
   
 
   
@@ -36,7 +36,7 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Using from stata" href="doc-stata.html" />
+    <link rel="next" title="Using from Stata" href="doc-stata.html" />
     <link rel="prev" title="Command line interface" href="doc-cli.html" /> 
 </head>
 
@@ -51,7 +51,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home" alt="Documentation Home"> pytwoway
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> PyTwoWay
           
 
           
@@ -85,14 +85,15 @@
               <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
-<li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From terminal</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">From python</a></li>
-<li class="toctree-l1"><a class="reference internal" href="doc-stata.html">From stata</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From Terminal</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">From Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-stata.html">From Stata</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Notebook examples</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/pytwoway_example.html">Simple</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/blm_example.html">BLM</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul>
@@ -101,7 +102,6 @@
 <li class="toctree-l1"><a class="reference internal" href="class-blmestimator.html">BLMEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-feestimator.html">FEEstimator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="class-simtwoway.html">SimTwoWay</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-twowaymontecarlo.html">TwoWayMonteCarlo</a></li>
 </ul>
 
@@ -118,7 +118,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">pytwoway</a>
+          <a href="index.html">PyTwoWay</a>
         
       </nav>
 
@@ -149,7 +149,7 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li>Using from python</li>
+      <li>Using from Python</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -193,13 +193,13 @@
 }
 </style>
 <div class="section" id="using-from-python">
-<h1>Using from python<a class="headerlink" href="#using-from-python" title="Permalink to this headline">¶</a></h1>
-<p>To install from pip, from the command line run:</p>
+<h1>Using from Python<a class="headerlink" href="#using-from-python" title="Permalink to this headline">¶</a></h1>
+<p>To install via pip, from the command line run:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">pytwoway</span>
 </pre></div>
 </div>
 <p>Sample data: <a class="reference download internal" download="" href="_downloads/8585cbc63df53436d69d3cb66b5ad2c6/twoway_sample_data.csv"><code class="xref download docutils literal notranslate"><span class="pre">download</span></code></a></p>
-<p>To run in python:</p>
+<p>To run in Python:</p>
 <ul class="simple">
 <li><p>If you want to run estimators on your own data:</p></li>
 </ul>
@@ -270,10 +270,11 @@
 <li><p>If you want to run estimators on simulated data:</p></li>
 </ul>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
+<span class="kn">from</span> <span class="nn">bipartitepandas</span> <span class="kn">import</span> <span class="n">SimBipartite</span>
 <span class="c1"># Create SimTwoWay object</span>
-<span class="n">stw_net</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">SimTwoWay</span><span class="p">()</span>
+<span class="n">sbp_net</span> <span class="o">=</span> <span class="n">SimBipartite</span><span class="p">()</span>
 <span class="c1"># Generate data</span>
-<span class="n">sim_data</span> <span class="o">=</span> <span class="n">stw_net</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()</span>
+<span class="n">sim_data</span> <span class="o">=</span> <span class="n">sbp_net</span><span class="o">.</span><span class="n">sim_network</span><span class="p">()</span>
 <span class="c1"># Below is identical to first example, except we are now using the simulated data</span>
 <span class="c1"># Create TwoWay object</span>
 <span class="n">tw_net</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">TwoWay</span><span class="p">(</span><span class="n">sim_data</span><span class="p">)</span>
@@ -288,7 +289,7 @@
 </pre></div>
 </div>
 <ul class="simple">
-<li><p>If you want to run Monte Carlo on simulated data:</p></li>
+<li><p>If you want to run a Monte Carlo estimation on simulated data:</p></li>
 </ul>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
 <span class="c1"># Create TwoWayMonteCarlo object</span>
@@ -309,7 +310,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="doc-stata.html" class="btn btn-neutral float-right" title="Using from stata" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="doc-stata.html" class="btn btn-neutral float-right" title="Using from Stata" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="doc-cli.html" class="btn btn-neutral float-left" title="Command line interface" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -324,7 +325,7 @@
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Apr 15, 2021.
+        Last updated on Apr 21, 2021.
       </span>
 
     </p>

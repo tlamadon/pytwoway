@@ -282,35 +282,35 @@ class BLMModel:
 
                 Dictionary parameters:
 
-                    nl (int): number of worker types
+                    nl (int, default=6): number of worker types
 
-                    nk (int): number of firm types
+                    nk (int, default=10): number of firm types
 
-                    fixb (bool): if True, set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)
+                    fixb (bool, default=False): if True, set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)
 
-                    stationary (bool): if True, set A1 = A2
+                    stationary (bool, default=False): if True, set A1 = A2
 
-                    simulation (bool): if True, using model to simulate data
+                    simulation (bool, default=False): if True, using model to simulate data
 
-                    n_iters (int): number of iterations for EM
+                    n_iters (int, default=100): number of iterations for EM
 
-                    threshold (float): threshold to break EM loop
+                    threshold (float, default=1e-7): threshold to break EM loop
 
-                    update_a (bool): if False, do not update A1 or A2
+                    update_a (bool, default=True): if False, do not update A1 or A2
 
-                    update_s (bool): if False, do not update S1 or S2
+                    update_s (bool, default=True): if False, do not update S1 or S2
 
-                    update_pk1 (bool): if False, do not update pk1
+                    update_pk1 (bool, default=True): if False, do not update pk1
 
-                    return_qi (bool): if True, return qi matrix after first loop
+                    return_qi (bool, default=False): if True, return qi matrix after first loop
 
-                    cons_a (tuple): constraints on A1 and A2, where first entry gives list of constraints and second entry gives a parameter dictionary
+                    cons_a (tuple, default=(['lin'], {'n_periods': 2})): constraints on A1 and A2, where first entry gives list of constraints and second entry gives a parameter dictionary
 
-                    cons_s (tuple): constraints on S1 and S2, where first entry gives list of constraints and second entry gives a parameter dictionary
+                    cons_s (tuple, default=(['biggerthan'], {'gap_bigger': 1e-7, 'n_periods': 2})): constraints on S1 and S2, where first entry gives list of constraints and second entry gives a parameter dictionary
 
-                    d_prior (float): value >= 1, account for probabilities being too small
+                    d_prior (float, default=1.0001): value >= 1, account for probabilities being too small
 
-                    verbose (int): if 0, print no output; if 1, print additional output; if 2, print maximum output
+                    verbose (int, default=0): if 0, print no output; if 1, print additional output; if 2, print maximum output
     '''
     def __init__(self, user_blm={}):
         # Default parameters
@@ -878,21 +878,21 @@ class BLMEstimator:
 
             Dictionary parameters:
 
-                nl (int): number of worker types
+                nl (int, default=6): number of worker types
 
-                nk (int): number of firm types
+                nk (int, default=10): number of firm types
 
-                fixb (bool): if True, set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)
+                fixb (bool, default=False): if True, set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)
 
-                stationary (bool): if True, set A1 = A2
+                stationary (bool, default=False): if True, set A1 = A2
 
-                n_iters (int): number of iterations for EM
+                n_iters (int, default=100): number of iterations for EM
 
-                threshold (float): threshold to break EM loop
+                threshold (float, default=1e-7): threshold to break EM loop
 
-                d_prior (float): value >= 1, account for probabilities being too small
+                d_prior (float, default=1.0001): value >= 1, account for probabilities being too small
 
-                verbose (int): if 0, print no output; if 1, print additional output; if 2, print maximum output
+                verbose (int, default=0): if 0, print no output; if 1, print additional output; if 2, print maximum output
     '''
 
     def __init__(self, user_blm={}):

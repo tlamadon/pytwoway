@@ -12,7 +12,7 @@ from pathlib import Path
 import pyamg
 import numpy as np
 import pandas as pd
-from bipartitepandas import logger_init
+from bipartitepandas import update_dict, logger_init
 from scipy.sparse import csc_matrix, coo_matrix, diags, linalg
 import time
 # import pyreadr
@@ -49,60 +49,77 @@ class FEEstimator:
     provides methods to do A x Y but also (A'A)^-1 A'Y solve method
     '''
 
-    def __init__(self, params):
+    def __init__(self, data, params):
         '''
         Arguments:
+            data (Pandas DataFrame): cross-section labor data. Data contains the following columns:
+
+                i (worker id)
+
+                j1 (firm id 1)
+
+                j2 (firm id 2)
+
+                y1 (compensation 1)
+
+                y2 (compensation 2)
+
+                t1 (last period of observation 1)
+
+                t2 (last period of observation 2)
+
+                w1 (weight 1)
+
+                w2 (weight 2)
+
+                m (0 if stayer, 1 if mover)
+
+                cs (0 if not in cross section, 1 if in cross section)
             params (dict): dictionary of parameters for FE estimation
 
                 Dictionary parameters:
 
-                    data (Pandas DataFrame): cross-section labor data. Data contains the following columns:
+                    ncore (int, default=1): number of cores to use
 
-                        i (worker id)
+                    batch (int, default=1): batch size to send in parallel
 
-                        j1 (firm id 1)
+                    ndraw_pii (int, default=50): number of draws to use in approximation for leverages
 
-                        j2 (firm id 2)
+                    levfile (str, default=''): file to load precomputed leverages`
 
-                        y1 (compensation 1)
+                    ndraw_tr (int, default=5): number of draws to use in approximation for traces
 
-                        y2 (compensation 2)
+                    h2 (bool, default=False): if True, compute h2 correction
 
-                        t1 (last period of observation 1)
+                    out (str, default='res_fe.json'): outputfile where results are saved
 
-                        t2 (last period of observation 2)
+                    statsonly (bool, default=False): if True, return only basic statistics
 
-                        w1 (weight 1)
-
-                        w2 (weight 2)
-
-                        m (0 if stayer, 1 if mover)
-
-                        cs (0 if not in cross section, 1 if in cross section)
-
-                    ncore (int): number of cores to use
-
-                    batch (int): batch size to send in parallel
-
-                    ndraw_pii (int): number of draws to use in approximation for leverages
-
-                    levfile (str): file to load precomputed leverages`
-
-                    ndraw_tr (int): number of draws to use in approximation for traces
-
-                    h2 (bool): if True, compute h2 correction
-
-                    out (str): outputfile where results are saved
-
-                    statsonly (bool): if True, return only basic statistics
-
-                    Q (str): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
+                    Q (str, default='cov(alpha, psi)'): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
         '''
         # Start logger
         logger_init(self)
         # self.logger.info('initializing FEEstimator object')
 
-        self.params = params
+        self.adata = data
+
+        # Define default parameter dictionaries
+        default_params = {
+            'ncore': 1, # Number of cores to use
+            'batch': 1, # Batch size to send in parallel
+            'ndraw_pii': 50, # Number of draws to use in approximation for leverages
+            'levfile': '', # File to load precomputed leverages
+            'ndraw_tr': 5, # Number of draws to use in approximation for traces
+            'h2': False, # If True, compute h2 correction
+            'out': 'res_fe.json', # Outputfile where results are saved
+            'statsonly': False, # If True, return only basic statistics
+            'Q': 'cov(alpha, psi)' # Which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
+            # 'con': False, # Computes the smallest eigen values, this is the filepath where these results are saved FIXME not used
+            # 'logfile': '', # Log output to a logfile FIXME not used
+            # 'check': False # If True, compute the non-approximated estimates as well FIXME not used
+        }
+
+        self.params = update_dict(default_params, params)
         self.res = {} # Results dictionary
         self.summary = {} # Summary results dictionary
 
@@ -207,7 +224,7 @@ class FEEstimator:
         '''
         self.logger.info('preparing the data')
 
-        self.adata = self.params['data']
+        # self.adata = self.params['data']
         # self.adata['i'] = self.adata['i'].astype('category').cat.codes + 1 # FIXME commented out because i should already be correct
 
         self.nf = max(self.adata['j1'].max(), self.adata['j2'].max()) + 1 # Number of firms

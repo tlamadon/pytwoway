@@ -1,15 +1,15 @@
-Using from stata
+Using from Stata
 ================
 
-To install from stata, from the stata command line run::
+To install via Stata, from the Stata command line run::
 
    ssc install statatwoway
 
-The most efficient way to run statatwoway is through python. Please read :doc:`From python <doc-python>` on how to install pytwoway for python.
+The most efficient way to run StataTwoWay is through Python. Please read :doc:`From Python <doc-python>` on how to install PyTwoWay for Python. A version that does not depend on Python is currently in development.
 
 Sample data: :download:`download <twoway_sample_data.csv>`
 
-To run in stata:
+To run in Stata:
 
 .. code-block:: stata
 
@@ -21,15 +21,14 @@ To see all available results, type:
 
     return list
 
-You can choose to run fe, cre, or both. Additionally, while a config file is required, an environment is not. However, setting up an environment is recommended. Read about setting up environments in Anaconda `here <https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>`_.
+The estimators you can run are FE, CRE, or both. Additionally, while a config file is required, an environment is not. However, setting up an environment is recommended. Read about setting up environments in Anaconda `here <https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>`_.
 
-Use the following example config file as a template. Including `stata=True` automatically sets the correct data and filetypes. statatwoway generates a temporary datafile, and the `stata` option automatically inputs those values. For help about all the options that can be included in your config file, run the following in Terminal::
+Use the following example config file as a template. There is no need to include `data` or `filetype` options. StataTwoWay generates a temporary datafile and automatically inputs the name of the generated dataset and filetype `dta`. For help about all the options that can be included in your config file, from the command line run::
 
   pytw -h
 
 Example config.txt::
 
-    stata = True
     col_dict = "{'i': 'your_workerid_col', 'j': 'your_firmid_col', 'y': 'your_compensation_col', 't': 'your_year_col'}"
 
 .. note::

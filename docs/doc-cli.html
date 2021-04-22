@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Command line interface &mdash; pytwoway 0.1.4 documentation</title>
+  <title>Command line interface &mdash; PyTwoWay 0.1.6 documentation</title>
   
 
   
@@ -36,7 +36,7 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Using from python" href="doc-python.html" />
+    <link rel="next" title="Using from Python" href="doc-python.html" />
     <link rel="prev" title="Quick Start" href="index.html" /> 
 </head>
 
@@ -51,7 +51,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home" alt="Documentation Home"> pytwoway
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> PyTwoWay
           
 
           
@@ -85,14 +85,15 @@
               <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">From terminal</a></li>
-<li class="toctree-l1"><a class="reference internal" href="doc-python.html">From python</a></li>
-<li class="toctree-l1"><a class="reference internal" href="doc-stata.html">From stata</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">From Terminal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-python.html">From Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-stata.html">From Stata</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Notebook examples</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/pytwoway_example.html">Simple</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/blm_example.html">BLM</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul>
@@ -101,7 +102,6 @@
 <li class="toctree-l1"><a class="reference internal" href="class-blmestimator.html">BLMEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-feestimator.html">FEEstimator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="class-simtwoway.html">SimTwoWay</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-twowaymontecarlo.html">TwoWayMonteCarlo</a></li>
 </ul>
 
@@ -118,7 +118,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">pytwoway</a>
+          <a href="index.html">PyTwoWay</a>
         
       </nav>
 
@@ -194,12 +194,12 @@
 </style>
 <div class="section" id="command-line-interface">
 <h1>Command line interface<a class="headerlink" href="#command-line-interface" title="Permalink to this headline">¶</a></h1>
-<p>To install from pip, from the command line run:</p>
+<p>To install via pip, from the command line run:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">pytwoway</span>
 </pre></div>
 </div>
 <p>Sample data: <a class="reference download internal" download="" href="_downloads/8585cbc63df53436d69d3cb66b5ad2c6/twoway_sample_data.csv"><code class="xref download docutils literal notranslate"><span class="pre">download</span></code></a></p>
-<p>To run pytwoway using command line interface:</p>
+<p>To run PyTwoWay via the command line interface, run:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytw</span> <span class="o">--</span><span class="n">my</span><span class="o">-</span><span class="n">config</span> <span class="n">config</span><span class="o">.</span><span class="n">txt</span> <span class="o">--</span><span class="n">fe</span> <span class="o">--</span><span class="n">cre</span>
 </pre></div>
 </div>
@@ -209,7 +209,7 @@
 <span class="n">col_dict</span> <span class="o">=</span> <span class="s2">&quot;{&#39;i&#39;: &#39;your_workerid_col&#39;, &#39;j&#39;: &#39;your_firmid_col&#39;, &#39;y&#39;: &#39;your_compensation_col&#39;, &#39;t&#39;: &#39;your_year_col&#39;}&quot;</span>
 </pre></div>
 </div>
-<p>For help about all the options that can be included in your config file, run the following in Terminal (all options can also be included directly in the command line):</p>
+<p>For help about all the options that can be included in your config file (all options can also be included directly in the command line), from the command line run:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytw</span> <span class="o">-</span><span class="n">h</span>
 </pre></div>
 </div>
@@ -223,7 +223,7 @@
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
-        <a href="doc-python.html" class="btn btn-neutral float-right" title="Using from python" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+        <a href="doc-python.html" class="btn btn-neutral float-right" title="Using from Python" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
       
       
         <a href="index.html" class="btn btn-neutral float-left" title="Quick Start" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
@@ -238,7 +238,7 @@
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Apr 15, 2021.
+        Last updated on Apr 21, 2021.
       </span>
 
     </p>

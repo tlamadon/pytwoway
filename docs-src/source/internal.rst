@@ -5,7 +5,7 @@ Python API
 Overview
 ---------
 
-The main pytwoway API is split into six classes. pytwoway is canonically imported using
+The main PyTwoWay API is split into five classes. PyTwoWay is canonically imported using
 
   .. code-block:: python
 
@@ -19,9 +19,7 @@ The main pytwoway API is split into six classes. pytwoway is canonically importe
 
 * ``pytwoway.FEEstimator``: Class for FE estimators
 
-* ``pytwoway.SimTwoWay``: Class for simulating labor data
-
-* ``pytwoway.TwoWayMonteCarlo``: Class for running Monte Carlo simulations
+* ``pytwoway.TwoWayMonteCarlo``: Class for running Monte Carlo estimations
 
 Modules and Methods
 -------------------
@@ -67,14 +65,6 @@ Modules and Methods
    ~pytwoway.FEEstimator.fit_1
    ~pytwoway.FEEstimator.fit_2
    ~pytwoway.FEEstimator.get_fe_estimates
-
-``pytwoway.SimTwoWay``
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. autosummary::
-
-   ~pytwoway.SimTwoWay
-   ~pytwoway.SimTwoWay.sim_network
 
 ``pytwoway.TwoWayMonteCarlo``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

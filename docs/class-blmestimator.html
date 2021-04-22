@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>BLMEstimator class &mdash; pytwoway 0.1.4 documentation</title>
+  <title>BLMEstimator class &mdash; PyTwoWay 0.1.6 documentation</title>
   
 
   
@@ -51,7 +51,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home" alt="Documentation Home"> pytwoway
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> PyTwoWay
           
 
           
@@ -85,14 +85,15 @@
               <p class="caption"><span class="caption-text">User documentation</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
-<li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From terminal</a></li>
-<li class="toctree-l1"><a class="reference internal" href="doc-python.html">From python</a></li>
-<li class="toctree-l1"><a class="reference internal" href="doc-stata.html">From stata</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-cli.html">From Terminal</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-python.html">From Python</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-stata.html">From Stata</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Notebook examples</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/pytwoway_example.html">Simple</a></li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/blm_example.html">BLM</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Under the hood</span></p>
 <ul class="current">
@@ -101,7 +102,6 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">BLMEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-feestimator.html">FEEstimator</a></li>
-<li class="toctree-l1"><a class="reference internal" href="class-simtwoway.html">SimTwoWay</a></li>
 <li class="toctree-l1"><a class="reference internal" href="class-twowaymontecarlo.html">TwoWayMonteCarlo</a></li>
 </ul>
 
@@ -118,7 +118,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">pytwoway</a>
+          <a href="index.html">PyTwoWay</a>
         
       </nav>
 
@@ -204,14 +204,14 @@
 <dd class="field-odd"><p><strong>user_blm</strong> (<em>dict</em>) – <p>dictionary of parameters for BLM estimation</p>
 <p>Dictionary parameters:</p>
 <blockquote>
-<div><p>nl (int): number of worker types</p>
-<p>nk (int): number of firm types</p>
-<p>fixb (bool): if True, set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)</p>
-<p>stationary (bool): if True, set A1 = A2</p>
-<p>n_iters (int): number of iterations for EM</p>
-<p>threshold (float): threshold to break EM loop</p>
-<p>d_prior (float): value &gt;= 1, account for probabilities being too small</p>
-<p>verbose (int): if 0, print no output; if 1, print additional output; if 2, print maximum output</p>
+<div><p>nl (int, default=6): number of worker types</p>
+<p>nk (int, default=10): number of firm types</p>
+<p>fixb (bool, default=False): if True, set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)</p>
+<p>stationary (bool, default=False): if True, set A1 = A2</p>
+<p>n_iters (int, default=100): number of iterations for EM</p>
+<p>threshold (float, default=1e-7): threshold to break EM loop</p>
+<p>d_prior (float, default=1.0001): value &gt;= 1, account for probabilities being too small</p>
+<p>verbose (int, default=0): if 0, print no output; if 1, print additional output; if 2, print maximum output</p>
 </div></blockquote>
 </p>
 </dd>
@@ -285,7 +285,7 @@
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Apr 15, 2021.
+        Last updated on Apr 21, 2021.
       </span>
 
     </p>

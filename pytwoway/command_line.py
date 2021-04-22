@@ -49,8 +49,8 @@ def main():
     p.add('--filetype', required=False, help='file format of data')
 
     # Options to run FE or CRE
-    p.add('--fe', type=str2bool, help='run FE estimation') # This option can be set in a config file because it starts with '--'
-    p.add('--cre', type=str2bool, help='run CRE estimation')
+    p.add('--fe', action='store_true', help='run FE estimation') # This option can be set in a config file because it starts with '--'
+    p.add('--cre', action='store_true', help='run CRE estimation')
 
     ##### TwoWay start #####
     p.add('--data', required=False, help='path to labor data file')
@@ -60,7 +60,7 @@ def main():
     ##### TwoWay end #####
 
     ##### Stata start #####
-    p.add('--stata', type=str2bool, required=False, help='if True, running estimators on Stata')
+    p.add('--stata', action='store_true', required=False, help='if True, running estimators on Stata')
     ##### Stata end #####
 
     ##### KMeans start #####
@@ -106,22 +106,22 @@ def main():
     p.add('--ncore_fe', required=False, help='number of cores to use when computing fe')
     p.add('--batch', required=False, help='batch size to send in parallel when computing fe')
     p.add('--ndraw_pii', required=False, help='number of draw to use in approximation for leverages when computing fe')
-    p.add('--ndraw_tr_fe', required=False, help='number of draws to use in approximation for traces when computing fe')
-    p.add('--check', type=str2bool, required=False, help='whether to compute the non-approximated estimates as well when computing fe')
-    p.add('--hetero', type=str2bool, required=False, help='whether to compute the heteroskedastic estimates when computing fe')
-    p.add('--out_fe', required=False, help='filepath for fe results')
-    p.add('--con', required=False, help='computes the smallest eigen values when computing fe, this is the filepath where these results are saved')
-    p.add('--logfile', required=False, help='log output to a logfile when computing fe')
     p.add('--levfile', required=False, help='file to load precomputed leverages when computing fe')
+    p.add('--ndraw_tr_fe', required=False, help='number of draws to use in approximation for traces when computing fe')
+    p.add('--h2', type=str2bool, required=False, help='if True, compute the h2 correction when computing fe')
+    p.add('--out_fe', required=False, help='outputfile where fe results are saved')
     p.add('--statsonly', type=str2bool, required=False, help='save data statistics only when computing fe')
     p.add('--Q', required=False, help="which Q matrix to consider when computing fe. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'")
+    # p.add('--con', required=False, help='computes the smallest eigen values when computing fe, this is the filepath where these results are saved')
+    # p.add('--logfile', required=False, help='log output to a logfile when computing fe')
+    # p.add('--check', type=str2bool, required=False, help='whether to compute the non-approximated estimates as well when computing fe')
     ##### FE end #####
 
     ##### CRE start #####
     p.add('--ncore_cre', required=False, help='number of cores to use when computing cre')
     p.add('--ndraw_tr_cre', required=False, help='number of draws to use in approximation for traces when computing cre')
     p.add('--ndp', required=False, help=' number of draw to use in approximation for leverages when computing cre')
-    p.add('--out_cre', required=False, help='filepath for cre results')
+    p.add('--out_cre', required=False, help='outputfile where cre results are saved')
     p.add('--posterior', type=str2bool, required=False, help='whether to compute the posterior variance when computing cre')
     p.add('--wo_btw', required=False, help='sets between variation to 0, pure RE when computing cre')
     ##### CRE end #####
@@ -146,12 +146,19 @@ def main():
     ##### Stata end #####
 
     # Generate TwoWay dictionary
-    if params.filetype == 'csv':
-        tw_params = {'data': pd.read_csv(params.data), 'formatting': params.format, 'col_dict': col_dict}
-    elif params.filetype == 'ftr':
-        tw_params = {'data': pd.read_feather(params.data), 'formatting': params.format, 'col_dict': col_dict}
-    elif params.filetype == 'dta':
-        tw_params = {'data': pd.read_stata(params.data), 'formatting': params.format, 'col_dict': col_dict}
+    pd_from_filetype = {
+        'csv': pd.read_csv,
+        'json': pd.read_json,
+        'ftr': pd.read_feather,
+        'feather': pd.read_feather,
+        'dta': pd.read_stata,
+        'stata': pd.read_stata,
+        'parquet': pd.read_parquet,
+        'excel': pd.read_excel,
+        'xlsx': pd.read_excel,
+        'sql': pd.read_sql
+    }
+    tw_params = {'data': pd_from_filetype[params.filetype.lower()](params.data), 'formatting': params.format, 'col_dict': col_dict}
     tw_params = clear_dict(tw_params)
     ##### TwoWay end #####
 
@@ -166,7 +173,7 @@ def main():
     ##### Cluster end #####
 
     ##### FE start #####
-    fe_params = {'ncore': params.ncore_fe, 'batch': params.batch, 'ndraw_pii': params.ndraw_pii, 'ndraw_tr': params.ndraw_tr_fe, 'check': params.check, 'hetero': params.hetero, 'out': params.out_fe, 'con': params.con, 'logfile': params.logfile, 'levfile': params.levfile, 'statsonly': params.statsonly, 'Q': params.Q}
+    fe_params = {'ncore': params.ncore_fe, 'batch': params.batch, 'ndraw_pii': params.ndraw_pii, 'levfile': params.levfile, 'ndraw_tr': params.ndraw_tr_fe, 'h2': params.h2, 'out': params.out_fe, 'statsonly': params.statsonly, 'Q': params.Q} # 'con': params.con, 'logfile': params.logfile, 'check': params.check
     fe_params = clear_dict(fe_params)
     ##### FE end #####
 

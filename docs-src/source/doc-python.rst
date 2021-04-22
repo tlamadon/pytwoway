@@ -1,13 +1,13 @@
-Using from python
+Using from Python
 =================
 
-To install from pip, from the command line run::
+To install via pip, from the command line run::
 
    pip install pytwoway
 
 Sample data: :download:`download <twoway_sample_data.csv>`
 
-To run in python:
+To run in Python:
 
 - If you want to run estimators on your own data:
 
@@ -63,10 +63,11 @@ To run in python:
 .. code-block:: python
 
    import pytwoway as tw
+   from bipartitepandas import SimBipartite
    # Create SimTwoWay object
-   stw_net = tw.SimTwoWay()
+   sbp_net = SimBipartite()
    # Generate data
-   sim_data = stw_net.sim_network()
+   sim_data = sbp_net.sim_network()
    # Below is identical to first example, except we are now using the simulated data
    # Create TwoWay object
    tw_net = tw.TwoWay(sim_data)
@@ -79,7 +80,7 @@ To run in python:
    # Save the CRE results
    cre_res = tw_net.summary_cre()
 
-- If you want to run Monte Carlo on simulated data:
+- If you want to run a Monte Carlo estimation on simulated data:
 
 .. code-block:: python
 
