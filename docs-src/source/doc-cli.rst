@@ -7,7 +7,7 @@ To install via pip, from the command line run::
 
 Sample data: :download:`download <twoway_sample_data.csv>`
 
-To run PyTwoWay via the command line interface, run::
+To run PyTwoWay via the command line interface, from the command line run::
 
   pytw --my-config config.txt --fe --cre
 
