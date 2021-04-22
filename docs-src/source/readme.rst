@@ -38,7 +38,7 @@ To install via pip, from the command line run::
     pip install pytwoway
 
 
-To run PyTwoWay via the command line interface, run::
+To run PyTwoWay via the command line interface, from the command line run::
 
     pytw --my-config config.txt --fe --cre
 
