@@ -146,7 +146,7 @@ def test_blm_qi_1():
     max_qi_col = np.argmax(qi_estimate, axis=1)
     n_correct_qi = np.sum(max_qi_col == jdata['l'])
 
-    assert (n_correct_qi / len(max_qi_col)) > 0.95
+    assert (n_correct_qi / len(max_qi_col)) >= 0.95
 
 # def test_blm_A_3():
 #     # Test whether BLM estimates A properly, given true S and pk1.

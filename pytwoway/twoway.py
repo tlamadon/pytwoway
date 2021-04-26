@@ -200,3 +200,91 @@ class TwoWay():
             self.cre_summary (dict): dictionary of CRE summary results
         '''
         return self.cre_summary
+
+    def eventstudy(self, user_graph={}, periods_pre=3, periods_post=3, user_clean={}, user_cluster={}):
+        '''
+        Generate event study plots.
+
+        Arguments:
+            user_graph (dict): dictionary of parameters for graphing
+
+                Dictionary parameters:
+
+                    title_height (float, default=-0.45): location of titles for subfigures
+
+                    fontsize (float, default=9): font size of titles for subfigures
+            periods_pre (int): number of periods before the transition
+            periods_post (int): number of periods after the transition
+            user_clean (dict): dictionary of parameters for cleaning
+
+                Dictionary parameters:
+
+                    i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
+            user_cluster (dict): dictionary of parameters for clustering
+
+                Dictionary parameters:
+
+                    cdf_resolution (int, default=10): how many values to use to approximate the cdfs (when grouping by 'mean', this gives the number of quantiles to compute)
+
+                    grouping (str, default='quantile_all'): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary; 'mean' to group firms by average income within the firm)
+
+                    stayers_movers (str or None, default=None): if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers
+
+                    t (int or None, default=None): if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)
+
+                    weighted (bool, default=True): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)
+
+                    dropna (bool, default=False): if True, drop observations where firms aren't clustered; if False, keep all observations
+
+                    user_KMeans (dict): parameters for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html)
+        '''
+        if self.formatting == 'long':
+            import numpy as np
+            from matplotlib import pyplot as plt
+            # Default parameter dictionaries
+            default_graph = {
+                'title_height': -0.45,
+                'fontsize': 9
+            }
+            graph_params = bpd.update_dict(default_graph, user_graph)
+            # Prepare data
+            if not self.clean:
+                self.data = self.data.clean_data(user_clean=user_clean)
+                self.clean = True
+
+            frame = self.data.copy()
+            frame = frame.cluster(user_cluster=user_cluster)
+            es = frame.get_es_extended(periods_pre=periods_pre, periods_post=periods_post)
+            n_clusters = frame.n_clusters()
+            # Want n_clusters x n_clusters subplots
+            fig, axs = plt.subplots(nrows=n_clusters, ncols=n_clusters)
+            # Create lists of the x values and y columns we want
+            x_vals = []
+            y_cols = []
+            for i in range(1, periods_pre + 1):
+                x_vals.insert(0, - i)
+                y_cols.insert(0, 'y_l{}'.format(i))
+            for i in range(1, periods_post + 1):
+                x_vals.append(i)
+                y_cols.append('y_f{}'.format(i))
+            # Get y boundaries
+            y_min = 1000
+            y_max = -1000
+            # Generate plots
+            for i, row in enumerate(axs):
+                for j, ax in enumerate(row):
+                    # Keep if previous firm type is i and next firm type is j
+                    es_plot = es[(es['g_l1'] == i) & (es['g_f1'] == j)]
+                    y = es_plot[y_cols].mean(axis=0)
+                    yerr = es_plot[y_cols].std(axis=0) / (len(es_plot) ** 0.5)
+                    ax.errorbar(x_vals, y, yerr=yerr, ecolor='red', elinewidth=1, zorder=2)
+                    ax.axvline(0, color='orange', zorder=1)
+                    ax.set_title('{} to {} (n={})'.format(i, j, len(es_plot)), y=graph_params['title_height'], fontdict={'fontsize': graph_params['fontsize']})
+                    ax.grid()
+                    y_min = min(y_min, ax.get_ylim()[0])
+                    y_max = max(y_max, ax.get_ylim()[1])
+            plt.setp(axs, xticks=np.arange(-periods_pre, periods_post + 1), yticks=np.linspace(np.round(y_min, 1), np.round(y_max, 1), 4))
+            plt.tight_layout()
+            plt.show()
+        else:
+            warnings.warn('Event study plots can be generated only with long format data.')
