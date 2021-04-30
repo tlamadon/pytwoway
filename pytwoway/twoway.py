@@ -201,7 +201,7 @@ class TwoWay():
         '''
         return self.cre_summary
 
-    def eventstudy(self, user_graph={}, periods_pre=3, periods_post=3, user_clean={}, user_cluster={}):
+    def eventstudy(self, user_graph={}, periods_pre=3, periods_post=3, stable_pre=False, stable_post=False, user_clean={}, user_cluster={}):
         '''
         Generate event study plots.
 
@@ -215,6 +215,8 @@ class TwoWay():
                     fontsize (float, default=9): font size of titles for subfigures
             periods_pre (int): number of periods before the transition
             periods_post (int): number of periods after the transition
+            stable_pre (bool): if True, keep only workers who stay at a single firm before the transition
+            stable_post (bool): if True, keep only workers who stay at a single firm after the transition
             user_clean (dict): dictionary of parameters for cleaning
 
                 Dictionary parameters:
@@ -254,7 +256,7 @@ class TwoWay():
 
             frame = self.data.copy()
             frame = frame.cluster(user_cluster=user_cluster)
-            es = frame.get_es_extended(periods_pre=periods_pre, periods_post=periods_post)
+            es = frame.get_es_extended(periods_pre=periods_pre, periods_post=periods_post, stable_pre=stable_pre, stable_post=stable_post)
             n_clusters = frame.n_clusters()
             # Want n_clusters x n_clusters subplots
             fig, axs = plt.subplots(nrows=n_clusters, ncols=n_clusters)

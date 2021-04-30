@@ -68,10 +68,13 @@ class QPConstrained:
         b = np.array([])
         if constraint in ['lin', 'lin_add', 'akm']:
             n_periods = params['n_periods']
-            LL = np.zeros(shape=(nl - 1, n_periods * nl))
-            for l in range(nl - 1):
-                LL[l, l] = 1
-                LL[l, l + 1] = - 1
+            LL = np.zeros(shape=(n_periods * (nl - 1), n_periods * nl))
+            for period in range(n_periods):
+                row_shift = period * (nl - 1)
+                col_shift = period * nl
+                for l in range(nl - 1):
+                    LL[l + row_shift, l + col_shift] = 1
+                    LL[l + row_shift, l + col_shift + 1] = - 1
             KK = np.zeros(shape=(nk - 1, nk))
             for k in range(nk - 1):
                 KK[k, k] = 1
