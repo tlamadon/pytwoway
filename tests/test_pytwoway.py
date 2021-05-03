@@ -4,8 +4,8 @@ Tests for pytwoway
 import pytest
 import numpy as np
 import pandas as pd
-import pytwoway as tw
 import bipartitepandas as bpd
+import pytwoway as tw
 
 ##############
 ##### FE #####

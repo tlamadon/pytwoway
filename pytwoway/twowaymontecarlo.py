@@ -5,8 +5,8 @@ from multiprocessing import Pool
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+import bipartitepandas as bpd
 import pytwoway as tw
-from bipartitepandas import SimBipartite # logger_init
 from tqdm import trange
 import warnings
 
@@ -49,7 +49,7 @@ class TwoWayMonteCarlo:
         # logger_init(self)
         # self.logger.info('initializing TwoWayMonteCarlo object')
 
-        self.sbp_net = SimBipartite(sim_params)
+        self.sbp_net = bpd.SimBipartite(sim_params)
 
         # Prevent plotting unless results exist
         self.monte_carlo_res = False
@@ -58,7 +58,7 @@ class TwoWayMonteCarlo:
 
     # Cannot include two underscores because isn't compatible with starmap for multiprocessing
     # Source: https://stackoverflow.com/questions/27054963/python-attribute-error-object-has-no-attribute
-    def _twfe_monte_carlo_interior(self, fe_params={}, cre_params={}, cluster_params={}, collapsed_fe=True, collapsed_cre=True, clean_params={}):
+    def _twfe_monte_carlo_interior(self, fe_params={}, cre_params={}, cluster_params={}, collapsed=True, clean_params={}):
         '''
         Run Monte Carlo simulations of TwoWay to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to twfe_monte_carlo.
 
@@ -105,9 +105,9 @@ class TwoWayMonteCarlo:
 
                 Dictionary parameters:
 
-                    cdf_resolution (int, default=10): how many values to use to approximate the cdfs (when grouping by 'mean', this gives the number of quantiles to compute)
+                    measures (function or list of functions): how to compute measures for clustering. Options can be seen in bipartitepandas.measures.
 
-                    grouping (str, default='quantile_all'): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary; 'mean' to group firms by average income within the firm)
+                    grouping (function): how to group firms based on measures. Options can be seen in bipartitepandas.grouping.
 
                     stayers_movers (str or None, default=None): if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers
 
@@ -117,10 +117,7 @@ class TwoWayMonteCarlo:
 
                     dropna (bool, default=False): if True, drop observations where firms aren't clustered; if False, keep all observations
 
-                    user_KMeans (dict): parameters for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html)
-
-            collapsed_fe (bool): if True, run FE estimator on collapsed data
-            collapsed_cre (bool): if True, run CRE estimator on collapsed data
+            collapsed (bool): if True, run estimators on collapsed data
             clean_params (dict): dictionary of parameters for cleaning
 
                 Dictionary parameters:
@@ -144,12 +141,16 @@ class TwoWayMonteCarlo:
         psi_alpha_cov = np.cov(sim_data['psi'], sim_data['alpha'])[0, 1]
         # Use data to create TwoWay object
         tw_net = tw.TwoWay(sim_data)
+        # Prepare data
+        tw_net.prep_data(collapsed=collapsed, user_clean=clean_params)
         # Estimate FE model
-        tw_net.fit_fe(user_fe=fe_params, collapsed=collapsed_fe, user_clean=clean_params)
+        tw_net.fit_fe(user_fe=fe_params)
         # Save results
         fe_res = tw_net.fe_res
+        # Cluster data
+        tw_net.cluster(**cluster_params)
         # Estimate CRE model
-        tw_net.fit_cre(user_cre=cre_params, user_cluster=cluster_params, collapsed=collapsed_cre, user_clean=clean_params)
+        tw_net.fit_cre(user_cre=cre_params)
         # Save results
         cre_res = tw_net.cre_res
 
@@ -158,7 +159,7 @@ class TwoWayMonteCarlo:
                 fe_res['var_ho'], fe_res['cov_ho'], \
                 cre_res['tot_var'], cre_res['tot_cov']
 
-    def twfe_monte_carlo(self, N=10, ncore=1, fe_params={}, cre_params={}, cluster_params={}, collapsed_fe=True, collapsed_cre=True, clean_params={}):
+    def twfe_monte_carlo(self, N=10, ncore=1, fe_params={}, cre_params={}, cluster_params={}, collapsed=True, clean_params={}):
         '''
         Run Monte Carlo simulations of TwoWay to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:
 
@@ -223,9 +224,9 @@ class TwoWayMonteCarlo:
 
                 Dictionary parameters:
 
-                    cdf_resolution (int, default=10): how many values to use to approximate the cdfs (when grouping by 'mean', this gives the number of quantiles to compute)
+                    measures (function or list of functions): how to compute measures for clustering. Options can be seen in bipartitepandas.measures.
 
-                    grouping (str, default='quantile_all'): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary; 'mean' to group firms by average income within the firm)
+                    grouping (function): how to group firms based on measures. Options can be seen in bipartitepandas.grouping.
 
                     stayers_movers (str or None, default=None): if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers
 
@@ -235,10 +236,7 @@ class TwoWayMonteCarlo:
 
                     dropna (bool, default=False): if True, drop observations where firms aren't clustered; if False, keep all observations
 
-                    user_KMeans (dict): parameters for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html)
-
-            collapsed_fe (bool): if True, run FE estimator on collapsed data
-            collapsed_cre (bool): if True, run CRE estimator on collapsed data
+            collapsed (bool): if True, run estimators on data collapsed by worker-firm spells
             clean_params (dict): dictionary of parameters for cleaning
 
                 Dictionary parameters:
@@ -259,13 +257,13 @@ class TwoWayMonteCarlo:
         if ncore > 1:
             # Simulate networks
             with Pool(processes=ncore) as pool:
-                V = pool.starmap(self._twfe_monte_carlo_interior, [(fe_params, cre_params, cluster_params, collapsed_fe, collapsed_cre, clean_params) for _ in range(N)])
+                V = pool.starmap(self._twfe_monte_carlo_interior, [(fe_params, cre_params, cluster_params, collapsed, clean_params) for _ in range(N)])
             for i, res in enumerate(V):
                 true_psi_var[i], true_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_corr_psi_var[i], fe_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = res
         else:
             for i in trange(N):
                 # Simulate a network
-                true_psi_var[i], true_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_corr_psi_var[i], fe_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = self._twfe_monte_carlo_interior(fe_params=fe_params, cre_params=cre_params, cluster_params=cluster_params, collapsed_fe=collapsed_fe, collapsed_cre=collapsed_cre, clean_params=clean_params)
+                true_psi_var[i], true_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_corr_psi_var[i], fe_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = self._twfe_monte_carlo_interior(fe_params=fe_params, cre_params=cre_params, cluster_params=cluster_params, collapsed=collapsed, clean_params=clean_params)
 
         res = {}
 

@@ -7,6 +7,7 @@ pytw --my-config config.txt --fe --cre
 import configargparse
 import ast
 import pandas as pd
+import bipartitepandas as bpd
 from pytwoway import TwoWay as tw
 
 def clear_dict(d):
@@ -63,7 +64,30 @@ def main():
     p.add('--stata', action='store_true', required=False, help='if True, running estimators on Stata')
     ##### Stata end #####
 
-    ##### KMeans start #####
+    ##### Cluster start #####
+    #### General start ####
+    p.add('--measures', required=False, help="how to compute measures for clustering. Options are 'cdfs' for cdfs and 'moments' for moments. Can use a list for multiple measures. Details on options can be seen in bipartitepandas.measures.")
+    p.add('--grouping', required=False, help="how to group firms based on measures. Options are 'kmeans' for kmeans and 'quantiles' for quantiles. Details on options can be seen in bipartitepandas.grouping.")
+    p.add('--stayers_movers', required=False, help="if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers")
+    p.add('--t', required=False, help='if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)')
+    p.add('--weighted', type=str2bool, required=False, help='if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)')
+    p.add('--dropna', type=str2bool, required=False, help="if True, drop observations where firms aren't clustered; if False, keep all observations")
+    #### General end ####
+    #### Measures start ####
+    ### CDFs start ###
+    p.add('--cdf_resolution', required=False, help='how many values to use to approximate the cdfs when clustering')
+    p.add('--measure_cdfs', required=False, help='''
+    how to compute the cdfs when clustering ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary
+    ''')
+    ### CDFs end ###
+    ### Moments start ###
+    p.add('--measures_moments', required=False, help='''
+    how to compute the measures when clustering ('mean' to compute average income within each firm; 'var' to compute variance of income within each firm; 'max' to compute max income within each firm; 'min' to compute min income within each firm)
+    ''')
+    ### Moments end ###
+    #### Measures end ####
+    #### Grouping start ####
+    ### KMeans start ###
     p.add('--n_clusters', required=False, help='the number of clusters to form as well as the number of centroids to generate for the k-means algorithm.')
     p.add('--init', required=False, help='''
     Method for initialization of the k-means algorithm:
@@ -89,17 +113,11 @@ def main():
 
     For now "auto" (kept for backward compatibiliy) chooses "elkan" but it might change in the future for a better heuristic.
     ''')
-    ##### KMeans end #####
-
-    ##### Cluster start #####
-    p.add('--cdf_resolution', required=False, help="how many values to use to approximate the cdfs when clustering (when grouping by 'mean', this gives the number of quantiles to compute)")
-    p.add('--grouping', required=False, help='''
-    how to group the cdfs when clustering ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary; 'mean' to group firms by average income within the firm)
-    ''')
-    p.add('--stayers_movers', required=False, help="if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers")
-    p.add('--t', required=False, help='if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)')
-    p.add('--weighted', type=str2bool, required=False, help='if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)')
-    p.add('--dropna', type=str2bool, required=False, help="if True, drop observations where firms aren't clustered; if False, keep all observations")
+    ### KMeans end ###
+    ### Quantiles start ###
+    p.add('--n_quantiles', required=False, help='number of quantiles to compute for groups when clustering')
+    ### Quantiles end ###
+    #### Grouping end ####
     ##### Cluster end #####
 
     ##### FE start #####
@@ -162,14 +180,49 @@ def main():
     tw_params = clear_dict(tw_params)
     ##### TwoWay end #####
 
-    ##### KMeans start #####
+    ##### Cluster start #####
+    #### Measures start ####
+    ### CDFs start ###
+    cdf_params = {'cdf_resolution': params.cdf_resolution, 'measure': params.measure_cdfs}
+    cdf_params = clear_dict(cdf_params)
+    ### CDFs end ###
+    ### Moments start ###
+    if params.measures_moments is not None:
+        # Have to do ast.literal_eval twice for it to work properly
+        measures_moments = ast.literal_eval(ast.literal_eval(params.measures_moments))
+    else:
+        measures_moments = params.measures_moments
+    moments_params = {'measures_moments': measures_moments}
+    moments_params = clear_dict(moments_params)
+    ### Moments end ###
+    #### Measures end ####
+    #### Grouping start ####
+    ### KMeans start ###
     KMeans_params = {'n_clusters': params.n_clusters, 'init': params.init, 'n_init': params.n_init, 'max_iter': params.max_iter, 'tol': params.tol, 'precompute_distances': params.precompute_distances, 'verbose': params.verbose, 'random_state': params.random_state, 'copy_x': params.copy_x, 'n_jobs': params.n_jobs, 'algorithm': params.algorithm}
     KMeans_params = clear_dict(KMeans_params)
-    ##### KMeans end #####
-
-    ##### Cluster start #####
-    cluster_params = {'cdf_resolution': params.cdf_resolution, 'grouping': params.grouping, 'stayers_movers': params.stayers_movers, 't': params.t, 'weighted': params.weighted, 'dropna': params.dropna, 'user_KMeans': KMeans_params}
+    ### KMeans end ###
+    ### Quantiles start ###
+    quantiles_params = {'n_quantiles': params.n_quantiles}
+    quantiles_params = clear_dict(quantiles_params)
+    ### Quantiles end ###
+    #### Grouping end ####
+    #### General start ####
+    if params.measures is not None:
+        # Have to do ast.literal_eval twice for it to work properly
+        measures_raw = ast.literal_eval(ast.literal_eval(params.measures))
+        measures_raw = bpd.to_list(measures_raw)
+        measures = []
+        for measure in measures_raw:
+            if measure.lower() == 'cdfs':
+                measure_fn = bpd.measures.cdfs(**cdf_params)
+            elif measure.lower() == 'moments':
+                measure_fn = bpd.measures.moments(**moments_params)
+            measures.append(measure_fn)
+    else:
+        measures = params.measures
+    cluster_params = {'measures': measures, 'grouping': params.grouping, 'stayers_movers': params.stayers_movers, 't': params.t, 'weighted': params.weighted, 'dropna': params.dropna}
     cluster_params = clear_dict(cluster_params)
+    #### General end ####
     ##### Cluster end #####
 
     ##### FE start #####
@@ -190,9 +243,11 @@ def main():
     # Run estimation
     if params.fe or params.cre:
         tw_net = tw(**tw_params)
+        tw_net.prep_data(collapsed=params.collapsed, user_clean=clean_params)
 
         if params.fe:
-            tw_net.fit_fe(user_fe=fe_params, collapsed=params.collapsed, user_clean=clean_params)
+            tw_net.fit_fe(user_fe=fe_params)
 
         if params.cre:
-            tw_net.fit_cre(user_cre=cre_params, user_cluster=cluster_params, collapsed=params.collapsed, user_clean=clean_params)
+            tw_net.cluster(**cluster_params)
+            tw_net.fit_cre(user_cre=cre_params)

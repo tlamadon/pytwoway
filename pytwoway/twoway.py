@@ -2,8 +2,8 @@
 Class for a two-way fixed effect network
 '''
 import warnings
-import pytwoway as tw
 import bipartitepandas as bpd
+import pytwoway as tw
 
 class TwoWay():
     '''
@@ -40,47 +40,69 @@ class TwoWay():
 
         self.formatting = formatting
         self.clean = False # Whether data is clean
+        self.clustered = False # Whether data is clustered
 
         # self.logger.info('TwoWay object initialized')
 
-    def __prep_data(self, collapsed=True, user_clean={}):
+    def _clean(self, user_clean={}):
         '''
-        Prepare bipartite network for running estimators.
+        Clean data.
 
         Arguments:
-            collapsed (bool): if True, run estimators on collapsed data
             user_clean (dict): dictionary of parameters for cleaning
 
                 Dictionary parameters:
 
                     i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
-
-        Returns:
-            frame (BipartitePandas): prepared data
         '''
         if not self.clean:
             self.data = self.data.clean_data(user_clean=user_clean)
             self.clean = True
 
-        frame = self.data.copy()
+    def prep_data(self, collapsed=True, user_clean={}):
+        '''
+        Prepare bipartite network for running estimators.
+
+        Arguments:
+            collapsed (bool): if True, run estimators on data collapsed by worker-firm spells
+            user_clean (dict): dictionary of parameters for cleaning
+
+                Dictionary parameters:
+
+                    i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
+        '''
+        self._clean(user_clean=user_clean)
 
         if not collapsed:
             if self.formatting == 'long':
-                frame = frame.get_es()
+                self.data = self.data.get_es()
             elif self.formatting != 'es':
                 warnings.warn('Data already collapsed, running estimator on collapsed data')
                 collapsed = True
         if collapsed:
             if self.formatting == 'es':
-                frame = frame.get_long()
+                self.data = self.data.get_long()
             if self.formatting in ['es', 'long']:
-                frame = frame.get_collapsed_long()
+                self.data = self.data.get_collapsed_long()
             if self.formatting in ['es', 'long', 'long_collapsed']:
-                frame = frame.get_es()
+                self.data = self.data.get_es()
 
-        return frame
+    def cluster(self, measures=bpd.measures.cdfs(), grouping=bpd.grouping.kmeans(), stayers_movers=None, t=None, weighted=True, dropna=False):
+        '''
+        Cluster data and assign a new column giving the cluster for each firm.
 
-    def fit_fe(self, user_fe={}, collapsed=True, user_clean={}):
+        Arguments:
+            measures (function or list of functions): how to compute measures for clustering. Options can be seen in bipartitepandas.measures.
+            grouping (function): how to group firms based on measures. Options can be seen in bipartitepandas.grouping.
+            stayers_movers (str or None): if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers
+            t (int or None): if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)
+            weighted (bool): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)
+            dropna (bool): if True, drop observations where firms aren't clustered; if False, keep all observations
+        '''
+        self.data = self.data.cluster(measures=measures, grouping=grouping, stayers_movers=stayers_movers, t=t, weighted=weighted, dropna=dropna)
+        self.clustered = True
+
+    def fit_fe(self, user_fe={}):
         '''
         Fit the bias-corrected FE estimator. Saves two dictionary attributes: self.fe_res (complete results) and self.fe_summary (summary results).
 
@@ -106,19 +128,9 @@ class TwoWay():
                     statsonly (bool, default=False): if True, return only basic statistics
 
                     Q (str, default='cov(alpha, psi)'): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
-
-            collapsed (bool): if True, run estimators on collapsed data
-            user_clean (dict): dictionary of parameters for cleaning
-
-                Dictionary parameters:
-
-                    i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
         '''
-        # Prepare data
-        frame = self.__prep_data(collapsed=collapsed, user_clean=user_clean)
-
         # Run estimator
-        fe_solver = tw.FEEstimator(frame.get_cs(), user_fe)
+        fe_solver = tw.FEEstimator(self.data.get_cs(), user_fe)
         fe_solver.fit_1()
         fe_solver.construct_Q() # Comment out this line and manually create Q if you want a custom Q matrix
         fe_solver.fit_2()
@@ -126,7 +138,7 @@ class TwoWay():
         self.fe_res = fe_solver.res
         self.fe_summary = fe_solver.summary
 
-    def fit_cre(self, user_cre={}, user_cluster={}, collapsed=True, user_clean={}):
+    def fit_cre(self, user_cre={}):
         '''
         Fit the CRE estimator. Saves two dictionary attributes: self.cre_res (complete results) and self.cre_summary (summary results).
 
@@ -146,38 +158,9 @@ class TwoWay():
                     posterior (bool, default=False): if True, compute posterior variance
 
                     wo_btw (bool, default=False): if True, sets between variation to 0, pure RE
-
-            user_cluster (dict): dictionary of parameters for clustering
-
-                Dictionary parameters:
-
-                    cdf_resolution (int, default=10): how many values to use to approximate the cdfs (when grouping by 'mean', this gives the number of quantiles to compute)
-
-                    grouping (str, default='quantile_all'): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary; 'mean' to group firms by average income within the firm)
-
-                    stayers_movers (str or None, default=None): if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers
-
-                    t (int or None, default=None): if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)
-
-                    weighted (bool, default=True): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)
-
-                    dropna (bool, default=False): if True, drop observations where firms aren't clustered; if False, keep all observations
-
-                    user_KMeans (dict): parameters for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html)
-
-            collapsed (bool): if True, run estimators on collapsed data
-            user_clean (dict): dictionary of parameters for cleaning
-
-                Dictionary parameters:
-
-                    i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
         '''
-        # Prepare data
-        frame = self.__prep_data(collapsed=collapsed, user_clean=user_clean)
-        frame = frame.cluster(user_cluster=user_cluster)
-
         # Run estimator
-        cre_solver = tw.CREEstimator(frame.get_cs(), user_cre)
+        cre_solver = tw.CREEstimator(self.data.get_cs(), user_cre)
         cre_solver.fit()
 
         self.cre_res = cre_solver.res
@@ -201,11 +184,17 @@ class TwoWay():
         '''
         return self.cre_summary
 
-    def eventstudy(self, user_graph={}, periods_pre=3, periods_post=3, stable_pre=False, stable_post=False, user_clean={}, user_cluster={}):
+    def eventstudy(self, periods_pre=3, periods_post=3, stable_pre=[], stable_post=[], include=['g', 'y'], transition_col='j', user_graph={}, user_clean={}):
         '''
         Generate event study plots.
 
         Arguments:
+            periods_pre (int): number of periods before the transition
+            periods_post (int): number of periods after the transition
+            stable_pre (column name or list of column names): for each column, keep only workers who have constant values in that column before the transition
+            stable_post (column name or list of column names): for each column, keep only workers who have constant values in that column after the transition
+            include (column name or list of column names): columns to include data for all periods
+            transition_col (str): column to use to define a transition
             user_graph (dict): dictionary of parameters for graphing
 
                 Dictionary parameters:
@@ -213,51 +202,28 @@ class TwoWay():
                     title_height (float, default=-0.45): location of titles for subfigures
 
                     fontsize (float, default=9): font size of titles for subfigures
-            periods_pre (int): number of periods before the transition
-            periods_post (int): number of periods after the transition
-            stable_pre (bool): if True, keep only workers who stay at a single firm before the transition
-            stable_post (bool): if True, keep only workers who stay at a single firm after the transition
             user_clean (dict): dictionary of parameters for cleaning
 
                 Dictionary parameters:
 
                     i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
-            user_cluster (dict): dictionary of parameters for clustering
-
-                Dictionary parameters:
-
-                    cdf_resolution (int, default=10): how many values to use to approximate the cdfs (when grouping by 'mean', this gives the number of quantiles to compute)
-
-                    grouping (str, default='quantile_all'): how to group the cdfs ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary; 'mean' to group firms by average income within the firm)
-
-                    stayers_movers (str or None, default=None): if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers
-
-                    t (int or None, default=None): if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)
-
-                    weighted (bool, default=True): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)
-
-                    dropna (bool, default=False): if True, drop observations where firms aren't clustered; if False, keep all observations
-
-                    user_KMeans (dict): parameters for KMeans estimation (for more information on what parameters can be used, visit https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html)
         '''
         if self.formatting == 'long':
             import numpy as np
             from matplotlib import pyplot as plt
+
             # Default parameter dictionaries
             default_graph = {
                 'title_height': -0.45,
                 'fontsize': 9
             }
             graph_params = bpd.update_dict(default_graph, user_graph)
-            # Prepare data
-            if not self.clean:
-                self.data = self.data.clean_data(user_clean=user_clean)
-                self.clean = True
 
-            frame = self.data.copy()
-            frame = frame.cluster(user_cluster=user_cluster)
-            es = frame.get_es_extended(periods_pre=periods_pre, periods_post=periods_post, stable_pre=stable_pre, stable_post=stable_post)
-            n_clusters = frame.n_clusters()
+            # Clean data
+            self._clean(user_clean=user_clean)
+
+            es = self.data.get_es_extended(periods_pre=periods_pre, periods_post=periods_post, stable_pre=stable_pre, stable_post=stable_post, include=include, transition_col=transition_col)
+            n_clusters = self.data.n_clusters()
             # Want n_clusters x n_clusters subplots
             fig, axs = plt.subplots(nrows=n_clusters, ncols=n_clusters)
             # Create lists of the x values and y columns we want
@@ -285,7 +251,7 @@ class TwoWay():
                     ax.grid()
                     y_min = min(y_min, ax.get_ylim()[0])
                     y_max = max(y_max, ax.get_ylim()[1])
-            plt.setp(axs, xticks=np.arange(-periods_pre, periods_post + 1), yticks=np.linspace(np.round(y_min, 1), np.round(y_max, 1), 4))
+            plt.setp(axs, xticks=np.arange(-periods_pre, periods_post + 1), yticks=np.round(np.linspace(y_min, y_max, 4), 1))
             plt.tight_layout()
             plt.show()
         else:

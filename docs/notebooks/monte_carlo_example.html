@@ -451,6 +451,7 @@ div.rendered_html tbody tr:hover {
 <span></span><span class="c1"># Import the PyTwoWay package</span>
 <span class="c1"># (Make sure you have installed it using pip install pytwoway)</span>
 <span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
+<span class="kn">import</span> <span class="nn">bipartitepandas</span> <span class="k">as</span> <span class="nn">bpd</span>
 </pre></div>
 </div>
 </div>
@@ -539,28 +540,45 @@ div.rendered_html tbody tr:hover {
 <span class="p">}</span>
 <span class="c1"># For clustering</span>
 <span class="n">cluster_params</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">&#39;cdf_resolution&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="c1"># How many values to use to approximate the cdf when clustering</span>
-    <span class="s1">&#39;grouping&#39;</span><span class="p">:</span> <span class="s1">&#39;quantile_all&#39;</span><span class="p">,</span>
-        <span class="c1"># How to group the cdfs when clustering</span>
-        <span class="c1"># (&#39;quantile_all&#39; to get quantiles from entire set of data,</span>
-        <span class="c1">#     then have firm-level values between 0 and 1;</span>
-        <span class="c1"># &#39;quantile_firm_small&#39; to get quantiles at the firm-level</span>
-        <span class="c1">#     and have values be compensations if small data;</span>
-        <span class="c1"># &#39;quantile_firm_large&#39; to get quantiles at the firm-level</span>
-        <span class="c1">#     and have values be compensations if large data,</span>
-        <span class="c1">#     note that this is up to 50 times slower than &#39;quantile_firm_small&#39;</span>
-        <span class="c1">#     and should only be used if the dataset is too large to copy</span>
-        <span class="c1">#     into a dictionary)</span>
-    <span class="s1">&#39;stayers_movers&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># If None, clusters on entire dataset</span>
-                           <span class="c1"># If &#39;stayers&#39;, clusters on only stayers</span>
-                           <span class="c1"># If &#39;movers&#39;, clusters on only movers</span>
+    <span class="s1">&#39;measures&#39;</span><span class="p">:</span> <span class="n">bpd</span><span class="o">.</span><span class="n">measures</span><span class="o">.</span><span class="n">cdfs</span><span class="p">(</span>
+        <span class="n">cdf_resolution</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="c1"># How many values to use to approximate the cdfs</span>
+        <span class="n">measure</span><span class="o">=</span><span class="s1">&#39;quantile_all&#39;</span> <span class="c1"># How to compute the cdfs (</span>
+                               <span class="c1"># &#39;quantile_all&#39; to get quantiles from entire set of data,</span>
+                                    <span class="c1"># then have firm-level values between 0 and 1;</span>
+                               <span class="c1"># &#39;quantile_firm_small&#39; to get quantiles at the firm-level</span>
+                                    <span class="c1"># and have values be compensations if small data;</span>
+                               <span class="c1"># &#39;quantile_firm_large&#39; to get quantiles at the firm-level</span>
+                                    <span class="c1"># and have values be compensations if large data,</span>
+                                    <span class="c1"># note that this is up to 50 times slower than</span>
+                                    <span class="c1"># &#39;quantile_firm_small&#39; and should only be used</span>
+                                    <span class="c1"># if the dataset is too large to copy into a dictionary</span>
+    <span class="p">),</span>
+    <span class="s1">&#39;grouping&#39;</span><span class="p">:</span> <span class="n">bpd</span><span class="o">.</span><span class="n">grouping</span><span class="o">.</span><span class="n">kmeans</span><span class="p">(</span> <span class="c1"># Read more at</span>
+                                  <span class="c1"># https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</span>
+        <span class="n">n_clusters</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">init</span><span class="o">=</span><span class="s1">&#39;k-means++&#39;</span><span class="p">,</span>
+        <span class="n">n_init</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
+        <span class="n">max_iter</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>
+        <span class="n">tol</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">,</span>
+        <span class="n">precompute_distances</span><span class="o">=</span><span class="s1">&#39;deprecated&#39;</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+        <span class="n">random_state</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">copy_x</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">n_jobs</span><span class="o">=</span><span class="s1">&#39;deprecated&#39;</span><span class="p">,</span>
+        <span class="n">algorithm</span><span class="o">=</span><span class="s1">&#39;auto&#39;</span>
+    <span class="p">),</span>
+    <span class="s1">&#39;stayers_movers&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># If None, clusters on entire dataset;</span>
+                         <span class="c1"># If &#39;stayers&#39;, clusters on only stayers</span>
+                         <span class="c1"># If &#39;movers&#39;, clusters on only movers</span>
     <span class="s1">&#39;t&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="c1"># If None, clusters on entire dataset</span>
-               <span class="c1"># If int, gives period in data to consider (only valid for non-collapsed data)</span>
-    <span class="s1">&#39;weighted&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="c1"># If True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)</span>
-    <span class="s1">&#39;dropna&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># If True, drop observations where firms aren&#39;t clustered</span>
-                     <span class="c1"># If False, keep all observations</span>
-    <span class="s1">&#39;user_KMeans&#39;</span><span class="p">:</span> <span class="n">KMeans_params</span>
+            <span class="c1"># If int, gives period in data to consider (only valid for non-collapsed data)</span>
+    <span class="s1">&#39;weighted&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="c1"># If True, weight firm clusters by firm size</span>
+                        <span class="c1"># (if a weight column is included, firm weight is computed using this column;</span>
+                        <span class="c1"># otherwise, each observation has weight 1)</span>
+    <span class="s1">&#39;dropna&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># If True, drop observations where firms aren&#39;t clustered;</span>
+                 <span class="c1"># If False, keep all observations</span>
 <span class="p">}</span>
+<span class="c1"># For data cleaning</span>
 <span class="n">clean_params</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s1">&#39;i_t_how&#39;</span><span class="p">:</span> <span class="s1">&#39;max&#39;</span> <span class="c1"># How to handle worker-year duplicates</span>
         <span class="c1"># If &#39;max&#39;, keep max paying job;</span>
@@ -589,8 +607,7 @@ div.rendered_html tbody tr:hover {
     <span class="n">fe_params</span><span class="o">=</span><span class="n">fe_params</span><span class="p">,</span>
     <span class="n">cre_params</span><span class="o">=</span><span class="n">cre_params</span><span class="p">,</span>
     <span class="n">cluster_params</span><span class="o">=</span><span class="n">cluster_params</span><span class="p">,</span>
-    <span class="n">collapsed_fe</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1"># If True, collapse data by worker-firm spells for FE estimator</span>
-    <span class="n">collapsed_cre</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1"># # If True, collapse data by worker-firm spells for CRE estimator</span>
+    <span class="n">collapsed</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="c1"># If True, collapse data by worker-firm spells for estimators</span>
     <span class="n">clean_params</span><span class="o">=</span><span class="n">clean_params</span>
 <span class="p">)</span>
 </pre></div>
@@ -648,7 +665,7 @@ div.rendered_html tbody tr:hover {
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Apr 22, 2021.
+        Last updated on May 02, 2021.
       </span>
 
     </p>

@@ -200,36 +200,43 @@
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Class of TwoWay, where TwoWay gives a network of firms and workers. Inherits from bipartitepandas.</p>
 <dl class="py method">
-<dt id="pytwoway.twoway.TwoWay.fit_cre">
-<code class="sig-name descname">fit_cre</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cre</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">user_cluster</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">collapsed</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">user_clean</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.fit_cre" title="Permalink to this definition">¶</a></dt>
-<dd><p>Fit the CRE estimator. Saves two dictionary attributes: self.cre_res (complete results) and self.cre_summary (summary results).</p>
+<dt id="pytwoway.twoway.TwoWay.cluster">
+<code class="sig-name descname">cluster</code><span class="sig-paren">(</span><em class="sig-param">measures=&lt;function compute_measures_cdfs&gt;</em>, <em class="sig-param">grouping=&lt;function compute_kmeans&gt;</em>, <em class="sig-param">stayers_movers=None</em>, <em class="sig-param">t=None</em>, <em class="sig-param">weighted=True</em>, <em class="sig-param">dropna=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.cluster" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cluster data and assign a new column giving the cluster for each firm.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>user_cre</strong> (<em>dict</em>) – <p>dictionary of parameters for CRE estimation</p>
+<li><p><strong>measures</strong> (<em>function</em><em> or </em><em>list of functions</em>) – how to compute measures for clustering. Options can be seen in bipartitepandas.measures.</p></li>
+<li><p><strong>grouping</strong> (<em>function</em>) – how to group firms based on measures. Options can be seen in bipartitepandas.grouping.</p></li>
+<li><p><strong>stayers_movers</strong> (<em>str</em><em> or </em><em>None</em>) – if None, clusters on entire dataset; if ‘stayers’, clusters on only stayers; if ‘movers’, clusters on only movers</p></li>
+<li><p><strong>t</strong> (<em>int</em><em> or </em><em>None</em>) – if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)</p></li>
+<li><p><strong>weighted</strong> (<em>bool</em>) – if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)</p></li>
+<li><p><strong>dropna</strong> (<em>bool</em>) – if True, drop observations where firms aren’t clustered; if False, keep all observations</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.twoway.TwoWay.eventstudy">
+<code class="sig-name descname">eventstudy</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">periods_pre</span><span class="o">=</span><span class="default_value">3</span></em>, <em class="sig-param"><span class="n">periods_post</span><span class="o">=</span><span class="default_value">3</span></em>, <em class="sig-param"><span class="n">stable_pre</span><span class="o">=</span><span class="default_value">[]</span></em>, <em class="sig-param"><span class="n">stable_post</span><span class="o">=</span><span class="default_value">[]</span></em>, <em class="sig-param"><span class="n">include</span><span class="o">=</span><span class="default_value">['g', 'y']</span></em>, <em class="sig-param"><span class="n">transition_col</span><span class="o">=</span><span class="default_value">'j'</span></em>, <em class="sig-param"><span class="n">user_graph</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">user_clean</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.eventstudy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate event study plots.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>periods_pre</strong> (<em>int</em>) – number of periods before the transition</p></li>
+<li><p><strong>periods_post</strong> (<em>int</em>) – number of periods after the transition</p></li>
+<li><p><strong>stable_pre</strong> (<em>column name</em><em> or </em><em>list of column names</em>) – for each column, keep only workers who have constant values in that column before the transition</p></li>
+<li><p><strong>stable_post</strong> (<em>column name</em><em> or </em><em>list of column names</em>) – for each column, keep only workers who have constant values in that column after the transition</p></li>
+<li><p><strong>include</strong> (<em>column name</em><em> or </em><em>list of column names</em>) – columns to include data for all periods</p></li>
+<li><p><strong>transition_col</strong> (<em>str</em>) – column to use to define a transition</p></li>
+<li><p><strong>user_graph</strong> (<em>dict</em>) – <p>dictionary of parameters for graphing</p>
 <p>Dictionary parameters:</p>
 <blockquote>
-<div><p>ncore (int, default=1): number of cores to use</p>
-<p>ndraw_tr (int, default=5): number of draws to use in approximation for traces</p>
-<p>ndp (int, default=50): number of draw to use in approximation for leverages</p>
-<p>out (str, default=’res_cre.json’): outputfile where results are saved</p>
-<p>posterior (bool, default=False): if True, compute posterior variance</p>
-<p>wo_btw (bool, default=False): if True, sets between variation to 0, pure RE</p>
+<div><p>title_height (float, default=-0.45): location of titles for subfigures</p>
+<p>fontsize (float, default=9): font size of titles for subfigures</p>
 </div></blockquote>
 </p></li>
-<li><p><strong>user_cluster</strong> (<em>dict</em>) – <p>dictionary of parameters for clustering</p>
-<p>Dictionary parameters:</p>
-<blockquote>
-<div><p>cdf_resolution (int, default=10): how many values to use to approximate the cdfs (when grouping by ‘mean’, this gives the number of quantiles to compute)</p>
-<p>grouping (str, default=’quantile_all’): how to group the cdfs (‘quantile_all’ to get quantiles from entire set of data, then have firm-level values between 0 and 1; ‘quantile_firm_small’ to get quantiles at the firm-level and have values be compensations if small data; ‘quantile_firm_large’ to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than ‘quantile_firm_small’ and should only be used if the dataset is too large to copy into a dictionary; ‘mean’ to group firms by average income within the firm)</p>
-<p>stayers_movers (str or None, default=None): if None, clusters on entire dataset; if ‘stayers’, clusters on only stayers; if ‘movers’, clusters on only movers</p>
-<p>t (int or None, default=None): if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)</p>
-<p>weighted (bool, default=True): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)</p>
-<p>dropna (bool, default=False): if True, drop observations where firms aren’t clustered; if False, keep all observations</p>
-<p>user_KMeans (dict): parameters for KMeans estimation (for more information on what parameters can be used, visit <a class="reference external" href="https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html">https://scikit-learn.org/stable/modules/generated/sklearn.cluster.KMeans.html</a>)</p>
-</div></blockquote>
-</p></li>
-<li><p><strong>collapsed</strong> (<em>bool</em>) – if True, run estimators on collapsed data</p></li>
 <li><p><strong>user_clean</strong> (<em>dict</em>) – <p>dictionary of parameters for cleaning</p>
 <p>Dictionary parameters:</p>
 <blockquote>
@@ -242,13 +249,33 @@
 </dd></dl>
 
 <dl class="py method">
+<dt id="pytwoway.twoway.TwoWay.fit_cre">
+<code class="sig-name descname">fit_cre</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_cre</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.fit_cre" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fit the CRE estimator. Saves two dictionary attributes: self.cre_res (complete results) and self.cre_summary (summary results).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>user_cre</strong> (<em>dict</em>) – <p>dictionary of parameters for CRE estimation</p>
+<p>Dictionary parameters:</p>
+<blockquote>
+<div><p>ncore (int, default=1): number of cores to use</p>
+<p>ndraw_tr (int, default=5): number of draws to use in approximation for traces</p>
+<p>ndp (int, default=50): number of draw to use in approximation for leverages</p>
+<p>out (str, default=’res_cre.json’): outputfile where results are saved</p>
+<p>posterior (bool, default=False): if True, compute posterior variance</p>
+<p>wo_btw (bool, default=False): if True, sets between variation to 0, pure RE</p>
+</div></blockquote>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt id="pytwoway.twoway.TwoWay.fit_fe">
-<code class="sig-name descname">fit_fe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_fe</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">collapsed</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">user_clean</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.fit_fe" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">fit_fe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">user_fe</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.fit_fe" title="Permalink to this definition">¶</a></dt>
 <dd><p>Fit the bias-corrected FE estimator. Saves two dictionary attributes: self.fe_res (complete results) and self.fe_summary (summary results).</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>user_fe</strong> (<em>dict</em>) – <p>dictionary of parameters for bias-corrected FE estimation</p>
+<dd class="field-odd"><p><strong>user_fe</strong> (<em>dict</em>) – <p>dictionary of parameters for bias-corrected FE estimation</p>
 <p>Dictionary parameters:</p>
 <blockquote>
 <div><p>ncore (int, default=1): number of cores to use</p>
@@ -261,8 +288,19 @@
 <p>statsonly (bool, default=False): if True, return only basic statistics</p>
 <p>Q (str, default=’cov(alpha, psi)’): which Q matrix to consider. Options include ‘cov(alpha, psi)’ and ‘cov(psi_t, psi_{t+1})’</p>
 </div></blockquote>
-</p></li>
-<li><p><strong>collapsed</strong> (<em>bool</em>) – if True, run estimators on collapsed data</p></li>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pytwoway.twoway.TwoWay.prep_data">
+<code class="sig-name descname">prep_data</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">collapsed</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">user_clean</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.prep_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepare bipartite network for running estimators.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>collapsed</strong> (<em>bool</em>) – if True, run estimators on data collapsed by worker-firm spells</p></li>
 <li><p><strong>user_clean</strong> (<em>dict</em>) – <p>dictionary of parameters for cleaning</p>
 <p>Dictionary parameters:</p>
 <blockquote>
@@ -329,7 +367,7 @@
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on Apr 25, 2021.
+        Last updated on May 02, 2021.
       </span>
 
     </p>
