@@ -44,7 +44,7 @@ class TwoWay():
 
         # self.logger.info('TwoWay object initialized')
 
-    def _clean(self, user_clean={}):
+    def _clean(self, user_clean={}, he=False):
         '''
         Clean data.
 
@@ -58,12 +58,17 @@ class TwoWay():
                     i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
 
                     copy (bool, default=False): if False, avoid copy
+            he (bool): if True, compute largest biconnected set of firms for heteroskedastic correction
         '''
         if not self.clean:
+            if he:
+                # Must be biconnected for heteroskedastic correction
+                user_clean = user_clean.copy()
+                user_clean['connectedness'] = 'biconnected'
             self.data = self.data.clean_data(user_clean=user_clean)
             self.clean = True
 
-    def prep_data(self, collapsed=True, user_clean={}):
+    def prep_data(self, collapsed=True, user_clean={}, he=False):
         '''
         Prepare bipartite network for running estimators.
 
@@ -78,8 +83,9 @@ class TwoWay():
                     i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
 
                     copy (bool, default=False): if False, avoid copy
+            he (bool): if True, compute largest biconnected set of firms for heteroskedastic correction
         '''
-        self._clean(user_clean=user_clean)
+        self._clean(user_clean=user_clean, he=he)
 
         if not collapsed:
             if self.formatting == 'long':
@@ -129,7 +135,7 @@ class TwoWay():
 
                     ndraw_tr (int, default=5): number of draws to use in approximation for traces
 
-                    h2 (bool, default=False): if True, compute h2 correction
+                    he (bool, default=False): if True, compute heteroskedastic correction
 
                     out (str, default='res_fe.json'): outputfile where results are saved
 

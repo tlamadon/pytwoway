@@ -126,7 +126,7 @@ def main():
     p.add('--ndraw_pii', required=False, help='number of draw to use in approximation for leverages when computing fe')
     p.add('--levfile', required=False, help='file to load precomputed leverages when computing fe')
     p.add('--ndraw_tr_fe', required=False, help='number of draws to use in approximation for traces when computing fe')
-    p.add('--h2', type=str2bool, required=False, help='if True, compute the h2 correction when computing fe')
+    p.add('--he', type=str2bool, required=False, help='if True, compute the heteroskedastic correction when computing fe')
     p.add('--out_fe', required=False, help='outputfile where fe results are saved')
     p.add('--statsonly', type=str2bool, required=False, help='save data statistics only when computing fe')
     p.add('--Q', required=False, help="which Q matrix to consider when computing fe. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'")
@@ -228,7 +228,7 @@ def main():
     ##### Cluster end #####
 
     ##### FE start #####
-    fe_params = {'ncore': params.ncore_fe, 'batch': params.batch, 'ndraw_pii': params.ndraw_pii, 'levfile': params.levfile, 'ndraw_tr': params.ndraw_tr_fe, 'h2': params.h2, 'out': params.out_fe, 'statsonly': params.statsonly, 'Q': params.Q} # 'con': params.con, 'logfile': params.logfile, 'check': params.check
+    fe_params = {'ncore': params.ncore_fe, 'batch': params.batch, 'ndraw_pii': params.ndraw_pii, 'levfile': params.levfile, 'ndraw_tr': params.ndraw_tr_fe, 'he': params.he, 'out': params.out_fe, 'statsonly': params.statsonly, 'Q': params.Q} # 'con': params.con, 'logfile': params.logfile, 'check': params.check
     fe_params = clear_dict(fe_params)
     ##### FE end #####
 
@@ -245,11 +245,12 @@ def main():
     # Run estimation
     if params.fe or params.cre:
         tw_net = tw(**tw_params)
-        tw_net.prep_data(collapsed=params.collapsed, user_clean=clean_params)
 
         if params.fe:
+            tw_net.prep_data(collapsed=params.collapsed, user_clean=clean_params)
             tw_net.fit_fe(user_fe=fe_params)
 
         if params.cre:
+            tw_net.prep_data(collapsed=params.collapsed, user_clean=clean_params, he=params.he) # Note that if params.he is None the code still works
             tw_net.cluster(**cluster_params)
             tw_net.fit_cre(user_cre=cre_params)

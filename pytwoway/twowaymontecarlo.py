@@ -77,7 +77,7 @@ class TwoWayMonteCarlo:
 
                     ndraw_tr (int, default=5): number of draws to use in approximation for traces
 
-                    h2 (bool, default=False): if True, compute h2 correction
+                    he (bool, default=False): if True, compute heteroskedastic correction
 
                     out (str, default='res_fe.json'): outputfile where results are saved
 
@@ -200,7 +200,7 @@ class TwoWayMonteCarlo:
 
                     ndraw_tr (int, default=5): number of draws to use in approximation for traces
 
-                    h2 (bool, default=False): if True, compute h2 correction
+                    he (bool, default=False): if True, compute heteroskedastic correction
 
                     out (str, default='res_fe.json'): outputfile where results are saved
 

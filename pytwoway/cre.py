@@ -117,7 +117,7 @@ class CREEstimator:
 
         # Save some commonly used parameters as attributes
         self.ncore = self.params['ncore'] # Number of cores to use
-        self.ndraw_trace = self.params['ndraw_tr'] # Number of draws to compute hetero correction
+        self.ndraw_trace = self.params['ndraw_tr'] # Number of draws to use in approximation for traces
         self.wo_btw = self.params['wo_btw'] # If True, sets between variation to 0, pure RE
 
         # Store some parameters in results dictionary

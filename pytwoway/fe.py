@@ -89,7 +89,7 @@ class FEEstimator:
 
                     ndraw_tr (int, default=5): number of draws to use in approximation for traces
 
-                    h2 (bool, default=False): if True, compute h2 correction
+                    he (bool, default=False): if True, compute heteroskedastic correction
 
                     out (str, default='res_fe.json'): outputfile where results are saved
 
@@ -110,7 +110,7 @@ class FEEstimator:
             'ndraw_pii': 50, # Number of draws to use in approximation for leverages
             'levfile': '', # File to load precomputed leverages
             'ndraw_tr': 5, # Number of draws to use in approximation for traces
-            'h2': False, # If True, compute h2 correction
+            'he': False, # If True, compute heteroskedastic correction
             'out': 'res_fe.json', # Outputfile where results are saved
             'statsonly': False, # If True, return only basic statistics
             'Q': 'cov(alpha, psi)' # Which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
@@ -126,8 +126,8 @@ class FEEstimator:
         # Save some commonly used parameters as attributes
         self.ncore = self.params['ncore'] # Number of cores to use
         self.ndraw_pii = self.params['ndraw_pii'] # Number of draws to compute leverage
-        self.ndraw_trace = self.params['ndraw_tr'] # Number of draws to compute h2 correction
-        self.compute_h2 = self.params['h2']
+        self.ndraw_trace = self.params['ndraw_tr'] # Number of draws to compute heteroskedastic correction
+        self.compute_he = self.params['he']
 
         # Store some parameters in results dictionary
         self.res['cores'] = self.ncore
@@ -157,7 +157,7 @@ class FEEstimator:
     @staticmethod
     def __load(filename):
         '''
-        Load files for h2 correction.
+        Load files for heteroskedastic correction.
 
         Arguments:
             filename (string): file to load
@@ -202,10 +202,10 @@ class FEEstimator:
             self.__create_fe_solver() # Solve FE model
             self.__compute_trace_approximation_fe() # Compute trace approxmation
 
-            # If computing h2 correction
-            if self.compute_h2:
-                self.__compute_leverages_Pii() # Solve h2 model
-                self.__compute_trace_approximation_h2() # Compute trace approximation
+            # If computing heteroskedastic correction
+            if self.compute_he:
+                self.__compute_leverages_Pii() # Solve heteroskedastic model
+                self.__compute_trace_approximation_he() # Compute trace approximation
 
             self.__collect_res() # Collect all results
 
@@ -470,7 +470,7 @@ class FEEstimator:
         self.psi_hat, self.alpha_hat = self.__solve(self.Y)
 
         self.logger.info('solver time {:2.4f} seconds'.format(self.last_invert_time))
-        self.logger.info('expected total time {:2.4f} minutes'.format( (self.ndraw_trace * (1 + self.compute_h2) + self.ndraw_pii * self.compute_h2) * self.last_invert_time / 60))
+        self.logger.info('expected total time {:2.4f} minutes'.format( (self.ndraw_trace * (1 + self.compute_he) + self.ndraw_pii * self.compute_he) * self.last_invert_time / 60))
 
         self.E = self.Y - self.__mult_A(self.psi_hat, self.alpha_hat)
 
@@ -492,16 +492,16 @@ class FEEstimator:
 
     def __compute_leverages_Pii(self):
         '''
-        Compute leverages for h2 correction.
+        Compute leverages for heteroskedastic correction.
         '''
         self.Pii = np.zeros(self.nn)
         self.Sii = np.zeros(self.nn)
 
         if len(self.params['levfile']) > 1:
-            self.logger.info('[h2] starting h2 correction, loading precomputed files')
+            self.logger.info('[he] starting heteroskedastic correction, loading precomputed files')
 
             files = glob.glob('{}*'.format(self.params['levfile']))
-            self.logger.info('[h2] found {} files to get leverages from'.format(len(files)))
+            self.logger.info('[he] found {} files to get leverages from'.format(len(files)))
             self.res['lev_file_count'] = len(files)
             assert len(files) > 0, "Didn't find any leverage files!"
 
@@ -510,7 +510,7 @@ class FEEstimator:
                 self.Pii += pp / len(files)
 
         elif self.ncore > 1:
-            self.logger.info('[h2] starting h2 correction p2={}, using {} cores, batch size {}'.format(self.ndraw_pii, self.ncore, self.params['batch']))
+            self.logger.info('[he] starting heteroskedastic correction p2={}, using {} cores, batch size {}'.format(self.ndraw_pii, self.ncore, self.params['batch']))
             set_start_method('spawn')
             with Pool(processes=self.ncore) as pool:
                 Pii_all = pool.starmap(self.__leverage_approx, [self.params['batch'] for _ in range(self.ndraw_pii // self.params['batch'])])
@@ -529,7 +529,7 @@ class FEEstimator:
 
         # Attach the computed Pii to the dataframe
         self.adata['Pii'] = self.Pii
-        self.logger.info('[h2] Leverage range {:2.4f} to {:2.4f}'.format(self.adata.query('m == 1').Pii.min(), self.adata.query('m == 1').Pii.max()))
+        self.logger.info('[he] Leverage range {:2.4f} to {:2.4f}'.format(self.adata.query('m == 1').Pii.min(), self.adata.query('m == 1').Pii.max()))
 
         # Give stayers the variance estimate at the firm level
         self.adata['Sii'] = self.Y * self.E / (1 - self.Pii)
@@ -539,7 +539,7 @@ class FEEstimator:
         self.adata['Sii'] = np.where(self.adata['m'] == 1, self.adata['Sii'], self.adata['Sii_j'])
         self.Sii = self.adata['Sii']
 
-        self.logger.info('[h2] variance of residuals in h2 case: {:2.4f}'.format(self.Sii.mean()))
+        self.logger.info('[he] variance of residuals in heteroskedastic case: {:2.4f}'.format(self.Sii.mean()))
 
     def __compute_trace_approximation_fe(self):
         '''
@@ -644,13 +644,13 @@ class FEEstimator:
     #         self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
     #         self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
-    def __compute_trace_approximation_h2(self):
+    def __compute_trace_approximation_he(self):
         '''
-        Compute h2 trace approximation.
+        Compute heteroskedastic trace approximation.
         '''
-        self.logger.info('Starting h2 trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
-        self.tr_var_h2_all = np.zeros(self.ndraw_trace)
-        self.tr_cov_h2_all = np.zeros(self.ndraw_trace)
+        self.logger.info('Starting heteroskedastic trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
+        self.tr_var_he_all = np.zeros(self.ndraw_trace)
+        self.tr_cov_he_all = np.zeros(self.ndraw_trace)
 
         Jq, Wq = self.__construct_Jq_Wq()
 
@@ -666,10 +666,10 @@ class FEEstimator:
             R3_psi = Jq * psi2
 
             # Trace corrections
-            self.tr_var_h2_all[r] = np.cov(R2_psi, R3_psi)[0][1]
-            self.tr_cov_h2_all[r] = np.cov(R2_alpha, R3_psi)[0][1]
+            self.tr_var_he_all[r] = np.cov(R2_psi, R3_psi)[0][1]
+            self.tr_cov_he_all[r] = np.cov(R2_alpha, R3_psi)[0][1]
 
-            self.logger.debug('h2 [traces] step {}/{} done.'.format(r, self.ndraw_trace))
+            self.logger.debug('heteroskedastic [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
     def __collect_res(self):
         '''
@@ -689,18 +689,18 @@ class FEEstimator:
             pass
         # FIXME Section ends here
 
-        if self.compute_h2:
-            self.res['eps_var_h2'] = self.Sii.mean()
+        if self.compute_he:
+            self.res['eps_var_he'] = self.Sii.mean()
             self.res['min_lev'] = self.adata.query('m == 1').Pii.min()
             self.res['max_lev'] = self.adata.query('m == 1').Pii.max()
-            self.res['tr_var_h2'] = np.mean(self.tr_var_h2_all)
-            self.res['tr_cov_h2'] = np.mean(self.tr_cov_h2_all)
+            self.res['tr_var_he'] = np.mean(self.tr_var_he_all)
+            self.res['tr_cov_he'] = np.mean(self.tr_cov_he_all)
             self.res['tr_var_ho_sd'] = np.std(self.tr_var_ho_all)
             self.res['tr_cov_ho_sd'] = np.std(self.tr_cov_ho_all)
-            self.res['tr_var_h2_sd'] = np.std(self.tr_var_h2_all)
-            self.res['tr_cov_h2_sd'] = np.std(self.tr_cov_h2_all)
-            self.logger.info('[h2] VAR tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_var_h2'], np.std(self.tr_var_h2_all)))
-            self.logger.info('[h2] COV tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_cov_h2'], np.std(self.tr_cov_h2_all)))
+            self.res['tr_var_he_sd'] = np.std(self.tr_var_he_all)
+            self.res['tr_cov_he_sd'] = np.std(self.tr_cov_he_all)
+            self.logger.info('[he] VAR tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_var_he'], np.std(self.tr_var_he_all)))
+            self.logger.info('[he] COV tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_cov_he'], np.std(self.tr_cov_he_all)))
 
         # ----- FINAL ------
         # FIXME Need to figure out when this section can be run
@@ -722,9 +722,9 @@ class FEEstimator:
             pass
         # FIXME Section ends here
 
-        if self.compute_h2:
-            self.logger.info('[h2] VAR fe={:2.4f} bc={:2.4f}'.format(self.var_fe, self.var_fe - self.res['tr_var_h2']))
-            self.logger.info('[h2] COV fe={:2.4f} bc={:2.4f}'.format(self.cov_fe, self.cov_fe - self.res['tr_cov_h2']))
+        if self.compute_he:
+            self.logger.info('[he] VAR fe={:2.4f} bc={:2.4f}'.format(self.var_fe, self.var_fe - self.res['tr_var_he']))
+            self.logger.info('[he] COV fe={:2.4f} bc={:2.4f}'.format(self.cov_fe, self.cov_fe - self.res['tr_cov_he']))
 
         self.res['var_y'] = np.var(self.Yq)
         # FIXME Need to figure out when this section can be run
@@ -750,9 +750,9 @@ class FEEstimator:
             pass
         # FIXME Section ends here
 
-        if self.compute_h2:
-            self.res['var_h2'] = self.var_fe - self.res['tr_var_h2']
-            self.res['cov_h2'] = self.cov_fe - self.res['tr_cov_h2']
+        if self.compute_he:
+            self.res['var_he'] = self.var_fe - self.res['tr_var_he']
+            self.res['cov_he'] = self.cov_fe - self.res['tr_cov_he']
 
         # Create summary variable
         self.summary['var_y'] = self.res['var_y']
