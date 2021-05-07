@@ -285,7 +285,7 @@
 <p>ndraw_pii (int, default=50): number of draws to use in approximation for leverages</p>
 <p>levfile (str, default=’’): file to load precomputed leverages</p>
 <p>ndraw_tr (int, default=5): number of draws to use in approximation for traces</p>
-<p>h2 (bool, default=False): if True, compute h2 correction</p>
+<p>he (bool, default=False): if True, compute heteroskedastic correction</p>
 <p>out (str, default=’res_fe.json’): outputfile where results are saved</p>
 <p>statsonly (bool, default=False): if True, return only basic statistics</p>
 <p>Q (str, default=’cov(alpha, psi)’): which Q matrix to consider. Options include ‘cov(alpha, psi)’ and ‘cov(psi_t, psi_{t+1})’</p>
@@ -297,7 +297,7 @@
 
 <dl class="py method">
 <dt id="pytwoway.twoway.TwoWay.prep_data">
-<code class="sig-name descname">prep_data</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">collapsed</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">user_clean</span><span class="o">=</span><span class="default_value">{}</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.prep_data" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">prep_data</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">collapsed</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">user_clean</span><span class="o">=</span><span class="default_value">{}</span></em>, <em class="sig-param"><span class="n">he</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.twoway.TwoWay.prep_data" title="Permalink to this definition">¶</a></dt>
 <dd><p>Prepare bipartite network for running estimators.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -311,6 +311,7 @@
 <p>copy (bool, default=False): if False, avoid copy</p>
 </div></blockquote>
 </p></li>
+<li><p><strong>he</strong> (<em>bool</em>) – if True, compute largest biconnected set of firms for heteroskedastic correction</p></li>
 </ul>
 </dd>
 </dl>
@@ -371,7 +372,7 @@
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on May 06, 2021.
+        Last updated on May 07, 2021.
       </span>
 
     </p>
