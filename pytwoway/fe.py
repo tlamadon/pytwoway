@@ -22,7 +22,6 @@ from timeit import default_timer as timer
 import itertools
 import pickle
 import time
-import argparse
 import json
 import glob, sys
 

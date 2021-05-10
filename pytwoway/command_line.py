@@ -161,7 +161,7 @@ def main():
 
     ##### Stata start #####
     if params.stata:
-        params.data = 'statatwoway.dta'
+        params.data = 'leedtwoway_temp_data.dta'
         params.filetype = 'dta'
     ##### Stata end #####
 

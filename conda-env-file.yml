@@ -1,4 +1,4 @@
-name: twfe-env
+name: pytw-env
 channels:
   - defaults
   - conda-forge
@@ -12,20 +12,17 @@ dependencies:
   - pytest
   - numpy
   - pandas
-#  - bipartitepandas
+  - bipartitepandas
   - scipy
+  - pyamg
+  - qpsolvers
+  - configargparse
   - matplotlib
   - tqdm
-  - networkx
-  - scikit-learn
-  - pyamg
-  # - pyreadr
-  - configargparse
-  # - sphinx
   - nbsphinx
   - pip:
       - sphinx-rtd-theme # Sphinx theme
-      # - pyarrow
+      - pyarrow
 
 # conda env create --file environment.yml
-# conda env remove --name twfe-env
+# conda env remove --name pytw-env

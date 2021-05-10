@@ -343,7 +343,7 @@ class CREEstimator:
         dm.eval('y1m2j_lo = (nm2j * y1m2j - nm2c * y1m2c) / (nm2j - nm2c)', inplace=True)
         dm.eval('y2m2j_lo = (nm2j * y2m2j - nm2c * y2m2c) / (nm2j - nm2c)', inplace=True)
 
-        # compute the moments involving stayers
+        # Compute the moments involving stayers
         res['y1s_y1s'] = ds.query('nsj > 1').pipe(pipe_qcov, 'y1n', 'y1s_lo')
         res['y1s_y1s_count'] = ds.query('nsj > 1').shape[0]
         res['y1s_var'] = ds['y1n'].var()
