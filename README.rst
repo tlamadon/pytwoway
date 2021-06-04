@@ -65,3 +65,15 @@ Bibtex entry::
     year={2020},
     institution={National Bureau of Economic Research}
   }
+
+
+Development
+-----------
+
+Easiest is to use poetry to set up a local environment:
+
+    poetry install
+    poetry shell
+    python -m pytest
+
+    
