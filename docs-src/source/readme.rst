@@ -4,8 +4,8 @@ PyTwoWay
 .. image:: https://badge.fury.io/py/pytwoway.svg
     :target: https://badge.fury.io/py/pytwoway
 
-.. image:: https://travis-ci.com/tlamadon/pytwoway.svg?branch=master
-    :target: https://travis-ci.com/tlamadon/pytwoway
+.. image:: https://circleci.com/gh/tlamadon/pytwoway/tree/master.svg?style=shield
+    :target: https://circleci.com/gh/tlamadon/pytwoway/tree/master    
 
 .. image:: https://img.shields.io/badge/doc-latest-blue
     :target: https://tlamadon.github.io/pytwoway/
