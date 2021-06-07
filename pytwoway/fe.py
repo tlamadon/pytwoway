@@ -726,6 +726,7 @@ class FEEstimator:
             self.logger.info('[he] COV fe={:2.4f} bc={:2.4f}'.format(self.cov_fe, self.cov_fe - self.res['tr_cov_he']))
 
         self.res['var_y'] = np.var(self.Yq)
+        self.summary['var_y'] = self.res['var_y']
         # FIXME Need to figure out when this section can be run
         try:
             self.res['var_fe'] = self.var_fe
@@ -752,9 +753,8 @@ class FEEstimator:
         if self.compute_he:
             self.res['var_he'] = self.var_fe - self.res['tr_var_he']
             self.res['cov_he'] = self.cov_fe - self.res['tr_cov_he']
-
-        # Create summary variable
-        self.summary['var_y'] = self.res['var_y']
+            self.summary['var_he'] = self.res['var_he']
+            self.summary['cov_he'] = self.res['cov_he']
 
     def __save_res(self):
         '''
@@ -774,7 +774,7 @@ class FEEstimator:
         Return estimated psi_hats linked to firm ids and alpha_hats linked to worker ids.
 
         Returns:
-            alpha_hat_dict (dict): dictionary linking firm ids to estimated firm fixed effects
+            psi_hat_dict (dict): dictionary linking firm ids to estimated firm fixed effects
             alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed effects
         '''
         j_vals = np.arange(self.nf) # np.arange(self.adata.j1.max()) + 1

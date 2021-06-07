@@ -20,7 +20,7 @@ The package provides implementations for a series of estimators for models with 
 
 1. two way fixed effect estimator as proposed by Abowd Kramarz and Margolis
 2. homoskedastic bias correction as in Andrews et al
-3. heteroskedastic correction as in KSS (TBD)
+3. heteroskedastic correction as in KSS
 4. a group fixed estimator as in BLM
 5. a group correlated random effect as presented in the main paper
 
@@ -52,6 +52,18 @@ Example config.txt::
     filetype = csv
     col_dict = "{'i': 'your_workerid_col', 'j': 'your_firmid_col', 'y': 'your_compensation_col', 't': 'your_year_col'}"
 
+Authors
+-------
+
+Thibaut Lamadon,
+Assistant Professor in Economics, University of Chicago,
+lamadon@uchicago.edu
+
+
+Adam A. Oppenheimer,
+Research Professional, University of Chicago,
+oppenheimer@uchicago.edu
+
 Citation
 --------
 
@@ -75,5 +87,3 @@ Easiest is to use poetry to set up a local environment:
     poetry install
     poetry shell
     python -m pytest
-
-    

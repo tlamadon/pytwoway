@@ -29,16 +29,15 @@ class TwoWay():
         bpd.logger_init(self)
         # self.logger.info('initializing TwoWay object')
 
-        type_dict = { # Determine type based on formatting
+        self.type_dict = { # Determine type based on formatting
             'long': bpd.BipartiteLong,
             'long_collapsed': bpd.BipartiteLongCollapsed,
             'es': bpd.BipartiteEventStudy,
             'es_collapsed': bpd.BipartiteEventStudyCollapsed
         }
 
-        self.data = type_dict[formatting](data, col_dict=col_dict)
+        self.data = self.type_dict[formatting](data, col_dict=col_dict)
 
-        self.formatting = formatting
         self.clean = False # Whether data is clean
         self.clustered = False # Whether data is clustered
 
@@ -88,17 +87,17 @@ class TwoWay():
         self._clean(user_clean=user_clean, he=he)
 
         if not collapsed:
-            if self.formatting == 'long':
+            if isinstance(self.data, self.type_dict['long']):
                 self.data = self.data.get_es()
-            elif self.formatting != 'es':
+            elif not isinstance(self.data, self.type_dict['es']): # If not long or es, must be collapsed already
                 warnings.warn('Data already collapsed, running estimator on collapsed data')
                 collapsed = True
         if collapsed:
-            if self.formatting == 'es':
+            if isinstance(self.data, self.type_dict['es']):
                 self.data = self.data.get_long()
-            if self.formatting in ['es', 'long']:
+            if isinstance(self.data, self.type_dict['long']):
                 self.data = self.data.get_collapsed_long()
-            if self.formatting in ['es', 'long', 'long_collapsed']:
+            if isinstance(self.data, self.type_dict['long_collapsed']):
                 self.data = self.data.get_es()
 
     def cluster(self, measures=bpd.measures.cdfs(), grouping=bpd.grouping.kmeans(), stayers_movers=None, t=None, weighted=True, dropna=False):
@@ -226,7 +225,7 @@ class TwoWay():
 
                     copy (bool, default=False): if False, avoid copy
         '''
-        if self.formatting == 'long':
+        if isinstance(self.data, self.type_dict['long']):
             import numpy as np
             from matplotlib import pyplot as plt
 

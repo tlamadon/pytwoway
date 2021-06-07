@@ -131,12 +131,14 @@ class TwoWayMonteCarlo:
         Returns:
             true_psi_var (float): true simulated sample variance of psi
             true_psi_alpha_cov (float): true simulated sample covariance of psi and alpha
-            fe_psi_var (float): AKM estimate of variance of psi
-            fe_psi_alpha_cov (float): AKM estimate of covariance of psi and alpha
-            fe_corr_psi_var (float): bias-corrected AKM estimate of variance of psi
-            fe_corr_psi_alpha_cov (float): bias-corrected AKM estimate of covariance of psi and alpha
             cre_psi_var (float): CRE estimate of variance of psi
             cre_psi_alpha_cov (float): CRE estimate of covariance of psi and alpha
+            fe_psi_var (float): AKM estimate of variance of psi
+            fe_psi_alpha_cov (float): AKM estimate of covariance of psi and alpha
+            fe_ho_psi_var (float): homoskedastic-corrected AKM estimate of variance of psi
+            fe_ho_psi_alpha_cov (float): homoskedastic-corrected AKM estimate of covariance of psi and alpha
+            fe_he_psi_var (float): heteroskedastic-corrected AKM estimate of variance of psi
+            fe_he_psi_alpha_cov (float): heteroskedastic-corrected AKM estimate of covariance of psi and alpha
         '''
         # Simulate data
         sim_data = self.sbp_net.sim_network()
@@ -146,22 +148,25 @@ class TwoWayMonteCarlo:
         # Use data to create TwoWay object
         tw_net = tw.TwoWay(sim_data)
         # Prepare data
-        tw_net.prep_data(collapsed=collapsed, user_clean=clean_params)
-        # Estimate FE model
-        tw_net.fit_fe(user_fe=fe_params)
-        # Save results
-        fe_res = tw_net.fe_res
+        tw_net.prep_data(collapsed=collapsed, user_clean=clean_params, he=False)
         # Cluster data
         tw_net.cluster(**cluster_params)
         # Estimate CRE model
         tw_net.fit_cre(user_cre=cre_params)
         # Save results
         cre_res = tw_net.cre_res
+        # Prepare data for heteroskedastic correction
+        tw_net.prep_data(collapsed=collapsed, user_clean=clean_params, he=True)
+        # Estimate FE model
+        tw_net.fit_fe(user_fe=fe_params)
+        # Save results
+        fe_res = tw_net.fe_res
 
         return psi_var, psi_alpha_cov, \
+                cre_res['tot_var'], cre_res['tot_cov'], \
                 fe_res['var_fe'], fe_res['cov_fe'], \
                 fe_res['var_ho'], fe_res['cov_ho'], \
-                cre_res['tot_var'], cre_res['tot_cov']
+                fe_res['var_he'], fe_res['cov_he']
 
     def twfe_monte_carlo(self, N=10, ncore=1, fe_params={}, cre_params={}, cluster_params={}, collapsed=True, clean_params={}):
         '''
@@ -171,17 +176,21 @@ class TwoWayMonteCarlo:
 
             true_psi_alpha_cov (NumPy Array): true simulated sample covariance of psi and alpha
 
+            cre_psi_var (NumPy Array): CRE estimate of variance of psi
+
+            cre_psi_alpha_cov (NumPy Array): CRE estimate of covariance of psi and alpha
+
             fe_psi_var (NumPy Array): AKM estimate of variance of psi
 
             fe_psi_alpha_cov (NumPy Array): AKM estimate of covariance of psi and alpha
 
-            fe_corr_psi_var (NumPy Array): bias-corrected AKM estimate of variance of psi
+            fe_ho_psi_var (NumPy Array): homoskedastic-corrected AKM estimate of variance of psi
 
-            fe_corr_psi_alpha_cov (NumPy Array): bias-corrected AKM estimate of covariance of psi and alpha
+            fe_ho_psi_alpha_cov (NumPy Array): homoskedastic-corrected AKM estimate of covariance of psi and alpha
 
-            cre_psi_var (NumPy Array): CRE estimate of variance of psi
+            fe_he_psi_var (NumPy Array): heteroskedastic-corrected AKM estimate of variance of psi
 
-            cre_psi_alpha_cov (NumPy Array): CRE estimate of covariance of psi and alpha
+            fe_he_psi_alpha_cov (NumPy Array): heteroskedastic-corrected AKM estimate of covariance of psi and alpha
 
         Arguments:
             N (int): number of simulations
@@ -254,12 +263,17 @@ class TwoWayMonteCarlo:
         # Initialize NumPy arrays to store results
         true_psi_var = np.zeros(N)
         true_psi_alpha_cov = np.zeros(N)
-        fe_psi_var = np.zeros(N)
-        fe_psi_alpha_cov = np.zeros(N)
-        fe_corr_psi_var = np.zeros(N)
-        fe_corr_psi_alpha_cov = np.zeros(N)
         cre_psi_var = np.zeros(N)
         cre_psi_alpha_cov = np.zeros(N)
+        fe_psi_var = np.zeros(N)
+        fe_psi_alpha_cov = np.zeros(N)
+        fe_ho_psi_var = np.zeros(N)
+        fe_ho_psi_alpha_cov = np.zeros(N)
+        fe_he_psi_var = np.zeros(N)
+        fe_he_psi_alpha_cov = np.zeros(N)
+
+        # Set fe_params to always have he=True
+        fe_params['he'] = True
 
         # Use multi-processing
         if ncore > 1:
@@ -267,22 +281,24 @@ class TwoWayMonteCarlo:
             with Pool(processes=ncore) as pool:
                 V = pool.starmap(self._twfe_monte_carlo_interior, [(fe_params, cre_params, cluster_params, collapsed, clean_params) for _ in range(N)])
             for i, res in enumerate(V):
-                true_psi_var[i], true_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_corr_psi_var[i], fe_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = res
+                true_psi_var[i], true_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_ho_psi_var[i], fe_ho_psi_alpha_cov[i], fe_he_psi_var[i], fe_he_psi_alpha_cov[i] = res
         else:
             for i in trange(N):
                 # Simulate a network
-                true_psi_var[i], true_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_corr_psi_var[i], fe_corr_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i] = self._twfe_monte_carlo_interior(fe_params=fe_params, cre_params=cre_params, cluster_params=cluster_params, collapsed=collapsed, clean_params=clean_params)
+                true_psi_var[i], true_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], fe_ho_psi_var[i], fe_ho_psi_alpha_cov[i], fe_he_psi_var[i], fe_he_psi_alpha_cov[i] = self._twfe_monte_carlo_interior(fe_params=fe_params, cre_params=cre_params, cluster_params=cluster_params, collapsed=collapsed, clean_params=clean_params)
 
         res = {}
 
         res['true_psi_var'] = true_psi_var
         res['true_psi_alpha_cov'] = true_psi_alpha_cov
-        res['fe_psi_var'] = fe_psi_var
-        res['fe_psi_alpha_cov'] = fe_psi_alpha_cov
-        res['fe_corr_psi_var'] = fe_corr_psi_var
-        res['fe_corr_psi_alpha_cov'] = fe_corr_psi_alpha_cov
         res['cre_psi_var'] = cre_psi_var
         res['cre_psi_alpha_cov'] = cre_psi_alpha_cov
+        res['fe_psi_var'] = fe_psi_var
+        res['fe_psi_alpha_cov'] = fe_psi_alpha_cov
+        res['fe_ho_psi_var'] = fe_ho_psi_var
+        res['fe_ho_psi_alpha_cov'] = fe_ho_psi_alpha_cov
+        res['fe_he_psi_var'] = fe_he_psi_var
+        res['fe_he_psi_alpha_cov'] = fe_he_psi_alpha_cov
 
         self.res = res
         self.monte_carlo_res = True
@@ -298,26 +314,31 @@ class TwoWayMonteCarlo:
             # Extract results
             true_psi_var = self.res['true_psi_var']
             true_psi_alpha_cov = self.res['true_psi_alpha_cov']
-            fe_psi_var = self.res['fe_psi_var']
-            fe_psi_alpha_cov = self.res['fe_psi_alpha_cov']
-            fe_corr_psi_var = self.res['fe_corr_psi_var']
-            fe_corr_psi_alpha_cov = self.res['fe_corr_psi_alpha_cov']
             cre_psi_var = self.res['cre_psi_var']
             cre_psi_alpha_cov = self.res['cre_psi_alpha_cov']
+            fe_psi_var = self.res['fe_psi_var']
+            fe_psi_alpha_cov = self.res['fe_psi_alpha_cov']
+            fe_ho_psi_var = self.res['fe_ho_psi_var']
+            fe_ho_psi_alpha_cov = self.res['fe_ho_psi_alpha_cov']
+            fe_he_psi_var = self.res['fe_he_psi_var']
+            fe_he_psi_alpha_cov = self.res['fe_he_psi_alpha_cov']
 
             # Define differences
-            fe_psi_diff = sorted(fe_psi_var - true_psi_var)
-            fe_psi_alpha_diff = sorted(fe_psi_alpha_cov - true_psi_alpha_cov)
-            fe_corr_psi_diff = sorted(fe_corr_psi_var - true_psi_var)
-            fe_corr_psi_alpha_diff = sorted(fe_corr_psi_alpha_cov - true_psi_alpha_cov)
             cre_psi_diff = sorted(cre_psi_var - true_psi_var)
             cre_psi_alpha_diff = sorted(cre_psi_alpha_cov - true_psi_alpha_cov)
+            fe_psi_diff = sorted(fe_psi_var - true_psi_var)
+            fe_psi_alpha_diff = sorted(fe_psi_alpha_cov - true_psi_alpha_cov)
+            fe_ho_psi_diff = sorted(fe_ho_psi_var - true_psi_var)
+            fe_ho_psi_alpha_diff = sorted(fe_ho_psi_alpha_cov - true_psi_alpha_cov)
+            fe_he_psi_diff = sorted(fe_he_psi_var - true_psi_var)
+            fe_he_psi_alpha_diff = sorted(fe_he_psi_alpha_cov - true_psi_alpha_cov)
 
             # Plot histograms
             # First, var(psi)
             plt.axvline(x=0, color='purple', linestyle='--', label=r'$\Delta$Truth=0')
             plt.hist(fe_psi_diff, bins=50, label='AKM var(psi)')
-            plt.hist(fe_corr_psi_diff, bins=50, label='Bias-corrected AKM var(psi)')
+            plt.hist(fe_ho_psi_diff, bins=50, label='Ho-corrected AKM var(psi)')
+            plt.hist(fe_he_psi_diff, bins=50, label='He-corrected AKM var(psi)')
             plt.hist(cre_psi_diff, bins=50, label='CRE var(psi)')
             plt.legend()
             plt.show()
@@ -325,7 +346,8 @@ class TwoWayMonteCarlo:
             # Second, cov(psi, alpha)
             plt.axvline(x=0, color='purple', linestyle='--', label=r'$\Delta$Truth=0')
             plt.hist(fe_psi_alpha_diff, bins=50, label='AKM cov(psi, alpha)')
-            plt.hist(fe_corr_psi_alpha_diff, bins=50, label='Bias-corrected AKM cov(psi, alpha)')
+            plt.hist(fe_ho_psi_alpha_diff, bins=50, label='Ho-corrected AKM cov(psi, alpha)')
+            plt.hist(fe_he_psi_alpha_diff, bins=50, label='He-corrected AKM cov(psi, alpha)')
             plt.hist(cre_psi_alpha_diff, bins=50, label='CRE cov(psi, alpha)')
             plt.legend()
             plt.show()
