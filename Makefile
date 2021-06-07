@@ -3,7 +3,7 @@ doc:
 	cp README.rst docs/source/README.rst
 	rm -rf docs/build
 	$(MAKE) -C docs html
-	cd docs/build && \
+	cd docs/build/html && \
 	git init && \
 	git add . && \
 	git commit -m "Update documentation using Makefile" && \
