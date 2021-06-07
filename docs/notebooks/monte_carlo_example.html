@@ -509,7 +509,7 @@ div.rendered_html tbody tr:hover {
     <span class="s1">&#39;ndraw_pii&#39;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="c1"># Number of draw to use in approximation for leverages</span>
     <span class="s1">&#39;levfile&#39;</span><span class="p">:</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="c1"># File to load precomputed leverages</span>
     <span class="s1">&#39;ndraw_tr&#39;</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span> <span class="c1"># Number of draws to use in approximation for traces</span>
-    <span class="s1">&#39;h2&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># If True, compute h2 correction</span>
+    <span class="s1">&#39;he&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="c1"># If True, compute heteroskedastic correction</span>
     <span class="s1">&#39;out&#39;</span><span class="p">:</span> <span class="s1">&#39;res_fe.json&#39;</span><span class="p">,</span> <span class="c1"># Outputfile where FE results are saved</span>
     <span class="s1">&#39;statsonly&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="c1"># If True, return only basic statistics</span>
     <span class="s1">&#39;Q&#39;</span><span class="p">:</span> <span class="s1">&#39;cov(alpha, psi)&#39;</span> <span class="c1"># Which Q matrix to consider. Options include &#39;cov(alpha, psi)&#39; and &#39;cov(psi_t, psi_{t+1})&#39;</span>
@@ -580,7 +580,11 @@ div.rendered_html tbody tr:hover {
 <span class="p">}</span>
 <span class="c1"># For data cleaning</span>
 <span class="n">clean_params</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s1">&#39;i_t_how&#39;</span><span class="p">:</span> <span class="s1">&#39;max&#39;</span> <span class="c1"># How to handle worker-year duplicates</span>
+    <span class="s1">&#39;connectedness&#39;</span><span class="p">:</span> <span class="s1">&#39;connected&#39;</span><span class="p">,</span> <span class="c1"># When computing largest connected set of firms:</span>
+        <span class="c1"># If &#39;connected&#39;, keep observations in the largest connected set of firms;</span>
+        <span class="c1"># If &#39;biconnected&#39;, keep observations in the largest biconnected set of firms;</span>
+        <span class="c1"># If None, keep all observations</span>
+    <span class="s1">&#39;i_t_how&#39;</span><span class="p">:</span> <span class="s1">&#39;max&#39;</span><span class="p">,</span> <span class="c1"># How to handle worker-year duplicates</span>
         <span class="c1"># If &#39;max&#39;, keep max paying job;</span>
         <span class="c1"># If &#39;sum&#39;, sum over duplicate worker-firm-year observations,</span>
             <span class="c1"># then take the highest paying worker-firm sum;</span>
@@ -589,6 +593,7 @@ div.rendered_html tbody tr:hover {
         <span class="c1"># Note that if multiple time and/or firm columns are included</span>
             <span class="c1"># (as in event study format), then data is converted to long,</span>
             <span class="c1"># cleaned, then reconverted to its original format</span>
+    <span class="s1">&#39;copy&#39;</span><span class="p">:</span> <span class="kc">False</span> <span class="c1"># If False, avoid copy</span>
 <span class="p">}</span>
 </pre></div>
 </div>
@@ -597,7 +602,7 @@ div.rendered_html tbody tr:hover {
 <div class="section" id="Fourth,-run-the-Monte-Carlo-simulation-using-the-parameter-choices">
 <h2>Fourth, run the Monte Carlo simulation using the parameter choices<a class="headerlink" href="#Fourth,-run-the-Monte-Carlo-simulation-using-the-parameter-choices" title="Permalink to this headline">¶</a></h2>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -665,7 +670,7 @@ div.rendered_html tbody tr:hover {
         
         &copy; Copyright 2021, Thibaut Lamadon.
       <span class="lastupdated">
-        Last updated on May 02, 2021.
+        Last updated on Jun 07, 2021.
       </span>
 
     </p>
