@@ -20,10 +20,7 @@ help:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 copy:
-	rm -f *.log
-	cp -r build/html/** ../docs
-	cp .nojekyll ../docs
-	git add ../docs
+	cp .nojekyll build/html/.nojekyll
 
 clear:
 	git rm ../docs/ -r -f

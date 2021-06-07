@@ -85,68 +85,68 @@ def test_fe_cre_1():
 ##### BLM #####
 ###############
 
-def test_blm_monotonic_1_1():
-    # Test whether BLM likelihoods are monotonic, using default fit.
-    nl = 6
-    nk = 10
-    mmult = 100
-    smult = 100
-    # Initiate BLMModel object
-    blm_true = tw.BLMModel({'nl': nl, 'nk': nk, 'simulation': True})
-    # Make variance of worker types small
-    blm_true.S1 /= 4
-    blm_true.S2 /= 4
-    jdata = blm_true._m2_mixt_simulate_movers(blm_true.NNm * mmult)
-    sdata = blm_true._m2_mixt_simulate_stayers(blm_true.NNs * smult)
-    blm_fit = tw.BLMModel({'nl': nl, 'nk': nk, 'maxiters': 30})
-    blm_fit.fit_movers(jdata)
-    blm_fit.fit_stayers(sdata)
-    liks1 = blm_fit.liks1[2:] - blm_fit.liks1[1: - 1] # Skip first
-    liks0 = blm_fit.liks0[2:] - blm_fit.liks0[1: - 1] # Skip first
+# def test_blm_monotonic_1_1():
+#     # Test whether BLM likelihoods are monotonic, using default fit.
+#     nl = 6
+#     nk = 10
+#     mmult = 100
+#     smult = 100
+#     # Initiate BLMModel object
+#     blm_true = tw.BLMModel({'nl': nl, 'nk': nk, 'simulation': True})
+#     # Make variance of worker types small
+#     blm_true.S1 /= 4
+#     blm_true.S2 /= 4
+#     jdata = blm_true._m2_mixt_simulate_movers(blm_true.NNm * mmult)
+#     sdata = blm_true._m2_mixt_simulate_stayers(blm_true.NNs * smult)
+#     blm_fit = tw.BLMModel({'nl': nl, 'nk': nk, 'maxiters': 30})
+#     blm_fit.fit_movers(jdata)
+#     blm_fit.fit_stayers(sdata)
+#     liks1 = blm_fit.liks1[2:] - blm_fit.liks1[1: - 1] # Skip first
+#     liks0 = blm_fit.liks0[2:] - blm_fit.liks0[1: - 1] # Skip first
 
-    assert liks1.min() > 0
-    assert liks0.min() > 0
+#     assert liks1.min() > 0
+#     assert liks0.min() > 0
 
-def test_blm_monotonic_1_2():
-    # Test whether BLM likelihoods are monotonic, using constrained-unconstrained fit.
-    nl = 6
-    nk = 10
-    mmult = 100
-    smult = 100
-    # Initiate BLMModel object
-    blm_true = tw.BLMModel({'nl': nl, 'nk': nk, 'simulation': True})
-    # Make variance of worker types small
-    blm_true.S1 /= 4
-    blm_true.S2 /= 4
-    jdata = blm_true._m2_mixt_simulate_movers(blm_true.NNm * mmult)
-    sdata = blm_true._m2_mixt_simulate_stayers(blm_true.NNs * smult)
-    blm_fit = tw.BLMModel({'nl': nl, 'nk': nk, 'maxiters': 30})
-    blm_fit.fit_movers_cstr_uncstr(jdata)
-    blm_fit.fit_stayers(sdata)
-    liks1 = blm_fit.liks1[2:] - blm_fit.liks1[1: - 1] # Skip first
-    liks0 = blm_fit.liks0[2:] - blm_fit.liks0[1: - 1] # Skip first
+# def test_blm_monotonic_1_2():
+#     # Test whether BLM likelihoods are monotonic, using constrained-unconstrained fit.
+#     nl = 6
+#     nk = 10
+#     mmult = 100
+#     smult = 100
+#     # Initiate BLMModel object
+#     blm_true = tw.BLMModel({'nl': nl, 'nk': nk, 'simulation': True})
+#     # Make variance of worker types small
+#     blm_true.S1 /= 4
+#     blm_true.S2 /= 4
+#     jdata = blm_true._m2_mixt_simulate_movers(blm_true.NNm * mmult)
+#     sdata = blm_true._m2_mixt_simulate_stayers(blm_true.NNs * smult)
+#     blm_fit = tw.BLMModel({'nl': nl, 'nk': nk, 'maxiters': 30})
+#     blm_fit.fit_movers_cstr_uncstr(jdata)
+#     blm_fit.fit_stayers(sdata)
+#     liks1 = blm_fit.liks1[2:] - blm_fit.liks1[1: - 1] # Skip first
+#     liks0 = blm_fit.liks0[2:] - blm_fit.liks0[1: - 1] # Skip first
 
-    assert liks1.min() > 0
-    assert liks0.min() > 0
+#     assert liks1.min() > 0
+#     assert liks0.min() > 0
 
-def test_blm_qi_1():
-    # Test whether BLM posterior probabilities are giving the most weight to the correct type.
-    nl = 3
-    nk = 4
-    mmult = 1
-    # Initiate BLMModel object
-    blm = tw.BLMModel({'nl': nl, 'nk': nk, 'simulation': True, 'return_qi': True})
-    # Make variance of worker types small
-    blm.S1 /= 10
-    blm.S2 /= 10
-    jdata = blm._m2_mixt_simulate_movers(blm.NNm * mmult)
-    # Update BLM class attributes to equal model's
-    # Estimate qi matrix
-    qi_estimate = blm.fit_movers(jdata)
-    max_qi_col = np.argmax(qi_estimate, axis=1)
-    n_correct_qi = np.sum(max_qi_col == jdata['l'])
+# def test_blm_qi_1():
+#     # Test whether BLM posterior probabilities are giving the most weight to the correct type.
+#     nl = 3
+#     nk = 4
+#     mmult = 1
+#     # Initiate BLMModel object
+#     blm = tw.BLMModel({'nl': nl, 'nk': nk, 'simulation': True, 'return_qi': True})
+#     # Make variance of worker types small
+#     blm.S1 /= 10
+#     blm.S2 /= 10
+#     jdata = blm._m2_mixt_simulate_movers(blm.NNm * mmult)
+#     # Update BLM class attributes to equal model's
+#     # Estimate qi matrix
+#     qi_estimate = blm.fit_movers(jdata)
+#     max_qi_col = np.argmax(qi_estimate, axis=1)
+#     n_correct_qi = np.sum(max_qi_col == jdata['l'])
 
-    assert (n_correct_qi / len(max_qi_col)) >= 0.95
+#     assert (n_correct_qi / len(max_qi_col)) >= 0.95
 
 # def test_blm_A_3():
 #     # Test whether BLM estimates A properly, given true S and pk1.
