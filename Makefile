@@ -1,5 +1,8 @@
-#GIT_REMOTE =  https://github.com/tlamadon/pytwoway.git
-GIT_ORIGIN=`git remote -v | head -1`
+# get the remote push url
+GIT_REMOTE:=$(shell git remote get-url --push origin)
+
+test:
+	echo "$(GIT_REMOTE)"
 
 doc:
 	cp README.rst docs/source/README.rst
@@ -9,6 +12,6 @@ doc:
 	git init && \
 	git add . && \
 	git commit -m "Update documentation using Makefile" && \
-	git remote add $GIT_ORIGIN && \
+	git remote add origin $(GIT_REMOTE) && \
 	git push --force origin master:gh-pages
 	rm -rf docs/build

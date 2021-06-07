@@ -10,6 +10,7 @@ tests/__pycache__/
 dist/
 pytwoway.egg-info/
 build/
+docs/
 
 # Compiled source #
 ###################
