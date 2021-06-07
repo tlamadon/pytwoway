@@ -11,7 +11,7 @@ doc:
 	cd docs/build/html && \
 	git init && \
 	git add . && \
-	git commit -m "Update documentation using Makefile" && \
+	git commit -m "Update documentation using Makefile [ci skip]" && \
 	git remote add origin $(GIT_REMOTE) && \
 	git push --force origin master:gh-pages
 	rm -rf docs/build
