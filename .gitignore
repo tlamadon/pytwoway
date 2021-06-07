@@ -1,18 +1,14 @@
 # Folders #
 ###########
 .vscode/
-docs-src/build/
+docs/build/
 pytwoway/__pycache__/
 tests/__pycache__/
 .pytest_cache/
 .eggs
 tests/__pycache__/
-pytwoway/config.txt
 dist/
 pytwoway.egg-info/
-docs/_sources/
-docs/_static/**.rst
-docs/_static/conf.py
 build/
 
 # Compiled source #
