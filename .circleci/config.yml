@@ -49,4 +49,7 @@ workflows:
   # The build-and-test we will run EVERYTIME a piece of code changes
   build-and-test-workflow:
     jobs:
-      - build-and-test
+        - build-and-test:
+            branches:
+                ignore:
+                    - gh-pages
