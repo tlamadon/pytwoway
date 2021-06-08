@@ -2,7 +2,7 @@
 GIT_REMOTE:=$(shell git remote get-url --push origin)
 
 test:
-	echo "$(GIT_REMOTE)"
+	poetry run python -m pytest
 
 doc:
 	cp README.rst docs/source/README.rst

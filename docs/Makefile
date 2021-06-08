@@ -21,6 +21,7 @@ help:
 
 copy:
 	cp .nojekyll build/html/.nojekyll
+	cp -r ../.circleci build/html/.circleci
 
 clear:
 	git rm ../docs/ -r -f
