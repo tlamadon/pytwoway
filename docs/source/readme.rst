@@ -82,7 +82,7 @@ Bibtex entry::
 Development
 -----------
 
-Easiest is to use poetry to set up a local environment:
+Easiest is to use poetry to set up a local environment::
 
     poetry install
     poetry shell
