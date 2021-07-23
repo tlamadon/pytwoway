@@ -28,25 +28,348 @@ def test_fe_ho_1():
 
     col_dict = {'i': 'id', 'j': 'firm', 'y': 'comp', 't': 'time'}
 
-    bdf = bpd.BipartiteLong(df, col_dict=col_dict)
-    bdf = bdf.clean_data()
-    bdf = bdf.get_collapsed_long()
-    bdf = bdf.get_es()
+    bdf = bpd.BipartiteLong(df, col_dict=col_dict).clean_data().get_collapsed_long()
 
     fe_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'levfile': '', 'ndraw_tr': 5, 'h2': False, 'out': 'res_fe.json',  'statsonly': False, 'Q': 'cov(alpha, psi)'}
 
-    fe_solver = tw.FEEstimator(bdf.get_cs(), fe_params)
+    fe_solver = tw.FEEstimator(bdf, fe_params)
     fe_solver.fit_1()
     fe_solver.construct_Q()
     fe_solver.fit_2()
 
     psi_hat, alpha_hat = fe_solver.get_fe_estimates()
 
-    assert abs(psi_hat[0] - 1) < 1e-5
-    assert abs(psi_hat[1] + 1) < 1e-5
-    assert abs(alpha_hat[0] - 7) < 1e-5
-    assert abs(alpha_hat[1] - 6) < 1e-5
-    assert abs(alpha_hat[2] - 8) < 1e-5
+    assert abs(psi_hat[0] - 1) < 1e-10
+    assert abs(psi_hat[1] + 1) < 1e-10
+    assert abs(psi_hat[2]) < 1e-10
+    assert abs(alpha_hat[0] - 7) < 1e-10
+    assert abs(alpha_hat[1] - 6) < 1e-10
+    assert abs(alpha_hat[2] - 8) < 1e-10
+
+def test_fe_weights_2_a():
+    # Test that FE weights are computed correctly.
+    np.random.seed(1234)
+    a = bpd.SimBipartite().sim_network()
+    # Non-collapsed data
+    b = bpd.BipartiteLong(a).clean_data()
+    # Collapsed data
+    c = bpd.BipartiteLong(a).clean_data().get_collapsed_long()
+
+    assert np.sum(c['w']) == len(b)
+
+def test_fe_weights_2_b():
+    # Test that FE weights are computed correctly.
+    np.random.seed(1234)
+    a = bpd.SimBipartite().sim_network()
+    # Non-collapsed data
+    b = bpd.BipartiteLong(a).clean_data() # .get_es().get_cs()
+    # Collapsed data
+    c = bpd.BipartiteLong(a).clean_data().get_collapsed_long().get_es().get_long() # get_cs()
+
+    assert np.sum(c['w']) == len(b)
+
+def test_fe_weights_3():
+    # Test that FE weights are computing sigma^2 plug-in sigma^2 bias-corrected, and vars/covs correctly with full data by trying with and withought weights.
+    np.random.seed(1234)
+    a = bpd.SimBipartite().sim_network()
+    # Simulate without weights
+    b = bpd.BipartiteLong(a).clean_data().gen_m()
+    fe_solver_b = tw.FEEstimator(b, {})
+    fe_solver_b.fit_1()
+    fe_solver_b.construct_Q()
+    fe_solver_b.fit_2()
+    # Simulate with weight 1
+    c = bpd.BipartiteLong(a).clean_data().gen_m()
+    c['w'] = 1
+    fe_solver_c = tw.FEEstimator(c, {})
+    fe_solver_c.fit_1()
+    fe_solver_c.construct_Q()
+    fe_solver_c.fit_2()
+
+    # Collect sigma^2 plug-in
+    sigma_pi_b = fe_solver_b.var_e_pi
+    sigma_pi_c = fe_solver_c.var_e_pi
+
+    assert sigma_pi_b == sigma_pi_c
+
+    # Collect sigma^2 bias-corrected
+    sigma_bc_b = fe_solver_b.var_e
+    sigma_bc_c = fe_solver_c.var_e
+
+    assert abs((sigma_bc_b - sigma_bc_c) / sigma_bc_b) < 1e-3
+
+    # Collect vars/covs
+    res_b = fe_solver_b.summary
+    res_c = fe_solver_c.summary
+
+    assert abs((res_b['var_fe'] - res_c['var_fe']) / res_b['var_fe']) < 1e-10
+    assert abs((res_b['cov_fe'] - res_c['cov_fe']) / res_b['cov_fe']) < 1e-10
+    assert abs((res_b['var_ho'] - res_c['var_ho']) / res_b['var_ho']) < 1e-2
+    assert abs((res_b['cov_ho'] - res_c['cov_ho']) / res_b['cov_ho']) < 1e-2
+
+def test_fe_weights_4():
+    # Test that FE weights are computing all parameters correctly with simple data.
+    worker_data = []
+    worker_data.append({'firm': 0, 'time': 1, 'id': 0, 'comp': 8.})
+    worker_data.append({'firm': 1, 'time': 2, 'id': 0, 'comp': 6.})
+    worker_data.append({'firm': 1, 'time': 3, 'id': 0, 'comp': 6.})
+    worker_data.append({'firm': 4, 'time': 4, 'id': 0, 'comp': 7.})
+    worker_data.append({'firm': 5, 'time': 5, 'id': 0, 'comp': 9.})
+    worker_data.append({'firm': 1, 'time': 1, 'id': 1, 'comp': 5.})
+    worker_data.append({'firm': 3, 'time': 2, 'id': 1, 'comp': 6.})
+    worker_data.append({'firm': 3, 'time': 1, 'id': 2, 'comp': 8.})
+    worker_data.append({'firm': 3, 'time': 2, 'id': 2, 'comp': 8.})
+
+    a = pd.concat([pd.DataFrame(worker, index=[i]) for i, worker in enumerate(worker_data)])#.sort_values(['id', 'time'])
+    col_dict = {'i': 'id', 'j': 'firm', 'y': 'comp', 't': 'time'}
+    # Simulate on non-collapsed data
+    b = bpd.BipartiteLong(a, col_dict=col_dict).clean_data().gen_m()
+    fe_solver_b = tw.FEEstimator(b, {})
+    fe_solver_b.fit_1()
+    fe_solver_b.construct_Q()
+    fe_solver_b.fit_2()
+    # Simulate on collapsed data
+    c = bpd.BipartiteLong(a, col_dict=col_dict).clean_data().get_collapsed_long()
+    fe_solver_c = tw.FEEstimator(c, {})
+    fe_solver_c.fit_1()
+    fe_solver_c.construct_Q()
+    fe_solver_c.fit_2()
+    # Collect parameter estimates
+    b_psi, b_alpha = fe_solver_b.get_fe_estimates()
+    c_psi, c_alpha = fe_solver_c.get_fe_estimates()
+    # Convert to dataframes
+    b_psi = pd.DataFrame(list(b_psi.items()), columns=['fid', 'psi'])
+    b_alpha = pd.DataFrame(list(b_alpha.items()), columns=['wid', 'alpha'])
+    c_psi = pd.DataFrame(list(c_psi.items()), columns=['fid', 'psi'])
+    c_alpha = pd.DataFrame(list(c_alpha.items()), columns=['wid', 'alpha'])
+    # Test correlation
+    assert abs(np.corrcoef(b_psi['psi'], c_psi['psi'])[0, 1] - 1) < 1e-10
+    assert abs(np.corrcoef(b_alpha['alpha'], c_alpha['alpha'])[0, 1] - 1) < 1e-10
+    # Test coefficients
+    for i in range(len(b_psi)):
+        assert abs(b_psi.iloc[i]['psi'] - c_psi.iloc[i]['psi']) < 1e-10
+    for i in range(len(b_alpha)):
+        assert abs(b_alpha.iloc[i]['alpha'] - c_alpha.iloc[i]['alpha']) < 1e-10
+    # Collect sigma^2 plug-in
+    sigma_pi_b = fe_solver_b.var_e_pi
+    sigma_pi_c = fe_solver_c.var_e_pi
+
+    assert abs(sigma_pi_b - sigma_pi_c) < 1e-30
+
+    # Collect sigma^2 bias-corrected
+    sigma_bc_b = fe_solver_b.var_e
+    sigma_bc_c = fe_solver_c.var_e
+
+    assert abs((sigma_bc_b - sigma_bc_c) / sigma_bc_b) < 1e-3
+    # Test vars/covs
+    res_b = fe_solver_b.summary
+    res_c = fe_solver_c.summary
+
+    assert abs((res_b['var_fe'] - res_c['var_fe']) / res_b['var_fe']) < 1e-10
+    assert abs((res_b['cov_fe'] - res_c['cov_fe']) / res_b['cov_fe']) < 1e-10
+    assert abs((res_b['var_ho'] - res_c['var_ho']) / res_b['var_ho']) < 1e-10
+    assert abs((res_b['cov_ho'] - res_c['cov_ho']) / res_b['cov_ho']) < 1e-10
+
+# def test_fe_weights_5(): # FIXME this test doesn't work because un-collapsing data gives different estimates
+#     # Test that FE weights are computing all parameters correctly with full data by collapsing then un-collapsing data.
+#     np.random.seed(1234)
+#     a = bpd.SimBipartite().sim_network()
+#     # Simulate on non-collapsed data
+#     b = bpd.BipartiteLong(a).clean_data().gen_m()
+#     fe_solver_b = tw.FEEstimator(b, {})
+#     fe_solver_b.fit_1()
+#     fe_solver_b.construct_Q()
+#     fe_solver_b.fit_2()
+#     # Simulate on collapsed then un-collapsed data
+#     c = bpd.BipartiteLong(a).clean_data().get_collapsed_long().uncollapse().drop('w')
+#     fe_solver_c = tw.FEEstimator(c, {})
+#     fe_solver_c.fit_1()
+#     fe_solver_c.construct_Q()
+#     fe_solver_c.fit_2()
+#     # Collect parameter estimates
+#     b_psi, b_alpha = fe_solver_b.get_fe_estimates()
+#     c_psi, c_alpha = fe_solver_c.get_fe_estimates()
+#     # Convert to dataframes
+#     b_psi = pd.DataFrame(list(b_psi.items()), columns=['fid', 'psi'])
+#     b_alpha = pd.DataFrame(list(b_alpha.items()), columns=['wid', 'alpha'])
+#     c_psi = pd.DataFrame(list(c_psi.items()), columns=['fid', 'psi'])
+#     c_alpha = pd.DataFrame(list(c_alpha.items()), columns=['wid', 'alpha'])
+#     # Test correlation
+#     assert abs(np.corrcoef(b_psi['psi'], c_psi['psi'])[0, 1] - 1) < 1e-15
+#     assert abs(np.corrcoef(b_alpha['alpha'], c_alpha['alpha'])[0, 1] - 1) < 1e-15
+#     # Test coefficients
+#     for i in range(len(b_psi)):
+#         assert abs(b_psi.iloc[i]['psi'] - c_psi.iloc[i]['psi']) < 1e-10
+#     for i in range(len(b_alpha)):
+#         assert abs(b_alpha.iloc[i]['alpha'] - c_alpha.iloc[i]['alpha']) < 1e-10
+#     # Collect sigma^2 bias-corrected
+#     sigma_bc_b = fe_solver_b.var_e
+#     sigma_bc_c = fe_solver_c.var_e
+
+#     assert abs((sigma_bc_b - sigma_bc_c) / sigma_bc_b) < 1e-3
+#     # Test vars/covs
+#     res_b = fe_solver_b.summary
+#     res_c = fe_solver_c.summary
+
+#     assert abs((res_b['var_fe'] - res_c['var_fe']) / res_b['var_fe']) < 1e-10
+#     assert abs((res_b['cov_fe'] - res_c['cov_fe']) / res_b['cov_fe']) < 1e-10
+#     assert abs((res_b['var_ho'] - res_c['var_ho']) / res_b['var_ho']) < 1e-2
+#     assert abs((res_b['cov_ho'] - res_c['cov_ho']) / res_b['cov_ho']) < 1e-2
+
+def test_fe_weights_6():
+    # Test that FE weights are computing alpha, psi, and sigma^2 correctly with full data.
+    np.random.seed(1234)
+    a = bpd.SimBipartite().sim_network()
+    # Simulate on non-collapsed data
+    b = bpd.BipartiteLong(a).clean_data().gen_m()
+    fe_solver_b = tw.FEEstimator(b, {})
+    fe_solver_b.fit_1()
+    fe_solver_b.construct_Q()
+    fe_solver_b.fit_2()
+    # Simulate on collapsed data
+    c = bpd.BipartiteLong(a).clean_data().get_collapsed_long()
+    fe_solver_c = tw.FEEstimator(c, {})
+    fe_solver_c.fit_1()
+    fe_solver_c.construct_Q()
+    fe_solver_c.fit_2()
+    # Collect parameter estimates
+    b_psi, b_alpha = fe_solver_b.get_fe_estimates()
+    c_psi, c_alpha = fe_solver_c.get_fe_estimates()
+    # Convert to dataframes
+    b_psi = pd.DataFrame(list(b_psi.items()), columns=['fid', 'psi'])
+    b_alpha = pd.DataFrame(list(b_alpha.items()), columns=['wid', 'alpha'])
+    c_psi = pd.DataFrame(list(c_psi.items()), columns=['fid', 'psi'])
+    c_alpha = pd.DataFrame(list(c_alpha.items()), columns=['wid', 'alpha'])
+    # Test correlation
+    assert abs(np.corrcoef(b_psi['psi'], c_psi['psi'])[0, 1] - 1) < 1e-10
+    assert abs(np.corrcoef(b_alpha['alpha'], c_alpha['alpha'])[0, 1] - 1) < 1e-10
+    # Test coefficients
+    for i in range(len(b_psi)):
+        assert abs(b_psi.iloc[i]['psi'] - c_psi.iloc[i]['psi']) < 1e-8
+    for i in range(len(b_alpha)):
+        assert abs(b_alpha.iloc[i]['alpha'] - c_alpha.iloc[i]['alpha']) < 1e-8
+    # # Collect sigma^2 plug-in # FIXME these won't be the same
+    # sigma_pi_b = fe_solver_b.var_e_pi
+    # sigma_pi_c = fe_solver_c.var_e_pi
+
+    # assert sigma_pi_b == sigma_pi_c
+
+    # Collect sigma^2 bias-corrected
+    sigma_bc_b = fe_solver_b.var_e
+    sigma_bc_c = fe_solver_c.var_e
+
+    assert abs((sigma_bc_b - sigma_bc_c) / sigma_bc_b) < 1e-2
+    # Test against true sigma^2
+    a['E'] = a['y'] - a['alpha'] - a['psi']
+    sigma_true = a['E'].var()
+    assert abs(sigma_bc_b - sigma_true) / abs(sigma_true) < 1e-3
+    assert abs(sigma_bc_c - sigma_true) / abs(sigma_true) < 1e-2
+    # Test vars/covs
+    res_b = fe_solver_b.summary
+    res_c = fe_solver_c.summary
+
+    assert abs((res_b['var_fe'] - res_c['var_fe']) / res_b['var_fe']) < 1e-10
+    assert abs((res_b['cov_fe'] - res_c['cov_fe']) / res_b['cov_fe']) < 1e-10
+    assert abs((res_b['var_ho'] - res_c['var_ho']) / res_b['var_ho']) < 1e-2
+    assert abs((res_b['cov_ho'] - res_c['cov_ho']) / res_b['cov_ho']) < 1e-2
+
+def test_fe_weights_7():
+    # Test that FE weights are computing weighted parameters correctly with simple data that has high dependence on weighting.
+    # Firm 0: 1; 1: -1; 2: 15; 3: 0; 4: 0; 5: 2 
+    # Worker 0: 7; 1: 6; 2: 8; 3: 51; 4: -50
+    worker_data = []
+    worker_data.append({'firm': 0, 'time': 1, 'id': 0, 'comp': 8.})
+    worker_data.append({'firm': 1, 'time': 2, 'id': 0, 'comp': 6.})
+    worker_data.append({'firm': 1, 'time': 3, 'id': 0, 'comp': 6.})
+    worker_data.append({'firm': 4, 'time': 4, 'id': 0, 'comp': 7.})
+    worker_data.append({'firm': 5, 'time': 5, 'id': 0, 'comp': 9.})
+    worker_data.append({'firm': 1, 'time': 1, 'id': 1, 'comp': 5.})
+    worker_data.append({'firm': 3, 'time': 2, 'id': 1, 'comp': 6.})
+    worker_data.append({'firm': 3, 'time': 1, 'id': 2, 'comp': 8.})
+    worker_data.append({'firm': 3, 'time': 2, 'id': 2, 'comp': 8.})
+    worker_data.append({'firm': 5, 'time': 1, 'id': 3, 'comp': 53.})
+    worker_data.append({'firm': 5, 'time': 2, 'id': 3, 'comp': 53.})
+    worker_data.append({'firm': 5, 'time': 3, 'id': 3, 'comp': 53.})
+    worker_data.append({'firm': 5, 'time': 4, 'id': 3, 'comp': 53.})
+    worker_data.append({'firm': 5, 'time': 5, 'id': 3, 'comp': 53.})
+    worker_data.append({'firm': 3, 'time': 6, 'id': 3, 'comp': 51.})
+    worker_data.append({'firm': 3, 'time': 7, 'id': 3, 'comp': 51.})
+    worker_data.append({'firm': 3, 'time': 8, 'id': 3, 'comp': 51.})
+    worker_data.append({'firm': 3, 'time': 9, 'id': 3, 'comp': 51.})
+    worker_data.append({'firm': 3, 'time': 10, 'id': 3, 'comp': 51.})
+    worker_data.append({'firm': 4, 'time': 1, 'id': 4, 'comp': -50.})
+    worker_data.append({'firm': 4, 'time': 2, 'id': 4, 'comp': -50.})
+    worker_data.append({'firm': 4, 'time': 3, 'id': 4, 'comp': -50.})
+    worker_data.append({'firm': 4, 'time': 4, 'id': 4, 'comp': -50.})
+    worker_data.append({'firm': 4, 'time': 5, 'id': 4, 'comp': -50.})
+    worker_data.append({'firm': 2, 'time': 6, 'id': 4, 'comp': -35.})
+    worker_data.append({'firm': 2, 'time': 7, 'id': 4, 'comp': -35.})
+    worker_data.append({'firm': 2, 'time': 8, 'id': 4, 'comp': -35.})
+    worker_data.append({'firm': 2, 'time': 9, 'id': 4, 'comp': -35.})
+    worker_data.append({'firm': 2, 'time': 10, 'id': 4, 'comp': -35.})
+
+    a = pd.concat([pd.DataFrame(worker, index=[i]) for i, worker in enumerate(worker_data)])#.sort_values(['id', 'time'])
+    col_dict = {'i': 'id', 'j': 'firm', 'y': 'comp', 't': 'time'}
+    # Simulate on non-collapsed data
+    b = bpd.BipartiteLong(a, col_dict=col_dict).clean_data().gen_m()
+    fe_solver_b = tw.FEEstimator(b, {})
+    fe_solver_b.fit_1()
+    fe_solver_b.construct_Q()
+    fe_solver_b.fit_2()
+    # Simulate on collapsed data with weights all reset to 1
+    c = bpd.BipartiteLong(a, col_dict=col_dict).clean_data().get_collapsed_long()
+    c['w'] = 1
+    fe_solver_c = tw.FEEstimator(c, {})
+    fe_solver_c.fit_1()
+    fe_solver_c.construct_Q()
+    fe_solver_c.fit_2()
+    # Simulate on collapsed data with correct weights
+    d = bpd.BipartiteLong(a, col_dict=col_dict).clean_data().get_collapsed_long()
+    fe_solver_d = tw.FEEstimator(d, {})
+    fe_solver_d.fit_1()
+    fe_solver_d.construct_Q()
+    fe_solver_d.fit_2()
+    # Collect parameter estimates
+    b_psi, b_alpha = fe_solver_b.get_fe_estimates()
+    c_psi, c_alpha = fe_solver_c.get_fe_estimates()
+    d_psi, d_alpha = fe_solver_d.get_fe_estimates()
+    # Convert to dataframes
+    b_psi = pd.DataFrame(list(b_psi.items()), columns=['fid', 'psi'])
+    b_alpha = pd.DataFrame(list(b_alpha.items()), columns=['wid', 'alpha'])
+    c_psi = pd.DataFrame(list(c_psi.items()), columns=['fid', 'psi'])
+    c_alpha = pd.DataFrame(list(c_alpha.items()), columns=['wid', 'alpha'])
+    d_psi = pd.DataFrame(list(d_psi.items()), columns=['fid', 'psi'])
+    d_alpha = pd.DataFrame(list(d_alpha.items()), columns=['wid', 'alpha'])
+    # # Test correlation
+    # assert abs(np.corrcoef(b_psi['psi'], c_psi['psi'])[0, 1] - 1) < 1e-10
+    # assert abs(np.corrcoef(b_alpha['alpha'], c_alpha['alpha'])[0, 1] - 1) < 1e-10
+    # # Test coefficients
+    # for i in range(len(b_psi)):
+    #     assert abs(b_psi.iloc[i]['psi'] - c_psi.iloc[i]['psi']) < 1e-10
+    # for i in range(len(b_alpha)):
+    #     assert abs(b_alpha.iloc[i]['alpha'] - c_alpha.iloc[i]['alpha']) < 1e-10
+    # Collect sigma^2 plug-in
+    sigma_pi_b = fe_solver_b.var_e_pi
+    sigma_pi_c = fe_solver_c.var_e_pi
+    sigma_pi_d = fe_solver_d.var_e_pi
+
+    # assert abs(sigma_pi_b - sigma_pi_c) < 1e-30
+
+    # Collect sigma^2 bias-corrected
+    sigma_bc_b = fe_solver_b.var_e
+    sigma_bc_c = fe_solver_c.var_e
+    sigma_bc_d = fe_solver_d.var_e
+
+    # assert abs((sigma_bc_b - sigma_bc_c) / sigma_bc_b) < 1e-3
+    # Test vars/covs
+    res_b = fe_solver_b.summary
+    res_c = fe_solver_c.summary
+    res_d = fe_solver_d.summary
+
+    # assert abs((res_b['var_fe'] - res_c['var_fe']) / res_b['var_fe']) < 1e-10
+    # assert abs((res_b['cov_fe'] - res_c['cov_fe']) / res_b['cov_fe']) < 1e-10
+    # assert abs((res_b['var_ho'] - res_c['var_ho']) / res_b['var_ho']) < 1e-10
+    # assert abs((res_b['cov_ho'] - res_c['cov_ho']) / res_b['cov_ho']) < 1e-10
 
 #######################
 ##### Monte Carlo #####

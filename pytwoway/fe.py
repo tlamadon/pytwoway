@@ -101,6 +101,10 @@ class FEEstimator:
         # self.logger.info('initializing FEEstimator object')
 
         self.adata = data
+        try:
+            self.adata.sort_values(['i', 't'], inplace=True)
+        except KeyError:
+            self.adata.sort_values(['i', 't1'], inplace=True)
 
         # Define default parameter dictionaries
         default_params = {
@@ -199,7 +203,7 @@ class FEEstimator:
 
         else: # If running analysis
             self.__create_fe_solver() # Solve FE model
-            self.__compute_trace_approximation_fe() # Compute trace approxmation
+            self.__compute_trace_approximation_fe() # Compute trace approximation
 
             # If computing heteroskedastic correction
             if self.compute_he:
@@ -223,11 +227,8 @@ class FEEstimator:
         '''
         self.logger.info('preparing the data')
 
-        # self.adata = self.params['data']
-        # self.adata['i'] = self.adata['i'].astype('category').cat.codes + 1 # FIXME commented out because i should already be correct
-
-        self.nf = max(self.adata['j1'].max(), self.adata['j2'].max()) + 1 # Number of firms
-        self.nw = self.adata['i'].max() + 1 # Number of workers
+        self.nf = self.adata.n_firms() # Number of firms
+        self.nw = self.adata.n_workers() # Number of workers
         self.nn = len(self.adata) # Number of observations
         self.logger.info('data firms={} workers={} observations={}'.format(self.nf, self.nw, self.nn))
 
@@ -237,72 +238,43 @@ class FEEstimator:
         self.res['n_stayers'] = self.res['n_workers'] - self.res['n_movers']
         self.logger.info('data movers={} stayers={}'.format(self.res['n_movers'], self.res['n_stayers']))
 
+        # Prepare 'cs' column (0 if observation is first for a worker, 1 if intermediate, 2 if last for a worker)
+        worker_first_obs = (self.adata['i'] != self.adata['i'].shift(1))
+        worker_last_obs = (self.adata['i'] != self.adata['i'].shift(-1))
+        self.adata['cs'] = 1
+        self.adata.loc[(worker_first_obs) & ~(worker_last_obs), 'cs'] = 0
+        self.adata.loc[(worker_last_obs) & ~(worker_first_obs), 'cs'] = 2
+
         #res['year_max'] = int(sdata['year'].max())
         #res['year_min'] = int(sdata['year'].min())
-
-        # # Make j values unique per row
-        # jdata.set_index(np.arange(self.res['nm']) + 1)
-        # sdata.set_index(np.arange(self.res['ns']) + 1 + self.res['nm'])
-        # jdata['i'] = np.arange(self.res['nm']) + 1
-        # sdata['i'] = np.arange(self.res['ns']) + 1 + self.res['nm']
-
-        # # Combine the 2 data-sets
-        # # self.adata = pd.concat([sdata[['i', 'j1', 'y1']].assign(cs=1, m=0), jdata[['i', 'j1', 'y1']].assign(cs=1, m=1), jdata[['i', 'j2', 'y2']].rename(columns={'j2': 'j1', 'y2': 'y1'}).assign(cs=0, m=1)]) # FIXME updated below
-        # self.adata = pd.concat([sdata[['i', 'j1', 'j2', 'y1']].assign(cs=1, m=0), jdata[['i', 'j1', 'j2', 'y1']].assign(cs=1, m=1), jdata[['i', 'j1', 'j2', 'y2']].rename({'j1': 'j2', 'j2': 'j1', 'y2': 'y1'}, axis=1).assign(cs=0, m=1)]) # FIXME For some reason I didn't rename the last group's y2 to y1 before, but I'm changing it from y2 to y1 because it isn't working otherwise - make sure in the future to confirm this is the right thing to do (note that y2 is never used anywhere else in the code so it almost certainly is supposed to be labeled as y1, especially given that is how it was done in the original code above)
-        # self.adata = self.adata.reset_index(drop=True) # FIXME changed from set_index(pd.Series(range(len(self.adata))))
-        # self.adata['i'] = self.adata['i'].astype('category').cat.codes + 1
 
     def __prep_JWM(self):
         '''
         Generate J, W, and M matrices.
         '''
         # Matrices for the cross-section
-        J = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata.j1)), shape=(self.nn, self.nf)) # Firms
+        J = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata['j'])), shape=(self.nn, self.nf)) # Firms
         J = J[:, range(self.nf - 1)]  # Normalize one firm to 0
         self.J = J
-        W = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata.i)), shape=(self.nn, self.nw)) # Workers
+        W = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata['i'])), shape=(self.nn, self.nw)) # Workers
         self.W = W
-        # Dw = diags((W.T * W).diagonal()) # FIXME changed from .transpose() to .T ALSO commented this out since it's not used
-        Dwinv = diags(1.0 / ((W.T * W).diagonal())) # FIXME changed from .transpose() to .T
+        if 'w' in self.adata.columns:
+            # Diagonal weight matrix
+            Dp = diags(self.adata['w'])
+            Dwinv = linalg.inv(csc_matrix(W.T @ Dp @ W))
+        else:
+            # Diagonal weight matrix - all weight one
+            Dp = diags(np.ones(len(self.adata)))
+            Dwinv = diags(1.0 / ((W.T @ W).diagonal()))
+        self.Dp = Dp
         self.Dwinv = Dwinv
 
         self.logger.info('Prepare linear solver')
 
         # Finally create M
-        M = J.T * J - J.T * W * Dwinv * W.T * J # FIXME changed from .transpose() to .T
+        M = J.T @ Dp @ J - J.T @ Dp @ W @ Dwinv @ W.T @ Dp @ J
         self.M = M
         self.ml = pyamg.ruge_stuben_solver(M)
-
-        # L = diags(fes.M.diagonal()) - fes.M
-        # r = linalg.eigsh(L,k=2,which='LM')
-
-        # # Create cross-section matrices
-        # # cs == 1 ==> looking at y1 for movers (cs = cross section)
-        # # Create Q matrix
-        # if self.params['Q'] == 'cov(alpha, psi)': # Default
-        #     mdata = self.adata[self.adata['cs'] == 1] # FIXME changed from adata.query('cs==1') (I ran %timeit and slicing is faster)
-        #     mdata = mdata.reset_index(drop=True) # FIXME changed from set_index(pd.Series(range(len(mdata))))
-
-        #     nnq = len(mdata) # Number of observations
-        #     self.nnq = nnq
-        #     Jq = csc_matrix((np.ones(nnq), (mdata.index, mdata.j1 - 1)), shape=(nnq, nf))
-        #     self.Jq = Jq[:, range(nf - 1)]  # Normalizing one firm to 0
-        #     self.Wq = csc_matrix((np.ones(nnq), (mdata.index, mdata.i - 1)), shape=(nnq, nw))
-        #     self.Yq = mdata['y1']
-        # elif self.params['Q'] == 'cov(psi_t, psi_{t+1})':
-        #     mdata = self.adata[self.adata['m'] == 1] # FIXME changed from adata.query('cs==1') (I ran %timeit and slicing is faster)
-        #     mdata = mdata.reset_index(drop=True) # FIXME changed from set_index(pd.Series(range(len(mdata))))
-        #     mdata_1 = mdata[mdata['cs'] == 1].reset_index(drop=True) # Firm 1 for movers
-        #     mdata_2 = mdata[mdata['cs'] == 0].reset_index(drop=True) # Firm 2 for movers
-
-        #     nnq = len(mdata_1) # Number of observations
-        #     nm = len(mdata_1['i'].unique()) # Number of movers
-        #     self.nnq = nnq
-        #     J1 = csc_matrix((np.ones(nnq), (mdata_1.index, mdata_1.j1 - 1)), shape=(nnq, nf))
-        #     self.J1 = J1[:, range(nf - 1)]  # Normalizing one firm to 0
-        #     J2 = csc_matrix((np.ones(nnq), (mdata_2.index, mdata_2.j1 - 1)), shape=(nnq, nf))
-        #     self.J2 = J2[:, range(nf - 1)]  # Normalizing one firm to 0
-        #     self.Yq = mdata_1['y1']
 
         # Save time variable
         self.last_invert_time = 0
@@ -347,17 +319,35 @@ class FEEstimator:
 
     def __weighted_var(self, v, w): # FIXME was formerly a function outside the class
         '''
-        Compute weighted variance. @ FIXME I don't know what this function really does
+        Compute weighted variance.
 
         Arguments:
-            v: @ FIXME I don't know what this is
-            w: @ FIXME I don't know what this is
+            v: vector to weight
+            w: weights
 
         Returns:
-            v0: @ FIXME I don't know what this is
+            v0: weighted variance
         '''
         m0 = np.sum(w * v) / np.sum(w)
         v0 = np.sum(w * (v - m0) ** 2) / np.sum(w)
+
+        return v0
+
+    def __weighted_cov(self, v1, v2, w): # FIXME was formerly a function outside the class
+        '''
+        Compute weighted covariance.
+
+        Arguments:
+            v1: vector to weight
+            v2: vector to weight
+            w: weights
+
+        Returns:
+            v0: weighted variance
+        '''
+        m1 = np.sum(w * v1) / np.sum(w)
+        m2 = np.sum(w * v2) / np.sum(w)
+        v0 = np.sum(w * (v1 - m1) * (v2 - m2)) / np.sum(w)
 
         return v0
 
@@ -365,11 +355,11 @@ class FEEstimator:
         '''
         Compute some early statistics.
         '''
-        fdata = self.adata.groupby('j1').agg({'m':'sum', 'y1':'mean', 'i':'count' })
+        fdata = self.adata.groupby('j').agg({'m': 'sum', 'y': 'mean', 'i': 'count'})
         self.res['mover_quantiles'] = self.__weighted_quantile(fdata['m'], np.linspace(0, 1, 11), fdata['i']).tolist()
         self.res['size_quantiles'] = self.__weighted_quantile(fdata['i'], np.linspace(0, 1, 11), fdata['i']).tolist()
-        self.res['between_firm_var'] = self.__weighted_var(fdata['y1'], fdata['i'])
-        self.res['var_y'] = self.adata[self.adata['cs'] == 1]['y1'].var() # FIXME changed from adata.query('cs==1') (I ran %timeit and slicing is faster)
+        self.res['between_firm_var'] = self.__weighted_var(fdata['y'], fdata['i'])
+        self.res['var_y'] = self.adata['y'].var()
         self.logger.info('total variance: {:0.4f}'.format(self.res['var_y']))
 
         # extract woodcock moments using sdata and jdata
@@ -401,22 +391,22 @@ class FEEstimator:
         '''
         if self.params['Q'] == 'cov(alpha, psi)':
             # Which rows to select
-            self.adata['Jq'] = self.adata['cs'] == 1
+            self.adata['Jq'] = 1
+            self.adata['Wq'] = 1
             # Rows for csc_matrix
             self.adata['Jq_row'] = self.adata['Jq'].cumsum() - 1
-            # Columns for csc_matrix
-            self.adata['Jq_col'] = self.adata['j1']
-            self.adata['Wq'] = self.adata['cs'] == 1
             self.adata['Wq_row'] = self.adata['Wq'].cumsum() - 1
+            # Columns for csc_matrix
+            self.adata['Jq_col'] = self.adata['j']
             self.adata['Wq_col'] = self.adata['i']
 
         elif self.params['Q'] == 'cov(psi_t, psi_{t+1})':
-            self.adata['Jq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 1)
+            self.adata['Jq'] = (self.adata['m'] == 1) & ((self.adata['cs'] == 0) | (self.adata['cs'] == 1))
             self.adata['Jq_row'] = self.adata['Jq'].cumsum() - 1
-            self.adata['Jq_col'] = self.adata['j1']
-            self.adata['Wq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 0)
+            self.adata['Jq_col'] = self.adata['j']
+            self.adata['Wq'] = (self.adata['m'] == 1) & ((self.adata['cs'] == 1) | (self.adata['cs'] == 2))
             self.adata['Wq_row'] = self.adata['Wq'].cumsum() - 1
-            self.adata['Wq_col'] = self.adata['j1'] # Recall j1, j2 swapped for m==1 and cs==0
+            self.adata['Wq_col'] = self.adata['j']
 
         elif self.params['Q'] == 'cov(psi_i, psi_j)': # Code doesn't work
             self.adata['Jq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 1)
@@ -437,7 +427,7 @@ class FEEstimator:
         '''
         # Construct Jq, Wq matrices
         Jq = self.adata[self.adata['Jq'] == 1].reset_index(drop=True)
-        self.Yq = Jq['y1']
+        self.Yq = Jq['y']
         nJ = len(Jq)
         nJ_row = Jq['Jq_row'].max() + 1 # FIXME len(Jq['Jq_row'].unique())
         nJ_col = Jq['Jq_col'].max() + 1 # FIXME len(Jq['Jq_col'].unique())
@@ -450,8 +440,8 @@ class FEEstimator:
         nW_row = Wq['Wq_row'].max() + 1 # FIXME len(Wq['Wq_row'].unique())
         nW_col = Wq['Wq_col'].max() + 1 # FIXME len(Wq['Wq_col'].unique())
         Wq = csc_matrix((np.ones(nW), (Wq['Wq_row'], Wq['Wq_col'])), shape=(nW_row, nW_col)) # FIXME Should we use nJ because require Jq, Wq to have the same size?
-        if nW_col == self.nf: # If looking at firms, normalize one to 0
-            Wq = Wq[:, range(self.nf - 1)]
+        # if nW_col == self.nf: # If looking at firms, normalize one to 0
+        #     Wq = Wq[:, range(self.nf - 1)]
 
         return Jq, Wq
 
@@ -459,7 +449,7 @@ class FEEstimator:
         '''
         Solve FE model.
         '''
-        self.Y = self.adata.y1
+        self.Y = self.adata['y']
 
         # try to pickle the object to see its size
         # self.save('tmp.pkl') # FIXME should we delete these 2 lines?
@@ -486,7 +476,13 @@ class FEEstimator:
         # self.logger.info('[fe] var_psi={:2.4f} cov={:2.4f} tot={:2.4f}'.format(self.var_fe, self.cov_fe, self.tot_var))
         # # FIXME Section ends here
 
-        self.var_e = self.nn / (self.nn - self.nw - self.nf + 1) * np.power(self.E, 2).mean()
+        self.var_e_pi = np.var(self.E) # Plug-in variance
+        if 'w' in self.adata.columns:
+            self.__compute_trace_approximation_sigma_2()
+            trace_approximation = np.mean(self.tr_sigma_ho_all)
+            self.var_e = (self.nn * self.var_e_pi) / (np.sum(1 / self.Dp.data[0]) - trace_approximation)
+        else:
+            self.var_e = (self.nn * self.var_e_pi) / (self.nn - (self.nw + self.nf - 1))
         self.logger.info('[ho] variance of residuals {:2.4f}'.format(self.var_e))
 
     def __compute_leverages_Pii(self):
@@ -542,29 +538,48 @@ class FEEstimator:
 
     def __compute_trace_approximation_fe(self):
         '''
-        Compute FE trace approximation for arbitrary Q.
+        Compute weighted FE trace approximation for arbitrary Q.
         '''
-        self.logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
+        self.logger.info('Starting weighted FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
 
         Jq, Wq = self.__construct_Jq_Wq()
 
-        # Compute some stats
-        # FIXME Need to figure out when this section can be run
+        # Compute biased estimators
         self.tot_var = np.var(self.Y)
-        self.logger.info('[fe]')
-        try:
-            # print('psi', self.psi_hat)
-            self.var_fe = np.var(Jq * self.psi_hat)
-            self.logger.info('var_psi={:2.4f}'.format(self.var_fe))
-        except ValueError: # If dimension mismatch
-            pass
-        try:
-            self.cov_fe = np.cov(Jq * self.psi_hat, Wq * self.alpha_hat)[0][1]
-            self.logger.info('cov={:2.4f} tot={:2.4f}'.format(self.cov_fe, self.tot_var))
-        except ValueError: # If dimension mismatch
-            pass
-        # FIXME Section ends here
+        if 'w' in self.adata.columns:
+            self.logger.info('[weighted fe]')
+            self.var_fe = self.__weighted_var(Jq * self.psi_hat, self.adata['w'])
+            self.cov_fe = self.__weighted_cov(Jq * self.psi_hat, Wq * self.alpha_hat, self.adata['w'])
+        else:
+            self.logger.info('[fe]')
+            vcv = np.cov(Jq * self.psi_hat, Wq * self.alpha_hat, ddof=0) # Set ddof=0 is necessary, otherwise takes 1 / (N - 1) by default instead of 1 / N
+            self.var_fe = vcv[0, 0]
+            self.cov_fe = vcv[0, 1]
+        self.logger.info('var_psi={:2.4f}'.format(self.var_fe))
+        self.logger.info('cov={:2.4f} tot={:2.4f}'.format(self.cov_fe, self.tot_var))
 
+        ##### Start full Trace without collapse operator ######
+        # # Begin trace approximation
+        # self.tr_var_ho_all = np.zeros(self.ndraw_trace)
+        # self.tr_cov_ho_all = np.zeros(self.ndraw_trace)
+
+        # for r in trange(self.ndraw_trace):
+        #     # Generate -1 or 1 - in this case length nn
+        #     Z = 2 * np.random.binomial(1, 0.5, self.nn) - 1
+
+        #     # Compute either side of the Trace
+        #     R_psi, R_alpha = self.__solve(Z)
+
+        #     # Applying the Qcov and Qpsi implied by Jq and Wq
+        #     Rq_psi = Jq @ R_psi
+        #     Rq_alpha = Wq @ R_alpha
+
+        #     self.tr_var_ho_all[r] = np.cov(Rq_psi, Rq_psi)[0][1]
+        #     self.tr_cov_ho_all[r] = np.cov(Rq_psi, Rq_alpha)[0][1]
+
+        #     self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
+        ##### End full Trace without collapse operator ######
+        
         # Begin trace approximation
         self.tr_var_ho_all = np.zeros(self.ndraw_trace)
         self.tr_cov_ho_all = np.zeros(self.ndraw_trace)
@@ -574,28 +589,73 @@ class FEEstimator:
             Zpsi = 2 * np.random.binomial(1, 0.5, self.nf - 1) - 1
             Zalpha = 2 * np.random.binomial(1, 0.5, self.nw) - 1
 
-            R1 = Jq * Zpsi
+            R1 = Jq @ Zpsi
             psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
-            try:
-                R2_psi = Jq * psi1
-                # Trace correction
-                self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
-            except ValueError: # If dimension mismatch
-                try:
-                    del self.tr_var_ho_all
-                except AttributeError: # Once deleted
-                    pass
-            try:
-                R2_alpha = Wq * alpha1
-                # Trace correction
-                self.tr_cov_ho_all[r] = np.cov(R1, R2_alpha)[0][1]
-            except ValueError: # If dimension mismatch
-                try:
-                    del self.tr_cov_ho_all
-                except AttributeError: # Once deleted
-                    pass
+            R2_psi = Jq @ psi1
+            # Trace correction
+            self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
+            R2_alpha = Wq @ alpha1
+            # Trace correction
+            self.tr_cov_ho_all[r] = np.cov(R1, R2_alpha)[0][1]
 
             self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
+
+    # def __compute_trace_approximation_fe(self):
+    #     '''
+    #     Compute FE trace approximation for arbitrary Q.
+    #     '''
+    #     self.logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
+
+    #     Jq, Wq = self.__construct_Jq_Wq()
+
+    #     # Compute some stats
+    #     # FIXME Need to figure out when this section can be run
+    #     self.tot_var = np.var(self.Y)
+    #     self.logger.info('[fe]')
+    #     try:
+    #         # print('psi', self.psi_hat)
+    #         self.var_fe = np.var(Jq * self.psi_hat)
+    #         self.logger.info('var_psi={:2.4f}'.format(self.var_fe))
+    #     except ValueError: # If dimension mismatch
+    #         pass
+    #     try:
+    #         self.cov_fe = np.cov(Jq * self.psi_hat, Wq * self.alpha_hat)[0][1]
+    #         self.logger.info('cov={:2.4f} tot={:2.4f}'.format(self.cov_fe, self.tot_var))
+    #     except ValueError: # If dimension mismatch
+    #         pass
+    #     # FIXME Section ends here
+
+    #     # Begin trace approximation
+    #     self.tr_var_ho_all = np.zeros(self.ndraw_trace)
+    #     self.tr_cov_ho_all = np.zeros(self.ndraw_trace)
+
+    #     for r in trange(self.ndraw_trace):
+    #         # Generate -1 or 1
+    #         Zpsi = 2 * np.random.binomial(1, 0.5, self.nf - 1) - 1
+    #         Zalpha = 2 * np.random.binomial(1, 0.5, self.nw) - 1
+
+    #         R1 = Jq * Zpsi
+    #         psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
+    #         try:
+    #             R2_psi = Jq * psi1
+    #             # Trace correction
+    #             self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
+    #         except ValueError: # If dimension mismatch
+    #             try:
+    #                 del self.tr_var_ho_all
+    #             except AttributeError: # Once deleted
+    #                 pass
+    #         try:
+    #             R2_alpha = Wq * alpha1
+    #             # Trace correction
+    #             self.tr_cov_ho_all[r] = np.cov(R1, R2_alpha)[0][1]
+    #         except ValueError: # If dimension mismatch
+    #             try:
+    #                 del self.tr_cov_ho_all
+    #             except AttributeError: # Once deleted
+    #                 pass
+
+    #         self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
     # def compute_trace_approximation_fe(self):
     #     '''
@@ -670,6 +730,37 @@ class FEEstimator:
 
             self.logger.debug('heteroskedastic [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
+    def __compute_trace_approximation_sigma_2(self):
+        '''
+        Compute weighted sigma^2 trace approximation.
+
+        Solving Tr[A'A(A'DA)^{-1}] = Tr[A(A'DA)^{-1}A']. This is for the case where E[epsilon epsilon'|A] = sigma^2 * D^{-1}.
+        
+        Commented out, complex case: solving Tr[A(A'DA)^{-1}A'DD'A(A'DA)^{-1}A'] = Tr[D'A(A'DA)^{-1}A'A(A'DA)^{-1}A'D] by multiplying the right half by Z, then transposing that to get the left half.
+        '''
+        self.logger.info('Starting weighted sigma^2 trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
+
+        # Begin trace approximation
+        self.tr_sigma_ho_all = np.zeros(self.ndraw_trace)
+
+        for r in trange(self.ndraw_trace):
+            # Generate -1 or 1 - in this case length nn
+            Z = 2 * np.random.binomial(1, 0.5, self.nn) - 1
+
+            # Compute Trace
+            R_psi, R_alpha = self.__solve(Z, D2=False)
+            R_y = self.__mult_A(R_psi, R_alpha)
+
+            self.tr_sigma_ho_all[r] = Z.T @ R_y
+
+            # Trace when not using collapse operator:
+            # # Compute either side of the Trace
+            # R_y = self.__proj(Z)
+
+            # self.tr_sigma_ho_all[r] = np.sum(R_y ** 2)
+
+            self.logger.debug('sigma^2 [traces] step {}/{} done.'.format(r, self.ndraw_trace))
+
     def __collect_res(self):
         '''
         Collect all results.
@@ -677,17 +768,34 @@ class FEEstimator:
         self.res['tot_var'] = self.tot_var
         self.res['eps_var_ho'] = self.var_e
         self.res['eps_var_fe'] = np.var(self.E)
+        self.res['var_y'] = np.var(self.Yq)
+
+        # FE results
+        # Plug-in variance
+        self.res['var_fe'] = self.var_fe
+        self.logger.info('[ho] VAR fe={:2.4f}'.format(self.var_fe))
+        # Plug-in covariance
+        self.logger.info('[ho] COV fe={:2.4f}'.format(self.cov_fe))
+        self.res['cov_fe'] = self.cov_fe
+
+        # Homoskedastic results
+        # Trace approximation: variance
         self.res['tr_var_ho'] = np.mean(self.tr_var_ho_all)
         self.logger.info('[ho] VAR tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_var_ho'], np.std(self.tr_var_ho_all)))
+        # Trace approximation: covariance
+        self.res['tr_cov_ho'] = np.mean(self.tr_cov_ho_all)
+        self.logger.info('[ho] COV tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_cov_ho'], np.std(self.tr_cov_ho_all)))
+        # Bias-corrected variance
+        self.res['var_ho'] = self.var_fe - self.var_e * self.res['tr_var_ho']
+        self.logger.info('[ho] VAR bc={:2.4f}'.format(self.res['var_ho']))
+        # Bias-corrected covariance
+        self.res['cov_ho'] = self.cov_fe - self.var_e * self.res['tr_cov_ho']
+        self.logger.info('[ho] COV bc={:2.4f}'.format(self.res['cov_ho']))
 
-        # FIXME Need to figure out when this section can be run
-        try:
-            self.res['tr_cov_ho'] = np.mean(self.tr_cov_ho_all)
-            self.logger.info('[ho] COV tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_cov_ho'], np.std(self.tr_cov_ho_all)))
-        except AttributeError: # If no cov
-            pass
-        # FIXME Section ends here
+        for res in ['var_y', 'var_fe', 'cov_fe', 'var_ho', 'cov_ho']:
+            self.summary[res] = self.res[res]
 
+        # Heteroskedastic results
         if self.compute_he:
             self.res['eps_var_he'] = self.Sii.mean()
             self.res['min_lev'] = self.adata.query('m == 1').Pii.min()
@@ -700,61 +808,14 @@ class FEEstimator:
             self.res['tr_cov_he_sd'] = np.std(self.tr_cov_he_all)
             self.logger.info('[he] VAR tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_var_he'], np.std(self.tr_var_he_all)))
             self.logger.info('[he] COV tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_cov_he'], np.std(self.tr_cov_he_all)))
-
-        # ----- FINAL ------
-        # FIXME Need to figure out when this section can be run
-        try:
-            self.logger.info('[ho] VAR fe={:2.4f}'.format(self.var_fe))
-        except AttributeError: # If no var fe
-            pass
-        try:
-            self.logger.info('[ho] VAR bc={:2.4f}'.format(self.var_fe - self.var_e * self.res['tr_var_ho']))
-        except AttributeError: # If no var bc
-            pass
-        try:
-            self.logger.info('[ho] COV fe={:2.4f}'.format(self.cov_fe))
-        except AttributeError: # If no cov fe
-            pass
-        try:
-            self.logger.info('[ho] COV bc={:2.4f}'.format(self.cov_fe - self.var_e * self.res['tr_cov_ho']))
-        except AttributeError: # If no cov bc
-            pass
-        # FIXME Section ends here
-
-        if self.compute_he:
-            self.logger.info('[he] VAR fe={:2.4f} bc={:2.4f}'.format(self.var_fe, self.var_fe - self.res['tr_var_he']))
-            self.logger.info('[he] COV fe={:2.4f} bc={:2.4f}'.format(self.cov_fe, self.cov_fe - self.res['tr_cov_he']))
-
-        self.res['var_y'] = np.var(self.Yq)
-        self.summary['var_y'] = self.res['var_y']
-        # FIXME Need to figure out when this section can be run
-        try:
-            self.res['var_fe'] = self.var_fe
-            self.summary['var_fe'] = self.res['var_fe']
-        except AttributeError:
-            pass
-        try:
-            self.res['cov_fe'] = self.cov_fe
-            self.summary['cov_fe'] = self.res['cov_fe']
-        except AttributeError:
-            pass
-        try:
-            self.res['var_ho'] = self.var_fe - self.var_e * self.res['tr_var_ho']
-            self.summary['var_ho'] = self.res['var_ho']
-        except AttributeError:
-            pass
-        try:
-            self.res['cov_ho'] = self.cov_fe - self.var_e * self.res['tr_cov_ho']
-            self.summary['cov_ho'] = self.res['cov_ho']
-        except AttributeError:
-            pass
-        # FIXME Section ends here
-
-        if self.compute_he:
+            # ----- FINAL ------
             self.res['var_he'] = self.var_fe - self.res['tr_var_he']
+            self.logger.info('[he] VAR fe={:2.4f} bc={:2.4f}'.format(self.var_fe, self.res['var_he']))
             self.res['cov_he'] = self.cov_fe - self.res['tr_cov_he']
-            self.summary['var_he'] = self.res['var_he']
-            self.summary['cov_he'] = self.res['cov_he']
+            self.logger.info('[he] COV fe={:2.4f} bc={:2.4f}'.format(self.cov_fe, self.res['cov_he']))
+
+            for res in ['var_he', 'cov_he']:
+                self.summary[res] = self.res[res]
 
     def __save_res(self):
         '''
@@ -784,19 +845,21 @@ class FEEstimator:
 
         return psi_hat_dict, alpha_hat_dict
 
-    def __solve(self, Y):
+    def __solve(self, Y, D1=True, D2=True):
         '''
-        Compute (A'A)^-1 A'Y, the least squares estimate of A [psi_hat, alpha_hat] = Y.
+        Compute (A'D_1A)^-1 A'D_2Y, the least squares estimate of A [psi_hat, alpha_hat] = Y.
 
         Arguments:
             Y (Pandas DataFrame): labor data
+            D1 (bool): include first weight
+            D2 (bool): include second weight
 
         Returns:
             psi_hat: estimated firm fixed effects @ FIXME correct datatype
             alpha_hat: estimated worker fixed effects @ FIXME correct datatype
         '''
-        J_transpose_Y, W_transpose_Y = self.__mult_Atranspose(Y) # This gives A'Y
-        psi_hat, alpha_hat = self.__mult_AAinv(J_transpose_Y, W_transpose_Y)
+        J_transpose_Y, W_transpose_Y = self.__mult_Atranspose(Y, D2) # This gives A'Y
+        psi_hat, alpha_hat = self.__mult_AAinv(J_transpose_Y, W_transpose_Y, D1)
 
         return psi_hat, alpha_hat
 
@@ -816,29 +879,31 @@ class FEEstimator:
 
         return self.J * psi + self.W * alpha # J_psi + W_alpha
 
-    def __mult_Atranspose(self, v):
+    def __mult_Atranspose(self, v, weighted=True):
         '''
         Multiplies the transpose of A = [J W] stored in the object by v.
 
         Arguments:
             v: what to multiply by @ FIXME correct datatype
+            weighted (bool): include weights
 
         Returns:
             J_transpose_V (CSC Matrix): firms * v
             W_transpose_V (CSC Matrix): workers * v
         '''
-        # J_transpose_V = self.J.T * v # FIXME changed from .transpose() to .T
-        # W_transpose_V = self.W.T * v # FIXME changed from .transpose() to .T
+        if weighted:
+            return self.J.T @ self.Dp @ v, self.W.T @ self.Dp @ v
 
-        return self.J.T * v, self.W.T * v # J_transpose_V, W_transpose_V
+        return self.J.T @ v, self.W.T @ v # J_transpose_V, W_transpose_V
 
-    def __mult_AAinv(self, psi, alpha):
+    def __mult_AAinv(self, psi, alpha, weighted=True):
         '''
         Multiplies gamma = [psi alpha] by (A'A)^(-1) where A = [J W] stored in the object.
 
         Arguments:
             psi: firm fixed effects @ FIXME correct datatype
             alpha: worker fixed effects @ FIXME correct datatype
+            weighted (bool): include weights
 
         Returns:
             psi_out: estimated firm fixed effects @ FIXME correct datatype
@@ -849,10 +914,16 @@ class FEEstimator:
         # psi_out = inter1 - inter2
 
         start = timer()
-        psi_out = self.ml.solve(psi - self.J.T * (self.W * (self.Dwinv * alpha)), tol=1e-10) # FIXME changed from .transpose() to .T
-        self.last_invert_time = timer() - start
+        if weighted:
+            psi_out = self.ml.solve(psi - self.J.T * (self.Dp * (self.W * (self.Dwinv * alpha))), tol=1e-10)
+            self.last_invert_time = timer() - start
 
-        alpha_out = - self.Dwinv * (self.W.T * (self.J * psi_out)) + self.Dwinv * alpha # FIXME changed from .transpose() to .T
+            alpha_out = - self.Dwinv * (self.W.T * (self.Dp * (self.J * psi_out))) + self.Dwinv * alpha
+        else:
+            psi_out = self.ml.solve(psi - self.J.T * (self.W * (self.Dwinv * alpha)), tol=1e-10)
+            self.last_invert_time = timer() - start
+
+            alpha_out = - self.Dwinv * (self.W.T * (self.J * psi_out)) + self.Dwinv * alpha
 
         return psi_out, alpha_out
 
