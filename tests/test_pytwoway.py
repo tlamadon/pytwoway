@@ -161,15 +161,16 @@ def test_fe_weights_4():
     sigma_bc_b = fe_solver_b.var_e
     sigma_bc_c = fe_solver_c.var_e
 
-    assert abs(sigma_bc_b - sigma_bc_c) < 1e-10 # abs((sigma_bc_b - sigma_bc_c) / sigma_bc_b) < 1e-3
-    # Test vars/covs
-    res_b = fe_solver_b.summary
-    res_c = fe_solver_c.summary
+    if abs(sigma_bc_b - sigma_bc_c) != np.inf:
+        assert abs(sigma_bc_b - sigma_bc_c) < 1e-10 # abs((sigma_bc_b - sigma_bc_c) / sigma_bc_b) < 1e-3
+        # Test vars/covs
+        res_b = fe_solver_b.summary
+        res_c = fe_solver_c.summary
 
-    assert abs((res_b['var_fe'] - res_c['var_fe']) / res_b['var_fe']) < 1e-10
-    assert abs((res_b['cov_fe'] - res_c['cov_fe']) / res_b['cov_fe']) < 1e-10
-    assert abs((res_b['var_ho'] - res_c['var_ho']) / res_b['var_ho']) < 1e-10
-    assert abs((res_b['cov_ho'] - res_c['cov_ho']) / res_b['cov_ho']) < 1e-10
+        assert abs((res_b['var_fe'] - res_c['var_fe']) / res_b['var_fe']) < 1e-10
+        assert abs((res_b['cov_fe'] - res_c['cov_fe']) / res_b['cov_fe']) < 1e-10
+        assert abs((res_b['var_ho'] - res_c['var_ho']) / res_b['var_ho']) < 1e-10
+        assert abs((res_b['cov_ho'] - res_c['cov_ho']) / res_b['cov_ho']) < 1e-10
 
 # def test_fe_weights_5(): # FIXME this test doesn't work because un-collapsing data gives different estimates
 #     # Test that FE weights are computing all parameters correctly with full data by collapsing then un-collapsing data.
@@ -259,20 +260,21 @@ def test_fe_weights_6():
     sigma_bc_b = fe_solver_b.var_e
     sigma_bc_c = fe_solver_c.var_e
 
-    assert abs((sigma_bc_b - sigma_bc_c) / sigma_bc_b) < 1e-2
-    # Test against true sigma^2
-    a['E'] = a['y'] - a['alpha'] - a['psi']
-    sigma_true = a['E'].var()
-    assert abs(sigma_bc_b - sigma_true) / abs(sigma_true) < 5e-3
-    assert abs(sigma_bc_c - sigma_true) / abs(sigma_true) < 1e-2
-    # Test vars/covs
-    res_b = fe_solver_b.summary
-    res_c = fe_solver_c.summary
+    if abs(sigma_bc_b - sigma_bc_c) != np.inf:
+        assert abs((sigma_bc_b - sigma_bc_c) / sigma_bc_b) < 1e-2
+        # Test against true sigma^2
+        a['E'] = a['y'] - a['alpha'] - a['psi']
+        sigma_true = a['E'].var()
+        assert abs(sigma_bc_b - sigma_true) / abs(sigma_true) < 5e-3
+        assert abs(sigma_bc_c - sigma_true) / abs(sigma_true) < 1e-2
+        # Test vars/covs
+        res_b = fe_solver_b.summary
+        res_c = fe_solver_c.summary
 
-    assert abs((res_b['var_fe'] - res_c['var_fe']) / res_b['var_fe']) < 5e-10
-    assert abs((res_b['cov_fe'] - res_c['cov_fe']) / res_b['cov_fe']) < 5e-10
-    assert abs((res_b['var_ho'] - res_c['var_ho']) / res_b['var_ho']) < 1e-2
-    assert abs((res_b['cov_ho'] - res_c['cov_ho']) / res_b['cov_ho']) < 2e-2
+        assert abs((res_b['var_fe'] - res_c['var_fe']) / res_b['var_fe']) < 5e-10
+        assert abs((res_b['cov_fe'] - res_c['cov_fe']) / res_b['cov_fe']) < 5e-10
+        assert abs((res_b['var_ho'] - res_c['var_ho']) / res_b['var_ho']) < 1e-2
+        assert abs((res_b['cov_ho'] - res_c['cov_ho']) / res_b['cov_ho']) < 2e-2
 
 # The purpose of the following code is to measure the importance of correctly weighting observations, but it doesn't actually contain any tests
 # def test_fe_weights_7():
