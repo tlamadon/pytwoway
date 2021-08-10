@@ -203,7 +203,7 @@ class FEEstimator:
 
         else: # If running analysis
             self.__create_fe_solver() # Solve FE model
-            self.__compute_trace_approximation_fe() # Compute trace approximation
+            self.__compute_trace_approximation_ho() # Compute trace approximation
 
             # If computing heteroskedastic correction
             if self.compute_he:
@@ -261,12 +261,13 @@ class FEEstimator:
         if 'w' in self.adata.columns:
             # Diagonal weight matrix
             Dp = diags(self.adata['w'])
-            Dwinv = linalg.inv(csc_matrix(W.T @ Dp @ W))
+            # Dwinv = diags(1.0 / ((W.T @ Dp @ W).diagonal())) # linalg.inv(csc_matrix(W.T @ Dp @ W))
         else:
             # Diagonal weight matrix - all weight one
             Dp = diags(np.ones(len(self.adata)))
-            Dwinv = diags(1.0 / ((W.T @ W).diagonal()))
+        Dwinv = diags(1.0 / ((W.T @ Dp @ W).diagonal()))
         self.Dp = Dp
+        self.Dp_sqrt = np.sqrt(Dp)
         self.Dwinv = Dwinv
 
         self.logger.info('Prepare linear solver')
@@ -359,7 +360,7 @@ class FEEstimator:
         self.res['mover_quantiles'] = self.__weighted_quantile(fdata['m'], np.linspace(0, 1, 11), fdata['i']).tolist()
         self.res['size_quantiles'] = self.__weighted_quantile(fdata['i'], np.linspace(0, 1, 11), fdata['i']).tolist()
         self.res['between_firm_var'] = self.__weighted_var(fdata['y'], fdata['i'])
-        self.res['var_y'] = self.adata['y'].var()
+        self.res['var_y'] = self.__weighted_var(self.adata['y'], self.Dp)
         self.logger.info('total variance: {:0.4f}'.format(self.res['var_y']))
 
         # extract woodcock moments using sdata and jdata
@@ -485,66 +486,15 @@ class FEEstimator:
             self.var_e = (self.nn * self.var_e_pi) / (self.nn - (self.nw + self.nf - 1))
         self.logger.info('[ho] variance of residuals {:2.4f}'.format(self.var_e))
 
-    def __compute_leverages_Pii(self):
+    def __compute_trace_approximation_ho(self):
         '''
-        Compute leverages for heteroskedastic correction.
+        Compute weighted HO trace approximation for arbitrary Q.
         '''
-        self.Pii = np.zeros(self.nn)
-        self.Sii = np.zeros(self.nn)
-
-        if len(self.params['levfile']) > 1:
-            self.logger.info('[he] starting heteroskedastic correction, loading precomputed files')
-
-            files = glob.glob('{}*'.format(self.params['levfile']))
-            self.logger.info('[he] found {} files to get leverages from'.format(len(files)))
-            self.res['lev_file_count'] = len(files)
-            assert len(files) > 0, "Didn't find any leverage files!"
-
-            for f in files:
-                pp = np.load(f)
-                self.Pii += pp / len(files)
-
-        elif self.ncore > 1:
-            self.logger.info('[he] starting heteroskedastic correction p2={}, using {} cores, batch size {}'.format(self.ndraw_pii, self.ncore, self.params['batch']))
-            set_start_method('spawn')
-            with Pool(processes=self.ncore) as pool:
-                Pii_all = pool.starmap(self.__leverage_approx, [self.params['batch'] for _ in range(self.ndraw_pii // self.params['batch'])])
-
-            for pp in Pii_all:
-                Pii += pp / len(Pii_all)
-
-        else:
-            Pii_all = list(itertools.starmap(self.__leverage_approx, [[self.params['batch']] for _ in range(self.ndraw_pii // self.params['batch'])]))
-
-            for pp in Pii_all:
-                self.Pii += pp / len(Pii_all)
-
-        I = 1.0 * self.adata.eval('m == 1')
-        max_leverage = (I * self.Pii).max()
-
-        # Attach the computed Pii to the dataframe
-        self.adata['Pii'] = self.Pii
-        self.logger.info('[he] Leverage range {:2.4f} to {:2.4f}'.format(self.adata.query('m == 1').Pii.min(), self.adata.query('m == 1').Pii.max()))
-
-        # Give stayers the variance estimate at the firm level
-        self.adata['Sii'] = self.Y * self.E / (1 - self.Pii)
-        S_j = self.adata.query('m == 1').rename(columns={'Sii': 'Sii_j'}).groupby('j1')['Sii_j'].agg('mean')
-
-        self.adata = pd.merge(self.adata, S_j, on='j1')
-        self.adata['Sii'] = np.where(self.adata['m'] == 1, self.adata['Sii'], self.adata['Sii_j'])
-        self.Sii = self.adata['Sii']
-
-        self.logger.info('[he] variance of residuals in heteroskedastic case: {:2.4f}'.format(self.Sii.mean()))
-
-    def __compute_trace_approximation_fe(self):
-        '''
-        Compute weighted FE trace approximation for arbitrary Q.
-        '''
-        self.logger.info('Starting weighted FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
+        self.logger.info('Starting plug-in estimation')
 
         Jq, Wq = self.__construct_Jq_Wq()
 
-        # Compute biased estimators
+        # Compute plug-in (biased) estimators
         self.tot_var = np.var(self.Y)
         if 'w' in self.adata.columns:
             self.logger.info('[weighted fe]')
@@ -579,7 +529,9 @@ class FEEstimator:
 
         #     self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
         ##### End full Trace without collapse operator ######
-        
+
+        self.logger.info('Starting weighted homoskedastic trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
+
         # Begin trace approximation
         self.tr_var_ho_all = np.zeros(self.ndraw_trace)
         self.tr_cov_ho_all = np.zeros(self.ndraw_trace)
@@ -591,14 +543,14 @@ class FEEstimator:
 
             R1 = Jq @ Zpsi
             psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
+            # Trace correction - var(psi)
             R2_psi = Jq @ psi1
-            # Trace correction
             self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
+            # Trace correction - cov(psi, alpha)
             R2_alpha = Wq @ alpha1
-            # Trace correction
             self.tr_cov_ho_all[r] = np.cov(R1, R2_alpha)[0][1]
 
-            self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
+            self.logger.debug('homoskedastic [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
     # def __compute_trace_approximation_fe(self):
     #     '''
@@ -714,6 +666,7 @@ class FEEstimator:
         Jq, Wq = self.__construct_Jq_Wq()
 
         for r in trange(self.ndraw_trace):
+            # Generate -1 or 1
             Zpsi = 2 * np.random.binomial(1, 0.5, self.nf - 1) - 1
             Zalpha = 2 * np.random.binomial(1, 0.5, self.nw) - 1
 
@@ -721,7 +674,7 @@ class FEEstimator:
             R2_psi = Jq * psi1
             R2_alpha = Wq * alpha1
 
-            psi2, alpha2 = self.__mult_AAinv(*self.__mult_Atranspose(self.Sii * self.__mult_A(Zpsi, Zalpha)))
+            psi2, alpha2 = self.__mult_AAinv(*self.__mult_Atranspose(self.Sii * self.__mult_A(Zpsi, Zalpha, weighted=True)))
             R3_psi = Jq * psi2
 
             # Trace corrections
@@ -748,7 +701,7 @@ class FEEstimator:
             Z = 2 * np.random.binomial(1, 0.5, self.nn) - 1
 
             # Compute Trace
-            R_psi, R_alpha = self.__solve(Z, D2=False)
+            R_psi, R_alpha = self.__solve(Z, Dp2=False)
             R_y = self.__mult_A(R_psi, R_alpha)
 
             self.tr_sigma_ho_all[r] = Z.T @ R_y
@@ -768,7 +721,7 @@ class FEEstimator:
         self.res['tot_var'] = self.tot_var
         self.res['eps_var_ho'] = self.var_e
         self.res['eps_var_fe'] = np.var(self.E)
-        self.res['var_y'] = np.var(self.Yq)
+        self.res['var_y'] = self.__weighted_var(self.Yq, self.Dp)
 
         # FE results
         # Plug-in variance
@@ -845,31 +798,32 @@ class FEEstimator:
 
         return psi_hat_dict, alpha_hat_dict
 
-    def __solve(self, Y, D1=True, D2=True):
+    def __solve(self, Y, Dp1=True, Dp2=True):
         '''
         Compute (A'D_1A)^-1 A'D_2Y, the least squares estimate of A [psi_hat, alpha_hat] = Y.
 
         Arguments:
             Y (Pandas DataFrame): labor data
-            D1 (bool): include first weight
-            D2 (bool): include second weight
+            Dp1 (bool): include first weight
+            Dp2 (bool or str): include second weight, if Dp2='sqrt' then use square root of weights
 
         Returns:
             psi_hat: estimated firm fixed effects @ FIXME correct datatype
             alpha_hat: estimated worker fixed effects @ FIXME correct datatype
         '''
-        J_transpose_Y, W_transpose_Y = self.__mult_Atranspose(Y, D2) # This gives A'Y
-        psi_hat, alpha_hat = self.__mult_AAinv(J_transpose_Y, W_transpose_Y, D1)
+        J_transpose_Y, W_transpose_Y = self.__mult_Atranspose(Y, Dp2) # This gives A'Y
+        psi_hat, alpha_hat = self.__mult_AAinv(J_transpose_Y, W_transpose_Y, Dp1)
 
         return psi_hat, alpha_hat
 
-    def __mult_A(self, psi, alpha):
+    def __mult_A(self, psi, alpha, weighted=False):
         '''
         Multiplies A = [J W] stored in the object by psi and alpha (used, for example, to compute estimated outcomes and sample errors).
 
         Arguments:
             psi: firm fixed effects @ FIXME correct datatype
             alpha: worker fixed effects @ FIXME correct datatype
+            weighted (bool or str): include weights, if weighted='sqrt' then use square root of weights
 
         Returns:
             J_psi + W_alpha (CSC Matrix): firms * firm fixed effects + workers * worker fixed effects
@@ -877,7 +831,11 @@ class FEEstimator:
         # J_psi = self.J * psi
         # W_alpha = self.W * alpha
 
-        return self.J * psi + self.W * alpha # J_psi + W_alpha
+        if weighted:
+            if weighted == 'sqrt':
+                return self.Dp_sqrt @ (self.J @ psi + self.W @ alpha)
+            return self.Dp @ (self.J @ psi + self.W @ alpha)
+        return self.J @ psi + self.W @ alpha # J_psi + W_alpha
 
     def __mult_Atranspose(self, v, weighted=True):
         '''
@@ -885,20 +843,22 @@ class FEEstimator:
 
         Arguments:
             v: what to multiply by @ FIXME correct datatype
-            weighted (bool): include weights
+            weighted (bool or str): include weights, if weighted='sqrt' then use square root of weights
 
         Returns:
             J_transpose_V (CSC Matrix): firms * v
             W_transpose_V (CSC Matrix): workers * v
         '''
         if weighted:
+            if weighted == 'sqrt':
+                return self.J.T @ self.Dp_sqrt @ v, self.W.T @ self.Dp_sqrt @ v
             return self.J.T @ self.Dp @ v, self.W.T @ self.Dp @ v
 
         return self.J.T @ v, self.W.T @ v # J_transpose_V, W_transpose_V
 
     def __mult_AAinv(self, psi, alpha, weighted=True):
         '''
-        Multiplies gamma = [psi alpha] by (A'A)^(-1) where A = [J W] stored in the object.
+        Multiplies gamma = [psi alpha] by (A'A)^(-1) where A = [J W] stored in the object (i.e. takes (A'DA)^{-1}gamma).
 
         Arguments:
             psi: firm fixed effects @ FIXME correct datatype
@@ -927,17 +887,74 @@ class FEEstimator:
 
         return psi_out, alpha_out
 
-    def __proj(self, y): # FIXME should this y be Y?
+    def __proj(self, Y, Dp0=False, Dp1=True, Dp2=True):
         '''
-        Solve y, then project onto X space of data stored in the object.
+        Solve Y, then project onto X space of data stored in the object. Essentially solves A(A'A)^{-1}A'Y
+
+        Details:
+            Solve computes (A'D_1A)^-1 A'D_2Y, the least squares estimate of A [psi_hat \\ alpha_hat] = Y.
+            __mult_A computes A @ gamma = [J & W] @ [psi \\ alpha]
 
         Arguments:
             y (Pandas DataFrame): labor data
+            Dp0 (bool or str): include weights in __mult_A, if Dp0='sqrt' then use square root of weights
+            Dp1 (bool): include first weight in __solve()
+            Dp2 (bool or str): include second weight in __solve(), if Dp2='sqrt' then use square root of weights
 
         Returns:
-            Projection of psi, alpha solved from y onto X space
+            Projection of psi, alpha solved from Y onto X space
         '''
-        return self.__mult_A(*self.__solve(y))
+        return self.__mult_A(*self.__solve(Y, Dp1, Dp2), Dp0)
+
+    def __compute_leverages_Pii(self):
+        '''
+        Compute leverages for heteroskedastic correction.
+        '''
+        Pii = np.zeros(self.nn)
+
+        if len(self.params['levfile']) > 1:
+            self.logger.info('[he] starting heteroskedastic correction, loading precomputed files')
+
+            files = glob.glob('{}*'.format(self.params['levfile']))
+            self.logger.info('[he] found {} files to get leverages from'.format(len(files)))
+            self.res['lev_file_count'] = len(files)
+            assert len(files) > 0, "Didn't find any leverage files!"
+
+            for f in files:
+                pp = np.load(f)
+                Pii += pp / len(files)
+
+        elif self.ncore > 1:
+            self.logger.info('[he] starting heteroskedastic correction p2={}, using {} cores, batch size {}'.format(self.ndraw_pii, self.ncore, self.params['batch']))
+            set_start_method('spawn')
+            with Pool(processes=self.ncore) as pool:
+                Pii_all = pool.starmap(self.__leverage_approx, [self.params['batch'] for _ in range(self.ndraw_pii // self.params['batch'])])
+
+            for pp in Pii_all:
+                Pii += pp / len(Pii_all)
+
+        else:
+            Pii_all = list(itertools.starmap(self.__leverage_approx, [[self.params['batch']] for _ in range(self.ndraw_pii // self.params['batch'])]))
+
+            for pp in Pii_all:
+                Pii += pp / len(Pii_all)
+
+        I = 1.0 * self.adata.eval('m == 1')
+        max_leverage = (I * Pii).max()
+
+        # Attach the computed Pii to the dataframe
+        self.adata['Pii'] = Pii
+        self.logger.info('[he] Leverage range {:2.4f} to {:2.4f}'.format(self.adata.query('m == 1').Pii.min(), self.adata.query('m == 1').Pii.max()))
+
+        # Give stayers the variance estimate at the firm level
+        self.adata['Sii'] = self.Y * self.E / (1 - Pii)
+        S_j = pd.DataFrame(self.adata).query('m == 1').rename(columns={'Sii': 'Sii_j'}).groupby('j')['Sii_j'].agg('mean')
+
+        self.adata = pd.merge(self.adata, S_j, on='j')
+        self.adata['Sii'] = np.where(self.adata['m'] == 1, self.adata['Sii'], self.adata['Sii_j'])
+        self.Sii = self.adata['Sii']
+
+        self.logger.info('[he] variance of residuals in heteroskedastic case: {:2.4f}'.format(self.Sii.mean()))
 
     def __leverage_approx(self, ndraw_pii):
         '''
@@ -947,15 +964,15 @@ class FEEstimator:
             ndraw_pii (int): number of draws
 
         Returns:
-            Pii (NumPy Array): @ FIXME I don't know what this function does, so I don't know what Pii is
+            Pii (NumPy Array): Pii array
         '''
         Pii = np.zeros(self.nn)
 
         # Compute the different draws
         for r in trange(ndraw_pii):
-            R2  = 2 * np.random.binomial(1, 0.5, self.nn) - 1
-            Pii += 1 / ndraw_pii * np.power(self.__proj(R2), 2.0)
+            R2 = 2 * np.random.binomial(1, 0.5, self.nn) - 1
+            Pii += 1 / ndraw_pii * np.power(self.__proj(R2, Dp0='sqrt', Dp2='sqrt'), 2.0)
 
-        self.logger.info('Done with batch')
+        self.logger.info('done with batch')
 
         return Pii

@@ -86,19 +86,19 @@ class TwoWay():
         '''
         self._clean(user_clean=user_clean, he=he)
 
-        if not collapsed:
-            if isinstance(self.data, self.type_dict['long']):
-                self.data = self.data.get_es()
-            elif not isinstance(self.data, self.type_dict['es']): # If not long or es, must be collapsed already
-                warnings.warn('Data already collapsed, running estimator on collapsed data')
-                collapsed = True
+        # if not collapsed:
+        #     if isinstance(self.data, self.type_dict['long']):
+        #         self.data = self.data.get_es()
+        #     elif not isinstance(self.data, self.type_dict['es']): # If not long or es, must be collapsed already
+        #         warnings.warn('Data already collapsed, running estimator on collapsed data')
+        #         collapsed = True
         if collapsed:
             if isinstance(self.data, self.type_dict['es']):
                 self.data = self.data.get_long()
             if isinstance(self.data, self.type_dict['long']):
                 self.data = self.data.get_collapsed_long()
-            if isinstance(self.data, self.type_dict['long_collapsed']):
-                self.data = self.data.get_es()
+            # if isinstance(self.data, self.type_dict['long_collapsed']):
+            #     self.data = self.data.get_es()
 
     def cluster(self, measures=bpd.measures.cdfs(), grouping=bpd.grouping.kmeans(), stayers_movers=None, t=None, weighted=True, dropna=False):
         '''
@@ -143,7 +143,7 @@ class TwoWay():
                     Q (str, default='cov(alpha, psi)'): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
         '''
         # Run estimator
-        fe_solver = tw.FEEstimator(self.data.get_cs(), user_fe)
+        fe_solver = tw.FEEstimator(self.data, user_fe)
         fe_solver.fit_1()
         fe_solver.construct_Q() # Comment out this line and manually create Q if you want a custom Q matrix
         fe_solver.fit_2()
@@ -171,9 +171,12 @@ class TwoWay():
                     posterior (bool, default=False): if True, compute posterior variance
 
                     wo_btw (bool, default=False): if True, sets between variation to 0, pure RE
-        '''
+        ''' 
         # Run estimator
-        cre_solver = tw.CREEstimator(self.data.get_cs(), user_cre)
+        if isinstance(self.data, (self.type_dict['long'], self.type_dict['long_collapsed'])):
+            cre_solver = tw.CREEstimator(self.data.get_es().get_cs(), user_cre)
+        else:
+            cre_solver = tw.CREEstimator(self.data.get_cs(), user_cre)
         cre_solver.fit()
 
         self.cre_res = cre_solver.res
