@@ -5,7 +5,7 @@ with open('README.rst', 'r', encoding='utf-8') as fh:
 
 setuptools.setup(
     name='pytwoway',
-    version='0.1.11',
+    version='0.1.12',
     author='Thibaut Lamadon',
     author_email='thibaut.lamadon@gmail.com',
     description='Estimate two way fixed effect labor models',

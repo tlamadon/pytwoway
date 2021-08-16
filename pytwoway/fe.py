@@ -95,6 +95,8 @@ class FEEstimator:
                     statsonly (bool, default=False): if True, return only basic statistics
 
                     Q (str, default='cov(alpha, psi)'): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
+
+                    seed (int, default=None): NumPy RandomState seed
         '''
         # Start logger
         logger_init(self)
@@ -116,10 +118,11 @@ class FEEstimator:
             'he': False, # If True, compute heteroskedastic correction
             'out': 'res_fe.json', # Outputfile where results are saved
             'statsonly': False, # If True, return only basic statistics
-            'Q': 'cov(alpha, psi)' # Which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
+            'Q': 'cov(alpha, psi)', # Which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
             # 'con': False, # Computes the smallest eigen values, this is the filepath where these results are saved FIXME not used
             # 'logfile': '', # Log output to a logfile FIXME not used
             # 'check': False # If True, compute the non-approximated estimates as well FIXME not used
+            'seed': None # np.random.RandomState() seed
         }
 
         self.params = update_dict(default_params, params)
@@ -136,6 +139,9 @@ class FEEstimator:
         self.res['cores'] = self.ncore
         self.res['ndp'] = self.ndraw_pii
         self.res['ndt'] = self.ndraw_trace
+
+        # Create NumPy RandomState instance
+        self.rs = np.random.RandomState(self.params['seed'])
 
         # self.logger.info('FEEstimator object initialized')
 
@@ -517,7 +523,7 @@ class FEEstimator:
 
         # for r in trange(self.ndraw_trace):
         #     # Generate -1 or 1 - in this case length nn
-        #     Z = 2 * np.random.binomial(1, 0.5, self.nn) - 1
+        #     Z = 2 * self.rs.binomial(1, 0.5, self.nn) - 1
 
         #     # Compute either side of the Trace
         #     R_psi, R_alpha = self.__solve(Z)
@@ -540,8 +546,8 @@ class FEEstimator:
 
         for r in trange(self.ndraw_trace):
             # Generate -1 or 1
-            Zpsi = 2 * np.random.binomial(1, 0.5, self.nf - 1) - 1
-            Zalpha = 2 * np.random.binomial(1, 0.5, self.nw) - 1
+            Zpsi = 2 * self.rs.binomial(1, 0.5, self.nf - 1) - 1
+            Zalpha = 2 * self.rs.binomial(1, 0.5, self.nw) - 1
 
             R1 = Jq @ Zpsi
             psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
@@ -585,8 +591,8 @@ class FEEstimator:
 
     #     for r in trange(self.ndraw_trace):
     #         # Generate -1 or 1
-    #         Zpsi = 2 * np.random.binomial(1, 0.5, self.nf - 1) - 1
-    #         Zalpha = 2 * np.random.binomial(1, 0.5, self.nw) - 1
+    #         Zpsi = 2 * self.rs.binomial(1, 0.5, self.nf - 1) - 1
+    #         Zalpha = 2 * self.rs.binomial(1, 0.5, self.nw) - 1
 
     #         R1 = Jq * Zpsi
     #         psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
@@ -622,8 +628,8 @@ class FEEstimator:
 
     #     for r in trange(self.ndraw_trace):
     #         # Generate -1 or 1
-    #         Zpsi = 2 * np.random.binomial(1, 0.5, self.nf - 1) - 1
-    #         Zalpha = 2 * np.random.binomial(1, 0.5, self.nw) - 1
+    #         Zpsi = 2 * self.rs.binomial(1, 0.5, self.nf - 1) - 1
+    #         Zalpha = 2 * self.rs.binomial(1, 0.5, self.nw) - 1
 
     #         R1 = self.Jq * Zpsi
     #         psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
@@ -646,8 +652,8 @@ class FEEstimator:
 
     #     for r in trange(self.ndraw_trace):
     #         # Generate -1 or 1
-    #         Zpsi = 2 * np.random.binomial(1, 0.5, self.nf - 1) - 1
-    #         Zalpha = 2 * np.random.binomial(1, 0.5, self.nw) - 1
+    #         Zpsi = 2 * self.rs.binomial(1, 0.5, self.nf - 1) - 1
+    #         Zalpha = 2 * self.rs.binomial(1, 0.5, self.nw) - 1
 
     #         R1 = self.J1 * Zpsi
     #         psi1, _ = self.__mult_AAinv(Zpsi, Zalpha)
@@ -669,8 +675,8 @@ class FEEstimator:
 
         for r in trange(self.ndraw_trace):
             # Generate -1 or 1
-            Zpsi = 2 * np.random.binomial(1, 0.5, self.nf - 1) - 1
-            Zalpha = 2 * np.random.binomial(1, 0.5, self.nw) - 1
+            Zpsi = 2 * self.rs.binomial(1, 0.5, self.nf - 1) - 1
+            Zalpha = 2 * self.rs.binomial(1, 0.5, self.nw) - 1
 
             psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
             R2_psi = Jq * psi1
@@ -700,7 +706,7 @@ class FEEstimator:
 
         for r in trange(self.ndraw_trace):
             # Generate -1 or 1 - in this case length nn
-            Z = 2 * np.random.binomial(1, 0.5, self.nn) - 1
+            Z = 2 * self.rs.binomial(1, 0.5, self.nn) - 1
 
             # Compute Trace
             R_psi, R_alpha = self.__solve(Z, Dp2=False)
@@ -952,10 +958,8 @@ class FEEstimator:
         self.adata['Sii'] = self.Y * self.E / (1 - Pii)
         S_j = pd.DataFrame(self.adata).query('m == 1').rename(columns={'Sii': 'Sii_j'}).groupby('j')['Sii_j'].agg('mean')
 
-        self.adata_merge = pd.merge(self.adata, S_j, on='j')
-        self.__drop_cols() # Trick to remove columns from original data - merge into new dataframe, drop columns from original, then rename new dataframe to adata
-        self.adata = self.adata_merge
-        self.adata['Sii'] = np.where(self.adata['m'] == 1, self.adata['Sii'], self.adata['Sii_j'])
+        Sii_j = pd.merge(self.adata['j'], S_j, on='j')['Sii_j']
+        self.adata['Sii'] = np.where(self.adata['m'] == 1, self.adata['Sii'], Sii_j)
         self.Sii = self.adata['Sii']
 
         self.logger.info('[he] variance of residuals in heteroskedastic case: {:2.4f}'.format(self.Sii.mean()))
@@ -974,7 +978,7 @@ class FEEstimator:
 
         # Compute the different draws
         for r in trange(ndraw_pii):
-            R2 = 2 * np.random.binomial(1, 0.5, self.nn) - 1
+            R2 = 2 * self.rs.binomial(1, 0.5, self.nn) - 1
             Pii += 1 / ndraw_pii * np.power(self.__proj(R2, Dp0='sqrt', Dp2='sqrt'), 2.0)
 
         self.logger.info('done with batch')

@@ -142,6 +142,8 @@ class TwoWay():
                     statsonly (bool, default=False): if True, return only basic statistics
 
                     Q (str, default='cov(alpha, psi)'): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
+
+                    seed (int, default=None): NumPy RandomState seed
         '''
         # Run estimator
         fe_solver = tw.FEEstimator(self.data, user_fe)

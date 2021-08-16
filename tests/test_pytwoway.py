@@ -31,7 +31,7 @@ def test_fe_ho_1():
 
     bdf = bpd.BipartiteLong(df, col_dict=col_dict).clean_data().get_collapsed_long()
 
-    fe_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'levfile': '', 'ndraw_tr': 5, 'h2': False, 'out': 'res_fe.json',  'statsonly': False, 'Q': 'cov(alpha, psi)'}
+    fe_params = {'ncore': 1, 'batch': 1, 'ndraw_pii': 50, 'levfile': '', 'ndraw_tr': 5, 'h2': False, 'out': 'res_fe.json',  'statsonly': False, 'Q': 'cov(alpha, psi)', 'seed': 1234}
 
     fe_solver = tw.FEEstimator(bdf, fe_params)
     fe_solver.fit_1()
@@ -75,14 +75,14 @@ def test_fe_weights_3():
     a = bpd.SimBipartite().sim_network()
     # Simulate without weights
     b = bpd.BipartiteLong(a).clean_data().gen_m()
-    fe_solver_b = tw.FEEstimator(b, {})
+    fe_solver_b = tw.FEEstimator(b, {'seed': 1234})
     fe_solver_b.fit_1()
     fe_solver_b.construct_Q()
     fe_solver_b.fit_2()
     # Simulate with weight 1
     c = bpd.BipartiteLong(a).clean_data().gen_m()
     c['w'] = 1
-    fe_solver_c = tw.FEEstimator(c, {})
+    fe_solver_c = tw.FEEstimator(c, {'seed': 1234})
     fe_solver_c.fit_1()
     fe_solver_c.construct_Q()
     fe_solver_c.fit_2()
@@ -106,7 +106,7 @@ def test_fe_weights_3():
     assert abs((res_b['var_fe'] - res_c['var_fe']) / res_b['var_fe']) < 1e-10
     assert abs((res_b['cov_fe'] - res_c['cov_fe']) / res_b['cov_fe']) < 1e-10
     assert abs((res_b['var_ho'] - res_c['var_ho']) / res_b['var_ho']) < 1e-2
-    assert abs((res_b['cov_ho'] - res_c['cov_ho']) / res_b['cov_ho']) < 1e-2
+    assert abs((res_b['cov_ho'] - res_c['cov_ho']) / res_b['cov_ho']) < 2e-2
 
 def test_fe_weights_4():
     # Test that FE weights are computing all parameters correctly with simple data.
@@ -125,13 +125,13 @@ def test_fe_weights_4():
     col_dict = {'i': 'id', 'j': 'firm', 'y': 'comp', 't': 'time'}
     # Simulate on non-collapsed data
     b = bpd.BipartiteLong(a, col_dict=col_dict).clean_data().gen_m()
-    fe_solver_b = tw.FEEstimator(b, {})
+    fe_solver_b = tw.FEEstimator(b, {'seed': 1234})
     fe_solver_b.fit_1()
     fe_solver_b.construct_Q()
     fe_solver_b.fit_2()
     # Simulate on collapsed data
     c = bpd.BipartiteLong(a, col_dict=col_dict).clean_data().get_collapsed_long()
-    fe_solver_c = tw.FEEstimator(c, {})
+    fe_solver_c = tw.FEEstimator(c, {'seed': 1234})
     fe_solver_c.fit_1()
     fe_solver_c.construct_Q()
     fe_solver_c.fit_2()
@@ -178,13 +178,13 @@ def test_fe_weights_4():
 #     a = bpd.SimBipartite().sim_network()
 #     # Simulate on non-collapsed data
 #     b = bpd.BipartiteLong(a).clean_data().gen_m()
-#     fe_solver_b = tw.FEEstimator(b, {})
+#     fe_solver_b = tw.FEEstimator(b, {'seed': 1234})
 #     fe_solver_b.fit_1()
 #     fe_solver_b.construct_Q()
 #     fe_solver_b.fit_2()
 #     # Simulate on collapsed then un-collapsed data
 #     c = bpd.BipartiteLong(a).clean_data().get_collapsed_long().uncollapse().drop('w')
-#     fe_solver_c = tw.FEEstimator(c, {})
+#     fe_solver_c = tw.FEEstimator(c, {'seed': 1234})
 #     fe_solver_c.fit_1()
 #     fe_solver_c.construct_Q()
 #     fe_solver_c.fit_2()
@@ -224,13 +224,13 @@ def test_fe_weights_6():
     a = bpd.SimBipartite().sim_network()
     # Simulate on non-collapsed data
     b = bpd.BipartiteLong(a).clean_data().gen_m()
-    fe_solver_b = tw.FEEstimator(b, {})
+    fe_solver_b = tw.FEEstimator(b, {'seed': 1234})
     fe_solver_b.fit_1()
     fe_solver_b.construct_Q()
     fe_solver_b.fit_2()
     # Simulate on collapsed data
     c = bpd.BipartiteLong(a).clean_data().get_collapsed_long()
-    fe_solver_c = tw.FEEstimator(c, {})
+    fe_solver_c = tw.FEEstimator(c, {'seed': 1234})
     fe_solver_c.fit_1()
     fe_solver_c.construct_Q()
     fe_solver_c.fit_2()
@@ -261,7 +261,7 @@ def test_fe_weights_6():
     sigma_bc_c = fe_solver_c.var_e
 
     if abs(sigma_bc_b - sigma_bc_c) != np.inf:
-        assert abs((sigma_bc_b - sigma_bc_c) / sigma_bc_b) < 1e-2
+        assert abs((sigma_bc_b - sigma_bc_c) / sigma_bc_b) < 2e-2
         # Test against true sigma^2
         a['E'] = a['y'] - a['alpha'] - a['psi']
         sigma_true = a['E'].var()
@@ -316,20 +316,20 @@ def test_fe_weights_6():
 #     col_dict = {'i': 'id', 'j': 'firm', 'y': 'comp', 't': 'time'}
 #     # Simulate on non-collapsed data
 #     b = bpd.BipartiteLong(a, col_dict=col_dict).clean_data().gen_m()
-#     fe_solver_b = tw.FEEstimator(b, {})
+#     fe_solver_b = tw.FEEstimator(b, {'seed': 1234})
 #     fe_solver_b.fit_1()
 #     fe_solver_b.construct_Q()
 #     fe_solver_b.fit_2()
 #     # Simulate on collapsed data with weights all reset to 1
 #     c = bpd.BipartiteLong(a, col_dict=col_dict).clean_data().get_collapsed_long()
 #     c['w'] = 1
-#     fe_solver_c = tw.FEEstimator(c, {})
+#     fe_solver_c = tw.FEEstimator(c, {'seed': 1234})
 #     fe_solver_c.fit_1()
 #     fe_solver_c.construct_Q()
 #     fe_solver_c.fit_2()
 #     # Simulate on collapsed data with correct weights
 #     d = bpd.BipartiteLong(a, col_dict=col_dict).clean_data().get_collapsed_long()
-#     fe_solver_d = tw.FEEstimator(d, {})
+#     fe_solver_d = tw.FEEstimator(d, {'seed': 1234})
 #     fe_solver_d.fit_1()
 #     fe_solver_d.construct_Q()
 #     fe_solver_d.fit_2()
@@ -377,13 +377,20 @@ def test_fe_weights_6():
 
 def construct_Jq_Wq(fe_solver):
     '''
-    USED IN TEST test_fe_he_7()
+    USED IN TEST test_fe_he_8()
     Construct Jq and Wq matrices.
 
     Returns:
         Jq (Pandas DataFrame): left matrix for computing Q
         Wq (Pandas DataFrame): right matrix for computing Q
     '''
+    # Construct Q matrix
+    fe_solver.adata['Jq'] = 1
+    fe_solver.adata['Wq'] = 1
+    fe_solver.adata['Jq_row'] = fe_solver.adata['Jq'].cumsum() - 1
+    fe_solver.adata['Wq_row'] = fe_solver.adata['Wq'].cumsum() - 1
+    fe_solver.adata['Jq_col'] = fe_solver.adata['j']
+    fe_solver.adata['Wq_col'] = fe_solver.adata['i']
     # Construct Jq, Wq matrices
     Jq = fe_solver.adata[fe_solver.adata['Jq'] == 1].reset_index(drop=True)
     nJ = len(Jq)
@@ -409,13 +416,13 @@ def test_fe_he_8():
     a = bpd.SimBipartite({'num_ind': 1000}).sim_network()
     # Simulate on non-collapsed data
     b = bpd.BipartiteLong(a).clean_data({'connectedness': 'biconnected'}).gen_m()
-    fe_solver_b = tw.FEEstimator(b, {'he': True})
+    fe_solver_b = tw.FEEstimator(b, {'he': True, 'seed': 1234})
     fe_solver_b.fit_1()
     fe_solver_b.construct_Q()
     fe_solver_b.fit_2()
     # Simulate on collapsed data
     c = bpd.BipartiteLong(a).clean_data({'connectedness': 'biconnected'}).get_collapsed_long()
-    fe_solver_c = tw.FEEstimator(c, {'he': True})
+    fe_solver_c = tw.FEEstimator(c, {'he': True, 'seed': 1234})
     fe_solver_c.fit_1()
     fe_solver_c.construct_Q()
     fe_solver_c.fit_2()
