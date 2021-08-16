@@ -65,6 +65,7 @@ class TwoWay():
                 user_clean = user_clean.copy()
                 user_clean['connectedness'] = 'biconnected'
             self.data = self.data.clean_data(user_clean=user_clean)
+            self.data.gen_m()
             self.clean = True
 
     def prep_data(self, collapsed=True, user_clean={}, he=False):

@@ -16,10 +16,14 @@ To run in Python:
    import pytwoway as tw
    # Create TwoWay object
    tw_net = tw.TwoWay(data)
+   # Clean data
+   tw_net.prep_data()
    # Fit the FE estimators
    tw_net.fit_fe()
    # Save the FE results
    fe_res = tw_net.summary_fe()
+   # Cluster to prepare for CRE
+   tw_net.cluster()
    # Fit the CRE estimator
    tw_net.fit_cre()
    # Save the CRE results
@@ -71,10 +75,14 @@ To run in Python:
    # Below is identical to first example, except we are now using the simulated data
    # Create TwoWay object
    tw_net = tw.TwoWay(sim_data)
+   # Clean data
+   tw_net.prep_data()
    # Fit the FE estimators:
    tw_net.fit_fe()
    # Save the FE results
    fe_res = tw_net.summary_fe()
+   # Cluster to prepare for CRE
+   tw_net.cluster()
    # Fit the CRE estimator
    tw_net.fit_cre()
    # Save the CRE results

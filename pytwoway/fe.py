@@ -219,6 +219,8 @@ class FEEstimator:
 
         self.__save_res() # Save results to json
 
+        self.__drop_cols() # Drop irrelevant columns
+
         self.logger.info('------ DONE -------')
 
     def __prep_vars(self):
@@ -721,7 +723,7 @@ class FEEstimator:
         self.res['tot_var'] = self.tot_var
         self.res['eps_var_ho'] = self.var_e
         self.res['eps_var_fe'] = np.var(self.E)
-        self.res['var_y'] = self.__weighted_var(self.Yq, self.Dp)
+        # self.res['var_y'] = self.__weighted_var(self.Yq, self.Dp)
 
         # FE results
         # Plug-in variance
@@ -950,7 +952,9 @@ class FEEstimator:
         self.adata['Sii'] = self.Y * self.E / (1 - Pii)
         S_j = pd.DataFrame(self.adata).query('m == 1').rename(columns={'Sii': 'Sii_j'}).groupby('j')['Sii_j'].agg('mean')
 
-        self.adata = pd.merge(self.adata, S_j, on='j')
+        self.adata_merge = pd.merge(self.adata, S_j, on='j')
+        self.__drop_cols() # Trick to remove columns from original data - merge into new dataframe, drop columns from original, then rename new dataframe to adata
+        self.adata = self.adata_merge
         self.adata['Sii'] = np.where(self.adata['m'] == 1, self.adata['Sii'], self.adata['Sii_j'])
         self.Sii = self.adata['Sii']
 
@@ -976,3 +980,10 @@ class FEEstimator:
         self.logger.info('done with batch')
 
         return Pii
+
+    def __drop_cols(self):
+        '''
+        Drop irrelevant columns (['Jq', 'Wq', 'Jq_row', 'Wq_row', 'Jq_col', 'Wq_col']).
+        '''
+        for col in ['Jq', 'Wq', 'Jq_row', 'Wq_row', 'Jq_col', 'Wq_col', 'Pii', 'Sii']:
+            self.adata.drop(col, inplace=True)
