@@ -266,7 +266,7 @@ def test_fe_weights_6():
         a['E'] = a['y'] - a['alpha'] - a['psi']
         sigma_true = a['E'].var()
         assert abs(sigma_bc_b - sigma_true) / abs(sigma_true) < 5e-3
-        assert abs(sigma_bc_c - sigma_true) / abs(sigma_true) < 1e-2
+        assert abs(sigma_bc_c - sigma_true) / abs(sigma_true) < 2e-2
         # Test vars/covs
         res_b = fe_solver_b.summary
         res_c = fe_solver_c.summary
