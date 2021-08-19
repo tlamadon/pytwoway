@@ -83,7 +83,11 @@ class TwoWayMonteCarlo:
 
                     statsonly (bool, default=False): if True, return only basic statistics
 
+                    feonly (bool, default=False): if True, compute only fixed effects and not variances
+
                     Q (str, default='cov(alpha, psi)'): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
+
+                    seed (int, default=None): NumPy RandomState seed
 
             cre_params (dict): dictionary of parameters for CRE estimation
 
@@ -125,6 +129,8 @@ class TwoWayMonteCarlo:
                     connectedness (str or None, default='connected'): if 'connected', keep observations in the largest connected set of firms; if 'biconnected', keep observations in the largest biconnected set of firms; if None, keep all observations
 
                     i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
+
+                    data_validity (bool, default=True): if True, run data validity checks; much faster if set to False
 
                     copy (bool, default=False): if False, avoid copy
 
@@ -215,7 +221,11 @@ class TwoWayMonteCarlo:
 
                     statsonly (bool, default=False): if True, return only basic statistics
 
+                    feonly (bool, default=False): if True, compute only fixed effects and not variances
+
                     Q (str, default='cov(alpha, psi)'): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
+
+                    seed (int, default=None): NumPy RandomState seed
 
             cre_params (dict): dictionary of parameters for CRE estimation
 
@@ -257,6 +267,8 @@ class TwoWayMonteCarlo:
                     connectedness (str or None, default='connected'): if 'connected', keep observations in the largest connected set of firms; if 'biconnected', keep observations in the largest biconnected set of firms; if None, keep all observations
 
                     i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
+
+                    data_validity (bool, default=True): if True, run data validity checks; much faster if set to False
 
                     copy (bool, default=False): if False, avoid copy
         '''

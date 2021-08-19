@@ -7,7 +7,7 @@ Computes a bunch of estimates from an event study data set:
 
 Does this through class FEEstimator
 '''
-import logging
+import warnings
 from pathlib import Path
 import pyamg
 import numpy as np
@@ -94,6 +94,8 @@ class FEEstimator:
 
                     statsonly (bool, default=False): if True, return only basic statistics
 
+                    feonly (bool, default=False): if True, compute only fixed effects and not variances
+
                     Q (str, default='cov(alpha, psi)'): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
 
                     seed (int, default=None): NumPy RandomState seed
@@ -118,6 +120,7 @@ class FEEstimator:
             'he': False, # If True, compute heteroskedastic correction
             'out': 'res_fe.json', # Outputfile where results are saved
             'statsonly': False, # If True, return only basic statistics
+            'feonly': False, # If True, compute only fixed effects and not variances
             'Q': 'cov(alpha, psi)', # Which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
             # 'con': False, # Computes the smallest eigen values, this is the filepath where these results are saved FIXME not used
             # 'logfile': '', # Log output to a logfile FIXME not used
@@ -209,14 +212,16 @@ class FEEstimator:
 
         else: # If running analysis
             self.__create_fe_solver() # Solve FE model
-            self.__compute_trace_approximation_ho() # Compute trace approximation
+            self.__get_fe_estimates() # Add fixed effect columns
+            if not self.params['feonly']: # If running full model
+                self.__compute_trace_approximation_ho() # Compute trace approximation
 
-            # If computing heteroskedastic correction
-            if self.compute_he:
-                self.__compute_leverages_Pii() # Solve heteroskedastic model
-                self.__compute_trace_approximation_he() # Compute trace approximation
+                # If computing heteroskedastic correction
+                if self.compute_he:
+                    self.__compute_leverages_Pii() # Solve heteroskedastic model
+                    self.__compute_trace_approximation_he() # Compute trace approximation
 
-            self.__collect_res() # Collect all results
+                self.__collect_res() # Collect all results
 
         end_time = time.time()
 
@@ -760,7 +765,7 @@ class FEEstimator:
         if self.compute_he:
             self.res['eps_var_he'] = self.Sii.mean()
             self.res['min_lev'] = self.adata.query('m == 1').Pii.min()
-            self.res['max_lev'] = self.adata.query('m == 1').Pii.max()
+            self.res['max_lev'] = self.res['max_lev'] # self.adata.query('m == 1').Pii.max() # Already computed, this just reorders the dictionary
             self.res['tr_var_he'] = np.mean(self.tr_var_he_all)
             self.res['tr_cov_he'] = np.mean(self.tr_cov_he_all)
             self.res['tr_var_ho_sd'] = np.std(self.tr_var_ho_all)
@@ -791,20 +796,18 @@ class FEEstimator:
 
         self.logger.info('saved results to {}'.format(self.params['out']))
 
-    def get_fe_estimates(self):
+    def __get_fe_estimates(self):
         '''
-        Return estimated psi_hats linked to firm ids and alpha_hats linked to worker ids.
-
-        Returns:
-            psi_hat_dict (dict): dictionary linking firm ids to estimated firm fixed effects
-            alpha_hat_dict (dict): dictionary linking worker ids to estimated worker fixed effects
+        Add the estimated psi_hats and alpha_hats to the dataframe.
         '''
         j_vals = np.arange(self.nf) # np.arange(self.adata.j1.max()) + 1
         i_vals = np.arange(self.nw) # np.arange(self.adata.i.max()) + 1
         psi_hat_dict = dict(zip(j_vals, np.concatenate([self.psi_hat, np.array([0])]))) # Add 0 for normalized firm
         alpha_hat_dict = dict(zip(i_vals, self.alpha_hat))
 
-        return psi_hat_dict, alpha_hat_dict
+        # Attach columns
+        self.adata['psi_hat'] = self.adata['j'].map(psi_hat_dict)
+        self.adata['alpha_hat'] = self.adata['i'].map(alpha_hat_dict)
 
     def __solve(self, Y, Dp1=True, Dp2=True):
         '''
@@ -948,7 +951,12 @@ class FEEstimator:
                 Pii += pp / len(Pii_all)
 
         I = 1.0 * self.adata.eval('m == 1')
-        max_leverage = (I * Pii).max()
+        self.res['max_lev'] = (I * Pii).max()
+
+        if self.res['max_lev'] >= 1:
+            leverage_warning = 'Max P_ii is {} which is >= 1. This should not happen - increase your value of ndraw_pii until this warning is no longer raised (ndraw_pii is currently set to {}).'.format(self.res['max_lev'], self.params['ndraw_pii'])
+            warnings.warn(leverage_warning)
+            self.logger.info(leverage_warning)
 
         # Attach the computed Pii to the dataframe
         self.adata['Pii'] = Pii
@@ -990,4 +998,5 @@ class FEEstimator:
         Drop irrelevant columns (['Jq', 'Wq', 'Jq_row', 'Wq_row', 'Jq_col', 'Wq_col']).
         '''
         for col in ['Jq', 'Wq', 'Jq_row', 'Wq_row', 'Jq_col', 'Wq_col', 'Pii', 'Sii']:
-            self.adata.drop(col, inplace=True)
+            if col in self.adata.columns:
+                self.adata.drop(col, inplace=True)
