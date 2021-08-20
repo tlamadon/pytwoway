@@ -241,10 +241,10 @@ class QPConstrained:
         k = 10
         # parameters
 
-        rs = np.random.RandomState()
-        x = rs.normal(size=k)
+        rng = np.random.default_rng()
+        x = rng.normal(size=k)
         # regressors
-        M = rs.normal(size=(n, k))
+        M = rng.normal(size=(n, k))
         # dependent
         Y = M @ x
 
@@ -350,30 +350,30 @@ class BLMModel:
         self.stationary = params['stationary']
 
         # np.random.RandomState().seed() # Required for multiprocessing to ensure different seeds
-        rs = np.random.RandomState(seed) # Required for multiprocessing to ensure different seeds
-        self.rs = rs
+        rng = np.random.default_rng(seed) # Required for multiprocessing to ensure different seeds
+        self.rng = rng
         if params['simulation']:
             # Model for Y1 | Y2, l, k for movers and stayers
-            self.A1 = 0.9 * (1 + 0.5 * rs.normal(size=(nk, nl)))
-            self.S1 = 0.3 * (1 + 0.5 * rs.uniform(size=(nk, nl)))
+            self.A1 = 0.9 * (1 + 0.5 * rng.normal(size=(nk, nl)))
+            self.S1 = 0.3 * (1 + 0.5 * rng.uniform(size=(nk, nl)))
             # Model for Y4 | Y3, l, k for movers and stayers
-            self.A2 = 0.9 * (1 + 0.5 * rs.normal(size=(nk, nl)))
-            self.S2 = 0.3 * (1 + 0.5 * rs.uniform(size=(nk, nl)))
+            self.A2 = 0.9 * (1 + 0.5 * rng.normal(size=(nk, nl)))
+            self.S2 = 0.3 * (1 + 0.5 * rng.uniform(size=(nk, nl)))
             # Model for p(K | l, l') for movers
-            self.pk1 = rs.dirichlet(alpha=[1] * nl, size=nk * nk)
+            self.pk1 = rng.dirichlet(alpha=[1] * nl, size=nk * nk)
             # Model for p(K | l, l') for stayers
-            self.pk0 = rs.dirichlet(alpha=[1] * nl, size=nk)
+            self.pk0 = rng.dirichlet(alpha=[1] * nl, size=nk)
             # Sort
             self._sort_matrices()
         else:
             # Model for Y1 | Y2, l, k for movers and stayers
-            self.A1 = np.tile(sorted(rs.normal(size=nl)), (nk, 1))
+            self.A1 = np.tile(sorted(rng.normal(size=nl)), (nk, 1))
             self.S1 = np.ones(shape=(nk, nl))
             # Model for Y4 | Y3, l, k for movers and stayers
             self.A2 = self.A1.copy()
             self.S2 = np.ones(shape=(nk, nl))
             # Model for p(K | l, l') for movers
-            self.pk1 = rs.dirichlet(alpha=[1] * nl, size=nk * nk) # np.ones(shape=(nk * nk, nl)) / nl
+            self.pk1 = rng.dirichlet(alpha=[1] * nl, size=nk * nk) # np.ones(shape=(nk * nk, nl)) / nl
             # Model for p(K | l, l') for stayers
             self.pk0 = np.ones(shape=(nk, nl)) / nl
 
@@ -401,7 +401,7 @@ class BLMModel:
     #     nl = self.nl
     #     nk = self.nk
     #     # Model for Y1 | Y2, l, k for movers and stayers
-    #     self.A1 = np.tile(sorted(rs.normal(size=nl)), (nk, 1))
+    #     self.A1 = np.tile(sorted(rng.normal(size=nl)), (nk, 1))
     #     self.S1 = np.ones(shape=(nk, nl))
     #     # Model for Y4 | Y3, l, k for movers and stayers
     #     self.A2 = self.A1.copy()
@@ -784,12 +784,12 @@ class BLMModel:
 
                 # Draw k
                 draw_vals = np.arange(nl)
-                Li = self.rs.choice(draw_vals, size=ni, replace=True, p=pk1[jj, :])
+                Li = self.rng.choice(draw_vals, size=ni, replace=True, p=pk1[jj, :])
                 L[I] = Li
 
                 # Draw Y2, Y3
-                Y1[I] = A1[k1, Li] + S1[k1, Li] * self.rs.normal(size=ni)
-                Y2[I] = A2[k2, Li] + S2[k2, Li] * self.rs.normal(size=ni)
+                Y1[I] = A1[k1, Li] + S1[k1, Li] * self.rng.normal(size=ni)
+                Y2[I] = A2[k2, Li] + S2[k2, Li] * self.rng.normal(size=ni)
 
                 i += NNm[k1, k2]
 
@@ -830,12 +830,12 @@ class BLMModel:
 
             # Draw k
             draw_vals = np.arange(nl)
-            Ki = self.rs.choice(draw_vals, size=ni, replace=True, p=pk0[k1, :])
+            Ki = self.rng.choice(draw_vals, size=ni, replace=True, p=pk0[k1, :])
             K[I] = Ki
 
             # Draw Y2, Y3
-            Y1[I] = A1[k1, Ki] + S1[k1, Ki] * self.rs.normal(size=ni)
-            Y2[I] = A2[k1, Ki] + S2[k1, Ki] * self.rs.normal(size=ni)
+            Y1[I] = A1[k1, Ki] + S1[k1, Ki] * self.rng.normal(size=ni)
+            Y2[I] = A2[k1, Ki] + S2[k1, Ki] * self.rng.normal(size=ni)
 
             i += NNs[k1]
 
@@ -859,16 +859,16 @@ class BLMModel:
         sdata = self._m2_mixt_simulate_stayers(self.NNs * smult)
 
         # Create some firm ids
-        sdata['j1'] = np.hstack(np.roll(sdata.groupby('g1').apply(lambda df: self.rs.randint(low=0, high=len(df) // fsize + 1, size=len(df))), - 1)) # Random number generation, roll is required because j1 is - 1 for empty rows but they appear at the end of the dataframe
+        sdata['j1'] = np.hstack(np.roll(sdata.groupby('g1').apply(lambda df: self.rng.integer(low=0, high=len(df) // fsize + 1, size=len(df))), - 1)) # Random number generation, roll is required because j1 is - 1 for empty rows but they appear at the end of the dataframe
         sdata['j1'] = 'F' + (sdata['g1'].astype(int) + sdata['j1']).astype(str)
         sdata['g1b'] = sdata['g1']
         sdata['g1true'] = sdata['g1']
         jdata['g1c'] = jdata['g1']
         jdata['g1true'] = jdata['g1']
         jdata['g2true'] = jdata['g2']
-        jdata['j1'] = np.hstack(jdata.groupby('g1c').apply(lambda df: self.rs.choice(sdata.loc[sdata['g1b'].isin(jdata['g1c']), 'j1'].unique(), size=len(df))))
+        jdata['j1'] = np.hstack(jdata.groupby('g1c').apply(lambda df: self.rng.choice(sdata.loc[sdata['g1b'].isin(jdata['g1c']), 'j1'].unique(), size=len(df))))
         jdata['g2c'] = jdata['g2']
-        jdata['j2'] = np.hstack(jdata.groupby('g2c').apply(lambda df: self.rs.choice(sdata.loc[sdata['g1b'].isin(jdata['g2c']), 'j1'].unique(), size=len(df))))
+        jdata['j2'] = np.hstack(jdata.groupby('g2c').apply(lambda df: self.rng.choice(sdata.loc[sdata['g1b'].isin(jdata['g2c']), 'j1'].unique(), size=len(df))))
         jdata = jdata.drop(['g1c', 'g2c'], axis=1)
         sdata = sdata.drop(['g1b'], axis=1)
         sdata['j2'] = sdata['j1']
