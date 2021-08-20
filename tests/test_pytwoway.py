@@ -12,6 +12,15 @@ from scipy.sparse import csc_matrix
 ##### FE #####
 ##############
 
+def get_fe_estimates(fe_solver):
+    # Get (psi_hat_dict, alpha_hat_dict) from fe_solver
+    j_vals = np.arange(fe_solver.nf)
+    i_vals = np.arange(fe_solver.nw)
+    psi_hat_dict = dict(zip(j_vals, np.concatenate([fe_solver.psi_hat, np.array([0])]))) # Add 0 for normalized firm
+    alpha_hat_dict = dict(zip(i_vals, fe_solver.alpha_hat))
+
+    return psi_hat_dict, alpha_hat_dict
+
 def test_fe_ho_1():
     # Continuous time, 1 mover between firms 1 and 2, 1 between firms 2 and 4, and 1 stayer at firm 4, firm 4 gets reset to firm 3, and discontinuous time still counts as a move
     # psi1 = 5, psi2 = 3, psi4 = 4
@@ -38,7 +47,7 @@ def test_fe_ho_1():
     fe_solver.construct_Q()
     fe_solver.fit_2()
 
-    psi_hat, alpha_hat = fe_solver.get_fe_estimates()
+    psi_hat, alpha_hat = get_fe_estimates(fe_solver)
 
     assert abs(psi_hat[0] - 1) < 1e-10
     assert abs(psi_hat[1] + 1) < 1e-10
@@ -136,8 +145,8 @@ def test_fe_weights_4():
     fe_solver_c.construct_Q()
     fe_solver_c.fit_2()
     # Collect parameter estimates
-    b_psi, b_alpha = fe_solver_b.get_fe_estimates()
-    c_psi, c_alpha = fe_solver_c.get_fe_estimates()
+    b_psi, b_alpha = get_fe_estimates(fe_solver_b)
+    c_psi, c_alpha = get_fe_estimates(fe_solver_c)
     # Convert to dataframes
     b_psi = pd.DataFrame(list(b_psi.items()), columns=['fid', 'psi'])
     b_alpha = pd.DataFrame(list(b_alpha.items()), columns=['wid', 'alpha'])
@@ -189,8 +198,8 @@ def test_fe_weights_4():
 #     fe_solver_c.construct_Q()
 #     fe_solver_c.fit_2()
 #     # Collect parameter estimates
-#     b_psi, b_alpha = fe_solver_b.get_fe_estimates()
-#     c_psi, c_alpha = fe_solver_c.get_fe_estimates()
+#     b_psi, b_alpha = get_fe_estimates(fe_solver_b)
+#     c_psi, c_alpha = get_fe_estimates(fe_solver_c)
 #     # Convert to dataframes
 #     b_psi = pd.DataFrame(list(b_psi.items()), columns=['fid', 'psi'])
 #     b_alpha = pd.DataFrame(list(b_alpha.items()), columns=['wid', 'alpha'])
@@ -235,8 +244,8 @@ def test_fe_weights_6():
     fe_solver_c.construct_Q()
     fe_solver_c.fit_2()
     # Collect parameter estimates
-    b_psi, b_alpha = fe_solver_b.get_fe_estimates()
-    c_psi, c_alpha = fe_solver_c.get_fe_estimates()
+    b_psi, b_alpha = get_fe_estimates(fe_solver_b)
+    c_psi, c_alpha = get_fe_estimates(fe_solver_c)
     # Convert to dataframes
     b_psi = pd.DataFrame(list(b_psi.items()), columns=['fid', 'psi'])
     b_alpha = pd.DataFrame(list(b_alpha.items()), columns=['wid', 'alpha'])
@@ -334,9 +343,9 @@ def test_fe_weights_6():
 #     fe_solver_d.construct_Q()
 #     fe_solver_d.fit_2()
 #     # Collect parameter estimates
-#     b_psi, b_alpha = fe_solver_b.get_fe_estimates()
-#     c_psi, c_alpha = fe_solver_c.get_fe_estimates()
-#     d_psi, d_alpha = fe_solver_d.get_fe_estimates()
+#     b_psi, b_alpha = get_fe_estimates(fe_solver_b)
+#     c_psi, c_alpha = get_fe_estimates(fe_solver_c)
+#     d_psi, d_alpha = get_fe_estimates(fe_solver_d)
 #     # Convert to dataframes
 #     b_psi = pd.DataFrame(list(b_psi.items()), columns=['fid', 'psi'])
 #     b_alpha = pd.DataFrame(list(b_alpha.items()), columns=['wid', 'alpha'])
@@ -428,10 +437,10 @@ def test_fe_he_8():
     fe_solver_c.fit_2()
 
     # Add columns with estimated parameters
-    b_params = fe_solver_b.get_fe_estimates()
+    b_params = get_fe_estimates(fe_solver_b)
     b['alpha_hat'] = b['i'].map(b_params[1])
     b['psi_hat'] = b['j'].map(b_params[0])
-    c_params = fe_solver_c.get_fe_estimates()
+    c_params = get_fe_estimates(fe_solver_c)
     c['alpha_hat'] = c['i'].map(c_params[1])
     c['psi_hat'] = c['j'].map(c_params[0])
 
