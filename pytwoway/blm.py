@@ -859,7 +859,7 @@ class BLMModel:
         sdata = self._m2_mixt_simulate_stayers(self.NNs * smult)
 
         # Create some firm ids
-        sdata['j1'] = np.hstack(np.roll(sdata.groupby('g1').apply(lambda df: self.rng.integer(low=0, high=len(df) // fsize + 1, size=len(df))), - 1)) # Random number generation, roll is required because j1 is - 1 for empty rows but they appear at the end of the dataframe
+        sdata['j1'] = np.hstack(np.roll(sdata.groupby('g1').apply(lambda df: self.rng.integers(low=0, high=len(df) // fsize + 1, size=len(df))), - 1)) # Random number generation, roll is required because j1 is - 1 for empty rows but they appear at the end of the dataframe
         sdata['j1'] = 'F' + (sdata['g1'].astype(int) + sdata['j1']).astype(str)
         sdata['g1b'] = sdata['g1']
         sdata['g1true'] = sdata['g1']
