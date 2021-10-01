@@ -143,8 +143,8 @@ class FEEstimator:
         self.res['ndp'] = self.ndraw_pii
         self.res['ndt'] = self.ndraw_trace
 
-        # Create NumPy RandomState instance
-        self.rs = np.random.RandomState(self.params['seed'])
+        # Create NumPy Generator instance
+        self.rng = np.random.default_rng(self.params['seed'])
 
         # self.logger.info('FEEstimator object initialized')
 
@@ -528,7 +528,7 @@ class FEEstimator:
 
         # for r in trange(self.ndraw_trace):
         #     # Generate -1 or 1 - in this case length nn
-        #     Z = 2 * self.rs.binomial(1, 0.5, self.nn) - 1
+        #     Z = 2 * self.rng.binomial(1, 0.5, self.nn) - 1
 
         #     # Compute either side of the Trace
         #     R_psi, R_alpha = self.__solve(Z)
@@ -551,8 +551,8 @@ class FEEstimator:
 
         for r in trange(self.ndraw_trace):
             # Generate -1 or 1
-            Zpsi = 2 * self.rs.binomial(1, 0.5, self.nf - 1) - 1
-            Zalpha = 2 * self.rs.binomial(1, 0.5, self.nw) - 1
+            Zpsi = 2 * self.rng.binomial(1, 0.5, self.nf - 1) - 1
+            Zalpha = 2 * self.rng.binomial(1, 0.5, self.nw) - 1
 
             R1 = Jq @ Zpsi
             psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
@@ -596,8 +596,8 @@ class FEEstimator:
 
     #     for r in trange(self.ndraw_trace):
     #         # Generate -1 or 1
-    #         Zpsi = 2 * self.rs.binomial(1, 0.5, self.nf - 1) - 1
-    #         Zalpha = 2 * self.rs.binomial(1, 0.5, self.nw) - 1
+    #         Zpsi = 2 * self.rng.binomial(1, 0.5, self.nf - 1) - 1
+    #         Zalpha = 2 * self.rng.binomial(1, 0.5, self.nw) - 1
 
     #         R1 = Jq * Zpsi
     #         psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
@@ -633,8 +633,8 @@ class FEEstimator:
 
     #     for r in trange(self.ndraw_trace):
     #         # Generate -1 or 1
-    #         Zpsi = 2 * self.rs.binomial(1, 0.5, self.nf - 1) - 1
-    #         Zalpha = 2 * self.rs.binomial(1, 0.5, self.nw) - 1
+    #         Zpsi = 2 * self.rng.binomial(1, 0.5, self.nf - 1) - 1
+    #         Zalpha = 2 * self.rng.binomial(1, 0.5, self.nw) - 1
 
     #         R1 = self.Jq * Zpsi
     #         psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
@@ -657,8 +657,8 @@ class FEEstimator:
 
     #     for r in trange(self.ndraw_trace):
     #         # Generate -1 or 1
-    #         Zpsi = 2 * self.rs.binomial(1, 0.5, self.nf - 1) - 1
-    #         Zalpha = 2 * self.rs.binomial(1, 0.5, self.nw) - 1
+    #         Zpsi = 2 * self.rng.binomial(1, 0.5, self.nf - 1) - 1
+    #         Zalpha = 2 * self.rng.binomial(1, 0.5, self.nw) - 1
 
     #         R1 = self.J1 * Zpsi
     #         psi1, _ = self.__mult_AAinv(Zpsi, Zalpha)
@@ -680,8 +680,8 @@ class FEEstimator:
 
         for r in trange(self.ndraw_trace):
             # Generate -1 or 1
-            Zpsi = 2 * self.rs.binomial(1, 0.5, self.nf - 1) - 1
-            Zalpha = 2 * self.rs.binomial(1, 0.5, self.nw) - 1
+            Zpsi = 2 * self.rng.binomial(1, 0.5, self.nf - 1) - 1
+            Zalpha = 2 * self.rng.binomial(1, 0.5, self.nw) - 1
 
             psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
             R2_psi = Jq * psi1
@@ -711,7 +711,7 @@ class FEEstimator:
 
         for r in trange(self.ndraw_trace):
             # Generate -1 or 1 - in this case length nn
-            Z = 2 * self.rs.binomial(1, 0.5, self.nn) - 1
+            Z = 2 * self.rng.binomial(1, 0.5, self.nn) - 1
 
             # Compute Trace
             R_psi, R_alpha = self.__solve(Z, Dp2=False)
@@ -961,6 +961,7 @@ class FEEstimator:
         # Attach the computed Pii to the dataframe
         self.adata['Pii'] = Pii
         self.logger.info('[he] Leverage range {:2.4f} to {:2.4f}'.format(self.adata.query('m == 1').Pii.min(), self.adata.query('m == 1').Pii.max()))
+        # print('Observation with max leverage:', self.adata[self.adata['Pii'] == self.res['max_lev']])
 
         # Give stayers the variance estimate at the firm level
         self.adata['Sii'] = self.Y * self.E / (1 - Pii)
@@ -986,7 +987,7 @@ class FEEstimator:
 
         # Compute the different draws
         for r in trange(ndraw_pii):
-            R2 = 2 * self.rs.binomial(1, 0.5, self.nn) - 1
+            R2 = 2 * self.rng.binomial(1, 0.5, self.nn) - 1
             Pii += 1 / ndraw_pii * np.power(self.__proj(R2, Dp0='sqrt', Dp2='sqrt'), 2.0)
 
         self.logger.info('done with batch')

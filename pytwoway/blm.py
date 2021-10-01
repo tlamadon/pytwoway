@@ -315,7 +315,7 @@ class BLMModel:
                     d_prior (float, default=1.0001): value >= 1, account for probabilities being too small
 
                     verbose (int, default=0): if 0, print no output; if 1, print additional output; if 2, print maximum output
-        seed (int or None): seed for np.random.RandomState()
+        seed (int or None): seed for np.random.default_rng()
     '''
     def __init__(self, user_blm={}, seed=None):
         # Default parameters
@@ -914,14 +914,15 @@ class BLMEstimator:
         self.connectedness_low = None # No connectedness yet
         self.liks_all = None # No paths of likelihoods yet
 
-    def _sim_model(self, jdata):
+    def _sim_model(self, jdata, seed=None):
         '''
         Generate model and run fit_movers_cstr_uncstr() given parameters.
 
         Arguments:
             jdata (Pandas DataFrame): movers
+            seed (int or None): seed for np.random.default_rng()
         '''
-        model = BLMModel(self.blm_params)
+        model = BLMModel(self.blm_params, seed)
         model.fit_movers_cstr_uncstr(jdata)
         return model
 
@@ -935,7 +936,7 @@ class BLMEstimator:
             n_init (int): number of starting values
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness
             ncore (int): number of cores for multiprocessing
-            seed (int or None): seed to generate list of seeds for np.random.RandomState()
+            seed (int or None): seed to generate list of seeds for np.random.default_rng()
         '''
         if seed is None:
             seeds = [None] * n_init

@@ -7,7 +7,7 @@ import pytwoway as tw
 
 class TwoWay():
     '''
-    Class of TwoWay, where TwoWay gives a network of firms and workers. Inherits from bipartitepandas.
+    Class of TwoWay, where TwoWay gives a network of firms and workers.
     '''
 
     def __init__(self, data, formatting='long', col_dict=None):
@@ -89,20 +89,14 @@ class TwoWay():
                     copy (bool, default=False): if False, avoid copy
             he (bool): if True, compute largest biconnected set of firms for heteroskedastic correction
         '''
-        if collapsed and isinstance(self.data, (self.type_dict['es'], self.type_dict['long'])):
-            # Don't compute largest connected set on non-collapsed data
-            user_clean_copy = user_clean.copy()
-            user_clean_copy['connectedness'] = None
-            self._clean(user_clean=user_clean_copy, he=False)
-            self.clean = False # Not actually clean yet
-            # Now collapse the data
+        # Clean the data
+        self._clean(user_clean=user_clean, he=he)
+        # Collapse the data
+        if collapsed:
             if isinstance(self.data, self.type_dict['es']):
                 self.data = self.data.get_long()
             if isinstance(self.data, self.type_dict['long']):
                 self.data = self.data.get_collapsed_long()
-        # If collapsed, compute connected set on collapsed data
-        # Otherwise, this is the normal cleaning step
-        self._clean(user_clean=user_clean, he=he)
 
     def cluster(self, measures=bpd.measures.cdfs(), grouping=bpd.grouping.kmeans(), stayers_movers=None, t=None, weighted=True, dropna=False):
         '''
