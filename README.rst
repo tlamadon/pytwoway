@@ -7,6 +7,9 @@ PyTwoWay
 .. image:: https://anaconda.org/tlamadon/pytwoway/badges/version.svg
     :target: https://anaconda.org/tlamadon/pytwoway
 
+.. image:: https://anaconda.org/tlamadon/pytwoway/badges/platforms.svg   
+    :target: https://anaconda.org/tlamadon/pytwoway
+
 .. image:: https://circleci.com/gh/tlamadon/pytwoway/tree/master.svg?style=shield
     :target: https://circleci.com/gh/tlamadon/pytwoway/tree/master    
 
