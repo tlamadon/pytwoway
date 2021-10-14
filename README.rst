@@ -4,6 +4,9 @@ PyTwoWay
 .. image:: https://badge.fury.io/py/pytwoway.svg
     :target: https://badge.fury.io/py/pytwoway
 
+.. image:: https://anaconda.org/tlamadon/pytwoway/badges/version.svg
+    :target: https://anaconda.org/tlamadon/pytwoway
+
 .. image:: https://circleci.com/gh/tlamadon/pytwoway/tree/master.svg?style=shield
     :target: https://circleci.com/gh/tlamadon/pytwoway/tree/master    
 
@@ -96,7 +99,7 @@ To push the package to PiP, increase the version number in the `pyproject.toml` 
 Finally to build the package for conda and upload it
 
     conda skeleton pypi pytwoway
-    conda config --set anaconda_upload yse
+    conda config --set anaconda_upload yes
     conda-build pytwoway -c tlamadon --output-folder pytwoway
 
 
