@@ -16,6 +16,9 @@ PyTwoWay
 .. image:: https://img.shields.io/badge/doc-latest-blue
     :target: https://tlamadon.github.io/pytwoway/
 
+.. image:: https://badgen.net/badge//gh/pytwoway?icon=github
+    :target: https://github.com/tlamadon/pytwoway
+
 `PyTwoWay` is the Python package associated with the following paper:
 
 "`How Much Should we Trust Estimates of Firm Effects and Worker Sorting? <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" 
