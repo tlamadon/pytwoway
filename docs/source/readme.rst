@@ -4,11 +4,20 @@ PyTwoWay
 .. image:: https://badge.fury.io/py/pytwoway.svg
     :target: https://badge.fury.io/py/pytwoway
 
+.. image:: https://anaconda.org/tlamadon/pytwoway/badges/version.svg
+    :target: https://anaconda.org/tlamadon/pytwoway
+
+.. image:: https://anaconda.org/tlamadon/pytwoway/badges/platforms.svg
+    :target: https://anaconda.org/tlamadon/pytwoway
+
 .. image:: https://circleci.com/gh/tlamadon/pytwoway/tree/master.svg?style=shield
-    :target: https://circleci.com/gh/tlamadon/pytwoway/tree/master    
+    :target: https://circleci.com/gh/tlamadon/pytwoway/tree/master
 
 .. image:: https://img.shields.io/badge/doc-latest-blue
     :target: https://tlamadon.github.io/pytwoway/
+
+.. image:: https://badgen.net/badge//gh/pytwoway?icon=github
+    :target: https://github.com/tlamadon/pytwoway
 
 `PyTwoWay` is the Python package associated with the following paper:
 
@@ -82,8 +91,22 @@ Bibtex entry::
 Development
 -----------
 
-Easiest is to use poetry to set up a local environment::
+If you want to contribute to the package, the easiest
+is to use poetry to set up a local environment::
 
     poetry install
-    poetry shell
-    python -m pytest
+    poetry run python -m pytest
+
+To push the package to PiP, increase the version number in the `pyproject.toml` file and then
+
+    poetry build
+    poetry publish
+
+Finally to build the package for conda and upload it
+
+    conda skeleton pypi pytwoway
+    conda config --set anaconda_upload yes
+    conda-build pytwoway -c tlamadon --output-folder pytwoway
+
+
+
