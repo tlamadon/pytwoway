@@ -35,10 +35,11 @@ jobs:
           paths: 
             - /home/circleci/.cache/pypoetry/virtualenvs
 
-      # Last step, runs our tests ommiting the dependencies path (so we don't take their coverage into account)
+      # Last step, runs our tests omitting the dependencies path (so we don't take their coverage into account)
       # And send our coverage somewhere, in this case, coveralls
       - run:
           name: Run Pytest
+          no_output_timeout: 20m
           command: |
             poetry run python -m pytest 
 
