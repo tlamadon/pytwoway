@@ -145,7 +145,10 @@ class TwoWay():
                     seed (int, default=None): NumPy RandomState seed
         '''
         # Run estimator
-        fe_solver = tw.FEEstimator(self.data, user_fe)
+        if isinstance(self.data, (self.type_dict['es'], self.type_dict['es_collapsed'])):
+            fe_solver = tw.FEEstimator(self.data.get_long(), user_fe)
+        else:
+            fe_solver = tw.FEEstimator(self.data, user_fe)
         fe_solver.fit_1()
         fe_solver.construct_Q() # Comment out this line and manually create Q if you want a custom Q matrix
         fe_solver.fit_2()
