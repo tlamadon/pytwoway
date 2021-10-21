@@ -10,6 +10,152 @@ import pytwoway as tw
 from tqdm import trange
 import warnings
 
+def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), threshold=15, user_clean={}, rng=np.random.default_rng()):
+    '''
+    First, keep only firms that have at minimum `threshold` many movers. Then take a random subset of subsets[0] percent of remaining movers. Constructively rebuild the data to reach each subsequent value of subsets. Return these subsets as an iterator.
+
+    Arguments:
+        bdf (BipartiteBase): data
+        subsets (list): percents of movers to keep (must be weakly increasing)
+        threshold (int): minimum number of movers required to keep a firm
+        user_clean (dict): dictionary of parameters for cleaning
+
+            Dictionary parameters:
+
+                connectedness (str or None, default='connected'): if 'connected', keep observations in the largest connected set of firms; if 'biconnected', keep observations in the largest biconnected set of firms; if None, keep all observations
+
+                i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then data is converted to long, cleaned, then reconverted to its original format
+
+                data_validity (bool, default=True): if True, run data validity checks; much faster if set to False
+
+                copy (bool, default=False): if False, avoid copy
+
+        rng (NumPy RandomState): NumPy RandomState object
+
+    Returns:
+        subset (iterator of BipartiteBase): subset of data
+    '''
+    # Update clean_params to make computations faster
+    clean_params = user_clean.copy()
+    clean_params['data_validity'] = False
+    clean_params['copy'] = False
+
+    # Make sure subsets are weakly increasing
+    if np.min(np.diff(np.array(subsets))) < 0:
+        warnings.warn('Subsets must be weakly increasing.')
+        return None
+
+    # Take subset of firms that meet threshold
+    threshold_firms = bdf.min_movers(threshold=threshold, copy=False)
+    subset_init = bdf.keep_ids('j', threshold_firms, copy=False)
+
+    # Worker ids in base subset
+    wids_init = subset_init.loc[subset_init['m'] == 1, 'i'].unique()
+
+    # Draw first subset
+    n_wid_drops_1 = int(np.floor((1 - subsets[0]) * len(wids_init))) # Number of wids to drop
+    wid_drops_1 = set(rng.choice(wids_init, size=n_wid_drops_1, replace=False)) # Draw wids to drop
+    ##### Disable Pandas warning #####
+    pd.options.mode.chained_assignment = None
+    subset_1 = subset_init.drop_ids('i', wid_drops_1, copy=False)._reset_attributes().clean_data(clean_params).gen_m()
+    ##### Re-enable Pandas warning #####
+    pd.options.mode.chained_assignment = 'warn'
+    subset_1_orig_ids = subset_1.original_ids(copy=False)
+
+    yield subset_1
+
+    # Get list of all valid firms
+    valid_firms = []
+    for j_subcol in bpd.to_list(bdf.reference_dict['j']):
+        original_j = 'original_' + j_subcol
+        valid_firms += list(subset_1_orig_ids[original_j].unique())
+    valid_firms = set(valid_firms)
+
+    # Take all data for list of firms in smallest subset
+    subset_init = subset_init.keep_ids('j', valid_firms, copy=False)
+
+    # Determine which wids (for movers) can still be drawn
+    all_valid_wids = set(subset_init.loc[subset_init['m'] == 1, 'i'].unique())
+    dropped_wids = all_valid_wids.difference(set(subset_1_orig_ids.loc[subset_1_orig_ids['m'] == 1, 'original_i'].unique()))
+    subset_prev = subset_1
+    del subset_1, subset_1_orig_ids
+
+    for i, subset_pct in enumerate(subsets[1:]): # Each step, drop fewer wids
+        n_wid_draws_i = min(int(np.ceil((1 - subset_pct) * len(all_valid_wids))), len(dropped_wids))
+        if n_wid_draws_i <= 0:
+            warnings.warn('Attrition plot does not change at iteration {}'.format(i))
+            yield subset_prev
+        else:
+            wid_draws_i = set(rng.choice(list(dropped_wids), size=n_wid_draws_i, replace=False))
+            dropped_wids = wid_draws_i
+
+            ##### Disable Pandas warning #####
+            pd.options.mode.chained_assignment = None
+            subset_i = subset_init.drop_ids('i', dropped_wids, copy=False)._reset_attributes().clean_data(clean_params).gen_m()
+            ##### Re-enable Pandas warning #####
+            pd.options.mode.chained_assignment = 'warn'
+
+            yield subset_i
+
+            subset_prev = subset_i
+
+def attrition_decreasing(bdf, subsets=np.linspace(0.5, 0.1, 5), threshold=15, user_clean={}, rng=np.random.default_rng()):
+    '''
+    First, keep only firms that have at minimum `threshold` many movers. Then take a random subset of subsets[0] percent of remaining movers. Deconstruct the data to reach each subsequent value of subsets. Return these subsets as an iterator.
+
+    Arguments:
+        bdf (BipartiteBase): data
+        subsets (list): percents of movers to keep percents of movers to keep (must be weakly decreasing)
+        threshold (int): minimum number of movers required to keep a firm
+        user_clean (dict): dictionary of parameters for cleaning
+
+            Dictionary parameters:
+
+                connectedness (str or None, default='connected'): if 'connected', keep observations in the largest connected set of firms; if 'biconnected', keep observations in the largest biconnected set of firms; if None, keep all observations
+
+                i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then data is converted to long, cleaned, then reconverted to its original format
+
+                data_validity (bool, default=True): if True, run data validity checks; much faster if set to False
+
+                copy (bool, default=False): if False, avoid copy
+
+            rng (NumPy RandomState): NumPy RandomState object
+
+    Returns:
+        subset (iterator of BipartiteBase): subset of data
+    '''
+    # Update clean_params to make computations faster
+    clean_params = user_clean.copy()
+    clean_params['data_validity'] = False
+    clean_params['copy'] = False
+
+    # Make sure subsets are weakly decreasing
+    if np.min(np.diff(np.array(subsets))) > 0:
+        warnings.warn('Subsets must be weakly decreasing.')
+        return None
+
+    # Take subset of firms that meet threshold
+    threshold_firms = bdf.min_movers(threshold=threshold, copy=False)
+    subset_init = bdf.keep_ids('j', threshold_firms, copy=False)
+
+    # Worker ids in base subset
+    wids_movers = subset_init.loc[subset_init['m'] == 1, 'i'].unique()
+    wids_stayers = list(subset_init.loc[subset_init['m'] == 0, 'i'].unique())
+
+    relative_fraction = subsets / (np.concatenate([[1], subsets]))[:-1]
+
+    for frac in relative_fraction:
+        n_draws = int(np.ceil(frac * len(wids_movers)))
+        wids_movers = list(rng.choice(wids_movers, size=n_draws, replace=False))
+
+        ##### Disable Pandas warning #####
+        pd.options.mode.chained_assignment = None
+        subset_i = subset_init.keep_ids('i', wids_movers + wids_stayers, copy=False)._reset_attributes().clean_data(clean_params).gen_m()
+        ##### Re-enable Pandas warning #####
+        pd.options.mode.chained_assignment = 'warn'
+
+        yield subset_i
+
 class TwoWayAttrition:
     '''
     Class of TwoWayAttrition, which generates attrition plots using bipartite labor data.
@@ -19,7 +165,7 @@ class TwoWayAttrition:
     '''
 
     def __init__(self, bdf):
-        self.bdf = bdf # type(bdf)(bdf, include_id_reference_dict=True)
+        self.bdf = bdf
 
         # Prevent plotting until results exist
         self.res = False
@@ -27,7 +173,6 @@ class TwoWayAttrition:
         self.default_attrition = {
             'type_and_subsets': ('increasing', np.linspace(0.1, 0.5, 5)), # How to attrition data (either 'increasing' or 'decreasing'), and subsets to consider (both are required because switching type requires swapping the order of the subsets)
             'threshold': 15, # Minimum number of movers required to keep a firm
-            'copy': True # If False, avoid copy
         }
 
     # Cannot include two underscores because isn't compatible with starmap for multiprocessing
@@ -110,7 +255,7 @@ class TwoWayAttrition:
 
         return {'fe': tw_net.fe_res, 'cre': tw_net.cre_res}
 
-    def _attrition_single(self, ncore=1, attrition_params={}, fe_params={}, cre_params={}, cluster_params={}, clean_params={}):
+    def _attrition_single(self, ncore=1, attrition_params={}, fe_params={}, cre_params={}, cluster_params={}, clean_params={}, rng=np.random.default_rng()):
         '''
         Run attrition estimations of TwoWay to estimate parameters given fraction of movers remaining. This is the interior function to attrition.
 
@@ -123,8 +268,6 @@ class TwoWayAttrition:
                     type_and_subsets (tuple of (str, list), default=('increasing', np.linspace(0.1, 0.5, 5))): how to attrition data (either 'increasing' or 'decreasing'), and subsets to consider (both are required because switching type requires swapping the order of the subsets)
 
                     threshold (int, default=15): minimum number of movers required to keep a firm
-
-                    copy (bool, default=True): if False, avoid copy
 
             fe_params (dict): dictionary of parameters for FE estimation
 
@@ -196,6 +339,8 @@ class TwoWayAttrition:
 
                     copy (bool, default=False): if False, avoid copy
 
+            rng (NumPy RandomState): NumPy RandomState object
+
         Returns:
             res_all (dict of dicts of lists): in the first dictionary we choose 'connected' or 'biconnected'; in the second dictionary we choose 'fe' or 'cre'; and finally, we are given a list of results for each attrition percentage.
         '''
@@ -216,12 +361,15 @@ class TwoWayAttrition:
         clean_params_biconnected['connectedness'] = 'biconnected'
         clean_params_all = [clean_params_connected, clean_params_biconnected]
 
+        attrition_fn = {
+            'increasing': attrition_increasing,
+            'decreasing': attrition_decreasing
+        }
+        attrition_fn = attrition_fn[attrition_params['type_and_subsets'][0]]
+
         for i in range(2):
             # Create iterator
-            if attrition_params['type_and_subsets'][0] == 'increasing':
-                attrition_iterator = self.bdf.attrition_increasing(subsets=attrition_params['type_and_subsets'][1], threshold=attrition_params['threshold'], user_clean=clean_params_all[i], copy=attrition_params['copy'])
-            elif attrition_params['type_and_subsets'][0] == 'decreasing':
-                attrition_iterator = self.bdf.attrition_increasing(subsets=attrition_params['type_and_subsets'][1], threshold=attrition_params['threshold'], user_clean=clean_params_all[i], copy=attrition_params['copy'])
+            attrition_iterator = attrition_fn(self.bdf, subsets=attrition_params['type_and_subsets'][1], threshold=attrition_params['threshold'], user_clean=clean_params_all[i], rng=rng)
 
             # Use multi-processing
             if ncore > 1:
@@ -242,7 +390,7 @@ class TwoWayAttrition:
 
         return res_all
 
-    def attrition(self, N=10, ncore=1, attrition_params={}, fe_params={}, cre_params={}, cluster_params={}, clean_params={}):
+    def attrition(self, N=10, ncore=1, attrition_params={}, fe_params={}, cre_params={}, cluster_params={}, clean_params={}, seed=None):
         '''
         Run Monte Carlo on attrition estimations of TwoWay to estimate variance of parameter estimates given fraction of movers remaining.
 
@@ -329,9 +477,12 @@ class TwoWayAttrition:
 
                     copy (bool, default=False): if False, avoid copy
 
+            seed (int): NumPy RandomState seed
+
         Returns:
             res_all (dict of dicts of lists of lists): in the first dictionary we choose 'connected' or 'biconnected'; in the second dictionary we choose 'fe' or 'cre'; then, we are given a list of results for each Monte Carlo simulation; and finally, for a particular Monte Carlo simulation, we are given a list of results for each attrition percentage.
         '''
+        rng = np.random.default_rng(seed)
         # Create lists to save results
         res_connected = {'fe': [], 'cre': []} # For non-HE
         res_biconnected = {'fe': [], 'cre': []} # For HE
@@ -351,7 +502,7 @@ class TwoWayAttrition:
         else:
             for i in trange(N):
                 # Estimate
-                res = self._attrition_single(ncore=ncore, attrition_params=attrition_params_full, fe_params=fe_params, cre_params=cre_params, cluster_params=cluster_params, clean_params=clean_params)
+                res = self._attrition_single(ncore=ncore, attrition_params=attrition_params_full, fe_params=fe_params, cre_params=cre_params, cluster_params=cluster_params, clean_params=clean_params, rng=rng)
                 res_connected['fe'].append(res['connected']['fe'])
                 res_connected['cre'].append(res['connected']['cre'])
                 res_biconnected['fe'].append(res['biconnected']['fe'])
@@ -359,19 +510,19 @@ class TwoWayAttrition:
 
         res_all = {'connected': res_connected, 'biconnected': res_biconnected}
 
+        self.type_and_subsets = attrition_params_full['type_and_subsets']
         self.res = res_all
 
-    def plot_attrition(self, subsets=np.linspace(0.1, 0.5, 5)):
+    def plot_attrition(self):
         '''
         Plot results from Monte Carlo simulations.
-
-        Arguments:
-            subsets (list): subsets to consider for attrition
         '''
-        if not self.monte_carlo_res:
+        if not self.res:
             warnings.warn('Must generate attrition data before results can be plotted. This can be done by running .attrition()')
 
         else:
+            # Extract attrition type and subsets
+            attrition_type, subsets = self.type_and_subsets
             # Get N, M
             N = len(self.res['connected']['fe']) # Number of estimations
             M = len(self.res['connected']['fe'][0]) # Number of attritions per estimation
@@ -417,6 +568,14 @@ class TwoWayAttrition:
             conset_cov_psi_alpha_pct = 100 * conset_cov_psi_alpha_pct
             biconset_var_psi_pct = 100 * biconset_var_psi_pct
             biconset_cov_psi_alpha_pct = 100 * biconset_cov_psi_alpha_pct
+
+            # Flip along 1st axis so both increasing and decreasing have the same order
+            if attrition_type == 'decreasing':
+                x_axis = np.flip(x_axis)
+                conset_var_psi_pct = np.flip(conset_var_psi_pct, axis=1)
+                conset_cov_psi_alpha_pct = np.flip(conset_cov_psi_alpha_pct, axis=1)
+                biconset_var_psi_pct = np.flip(biconset_var_psi_pct, axis=1)
+                biconset_cov_psi_alpha_pct = np.flip(biconset_cov_psi_alpha_pct, axis=1)
 
             # Plot figures
             # Firm effects (connected set)

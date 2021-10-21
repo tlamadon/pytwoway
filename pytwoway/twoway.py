@@ -36,7 +36,10 @@ class TwoWay():
             'es_collapsed': bpd.BipartiteEventStudyCollapsed
         }
 
-        self.data = self.type_dict[formatting](data, col_dict=col_dict)
+        if isinstance(data, bpd.BipartiteBase):
+            self.data = data
+        else:
+            self.data = self.type_dict[formatting](data, col_dict=col_dict)
 
         self.clean = False # Whether data is clean
         self.clustered = False # Whether data is clustered

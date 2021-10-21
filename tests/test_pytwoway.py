@@ -524,6 +524,44 @@ def test_fe_cre_1():
     assert fe_he_psi_diff < 0.05
     assert fe_he_psi_alpha_diff < 0.05
 
+#####################
+##### Attrition #####
+#####################
+
+def test_attrition_increasing_1():
+    # Test attrition_increasing() and attrition_decreasing(), by checking that the fraction of movers remaining is approximately equal to what `subsets` specifies.
+    
+    # First test increasing, then decreasing
+    subsets_lst = [np.linspace(0.1, 0.5, 5), np.linspace(0.5, 0.1, 5)]
+    attrition_fn = [tw.attrition.attrition_increasing, tw.attrition.attrition_decreasing]
+
+    for i in range(2):
+        # Non-collapsed
+        bdf = bpd.BipartiteLong(bpd.SimBipartite({'seed': 1234}).sim_network(), include_id_reference_dict=True).clean_data().get_es()
+
+        orig_n_movers = len(bdf.loc[bdf['m'] == 1, 'i'].unique())
+        n_movers = []
+
+        for j in attrition_fn[i](bdf, subsets_lst[i], rng=np.random.default_rng(1234)):
+            n_movers.append(len(j.loc[j['m'] == 1, 'i'].unique()))
+
+        n_movers_vs_subsets = abs((np.array(n_movers) / orig_n_movers) - subsets_lst[i])
+
+        assert np.max(n_movers_vs_subsets) < 2e-4
+
+        # Collapsed
+        bdf = bpd.BipartiteLong(bpd.SimBipartite({'seed': 1234}).sim_network(), include_id_reference_dict=True).clean_data().get_collapsed_long().get_es()
+
+        orig_n_movers = len(bdf.loc[bdf['m'] == 1, 'i'].unique())
+        n_movers = []
+
+        for j in attrition_fn[i](bdf, subsets_lst[i], rng=np.random.default_rng(1234)):
+            n_movers.append(len(j.loc[j['m'] == 1, 'i'].unique()))
+
+        n_movers_vs_subsets = abs((np.array(n_movers) / orig_n_movers) - subsets_lst[i])
+
+        assert np.max(n_movers_vs_subsets) < 2e-4
+
 ###############
 ##### BLM #####
 ###############
