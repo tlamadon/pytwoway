@@ -986,7 +986,7 @@ class FEEstimator:
         Pii = np.zeros(self.nn)
 
         # Compute the different draws
-        for r in trange(ndraw_pii):
+        for _ in range(ndraw_pii):
             R2 = 2 * self.rng.binomial(1, 0.5, self.nn) - 1
             Pii += 1 / ndraw_pii * np.power(self.__proj(R2, Dp0='sqrt', Dp2='sqrt'), 2.0)
 

@@ -5,7 +5,7 @@ Python API
 Overview
 ---------
 
-The main PyTwoWay API is split into five classes. PyTwoWay is canonically imported using
+The main PyTwoWay API is split into six classes. PyTwoWay is canonically imported using
 
   .. code-block:: python
 
@@ -18,6 +18,8 @@ The main PyTwoWay API is split into five classes. PyTwoWay is canonically import
 * ``pytwoway.CREEstimator``: Class for CRE estimator
 
 * ``pytwoway.FEEstimator``: Class for FE estimators
+
+* ``pytwoway.TwoWayAttrition``: Class for generating attrition plots
 
 * ``pytwoway.TwoWayMonteCarlo``: Class for running Monte Carlo estimations
 
@@ -65,6 +67,18 @@ Modules and Methods
    ~pytwoway.FEEstimator.fit_1
    ~pytwoway.FEEstimator.fit_2
    ~pytwoway.FEEstimator.get_fe_estimates
+
+``pytwoway.TwoWayAttrition``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+
+   ~pytwoway.TwoWayAttrition
+   ~pytwoway.TwoWayAttrition.attrition
+   ~pytwoway.TwoWayAttrition.plot_attrition
+   ~pytwoway.attrition.attrition_decreasing
+   ~pytwoway.attrition.attrition_increasing
+
 
 ``pytwoway.TwoWayMonteCarlo``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

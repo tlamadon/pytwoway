@@ -35,6 +35,8 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), threshold=15, us
     Returns:
         subset (iterator of BipartiteBase): subset of data
     '''
+    bdf = bdf.copy()
+    bpd.logger_init(bdf) # This stops a weird logging bug that stops multiprocessing from working
     # Update clean_params to make computations faster
     clean_params = user_clean.copy()
     clean_params['data_validity'] = False
@@ -57,7 +59,7 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), threshold=15, us
     wid_drops_1 = set(rng.choice(wids_init, size=n_wid_drops_1, replace=False)) # Draw wids to drop
     ##### Disable Pandas warning #####
     pd.options.mode.chained_assignment = None
-    subset_1 = subset_init.drop_ids('i', wid_drops_1, copy=False)._reset_attributes().clean_data(clean_params).gen_m()
+    subset_1 = subset_init.drop_ids('i', wid_drops_1, copy=False).copy()._reset_attributes().clean_data(clean_params).gen_m()
     ##### Re-enable Pandas warning #####
     pd.options.mode.chained_assignment = 'warn'
     subset_1_orig_ids = subset_1.original_ids(copy=False)
@@ -68,6 +70,9 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), threshold=15, us
     valid_firms = []
     for j_subcol in bpd.to_list(bdf.reference_dict['j']):
         original_j = 'original_' + j_subcol
+        if original_j not in subset_1_orig_ids.columns:
+            # If ids didn't change for subset
+            original_j = j_subcol
         valid_firms += list(subset_1_orig_ids[original_j].unique())
     valid_firms = set(valid_firms)
 
@@ -91,7 +96,7 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), threshold=15, us
 
             ##### Disable Pandas warning #####
             pd.options.mode.chained_assignment = None
-            subset_i = subset_init.drop_ids('i', dropped_wids, copy=False)._reset_attributes().clean_data(clean_params).gen_m()
+            subset_i = subset_init.drop_ids('i', dropped_wids, copy=False).copy()._reset_attributes().clean_data(clean_params).gen_m()
             ##### Re-enable Pandas warning #####
             pd.options.mode.chained_assignment = 'warn'
 
@@ -124,6 +129,8 @@ def attrition_decreasing(bdf, subsets=np.linspace(0.5, 0.1, 5), threshold=15, us
     Returns:
         subset (iterator of BipartiteBase): subset of data
     '''
+    bdf = bdf.copy()
+    bpd.logger_init(bdf) # This stops a weird logging bug that stops multiprocessing from working
     # Update clean_params to make computations faster
     clean_params = user_clean.copy()
     clean_params['data_validity'] = False
@@ -150,7 +157,7 @@ def attrition_decreasing(bdf, subsets=np.linspace(0.5, 0.1, 5), threshold=15, us
 
         ##### Disable Pandas warning #####
         pd.options.mode.chained_assignment = None
-        subset_i = subset_init.keep_ids('i', wids_movers + wids_stayers, copy=False)._reset_attributes().clean_data(clean_params).gen_m()
+        subset_i = subset_init.keep_ids('i', wids_movers + wids_stayers, copy=False).copy()._reset_attributes().clean_data(clean_params).gen_m()
         ##### Re-enable Pandas warning #####
         pd.options.mode.chained_assignment = 'warn'
 
@@ -165,7 +172,7 @@ class TwoWayAttrition:
     '''
 
     def __init__(self, bdf):
-        self.bdf = bdf
+        self.bdf = type(bdf)(bdf)._reset_id_reference_dict(include=True) # This overwrites the id_reference_dict without altering the original dataframe, and without copying the underlying data
 
         # Prevent plotting until results exist
         self.res = False
@@ -372,7 +379,7 @@ class TwoWayAttrition:
             attrition_iterator = attrition_fn(self.bdf, subsets=attrition_params['type_and_subsets'][1], threshold=attrition_params['threshold'], user_clean=clean_params_all[i], rng=rng)
 
             # Use multi-processing
-            if ncore > 1:
+            if False: # ncore > 1:
                 # Estimate
                 with Pool(processes=ncore) as pool:
                     V = pool.starmap(self._attrition_interior, [(attrition_subset, fe_params_all[i], cre_params, cluster_params) for attrition_subset in attrition_iterator])
@@ -490,7 +497,7 @@ class TwoWayAttrition:
         attrition_params_full = bpd.util.update_dict(self.default_attrition, attrition_params)
 
         # Use multi-processing
-        if False: # ncore > 1:
+        if ncore > 1:
             # Estimate
             with Pool(processes=ncore) as pool:
                 V = pool.starmap(self._attrition_single, [(ncore, attrition_params_full, fe_params, cre_params, cluster_params, clean_params) for _ in range(N)])
@@ -500,7 +507,7 @@ class TwoWayAttrition:
                 res_biconnected['fe'].append(res[1]['biconnected']['fe'])
                 res_biconnected['cre'].append(res[1]['biconnected']['cre'])
         else:
-            for i in trange(N):
+            for _ in trange(N):
                 # Estimate
                 res = self._attrition_single(ncore=ncore, attrition_params=attrition_params_full, fe_params=fe_params, cre_params=cre_params, cluster_params=cluster_params, clean_params=clean_params, rng=rng)
                 res_connected['fe'].append(res['connected']['fe'])
@@ -587,6 +594,7 @@ class TwoWayAttrition:
             plt.ylabel('Firm Effects: Share of Variance (%)')
             plt.legend()
             plt.grid()
+            plt.tight_layout()
             plt.show()
             # Firm effects (biconnected set)
             plt.plot(x_axis, biconset_var_psi_pct[:, :, 0].mean(axis=0), label='FE')
@@ -598,6 +606,7 @@ class TwoWayAttrition:
             plt.ylabel('Firm Effects: Share of Variance (%)')
             plt.legend()
             plt.grid()
+            plt.tight_layout()
             plt.show()
 
             # Sorting (connected set)
@@ -609,6 +618,7 @@ class TwoWayAttrition:
             plt.ylabel('Sorting: Share of Variance (%)')
             plt.legend()
             plt.grid()
+            plt.tight_layout()
             plt.show()
             # Sorting (biconnected set)
             plt.plot(x_axis, biconset_cov_psi_alpha_pct[:, :, 0].mean(axis=0), label='FE')
@@ -620,6 +630,7 @@ class TwoWayAttrition:
             plt.ylabel('Sorting: Share of Variance (%)')
             plt.legend()
             plt.grid()
+            plt.tight_layout()
             plt.show()
 
             # Plot boxplots
