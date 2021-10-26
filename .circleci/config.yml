@@ -22,7 +22,13 @@ jobs:
           keys: 
             - deps-{{ checksum "poetry.lock" }}
 
-      # Let's install the dependencies
+      # Upgrade pip
+      - run:
+          name: Upgrade pip
+          command: |
+            poetry run pip install --upgrade pip
+
+      # Install the dependencies
       - run:
           name: Install Dependencies
           command: |

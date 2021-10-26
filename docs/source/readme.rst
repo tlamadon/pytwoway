@@ -97,12 +97,12 @@ way is to use poetry to set up a local environment::
     poetry install
     poetry run python -m pytest
 
-To push the package to PiP, increase the version number in the `pyproject.toml` file and then
+To push the package to PiP, increase the version number in the `pyproject.toml` file and then::
 
     poetry build
     poetry publish
 
-Finally to build the package for conda and upload it
+Finally to build the package for conda and upload it::
 
     conda skeleton pypi pytwoway
     conda config --set anaconda_upload yes

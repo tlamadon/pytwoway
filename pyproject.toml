@@ -9,7 +9,7 @@ authors = ["Thibaut Lamadon <thibaut.lamadon@gmail.com>"]
 readme = "README.rst"
 
 [tool.poetry.dependencies]
-python = ">=3.7"
+python = ">=3.6.1"
 bipartitepandas = "*"
 configargparse = "*"
 matplotlib = "*"
