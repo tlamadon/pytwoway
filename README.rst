@@ -38,7 +38,7 @@ The package provides implementations for a series of estimators for models with 
 
 If you want to give it a try, you can start the example notebook here: |binder|. This starts a fully interactive notebook with a simple example that generates data and runs the estimators.
 
-The code is relatively efficient. Solving large sparse linear models relies on `PyAMG <https://github.com/pyamg/pyamg>`_. This is the code we use to estimate the different decompositions on US data. 
+The code is relatively efficient. Solving large sparse linear models relies on `PyAMG <https://github.com/pyamg/pyamg>`_. This is the code we use to estimate the different decompositions on US data. Data cleaning is handled by `BipartitePandas <https://github.com/tlamadon/bipartitepandas/>`_.
 
 The package provides a Python interface as well as an intuitive command line interface. Installation is handled by `pip` or `Conda` (TBD). The source of the package is available on GitHub at `PyTwoWay <https://github.com/tlamadon/pytwoway>`_. The online documentation is hosted  `here <https://tlamadon.github.io/pytwoway/>`_.
 
@@ -92,7 +92,7 @@ Development
 -----------
 
 If you want to contribute to the package, the easiest
-is to use poetry to set up a local environment::
+way is to use poetry to set up a local environment::
 
     poetry install
     poetry run python -m pytest
@@ -107,6 +107,3 @@ Finally to build the package for conda and upload it
     conda skeleton pypi pytwoway
     conda config --set anaconda_upload yes
     conda-build pytwoway -c tlamadon --output-folder pytwoway
-
-
-
