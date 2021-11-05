@@ -10,14 +10,13 @@ import pytwoway as tw
 from tqdm import trange
 import warnings
 
-def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), threshold=15, user_clean={}, rng=np.random.default_rng()):
+def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), user_clean={}, rng=np.random.default_rng()):
     '''
     First, keep only firms that have at minimum `threshold` many movers. Then take a random subset of subsets[0] percent of remaining movers. Constructively rebuild the data to reach each subsequent value of subsets. Return these subsets as an iterator.
 
     Arguments:
         bdf (BipartiteBase): data
         subsets (list): percents of movers to keep (must be weakly increasing)
-        threshold (int): minimum number of movers required to keep a firm
         user_clean (dict): dictionary of parameters for cleaning
 
             Dictionary parameters:
@@ -26,6 +25,8 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), threshold=15, us
 
                 i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then data is converted to long, cleaned, then reconverted to its original format
 
+                drop_multiples (bool): if True, rather than collapsing over spells, drop any spells with multiple observations (this is for computational efficiency when re-collapsing data for biconnected components)
+
                 data_validity (bool, default=True): if True, run data validity checks; much faster if set to False
 
                 copy (bool, default=False): if False, avoid copy
@@ -33,10 +34,9 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), threshold=15, us
         rng (NumPy RandomState): NumPy RandomState object
 
     Returns:
-        subset (iterator of BipartiteBase): subset of data
+        subset, is_clean (tuple of iterator of BipartiteBase, bool): first entry is subset of data, second is boolean indicating whether data is clean
     '''
-    bdf = bdf.copy()
-    bpd.logger_init(bdf) # This stops a weird logging bug that stops multiprocessing from working
+    # bdf = bdf.copy()
     # Update clean_params to make computations faster
     clean_params = user_clean.copy()
     clean_params['data_validity'] = False
@@ -47,41 +47,52 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), threshold=15, us
         warnings.warn('Subsets must be weakly increasing.')
         return None
 
-    # Take subset of firms that meet threshold
-    threshold_firms = bdf.min_movers(threshold=threshold, copy=False)
-    subset_init = bdf.keep_ids('j', threshold_firms, copy=False)
-
     # Worker ids in base subset
-    wids_init = subset_init.loc[subset_init['m'] == 1, 'i'].unique()
+    wids_init = bdf.loc[bdf['m'] == 1, 'i'].unique()
 
     # Draw first subset
     n_wid_drops_1 = int(np.floor((1 - subsets[0]) * len(wids_init))) # Number of wids to drop
     wid_drops_1 = set(rng.choice(wids_init, size=n_wid_drops_1, replace=False)) # Draw wids to drop
+    # if True: # clean_params['connectedness'] == 'biconnected':
+    #     # Must drop m because it can change for biconnected components
+    #     # FIXME for some reason the code doesn't work unless it always drops m
+    #     bdf.drop('m')
     ##### Disable Pandas warning #####
     pd.options.mode.chained_assignment = None
-    subset_1 = subset_init.drop_ids('i', wid_drops_1, copy=False).copy()._reset_attributes().clean_data(clean_params).gen_m()
+    subset_1 = bdf.drop_ids('i', wid_drops_1, copy=False).copy().drop('m')._reset_attributes(columns_contig=True, connected=True, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False).clean_data(clean_params).gen_m()
     ##### Re-enable Pandas warning #####
     pd.options.mode.chained_assignment = 'warn'
-    subset_1_orig_ids = subset_1.original_ids(copy=False)
 
-    yield subset_1
+    yield subset_1, True
+
+    subset_1_orig_ids = subset_1.original_ids(copy=False)
 
     # Get list of all valid firms
     valid_firms = []
     for j_subcol in bpd.to_list(bdf.reference_dict['j']):
         original_j = 'original_' + j_subcol
         if original_j not in subset_1_orig_ids.columns:
-            # If ids didn't change for subset
+            # If no changes to this column
             original_j = j_subcol
         valid_firms += list(subset_1_orig_ids[original_j].unique())
     valid_firms = set(valid_firms)
 
     # Take all data for list of firms in smallest subset
-    subset_init = subset_init.keep_ids('j', valid_firms, copy=False)
+    # bdf._reset_id_reference_dict() # Clear id_reference_dict since it is no longer necessary
+    subset_init = bdf.keep_ids('j', valid_firms, copy=False).copy().drop('m')
+    subset_init._reset_id_reference_dict() # Clear id_reference_dict since it is no longer necessary
+    if isinstance(bdf, bpd.BipartiteLongCollapsed):
+        # Must recollapse for biconnected components
+        subset_init = subset_init.recollapse(copy=False)
+    subset_init.gen_m()
 
     # Determine which wids (for movers) can still be drawn
     all_valid_wids = set(subset_init.loc[subset_init['m'] == 1, 'i'].unique())
-    dropped_wids = all_valid_wids.difference(set(subset_1_orig_ids.loc[subset_1_orig_ids['m'] == 1, 'original_i'].unique()))
+    original_i = 'original_i'
+    if original_i not in subset_1_orig_ids.columns:
+        # If no changes to i column
+        original_i = 'i'
+    dropped_wids = all_valid_wids.difference(set(subset_1_orig_ids.loc[subset_1_orig_ids['m'] == 1, original_i].unique()))
     subset_prev = subset_1
     del subset_1, subset_1_orig_ids
 
@@ -89,65 +100,49 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), threshold=15, us
         n_wid_draws_i = min(int(np.ceil((1 - subset_pct) * len(all_valid_wids))), len(dropped_wids))
         if n_wid_draws_i <= 0:
             warnings.warn('Attrition plot does not change at iteration {}'.format(i))
-            yield subset_prev
+            yield subset_prev, False
         else:
             wid_draws_i = set(rng.choice(list(dropped_wids), size=n_wid_draws_i, replace=False))
             dropped_wids = wid_draws_i
 
             ##### Disable Pandas warning #####
             pd.options.mode.chained_assignment = None
-            subset_i = subset_init.drop_ids('i', dropped_wids, copy=False).copy()._reset_attributes().clean_data(clean_params).gen_m()
+            subset_i = subset_init.drop_ids('i', dropped_wids, copy=False).copy()._reset_attributes(columns_contig=True, connected=False, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False)
             ##### Re-enable Pandas warning #####
             pd.options.mode.chained_assignment = 'warn'
 
-            yield subset_i
+            yield subset_i, False
 
             subset_prev = subset_i
 
-def attrition_decreasing(bdf, subsets=np.linspace(0.5, 0.1, 5), threshold=15, user_clean={}, rng=np.random.default_rng()):
+def attrition_decreasing(bdf, subsets=np.linspace(0.5, 0.1, 5), user_clean={}, rng=np.random.default_rng()):
     '''
     First, keep only firms that have at minimum `threshold` many movers. Then take a random subset of subsets[0] percent of remaining movers. Deconstruct the data to reach each subsequent value of subsets. Return these subsets as an iterator.
 
     Arguments:
         bdf (BipartiteBase): data
         subsets (list): percents of movers to keep percents of movers to keep (must be weakly decreasing)
-        threshold (int): minimum number of movers required to keep a firm
-        user_clean (dict): dictionary of parameters for cleaning
-
-            Dictionary parameters:
-
-                connectedness (str or None, default='connected'): if 'connected', keep observations in the largest connected set of firms; if 'biconnected', keep observations in the largest biconnected set of firms; if None, keep all observations
-
-                i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then data is converted to long, cleaned, then reconverted to its original format
-
-                data_validity (bool, default=True): if True, run data validity checks; much faster if set to False
-
-                copy (bool, default=False): if False, avoid copy
+        user_clean (dict): placeholder multiprocessing
 
             rng (NumPy RandomState): NumPy RandomState object
 
     Returns:
-        subset (iterator of BipartiteBase): subset of data
+        subset, is_clean (tuple of iterator of BipartiteBase, bool): first entry is subset of data, second is boolean indicating whether data is clean
     '''
-    bdf = bdf.copy()
-    bpd.logger_init(bdf) # This stops a weird logging bug that stops multiprocessing from working
-    # Update clean_params to make computations faster
-    clean_params = user_clean.copy()
-    clean_params['data_validity'] = False
-    clean_params['copy'] = False
+    # bdf = bdf.copy()
+    # bdf._reset_id_reference_dict() # Clear id_reference_dict since it is not necessary
 
     # Make sure subsets are weakly decreasing
     if np.min(np.diff(np.array(subsets))) > 0:
         warnings.warn('Subsets must be weakly decreasing.')
         return None
 
-    # Take subset of firms that meet threshold
-    threshold_firms = bdf.min_movers(threshold=threshold, copy=False)
-    subset_init = bdf.keep_ids('j', threshold_firms, copy=False)
-
     # Worker ids in base subset
-    wids_movers = subset_init.loc[subset_init['m'] == 1, 'i'].unique()
-    wids_stayers = list(subset_init.loc[subset_init['m'] == 0, 'i'].unique())
+    wids_movers = bdf.loc[bdf['m'] == 1, 'i'].unique()
+    wids_stayers = list(bdf.loc[bdf['m'] == 0, 'i'].unique())
+
+    # # Drop m since it can change for biconnected components
+    # bdf.drop('m')
 
     relative_fraction = subsets / (np.concatenate([[1], subsets]))[:-1]
 
@@ -157,11 +152,13 @@ def attrition_decreasing(bdf, subsets=np.linspace(0.5, 0.1, 5), threshold=15, us
 
         ##### Disable Pandas warning #####
         pd.options.mode.chained_assignment = None
-        subset_i = subset_init.keep_ids('i', wids_movers + wids_stayers, copy=False).copy()._reset_attributes().clean_data(clean_params).gen_m()
+        subset_i = bdf.keep_ids('i', wids_movers + wids_stayers, copy=False).copy()
+        subset_i._reset_id_reference_dict()
+        subset_i = subset_i.drop('m')._reset_attributes(columns_contig=True, connected=True, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False)
         ##### Re-enable Pandas warning #####
         pd.options.mode.chained_assignment = 'warn'
 
-        yield subset_i
+        yield subset_i, False
 
 class TwoWayAttrition:
     '''
@@ -184,12 +181,27 @@ class TwoWayAttrition:
 
     # Cannot include two underscores because isn't compatible with starmap for multiprocessing
     # Source: https://stackoverflow.com/questions/27054963/python-attribute-error-object-has-no-attribute
-    def _attrition_interior(self, bdf, fe_params={}, cre_params={}, cluster_params={}):
+    def _attrition_interior(self, bdf, is_clean, clean_params={}, fe_params={}, cre_params={}, cluster_params={}):
         '''
         Estimate all parameters of interest. This is the interior function to attrition_single.
 
         Arguments:
             bdf (BipartiteBase): bipartite dataframe
+            is_clean (bool): if True, data is clean
+            clean_params (dict): dictionary of parameters for cleaning
+
+            Dictionary parameters:
+
+                connectedness (str or None, default='connected'): if 'connected', keep observations in the largest connected set of firms; if 'biconnected', keep observations in the largest biconnected set of firms; if None, keep all observations
+
+                i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then data is converted to long, cleaned, then reconverted to its original format
+
+                drop_multiples (bool): if True, rather than collapsing over spells, drop any spells with multiple observations (this is for computational efficiency when re-collapsing data for biconnected components)
+
+                data_validity (bool, default=True): if True, run data validity checks; much faster if set to False
+
+                copy (bool, default=False): if False, avoid copy
+
             fe_params (dict): dictionary of parameters for FE estimation
 
                 Dictionary parameters:
@@ -251,6 +263,13 @@ class TwoWayAttrition:
         Returns:
             {'fe': tw_net.fe_res, 'cre': tw_net.cre_res} (dict): FE results, CRE results
         '''
+        bpd.logger_init(bdf) # This stops a weird logging bug that stops multiprocessing from working
+        if not is_clean:
+            # Update clean_params to make computations faster
+            clean_params = clean_params.copy()
+            clean_params['data_validity'] = False
+            clean_params['copy'] = False
+            bdf = bdf.clean_data(clean_params)
         # Use data to create TwoWay object (note that data is already clean)
         tw_net = tw.TwoWay(bdf)
         # Estimate FE model
@@ -342,6 +361,8 @@ class TwoWayAttrition:
 
                     i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
 
+                    drop_multiples (bool): if True, rather than collapsing over spells, drop any spells with multiple observations (this is for computational efficiency when re-collapsing data for biconnected components)
+
                     data_validity (bool, default=True): if True, run data validity checks; much faster if set to False
 
                     copy (bool, default=False): if False, avoid copy
@@ -376,20 +397,27 @@ class TwoWayAttrition:
 
         for i in range(2):
             # Create iterator
-            attrition_iterator = attrition_fn(self.bdf, subsets=attrition_params['type_and_subsets'][1], threshold=attrition_params['threshold'], user_clean=clean_params_all[i], rng=rng)
+            attrition_iterator = attrition_fn(self.bdf, subsets=attrition_params['type_and_subsets'][1], user_clean=clean_params_all[i], rng=rng)
 
-            # Use multi-processing
-            if False: # ncore > 1:
+            def yield_attrition_params():
+                clean_params_interior = clean_params_all[i].copy()
+                if attrition_params['type_and_subsets'][0] == 'increasing':
+                    # Once the initial connectedness has been computed, nothing else has to be done
+                    clean_params_interior['connectedness'] = None
+                for attrition_subset in attrition_iterator:
+                    yield (*attrition_subset, clean_params_interior, fe_params_all[i], cre_params, cluster_params)
+
+            if ncore > 1: # Use multi-processing
                 # Estimate
                 with Pool(processes=ncore) as pool:
-                    V = pool.starmap(self._attrition_interior, [(attrition_subset, fe_params_all[i], cre_params, cluster_params) for attrition_subset in attrition_iterator])
+                    V = pool.starmap(self._attrition_interior, yield_attrition_params())
                 for res in enumerate(V):
                     res_all[i]['fe'].append(res[1]['fe'])
                     res_all[i]['cre'].append(res[1]['cre'])
             else:
-                for attrition_subset in attrition_iterator:
+                for attrition_subparams in yield_attrition_params():
                     # Estimate
-                    res = self._attrition_interior(attrition_subset, fe_params=fe_params_all[i], cre_params=cre_params, cluster_params=cluster_params)
+                    res = self._attrition_interior(*attrition_subparams)
                     res_all[i]['fe'].append(res['fe'])
                     res_all[i]['cre'].append(res['cre'])
 
@@ -399,7 +427,7 @@ class TwoWayAttrition:
 
     def attrition(self, N=10, ncore=1, attrition_params={}, fe_params={}, cre_params={}, cluster_params={}, clean_params={}, seed=None):
         '''
-        Run Monte Carlo on attrition estimations of TwoWay to estimate variance of parameter estimates given fraction of movers remaining.
+        Run Monte Carlo on attrition estimations of TwoWay to estimate variance of parameter estimates given fraction of movers remaining. Note that this overwrites the stored dataframe, meaning if you want to run attrition with different threshold number of movers, you will have to create multiple TwoWayAttrition objects, or alternatively, run this method with an increasing threshold for each iteration.
 
         Arguments:
             N (int): number of simulations
@@ -480,6 +508,8 @@ class TwoWayAttrition:
 
                     i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
 
+                    drop_multiples (bool): if True, rather than collapsing over spells, drop any spells with multiple observations (this is for computational efficiency when re-collapsing data for biconnected components)
+
                     data_validity (bool, default=True): if True, run data validity checks; much faster if set to False
 
                     copy (bool, default=False): if False, avoid copy
@@ -496,8 +526,12 @@ class TwoWayAttrition:
 
         attrition_params_full = bpd.util.update_dict(self.default_attrition, attrition_params)
 
+        # Take subset of firms that meet threshold
+        threshold_firms = self.bdf.min_movers(threshold=attrition_params_full['threshold'], copy=False)
+        self.bdf = self.bdf.keep_ids('j', threshold_firms, copy=False)
+
         # Use multi-processing
-        if ncore > 1:
+        if False: # ncore > 1:
             # Estimate
             with Pool(processes=ncore) as pool:
                 V = pool.starmap(self._attrition_single, [(ncore, attrition_params_full, fe_params, cre_params, cluster_params, clean_params) for _ in range(N)])

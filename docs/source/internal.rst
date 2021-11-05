@@ -75,10 +75,9 @@ Modules and Methods
 
    ~pytwoway.TwoWayAttrition
    ~pytwoway.TwoWayAttrition.attrition
+   ~pytwoway.TwoWayAttrition.attrition_decreasing
+   ~pytwoway.TwoWayAttrition.attrition_increasing
    ~pytwoway.TwoWayAttrition.plot_attrition
-   ~pytwoway.attrition.attrition_decreasing
-   ~pytwoway.attrition.attrition_increasing
-
 
 ``pytwoway.TwoWayMonteCarlo``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

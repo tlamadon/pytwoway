@@ -1,7 +1,7 @@
 TwoWayMonteCarlo class
 ======================
 
-.. autoclass:: pytwoway.twowaymontecarlo.TwoWayMonteCarlo
+.. autoclass:: pytwoway.montecarlo.TwoWayMonteCarlo
    :members:
    :undoc-members:
    :show-inheritance:

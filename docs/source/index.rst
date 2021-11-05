@@ -26,4 +26,5 @@
   BLMEstimator <class-blmestimator>
   CREEstimator <class-creestimator>
   FEEstimator <class-feestimator>
+  TwoWayAttrition <class-twowayattrition>
   TwoWayMonteCarlo <class-twowaymontecarlo>

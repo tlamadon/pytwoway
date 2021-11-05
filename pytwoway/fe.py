@@ -17,7 +17,7 @@ from scipy.sparse import csc_matrix, coo_matrix, diags, linalg
 import time
 # import pyreadr
 import os
-from multiprocessing import Pool, TimeoutError, set_start_method
+from multiprocessing import Pool, TimeoutError, Value, set_start_method
 from timeit import default_timer as timer
 import itertools
 import pickle
@@ -51,29 +51,23 @@ class FEEstimator:
     def __init__(self, data, params):
         '''
         Arguments:
-            data (Pandas DataFrame): cross-section labor data. Data contains the following columns:
+            data (Pandas DataFrame): (collapsed) long format labor data. Data contains the following columns:
 
                 i (worker id)
 
-                j1 (firm id 1)
+                j (firm id)
 
-                j2 (firm id 2)
+                y (compensation)
 
-                y1 (compensation 1)
+                t (period) if long
 
-                y2 (compensation 2)
+                t1 (first period of observation) if collapsed long
 
-                t1 (last period of observation 1)
+                t2 (last period of observation) if collapsed long
 
-                t2 (last period of observation 2)
-
-                w1 (weight 1)
-
-                w2 (weight 2)
+                w (weight)
 
                 m (0 if stayer, 1 if mover)
-
-                cs (0 if not in cross section, 1 if in cross section)
             params (dict): dictionary of parameters for FE estimation
 
                 Dictionary parameters:
@@ -199,42 +193,42 @@ class FEEstimator:
         self.start_time = time.time()
 
         # Begin cleaning and analysis
-        self.__prep_vars() # Prepare data
-        self.__prep_JWM() # Use cleaned adata to generate some attributes
-        self.__compute_early_stats() # Use cleaned data to compute some statistics
+        self._prep_vars() # Prepare data
+        self._prep_JWM() # Use cleaned adata to generate some attributes
+        self._compute_early_stats() # Use cleaned data to compute some statistics
 
     def fit_2(self):
         '''
         Run FE solver, part 2.
         '''
         if self.params['statsonly']: # If only returning early statistics
-            self.__save_early_stats()
+            self._save_early_stats()
 
         else: # If running analysis
-            self.__create_fe_solver() # Solve FE model
-            self.__get_fe_estimates() # Add fixed effect columns
+            self._create_fe_solver() # Solve FE model
+            self._get_fe_estimates() # Add fixed effect columns
             if not self.params['feonly']: # If running full model
-                self.__compute_trace_approximation_ho() # Compute trace approximation
+                self._compute_trace_approximation_ho() # Compute trace approximation
 
                 # If computing heteroskedastic correction
                 if self.compute_he:
-                    self.__compute_leverages_Pii() # Solve heteroskedastic model
-                    self.__compute_trace_approximation_he() # Compute trace approximation
+                    self._compute_leverages_Pii() # Solve heteroskedastic model
+                    self._compute_trace_approximation_he() # Compute trace approximation
 
-                self.__collect_res() # Collect all results
+                self._collect_res() # Collect all results
 
         end_time = time.time()
 
         self.res['total_time'] = end_time - self.start_time
         del self.start_time
 
-        self.__save_res() # Save results to json
+        self._save_res() # Save results to json
 
-        self.__drop_cols() # Drop irrelevant columns
+        self._drop_cols() # Drop irrelevant columns
 
         self.logger.info('------ DONE -------')
 
-    def __prep_vars(self):
+    def _prep_vars(self):
         '''
         Generate some initial class attributes and results.
         '''
@@ -247,7 +241,7 @@ class FEEstimator:
 
         self.res['n_firms'] = self.nf
         self.res['n_workers'] = self.nw
-        self.res['n_movers'] = len(np.unique(self.adata[self.adata['m'] == 1]['i']))
+        self.res['n_movers'] = self.adata.loc[self.adata['m'] == 1, 'i'].nunique()
         self.res['n_stayers'] = self.res['n_workers'] - self.res['n_movers']
         self.logger.info('data movers={} stayers={}'.format(self.res['n_movers'], self.res['n_stayers']))
 
@@ -261,7 +255,7 @@ class FEEstimator:
         #res['year_max'] = int(sdata['year'].max())
         #res['year_min'] = int(sdata['year'].min())
 
-    def __prep_JWM(self):
+    def _prep_JWM(self):
         '''
         Generate J, W, and M matrices.
         '''
@@ -365,15 +359,17 @@ class FEEstimator:
 
         return v0
 
-    def __compute_early_stats(self):
+    def _compute_early_stats(self):
         '''
         Compute some early statistics.
         '''
         fdata = self.adata.groupby('j').agg({'m': 'sum', 'y': 'mean', 'i': 'count'})
-        self.res['mover_quantiles'] = self.__weighted_quantile(fdata['m'], np.linspace(0, 1, 11), fdata['i']).tolist()
-        self.res['size_quantiles'] = self.__weighted_quantile(fdata['i'], np.linspace(0, 1, 11), fdata['i']).tolist()
-        self.res['between_firm_var'] = self.__weighted_var(fdata['y'], fdata['i'])
-        self.res['var_y'] = self.__weighted_var(self.adata['y'], self.Dp)
+        fm, fy, fi = fdata['m'].to_numpy(), fdata['y'].to_numpy(), fdata['i'].to_numpy()
+        ls = np.linspace(0, 1, 11)
+        self.res['mover_quantiles'] = self.__weighted_quantile(fm, ls, fi).tolist()
+        self.res['size_quantiles'] = self.__weighted_quantile(fi, ls, fi).tolist()
+        self.res['between_firm_var'] = self.__weighted_var(fy, fi)
+        self.res['var_y'] = self.__weighted_var(self.adata['y'].to_numpy(), self.Dp)
         self.logger.info('total variance: {:0.4f}'.format(self.res['var_y']))
 
         # extract woodcock moments using sdata and jdata
@@ -388,7 +384,7 @@ class FEEstimator:
         #self.logger.info("[woodcock] var alpha = {}", res['woodcock_var_alpha'])
         #self.logger.info("[woodcock] var eps = {}", res['woodcock_var_eps'])
 
-    def __save_early_stats(self):
+    def _save_early_stats(self):
         '''
         Save the early statistics computed in compute_early_stats().
         '''
@@ -405,31 +401,34 @@ class FEEstimator:
         '''
         if self.params['Q'] == 'cov(alpha, psi)':
             # Which rows to select
-            self.adata['Jq'] = 1
-            self.adata['Wq'] = 1
+            # self.adata['Jq'] = 1
+            # self.adata['Wq'] = 1
             # Rows for csc_matrix
-            self.adata['Jq_row'] = self.adata['Jq'].cumsum() - 1
-            self.adata['Wq_row'] = self.adata['Wq'].cumsum() - 1
+            self.adata['Jq_row'] = np.arange(self.nn) # self.adata['Jq'].cumsum() - 1
+            self.adata['Wq_row'] = np.arange(self.nn) # self.adata['Wq'].cumsum() - 1
             # Columns for csc_matrix
             self.adata['Jq_col'] = self.adata['j']
             self.adata['Wq_col'] = self.adata['i']
 
-        elif self.params['Q'] == 'cov(psi_t, psi_{t+1})':
-            self.adata['Jq'] = (self.adata['m'] == 1) & ((self.adata['cs'] == 0) | (self.adata['cs'] == 1))
-            self.adata['Jq_row'] = self.adata['Jq'].cumsum() - 1
-            self.adata['Jq_col'] = self.adata['j']
-            self.adata['Wq'] = (self.adata['m'] == 1) & ((self.adata['cs'] == 1) | (self.adata['cs'] == 2))
-            self.adata['Wq_row'] = self.adata['Wq'].cumsum() - 1
-            self.adata['Wq_col'] = self.adata['j']
+        elif self.params['Q'] in ['cov(psi_t, psi_{t+1})', 'cov(psi_i, psi_j)']:
+            warnings.warn('These Q options are not yet implemented.')
 
-        elif self.params['Q'] == 'cov(psi_i, psi_j)': # Code doesn't work
-            self.adata['Jq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 1)
-            self.adata['Jq_row'] = self.adata['j1']
-            self.adata['Jq_col'] = self.adata['j1']
-            self.adata['Wq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 0)
-            # Recall j1, j2 swapped for m==1 and cs==0
-            self.adata['Wq_row'] = self.adata['j2']
-            self.adata['Wq_col'] = self.adata['j1']
+        # elif self.params['Q'] == 'cov(psi_t, psi_{t+1})':
+        #     self.adata['Jq'] = (self.adata['m'] == 1) & ((self.adata['cs'] == 0) | (self.adata['cs'] == 1))
+        #     self.adata['Jq_row'] = self.adata['Jq'].cumsum() - 1
+        #     self.adata['Jq_col'] = self.adata['j']
+        #     self.adata['Wq'] = (self.adata['m'] == 1) & ((self.adata['cs'] == 1) | (self.adata['cs'] == 2))
+        #     self.adata['Wq_row'] = self.adata['Wq'].cumsum() - 1
+        #     self.adata['Wq_col'] = self.adata['j']
+
+        # elif self.params['Q'] == 'cov(psi_i, psi_j)': # Code doesn't work
+        #     self.adata['Jq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 1)
+        #     self.adata['Jq_row'] = self.adata['j1']
+        #     self.adata['Jq_col'] = self.adata['j1']
+        #     self.adata['Wq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 0)
+        #     # Recall j1, j2 swapped for m==1 and cs==0
+        #     self.adata['Wq_row'] = self.adata['j2']
+        #     self.adata['Wq_col'] = self.adata['j1']
 
     def __construct_Jq_Wq(self):
         '''
@@ -439,6 +438,9 @@ class FEEstimator:
             Jq (Pandas DataFrame): left matrix for computing Q
             Wq (Pandas DataFrame): right matrix for computing Q
         '''
+        # FIXME this method is irrelevant at the moment
+        return self.J, self.W
+
         # Construct Jq, Wq matrices
         Jq = self.adata[self.adata['Jq'] == 1].reset_index(drop=True)
         self.Yq = Jq['y']
@@ -459,11 +461,11 @@ class FEEstimator:
 
         return Jq, Wq
 
-    def __create_fe_solver(self):
+    def _create_fe_solver(self):
         '''
         Solve FE model.
         '''
-        self.Y = self.adata['y']
+        self.Y = self.adata['y'].to_numpy()
 
         # try to pickle the object to see its size
         # self.save('tmp.pkl') # FIXME should we delete these 2 lines?
@@ -492,14 +494,14 @@ class FEEstimator:
 
         self.var_e_pi = np.var(self.E) # Plug-in variance
         if 'w' in self.adata.columns:
-            self.__compute_trace_approximation_sigma_2()
+            self._compute_trace_approximation_sigma_2()
             trace_approximation = np.mean(self.tr_sigma_ho_all)
             self.var_e = (self.nn * self.var_e_pi) / (np.sum(1 / self.Dp.data[0]) - trace_approximation)
         else:
             self.var_e = (self.nn * self.var_e_pi) / (self.nn - (self.nw + self.nf - 1))
         self.logger.info('[ho] variance of residuals {:2.4f}'.format(self.var_e))
 
-    def __compute_trace_approximation_ho(self):
+    def _compute_trace_approximation_ho(self):
         '''
         Compute weighted HO trace approximation for arbitrary Q.
         '''
@@ -511,8 +513,8 @@ class FEEstimator:
         self.tot_var = np.var(self.Y)
         if 'w' in self.adata.columns:
             self.logger.info('[weighted fe]')
-            self.var_fe = self.__weighted_var(Jq * self.psi_hat, self.adata['w'])
-            self.cov_fe = self.__weighted_cov(Jq * self.psi_hat, Wq * self.alpha_hat, self.adata['w'])
+            self.var_fe = self.__weighted_var(Jq * self.psi_hat, self.Dp)
+            self.cov_fe = self.__weighted_cov(Jq * self.psi_hat, Wq * self.alpha_hat, self.Dp)
         else:
             self.logger.info('[fe]')
             vcv = np.cov(Jq * self.psi_hat, Wq * self.alpha_hat, ddof=0) # Set ddof=0 is necessary, otherwise takes 1 / (N - 1) by default instead of 1 / N
@@ -668,7 +670,7 @@ class FEEstimator:
     #         self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
     #         self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
-    def __compute_trace_approximation_he(self):
+    def _compute_trace_approximation_he(self):
         '''
         Compute heteroskedastic trace approximation.
         '''
@@ -696,7 +698,7 @@ class FEEstimator:
 
             self.logger.debug('heteroskedastic [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
-    def __compute_trace_approximation_sigma_2(self):
+    def _compute_trace_approximation_sigma_2(self):
         '''
         Compute weighted sigma^2 trace approximation.
 
@@ -727,7 +729,7 @@ class FEEstimator:
 
             self.logger.debug('sigma^2 [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
-    def __collect_res(self):
+    def _collect_res(self):
         '''
         Collect all results.
         '''
@@ -763,8 +765,8 @@ class FEEstimator:
 
         # Heteroskedastic results
         if self.compute_he:
-            self.res['eps_var_he'] = self.Sii.mean()
-            self.res['min_lev'] = self.adata.query('m == 1').Pii.min()
+            self.res['eps_var_he'] = self.res['eps_var_he'] # self.Sii.mean() # Already computed, this just reorders the dictionary
+            self.res['min_lev'] = self.res['min_lev'] # self.adata.loc[self.adata['m'] == 1, 'Pii'].min() # FIXME was formerly self.adata.query('m == 1').Pii.min() # Already computed, this just reorders the dictionary
             self.res['max_lev'] = self.res['max_lev'] # self.adata.query('m == 1').Pii.max() # Already computed, this just reorders the dictionary
             self.res['tr_var_he'] = np.mean(self.tr_var_he_all)
             self.res['tr_cov_he'] = np.mean(self.tr_cov_he_all)
@@ -783,7 +785,7 @@ class FEEstimator:
             for res in ['var_he', 'cov_he']:
                 self.summary[res] = self.res[res]
 
-    def __save_res(self):
+    def _save_res(self):
         '''
         Save results as json.
         '''
@@ -796,7 +798,7 @@ class FEEstimator:
 
         self.logger.info('saved results to {}'.format(self.params['out']))
 
-    def __get_fe_estimates(self):
+    def _get_fe_estimates(self):
         '''
         Add the estimated psi_hats and alpha_hats to the dataframe.
         '''
@@ -917,7 +919,7 @@ class FEEstimator:
         '''
         return self.__mult_A(*self.__solve(Y, Dp1, Dp2), Dp0)
 
-    def __compute_leverages_Pii(self):
+    def _compute_leverages_Pii(self):
         '''
         Compute leverages for heteroskedastic correction.
         '''
@@ -939,18 +941,19 @@ class FEEstimator:
             self.logger.info('[he] starting heteroskedastic correction p2={}, using {} cores, batch size {}'.format(self.ndraw_pii, self.ncore, self.params['batch']))
             set_start_method('spawn')
             with Pool(processes=self.ncore) as pool:
-                Pii_all = pool.starmap(self.__leverage_approx, [self.params['batch'] for _ in range(self.ndraw_pii // self.params['batch'])])
+                Pii_all = pool.starmap(self._leverage_approx, [self.params['batch'] for _ in range(self.ndraw_pii // self.params['batch'])])
 
             for pp in Pii_all:
                 Pii += pp / len(Pii_all)
 
         else:
-            Pii_all = list(itertools.starmap(self.__leverage_approx, [[self.params['batch']] for _ in range(self.ndraw_pii // self.params['batch'])]))
+            Pii_all = list(itertools.starmap(self._leverage_approx, [[self.params['batch']] for _ in range(self.ndraw_pii // self.params['batch'])]))
 
             for pp in Pii_all:
                 Pii += pp / len(Pii_all)
 
-        I = 1.0 * self.adata.eval('m == 1')
+        I = 1.0 * (self.adata['m'] == 1) # FIXME was formerly self.adata.eval('m == 1')
+        self.res['min_lev'] = (I * Pii).min()
         self.res['max_lev'] = (I * Pii).max()
 
         if self.res['max_lev'] >= 1:
@@ -960,20 +963,21 @@ class FEEstimator:
 
         # Attach the computed Pii to the dataframe
         self.adata['Pii'] = Pii
-        self.logger.info('[he] Leverage range {:2.4f} to {:2.4f}'.format(self.adata.query('m == 1').Pii.min(), self.adata.query('m == 1').Pii.max()))
+        self.logger.info('[he] Leverage range {:2.4f} to {:2.4f}'.format(self.res['min_lev'], self.res['max_lev']))
         # print('Observation with max leverage:', self.adata[self.adata['Pii'] == self.res['max_lev']])
 
         # Give stayers the variance estimate at the firm level
         self.adata['Sii'] = self.Y * self.E / (1 - Pii)
-        S_j = pd.DataFrame(self.adata).query('m == 1').rename(columns={'Sii': 'Sii_j'}).groupby('j')['Sii_j'].agg('mean')
+        S_j = self.adata[self.adata['m'] == 1].rename({'Sii': 'Sii_j'}).groupby('j')['Sii_j'].agg('mean') # FIXME was formerly pd.DataFrame(self.adata).query('m == 1').rename(columns={'Sii': 'Sii_j'}).groupby('j')['Sii_j'].agg('mean')
 
         Sii_j = pd.merge(self.adata['j'], S_j, on='j')['Sii_j']
         self.adata['Sii'] = np.where(self.adata['m'] == 1, self.adata['Sii'], Sii_j)
         self.Sii = self.adata['Sii']
 
-        self.logger.info('[he] variance of residuals in heteroskedastic case: {:2.4f}'.format(self.Sii.mean()))
+        self.res['eps_var_he'] = self.Sii.mean()
+        self.logger.info('[he] variance of residuals in heteroskedastic case: {:2.4f}'.format(self.res['eps_var_he']))
 
-    def __leverage_approx(self, ndraw_pii):
+    def _leverage_approx(self, ndraw_pii):
         '''
         Compute an approximate leverage using ndraw_pii.
 
@@ -994,7 +998,7 @@ class FEEstimator:
 
         return Pii
 
-    def __drop_cols(self):
+    def _drop_cols(self):
         '''
         Drop irrelevant columns (['Jq', 'Wq', 'Jq_row', 'Wq_row', 'Jq_col', 'Wq_col']).
         '''

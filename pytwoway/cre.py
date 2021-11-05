@@ -138,9 +138,12 @@ class CREEstimator:
         # Generate stayers and movers, and set indices so they don't overlap
         jdata = self.adata[(self.adata['m'] == 1) & (self.adata['cs'] == 1)].reset_index(drop=True)
         self.mn = len(jdata) # Number of observations from movers # FIXME I renamed from nm to mn, since nm makes it seem like it's the number of movers, while mn gives movers, where n is the total number of observations
-        sdata = self.adata[(self.adata['m'] == 0) & (self.adata['cs'] == 1)].set_index(np.arange(self.ns) + self.mn) # FIXME was np.arange(self.ns) + 1 + self.mn
+        ########################################
+        ##### NOTE: if you code crashes on the next line, it is likely because your data is not collapsed #####
+        ########################################
+        sdata = self.adata[(self.adata['m'] == 0) & (self.adata['cs'] == 1)].set_index(np.arange(self.ns) + self.mn) # FIXME could be np.arange(len(sdata)) + self.mn for non-collapsed data, since stayers can have multiple observations - but this has issues at the moment because consecutive observations at the same firm for movers should be marked as stayers
         sdata, jdata = self.__estimate_between_cluster(sdata, jdata)
-        self.__estimate_within_cluster(sdata, jdata)
+        self._estimate_within_cluster(sdata, jdata)
         self.__estimate_within_parameters()
 
         cdata = pd.concat([sdata[['y1', 'psi1_tmp', 'mx', 'j1']], jdata[['y1', 'psi1_tmp', 'mx', 'j1']]], axis=0)
@@ -199,7 +202,7 @@ class CREEstimator:
         nn = len(self.adata) # Number of observations
         self.logger.info('data firms={} workers={} clusters={} observations={}'.format(self.nf, self.nw, self.nc, nn))
 
-        nm = len(np.unique(self.adata[self.adata['m'] == 1]['i'])) # Number of movers
+        nm = self.adata.loc[self.adata['m'] == 1, 'i'].nunique() # Number of movers
         self.ns = self.nw - nm # Number of stayers
         self.logger.info('data movers={} stayers={}'.format(nm, self.ns))
 
@@ -296,7 +299,7 @@ class CREEstimator:
 
         return sdata, jdata
 
-    def __estimate_within_cluster(self, sdata, jdata):
+    def _estimate_within_cluster(self, sdata, jdata):
         '''
         @ FIXME add description of function
 
@@ -488,7 +491,7 @@ class CREEstimator:
             jdata (Pandas DataFrame): movers
         '''
         jdata_f = pd.concat([jdata[['j1', 'g1']], jdata[['j2', 'g2']].rename(columns={'j2': 'j1', 'g2': 'g1'})]).drop_duplicates()
-        Jf = csc_matrix((np.ones(len(jdata_f)), (jdata_f['j1'], jdata_f['g1'])), shape=(len(jdata_f), self.nc))
+        Jf = csc_matrix((np.ones(len(jdata_f)), (jdata_f['j1'], jdata_f['g1'])), shape=(self.nf, self.nc)) # Need self.nf because recall there can be firms in j2 that aren't in j1
         self.Mud = Jf * self.between_params['Afill']
 
     def __prep_posterior_var(self, jdata, cdata):
