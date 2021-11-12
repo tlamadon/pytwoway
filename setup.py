@@ -22,7 +22,8 @@ setuptools.setup(
         'qpsolvers',
         'ConfigArgParse',
         'matplotlib',
-        'tqdm'
+        'tqdm',
+        'statsmodel'
       ],
     entry_points = {
         'console_scripts': ['pytw=pytwoway.command_line:main'],
