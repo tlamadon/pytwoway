@@ -12,7 +12,7 @@ from pathlib import Path
 import pyamg
 import numpy as np
 import pandas as pd
-from bipartitepandas import update_dict, logger_init
+from bipartitepandas import update_dict, to_list, logger_init
 from scipy.sparse import csc_matrix, coo_matrix, diags, linalg
 import time
 # import pyreadr
@@ -99,10 +99,7 @@ class FEEstimator:
         # self.logger.info('initializing FEEstimator object')
 
         self.adata = data
-        try:
-            self.adata.sort_values(['i', 't'], inplace=True)
-        except KeyError:
-            self.adata.sort_values(['i', 't1'], inplace=True)
+        self.adata.sort_values(['i', to_list(self.adata.reference_dict['t'])[0]], inplace=True)
 
         # Define default parameter dictionaries
         default_params = {
@@ -241,13 +238,13 @@ class FEEstimator:
 
         self.res['n_firms'] = self.nf
         self.res['n_workers'] = self.nw
-        self.res['n_movers'] = self.adata.loc[self.adata['m'] == 1, 'i'].nunique()
+        self.res['n_movers'] = self.adata.loc[self.adata['m'].to_numpy() == 1, 'i'].nunique()
         self.res['n_stayers'] = self.res['n_workers'] - self.res['n_movers']
         self.logger.info('data movers={} stayers={}'.format(self.res['n_movers'], self.res['n_stayers']))
 
         # Prepare 'cs' column (0 if observation is first for a worker, 1 if intermediate, 2 if last for a worker)
-        worker_first_obs = (self.adata['i'] != self.adata['i'].shift(1))
-        worker_last_obs = (self.adata['i'] != self.adata['i'].shift(-1))
+        worker_first_obs = (self.adata['i'].to_numpy() != np.roll(self.adata['i'].to_numpy(), 1))
+        worker_last_obs = (self.adata['i'].to_numpy() != np.roll(self.adata['i'].to_numpy(), -1))
         self.adata['cs'] = 1
         self.adata.loc[(worker_first_obs) & ~(worker_last_obs), 'cs'] = 0
         self.adata.loc[(worker_last_obs) & ~(worker_first_obs), 'cs'] = 2
@@ -260,14 +257,14 @@ class FEEstimator:
         Generate J, W, and M matrices.
         '''
         # Matrices for the cross-section
-        J = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata['j'])), shape=(self.nn, self.nf)) # Firms
+        J = csc_matrix((np.ones(self.nn), (self.adata.index.to_numpy(), self.adata['j'].to_numpy())), shape=(self.nn, self.nf)) # Firms
         J = J[:, range(self.nf - 1)]  # Normalize one firm to 0
         self.J = J
-        W = csc_matrix((np.ones(self.nn), (self.adata.index, self.adata['i'])), shape=(self.nn, self.nw)) # Workers
+        W = csc_matrix((np.ones(self.nn), (self.adata.index.to_numpy(), self.adata['i'].to_numpy())), shape=(self.nn, self.nw)) # Workers
         self.W = W
         if 'w' in self.adata.columns:
             # Diagonal weight matrix
-            Dp = diags(self.adata['w'])
+            Dp = diags(self.adata['w'].to_numpy())
             # Dwinv = diags(1.0 / ((W.T @ Dp @ W).diagonal())) # linalg.inv(csc_matrix(W.T @ Dp @ W))
         else:
             # Diagonal weight matrix - all weight one
@@ -960,9 +957,11 @@ class FEEstimator:
             leverage_warning = 'Max P_ii is {} which is >= 1. This should not happen - increase your value of ndraw_pii until this warning is no longer raised (ndraw_pii is currently set to {}).'.format(self.res['max_lev'], self.params['ndraw_pii'])
             warnings.warn(leverage_warning)
             self.logger.info(leverage_warning)
+            self.adata['Pii'] = Pii
+            self.adata.to_feather('pii_data.ftr')
 
-        # Attach the computed Pii to the dataframe
-        self.adata['Pii'] = Pii
+        # # Attach the computed Pii to the dataframe
+        # self.adata['Pii'] = Pii
         self.logger.info('[he] Leverage range {:2.4f} to {:2.4f}'.format(self.res['min_lev'], self.res['max_lev']))
         # print('Observation with max leverage:', self.adata[self.adata['Pii'] == self.res['max_lev']])
 
@@ -992,7 +991,7 @@ class FEEstimator:
         # Compute the different draws
         for _ in range(ndraw_pii):
             R2 = 2 * self.rng.binomial(1, 0.5, self.nn) - 1
-            Pii += 1 / ndraw_pii * np.power(self.__proj(R2, Dp0='sqrt', Dp2='sqrt'), 2.0)
+            Pii += 1 / ndraw_pii * np.power(self.__proj(R2, Dp0='sqrt', Dp2='sqrt'), 2.0) # np.power(self.__proj(R2, False, False, False), 2.0)
 
         self.logger.info('done with batch')
 
