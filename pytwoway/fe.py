@@ -957,8 +957,8 @@ class FEEstimator:
             leverage_warning = 'Max P_ii is {} which is >= 1. This should not happen - increase your value of ndraw_pii until this warning is no longer raised (ndraw_pii is currently set to {}).'.format(self.res['max_lev'], self.params['ndraw_pii'])
             warnings.warn(leverage_warning)
             self.logger.info(leverage_warning)
-            self.adata['Pii'] = Pii
-            self.adata.to_feather('pii_data.ftr')
+            # self.adata['Pii'] = Pii
+            # self.adata.to_feather('pii_data.ftr')
 
         # # Attach the computed Pii to the dataframe
         # self.adata['Pii'] = Pii

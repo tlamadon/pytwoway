@@ -36,7 +36,6 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), user_clean={}, r
     Returns:
         subset, is_clean (tuple of iterator of BipartiteBase, bool): first entry is subset of data, second is boolean indicating whether data is clean
     '''
-    # bdf = bdf.copy()
     # Update clean_params to make computations faster
     clean_params = user_clean.copy()
     clean_params['data_validity'] = False
@@ -48,18 +47,15 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), user_clean={}, r
         return None
 
     # Worker ids in base subset
-    wids_init = bdf.loc[bdf['m'] == 1, 'i'].unique()
+    wids_init = bdf.loc[bdf['m'].to_numpy() == 1, 'i'].unique()
 
     # Draw first subset
     n_wid_drops_1 = int(np.floor((1 - subsets[0]) * len(wids_init))) # Number of wids to drop
     wid_drops_1 = set(rng.choice(wids_init, size=n_wid_drops_1, replace=False)) # Draw wids to drop
-    # if True: # clean_params['connectedness'] == 'biconnected':
-    #     # Must drop m because it can change for biconnected components
-    #     # FIXME for some reason the code doesn't work unless it always drops m
-    #     bdf.drop('m')
+
     ##### Disable Pandas warning #####
     pd.options.mode.chained_assignment = None
-    subset_1 = bdf.drop_ids('i', wid_drops_1, copy=False).copy().drop('m')._reset_attributes(columns_contig=True, connected=True, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False).clean_data(clean_params).gen_m()
+    subset_1 = bdf.drop_ids('i', wid_drops_1, copy=False).copy()._reset_attributes(columns_contig=True, connected=True, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False).clean_data(clean_params)
     ##### Re-enable Pandas warning #####
     pd.options.mode.chained_assignment = 'warn'
 
@@ -78,16 +74,16 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), user_clean={}, r
     valid_firms = set(valid_firms)
 
     # Take all data for list of firms in smallest subset
-    # bdf._reset_id_reference_dict() # Clear id_reference_dict since it is no longer necessary
-    subset_init = bdf.keep_ids('j', valid_firms, copy=False).copy().drop('m')
+    subset_init = bdf.keep_ids('j', valid_firms, copy=False).copy()
     subset_init._reset_id_reference_dict() # Clear id_reference_dict since it is no longer necessary
     if isinstance(bdf, bpd.BipartiteLongCollapsed):
-        # Must recollapse for biconnected components
+        # Must recollapse because set of firms changed
         subset_init = subset_init.recollapse(copy=False)
-    subset_init.gen_m()
+    subset_init = subset_init.gen_m(force=True, copy=False)
 
     # Determine which wids (for movers) can still be drawn
-    all_valid_wids = set(subset_init.loc[subset_init['m'] == 1, 'i'].unique())
+    all_valid_wids = set(subset_init.loc[subset_init['m'].to_numpy() == 1, 'i'].unique())
+
     original_i = 'original_i'
     if original_i not in subset_1_orig_ids.columns:
         # If no changes to i column
@@ -107,7 +103,7 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), user_clean={}, r
 
             ##### Disable Pandas warning #####
             pd.options.mode.chained_assignment = None
-            subset_i = subset_init.drop_ids('i', dropped_wids, copy=False).copy()._reset_attributes(columns_contig=True, connected=False, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False)
+            subset_i = subset_init.drop_ids('i', wid_draws_i, copy=False).copy()._reset_attributes(columns_contig=True, connected=False, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False)
             ##### Re-enable Pandas warning #####
             pd.options.mode.chained_assignment = 'warn'
 
@@ -138,8 +134,8 @@ def attrition_decreasing(bdf, subsets=np.linspace(0.5, 0.1, 5), user_clean={}, r
         return None
 
     # Worker ids in base subset
-    wids_movers = bdf.loc[bdf['m'] == 1, 'i'].unique()
-    wids_stayers = list(bdf.loc[bdf['m'] == 0, 'i'].unique())
+    wids_movers = bdf.loc[bdf['m'].to_numpy() == 1, 'i'].unique()
+    wids_stayers = list(bdf.loc[bdf['m'].to_numpy() == 0, 'i'].unique())
 
     # # Drop m since it can change for biconnected components
     # bdf.drop('m')
@@ -271,6 +267,7 @@ class TwoWayAttrition:
             clean_params['copy'] = False
             bdf = bdf.clean_data(clean_params)
         # Use data to create TwoWay object (note that data is already clean)
+        # bdf['w'] = 1 # FIXME temporary
         tw_net = tw.TwoWay(bdf)
         # Estimate FE model
         tw_net.fit_fe(user_fe=fe_params)
@@ -529,6 +526,9 @@ class TwoWayAttrition:
         # Take subset of firms that meet threshold
         threshold_firms = self.bdf.min_movers(threshold=attrition_params_full['threshold'], copy=False)
         self.bdf = self.bdf.keep_ids('j', threshold_firms, copy=False)
+        if isinstance(self.bdf, bpd.BipartiteLongCollapsed):
+            # Must recollapse because set of firms changed
+            self.bdf = self.bdf.recollapse(copy=False)
 
         # Use multi-processing
         if False: # ncore > 1:
