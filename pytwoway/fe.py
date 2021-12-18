@@ -13,7 +13,7 @@ import pyamg
 import numpy as np
 import pandas as pd
 from bipartitepandas import update_dict, to_list, logger_init
-from scipy.sparse import csc_matrix, coo_matrix, diags, linalg
+from scipy.sparse import csc_matrix, coo_matrix, diags, linalg, hstack, eye
 import time
 # import pyreadr
 import os
@@ -84,6 +84,8 @@ class FEEstimator:
 
                     he (bool, default=False): if True, compute heteroskedastic correction
 
+                    he_analytical (bool, default=False): if True, compute heteroskedastic correction, using analytical formula; if False, use JL approxmation
+
                     out (str, default='res_fe.json'): outputfile where results are saved
 
                     statsonly (bool, default=False): if True, return only basic statistics
@@ -109,6 +111,7 @@ class FEEstimator:
             'levfile': '', # File to load precomputed leverages
             'ndraw_tr': 5, # Number of draws to use in approximation for traces
             'he': False, # If True, compute heteroskedastic correction
+            'he_analytical': False, # If True, compute heteroskedastic correction, using analytical formula; if False, use JL approxmation
             'out': 'res_fe.json', # Outputfile where results are saved
             'statsonly': False, # If True, return only basic statistics
             'feonly': False, # If True, compute only fixed effects and not variances
@@ -204,6 +207,7 @@ class FEEstimator:
         else: # If running analysis
             self._create_fe_solver() # Solve FE model
             self._get_fe_estimates() # Add fixed effect columns
+
             if not self.params['feonly']: # If running full model
                 self._compute_trace_approximation_ho() # Compute trace approximation
 
@@ -219,9 +223,11 @@ class FEEstimator:
         self.res['total_time'] = end_time - self.start_time
         del self.start_time
 
-        self._save_res() # Save results to json
+        # Save results to json
+        self._save_res()
 
-        self._drop_cols() # Drop irrelevant columns
+        # Drop irrelevant columns
+        self._drop_cols()
 
         self.logger.info('------ DONE -------')
 
@@ -916,38 +922,87 @@ class FEEstimator:
         '''
         return self.__mult_A(*self.__solve(Y, Dp1, Dp2), Dp0)
 
+    def __AAinv_components(self):
+        '''
+        Construct (A'D_pA)^{-1} block matrix components. Do not use this with large datasets.
+
+        Returns:
+            (A, B, C, D) (tuple): four blocks in (A'D_pA)^{-1}
+        '''
+        # Define variables
+        nf = self.nf
+        nw = self.nw
+        print('nf:', nf)
+        print('nw:', nw)
+        J = self.J
+        W = self.W
+        M = np.linalg.inv(self.M.todense())
+        # if self.M.shape[0] == 1:
+        #     # The first csc_matrix is to stop a warning, the second is to stop a dimension mismatch if M is 1 x 1
+        #     M = csc_matrix(linalg.inv(csc_matrix(self.M))) # np.linalg.inv(self.M.todense())
+        # else:
+        #     M = linalg.inv(csc_matrix(self.M)) # np.linalg.inv(self.M.todense())
+
+        Dp = self.Dp
+        Dwinv = self.Dwinv
+
+        # Construct blocks
+        A = M
+        B = - M @ J.T @ Dp @ W @ Dwinv
+        C = - Dwinv @ W.T @ Dp @ J @ M
+        D = Dwinv + C @ self.M @ B # Dwinv @ (eye(nw) + W.T @ Dp @ J @ M @ J.T @ Dp @ W @ Dwinv)
+
+        return A, B, C, D
+
     def _compute_leverages_Pii(self):
         '''
         Compute leverages for heteroskedastic correction.
         '''
         Pii = np.zeros(self.nn)
 
-        if len(self.params['levfile']) > 1:
-            self.logger.info('[he] starting heteroskedastic correction, loading precomputed files')
-
-            files = glob.glob('{}*'.format(self.params['levfile']))
-            self.logger.info('[he] found {} files to get leverages from'.format(len(files)))
-            self.res['lev_file_count'] = len(files)
-            assert len(files) > 0, "Didn't find any leverage files!"
-
-            for f in files:
-                pp = np.load(f)
-                Pii += pp / len(files)
-
-        elif self.ncore > 1:
-            self.logger.info('[he] starting heteroskedastic correction p2={}, using {} cores, batch size {}'.format(self.ndraw_pii, self.ncore, self.params['batch']))
-            set_start_method('spawn')
-            with Pool(processes=self.ncore) as pool:
-                Pii_all = pool.starmap(self._leverage_approx, [self.params['batch'] for _ in range(self.ndraw_pii // self.params['batch'])])
-
-            for pp in Pii_all:
-                Pii += pp / len(Pii_all)
+        if self.params['he_analytical']:
+            # Construct weighted J and W
+            DpJ = np.asarray((self.Dp_sqrt @ self.J).todense())
+            DpW = np.asarray((self.Dp_sqrt @ self.W).todense())
+            # Dp = np.diagonal(self.Dp.toarray())
+            # Directly compute (A'A)^{-1}
+            AA_inv_A, AA_inv_B, AA_inv_C, AA_inv_D = self.__AAinv_components()
+            for i in range(self.nn):
+                if self.adata['m'].to_numpy()[i] == 1:
+                    DpJ_i = DpJ[i, :]
+                    DpW_i = DpW[i, :]
+                    # AAinv_J_i, AAinv_W_i = self.__mult_AAinv(J_i, W_i)
+                    # Pii[i] = Dp[i] * (np.inner(J_i, AAinv_J_i) + np.inner(W_i, AAinv_W_i))
+                    # Pii[i] = Dp[i] * (A_i.T @ AA_inv @ A_i)
+                    Pii[i] = DpJ_i @ AA_inv_A @ DpJ_i + DpJ_i @ AA_inv_B @ DpW_i + DpW_i @ AA_inv_C @ DpJ_i + DpW_i @ AA_inv_D @ DpW_i
 
         else:
-            Pii_all = list(itertools.starmap(self._leverage_approx, [[self.params['batch']] for _ in range(self.ndraw_pii // self.params['batch'])]))
+            if len(self.params['levfile']) > 1:
+                self.logger.info('[he] starting heteroskedastic correction, loading precomputed files')
 
-            for pp in Pii_all:
-                Pii += pp / len(Pii_all)
+                files = glob.glob('{}*'.format(self.params['levfile']))
+                self.logger.info('[he] found {} files to get leverages from'.format(len(files)))
+                self.res['lev_file_count'] = len(files)
+                assert len(files) > 0, "Didn't find any leverage files!"
+
+                for f in files:
+                    pp = np.load(f)
+                    Pii += pp / len(files)
+
+            elif self.ncore > 1:
+                self.logger.info('[he] starting heteroskedastic correction p2={}, using {} cores, batch size {}'.format(self.ndraw_pii, self.ncore, self.params['batch']))
+                set_start_method('spawn')
+                with Pool(processes=self.ncore) as pool:
+                    Pii_all = pool.starmap(self._leverage_approx, [self.params['batch'] for _ in range(self.ndraw_pii // self.params['batch'])])
+
+                for pp in Pii_all:
+                    Pii += pp / len(Pii_all)
+
+            else:
+                Pii_all = list(itertools.starmap(self._leverage_approx, [[self.params['batch']] for _ in range(self.ndraw_pii // self.params['batch'])]))
+
+                for pp in Pii_all:
+                    Pii += pp / len(Pii_all)
 
         I = 1.0 * (self.adata['m'] == 1) # FIXME was formerly self.adata.eval('m == 1')
         self.res['min_lev'] = (I * Pii).min()

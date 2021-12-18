@@ -148,9 +148,7 @@ def attrition_decreasing(bdf, subsets=np.linspace(0.5, 0.1, 5), user_clean={}, r
 
         ##### Disable Pandas warning #####
         pd.options.mode.chained_assignment = None
-        subset_i = bdf.keep_ids('i', wids_movers + wids_stayers, copy=False).copy()
-        subset_i._reset_id_reference_dict()
-        subset_i = subset_i.drop('m')._reset_attributes(columns_contig=True, connected=True, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False)
+        subset_i = bdf.keep_ids('i', wids_movers + wids_stayers, copy=False).copy()._reset_id_reference_dict()._reset_attributes(columns_contig=True, connected=True, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False)
         ##### Re-enable Pandas warning #####
         pd.options.mode.chained_assignment = 'warn'
 
@@ -421,7 +419,6 @@ class TwoWayAttrition:
         res_all = {'connected': res_all[0], 'biconnected': res_all[1]}
 
         return res_all
-
     def attrition(self, N=10, ncore=1, attrition_params={}, fe_params={}, cre_params={}, cluster_params={}, clean_params={}, seed=None):
         '''
         Run Monte Carlo on attrition estimations of TwoWay to estimate variance of parameter estimates given fraction of movers remaining. Note that this overwrites the stored dataframe, meaning if you want to run attrition with different threshold number of movers, you will have to create multiple TwoWayAttrition objects, or alternatively, run this method with an increasing threshold for each iteration.
@@ -604,7 +601,7 @@ class TwoWayAttrition:
                     biconset_cov_psi_alpha_pct[i, j, 3] = 2 * float(bicon_res_fe_dict['cov_he']) / float(bicon_res_fe_dict['var_y'])
 
             # x-axis
-            x_axis = (100 * subsets).astype(int)
+            x_axis = np.round(100 * subsets).astype(int)
             conset_var_psi_pct = 100 * conset_var_psi_pct
             conset_cov_psi_alpha_pct = 100 * conset_cov_psi_alpha_pct
             biconset_var_psi_pct = 100 * biconset_var_psi_pct
