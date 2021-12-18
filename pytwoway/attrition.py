@@ -265,7 +265,7 @@ class TwoWayAttrition:
             clean_params['copy'] = False
             bdf = bdf.clean_data(clean_params)
         # Use data to create TwoWay object (note that data is already clean)
-        # bdf['w'] = 1 # FIXME temporary
+        bdf['w'] = 1 # FIXME temporary
         tw_net = tw.TwoWay(bdf)
         # Estimate FE model
         tw_net.fit_fe(user_fe=fe_params)
