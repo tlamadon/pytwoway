@@ -100,8 +100,7 @@ class FEEstimator:
         logger_init(self)
         # self.logger.info('initializing FEEstimator object')
 
-        self.adata = data
-        self.adata.sort_values(['i', to_list(self.adata.reference_dict['t'])[0]], inplace=True)
+        self.adata = data.copy()
 
         # Define default parameter dictionaries
         default_params = {
@@ -237,6 +236,12 @@ class FEEstimator:
         '''
         self.logger.info('preparing the data')
 
+        # if self.params['he']:
+        #     # Duplicate double moves
+        #     self.adata = pd.concat([self.adata, self.adata.loc[self.adata.loc[:, 'm'].to_numpy() == 2, :]], axis=0, ignore_index=True, copy=False)
+        #     self.adata.sort_values(['i', to_list(self.adata.reference_dict['t'])[0]], inplace=True)
+        self.adata.sort_values(['i', to_list(self.adata.reference_dict['t'])[0]], inplace=True)
+
         self.nf = self.adata.n_firms() # Number of firms
         self.nw = self.adata.n_workers() # Number of workers
         self.nn = len(self.adata) # Number of observations
@@ -244,16 +249,16 @@ class FEEstimator:
 
         self.res['n_firms'] = self.nf
         self.res['n_workers'] = self.nw
-        self.res['n_movers'] = self.adata.loc[self.adata['m'].to_numpy() == 1, 'i'].nunique()
+        self.res['n_movers'] = self.adata.loc[self.adata['m'].to_numpy() > 0, 'i'].nunique()
         self.res['n_stayers'] = self.res['n_workers'] - self.res['n_movers']
         self.logger.info('data movers={} stayers={}'.format(self.res['n_movers'], self.res['n_stayers']))
 
-        # Prepare 'cs' column (0 if observation is first for a worker, 1 if intermediate, 2 if last for a worker)
-        worker_first_obs = (self.adata['i'].to_numpy() != np.roll(self.adata['i'].to_numpy(), 1))
-        worker_last_obs = (self.adata['i'].to_numpy() != np.roll(self.adata['i'].to_numpy(), -1))
-        self.adata['cs'] = 1
-        self.adata.loc[(worker_first_obs) & ~(worker_last_obs), 'cs'] = 0
-        self.adata.loc[(worker_last_obs) & ~(worker_first_obs), 'cs'] = 2
+        # # Prepare 'cs' column (0 if observation is first for a worker, 1 if intermediate, 2 if last for a worker)
+        # worker_first_obs = (self.adata['i'].to_numpy() != np.roll(self.adata['i'].to_numpy(), 1))
+        # worker_last_obs = (self.adata['i'].to_numpy() != np.roll(self.adata['i'].to_numpy(), -1))
+        # self.adata['cs'] = 1
+        # self.adata.loc[(worker_first_obs) & ~(worker_last_obs), 'cs'] = 0
+        # self.adata.loc[(worker_last_obs) & ~(worker_first_obs), 'cs'] = 2
 
         #res['year_max'] = int(sdata['year'].max())
         #res['year_min'] = int(sdata['year'].min())
@@ -417,18 +422,18 @@ class FEEstimator:
             warnings.warn('These Q options are not yet implemented.')
 
         # elif self.params['Q'] == 'cov(psi_t, psi_{t+1})':
-        #     self.adata['Jq'] = (self.adata['m'] == 1) & ((self.adata['cs'] == 0) | (self.adata['cs'] == 1))
+        #     self.adata['Jq'] = (self.adata['m'] > 0) & ((self.adata['cs'] == 0) | (self.adata['cs'] == 1))
         #     self.adata['Jq_row'] = self.adata['Jq'].cumsum() - 1
         #     self.adata['Jq_col'] = self.adata['j']
-        #     self.adata['Wq'] = (self.adata['m'] == 1) & ((self.adata['cs'] == 1) | (self.adata['cs'] == 2))
+        #     self.adata['Wq'] = (self.adata['m'] > 0) & ((self.adata['cs'] == 1) | (self.adata['cs'] == 2))
         #     self.adata['Wq_row'] = self.adata['Wq'].cumsum() - 1
         #     self.adata['Wq_col'] = self.adata['j']
 
         # elif self.params['Q'] == 'cov(psi_i, psi_j)': # Code doesn't work
-        #     self.adata['Jq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 1)
+        #     self.adata['Jq'] = (self.adata['m'] > 0) & (self.adata['cs'] == 1)
         #     self.adata['Jq_row'] = self.adata['j1']
         #     self.adata['Jq_col'] = self.adata['j1']
-        #     self.adata['Wq'] = (self.adata['m'] == 1) & (self.adata['cs'] == 0)
+        #     self.adata['Wq'] = (self.adata['m'] > 0) & (self.adata['cs'] == 0)
         #     # Recall j1, j2 swapped for m==1 and cs==0
         #     self.adata['Wq_row'] = self.adata['j2']
         #     self.adata['Wq_col'] = self.adata['j1']
@@ -769,8 +774,8 @@ class FEEstimator:
         # Heteroskedastic results
         if self.compute_he:
             self.res['eps_var_he'] = self.res['eps_var_he'] # self.Sii.mean() # Already computed, this just reorders the dictionary
-            self.res['min_lev'] = self.res['min_lev'] # self.adata.loc[self.adata['m'] == 1, 'Pii'].min() # FIXME was formerly self.adata.query('m == 1').Pii.min() # Already computed, this just reorders the dictionary
-            self.res['max_lev'] = self.res['max_lev'] # self.adata.query('m == 1').Pii.max() # Already computed, this just reorders the dictionary
+            self.res['min_lev'] = self.res['min_lev'] # self.adata.loc[self.adata['m'] > 0, 'Pii'].min() # FIXME was formerly self.adata.query('m > 0').Pii.min() # Already computed, this just reorders the dictionary
+            self.res['max_lev'] = self.res['max_lev'] # self.adata.query('m > 0').Pii.max() # Already computed, this just reorders the dictionary
             self.res['tr_var_he'] = np.mean(self.tr_var_he_all)
             self.res['tr_cov_he'] = np.mean(self.tr_cov_he_all)
             self.res['tr_var_ho_sd'] = np.std(self.tr_var_ho_all)
@@ -968,7 +973,7 @@ class FEEstimator:
             # Directly compute (A'A)^{-1}
             AA_inv_A, AA_inv_B, AA_inv_C, AA_inv_D = self.__AAinv_components()
             for i in range(self.nn):
-                if self.adata['m'].to_numpy()[i] == 1:
+                if self.adata['m'].to_numpy()[i] > 0:
                     DpJ_i = DpJ[i, :]
                     DpW_i = DpW[i, :]
                     # AAinv_J_i, AAinv_W_i = self.__mult_AAinv(J_i, W_i)
@@ -1004,7 +1009,7 @@ class FEEstimator:
                 for pp in Pii_all:
                     Pii += pp / len(Pii_all)
 
-        I = 1.0 * (self.adata['m'] == 1) # FIXME was formerly self.adata.eval('m == 1')
+        I = 1.0 * (self.adata['m'] > 0) # FIXME was formerly self.adata.eval('m == 1')
         self.res['min_lev'] = (I * Pii).min()
         self.res['max_lev'] = (I * Pii).max()
 
@@ -1022,10 +1027,10 @@ class FEEstimator:
 
         # Give stayers the variance estimate at the firm level
         self.adata['Sii'] = self.Y * self.E / (1 - Pii)
-        S_j = self.adata[self.adata['m'] == 1].rename({'Sii': 'Sii_j'}).groupby('j')['Sii_j'].agg('mean') # FIXME was formerly pd.DataFrame(self.adata).query('m == 1').rename(columns={'Sii': 'Sii_j'}).groupby('j')['Sii_j'].agg('mean')
+        S_j = self.adata[self.adata['m'] > 0].rename({'Sii': 'Sii_j'}).groupby('j')['Sii_j'].agg('mean') # FIXME was formerly pd.DataFrame(self.adata).query('m == 1').rename(columns={'Sii': 'Sii_j'}).groupby('j')['Sii_j'].agg('mean')
 
         Sii_j = pd.merge(self.adata['j'], S_j, on='j')['Sii_j']
-        self.adata['Sii'] = np.where(self.adata['m'] == 1, self.adata['Sii'], Sii_j)
+        self.adata['Sii'] = np.where(self.adata['m'] > 0, self.adata['Sii'], Sii_j)
         self.Sii = self.adata['Sii']
 
         self.res['eps_var_he'] = self.Sii.mean()

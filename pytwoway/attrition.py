@@ -55,7 +55,7 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), user_clean={}, r
 
     ##### Disable Pandas warning #####
     pd.options.mode.chained_assignment = None
-    subset_1 = bdf.drop_ids('i', wid_drops_1, copy=False).copy()._reset_attributes(columns_contig=True, connected=True, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False).clean_data(clean_params)
+    subset_1 = bdf.drop_ids('i', wid_drops_1, copy=True)._reset_attributes(columns_contig=True, connected=True, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False).clean_data(clean_params)
     ##### Re-enable Pandas warning #####
     pd.options.mode.chained_assignment = 'warn'
 
@@ -74,12 +74,8 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), user_clean={}, r
     valid_firms = set(valid_firms)
 
     # Take all data for list of firms in smallest subset
-    subset_init = bdf.keep_ids('j', valid_firms, copy=False).copy()
+    subset_init = bdf.keep_ids('j', valid_firms, copy=True)
     subset_init._reset_id_reference_dict() # Clear id_reference_dict since it is no longer necessary
-    if isinstance(bdf, bpd.BipartiteLongCollapsed):
-        # Must recollapse because set of firms changed
-        subset_init = subset_init.recollapse(copy=False)
-    subset_init = subset_init.gen_m(force=True, copy=False)
 
     # Determine which wids (for movers) can still be drawn
     all_valid_wids = set(subset_init.loc[subset_init['m'].to_numpy() == 1, 'i'].unique())
@@ -103,7 +99,7 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), user_clean={}, r
 
             ##### Disable Pandas warning #####
             pd.options.mode.chained_assignment = None
-            subset_i = subset_init.drop_ids('i', wid_draws_i, copy=False).copy()._reset_attributes(columns_contig=True, connected=False, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False)
+            subset_i = subset_init.drop_ids('i', wid_draws_i, copy=True)._reset_attributes(columns_contig=True, connected=False, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False)
             ##### Re-enable Pandas warning #####
             pd.options.mode.chained_assignment = 'warn'
 
@@ -148,7 +144,7 @@ def attrition_decreasing(bdf, subsets=np.linspace(0.5, 0.1, 5), user_clean={}, r
 
         ##### Disable Pandas warning #####
         pd.options.mode.chained_assignment = None
-        subset_i = bdf.keep_ids('i', wids_movers + wids_stayers, copy=False).copy()._reset_id_reference_dict()._reset_attributes(columns_contig=True, connected=True, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False)
+        subset_i = bdf.keep_ids('i', wids_movers + wids_stayers, copy=True)._reset_id_reference_dict()._reset_attributes(columns_contig=True, connected=True, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False)
         ##### Re-enable Pandas warning #####
         pd.options.mode.chained_assignment = 'warn'
 
@@ -171,6 +167,8 @@ class TwoWayAttrition:
         self.default_attrition = {
             'type_and_subsets': ('increasing', np.linspace(0.1, 0.5, 5)), # How to attrition data (either 'increasing' or 'decreasing'), and subsets to consider (both are required because switching type requires swapping the order of the subsets)
             'threshold': 15, # Minimum number of movers required to keep a firm
+            'drop_multiples': False, # If True, rather than collapsing over spells, drop any spells with multiple observations (this is for computational efficiency when re-collapsing data for biconnected components)
+            'copy': True # If False, avoid copy
         }
 
     # Cannot include two underscores because isn't compatible with starmap for multiprocessing
@@ -265,7 +263,7 @@ class TwoWayAttrition:
             clean_params['copy'] = False
             bdf = bdf.clean_data(clean_params)
         # Use data to create TwoWay object (note that data is already clean)
-        bdf['w'] = 1 # FIXME temporary
+        # bdf['w'] = 1 # FIXME temporary
         tw_net = tw.TwoWay(bdf)
         # Estimate FE model
         tw_net.fit_fe(user_fe=fe_params)
@@ -381,7 +379,7 @@ class TwoWayAttrition:
         clean_params_connected = clean_params.copy()
         clean_params_connected['connectedness'] = 'connected'
         clean_params_biconnected = clean_params.copy()
-        clean_params_biconnected['connectedness'] = 'biconnected'
+        clean_params_biconnected['connectedness'] = 'biconnected_observations'
         clean_params_all = [clean_params_connected, clean_params_biconnected]
 
         attrition_fn = {
@@ -433,6 +431,8 @@ class TwoWayAttrition:
                     type_and_subsets (tuple of (str, list), default=('increasing', np.linspace(0.1, 0.5, 5))): how to attrition data (either 'increasing' or 'decreasing'), and subsets to consider (both are required because switching type requires swapping the order of the subsets)
 
                     threshold (int, default=15): minimum number of movers required to keep a firm
+
+                    drop_multiples (bool, default=False): if True, rather than collapsing over spells, drop any spells with multiple observations (this is for computational efficiency when re-collapsing data for biconnected components)
 
                     copy (bool, default=True): if False, avoid copy
 
@@ -521,11 +521,7 @@ class TwoWayAttrition:
         attrition_params_full = bpd.util.update_dict(self.default_attrition, attrition_params)
 
         # Take subset of firms that meet threshold
-        threshold_firms = self.bdf.min_movers(threshold=attrition_params_full['threshold'], copy=False)
-        self.bdf = self.bdf.keep_ids('j', threshold_firms, copy=False)
-        if isinstance(self.bdf, bpd.BipartiteLongCollapsed):
-            # Must recollapse because set of firms changed
-            self.bdf = self.bdf.recollapse(copy=False)
+        self.bdf = self.bdf.min_moves_frame(threshold=attrition_params_full['threshold'], drop_multiples=attrition_params_full['drop_multiples'], copy=False)
 
         # Use multi-processing
         if False: # ncore > 1:
