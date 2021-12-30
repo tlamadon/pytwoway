@@ -1,7 +1,7 @@
 '''
 Class for Attrition plots
 '''
-from multiprocessing import Pool
+from multiprocessing import Pool, Value
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -47,17 +47,36 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), user_clean={}, r
         return None
 
     # Worker ids in base subset
-    wids_init = bdf.loc[bdf['m'].to_numpy() == 1, 'i'].unique()
+    wids_init = bdf.loc[bdf['m'].to_numpy() > 0, 'i'].unique()
 
-    # Draw first subset
-    n_wid_drops_1 = int(np.floor((1 - subsets[0]) * len(wids_init))) # Number of wids to drop
-    wid_drops_1 = set(rng.choice(wids_init, size=n_wid_drops_1, replace=False)) # Draw wids to drop
+    for i in range(10):
+        # Sometimes we draw so few firms that it's likely to end up with no observations left, so redraw up to 10 times
+        if i < 9:
+            try:
+                # Draw first subset
+                n_wid_drops_1 = int(np.floor((1 - subsets[0]) * len(wids_init))) # Number of wids to drop
+                wid_drops_1 = set(rng.choice(wids_init, size=n_wid_drops_1, replace=False)) # Draw wids to drop
 
-    ##### Disable Pandas warning #####
-    pd.options.mode.chained_assignment = None
-    subset_1 = bdf.drop_ids('i', wid_drops_1, copy=True)._reset_attributes(columns_contig=True, connected=True, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False).clean_data(clean_params)
-    ##### Re-enable Pandas warning #####
-    pd.options.mode.chained_assignment = 'warn'
+                ##### Disable Pandas warning #####
+                pd.options.mode.chained_assignment = None
+                subset_1 = bdf.drop_ids('i', wid_drops_1, copy=True)._reset_attributes(columns_contig=True, connected=True, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False).clean_data(clean_params)
+                ##### Re-enable Pandas warning #####
+                pd.options.mode.chained_assignment = 'warn'
+                success = True
+            except ValueError:
+                success = False
+        else:
+            # Draw first subset
+            n_wid_drops_1 = int(np.floor((1 - subsets[0]) * len(wids_init))) # Number of wids to drop
+            wid_drops_1 = set(rng.choice(wids_init, size=n_wid_drops_1, replace=False)) # Draw wids to drop
+
+            ##### Disable Pandas warning #####
+            pd.options.mode.chained_assignment = None
+            subset_1 = bdf.drop_ids('i', wid_drops_1, copy=True)._reset_attributes(columns_contig=True, connected=True, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False).clean_data(clean_params)
+            ##### Re-enable Pandas warning #####
+            pd.options.mode.chained_assignment = 'warn'
+        if success:
+            break
 
     yield subset_1, True
 
@@ -78,13 +97,13 @@ def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), user_clean={}, r
     subset_init._reset_id_reference_dict() # Clear id_reference_dict since it is no longer necessary
 
     # Determine which wids (for movers) can still be drawn
-    all_valid_wids = set(subset_init.loc[subset_init['m'].to_numpy() == 1, 'i'].unique())
+    all_valid_wids = set(subset_init.loc[subset_init['m'].to_numpy() > 0, 'i'].unique())
 
     original_i = 'original_i'
     if original_i not in subset_1_orig_ids.columns:
         # If no changes to i column
         original_i = 'i'
-    dropped_wids = all_valid_wids.difference(set(subset_1_orig_ids.loc[subset_1_orig_ids['m'] == 1, original_i].unique()))
+    dropped_wids = all_valid_wids.difference(set(subset_1_orig_ids.loc[subset_1_orig_ids['m'] > 0, original_i].unique()))
     subset_prev = subset_1
     del subset_1, subset_1_orig_ids
 
@@ -130,7 +149,7 @@ def attrition_decreasing(bdf, subsets=np.linspace(0.5, 0.1, 5), user_clean={}, r
         return None
 
     # Worker ids in base subset
-    wids_movers = bdf.loc[bdf['m'].to_numpy() == 1, 'i'].unique()
+    wids_movers = bdf.loc[bdf['m'].to_numpy() > 0, 'i'].unique()
     wids_stayers = list(bdf.loc[bdf['m'].to_numpy() == 0, 'i'].unique())
 
     # # Drop m since it can change for biconnected components
@@ -263,7 +282,6 @@ class TwoWayAttrition:
             clean_params['copy'] = False
             bdf = bdf.clean_data(clean_params)
         # Use data to create TwoWay object (note that data is already clean)
-        # bdf['w'] = 1 # FIXME temporary
         tw_net = tw.TwoWay(bdf)
         # Estimate FE model
         tw_net.fit_fe(user_fe=fe_params)

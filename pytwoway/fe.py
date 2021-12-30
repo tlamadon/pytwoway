@@ -86,6 +86,8 @@ class FEEstimator:
 
                     he_analytical (bool, default=False): if True, compute heteroskedastic correction, using analytical formula; if False, use JL approxmation
 
+                    weighted (bool, default=True): if True, run weighted estimators
+
                     out (str, default='res_fe.json'): outputfile where results are saved
 
                     statsonly (bool, default=False): if True, return only basic statistics
@@ -111,6 +113,7 @@ class FEEstimator:
             'ndraw_tr': 5, # Number of draws to use in approximation for traces
             'he': False, # If True, compute heteroskedastic correction
             'he_analytical': False, # If True, compute heteroskedastic correction, using analytical formula; if False, use JL approxmation
+            'weighted': True, # If True, run weighted estimators
             'out': 'res_fe.json', # Outputfile where results are saved
             'statsonly': False, # If True, return only basic statistics
             'feonly': False, # If True, compute only fixed effects and not variances
@@ -273,7 +276,7 @@ class FEEstimator:
         self.J = J
         W = csc_matrix((np.ones(self.nn), (self.adata.index.to_numpy(), self.adata['i'].to_numpy())), shape=(self.nn, self.nw)) # Workers
         self.W = W
-        if 'w' in self.adata.columns:
+        if self.params['weighted'] and ('w' in self.adata.columns):
             # Diagonal weight matrix
             Dp = diags(self.adata['w'].to_numpy())
             # Dwinv = diags(1.0 / ((W.T @ Dp @ W).diagonal())) # linalg.inv(csc_matrix(W.T @ Dp @ W))
