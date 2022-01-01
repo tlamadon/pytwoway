@@ -484,6 +484,23 @@ def test_fe_he_8():
 
     assert np.max(abs(collapsed_b - collapsed_c)) < 1e-13
 
+def test_fe_he_8():
+    # Test that HE Pii are equivalent when computed using M^{-1} explicitly or computing each observation one at a time using multi-grid solver
+    a = bpd.SimBipartite({'num_ind': 1000, 'seed': 1234}).sim_network()
+    # Simulate on non-collapsed data
+    b = bpd.BipartiteLong(a).clean_data({'connectedness': 'biconnected_observations'})
+    fe_solver_b = tw.FEEstimator(b.copy(), {'he': True, 'he_analytical': True, 'seed': 1234})
+    fe_solver_b.fit_1()
+    fe_solver_b._create_fe_solver()
+    fe_solver_b._compute_leverages_Pii()
+
+    fe_solver_c = tw.FEEstimator(b.copy(), {'he': True, 'he_analytical': False, 'ndraw_Pii': 1, 'seed': 1234})
+    fe_solver_c.fit_1()
+    fe_solver_c._create_fe_solver()
+    fe_solver_c._compute_leverages_Pii()
+
+    assert np.sum(np.abs(fe_solver_b.adata['Sii'] - fe_solver_c.adata['Sii'])) < 1e-4
+
 #######################
 ##### Monte Carlo #####
 #######################

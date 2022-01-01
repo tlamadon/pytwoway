@@ -108,7 +108,10 @@ class FEEstimator:
         default_params = {
             'ncore': 1, # Number of cores to use
             'batch': 1, # Batch size to send in parallel
-            'ndraw_pii': 50, # Number of draws to use in approximation for leverages
+            'ndraw_pii_batchsize': 50, # Number of draws to use for each batch in approximation for leverages
+            'ndraw_pii_nbatches': 10, # Max number of batches to run
+            'ndraw_pii_threshold_obs': 100, # Minimum number of observations with Pii >= threshold where batches will keep running
+            'ndraw_pii_threshold_pii': 0.98, # Threshold Pii value for computing threshold number of Pii observations
             'levfile': '', # File to load precomputed leverages
             'ndraw_tr': 5, # Number of draws to use in approximation for traces
             'he': False, # If True, compute heteroskedastic correction
@@ -130,7 +133,7 @@ class FEEstimator:
 
         # Save some commonly used parameters as attributes
         self.ncore = self.params['ncore'] # Number of cores to use
-        self.ndraw_pii = self.params['ndraw_pii'] # Number of draws to compute leverage
+        self.ndraw_pii = self.params['ndraw_pii_batchsize'] # Number of draws to compute leverage
         self.ndraw_trace = self.params['ndraw_tr'] # Number of draws to compute heteroskedastic correction
         self.compute_he = self.params['he']
 
@@ -930,59 +933,82 @@ class FEEstimator:
         '''
         return self.__mult_A(*self.__solve(Y, Dp1, Dp2), Dp0)
 
-    def __AAinv_components(self):
+    def __construct_M_inv(self):
         '''
-        Construct (A'D_pA)^{-1} block matrix components. Do not use this with large datasets.
-
-        Returns:
-            (A, B, C, D) (tuple): four blocks in (A'D_pA)^{-1}
+        Construct (A'D_pA)^{-1} block matrix components where M^{-1} is computed explicitly.
         '''
         # Define variables
-        nf = self.nf
-        nw = self.nw
-        print('nf:', nf)
-        print('nw:', nw)
         J = self.J
         W = self.W
-        M = np.linalg.inv(self.M.todense())
-        # if self.M.shape[0] == 1:
-        #     # The first csc_matrix is to stop a warning, the second is to stop a dimension mismatch if M is 1 x 1
-        #     M = csc_matrix(linalg.inv(csc_matrix(self.M))) # np.linalg.inv(self.M.todense())
-        # else:
-        #     M = linalg.inv(csc_matrix(self.M)) # np.linalg.inv(self.M.todense())
+        Minv = np.linalg.inv(self.M.todense())
+        Dp = self.Dp
+        Dwinv = self.Dwinv
+
+        # Construct blocks
+        self.AA_inv_A = Minv
+        self.AA_inv_B = - Minv @ J.T @ Dp @ W @ Dwinv
+        self.AA_inv_C = - Dwinv @ W.T @ Dp @ J @ Minv
+        self.AA_inv_D = Dwinv + self.AA_inv_C @ self.M @ self.AA_inv_B # Dwinv @ (eye(nw) + W.T @ Dp @ J @ M @ J.T @ Dp @ W @ Dwinv)
+
+    def __construct_AAinv_components(self):
+        '''
+        Construct (A'D_pA)^{-1} block matrix components. Use this for computing a small number of individual Pii.
+        '''
+        # Define variables
+        J = self.J
+        W = self.W
 
         Dp = self.Dp
         Dwinv = self.Dwinv
 
         # Construct blocks
-        A = M
-        B = - M @ J.T @ Dp @ W @ Dwinv
-        C = - Dwinv @ W.T @ Dp @ J @ M
-        D = Dwinv + C @ self.M @ B # Dwinv @ (eye(nw) + W.T @ Dp @ J @ M @ J.T @ Dp @ W @ Dwinv)
+        self.AA_inv_A = None
+        self.AA_inv_B = J.T @ Dp @ W @ Dwinv
+        self.AA_inv_C = - Dwinv @ W.T @ Dp @ J
+        self.AA_inv_D = None
 
-        return A, B, C, D
+    def __compute_Pii(self, DpJ_i, DpW_i):
+        '''
+        Compute Pii for a single observation for heteroskedastic correction.
+
+        Arguments:
+            DpJ_i (NumPy Array): weighted J matrix
+            DpW_i (NumPy Array): weighted W matrix
+
+        Returns:
+            (float): estimate for Pii
+        '''
+        if self.AA_inv_A is not None:
+            # Explicitly compute M
+            A = DpJ_i @ self.AA_inv_A @ DpJ_i
+            B = DpJ_i @ self.AA_inv_B @ DpW_i
+            C = DpW_i @ self.AA_inv_C @ DpJ_i
+            D = DpW_i @ self.AA_inv_D @ DpW_i
+        else:
+            # Don't explicitly compute M
+            M_DpJ_i = self.ml.solve(DpJ_i)
+            M_B = self.ml.solve(self.AA_inv_B @ DpW_i)
+
+            # Construct blocks
+            A = DpJ_i @ M_DpJ_i
+            B = - DpJ_i @ M_B
+            C = DpW_i @ self.AA_inv_C @ M_DpJ_i
+            D = DpW_i @ (self.Dwinv @ DpW_i - self.AA_inv_C @ M_B)
+
+        return A + B + C + D
 
     def _compute_leverages_Pii(self):
         '''
         Compute leverages for heteroskedastic correction.
         '''
         Pii = np.zeros(self.nn)
+        # Indices to compute Pii analytically
+        analytical_indices = []
+        m = (self.adata.loc[:, 'm'].to_numpy() > 0)
 
         if self.params['he_analytical']:
-            # Construct weighted J and W
-            DpJ = np.asarray((self.Dp_sqrt @ self.J).todense())
-            DpW = np.asarray((self.Dp_sqrt @ self.W).todense())
-            # Dp = np.diagonal(self.Dp.toarray())
-            # Directly compute (A'A)^{-1}
-            AA_inv_A, AA_inv_B, AA_inv_C, AA_inv_D = self.__AAinv_components()
-            for i in range(self.nn):
-                if self.adata['m'].to_numpy()[i] > 0:
-                    DpJ_i = DpJ[i, :]
-                    DpW_i = DpW[i, :]
-                    # AAinv_J_i, AAinv_W_i = self.__mult_AAinv(J_i, W_i)
-                    # Pii[i] = Dp[i] * (np.inner(J_i, AAinv_J_i) + np.inner(W_i, AAinv_W_i))
-                    # Pii[i] = Dp[i] * (A_i.T @ AA_inv @ A_i)
-                    Pii[i] = DpJ_i @ AA_inv_A @ DpJ_i + DpJ_i @ AA_inv_B @ DpW_i + DpW_i @ AA_inv_C @ DpJ_i + DpW_i @ AA_inv_D @ DpW_i
+            analytical_indices = self.adata.loc[m, :].index
+            self.__construct_M_inv()
 
         else:
             if len(self.params['levfile']) > 1:
@@ -998,26 +1024,77 @@ class FEEstimator:
                     Pii += pp / len(files)
 
             elif self.ncore > 1:
+                # FIXME get rid of code duplication with this and the else statement
                 self.logger.info('[he] starting heteroskedastic correction p2={}, using {} cores, batch size {}'.format(self.ndraw_pii, self.ncore, self.params['batch']))
-                set_start_method('spawn')
-                with Pool(processes=self.ncore) as pool:
-                    Pii_all = pool.starmap(self._leverage_approx, [self.params['batch'] for _ in range(self.ndraw_pii // self.params['batch'])])
+                for batch_i in range(self.params['ndraw_pii_nbatches']):
+                    Pii_i = np.zeros(self.nn)
+                    set_start_method('spawn')
+                    with Pool(processes=self.ncore) as pool:
+                        Pii_all = pool.starmap(self._leverage_approx, [self.params['batch'] for _ in range(self.ndraw_pii // self.params['batch'])])
 
-                for pp in Pii_all:
-                    Pii += pp / len(Pii_all)
+                    for pp in Pii_all:
+                        Pii_i += pp / len(Pii_all)
+
+                    # Take weighted average over all Pii draws
+                    Pii = (batch_i * Pii + Pii_i) / (batch_i + 1)
+
+                    # Compute number of bad draws
+                    n_bad_draws = sum(m & (Pii >= self.params['ndraw_pii_threshold_pii']))
+
+                    # If few enough bad draws, compute them analytically
+                    if n_bad_draws < self.params['ndraw_pii_threshold_obs']:
+                        leverage_warning = 'Threshold for max Pii is {}, with {} draws per batch and a maximum of {} batches being drawn. There are {} observation(s) with Pii above this threshold. These will be recomputed analytically. It took {} batch(es) to get below the threshold of {} bad observations.'.format(self.params['ndraw_pii_threshold_pii'], self.ndraw_pii, self.params['ndraw_pii_nbatches'], n_bad_draws, batch_i + 1, self.params['ndraw_pii_threshold_obs'])
+                        warnings.warn(leverage_warning)
+                        break
+                    elif batch_i == self.params['ndraw_pii_nbatches'] - 1:
+                        leverage_warning = 'Threshold for max Pii is {}, with {} draws per batch and a maximum of {} batches being drawn. After exhausting the maximum number of batches, there are still {} draws with Pii above this threshold. These will be recomputed analytically.'.format(self.params['ndraw_pii_threshold_pii'], self.ndraw_pii, self.params['ndraw_pii_nbatches'], n_bad_draws)
+                        warnings.warn(leverage_warning)
 
             else:
-                Pii_all = list(itertools.starmap(self._leverage_approx, [[self.params['batch']] for _ in range(self.ndraw_pii // self.params['batch'])]))
+                for batch_i in range(self.params['ndraw_pii_nbatches']):
+                    Pii_i = np.zeros(self.nn)
+                    Pii_all = list(itertools.starmap(self._leverage_approx, [[self.params['batch']] for _ in range(self.ndraw_pii // self.params['batch'])]))
 
-                for pp in Pii_all:
-                    Pii += pp / len(Pii_all)
+                    for pp in Pii_all:
+                        Pii_i += pp / len(Pii_all)
+
+                    # Take weighted average over all Pii draws
+                    Pii = (batch_i * Pii + Pii_i) / (batch_i + 1)
+
+                    # Compute number of bad draws
+                    n_bad_draws = sum(m & (Pii >= self.params['ndraw_pii_threshold_pii']))
+
+                    # If few enough bad draws, compute them analytically
+                    if n_bad_draws < self.params['ndraw_pii_threshold_obs']:
+                        leverage_warning = 'Threshold for max Pii is {}, with {} draws per batch and a maximum of {} batches being drawn. There are {} observation(s) with Pii above this threshold. These will be recomputed analytically. It took {} batch(es) to get below the threshold of {} bad observations.'.format(self.params['ndraw_pii_threshold_pii'], self.ndraw_pii, self.params['ndraw_pii_nbatches'], n_bad_draws, batch_i + 1, self.params['ndraw_pii_threshold_obs'])
+                        warnings.warn(leverage_warning)
+                        break
+                    elif batch_i == self.params['ndraw_pii_nbatches'] - 1:
+                        leverage_warning = 'Threshold for max Pii is {}, with {} draws per batch and a maximum of {} batches being drawn. After exhausting the maximum number of batches, there are still {} draws with Pii above this threshold. These will be recomputed analytically.'.format(self.params['ndraw_pii_threshold_pii'], self.ndraw_pii, self.params['ndraw_pii_nbatches'], n_bad_draws)
+                        warnings.warn(leverage_warning)
+
+            # Compute Pii analytically for observations with Pii approximation above threshold value
+            analytical_indices = self.adata.loc[m & (Pii >= self.params['ndraw_pii_threshold_pii']), :].index
+            if len(analytical_indices) > 0:
+                self.__construct_AAinv_components()
+
+        # Compute analytical Pii
+        if len(analytical_indices) > 0:
+            # Construct weighted J and W
+            DpJ = np.asarray((self.Dp_sqrt @ self.J).todense())
+            DpW = np.asarray((self.Dp_sqrt @ self.W).todense())
+
+            for i in analytical_indices:
+                DpJ_i = DpJ[i, :]
+                DpW_i = DpW[i, :]
+                Pii[i] = self.__compute_Pii(DpJ_i, DpW_i)
 
         I = 1.0 * (self.adata['m'] > 0) # FIXME was formerly self.adata.eval('m == 1')
         self.res['min_lev'] = (I * Pii).min()
         self.res['max_lev'] = (I * Pii).max()
 
         if self.res['max_lev'] >= 1:
-            leverage_warning = 'Max P_ii is {} which is >= 1. This should not happen - increase your value of ndraw_pii until this warning is no longer raised (ndraw_pii is currently set to {}).'.format(self.res['max_lev'], self.params['ndraw_pii'])
+            leverage_warning = 'Max P_ii is {} which is >= 1. This should not happen - increase your value of ndraw_pii until this warning is no longer raised (ndraw_pii is currently set to {}).'.format(self.res['max_lev'], self.ndraw_pii)
             warnings.warn(leverage_warning)
             self.logger.info(leverage_warning)
             # self.adata['Pii'] = Pii
