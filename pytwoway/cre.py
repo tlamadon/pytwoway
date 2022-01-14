@@ -7,7 +7,7 @@
 import pyamg
 import numpy as np
 import pandas as pd
-from bipartitepandas import update_dict, logger_init
+from bipartitepandas import ParamsDict, update_dict, logger_init
 from scipy.sparse import csc_matrix, coo_matrix, diags, linalg, eye
 import time
 # import pyreadr
@@ -24,6 +24,51 @@ try:
     from tqdm import tqdm, trange
 except ImportError:
     trange = range
+
+_cre_params_default = ParamsDict({
+    'ncore': (1, 'type', int,
+        '''
+            (default=1) Number of cores to use.
+        '''),
+    'posterior': (False, 'type', bool,
+        '''
+            (default=False) If True, compute posterior variance.
+        '''),
+    'wo_btw': (False, 'type', bool,
+        '''
+            (default=False) If True, sets between variation to 0, pure RE.
+        '''),
+    'ndraw_trace': (5, 'type', int,
+        '''
+            (default=5) Number of draws to use in trace approximations.
+        '''),
+    'out': ('res_cre.json', 'type', str,
+        '''
+            (default='res_fe.json') Outputfile where results are saved.
+        '''),
+    # 'ndp': (50, 'type', int, # FIXME not used
+    #     '''
+    #         (default=50) Number of draws to use in approximation of leverages.
+    #     '''),
+    'rng': (np.random.default_rng(None), 'type', np.random.Generator,
+        '''
+            (default=np.random.default_rng(None)) NumPy random number generator.
+        ''')
+})
+
+def cre_params(update_dict={}):
+    '''
+    Dictionary of default cre_params.
+
+    Arguments:
+        update_dict (dict): user parameter values
+
+    Returns:
+        (ParamsDict) dictionary of cre_params
+    '''
+    new_dict = _cre_params_default.copy()
+    new_dict.update(update_dict)
+    return new_dict
 
 def pipe_qcov(df, e1, e2):
     v1 = df.eval(e1)
@@ -42,7 +87,7 @@ def pd_to_np(df, colr, colc, colv, nr, nc):
 
     for i in range(nr):
         for j in range(nc):
-            I = (row_index == i + 1) & (col_index == j + 1)
+            I = (row_index == i) & (col_index == j)
             if I.sum() > 0:
                 A[i, j] = values[I][0]
 
@@ -53,7 +98,7 @@ class CREEstimator:
     '''
     Uses multigrid and partialing out to solve two way Fixed Effect model.
     '''
-    def __init__(self, data, params):
+    def __init__(self, data, params=cre_params()):
         '''
         Arguments:
             data (Pandas DataFrame): cross-section labor data. Data contains the following columns:
@@ -79,21 +124,7 @@ class CREEstimator:
                 m (0 if stayer, 1 if mover)
 
                 cs (0 if not in cross section, 1 if in cross section)
-            params (dict): dictionary of parameters for CRE estimation
-
-                Dictionary parameters:
-
-                    ncore (int, default=1): number of cores to use
-
-                    ndraw_tr (int, default=5): number of draws to use in approximation for traces
-
-                    ndp (int, default=50): number of draw to use in approximation for leverages
-
-                    out (str, default='res_cre.json'): outputfile where results are saved
-
-                    posterior (bool, default=False): if True, compute posterior variance
-
-                    wo_btw (bool, default=False): if True, sets between variation to 0, pure RE
+            params (ParamsDict): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters.
         '''
         # Start logger
         logger_init(self)
@@ -101,28 +132,24 @@ class CREEstimator:
 
         self.adata = data
 
-        # Define default parameter dictionaries
-        default_params = {
-            'ncore': 1, # Number of cores to use
-            'ndraw_tr': 5, # Number of draws to use in approximation for traces
-            'ndp': 50, # Number of draw to use in approximation for leverages
-            'out': 'res_cre.json', # Outputfile where results are saved
-            'posterior': False, # If True, compute posterior variance
-            'wo_btw': False # If True, sets between variation to 0, pure RE
-        }
-
-        self.params = update_dict(default_params, params)
+        self.params = params
         self.res = {} # Results dictionary
         self.summary = {} # Summary results dictionary
 
-        # Save some commonly used parameters as attributes
-        self.ncore = self.params['ncore'] # Number of cores to use
-        self.ndraw_trace = self.params['ndraw_tr'] # Number of draws to use in approximation for traces
-        self.wo_btw = self.params['wo_btw'] # If True, sets between variation to 0, pure RE
+        ## Save some commonly used parameters as attributes
+        # Number of cores to use
+        self.ncore = self.params['ncore']
+        # Number of draws to use in trace approximations
+        self.ndraw_trace = self.params['ndraw_trace']
+        # If True, sets between variation to 0, pure RE
+        self.wo_btw = self.params['wo_btw']
 
-        # Store some parameters in results dictionary
+        ## Store some parameters in results dictionary
         self.res['cores'] = self.ncore
         self.res['ndt'] = self.ndraw_trace
+
+        # NumPy random number generator
+        self.rng = self.params['rng']
 
         # self.logger.info('CREEstimator object initialized')
 
@@ -136,7 +163,7 @@ class CREEstimator:
         self.__prep_vars() # Prepare data
 
         # Generate stayers and movers, and set indices so they don't overlap
-        jdata = self.adata[(self.adata['m'] == 1) & (self.adata['cs'] == 1)].reset_index(drop=True)
+        jdata = self.adata[(self.adata['m'] > 0) & (self.adata['cs'] == 1)].reset_index(drop=True)
         self.mn = len(jdata) # Number of observations from movers # FIXME I renamed from nm to mn, since nm makes it seem like it's the number of movers, while mn gives movers, where n is the total number of observations
         ########################################
         ##### NOTE: if you code crashes on the next line, it is likely because your data is not collapsed #####
@@ -537,7 +564,7 @@ class CREEstimator:
         # Next we look at the trace term
         tr_var_pos_all = np.zeros(self.ndraw_trace)
         for r in trange(self.ndraw_trace):
-            Zpsi = 2 * np.random.binomial(1, 0.5, self.nf) - 1
+            Zpsi = 2 * self.rng.binomial(1, 0.5, self.nf) - 1
 
             R1 = self.Jq * Zpsi
             R2 = self.Jq * self.ml.solve(Zpsi)

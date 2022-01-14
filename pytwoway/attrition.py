@@ -5,635 +5,465 @@ from multiprocessing import Pool, Value
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-import bipartitepandas as bpd
+from bipartitepandas import ParamsDict, to_list, logger_init, cluster_params, clean_params
 import pytwoway as tw
-from tqdm import trange
+from tqdm import tqdm
 import warnings
 
-def attrition_increasing(bdf, subsets=np.linspace(0.1, 0.5, 5), user_clean={}, rng=np.random.default_rng()):
+# Define default parameter dictionary
+_attrition_params_default = ParamsDict({
+    'type_and_subsets': (('increasing', np.linspace(0.1, 0.5, 5)), 'type', tuple,
+        '''
+            (default=('increasing', np.linspace(0.1, 0.5, 5))) How to attrition data (either 'increasing' or 'decreasing'), and subsets to consider (both are required because switching type requires swapping the order of the subsets).
+        '''),
+    'min_moves_threshold': (15, 'type', int,
+        '''
+            (default=15) Minimum number of moves required to keep a firm.
+        '''),
+    'copy': (False, 'type', bool,
+        '''
+            (default=False) If False, avoid copy.
+        ''')
+})
+
+def attrition_params(update_dict={}):
     '''
-    First, keep only firms that have at minimum `threshold` many movers. Then take a random subset of subsets[0] percent of remaining movers. Constructively rebuild the data to reach each subsequent value of subsets. Return these subsets as an iterator.
+    Dictionary of default attrition_params.
 
     Arguments:
-        bdf (BipartiteBase): data
-        subsets (list): percents of movers to keep (must be weakly increasing)
-        user_clean (dict): dictionary of parameters for cleaning
-
-            Dictionary parameters:
-
-                connectedness (str or None, default='connected'): if 'connected', keep observations in the largest connected set of firms; if 'biconnected', keep observations in the largest biconnected set of firms; if None, keep all observations
-
-                i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then data is converted to long, cleaned, then reconverted to its original format
-
-                drop_multiples (bool): if True, rather than collapsing over spells, drop any spells with multiple observations (this is for computational efficiency when re-collapsing data for biconnected components)
-
-                data_validity (bool, default=True): if True, run data validity checks; much faster if set to False
-
-                copy (bool, default=False): if False, avoid copy
-
-        rng (NumPy RandomState): NumPy RandomState object
+        update_dict (dict): user parameter values
 
     Returns:
-        subset, is_clean (tuple of iterator of BipartiteBase, bool): first entry is subset of data, second is boolean indicating whether data is clean
+        (ParamsDict) dictionary of attrition_params
     '''
-    # Update clean_params to make computations faster
-    clean_params = user_clean.copy()
-    clean_params['data_validity'] = False
-    clean_params['copy'] = False
+    new_dict = _attrition_params_default.copy()
+    new_dict.update(update_dict)
+    return new_dict
 
-    # Make sure subsets are weakly increasing
-    if np.min(np.diff(np.array(subsets))) < 0:
-        warnings.warn('Subsets must be weakly increasing.')
-        return None
-
-    # Worker ids in base subset
-    wids_init = bdf.loc[bdf['m'].to_numpy() > 0, 'i'].unique()
-
-    for i in range(10):
-        # Sometimes we draw so few firms that it's likely to end up with no observations left, so redraw up to 10 times
-        if i < 9:
-            try:
-                # Draw first subset
-                n_wid_drops_1 = int(np.floor((1 - subsets[0]) * len(wids_init))) # Number of wids to drop
-                wid_drops_1 = set(rng.choice(wids_init, size=n_wid_drops_1, replace=False)) # Draw wids to drop
-
-                ##### Disable Pandas warning #####
-                pd.options.mode.chained_assignment = None
-                subset_1 = bdf.drop_ids('i', wid_drops_1, copy=True)._reset_attributes(columns_contig=True, connected=True, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False).clean_data(clean_params)
-                ##### Re-enable Pandas warning #####
-                pd.options.mode.chained_assignment = 'warn'
-                success = True
-            except ValueError:
-                success = False
-        else:
-            # Draw first subset
-            n_wid_drops_1 = int(np.floor((1 - subsets[0]) * len(wids_init))) # Number of wids to drop
-            wid_drops_1 = set(rng.choice(wids_init, size=n_wid_drops_1, replace=False)) # Draw wids to drop
-
-            ##### Disable Pandas warning #####
-            pd.options.mode.chained_assignment = None
-            subset_1 = bdf.drop_ids('i', wid_drops_1, copy=True)._reset_attributes(columns_contig=True, connected=True, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False).clean_data(clean_params)
-            ##### Re-enable Pandas warning #####
-            pd.options.mode.chained_assignment = 'warn'
-        if success:
-            break
-
-    yield subset_1, True
-
-    subset_1_orig_ids = subset_1.original_ids(copy=False)
-
-    # Get list of all valid firms
-    valid_firms = []
-    for j_subcol in bpd.to_list(bdf.reference_dict['j']):
-        original_j = 'original_' + j_subcol
-        if original_j not in subset_1_orig_ids.columns:
-            # If no changes to this column
-            original_j = j_subcol
-        valid_firms += list(subset_1_orig_ids[original_j].unique())
-    valid_firms = set(valid_firms)
-
-    # Take all data for list of firms in smallest subset
-    subset_init = bdf.keep_ids('j', valid_firms, copy=True)
-    subset_init._reset_id_reference_dict() # Clear id_reference_dict since it is no longer necessary
-
-    # Determine which wids (for movers) can still be drawn
-    all_valid_wids = set(subset_init.loc[subset_init['m'].to_numpy() > 0, 'i'].unique())
-
-    original_i = 'original_i'
-    if original_i not in subset_1_orig_ids.columns:
-        # If no changes to i column
-        original_i = 'i'
-    dropped_wids = all_valid_wids.difference(set(subset_1_orig_ids.loc[subset_1_orig_ids['m'] > 0, original_i].unique()))
-    subset_prev = subset_1
-    del subset_1, subset_1_orig_ids
-
-    for i, subset_pct in enumerate(subsets[1:]): # Each step, drop fewer wids
-        n_wid_draws_i = min(int(np.ceil((1 - subset_pct) * len(all_valid_wids))), len(dropped_wids))
-        if n_wid_draws_i <= 0:
-            warnings.warn('Attrition plot does not change at iteration {}'.format(i))
-            yield subset_prev, False
-        else:
-            wid_draws_i = set(rng.choice(list(dropped_wids), size=n_wid_draws_i, replace=False))
-            dropped_wids = wid_draws_i
-
-            ##### Disable Pandas warning #####
-            pd.options.mode.chained_assignment = None
-            subset_i = subset_init.drop_ids('i', wid_draws_i, copy=True)._reset_attributes(columns_contig=True, connected=False, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False)
-            ##### Re-enable Pandas warning #####
-            pd.options.mode.chained_assignment = 'warn'
-
-            yield subset_i, False
-
-            subset_prev = subset_i
-
-def attrition_decreasing(bdf, subsets=np.linspace(0.5, 0.1, 5), user_clean={}, rng=np.random.default_rng()):
+class Attrition:
     '''
-    First, keep only firms that have at minimum `threshold` many movers. Then take a random subset of subsets[0] percent of remaining movers. Deconstruct the data to reach each subsequent value of subsets. Return these subsets as an iterator.
-
-    Arguments:
-        bdf (BipartiteBase): data
-        subsets (list): percents of movers to keep percents of movers to keep (must be weakly decreasing)
-        user_clean (dict): placeholder multiprocessing
-
-            rng (NumPy RandomState): NumPy RandomState object
-
-    Returns:
-        subset, is_clean (tuple of iterator of BipartiteBase, bool): first entry is subset of data, second is boolean indicating whether data is clean
-    '''
-    # bdf = bdf.copy()
-    # bdf._reset_id_reference_dict() # Clear id_reference_dict since it is not necessary
-
-    # Make sure subsets are weakly decreasing
-    if np.min(np.diff(np.array(subsets))) > 0:
-        warnings.warn('Subsets must be weakly decreasing.')
-        return None
-
-    # Worker ids in base subset
-    wids_movers = bdf.loc[bdf['m'].to_numpy() > 0, 'i'].unique()
-    wids_stayers = list(bdf.loc[bdf['m'].to_numpy() == 0, 'i'].unique())
-
-    # # Drop m since it can change for biconnected components
-    # bdf.drop('m')
-
-    relative_fraction = subsets / (np.concatenate([[1], subsets]))[:-1]
-
-    for frac in relative_fraction:
-        n_draws = int(np.ceil(frac * len(wids_movers)))
-        wids_movers = list(rng.choice(wids_movers, size=n_draws, replace=False))
-
-        ##### Disable Pandas warning #####
-        pd.options.mode.chained_assignment = None
-        subset_i = bdf.keep_ids('i', wids_movers + wids_stayers, copy=True)._reset_id_reference_dict()._reset_attributes(columns_contig=True, connected=True, correct_cols=False, no_na=False, no_duplicates=False, i_t_unique=False)
-        ##### Re-enable Pandas warning #####
-        pd.options.mode.chained_assignment = 'warn'
-
-        yield subset_i, False
-
-class TwoWayAttrition:
-    '''
-    Class of TwoWayAttrition, which generates attrition plots using bipartite labor data.
+    Class of Attrition, which generates attrition plots using bipartite labor data.
 
     Arguments:
         bdf (BipartiteBase): bipartite dataframe
+        attrition_params (ParamsDict): dictionary of parameters for attrition. Run tw.attrition_params().describe_all() for descriptions of all valid parameters.
+        fe_params (ParamsDict): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters.
+        cre_params (ParamsDict): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters.
+        cluster_params (ParamsDict): dictionary of parameters for clustering in CRE estimation. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters.
+        clean_params (ParamsDict): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters.
     '''
 
-    def __init__(self, bdf):
-        self.bdf = type(bdf)(bdf)._reset_id_reference_dict(include=True) # This overwrites the id_reference_dict without altering the original dataframe, and without copying the underlying data
+    def __init__(self, bdf, attrition_params=attrition_params(), fe_params=tw.fe_params(), cre_params=tw.cre_params(), cluster_params=cluster_params(), clean_params=clean_params()):
+        ##### Save attributes
+        ## Basic attributes
+        # Data - this overwrites the id_reference_dict without altering the original dataframe, and without copying the underlying data
+        if attrition_params['copy']:
+            self.bdf = type(bdf)(bdf.copy())._reset_id_reference_dict(include=True)
+        else:
+            self.bdf = type(bdf)(bdf)._reset_id_reference_dict(include=True)
+
+        # Type and subsets
+        self.attrition_type = attrition_params['type_and_subsets'][0]
+        self.subsets = attrition_params['type_and_subsets'][1]
+
+        # Attrition function (increasing or decreasing)
+        attrition_fn_dict = {
+            'increasing': self._attrition_increasing,
+            'decreasing': self._attrition_decreasing
+        }
+        self.attrition_fn = attrition_fn_dict[self.attrition_type]
+
+        # Make sure subsets are weakly increasing/decreasing
+        if (self.attrition_type == 'increasing') and (np.min(np.diff(np.array(self.subsets))) < 0):
+            raise NotImplementedError('Subsets must be weakly increasing for increasing subsets.')
+        elif (self.attrition_type == 'decreasing') and (np.min(np.diff(np.array(self.subsets))) > 0):
+            raise NotImplementedError('Subsets must be weakly decreasing for decreasing subsets.')
 
         # Prevent plotting until results exist
-        self.res = False
+        self.attrition_res = False
 
-        self.default_attrition = {
-            'type_and_subsets': ('increasing', np.linspace(0.1, 0.5, 5)), # How to attrition data (either 'increasing' or 'decreasing'), and subsets to consider (both are required because switching type requires swapping the order of the subsets)
-            'threshold': 15, # Minimum number of movers required to keep a firm
-            'drop_multiples': False, # If True, rather than collapsing over spells, drop any spells with multiple observations (this is for computational efficiency when re-collapsing data for biconnected components)
-            'copy': True # If False, avoid copy
+        #### Parameter dictionaries
+        ### Save parameter dictionaries
+        self.attrition_params = attrition_params.copy()
+        self.fe_params = fe_params.copy()
+        self.cre_params = cre_params.copy()
+        self.cluster_params = cluster_params.copy()
+        self.clean_params = clean_params.copy()
+
+        ### Update parameter dictionaries
+        ## Clean
+        self.clean_params['is_sorted'] = True
+        self.clean_params['force'] = False
+        self.clean_params['copy'] = False
+
+        ## Cluster
+        self.cluster_params['clean_params'] = self.clean_params.copy()
+        self.cluster_params['is_sorted'] = True
+        self.cluster_params['copy'] = False
+
+        ## Non-HE and HE parameter dictionaries
+        # FE
+        self.fe_params_non_he = self.fe_params.copy()
+        self.fe_params_non_he['he'] = False
+        self.fe_params_he = self.fe_params.copy()
+        self.fe_params_he['he'] = True
+
+        # Clean
+        self.clean_params_non_he = self.clean_params.copy()
+        self.clean_params_non_he['connectedness'] = 'connected'
+        self.clean_params_he = self.clean_params.copy()
+        self.clean_params_he['connectedness'] = 'leave_one_observation_out'
+
+        # Cluster
+        self.cluster_params_non_he = self.cluster_params.copy()
+        self.cluster_params_non_he['clean_params'] = self.clean_params_non_he.copy()
+        self.cluster_params_he = self.cluster_params.copy()
+        self.cluster_params_he['clean_params'] = self.clean_params_he.copy()
+
+        # Combined
+        self.non_he_he_params = {
+            'non_he': {
+                'fe': self.fe_params_non_he,
+                'cluster': self.cluster_params_non_he,
+                'clean': self.clean_params_non_he
+            },
+            'he': {
+                'fe': self.fe_params_he,
+                'cluster': self.cluster_params_he,
+                'clean': self.clean_params_he
+            }
         }
 
     # Cannot include two underscores because isn't compatible with starmap for multiprocessing
     # Source: https://stackoverflow.com/questions/27054963/python-attribute-error-object-has-no-attribute
-    def _attrition_interior(self, bdf, is_clean, clean_params={}, fe_params={}, cre_params={}, cluster_params={}):
+    def _attrition_interior(self, wids_to_drop, fe_params=tw.fe_params(), cre_params=tw.cre_params(), cluster_params=cluster_params(), clean_params=clean_params()):
         '''
         Estimate all parameters of interest. This is the interior function to attrition_single.
 
         Arguments:
-            bdf (BipartiteBase): bipartite dataframe
-            is_clean (bool): if True, data is clean
-            clean_params (dict): dictionary of parameters for cleaning
-
-            Dictionary parameters:
-
-                connectedness (str or None, default='connected'): if 'connected', keep observations in the largest connected set of firms; if 'biconnected', keep observations in the largest biconnected set of firms; if None, keep all observations
-
-                i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then data is converted to long, cleaned, then reconverted to its original format
-
-                drop_multiples (bool): if True, rather than collapsing over spells, drop any spells with multiple observations (this is for computational efficiency when re-collapsing data for biconnected components)
-
-                data_validity (bool, default=True): if True, run data validity checks; much faster if set to False
-
-                copy (bool, default=False): if False, avoid copy
-
-            fe_params (dict): dictionary of parameters for FE estimation
-
-                Dictionary parameters:
-
-                    ncore (int, default=1): number of cores to use
-
-                    batch (int, default=1): batch size to send in parallel
-
-                    ndraw_pii (int, default=50): number of draws to use in approximation for leverages
-
-                    levfile (str, default=''): file to load precomputed leverages
-
-                    ndraw_tr (int, default=5): number of draws to use in approximation for traces
-
-                    he (bool, default=False): if True, compute heteroskedastic correction
-
-                    out (str, default='res_fe.json'): outputfile where results are saved
-
-                    statsonly (bool, default=False): if True, return only basic statistics
-
-                    feonly (bool, default=False): if True, compute only fixed effects and not variances
-
-                    Q (str, default='cov(alpha, psi)'): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
-
-                    seed (int, default=None): NumPy RandomState seed
-
-            cre_params (dict): dictionary of parameters for CRE estimation
-
-                Dictionary parameters:
-
-                    ncore (int, default=1): number of cores to use
-
-                    ndraw_tr (int, default=5): number of draws to use in approximation for traces
-
-                    ndp (int, default=50): number of draw to use in approximation for leverages
-
-                    out (str, default='res_cre.json'): outputfile where results are saved
-
-                    posterior (bool, default=False): if True, compute posterior variance
-
-                    wo_btw (bool, default=False): if True, sets between variation to 0, pure RE
-
-            cluster_params (dict): dictionary of parameters for clustering in CRE estimation
-
-                Dictionary parameters:
-
-                    measures (function or list of functions): how to compute measures for clustering. Options can be seen in bipartitepandas.measures.
-
-                    grouping (function): how to group firms based on measures. Options can be seen in bipartitepandas.grouping.
-
-                    stayers_movers (str or None, default=None): if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers
-
-                    t (int or None, default=None): if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)
-
-                    weighted (bool, default=True): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)
-
-                    dropna (bool, default=False): if True, drop observations where firms aren't clustered; if False, keep all observations
+            wids_to_drop (set or None): if set, worker ids to drop from self.subset_2; if None, subset is saved as self.subset_1
+            fe_params (ParamsDict): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters.
+            cre_params (ParamsDict): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters.
+            cluster_params (ParamsDict): dictionary of parameters for clustering in CRE estimation. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters.
+            clean_params (ParamsDict): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters.
 
         Returns:
-            {'fe': tw_net.fe_res, 'cre': tw_net.cre_res} (dict): FE results, CRE results
+            (dict): {'fe': FE results, 'cre': CRE results}
         '''
-        bpd.logger_init(bdf) # This stops a weird logging bug that stops multiprocessing from working
-        if not is_clean:
-            # Update clean_params to make computations faster
-            clean_params = clean_params.copy()
-            clean_params['data_validity'] = False
-            clean_params['copy'] = False
-            bdf = bdf.clean_data(clean_params)
-        # Use data to create TwoWay object (note that data is already clean)
-        tw_net = tw.TwoWay(bdf)
-        # Estimate FE model
-        tw_net.fit_fe(user_fe=fe_params)
-        # Cluster data
-        tw_net.cluster(**cluster_params)
-        # Estimate CRE model
-        tw_net.fit_cre(user_cre=cre_params)
+        # logger_init(bdf) # This stops a weird logging bug that stops multiprocessing from working
+        if wids_to_drop is not None:
+            # Drop ids and clean data (NOTE: this does not require a copy)
+            bdf = self.subset_2.drop_ids('i', wids_to_drop, copy=False)._reset_attributes(columns_contig=True, connected=False, no_na=False, no_duplicates=False, i_t_unique=False).clean_data(clean_params)
+        else:
+            bdf = self.subset_1
+        ## Estimate FE model
+        fe_estimator = tw.FEEstimator(bdf, fe_params)
+        fe_estimator.fit()
+        ## Estimate CRE model
+        # Cluster
+        bdf = bdf.cluster(cluster_params)
+        # Estimate
+        cre_estimator = tw.CREEstimator(bdf.get_es(move_to_worker=False, is_sorted=True).get_cs(), cre_params)
+        cre_estimator.fit()
 
-        return {'fe': tw_net.fe_res, 'cre': tw_net.cre_res}
+        return {'fe': fe_estimator.res, 'cre': cre_estimator.res}
 
-    def _attrition_single(self, ncore=1, attrition_params={}, fe_params={}, cre_params={}, cluster_params={}, clean_params={}, rng=np.random.default_rng()):
+    def _attrition_increasing(self, clean_params=clean_params(), rng=np.random.default_rng()):
+        '''
+        First, keep only firms that have at minimum `threshold` many movers. Then take a random subset of subsets[0] percent of remaining movers. Constructively rebuild the data to reach each subsequent value of subsets. Return the worker ids to drop to attain these subsets as an iterator.
+
+        Arguments:
+            clean_params (ParamsDict): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters.
+            rng (np.random.Generator): NumPy random number generator
+
+        Returns:
+            wids_to_drop (set or None): if set, worker ids to drop from self.subset_2; if None, subset is saved as self.subset_1
+        '''
+        # Get subsets
+        subsets = self.subsets
+
+        # Worker ids in base subset
+        wids_init = self.bdf.loc[self.bdf.loc[:, 'm'].to_numpy() > 0, :].unique_ids('i')
+
+        for i in range(10):
+            # Sometimes we draw so few firms that it's likely to end up with no observations left, so redraw until success
+            ## Draw first subset
+            # Number of wids to drop
+            n_wid_drops_1 = int(np.floor((1 - subsets[0]) * len(wids_init)))
+            # Draw wids to drop
+            wid_drops_1 = set(rng.choice(wids_init, size=n_wid_drops_1, replace=False))
+            try:
+                # NOTE: this requires the copy
+                self.subset_1 = self.bdf.drop_ids('i', wid_drops_1, drop_returners_to_stayers=clean_params['drop_returners_to_stayers'], is_sorted=True, reset_index=True, copy=True)._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False).clean_data(clean_params)
+                break
+            except ValueError as v:
+                if i == 9:
+                    # Don't fail unless it's the last loop
+                    raise ValueError(v)
+
+        yield None
+
+        subset_1_orig_ids = self.subset_1.original_ids(copy=False)
+
+        # Get list of all valid firms
+        valid_firms = []
+        for j_subcol in to_list(self.bdf.reference_dict['j']):
+            original_j = 'original_' + j_subcol
+            if original_j not in subset_1_orig_ids.columns:
+                # If no changes to this column
+                original_j = j_subcol
+            valid_firms += list(subset_1_orig_ids[original_j].unique())
+        valid_firms = set(valid_firms)
+
+        # Take all data for list of firms in smallest subset (NOTE: this requires the copy)
+        self.subset_2 = self.bdf.keep_ids('j', valid_firms, drop_returners_to_stayers=clean_params['drop_returners_to_stayers'], is_sorted=True, reset_index=True, copy=True)
+        # Clear id_reference_dict since it is no longer necessary
+        self.subset_2._reset_id_reference_dict()
+
+        # Determine which wids (for movers) can still be drawn
+        all_valid_wids = set(self.subset_2.loc[self.subset_2.loc[:, 'm'].to_numpy() > 0, :].unique_ids('i'))
+
+        original_i = 'original_i'
+        if original_i not in subset_1_orig_ids.columns:
+            # If no changes to i column
+            original_i = 'i'
+        wids_to_drop = all_valid_wids.difference(set(subset_1_orig_ids.loc[subset_1_orig_ids.loc[:, 'm'].to_numpy() > 0, original_i].unique()))
+        del subset_1_orig_ids
+
+        for i, subset_pct in enumerate(subsets[1:]):
+            # Each step, drop fewer wids
+            n_wid_draws_i = min(int(np.round((1 - subset_pct) * len(all_valid_wids), 1)), len(wids_to_drop))
+            if n_wid_draws_i > 0:
+                wids_to_drop = set(rng.choice(list(wids_to_drop), size=n_wid_draws_i, replace=False))
+            else:
+                warnings.warn('Attrition plot does not change at iteration {}'.format(i))
+
+            yield wids_to_drop
+
+    def _attrition_decreasing(self, clean_params=clean_params(), rng=np.random.default_rng()):
+        '''
+        First, keep only firms that have at minimum `threshold` many movers. Then take a random subset of subsets[0] percent of remaining movers. Deconstruct the data to reach each subsequent value of subsets. Return the worker ids to drop to attain these subsets as an iterator.
+
+        Arguments:
+            clean_params (ParamsDict): used for _attrition_increasing(), does nothing for _attrition_decreasing()
+            rng (np.random.Generator): NumPy random number generator
+
+        Returns:
+            wids_to_drop (set): worker ids to drop from self.subset_2
+        '''
+        # bdf = bdf.copy()
+        # bdf._reset_id_reference_dict() # Clear id_reference_dict since it is not necessary
+
+        # For consistency with _attrition_increasing()
+        self.subset_2 = self.bdf
+
+        # Worker ids in base subset
+        wids_movers = set(self.bdf.loc[self.bdf.loc[:, 'm'].to_numpy() > 0, :].unique_ids('i'))
+        # wids_stayers = list(self.bdf.loc[self.bdf.loc[:, 'm'].to_numpy() == 0, :].unique_ids('i'))
+
+        # # Drop m since it can change for leave-one-out components
+        # bdf.drop('m')
+
+        relative_drop_fraction = 1 - self.subsets / (np.concatenate([[1], self.subsets]))[:-1]
+        wids_to_drop = set()
+
+        for i, drop_frac in enumerate(relative_drop_fraction):
+            n_wid_draws_i = min(int(np.round(drop_frac * len(wids_movers), 1)), len(wids_movers))
+            if n_wid_draws_i > 0:
+                wid_draws_i = set(rng.choice(list(wids_movers), size=n_wid_draws_i, replace=False))
+                wids_movers = wids_movers.difference(wid_draws_i)
+                wids_to_drop = wids_to_drop.union(wid_draws_i)
+            else:
+                warnings.warn('Attrition plot does not change at iteration {}'.format(i))
+
+            yield wids_to_drop
+
+            # subset_i = bdf.keep_ids('i', wids_movers + wids_stayers, copy=True)._reset_id_reference_dict()._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False)
+
+    def _attrition_single(self, ncore=1, rng=np.random.default_rng()):
         '''
         Run attrition estimations of TwoWay to estimate parameters given fraction of movers remaining. This is the interior function to attrition.
 
         Arguments:
-            ncore (int): how many cores to use
-            attrition_params (dict): dictionary of parameters for attrition
-
-                Dictionary parameters:
-
-                    type_and_subsets (tuple of (str, list), default=('increasing', np.linspace(0.1, 0.5, 5))): how to attrition data (either 'increasing' or 'decreasing'), and subsets to consider (both are required because switching type requires swapping the order of the subsets)
-
-                    threshold (int, default=15): minimum number of movers required to keep a firm
-
-            fe_params (dict): dictionary of parameters for FE estimation
-
-                Dictionary parameters:
-
-                    ncore (int, default=1): number of cores to use
-
-                    batch (int, default=1): batch size to send in parallel
-
-                    ndraw_pii (int, default=50): number of draws to use in approximation for leverages
-
-                    levfile (str, default=''): file to load precomputed leverages
-
-                    ndraw_tr (int, default=5): number of draws to use in approximation for traces
-
-                    he (bool, default=False): if True, compute heteroskedastic correction
-
-                    out (str, default='res_fe.json'): outputfile where results are saved
-
-                    statsonly (bool, default=False): if True, return only basic statistics
-
-                    feonly (bool, default=False): if True, compute only fixed effects and not variances
-
-                    Q (str, default='cov(alpha, psi)'): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
-
-                    seed (int, default=None): NumPy RandomState seed
-
-            cre_params (dict): dictionary of parameters for CRE estimation
-
-                Dictionary parameters:
-
-                    ncore (int, default=1): number of cores to use
-
-                    ndraw_tr (int, default=5): number of draws to use in approximation for traces
-
-                    ndp (int, default=50): number of draw to use in approximation for leverages
-
-                    out (str, default='res_cre.json'): outputfile where results are saved
-
-                    posterior (bool, default=False): if True, compute posterior variance
-
-                    wo_btw (bool, default=False): if True, sets between variation to 0, pure RE
-
-            cluster_params (dict): dictionary of parameters for clustering in CRE estimation
-
-                Dictionary parameters:
-
-                    measures (function or list of functions): how to compute measures for clustering. Options can be seen in bipartitepandas.measures.
-
-                    grouping (function): how to group firms based on measures. Options can be seen in bipartitepandas.grouping.
-
-                    stayers_movers (str or None, default=None): if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers
-
-                    t (int or None, default=None): if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)
-
-                    weighted (bool, default=True): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)
-
-                    dropna (bool, default=False): if True, drop observations where firms aren't clustered; if False, keep all observations
-
-            clean_params (dict): dictionary of parameters for cleaning
-
-                Dictionary parameters:
-
-                    connectedness (str or None, default='connected'): if 'connected', keep observations in the largest connected set of firms; if 'biconnected', keep observations in the largest biconnected set of firms; if None, keep all observations
-
-                    i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
-
-                    drop_multiples (bool): if True, rather than collapsing over spells, drop any spells with multiple observations (this is for computational efficiency when re-collapsing data for biconnected components)
-
-                    data_validity (bool, default=True): if True, run data validity checks; much faster if set to False
-
-                    copy (bool, default=False): if False, avoid copy
-
+            ncore (int): number of cores to use
             rng (NumPy RandomState): NumPy RandomState object
 
         Returns:
-            res_all (dict of dicts of lists): in the first dictionary we choose 'connected' or 'biconnected'; in the second dictionary we choose 'fe' or 'cre'; and finally, we are given a list of results for each attrition percentage.
+            res_all (dict of dicts of lists): in the first dictionary we choose 'non_he' or 'he'; in the second dictionary we choose 'fe' or 'cre'; and finally, we are given a list of results for each attrition percentage.
         '''
-        # Create lists to save results
-        res_connected = {'fe': [], 'cre': []} # For non-HE
-        res_biconnected = {'fe': [], 'cre': []} # For HE
-        res_all = [res_connected, res_biconnected]
-        # FE params
-        fe_params_connected = fe_params.copy()
-        fe_params_connected['he'] = False
-        fe_params_biconnected = fe_params.copy()
-        fe_params_biconnected['he'] = True
-        fe_params_all = [fe_params_connected, fe_params_biconnected]
-        # Clean params
-        clean_params_connected = clean_params.copy()
-        clean_params_connected['connectedness'] = 'connected'
-        clean_params_biconnected = clean_params.copy()
-        clean_params_biconnected['connectedness'] = 'biconnected_observations'
-        clean_params_all = [clean_params_connected, clean_params_biconnected]
-
-        attrition_fn = {
-            'increasing': attrition_increasing,
-            'decreasing': attrition_decreasing
+        ## Create lists to save results
+        # For non-HE
+        res_non_he = {'fe': [], 'cre': []}
+        # For HE
+        res_he = {'fe': [], 'cre': []}
+        # Combined
+        res_all = {
+            'non_he': res_non_he,
+            'he': res_he
         }
-        attrition_fn = attrition_fn[attrition_params['type_and_subsets'][0]]
 
-        for i in range(2):
+        for non_he_he in ['non_he', 'he']:
+            # Get parameters
+            non_he_he_params = self.non_he_he_params[non_he_he]
+            fe_params = non_he_he_params['fe']
+            cluster_params = non_he_he_params['cluster']
+            clean_params = non_he_he_params['clean']
+
             # Create iterator
-            attrition_iterator = attrition_fn(self.bdf, subsets=attrition_params['type_and_subsets'][1], user_clean=clean_params_all[i], rng=rng)
+            attrition_iterator = self.attrition_fn(clean_params=clean_params, rng=rng)
+
+            if self.attrition_type == 'increasing':
+                # Once the initial connectedness has been computed, larger subsets are connected by construction
+                clean_params = clean_params.copy()
+                clean_params['connectedness'] = None
 
             def yield_attrition_params():
-                clean_params_interior = clean_params_all[i].copy()
-                if attrition_params['type_and_subsets'][0] == 'increasing':
-                    # Once the initial connectedness has been computed, nothing else has to be done
-                    clean_params_interior['connectedness'] = None
-                for attrition_subset in attrition_iterator:
-                    yield (*attrition_subset, clean_params_interior, fe_params_all[i], cre_params, cluster_params)
+                N = len(self.subsets)
+                seeds = rng.bit_generator._seed_seq.spawn(N)
+                for i, wids_to_drop in enumerate(attrition_iterator):
+                    # Update seeds
+                    rng_i = np.random.default_rng(seeds[i])
+                    sub_fe_params = fe_params.copy()
+                    sub_fe_params.update({'rng': rng_i})
+                    sub_cre_params = self.cre_params.copy()
+                    sub_cre_params.update({'rng': rng_i})
+                    # Yield results
+                    yield (wids_to_drop, sub_fe_params, sub_cre_params, cluster_params, clean_params)
 
-            if ncore > 1: # Use multi-processing
-                # Estimate
+            if ncore > 1:
+                # Estimate with multi-processing
                 with Pool(processes=ncore) as pool:
                     V = pool.starmap(self._attrition_interior, yield_attrition_params())
                 for res in enumerate(V):
-                    res_all[i]['fe'].append(res[1]['fe'])
-                    res_all[i]['cre'].append(res[1]['cre'])
+                    res_all[non_he_he]['fe'].append(res[1]['fe'])
+                    res_all[non_he_he]['cre'].append(res[1]['cre'])
             else:
+                # Estimate without multi-processing
                 for attrition_subparams in yield_attrition_params():
-                    # Estimate
                     res = self._attrition_interior(*attrition_subparams)
-                    res_all[i]['fe'].append(res['fe'])
-                    res_all[i]['cre'].append(res['cre'])
+                    res_all[non_he_he]['fe'].append(res['fe'])
+                    res_all[non_he_he]['cre'].append(res['cre'])
 
-        res_all = {'connected': res_all[0], 'biconnected': res_all[1]}
+            if self.attrition_type == 'increasing':
+                del self.subset_1
+            del self.subset_2
 
         return res_all
-    def attrition(self, N=10, ncore=1, attrition_params={}, fe_params={}, cre_params={}, cluster_params={}, clean_params={}, seed=None):
+
+    def attrition(self, N=10, ncore=1, rng=np.random.default_rng(None)):
         '''
-        Run Monte Carlo on attrition estimations of TwoWay to estimate variance of parameter estimates given fraction of movers remaining. Note that this overwrites the stored dataframe, meaning if you want to run attrition with different threshold number of movers, you will have to create multiple TwoWayAttrition objects, or alternatively, run this method with an increasing threshold for each iteration.
+        Run Monte Carlo on attrition estimations of TwoWay to estimate variance of parameter estimates given fraction of movers remaining. Note that this overwrites the stored dataframe, meaning if you want to run attrition with different threshold number of movers, you will have to create multiple Attrition objects, or alternatively, run this method with an increasing threshold for each iteration.
 
         Arguments:
             N (int): number of simulations
-            ncore (int): how many cores to use
-            attrition_params (dict): dictionary of parameters for attrition
-
-                Dictionary parameters:
-
-                    type_and_subsets (tuple of (str, list), default=('increasing', np.linspace(0.1, 0.5, 5))): how to attrition data (either 'increasing' or 'decreasing'), and subsets to consider (both are required because switching type requires swapping the order of the subsets)
-
-                    threshold (int, default=15): minimum number of movers required to keep a firm
-
-                    drop_multiples (bool, default=False): if True, rather than collapsing over spells, drop any spells with multiple observations (this is for computational efficiency when re-collapsing data for biconnected components)
-
-                    copy (bool, default=True): if False, avoid copy
-
-            fe_params (dict): dictionary of parameters for FE estimation
-
-                Dictionary parameters:
-
-                    ncore (int, default=1): number of cores to use
-
-                    batch (int, default=1): batch size to send in parallel
-
-                    ndraw_pii (int, default=50): number of draws to use in approximation for leverages
-
-                    levfile (str, default=''): file to load precomputed leverages
-
-                    ndraw_tr (int, default=5): number of draws to use in approximation for traces
-
-                    he (bool, default=False): if True, compute heteroskedastic correction
-
-                    out (str, default='res_fe.json'): outputfile where results are saved
-
-                    statsonly (bool, default=False): if True, return only basic statistics
-
-                    feonly (bool, default=False): if True, compute only fixed effects and not variances
-
-                    Q (str, default='cov(alpha, psi)'): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
-
-                    seed (int, default=None): NumPy RandomState seed
-
-            cre_params (dict): dictionary of parameters for CRE estimation
-
-                Dictionary parameters:
-
-                    ncore (int, default=1): number of cores to use
-
-                    ndraw_tr (int, default=5): number of draws to use in approximation for traces
-
-                    ndp (int, default=50): number of draw to use in approximation for leverages
-
-                    out (str, default='res_cre.json'): outputfile where results are saved
-
-                    posterior (bool, default=False): if True, compute posterior variance
-
-                    wo_btw (bool, default=False): if True, sets between variation to 0, pure RE
-
-            cluster_params (dict): dictionary of parameters for clustering in CRE estimation
-
-                Dictionary parameters:
-
-                    measures (function or list of functions): how to compute measures for clustering. Options can be seen in bipartitepandas.measures.
-
-                    grouping (function): how to group firms based on measures. Options can be seen in bipartitepandas.grouping.
-
-                    stayers_movers (str or None, default=None): if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers
-
-                    t (int or None, default=None): if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)
-
-                    weighted (bool, default=True): if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)
-
-                    dropna (bool, default=False): if True, drop observations where firms aren't clustered; if False, keep all observations
-
-            clean_params (dict): dictionary of parameters for cleaning
-
-                Dictionary parameters:
-
-                    connectedness (str or None, default='connected'): if 'connected', keep observations in the largest connected set of firms; if 'biconnected', keep observations in the largest biconnected set of firms; if None, keep all observations
-
-                    i_t_how (str, default='max'): if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids
-
-                    drop_multiples (bool): if True, rather than collapsing over spells, drop any spells with multiple observations (this is for computational efficiency when re-collapsing data for biconnected components)
-
-                    data_validity (bool, default=True): if True, run data validity checks; much faster if set to False
-
-                    copy (bool, default=False): if False, avoid copy
-
-            seed (int): NumPy RandomState seed
+            ncore (int): number of cores to use
+            rng (np.random.Generator): NumPy random number generator. This overrides the random number generators for FE and CRE.
 
         Returns:
-            res_all (dict of dicts of lists of lists): in the first dictionary we choose 'connected' or 'biconnected'; in the second dictionary we choose 'fe' or 'cre'; then, we are given a list of results for each Monte Carlo simulation; and finally, for a particular Monte Carlo simulation, we are given a list of results for each attrition percentage.
+            res_all (dict of dicts of lists of lists): in the first dictionary we choose 'non_he' or 'he'; in the second dictionary we choose 'fe' or 'cre'; then, we are given a list of results for each Monte Carlo simulation; and finally, for a particular Monte Carlo simulation, we are given a list of results for each attrition percentage.
         '''
-        rng = np.random.default_rng(seed)
-        # Create lists to save results
-        res_connected = {'fe': [], 'cre': []} # For non-HE
-        res_biconnected = {'fe': [], 'cre': []} # For HE
-
-        attrition_params_full = bpd.util.update_dict(self.default_attrition, attrition_params)
+        ## Create lists to save results
+        # For non-HE
+        res_non_he = {'fe': [], 'cre': []}
+        # For HE
+        res_he = {'fe': [], 'cre': []}
 
         # Take subset of firms that meet threshold
-        self.bdf = self.bdf.min_moves_frame(threshold=attrition_params_full['threshold'], drop_multiples=attrition_params_full['drop_multiples'], copy=False)
+        self.bdf = self.bdf.min_moves_frame(threshold=self.attrition_params['min_moves_threshold'], drop_returners_to_stayers=self.clean_params['drop_returners_to_stayers'], is_sorted=True, reset_index=True, copy=False)
 
-        # Use multi-processing
         if False: # ncore > 1:
-            # Estimate
+            # Estimate with multi-processing
             with Pool(processes=ncore) as pool:
-                V = pool.starmap(self._attrition_single, [(ncore, attrition_params_full, fe_params, cre_params, cluster_params, clean_params) for _ in range(N)])
+                # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
+                # Multiprocessing tqdm source: https://stackoverflow.com/a/45276885/17333120
+                V = list(tqdm(pool.starmap(self._attrition_single, [(ncore, np.random.default_rng(seed)) for seed in rng.bit_generator._seed_seq.spawn(N)]), total=N))
             for res in enumerate(V):
-                res_connected['fe'].append(res[1]['connected']['fe'])
-                res_connected['cre'].append(res[1]['connected']['cre'])
-                res_biconnected['fe'].append(res[1]['biconnected']['fe'])
-                res_biconnected['cre'].append(res[1]['biconnected']['cre'])
+                res_non_he['fe'].append(res[1]['non_he']['fe'])
+                res_non_he['cre'].append(res[1]['non_he']['cre'])
+                res_he['fe'].append(res[1]['he']['fe'])
+                res_he['cre'].append(res[1]['he']['cre'])
         else:
-            for _ in trange(N):
-                # Estimate
-                res = self._attrition_single(ncore=ncore, attrition_params=attrition_params_full, fe_params=fe_params, cre_params=cre_params, cluster_params=cluster_params, clean_params=clean_params, rng=rng)
-                res_connected['fe'].append(res['connected']['fe'])
-                res_connected['cre'].append(res['connected']['cre'])
-                res_biconnected['fe'].append(res['biconnected']['fe'])
-                res_biconnected['cre'].append(res['biconnected']['cre'])
+            # Estimate without multi-processing
+            for seed in tqdm(rng.bit_generator._seed_seq.spawn(N)):
+                rng_i = np.random.default_rng(seed)
+                res = self._attrition_single(ncore=ncore, rng=rng_i)
+                res_non_he['fe'].append(res['non_he']['fe'])
+                res_non_he['cre'].append(res['non_he']['cre'])
+                res_he['fe'].append(res['he']['fe'])
+                res_he['cre'].append(res['he']['cre'])
 
-        res_all = {'connected': res_connected, 'biconnected': res_biconnected}
-
-        self.type_and_subsets = attrition_params_full['type_and_subsets']
-        self.res = res_all
+        # Combine results
+        self.attrition_res = {'non_he': res_non_he, 'he': res_he}
 
     def plot_attrition(self):
         '''
         Plot results from Monte Carlo simulations.
         '''
-        if not self.res:
+        if not self.attrition_res:
             warnings.warn('Must generate attrition data before results can be plotted. This can be done by running .attrition()')
 
         else:
-            # Extract attrition type and subsets
-            attrition_type, subsets = self.type_and_subsets
-            # Get N, M
-            N = len(self.res['connected']['fe']) # Number of estimations
-            M = len(self.res['connected']['fe'][0]) # Number of attritions per estimation
-            # Extract results
-            # Connected set
-            conset_var_psi_pct = np.zeros(shape=[N, M, 3])
-            conset_cov_psi_alpha_pct = np.zeros(shape=[N, M, 3])
-            # Biconnected set
-            biconset_var_psi_pct = np.zeros(shape=[N, M, 4])
-            biconset_cov_psi_alpha_pct = np.zeros(shape=[N, M, 4])
+            ## Get N, M
+            # Number of estimations
+            N = len(self.attrition_res['non_he']['fe'])
+            # Number of attritions per estimation
+            M = len(self.attrition_res['non_he']['fe'][0])
+            ## Extract results
+            # Non-HE
+            non_he_var_psi_pct = np.zeros(shape=[N, M, 3])
+            non_he_cov_psi_alpha_pct = np.zeros(shape=[N, M, 3])
+            # HE
+            he_var_psi_pct = np.zeros(shape=[N, M, 4])
+            he_cov_psi_alpha_pct = np.zeros(shape=[N, M, 4])
             for i in range(N):
                 for j in range(M):
-                    # Connected set
-                    con_res_fe_dict = self.res['connected']['fe'][i][j]
-                    con_res_cre_dict = self.res['connected']['cre'][i][j]
+                    # Non-HE
+                    non_he_res_fe_dict = self.attrition_res['non_he']['fe'][i][j]
+                    non_he_res_cre_dict = self.attrition_res['non_he']['cre'][i][j]
                     # Var(psi)
-                    conset_var_psi_pct[i, j, 0] = float(con_res_fe_dict['var_fe']) / float(con_res_fe_dict['var_y'])
-                    conset_var_psi_pct[i, j, 1] = float(con_res_fe_dict['var_ho']) / float(con_res_fe_dict['var_y'])
-                    conset_var_psi_pct[i, j, 2] = float(con_res_cre_dict['tot_var']) / float(con_res_cre_dict['var_y'])
+                    non_he_var_psi_pct[i, j, 0] = float(non_he_res_fe_dict['var_fe']) / float(non_he_res_fe_dict['var_y'])
+                    non_he_var_psi_pct[i, j, 1] = float(non_he_res_fe_dict['var_ho']) / float(non_he_res_fe_dict['var_y'])
+                    non_he_var_psi_pct[i, j, 2] = float(non_he_res_cre_dict['tot_var']) / float(non_he_res_cre_dict['var_y'])
                     # Cov(psi, alpha)
-                    conset_cov_psi_alpha_pct[i, j, 0] = 2 * float(con_res_fe_dict['cov_fe']) / float(con_res_fe_dict['var_y'])
-                    conset_cov_psi_alpha_pct[i, j, 1] = 2 * float(con_res_fe_dict['cov_ho']) / float(con_res_fe_dict['var_y'])
-                    conset_cov_psi_alpha_pct[i, j, 2] = 2 * float(con_res_cre_dict['tot_cov']) / float(con_res_cre_dict['var_y'])
+                    non_he_cov_psi_alpha_pct[i, j, 0] = 2 * float(non_he_res_fe_dict['cov_fe']) / float(non_he_res_fe_dict['var_y'])
+                    non_he_cov_psi_alpha_pct[i, j, 1] = 2 * float(non_he_res_fe_dict['cov_ho']) / float(non_he_res_fe_dict['var_y'])
+                    non_he_cov_psi_alpha_pct[i, j, 2] = 2 * float(non_he_res_cre_dict['tot_cov']) / float(non_he_res_cre_dict['var_y'])
 
-                    # Biconnected set
-                    bicon_res_fe_dict = self.res['biconnected']['fe'][i][j]
-                    bicon_res_cre_dict = self.res['biconnected']['cre'][i][j]
+                    # HE
+                    he_res_fe_dict = self.attrition_res['he']['fe'][i][j]
+                    he_res_cre_dict = self.attrition_res['he']['cre'][i][j]
                     # Var(psi)
-                    biconset_var_psi_pct[i, j, 0] = float(bicon_res_fe_dict['var_fe']) / float(bicon_res_fe_dict['var_y'])
-                    biconset_var_psi_pct[i, j, 1] = float(bicon_res_fe_dict['var_ho']) / float(bicon_res_fe_dict['var_y'])
-                    biconset_var_psi_pct[i, j, 2] = float(bicon_res_cre_dict['tot_var']) / float(bicon_res_cre_dict['var_y'])
-                    biconset_var_psi_pct[i, j, 3] = float(bicon_res_fe_dict['var_he']) / float(bicon_res_fe_dict['var_y'])
+                    he_var_psi_pct[i, j, 0] = float(he_res_fe_dict['var_fe']) / float(he_res_fe_dict['var_y'])
+                    he_var_psi_pct[i, j, 1] = float(he_res_fe_dict['var_ho']) / float(he_res_fe_dict['var_y'])
+                    he_var_psi_pct[i, j, 2] = float(he_res_cre_dict['tot_var']) / float(he_res_cre_dict['var_y'])
+                    he_var_psi_pct[i, j, 3] = float(he_res_fe_dict['var_he']) / float(he_res_fe_dict['var_y'])
 
                     # Cov(psi, alpha)
-                    biconset_cov_psi_alpha_pct[i, j, 0] = 2 * float(bicon_res_fe_dict['cov_fe']) / float(bicon_res_fe_dict['var_y'])
-                    biconset_cov_psi_alpha_pct[i, j, 1] = 2 * float(bicon_res_fe_dict['cov_ho']) / float(bicon_res_fe_dict['var_y'])
-                    biconset_cov_psi_alpha_pct[i, j, 2] = 2 * float(bicon_res_cre_dict['tot_cov']) / float(bicon_res_cre_dict['var_y'])
-                    biconset_cov_psi_alpha_pct[i, j, 3] = 2 * float(bicon_res_fe_dict['cov_he']) / float(bicon_res_fe_dict['var_y'])
+                    he_cov_psi_alpha_pct[i, j, 0] = 2 * float(he_res_fe_dict['cov_fe']) / float(he_res_fe_dict['var_y'])
+                    he_cov_psi_alpha_pct[i, j, 1] = 2 * float(he_res_fe_dict['cov_ho']) / float(he_res_fe_dict['var_y'])
+                    he_cov_psi_alpha_pct[i, j, 2] = 2 * float(he_res_cre_dict['tot_cov']) / float(he_res_cre_dict['var_y'])
+                    he_cov_psi_alpha_pct[i, j, 3] = 2 * float(he_res_fe_dict['cov_he']) / float(he_res_fe_dict['var_y'])
 
             # x-axis
-            x_axis = np.round(100 * subsets).astype(int)
-            conset_var_psi_pct = 100 * conset_var_psi_pct
-            conset_cov_psi_alpha_pct = 100 * conset_cov_psi_alpha_pct
-            biconset_var_psi_pct = 100 * biconset_var_psi_pct
-            biconset_cov_psi_alpha_pct = 100 * biconset_cov_psi_alpha_pct
+            x_axis = np.round(100 * self.subsets).astype(int)
+            non_he_var_psi_pct = 100 * non_he_var_psi_pct
+            non_he_cov_psi_alpha_pct = 100 * non_he_cov_psi_alpha_pct
+            he_var_psi_pct = 100 * he_var_psi_pct
+            he_cov_psi_alpha_pct = 100 * he_cov_psi_alpha_pct
 
             # Flip along 1st axis so both increasing and decreasing have the same order
-            if attrition_type == 'decreasing':
+            if self.attrition_type == 'decreasing':
                 x_axis = np.flip(x_axis)
-                conset_var_psi_pct = np.flip(conset_var_psi_pct, axis=1)
-                conset_cov_psi_alpha_pct = np.flip(conset_cov_psi_alpha_pct, axis=1)
-                biconset_var_psi_pct = np.flip(biconset_var_psi_pct, axis=1)
-                biconset_cov_psi_alpha_pct = np.flip(biconset_cov_psi_alpha_pct, axis=1)
+                non_he_var_psi_pct = np.flip(non_he_var_psi_pct, axis=1)
+                non_he_cov_psi_alpha_pct = np.flip(non_he_cov_psi_alpha_pct, axis=1)
+                he_var_psi_pct = np.flip(he_var_psi_pct, axis=1)
+                he_cov_psi_alpha_pct = np.flip(he_cov_psi_alpha_pct, axis=1)
 
             # Plot figures
-            # Firm effects (connected set)
-            plt.plot(x_axis, conset_var_psi_pct[:, :, 0].mean(axis=0), label='FE')
-            plt.plot(x_axis, conset_var_psi_pct[:, :, 1].mean(axis=0), label='HO')
-            plt.plot(x_axis, conset_var_psi_pct[:, :, 2].mean(axis=0), label='CRE')
+            # Firm effects (non-HE)
+            plt.plot(x_axis, non_he_var_psi_pct[:, :, 0].mean(axis=0), label='FE')
+            plt.plot(x_axis, non_he_var_psi_pct[:, :, 1].mean(axis=0), label='HO')
+            plt.plot(x_axis, non_he_var_psi_pct[:, :, 2].mean(axis=0), label='CRE')
             plt.title('Firm effects (connected set)')
             plt.xlabel('Share of Movers Kept (%)')
             plt.ylabel('Firm Effects: Share of Variance (%)')
@@ -641,12 +471,12 @@ class TwoWayAttrition:
             plt.grid()
             plt.tight_layout()
             plt.show()
-            # Firm effects (biconnected set)
-            plt.plot(x_axis, biconset_var_psi_pct[:, :, 0].mean(axis=0), label='FE')
-            plt.plot(x_axis, biconset_var_psi_pct[:, :, 1].mean(axis=0), label='HO')
-            plt.plot(x_axis, biconset_var_psi_pct[:, :, 2].mean(axis=0), label='CRE')
-            plt.plot(x_axis, biconset_var_psi_pct[:, :, 3].mean(axis=0), label='HE')
-            plt.title('Firm effects (biconnected set)')
+            # Firm effects (HE)
+            plt.plot(x_axis, he_var_psi_pct[:, :, 0].mean(axis=0), label='FE')
+            plt.plot(x_axis, he_var_psi_pct[:, :, 1].mean(axis=0), label='HO')
+            plt.plot(x_axis, he_var_psi_pct[:, :, 2].mean(axis=0), label='CRE')
+            plt.plot(x_axis, he_var_psi_pct[:, :, 3].mean(axis=0), label='HE')
+            plt.title('Firm effects (leave-one-out connected set)')
             plt.xlabel('Share of Movers Kept (%)')
             plt.ylabel('Firm Effects: Share of Variance (%)')
             plt.legend()
@@ -654,10 +484,10 @@ class TwoWayAttrition:
             plt.tight_layout()
             plt.show()
 
-            # Sorting (connected set)
-            plt.plot(x_axis, conset_cov_psi_alpha_pct[:, :, 0].mean(axis=0), label='FE')
-            plt.plot(x_axis, conset_cov_psi_alpha_pct[:, :, 1].mean(axis=0), label='HO')
-            plt.plot(x_axis, conset_cov_psi_alpha_pct[:, :, 2].mean(axis=0), label='CRE')
+            # Sorting (non-HE)
+            plt.plot(x_axis, non_he_cov_psi_alpha_pct[:, :, 0].mean(axis=0), label='FE')
+            plt.plot(x_axis, non_he_cov_psi_alpha_pct[:, :, 1].mean(axis=0), label='HO')
+            plt.plot(x_axis, non_he_cov_psi_alpha_pct[:, :, 2].mean(axis=0), label='CRE')
             plt.title('Sorting (connected set)')
             plt.xlabel('Share of Movers Kept (%)')
             plt.ylabel('Sorting: Share of Variance (%)')
@@ -665,12 +495,12 @@ class TwoWayAttrition:
             plt.grid()
             plt.tight_layout()
             plt.show()
-            # Sorting (biconnected set)
-            plt.plot(x_axis, biconset_cov_psi_alpha_pct[:, :, 0].mean(axis=0), label='FE')
-            plt.plot(x_axis, biconset_cov_psi_alpha_pct[:, :, 1].mean(axis=0), label='HO')
-            plt.plot(x_axis, biconset_cov_psi_alpha_pct[:, :, 2].mean(axis=0), label='CRE')
-            plt.plot(x_axis, biconset_cov_psi_alpha_pct[:, :, 3].mean(axis=0), label='HE')
-            plt.title('Sorting (biconnected set)')
+            # Sorting (HE)
+            plt.plot(x_axis, he_cov_psi_alpha_pct[:, :, 0].mean(axis=0), label='FE')
+            plt.plot(x_axis, he_cov_psi_alpha_pct[:, :, 1].mean(axis=0), label='HO')
+            plt.plot(x_axis, he_cov_psi_alpha_pct[:, :, 2].mean(axis=0), label='CRE')
+            plt.plot(x_axis, he_cov_psi_alpha_pct[:, :, 3].mean(axis=0), label='HE')
+            plt.title('Sorting (leave-one-out connected set)')
             plt.xlabel('Share of Movers Kept (%)')
             plt.ylabel('Sorting: Share of Variance (%)')
             plt.legend()
@@ -679,62 +509,63 @@ class TwoWayAttrition:
             plt.show()
 
             # Plot boxplots
-            # Firm effects (connected set)
+            # Firm effects (non-HE set)
             fig, ax = plt.subplots(nrows=1, ncols=3, sharey=True)
             subtitles = ['FE', 'FE-HO', 'CRE']
 
             for i, row in enumerate(ax):
                 # for col in row:
-                row.boxplot(conset_var_psi_pct[:, :, i], labels=x_axis, showfliers=False)
+                row.boxplot(non_he_var_psi_pct[:, :, i], labels=x_axis, showfliers=False)
                 row.grid()
                 row.set_title(subtitles[i])
             fig.suptitle('Firm effects (connected set)')
             fig.supxlabel('Share of Movers Kept (%)')
             fig.supylabel('Firm Effects: Share of Variance (%)')
             fig.tight_layout()
-            fig.show()
-            # Firm effects (biconnected set)
+            # NOTE: must use plt.show(), fig.show() raises a warning in Jupyter Notebook (source: https://stackoverflow.com/a/52827912/17333120)
+            plt.show()
+            # Firm effects (HE set)
             fig, ax = plt.subplots(nrows=1, ncols=4, sharey=True)
             subtitles = ['FE', 'FE-HO', 'CRE', 'FE-HE']
             order = [0, 1, 3, 2] # Because data is FE, FE-HO, CRE, FE-HE
 
             for i, row in enumerate(ax):
                 # for col in row:
-                row.boxplot(biconset_var_psi_pct[:, :, order[i]], labels=x_axis, showfliers=False)
+                row.boxplot(he_var_psi_pct[:, :, order[i]], labels=x_axis, showfliers=False)
                 row.grid()
                 row.set_title(subtitles[order[i]])
-            fig.suptitle('Firm effects (biconnected set)')
+            fig.suptitle('Firm effects (leave-one-out connected set)')
             fig.supxlabel('Share of Movers Kept (%)')
             fig.supylabel('Firm Effects: Share of Variance (%)')
             fig.tight_layout()
-            fig.show()
+            plt.show()
 
-            # Sorting (connected set)
+            # Sorting (non-HE set)
             fig, ax = plt.subplots(nrows=1, ncols=3, sharey=True)
             subtitles = ['FE', 'FE-HO', 'CRE']
 
             for i, row in enumerate(ax):
                 # for col in row:
-                row.boxplot(conset_cov_psi_alpha_pct[:, :, i], labels=x_axis, showfliers=False)
+                row.boxplot(non_he_cov_psi_alpha_pct[:, :, i], labels=x_axis, showfliers=False)
                 row.grid()
                 row.set_title(subtitles[i])
             fig.suptitle('Sorting (connected set)')
             fig.supxlabel('Share of Movers Kept (%)')
             fig.supylabel('Sorting: Share of Variance (%)')
             fig.tight_layout()
-            fig.show()
-            # Sorting (biconnected set)
+            plt.show()
+            # Sorting (HE set)
             fig, ax = plt.subplots(nrows=1, ncols=4, sharey=True)
             subtitles = ['FE', 'FE-HO', 'CRE', 'FE-HE']
             order = [0, 1, 3, 2] # Because data is FE, FE-HO, CRE, FE-HE
 
             for i, row in enumerate(ax):
                 # for col in row:
-                row.boxplot(biconset_cov_psi_alpha_pct[:, :, order[i]], labels=x_axis, showfliers=False)
+                row.boxplot(he_cov_psi_alpha_pct[:, :, order[i]], labels=x_axis, showfliers=False)
                 row.grid()
                 row.set_title(subtitles[order[i]])
-            fig.suptitle('Sorting (biconnected set)')
+            fig.suptitle('Sorting (leave-one-out connected set)')
             fig.supxlabel('Share of Movers Kept (%)')
             fig.supylabel('Sorting: Share of Variance (%)')
             fig.tight_layout()
-            fig.show()
+            plt.show()

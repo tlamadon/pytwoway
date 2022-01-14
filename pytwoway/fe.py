@@ -1,18 +1,12 @@
 '''
-Computes a bunch of estimates from an event study data set:
-
-    - AKM variance decomposition
-    - Andrews bias correction
-    - KSS bias correction
-
-Does this through class FEEstimator
+Defines class FEEstimator, which uses multigrid and partialing out to solve two way fixed effect models. This includes AKM, the Andrews et al. homoskedastic correction, and the Kline et al. heteroskedastic correction.
 '''
 import warnings
 from pathlib import Path
 import pyamg
 import numpy as np
 import pandas as pd
-from bipartitepandas import update_dict, to_list, logger_init
+from bipartitepandas import ParamsDict, logger_init
 from scipy.sparse import csc_matrix, coo_matrix, diags, linalg, hstack, eye
 import time
 # import pyreadr
@@ -36,22 +30,177 @@ except ImportError:
 #     v2 = df.eval(e2)
 #     return np.cov(v1, v2)[0][1]
 
+# Define default parameter dictionary
+_fe_params_default = ParamsDict({
+    'ncore': (1, 'type', int,
+        '''
+            (default=1) Number of cores to use.
+        '''),
+    'batch': (1, 'type', int,
+        '''
+            (default=1) Batch size to send in parallel.
+        '''),
+    'weighted': (True, 'type', bool,
+        '''
+            (default=True) If True, use weighted estimators.
+        '''),
+    'statsonly': (False, 'type', bool,
+        '''
+            (default=False) If True, return only basic statistics.
+        '''),
+    'feonly': (False, 'type', bool,
+        '''
+            (default=False) If True, estimate only fixed effects and not variances.
+        '''),
+    'Q': ('cov(alpha, psi)', 'set', ['cov(alpha, psi)', 'cov(psi_t, psi_{t+1})'],
+        '''
+            (default='cov(alpha, psi)') Which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'.
+        '''),
+    'ndraw_trace': (5, 'type', int,
+        '''
+            (default=5) Number of draws to use in trace approximations.
+        '''),
+    # 'trace_analytical': (False, 'type', bool, # FIXME not used
+    #     '''
+    #         (default=False) If True, estimate trace analytically.
+    #     ''')
+    'he': (False, 'type', bool,
+        '''
+            (default=False) If True, estimate heteroskedastic correction.
+        '''),
+    'he_analytical': (False, 'type', bool,
+        '''
+            (default=False) If True, estimate heteroskedastic correction using analytical formula; if False, use JL approxmation.
+        '''),
+    'lev_batchsize': (50, 'type', int,
+        '''
+            (default=50) Number of draws to use for each batch in approximation of leverages for heteroskedastic correction.
+        '''),
+    'lev_nbatches': (10, 'type', int,
+        '''
+            (default=10) Max number of batches to run in approximation of leverages for heteroskedastic correction.
+        '''),
+    'lev_threshold_obs': (50, 'type', int,
+        '''
+            (default=100) Minimum number of observations with Pii >= threshold where batches will keep running in approximation of leverages for heteroskedastic correction.
+        '''),
+    'lev_threshold_pii': (0.98, 'type', float,
+        '''
+            (default=0.98) Threshold Pii value for computing threshold number of Pii observations in approximation of leverages for heteroskedastic correction.
+        '''),
+    'levfile': ('', 'type', str,
+        '''
+            (default='') File to load precomputed leverages for heteroskedastic correction.
+        '''),
+    # 'con': (False, 'type', bool, # FIXME not used
+    #     '''
+    #         (default=False) Computes the smallest eigen values, this is the filepath where these results are saved.
+    #     '''),
+    'out': ('res_fe.json', 'type', str,
+        '''
+            (default='res_fe.json') Outputfile where results are saved.
+        '''),
+    'rng': (np.random.default_rng(None), 'type', np.random.Generator,
+        '''
+            (default=np.random.default_rng(None)) NumPy random number generator.
+        ''')
+})
+
+def fe_params(update_dict={}):
+    '''
+    Dictionary of default fe_params.
+
+    Arguments:
+        update_dict (dict): user parameter values
+
+    Returns:
+        (ParamsDict) dictionary of fe_params
+    '''
+    new_dict = _fe_params_default.copy()
+    new_dict.update(update_dict)
+    return new_dict
+
+def _weighted_quantile(values, quantiles, sample_weight=None, values_sorted=False, old_style=False):
+    '''
+    Very close to numpy.percentile, but supports weights.
+    NOTE: quantiles should be in [0, 1]!
+
+    Arguments:
+        values (NumPy Array): data
+        quantiles (array-like): quantiles to compute
+        sample_weight (array-like): weighting, must be same length as `array` (is `array` supposed to be quantiles?)
+        values_sorted (bool): if True, skips sorting of initial array
+        old_style (bool): if True, changes output to be consistent with numpy.percentile
+
+    Returns:
+        (NumPy Array): computed quantiles
+    '''
+    values = np.array(values)
+    quantiles = np.array(quantiles)
+    if sample_weight is None:
+        sample_weight = np.ones(len(values))
+    sample_weight = np.array(sample_weight)
+    assert np.all(quantiles >= 0) and np.all(quantiles <= 1), \
+        'quantiles should be in [0, 1]'
+
+    if not values_sorted:
+        sorter = np.argsort(values)
+        values = values[sorter]
+        sample_weight = sample_weight[sorter]
+
+    weighted_quantiles = np.cumsum(sample_weight) - 0.5 * sample_weight
+    if old_style:
+        # To be convenient with numpy.percentile
+        weighted_quantiles -= weighted_quantiles[0]
+        weighted_quantiles /= weighted_quantiles[-1]
+    else:
+        weighted_quantiles /= np.sum(sample_weight)
+
+    return np.interp(quantiles, weighted_quantiles, values)
+
+def _weighted_var(v, w):
+    '''
+    Compute weighted variance.
+
+    Arguments:
+        v (NumPy Array): vector to weight
+        w (NumPy Array): weights
+
+    Returns:
+        v0 (NumPy Array): weighted variance
+    '''
+    m0 = np.sum(w * v) / np.sum(w)
+    v0 = np.sum(w * (v - m0) ** 2) / np.sum(w)
+
+    return v0
+
+def _weighted_cov(v1, v2, w):
+    '''
+    Compute weighted covariance.
+
+    Arguments:
+        v1 (NumPy Array): vector to weight
+        v2 (NumPy Array): vector to weight
+        w (NumPy Array): weights
+
+    Returns:
+        v0 (NumPy Array): weighted variance
+    '''
+    m1 = np.sum(w * v1) / np.sum(w)
+    m2 = np.sum(w * v2) / np.sum(w)
+    v0 = np.sum(w * (v1 - m1) * (v2 - m2)) / np.sum(w)
+
+    return v0
+
 class FEEstimator:
     '''
-    Uses multigrid and partialing out to solve two way fixed effect model.
-
-    @ FIXME I think delete everything below this, it's basically contained in the class/functions within the class
-
-    takes as an input this adata
-    and creates associated A = [J W] matrix which are AKM dummies
-
-    provides methods to do A x Y but also (A'A)^-1 A'Y solve method
+    Uses multigrid and partialing out to solve two way fixed effect models. This includes AKM, the Andrews et al. homoskedastic correction, and the Kline et al. heteroskedastic correction.
     '''
 
-    def __init__(self, data, params):
+    def __init__(self, data, params=fe_params()):
         '''
         Arguments:
-            data (Pandas DataFrame): (collapsed) long format labor data. Data contains the following columns:
+            data (BipartitePandas DataFrame): (collapsed) long format labor data. Data contains the following columns:
 
                 i (worker id)
 
@@ -68,82 +217,36 @@ class FEEstimator:
                 w (weight)
 
                 m (0 if stayer, 1 if mover)
-            params (dict): dictionary of parameters for FE estimation
-
-                Dictionary parameters:
-
-                    ncore (int, default=1): number of cores to use
-
-                    batch (int, default=1): batch size to send in parallel
-
-                    ndraw_pii (int, default=50): number of draws to use in approximation for leverages
-
-                    levfile (str, default=''): file to load precomputed leverages`
-
-                    ndraw_tr (int, default=5): number of draws to use in approximation for traces
-
-                    he (bool, default=False): if True, compute heteroskedastic correction
-
-                    he_analytical (bool, default=False): if True, compute heteroskedastic correction, using analytical formula; if False, use JL approxmation
-
-                    weighted (bool, default=True): if True, run weighted estimators
-
-                    out (str, default='res_fe.json'): outputfile where results are saved
-
-                    statsonly (bool, default=False): if True, return only basic statistics
-
-                    feonly (bool, default=False): if True, compute only fixed effects and not variances
-
-                    Q (str, default='cov(alpha, psi)'): which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
-
-                    seed (int, default=None): NumPy RandomState seed
+            params (ParamsDict): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters.
         '''
         # Start logger
         logger_init(self)
         # self.logger.info('initializing FEEstimator object')
 
-        self.adata = data.copy()
+        self.adata = data
 
-        # Define default parameter dictionaries
-        default_params = {
-            'ncore': 1, # Number of cores to use
-            'batch': 1, # Batch size to send in parallel
-            'ndraw_pii_batchsize': 50, # Number of draws to use for each batch in approximation for leverages
-            'ndraw_pii_nbatches': 10, # Max number of batches to run
-            'ndraw_pii_threshold_obs': 100, # Minimum number of observations with Pii >= threshold where batches will keep running
-            'ndraw_pii_threshold_pii': 0.98, # Threshold Pii value for computing threshold number of Pii observations
-            'levfile': '', # File to load precomputed leverages
-            'ndraw_tr': 5, # Number of draws to use in approximation for traces
-            'he': False, # If True, compute heteroskedastic correction
-            'he_analytical': False, # If True, compute heteroskedastic correction, using analytical formula; if False, use JL approxmation
-            'weighted': True, # If True, run weighted estimators
-            'out': 'res_fe.json', # Outputfile where results are saved
-            'statsonly': False, # If True, return only basic statistics
-            'feonly': False, # If True, compute only fixed effects and not variances
-            'Q': 'cov(alpha, psi)', # Which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'
-            # 'con': False, # Computes the smallest eigen values, this is the filepath where these results are saved FIXME not used
-            # 'logfile': '', # Log output to a logfile FIXME not used
-            # 'check': False # If True, compute the non-approximated estimates as well FIXME not used
-            'seed': None # np.random.RandomState() seed
-        }
+        self.params = params
+        # Results dictionary
+        self.res = {}
+        # Summary results dictionary
+        self.summary = {}
 
-        self.params = update_dict(default_params, params)
-        self.res = {} # Results dictionary
-        self.summary = {} # Summary results dictionary
-
-        # Save some commonly used parameters as attributes
-        self.ncore = self.params['ncore'] # Number of cores to use
-        self.ndraw_pii = self.params['ndraw_pii_batchsize'] # Number of draws to compute leverage
-        self.ndraw_trace = self.params['ndraw_tr'] # Number of draws to compute heteroskedastic correction
+        ## Save some commonly used parameters as attributes
+        # Number of cores to use
+        self.ncore = self.params['ncore']
+        # Number of draws to compute leverage for heteroskedastic correction
+        self.ndraw_pii = self.params['lev_batchsize']
+        # Number of draws to use in trace approximations
+        self.ndraw_trace = self.params['ndraw_trace']
         self.compute_he = self.params['he']
 
-        # Store some parameters in results dictionary
+        ## Store some parameters in results dictionary
         self.res['cores'] = self.ncore
         self.res['ndp'] = self.ndraw_pii
         self.res['ndt'] = self.ndraw_trace
 
-        # Create NumPy Generator instance
-        self.rng = np.random.default_rng(self.params['seed'])
+        # NumPy random number generator
+        self.rng = self.params['rng']
 
         # self.logger.info('FEEstimator object initialized')
 
@@ -162,7 +265,8 @@ class FEEstimator:
             d (dict): attribute dictionary
         '''
         # Need to recreate the simple model and the search representation
-        self.__dict__ = d # Make d the attribute dictionary
+        # Make d the attribute dictionary
+        self.__dict__ = d
         self.ml = pyamg.ruge_stuben_solver(self.M)
 
     @staticmethod
@@ -191,6 +295,14 @@ class FEEstimator:
         with open(filename, 'wb') as outfile:
             pickle.dump(self, outfile)
 
+    def fit(self):
+        '''
+        Run FE solver.
+        '''
+        self.fit_1()
+        self.construct_Q()
+        self.fit_2()
+
     def fit_1(self):
         '''
         Run FE solver, part 1. Before fit_2(), modify adata to allow creation of Q matrix.
@@ -206,22 +318,31 @@ class FEEstimator:
         '''
         Run FE solver, part 2.
         '''
-        if self.params['statsonly']: # If only returning early statistics
+        if self.params['statsonly']:
+            # If only returning early statistics
             self._save_early_stats()
 
-        else: # If running analysis
-            self._create_fe_solver() # Solve FE model
-            self._get_fe_estimates() # Add fixed effect columns
+        else:
+            ## If running analysis
+            # Solve FE model
+            self._create_fe_solver()
+            # Add fixed effect columns
+            self._get_fe_estimates()
 
-            if not self.params['feonly']: # If running full model
-                self._compute_trace_approximation_ho() # Compute trace approximation
+            if not self.params['feonly']:
+                ## If running full model
+                # Compute trace approximation
+                self._compute_trace_approximation_ho()
 
-                # If computing heteroskedastic correction
                 if self.compute_he:
-                    self._compute_leverages_Pii() # Solve heteroskedastic model
-                    self._compute_trace_approximation_he() # Compute trace approximation
+                    ## If computing heteroskedastic correction
+                    # Solve heteroskedastic model
+                    self._compute_leverages_Pii()
+                    # Compute trace approximation
+                    self._compute_trace_approximation_he()
 
-                self._collect_res() # Collect all results
+                # Collect all results
+                self._collect_res()
 
         end_time = time.time()
 
@@ -241,23 +362,24 @@ class FEEstimator:
         Generate some initial class attributes and results.
         '''
         self.logger.info('preparing the data')
+        # self.adata.sort_values(['i', to_list(self.adata.reference_dict['t'])[0]], inplace=True)
 
-        # if self.params['he']:
-        #     # Duplicate double moves
-        #     self.adata = pd.concat([self.adata, self.adata.loc[self.adata.loc[:, 'm'].to_numpy() == 2, :]], axis=0, ignore_index=True, copy=False)
-        #     self.adata.sort_values(['i', to_list(self.adata.reference_dict['t'])[0]], inplace=True)
-        self.adata.sort_values(['i', to_list(self.adata.reference_dict['t'])[0]], inplace=True)
-
-        self.nf = self.adata.n_firms() # Number of firms
-        self.nw = self.adata.n_workers() # Number of workers
-        self.nn = len(self.adata) # Number of observations
+        # Number of firms
+        self.nf = self.adata.n_firms()
+        # Number of workers
+        self.nw = self.adata.n_workers()
+        # Number of observations
+        self.nn = len(self.adata)
         self.logger.info('data firms={} workers={} observations={}'.format(self.nf, self.nw, self.nn))
 
         self.res['n_firms'] = self.nf
         self.res['n_workers'] = self.nw
-        self.res['n_movers'] = self.adata.loc[self.adata['m'].to_numpy() > 0, 'i'].nunique()
+        self.res['n_movers'] = self.adata.loc[self.adata['m'].to_numpy() > 0, :].n_workers()
         self.res['n_stayers'] = self.res['n_workers'] - self.res['n_movers']
         self.logger.info('data movers={} stayers={}'.format(self.res['n_movers'], self.res['n_stayers']))
+
+        # Generate 'worker_m' indicating whether a worker is a mover or a stayer
+        self.adata.loc[:, 'worker_m'] = (self.adata.groupby('i')['m'].transform('max') > 0).astype(int, copy=False)
 
         # # Prepare 'cs' column (0 if observation is first for a worker, 1 if intermediate, 2 if last for a worker)
         # worker_first_obs = (self.adata['i'].to_numpy() != np.roll(self.adata['i'].to_numpy(), 1))
@@ -273,11 +395,14 @@ class FEEstimator:
         '''
         Generate J, W, and M matrices.
         '''
-        # Matrices for the cross-section
-        J = csc_matrix((np.ones(self.nn), (self.adata.index.to_numpy(), self.adata['j'].to_numpy())), shape=(self.nn, self.nf)) # Firms
-        J = J[:, range(self.nf - 1)]  # Normalize one firm to 0
+        ### Matrices for the cross-section
+        ## Firms
+        J = csc_matrix((np.ones(self.nn), (self.adata.index.to_numpy(), self.adata['j'].to_numpy())), shape=(self.nn, self.nf))
+        # Normalize one firm to 0
+        J = J[:, range(self.nf - 1)]
         self.J = J
-        W = csc_matrix((np.ones(self.nn), (self.adata.index.to_numpy(), self.adata['i'].to_numpy())), shape=(self.nn, self.nw)) # Workers
+        ## Workers
+        W = csc_matrix((np.ones(self.nn), (self.adata.index.to_numpy(), self.adata['i'].to_numpy())), shape=(self.nn, self.nw))
         self.W = W
         if self.params['weighted'] and ('w' in self.adata.columns):
             # Diagonal weight matrix
@@ -301,89 +426,17 @@ class FEEstimator:
         # Save time variable
         self.last_invert_time = 0
 
-    def __weighted_quantile(self, values, quantiles, sample_weight=None, values_sorted=False, old_style=False): # FIXME was formerly a function outside the class
-        '''
-        Very close to numpy.percentile, but supports weights.
-        NOTE: quantiles should be in [0, 1]!
-
-        Arguments:
-            values (NumPy Array): data
-            quantiles (array-like): quantiles to compute
-            sample_weight (array-like): weighting, must be same length as `array` (is `array` supposed to be quantiles?)
-            values_sorted (bool): if True, skips sorting of initial array
-            old_style (bool): if True, changes output to be consistent with numpy.percentile
-
-        Returns:
-            (NumPy Array): computed quantiles
-        '''
-        values = np.array(values)
-        quantiles = np.array(quantiles)
-        if sample_weight is None:
-            sample_weight = np.ones(len(values))
-        sample_weight = np.array(sample_weight)
-        assert np.all(quantiles >= 0) and np.all(quantiles <= 1), \
-            'quantiles should be in [0, 1]'
-
-        if not values_sorted:
-            sorter = np.argsort(values)
-            values = values[sorter]
-            sample_weight = sample_weight[sorter]
-
-        weighted_quantiles = np.cumsum(sample_weight) - 0.5 * sample_weight
-        if old_style:
-            # To be convenient with numpy.percentile
-            weighted_quantiles -= weighted_quantiles[0]
-            weighted_quantiles /= weighted_quantiles[-1]
-        else:
-            weighted_quantiles /= np.sum(sample_weight)
-
-        return np.interp(quantiles, weighted_quantiles, values)
-
-    def __weighted_var(self, v, w): # FIXME was formerly a function outside the class
-        '''
-        Compute weighted variance.
-
-        Arguments:
-            v: vector to weight
-            w: weights
-
-        Returns:
-            v0: weighted variance
-        '''
-        m0 = np.sum(w * v) / np.sum(w)
-        v0 = np.sum(w * (v - m0) ** 2) / np.sum(w)
-
-        return v0
-
-    def __weighted_cov(self, v1, v2, w): # FIXME was formerly a function outside the class
-        '''
-        Compute weighted covariance.
-
-        Arguments:
-            v1: vector to weight
-            v2: vector to weight
-            w: weights
-
-        Returns:
-            v0: weighted variance
-        '''
-        m1 = np.sum(w * v1) / np.sum(w)
-        m2 = np.sum(w * v2) / np.sum(w)
-        v0 = np.sum(w * (v1 - m1) * (v2 - m2)) / np.sum(w)
-
-        return v0
-
     def _compute_early_stats(self):
         '''
         Compute some early statistics.
         '''
-        fdata = self.adata.groupby('j').agg({'m': 'sum', 'y': 'mean', 'i': 'count'})
-        fm, fy, fi = fdata['m'].to_numpy(), fdata['y'].to_numpy(), fdata['i'].to_numpy()
+        fdata = self.adata.groupby('j').agg({'worker_m': 'sum', 'y': 'mean', 'i': 'count'})
+        fm, fy, fi = fdata.loc[:, 'worker_m'].to_numpy(), fdata.loc[:, 'y'].to_numpy(), fdata.loc[:, 'i'].to_numpy()
         ls = np.linspace(0, 1, 11)
-        self.res['mover_quantiles'] = self.__weighted_quantile(fm, ls, fi).tolist()
-        self.res['size_quantiles'] = self.__weighted_quantile(fi, ls, fi).tolist()
-        self.res['between_firm_var'] = self.__weighted_var(fy, fi)
-        self.res['var_y'] = self.__weighted_var(self.adata['y'].to_numpy(), self.Dp)
+        self.res['mover_quantiles'] = _weighted_quantile(fm, ls, fi).tolist()
+        self.res['size_quantiles'] = _weighted_quantile(fi, ls, fi).tolist()
+        self.res['between_firm_var'] = _weighted_var(fy, fi)
+        self.res['var_y'] = _weighted_var(self.adata.loc[:, 'y'].to_numpy(), self.Dp)
         self.logger.info('total variance: {:0.4f}'.format(self.res['var_y']))
 
         # extract woodcock moments using sdata and jdata
@@ -418,28 +471,28 @@ class FEEstimator:
             # self.adata['Jq'] = 1
             # self.adata['Wq'] = 1
             # Rows for csc_matrix
-            self.adata['Jq_row'] = np.arange(self.nn) # self.adata['Jq'].cumsum() - 1
-            self.adata['Wq_row'] = np.arange(self.nn) # self.adata['Wq'].cumsum() - 1
+            self.adata.loc[:, 'Jq_row'] = np.arange(self.nn) # self.adata['Jq'].cumsum() - 1
+            self.adata.loc[:, 'Wq_row'] = np.arange(self.nn) # self.adata['Wq'].cumsum() - 1
             # Columns for csc_matrix
-            self.adata['Jq_col'] = self.adata['j']
-            self.adata['Wq_col'] = self.adata['i']
+            self.adata.loc[:, 'Jq_col'] = self.adata.loc[:, 'j']
+            self.adata.loc[:, 'Wq_col'] = self.adata.loc[:, 'i']
 
         elif self.params['Q'] in ['cov(psi_t, psi_{t+1})', 'cov(psi_i, psi_j)']:
             warnings.warn('These Q options are not yet implemented.')
 
         # elif self.params['Q'] == 'cov(psi_t, psi_{t+1})':
-        #     self.adata['Jq'] = (self.adata['m'] > 0) & ((self.adata['cs'] == 0) | (self.adata['cs'] == 1))
+        #     self.adata['Jq'] = (self.adata['worker_m'] > 0) & ((self.adata['cs'] == 0) | (self.adata['cs'] == 1))
         #     self.adata['Jq_row'] = self.adata['Jq'].cumsum() - 1
         #     self.adata['Jq_col'] = self.adata['j']
-        #     self.adata['Wq'] = (self.adata['m'] > 0) & ((self.adata['cs'] == 1) | (self.adata['cs'] == 2))
+        #     self.adata['Wq'] = (self.adata['worker_m'] > 0) & ((self.adata['cs'] == 1) | (self.adata['cs'] == 2))
         #     self.adata['Wq_row'] = self.adata['Wq'].cumsum() - 1
         #     self.adata['Wq_col'] = self.adata['j']
 
         # elif self.params['Q'] == 'cov(psi_i, psi_j)': # Code doesn't work
-        #     self.adata['Jq'] = (self.adata['m'] > 0) & (self.adata['cs'] == 1)
+        #     self.adata['Jq'] = (self.adata['worker_m'] > 0) & (self.adata['cs'] == 1)
         #     self.adata['Jq_row'] = self.adata['j1']
         #     self.adata['Jq_col'] = self.adata['j1']
-        #     self.adata['Wq'] = (self.adata['m'] > 0) & (self.adata['cs'] == 0)
+        #     self.adata['Wq'] = (self.adata['worker_m'] > 0) & (self.adata['cs'] == 0)
         #     # Recall j1, j2 swapped for m==1 and cs==0
         #     self.adata['Wq_row'] = self.adata['j2']
         #     self.adata['Wq_col'] = self.adata['j1']
@@ -479,7 +532,7 @@ class FEEstimator:
         '''
         Solve FE model.
         '''
-        self.Y = self.adata['y'].to_numpy()
+        self.Y = self.adata.loc[:, 'y'].to_numpy()
 
         # try to pickle the object to see its size
         # self.save('tmp.pkl') # FIXME should we delete these 2 lines?
@@ -498,16 +551,9 @@ class FEEstimator:
         fe_rsq = 1 - np.power(self.E, 2).mean() / np.power(self.Y, 2).mean()
         self.logger.info('fixed effect R-square {:2.4f}'.format(fe_rsq))
 
-        # FIXME This section moved into compute_trace_approximation_fe()
-        # # FIXME Need to figure out when this section can be run
-        # self.tot_var = np.var(self.Y)
-        # self.var_fe = np.var(self.Jq * self.psi_hat)
-        # self.cov_fe = np.cov(self.Jq * self.psi_hat, self.Wq * self.alpha_hat)[0][1]
-        # self.logger.info('[fe] var_psi={:2.4f} cov={:2.4f} tot={:2.4f}'.format(self.var_fe, self.cov_fe, self.tot_var))
-        # # FIXME Section ends here
-
-        self.var_e_pi = np.var(self.E) # Plug-in variance
-        if 'w' in self.adata.columns:
+        # Plug-in variance
+        self.var_e_pi = np.var(self.E)
+        if self.params['weighted'] and ('w' in self.adata.columns):
             self._compute_trace_approximation_sigma_2()
             trace_approximation = np.mean(self.tr_sigma_ho_all)
             self.var_e = (self.nn * self.var_e_pi) / (np.sum(1 / self.Dp.data[0]) - trace_approximation)
@@ -527,11 +573,12 @@ class FEEstimator:
         self.tot_var = np.var(self.Y)
         if 'w' in self.adata.columns:
             self.logger.info('[weighted fe]')
-            self.var_fe = self.__weighted_var(Jq * self.psi_hat, self.Dp)
-            self.cov_fe = self.__weighted_cov(Jq * self.psi_hat, Wq * self.alpha_hat, self.Dp)
+            self.var_fe = _weighted_var(Jq * self.psi_hat, self.Dp)
+            self.cov_fe = _weighted_cov(Jq * self.psi_hat, Wq * self.alpha_hat, self.Dp)
         else:
             self.logger.info('[fe]')
-            vcv = np.cov(Jq * self.psi_hat, Wq * self.alpha_hat, ddof=0) # Set ddof=0 is necessary, otherwise takes 1 / (N - 1) by default instead of 1 / N
+            # Set ddof=0 is necessary, otherwise takes 1 / (N - 1) by default instead of 1 / N
+            vcv = np.cov(Jq * self.psi_hat, Wq * self.alpha_hat, ddof=0)
             self.var_fe = vcv[0, 0]
             self.cov_fe = vcv[0, 1]
         self.logger.info('var_psi={:2.4f}'.format(self.var_fe))
@@ -750,9 +797,9 @@ class FEEstimator:
         self.res['tot_var'] = self.tot_var
         self.res['eps_var_ho'] = self.var_e
         self.res['eps_var_fe'] = np.var(self.E)
-        # self.res['var_y'] = self.__weighted_var(self.Yq, self.Dp)
+        # self.res['var_y'] = _weighted_var(self.Yq, self.Dp)
 
-        # FE results
+        ## FE results ##
         # Plug-in variance
         self.res['var_fe'] = self.var_fe
         self.logger.info('[ho] VAR fe={:2.4f}'.format(self.var_fe))
@@ -760,7 +807,7 @@ class FEEstimator:
         self.logger.info('[ho] COV fe={:2.4f}'.format(self.cov_fe))
         self.res['cov_fe'] = self.cov_fe
 
-        # Homoskedastic results
+        ## Homoskedastic results ##
         # Trace approximation: variance
         self.res['tr_var_ho'] = np.mean(self.tr_var_ho_all)
         self.logger.info('[ho] VAR tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_var_ho'], np.std(self.tr_var_ho_all)))
@@ -777,11 +824,13 @@ class FEEstimator:
         for res in ['var_y', 'var_fe', 'cov_fe', 'var_ho', 'cov_ho']:
             self.summary[res] = self.res[res]
 
-        # Heteroskedastic results
+        ## Heteroskedastic results ##
         if self.compute_he:
-            self.res['eps_var_he'] = self.res['eps_var_he'] # self.Sii.mean() # Already computed, this just reorders the dictionary
-            self.res['min_lev'] = self.res['min_lev'] # self.adata.loc[self.adata['m'] > 0, 'Pii'].min() # FIXME was formerly self.adata.query('m > 0').Pii.min() # Already computed, this just reorders the dictionary
-            self.res['max_lev'] = self.res['max_lev'] # self.adata.query('m > 0').Pii.max() # Already computed, this just reorders the dictionary
+            ## Already computed, this just reorders the dictionary
+            self.res['eps_var_he'] = self.res['eps_var_he']
+            self.res['min_lev'] = self.res['min_lev']
+            self.res['max_lev'] = self.res['max_lev']
+            ## New results
             self.res['tr_var_he'] = np.mean(self.tr_var_he_all)
             self.res['tr_cov_he'] = np.mean(self.tr_cov_he_all)
             self.res['tr_var_ho_sd'] = np.std(self.tr_var_ho_all)
@@ -816,90 +865,84 @@ class FEEstimator:
         '''
         Add the estimated psi_hats and alpha_hats to the dataframe.
         '''
-        j_vals = np.arange(self.nf) # np.arange(self.adata.j1.max()) + 1
-        i_vals = np.arange(self.nw) # np.arange(self.adata.i.max()) + 1
-        psi_hat_dict = dict(zip(j_vals, np.concatenate([self.psi_hat, np.array([0])]))) # Add 0 for normalized firm
+        j_vals = np.arange(self.nf)
+        i_vals = np.arange(self.nw)
+
+        # Add 0 for normalized firm
+        psi_hat_dict = dict(zip(j_vals, np.concatenate([self.psi_hat, np.array([0])])))
         alpha_hat_dict = dict(zip(i_vals, self.alpha_hat))
 
         # Attach columns
-        self.adata['psi_hat'] = self.adata['j'].map(psi_hat_dict)
-        self.adata['alpha_hat'] = self.adata['i'].map(alpha_hat_dict)
+        self.adata.loc[:, 'psi_hat'] = self.adata.loc[:, 'j'].map(psi_hat_dict)
+        self.adata.loc[:, 'alpha_hat'] = self.adata.loc[:, 'i'].map(alpha_hat_dict)
 
     def __solve(self, Y, Dp1=True, Dp2=True):
         '''
-        Compute (A'D_1A)^-1 A'D_2Y, the least squares estimate of A [psi_hat, alpha_hat] = Y.
+        Compute (A' * Dp1 * A)^{-1} * A' * Dp2 * Y, the least squares estimate of Y = A * [psi_hat' alpha_hat']', where A = [J W] (J is firm indicators and W is worker indicators) and Dp gives weights.
 
         Arguments:
-            Y (Pandas DataFrame): labor data
-            Dp1 (bool): include first weight
-            Dp2 (bool or str): include second weight, if Dp2='sqrt' then use square root of weights
+            Y (NumPy Array): wage data
+            Dp1 (bool): if True, include first weight
+            Dp2 (bool or str): if True, include second weight; if 'sqrt', use square root of weights
 
         Returns:
-            psi_hat: estimated firm fixed effects @ FIXME correct datatype
-            alpha_hat: estimated worker fixed effects @ FIXME correct datatype
+            (tuple of CSC Matrices): (estimated firm fixed effects, estimated worker fixed effects)
         '''
-        J_transpose_Y, W_transpose_Y = self.__mult_Atranspose(Y, Dp2) # This gives A'Y
+        # This gives A' * Dp2 * Y
+        J_transpose_Y, W_transpose_Y = self.__mult_Atranspose(Y, Dp2)
+        # This gives (A' * Dp1 * A)^{-1} * A' * Dp2 * Y
         psi_hat, alpha_hat = self.__mult_AAinv(J_transpose_Y, W_transpose_Y, Dp1)
 
         return psi_hat, alpha_hat
 
     def __mult_A(self, psi, alpha, weighted=False):
         '''
-        Multiplies A = [J W] stored in the object by psi and alpha (used, for example, to compute estimated outcomes and sample errors).
+        Computes Dp * A * [psi' alpha']', where A = [J W] (J is firm indicators and W is worker indicators) and Dp gives weights (used, for example, to compute estimated outcomes and sample errors).
 
         Arguments:
-            psi: firm fixed effects @ FIXME correct datatype
-            alpha: worker fixed effects @ FIXME correct datatype
-            weighted (bool or str): include weights, if weighted='sqrt' then use square root of weights
+            psi (NumPy Array): firm part to multiply
+            alpha (NumPy Array): worker part to multiply
+            weighted (bool or str): if True, include weights; if 'sqrt', use square root of weights
 
         Returns:
-            J_psi + W_alpha (CSC Matrix): firms * firm fixed effects + workers * worker fixed effects
+            (CSC Matrix): result of Dp * A * [psi' alpha']'
         '''
-        # J_psi = self.J * psi
-        # W_alpha = self.W * alpha
-
         if weighted:
             if weighted == 'sqrt':
                 return self.Dp_sqrt @ (self.J @ psi + self.W @ alpha)
             return self.Dp @ (self.J @ psi + self.W @ alpha)
-        return self.J @ psi + self.W @ alpha # J_psi + W_alpha
+        return self.J @ psi + self.W @ alpha
 
     def __mult_Atranspose(self, v, weighted=True):
         '''
-        Multiplies the transpose of A = [J W] stored in the object by v.
+        Computes A' * Dp * v, where A = [J W] (J is firm indicators and W is worker indicators) and Dp gives weights.
 
         Arguments:
-            v: what to multiply by @ FIXME correct datatype
-            weighted (bool or str): include weights, if weighted='sqrt' then use square root of weights
+            v (NumPy Array): what to multiply by
+            weighted (bool or str): if True, include weights; if 'sqrt', use square root of weights
 
         Returns:
-            J_transpose_V (CSC Matrix): firms * v
-            W_transpose_V (CSC Matrix): workers * v
+            (tuple of CSC Matrices): (firm part of result, worker part of result)
         '''
         if weighted:
             if weighted == 'sqrt':
                 return self.J.T @ self.Dp_sqrt @ v, self.W.T @ self.Dp_sqrt @ v
             return self.J.T @ self.Dp @ v, self.W.T @ self.Dp @ v
 
-        return self.J.T @ v, self.W.T @ v # J_transpose_V, W_transpose_V
+        return self.J.T @ v, self.W.T @ v
 
     def __mult_AAinv(self, psi, alpha, weighted=True):
         '''
-        Multiplies gamma = [psi alpha] by (A'A)^(-1) where A = [J W] stored in the object (i.e. takes (A'DA)^{-1}gamma).
+        Computes (A' * Dp * A)^{-1} * [psi' alpha']', where A = [J W] (J is firm indicators and W is worker indicators) and Dp gives weights.
 
         Arguments:
-            psi: firm fixed effects @ FIXME correct datatype
-            alpha: worker fixed effects @ FIXME correct datatype
-            weighted (bool): include weights
+            psi (NumPy Array): firm part to multiply
+            alpha (NumPy Array): worker part to multiply
+            weighted (bool): if True, include weights
 
         Returns:
-            psi_out: estimated firm fixed effects @ FIXME correct datatype
-            alpha_out: estimated worker fixed effects @ FIXME correct datatype
+            (tuple of NumPy Arrays): (firm part of result, worker part of result)
         '''
-        # inter1 = self.ml.solve( psi , tol=1e-10 )
-        # inter2 = self.ml.solve(  , tol=1e-10 )
-        # psi_out = inter1 - inter2
-
         start = timer()
         if weighted:
             psi_out = self.ml.solve(psi - self.J.T * (self.Dp * (self.W * (self.Dwinv * alpha))), tol=1e-10)
@@ -916,26 +959,23 @@ class FEEstimator:
 
     def __proj(self, Y, Dp0=False, Dp1=True, Dp2=True):
         '''
+        Compute Dp0 * A * (A' * Dp1 * A)^{-1} * A' * Dp2 * Y, where A = [J W] (J is firm indicators and W is worker indicators) and Dp gives weights (essentially projects Y onto A space).
         Solve Y, then project onto X space of data stored in the object. Essentially solves A(A'A)^{-1}A'Y
 
-        Details:
-            Solve computes (A'D_1A)^-1 A'D_2Y, the least squares estimate of A [psi_hat \\ alpha_hat] = Y.
-            __mult_A computes A @ gamma = [J & W] @ [psi \\ alpha]
-
         Arguments:
-            y (Pandas DataFrame): labor data
-            Dp0 (bool or str): include weights in __mult_A, if Dp0='sqrt' then use square root of weights
-            Dp1 (bool): include first weight in __solve()
-            Dp2 (bool or str): include second weight in __solve(), if Dp2='sqrt' then use square root of weights
+            Y (NumPy Array): wage data
+            Dp0 (bool or str): if True, include weights in __mult_A(); if 'sqrt', use square root of weights
+            Dp1 (bool): if True, include first weight in __solve()
+            Dp2 (bool or str): if True, include second weight in __solve(); if 'sqrt', use square root of weights
 
         Returns:
-            Projection of psi, alpha solved from Y onto X space
+            (CSC Matrix): result of Dp0 * A * (A' * Dp1 * A)^{-1} * A' * Dp2 * Y (essentially the projection of Y onto A space)
         '''
         return self.__mult_A(*self.__solve(Y, Dp1, Dp2), Dp0)
 
     def __construct_M_inv(self):
         '''
-        Construct (A'D_pA)^{-1} block matrix components where M^{-1} is computed explicitly.
+        Construct (A' * Dp * A)^{-1} block matrix components where M^{-1} is computed explicitly.
         '''
         # Define variables
         J = self.J
@@ -952,7 +992,7 @@ class FEEstimator:
 
     def __construct_AAinv_components(self):
         '''
-        Construct (A'D_pA)^{-1} block matrix components. Use this for computing a small number of individual Pii.
+        Construct (A' * Dp * A)^{-1} block matrix components. Use this for computing a small number of individual Pii.
         '''
         # Define variables
         J = self.J
@@ -979,13 +1019,13 @@ class FEEstimator:
             (float): estimate for Pii
         '''
         if self.AA_inv_A is not None:
-            # Explicitly compute M
+            # M^{-1} has been explicitly computed
             A = DpJ_i @ self.AA_inv_A @ DpJ_i
             B = DpJ_i @ self.AA_inv_B @ DpW_i
             C = DpW_i @ self.AA_inv_C @ DpJ_i
             D = DpW_i @ self.AA_inv_D @ DpW_i
         else:
-            # Don't explicitly compute M
+            # M^{-1} has not been explicitly computed
             M_DpJ_i = self.ml.solve(DpJ_i)
             M_B = self.ml.solve(self.AA_inv_B @ DpW_i)
 
@@ -1004,10 +1044,10 @@ class FEEstimator:
         Pii = np.zeros(self.nn)
         # Indices to compute Pii analytically
         analytical_indices = []
-        m = (self.adata.loc[:, 'm'].to_numpy() > 0)
+        worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
 
         if self.params['he_analytical']:
-            analytical_indices = self.adata.loc[m, :].index
+            analytical_indices = self.adata.loc[worker_m, :].index
             self.__construct_M_inv()
 
         else:
@@ -1026,7 +1066,7 @@ class FEEstimator:
             elif self.ncore > 1:
                 # FIXME get rid of code duplication with this and the else statement
                 self.logger.info('[he] starting heteroskedastic correction p2={}, using {} cores, batch size {}'.format(self.ndraw_pii, self.ncore, self.params['batch']))
-                for batch_i in range(self.params['ndraw_pii_nbatches']):
+                for batch_i in range(self.params['lev_nbatches']):
                     Pii_i = np.zeros(self.nn)
                     set_start_method('spawn')
                     with Pool(processes=self.ncore) as pool:
@@ -1039,19 +1079,19 @@ class FEEstimator:
                     Pii = (batch_i * Pii + Pii_i) / (batch_i + 1)
 
                     # Compute number of bad draws
-                    n_bad_draws = sum(m & (Pii >= self.params['ndraw_pii_threshold_pii']))
+                    n_bad_draws = sum(worker_m & (Pii >= self.params['lev_threshold_pii']))
 
                     # If few enough bad draws, compute them analytically
-                    if n_bad_draws < self.params['ndraw_pii_threshold_obs']:
-                        leverage_warning = 'Threshold for max Pii is {}, with {} draws per batch and a maximum of {} batches being drawn. There are {} observation(s) with Pii above this threshold. These will be recomputed analytically. It took {} batch(es) to get below the threshold of {} bad observations.'.format(self.params['ndraw_pii_threshold_pii'], self.ndraw_pii, self.params['ndraw_pii_nbatches'], n_bad_draws, batch_i + 1, self.params['ndraw_pii_threshold_obs'])
+                    if n_bad_draws < self.params['lev_threshold_obs']:
+                        leverage_warning = 'Threshold for max Pii is {}, with {} draw(s) per batch and a maximum of {} batch(es) being drawn. There is/are {} observation(s) with Pii above this threshold. These will be recomputed analytically. It took {} batch(es) to get below the threshold of {} bad observations.'.format(self.params['lev_threshold_pii'], self.ndraw_pii, self.params['lev_nbatches'], n_bad_draws, batch_i + 1, self.params['lev_threshold_obs'])
                         warnings.warn(leverage_warning)
                         break
-                    elif batch_i == self.params['ndraw_pii_nbatches'] - 1:
-                        leverage_warning = 'Threshold for max Pii is {}, with {} draws per batch and a maximum of {} batches being drawn. After exhausting the maximum number of batches, there are still {} draws with Pii above this threshold. These will be recomputed analytically.'.format(self.params['ndraw_pii_threshold_pii'], self.ndraw_pii, self.params['ndraw_pii_nbatches'], n_bad_draws)
+                    elif batch_i == self.params['lev_nbatches'] - 1:
+                        leverage_warning = 'Threshold for max Pii is {}, with {} draw(s) per batch and a maximum of {} batch(es) being drawn. After exhausting the maximum number of batches, there is/are still {} draw(s) with Pii above this threshold. These will be recomputed analytically.'.format(self.params['lev_threshold_pii'], self.ndraw_pii, self.params['lev_nbatches'], n_bad_draws)
                         warnings.warn(leverage_warning)
 
             else:
-                for batch_i in range(self.params['ndraw_pii_nbatches']):
+                for batch_i in range(self.params['lev_nbatches']):
                     Pii_i = np.zeros(self.nn)
                     Pii_all = list(itertools.starmap(self._leverage_approx, [[self.params['batch']] for _ in range(self.ndraw_pii // self.params['batch'])]))
 
@@ -1062,19 +1102,19 @@ class FEEstimator:
                     Pii = (batch_i * Pii + Pii_i) / (batch_i + 1)
 
                     # Compute number of bad draws
-                    n_bad_draws = sum(m & (Pii >= self.params['ndraw_pii_threshold_pii']))
+                    n_bad_draws = sum(worker_m & (Pii >= self.params['lev_threshold_pii']))
 
                     # If few enough bad draws, compute them analytically
-                    if n_bad_draws < self.params['ndraw_pii_threshold_obs']:
-                        leverage_warning = 'Threshold for max Pii is {}, with {} draws per batch and a maximum of {} batches being drawn. There are {} observation(s) with Pii above this threshold. These will be recomputed analytically. It took {} batch(es) to get below the threshold of {} bad observations.'.format(self.params['ndraw_pii_threshold_pii'], self.ndraw_pii, self.params['ndraw_pii_nbatches'], n_bad_draws, batch_i + 1, self.params['ndraw_pii_threshold_obs'])
+                    if n_bad_draws < self.params['lev_threshold_obs']:
+                        leverage_warning = 'Threshold for max Pii is {}, with {} draw(s) per batch and a maximum of {} batch(es) being drawn. There is/are {} observation(s) with Pii above this threshold. These will be recomputed analytically. It took {} batch(es) to get below the threshold of {} bad observations.'.format(self.params['lev_threshold_pii'], self.ndraw_pii, self.params['lev_nbatches'], n_bad_draws, batch_i + 1, self.params['lev_threshold_obs'])
                         warnings.warn(leverage_warning)
                         break
-                    elif batch_i == self.params['ndraw_pii_nbatches'] - 1:
-                        leverage_warning = 'Threshold for max Pii is {}, with {} draws per batch and a maximum of {} batches being drawn. After exhausting the maximum number of batches, there are still {} draws with Pii above this threshold. These will be recomputed analytically.'.format(self.params['ndraw_pii_threshold_pii'], self.ndraw_pii, self.params['ndraw_pii_nbatches'], n_bad_draws)
+                    elif batch_i == self.params['lev_nbatches'] - 1:
+                        leverage_warning = 'Threshold for max Pii is {}, with {} draw(s) per batch and a maximum of {} batch(es) being drawn. After exhausting the maximum number of batches, there is/are still {} draw(s) with Pii above this threshold. These will be recomputed analytically.'.format(self.params['lev_threshold_pii'], self.ndraw_pii, self.params['lev_nbatches'], n_bad_draws)
                         warnings.warn(leverage_warning)
 
             # Compute Pii analytically for observations with Pii approximation above threshold value
-            analytical_indices = self.adata.loc[m & (Pii >= self.params['ndraw_pii_threshold_pii']), :].index
+            analytical_indices = self.adata.loc[worker_m & (Pii >= self.params['lev_threshold_pii']), :].index
             if len(analytical_indices) > 0:
                 self.__construct_AAinv_components()
 
@@ -1089,39 +1129,41 @@ class FEEstimator:
                 DpW_i = DpW[i, :]
                 Pii[i] = self.__compute_Pii(DpJ_i, DpW_i)
 
-        I = 1.0 * (self.adata['m'] > 0) # FIXME was formerly self.adata.eval('m == 1')
-        self.res['min_lev'] = (I * Pii).min()
-        self.res['max_lev'] = (I * Pii).max()
+        self.res['min_lev'] = Pii[worker_m].min()
+        self.res['max_lev'] = Pii[worker_m].max()
 
         if self.res['max_lev'] >= 1:
-            leverage_warning = 'Max P_ii is {} which is >= 1. This should not happen - increase your value of ndraw_pii until this warning is no longer raised (ndraw_pii is currently set to {}).'.format(self.res['max_lev'], self.ndraw_pii)
+            leverage_warning = "Max P_ii is {} which is >= 1. This should not happen - increase the value of 'lev_batchsize' or 'lev_nbatches' until this warning is no longer raised ('lev_batchsize' is currently set to {} and 'lev_nbatches' is currently set to {}).".format(self.res['max_lev'], self.ndraw_pii, self.params['lev_nbatches'])
             warnings.warn(leverage_warning)
             self.logger.info(leverage_warning)
             # self.adata['Pii'] = Pii
             # self.adata.to_feather('pii_data.ftr')
+            # raise NotImplementedError
 
-        # # Attach the computed Pii to the dataframe
-        # self.adata['Pii'] = Pii
         self.logger.info('[he] Leverage range {:2.4f} to {:2.4f}'.format(self.res['min_lev'], self.res['max_lev']))
         # print('Observation with max leverage:', self.adata[self.adata['Pii'] == self.res['max_lev']])
 
-        # Give stayers the variance estimate at the firm level
-        self.adata['Sii'] = self.Y * self.E / (1 - Pii)
-        S_j = self.adata[self.adata['m'] > 0].rename({'Sii': 'Sii_j'}).groupby('j')['Sii_j'].agg('mean') # FIXME was formerly pd.DataFrame(self.adata).query('m == 1').rename(columns={'Sii': 'Sii_j'}).groupby('j')['Sii_j'].agg('mean')
-
-        Sii_j = pd.merge(self.adata['j'], S_j, on='j')['Sii_j']
-        self.adata['Sii'] = np.where(self.adata['m'] > 0, self.adata['Sii'], Sii_j)
-        self.Sii = self.adata['Sii']
+        ## Give stayers the variance estimate at the firm level ##
+        # Temporarily set Pii = 0 for stayers to avoid divide-by-zero warning
+        Pii[~worker_m] = 0
+        # Compute Sii for movers
+        self.adata.loc[:, 'Sii'] = self.Y * self.E / (1 - Pii)
+        # Link firms to average Sii of movers
+        S_j = self.adata.loc[worker_m, :].groupby('j')['Sii'].mean().to_dict()
+        Sii_j = self.adata.loc[:, 'j'].map(S_j)
+        self.Sii = np.where(worker_m, self.adata.loc[:, 'Sii'], Sii_j)
+        # No longer need Sii column
+        self.adata.drop('Sii', axis=1, inplace=True)
 
         self.res['eps_var_he'] = self.Sii.mean()
         self.logger.info('[he] variance of residuals in heteroskedastic case: {:2.4f}'.format(self.res['eps_var_he']))
 
     def _leverage_approx(self, ndraw_pii):
         '''
-        Compute an approximate leverage using ndraw_pii.
+        Draw Pii estimates for use in JL approximation of leverage.
 
         Arguments:
-            ndraw_pii (int): number of draws
+            ndraw_pii (int): number of Pii draws
 
         Returns:
             Pii (NumPy Array): Pii array
@@ -1131,7 +1173,7 @@ class FEEstimator:
         # Compute the different draws
         for _ in range(ndraw_pii):
             R2 = 2 * self.rng.binomial(1, 0.5, self.nn) - 1
-            Pii += 1 / ndraw_pii * np.power(self.__proj(R2, Dp0='sqrt', Dp2='sqrt'), 2.0) # np.power(self.__proj(R2, False, False, False), 2.0)
+            Pii += 1 / ndraw_pii * np.power(self.__proj(R2, Dp0='sqrt', Dp2='sqrt'), 2.0)
 
         self.logger.info('done with batch')
 
@@ -1139,8 +1181,8 @@ class FEEstimator:
 
     def _drop_cols(self):
         '''
-        Drop irrelevant columns (['Jq', 'Wq', 'Jq_row', 'Wq_row', 'Jq_col', 'Wq_col']).
+        Drop irrelevant columns (['worker_m', 'Jq', 'Wq', 'Jq_row', 'Wq_row', 'Jq_col', 'Wq_col']).
         '''
-        for col in ['Jq', 'Wq', 'Jq_row', 'Wq_row', 'Jq_col', 'Wq_col', 'Pii', 'Sii']:
+        for col in ['worker_m', 'Jq', 'Wq', 'Jq_row', 'Wq_row', 'Jq_col', 'Wq_col']:
             if col in self.adata.columns:
-                self.adata.drop(col, inplace=True)
+                self.adata.drop(col, axis=1, inplace=True)

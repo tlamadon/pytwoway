@@ -507,7 +507,7 @@ def test_fe_he_8():
 
 def test_fe_cre_1():
     # Use Monte Carlo to test CRE, FE, FE-HO, and FE-HE estimators.
-    twmc_net = tw.TwoWayMonteCarlo()
+    twmc_net = tw.MonteCarlo()
     twmc_net.twfe_monte_carlo(N=50, ncore=1) # Can't do multiprocessing with Travis
 
     # Extract results
