@@ -56,11 +56,11 @@ class Attrition:
     def __init__(self, bdf, attrition_params=attrition_params(), fe_params=tw.fe_params(), cre_params=tw.cre_params(), cluster_params=cluster_params(), clean_params=clean_params()):
         ##### Save attributes
         ## Basic attributes
-        # Data - this overwrites the id_reference_dict without altering the original dataframe, and without copying the underlying data
+        # Data
         if attrition_params['copy']:
-            self.bdf = type(bdf)(bdf.copy())._reset_id_reference_dict(include=True)
+            self.bdf = bdf.copy()
         else:
-            self.bdf = type(bdf)(bdf)._reset_id_reference_dict(include=True)
+            self.bdf = bdf
 
         # Type and subsets
         self.attrition_type = attrition_params['type_and_subsets'][0]
@@ -153,9 +153,10 @@ class Attrition:
         # logger_init(bdf) # This stops a weird logging bug that stops multiprocessing from working
         if wids_to_drop is not None:
             # Drop ids and clean data (NOTE: this does not require a copy)
-            bdf = self.subset_2.drop_ids('i', wids_to_drop, copy=False)._reset_attributes(columns_contig=True, connected=False, no_na=False, no_duplicates=False, i_t_unique=False).clean_data(clean_params)
+            bdf = self.subset_2.drop_ids('i', wids_to_drop, copy=False)._reset_attributes(columns_contig=True, connected=False, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False).clean_data(clean_params)
         else:
             bdf = self.subset_1
+            del self.subset_1
         ## Estimate FE model
         fe_estimator = tw.FEEstimator(bdf, fe_params)
         fe_estimator.fit()
@@ -177,10 +178,13 @@ class Attrition:
             rng (np.random.Generator): NumPy random number generator
 
         Returns:
-            wids_to_drop (set or None): if set, worker ids to drop from self.subset_2; if None, subset is saved as self.subset_1
+            (list of (set or None)): for each entry in list, if set, worker ids to drop from self.subset_2; if None, subset is saved as self.subset_1
         '''
         # Get subsets
         subsets = self.subsets
+
+        # Must reset id_reference_dict
+        self.bdf = self.bdf._reset_id_reference_dict(include=True)
 
         # Worker ids in base subset
         wids_init = self.bdf.loc[self.bdf.loc[:, 'm'].to_numpy() > 0, :].unique_ids('i')
@@ -193,15 +197,15 @@ class Attrition:
             # Draw wids to drop
             wid_drops_1 = set(rng.choice(wids_init, size=n_wid_drops_1, replace=False))
             try:
-                # NOTE: this requires the copy
-                self.subset_1 = self.bdf.drop_ids('i', wid_drops_1, drop_returners_to_stayers=clean_params['drop_returners_to_stayers'], is_sorted=True, reset_index=True, copy=True)._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False).clean_data(clean_params)
+                # NOTE: this requires the copy if there are returners
+                self.subset_1 = self.bdf.drop_ids('i', wid_drops_1, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, reset_index=True, copy=True)._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False).clean_data(clean_params)
                 break
             except ValueError as v:
                 if i == 9:
                     # Don't fail unless it's the last loop
                     raise ValueError(v)
 
-        yield None
+        ret_lst = [None]
 
         subset_1_orig_ids = self.subset_1.original_ids(copy=False)
 
@@ -215,8 +219,8 @@ class Attrition:
             valid_firms += list(subset_1_orig_ids[original_j].unique())
         valid_firms = set(valid_firms)
 
-        # Take all data for list of firms in smallest subset (NOTE: this requires the copy)
-        self.subset_2 = self.bdf.keep_ids('j', valid_firms, drop_returners_to_stayers=clean_params['drop_returners_to_stayers'], is_sorted=True, reset_index=True, copy=True)
+        # Take all data for list of firms in smallest subset (NOTE: this requires the copy if there are returners)
+        self.subset_2 = self.bdf.keep_ids('j', valid_firms, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, reset_index=True, copy=True)
         # Clear id_reference_dict since it is no longer necessary
         self.subset_2._reset_id_reference_dict()
 
@@ -238,7 +242,9 @@ class Attrition:
             else:
                 warnings.warn('Attrition plot does not change at iteration {}'.format(i))
 
-            yield wids_to_drop
+            ret_lst.append(wids_to_drop)
+
+        return ret_lst
 
     def _attrition_decreasing(self, clean_params=clean_params(), rng=np.random.default_rng()):
         '''
@@ -249,7 +255,7 @@ class Attrition:
             rng (np.random.Generator): NumPy random number generator
 
         Returns:
-            wids_to_drop (set): worker ids to drop from self.subset_2
+            (list): list of worker ids to drop from self.subset_2
         '''
         # bdf = bdf.copy()
         # bdf._reset_id_reference_dict() # Clear id_reference_dict since it is not necessary
@@ -266,6 +272,7 @@ class Attrition:
 
         relative_drop_fraction = 1 - self.subsets / (np.concatenate([[1], self.subsets]))[:-1]
         wids_to_drop = set()
+        ret_lst = []
 
         for i, drop_frac in enumerate(relative_drop_fraction):
             n_wid_draws_i = min(int(np.round(drop_frac * len(wids_movers), 1)), len(wids_movers))
@@ -276,9 +283,11 @@ class Attrition:
             else:
                 warnings.warn('Attrition plot does not change at iteration {}'.format(i))
 
-            yield wids_to_drop
+            ret_lst.append(wids_to_drop)
 
-            # subset_i = bdf.keep_ids('i', wids_movers + wids_stayers, copy=True)._reset_id_reference_dict()._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False)
+            # subset_i = bdf.keep_ids('i', wids_movers + wids_stayers, copy=True)._reset_id_reference_dict()._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False)
+
+        return ret_lst
 
     def _attrition_single(self, ncore=1, rng=np.random.default_rng()):
         '''
@@ -317,9 +326,10 @@ class Attrition:
                 clean_params = clean_params.copy()
                 clean_params['connectedness'] = None
 
-            def yield_attrition_params():
+            def _attrition_interior_params():
                 N = len(self.subsets)
                 seeds = rng.bit_generator._seed_seq.spawn(N)
+                ret_lst = []
                 for i, wids_to_drop in enumerate(attrition_iterator):
                     # Update seeds
                     rng_i = np.random.default_rng(seeds[i])
@@ -327,24 +337,25 @@ class Attrition:
                     sub_fe_params.update({'rng': rng_i})
                     sub_cre_params = self.cre_params.copy()
                     sub_cre_params.update({'rng': rng_i})
-                    # Yield results
-                    yield (wids_to_drop, sub_fe_params, sub_cre_params, cluster_params, clean_params)
+                    # Append parameters
+                    ret_lst.append((wids_to_drop, sub_fe_params, sub_cre_params, cluster_params, clean_params))
+                return ret_lst
 
             if ncore > 1:
                 # Estimate with multi-processing
                 with Pool(processes=ncore) as pool:
-                    V = pool.starmap(self._attrition_interior, yield_attrition_params())
+                    V = pool.starmap(self._attrition_interior, _attrition_interior_params())
                 for res in enumerate(V):
                     res_all[non_he_he]['fe'].append(res[1]['fe'])
                     res_all[non_he_he]['cre'].append(res[1]['cre'])
             else:
                 # Estimate without multi-processing
-                for attrition_subparams in yield_attrition_params():
+                for attrition_subparams in _attrition_interior_params():
                     res = self._attrition_interior(*attrition_subparams)
                     res_all[non_he_he]['fe'].append(res['fe'])
                     res_all[non_he_he]['cre'].append(res['cre'])
 
-            if self.attrition_type == 'increasing':
+            if (self.attrition_type == 'increasing') and (ncore > 1):
                 del self.subset_1
             del self.subset_2
 
@@ -369,7 +380,7 @@ class Attrition:
         res_he = {'fe': [], 'cre': []}
 
         # Take subset of firms that meet threshold
-        self.bdf = self.bdf.min_moves_frame(threshold=self.attrition_params['min_moves_threshold'], drop_returners_to_stayers=self.clean_params['drop_returners_to_stayers'], is_sorted=True, reset_index=True, copy=False)
+        self.bdf = self.bdf.min_moves_frame(threshold=self.attrition_params['min_moves_threshold'], drop_returns_to_stays=self.clean_params['drop_returns_to_stays'], is_sorted=True, reset_index=True, copy=False)
 
         if False: # ncore > 1:
             # Estimate with multi-processing
