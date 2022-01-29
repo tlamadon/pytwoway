@@ -435,6 +435,7 @@ class FEEstimator:
         ls = np.linspace(0, 1, 11)
         self.res['mover_quantiles'] = _weighted_quantile(fm, ls, fi).tolist()
         self.res['size_quantiles'] = _weighted_quantile(fi, ls, fi).tolist()
+        # self.res['movers_per_firm'] = self.adata.loc[self.adata.loc[:, 'm'] > 0, :].groupby('j')['i'].nunique().mean()
         self.res['between_firm_var'] = _weighted_var(fy, fi)
         self.res['var_y'] = _weighted_var(self.adata.loc[:, 'y'].to_numpy(), self.Dp)
         self.logger.info('total variance: {:0.4f}'.format(self.res['var_y']))
