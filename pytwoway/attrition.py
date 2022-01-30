@@ -437,7 +437,6 @@ class Attrition:
 
         # Take subset of firms that meet threshold of sufficiently many moves
         bdf = bdf.min_moves_frame(threshold=self.attrition_params['min_moves_threshold'], drop_returns_to_stays=self.clean_params['drop_returns_to_stays'], is_sorted=True, reset_index=True, copy=False)
-        print('length after drop:', len(bdf))
 
         if len(bdf) == 0:
             raise ValueError("Length of dataframe is 0 after dropping firms with too few moves, consider lowering 'min_moves_threshold' in attrition_params.")
