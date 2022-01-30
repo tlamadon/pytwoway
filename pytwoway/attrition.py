@@ -212,7 +212,7 @@ class Attrition:
         # Cluster
         bdf = bdf.cluster(cluster_params)
         # Estimate
-        cre_estimator = tw.CREEstimator(bdf.get_es(move_to_worker=False, is_sorted=True, copy=False).get_cs(), cre_params)
+        cre_estimator = tw.CREEstimator(bdf.get_es(move_to_worker=False, is_sorted=True, copy=False).get_cs(copy=False), cre_params)
         cre_estimator.fit(rng)
 
         return {'fe': fe_estimator.res, 'cre': cre_estimator.res}

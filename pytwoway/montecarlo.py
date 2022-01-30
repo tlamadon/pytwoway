@@ -116,7 +116,7 @@ class MonteCarlo:
         # Cluster
         sim_data = sim_data.cluster(self.cluster_params)
         # Estimate
-        cre_estimator = tw.CREEstimator(sim_data.get_es(move_to_worker=False, is_sorted=True).get_cs(), self.cre_params)
+        cre_estimator = tw.CREEstimator(sim_data.get_es(move_to_worker=False, is_sorted=True).get_cs(copy=False), self.cre_params)
         cre_estimator.fit(rng)
         # Save results
         cre_res = cre_estimator.res
