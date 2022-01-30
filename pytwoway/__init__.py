@@ -1,6 +1,5 @@
 
 from .util import jitter_scatter # melt, jitter_scatter
-from .twoway import TwoWay
 from .fe import fe_params, FEEstimator
 from .cre import cre_params, CREEstimator
 from .blm import BLMEstimator

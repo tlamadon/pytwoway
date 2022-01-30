@@ -10,28 +10,36 @@ import pytwoway as tw
 from tqdm import tqdm
 import warnings
 
+# NOTE: multiprocessing isn't compatible with lambda functions
+def _tands(a):
+    return ((a[0] == 'increasing') and (np.min(np.diff(np.array(a[0]))) < 0)) or ((a[0] == 'decreasing') and (np.min(np.diff(np.array(a[0]))) > 0))
+def _gteq0(a):
+    return a >= 0
+def _gteq1(a):
+    return a >= 1
+
 # Define default parameter dictionary
 _attrition_params_default = ParamsDict({
-    'type_and_subsets': (('increasing', np.linspace(0.1, 0.5, 5)), 'type', tuple,
+    'type_and_subsets': (('increasing', np.linspace(0.1, 0.5, 5)), 'type_constrained', (tuple, _tands),
         '''
             (default=('increasing', np.linspace(0.1, 0.5, 5))) How to attrition data (either 'increasing' or 'decreasing'), and subsets to consider (both are required because switching type requires swapping the order of the subsets).
-        '''),
-    'min_moves_threshold': (15, 'type', int,
+        ''', "type 'increasing' with subsets that are weakly increasing, or type 'decreasing' with subsets that are weakly decreasing"),
+    'min_moves_threshold': (15, 'type_constrained', (int, _gteq0),
         '''
             (default=15) Minimum number of moves required to keep a firm.
-        '''),
-    'n_subsample_draws': (5, 'type', int,
+        ''', '>= 0'),
+    'n_subsample_draws': (5, 'type_constrained', (int, _gteq1),
         '''
             (default=5) Maximum number of attempts to draw a valid subsample for attrition increasing (this is necessary because the random draw may ultimately drop too many observations).
-        '''),
-    'subsample_min_firms': (20, 'type', int,
+        ''', '>= 1'),
+    'subsample_min_firms': (20, 'type_constrained', (int, _gteq1),
         '''
             (default=20) Minimum number of firms necessary for a subsample to be considered valid. This should be at least the number of clusters used when computing the CRE estimator.
-        '''),
+        ''', '>= 1'),
     'copy': (False, 'type', bool,
         '''
             (default=False) If False, avoid copy.
-        ''')
+        ''', None)
 })
 
 def attrition_params(update_dict={}):
@@ -113,11 +121,11 @@ class Attrition:
         }
         self.attrition_fn = attrition_fn_dict[self.attrition_type]
 
-        # Make sure subsets are weakly increasing/decreasing
-        if (self.attrition_type == 'increasing') and (np.min(np.diff(np.array(self.subsets))) < 0):
-            raise NotImplementedError('Subsets must be weakly increasing for increasing subsets.')
-        elif (self.attrition_type == 'decreasing') and (np.min(np.diff(np.array(self.subsets))) > 0):
-            raise NotImplementedError('Subsets must be weakly decreasing for decreasing subsets.')
+        # # Make sure subsets are weakly increasing/decreasing # FIXME this check occurs inside the parameter dictionary
+        # if (self.attrition_type == 'increasing') and (np.min(np.diff(np.array(self.subsets))) < 0):
+        #     raise NotImplementedError('Subsets must be weakly increasing for increasing subsets.')
+        # elif (self.attrition_type == 'decreasing') and (np.min(np.diff(np.array(self.subsets))) > 0):
+        #     raise NotImplementedError('Subsets must be weakly decreasing for decreasing subsets.')
 
         # Prevent plotting until results exist
         self.attrition_res = False
@@ -176,7 +184,7 @@ class Attrition:
 
     # Cannot include two underscores because isn't compatible with starmap for multiprocessing
     # Source: https://stackoverflow.com/questions/27054963/python-attribute-error-object-has-no-attribute
-    def _attrition_interior(self, wids_to_drop, fe_params=tw.fe_params(), cre_params=tw.cre_params(), cluster_params=cluster_params(), clean_params=clean_params()):
+    def _attrition_interior(self, wids_to_drop, fe_params=tw.fe_params(), cre_params=tw.cre_params(), cluster_params=cluster_params(), clean_params=clean_params(), rng=np.random.default_rng(None)):
         '''
         Estimate all parameters of interest. This is the interior function to attrition_single.
 
@@ -186,6 +194,7 @@ class Attrition:
             cre_params (ParamsDict): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters.
             cluster_params (ParamsDict): dictionary of parameters for clustering in CRE estimation. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters.
             clean_params (ParamsDict): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters.
+            rng (np.random.Generator): NumPy random number generator. This overrides the random number generators for FE and CRE.
 
         Returns:
             (dict): {'fe': FE results, 'cre': CRE results}
@@ -198,13 +207,13 @@ class Attrition:
             bdf = wids_to_drop
         ## Estimate FE model
         fe_estimator = tw.FEEstimator(bdf, fe_params)
-        fe_estimator.fit()
+        fe_estimator.fit(rng)
         ## Estimate CRE model
         # Cluster
         bdf = bdf.cluster(cluster_params)
         # Estimate
         cre_estimator = tw.CREEstimator(bdf.get_es(move_to_worker=False, is_sorted=True, copy=False).get_cs(), cre_params)
-        cre_estimator.fit()
+        cre_estimator.fit(rng)
 
         return {'fe': fe_estimator.res, 'cre': cre_estimator.res}
 
@@ -372,27 +381,25 @@ class Attrition:
                 '''
                 Yield attrition parameters for each subset.
                 '''
+                # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
                 N = len(self.subsets)
                 seeds = rng.bit_generator._seed_seq.spawn(N)
                 for i, wids_to_drop in enumerate(attrition_ids):
-                    # Update seeds
                     rng_i = np.random.default_rng(seeds[i])
-                    sub_fe_params = fe_params.copy()
-                    sub_fe_params.update({'rng': rng_i})
-                    sub_cre_params = self.cre_params.copy()
-                    sub_cre_params.update({'rng': rng_i})
                     # Yield parameters
-                    yield (wids_to_drop, sub_fe_params, sub_cre_params, cluster_params, clean_params)
+                    yield (wids_to_drop, fe_params, self.cre_params, cluster_params, clean_params, rng_i)
 
             if ncore > 1:
-                # Estimate with multi-processing
+                # Multiprocessing
                 with Pool(processes=ncore) as pool:
                     V = _unscramble(list(pool.starmap(self._attrition_interior, _scramble(list(_attrition_interior_params())))))
+
+                # Extract results
                 for res in enumerate(V):
                     res_all[non_he_he]['fe'].append(res[1]['fe'])
                     res_all[non_he_he]['cre'].append(res[1]['cre'])
             else:
-                # Estimate without multi-processing
+                # Single core
                 for attrition_subparams in _attrition_interior_params():
                     res = self._attrition_interior(*attrition_subparams)
                     res_all[non_he_he]['fe'].append(res['fe'])
@@ -425,16 +432,17 @@ class Attrition:
         # For HE
         res_he = {'fe': [], 'cre': []}
 
-        # Take subset of firms that meet threshold
+        # Save movers per firm (do this before taking subset of firms that meet threshold of sufficiently many moves)
+        self.movers_per_firm = bdf.loc[bdf.loc[:, 'm'] > 0, :].n_workers() / bdf.n_firms() # bdf.loc[bdf.loc[:, 'm'] > 0, :].groupby('j')['i'].nunique().mean()
+
+        # Take subset of firms that meet threshold of sufficiently many moves
         bdf = bdf.min_moves_frame(threshold=self.attrition_params['min_moves_threshold'], drop_returns_to_stays=self.clean_params['drop_returns_to_stays'], is_sorted=True, reset_index=True, copy=False)
+        print('length after drop:', len(bdf))
 
         if len(bdf) == 0:
             raise ValueError("Length of dataframe is 0 after dropping firms with too few moves, consider lowering 'min_moves_threshold' in attrition_params.")
         if (self.attrition_type == 'increasing') and (bdf.n_firms() < self.attrition_params['subsample_min_firms']):
             raise ValueError("Estimating attrition increasing, and dataframe has fewer firms than the minimum threshold required after dropping firms with too few moves. Considering lowering 'min_moves_threshold' or lowering 'subsample_min_firms' in attrition_params.")
-
-        # Save movers per firm
-        self.movers_per_firm = bdf.loc[bdf.loc[:, 'm'] > 0, :].n_workers() / bdf.n_firms() # bdf.loc[bdf.loc[:, 'm'] > 0, :].groupby('j')['i'].nunique().mean()
 
         if False: # ncore > 1:
             # Estimate with multi-processing
@@ -547,8 +555,8 @@ class Attrition:
                 non_he_movers_per_firm /= N
                 he_movers_per_firm /= N
                 # Increase by 300%, because we are approximating FIXME this is too much
-                non_he_movers_per_firm *= 3
-                he_movers_per_firm *= 3
+                non_he_movers_per_firm *= 1.5
+                he_movers_per_firm *= 1.5
 
                 # Reverse order so that both increasing and decreasing have the same order
                 if self.attrition_type == 'decreasing':

@@ -1,13 +1,13 @@
 '''
 Class for running Monte Carlo estimations on simulated bipartite networks
 '''
-from multiprocessing import Pool
 import numpy as np
 import pandas as pd
+from multiprocessing import Pool
 from matplotlib import pyplot as plt
 import bipartitepandas as bpd
 import pytwoway as tw
-from tqdm import tqdm
+from tqdm import tqdm, trange
 import warnings
 
 class MonteCarlo:
@@ -35,9 +35,9 @@ class MonteCarlo:
         self.fe_params = fe_params.copy()
         self.cre_params = cre_params.copy()
         self.cluster_params = cluster_params.copy()
-        self.sim_params = sim_params.copy()
         self.clean_params = clean_params.copy()
         # Other attributes
+        self.sim_network = bpd.SimBipartite(sim_params)
         self.collapse = collapse
         self.move_to_worker = move_to_worker
         self.log = log
@@ -66,9 +66,9 @@ class MonteCarlo:
 
     # Cannot include two underscores because isn't compatible with starmap for multiprocessing
     # Source: https://stackoverflow.com/questions/27054963/python-attribute-error-object-has-no-attribute
-    def _twfe_monte_carlo_interior(self, rng=np.random.default_rng(None)):
+    def _monte_carlo_interior(self, rng=np.random.default_rng(None)):
         '''
-        Run Monte Carlo simulations of two way fixed effect models to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to twfe_monte_carlo.
+        Run Monte Carlo simulations of two way fixed effect models to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to monte_carlo.
 
         Arguments:
             rng (np.random.Generator): NumPy random number generator
@@ -86,11 +86,7 @@ class MonteCarlo:
             he_psi_alpha_cov (float): heteroskedastic-corrected estimate of covariance of psi and alpha
         '''
         ## Simulate data
-        # Update rng
-        sim_params = self.sim_params.copy()
-        sim_params.update({'rng': rng})
-        # Simulate
-        sim_data = bpd.SimBipartite(sim_params).sim_network()
+        sim_data = self.sim_network.sim_network(rng)
         ## Compute true sample variance of psi and covariance of psi and alpha
         psi_var = np.var(sim_data['psi'], ddof=1)
         psi_alpha_cov = np.cov(sim_data['psi'], sim_data['alpha'], ddof=1)[0, 1]
@@ -112,23 +108,16 @@ class MonteCarlo:
             # Standard
             sim_data = sim_data.clean_data(self.clean_params)
         ## Estimate FE model
-        # Update rng
-        fe_params = self.fe_params.copy()
-        fe_params.update({'rng': rng})
-        # Estimate
-        fe_estimator = tw.FEEstimator(sim_data, fe_params)
-        fe_estimator.fit()
+        fe_estimator = tw.FEEstimator(sim_data, self.fe_params)
+        fe_estimator.fit(rng)
         # Save results
         fe_res = fe_estimator.res
         ## Estimate CRE model
-        # Update rng
-        cre_params = self.cre_params.copy()
-        cre_params.update({'rng': rng})
         # Cluster
         sim_data = sim_data.cluster(self.cluster_params)
         # Estimate
-        cre_estimator = tw.CREEstimator(sim_data.get_es(move_to_worker=False, is_sorted=True).get_cs(), cre_params)
-        cre_estimator.fit()
+        cre_estimator = tw.CREEstimator(sim_data.get_es(move_to_worker=False, is_sorted=True).get_cs(), self.cre_params)
+        cre_estimator.fit(rng)
         # Save results
         cre_res = cre_estimator.res
 
@@ -138,7 +127,7 @@ class MonteCarlo:
                 fe_res['var_ho'], fe_res['cov_ho'], \
                 fe_res['var_he'], fe_res['cov_he']
 
-    def twfe_monte_carlo(self, N=10, ncore=1, rng=np.random.default_rng(None)):
+    def monte_carlo(self, N=10, ncore=1, rng=np.random.default_rng(None)):
         '''
         Run Monte Carlo simulations of two way fixed effect models to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:
 
@@ -179,20 +168,21 @@ class MonteCarlo:
         he_psi_var = np.zeros(N)
         he_psi_alpha_cov = np.zeros(N)
 
-        # Use multi-processing
+        # Simulate networks
         if ncore > 1:
-            # Simulate networks
+            ## Multiprocessing
+            # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
+            seeds = rng.bit_generator._seed_seq.spawn(N)
             with Pool(processes=ncore) as pool:
-                # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
                 # Multiprocessing tqdm source: https://stackoverflow.com/a/45276885/17333120
-                V = list(tqdm(pool.imap(self._twfe_monte_carlo_interior, [np.random.default_rng(seed) for seed in rng.bit_generator._seed_seq.spawn(N)]), total=N))
-            for i, res in enumerate(V):
-                true_psi_var[i], true_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], ho_psi_var[i], ho_psi_alpha_cov[i], he_psi_var[i], he_psi_alpha_cov[i] = res
+                all_res = list(tqdm(pool.imap(self._monte_carlo_interior, [np.random.default_rng(seed) for seed in seeds]), total=N))
         else:
-            for i, seed in enumerate(tqdm(rng.bit_generator._seed_seq.spawn(N))):
-                rng_i = np.random.default_rng(seed)
-                # Simulate a network
-                true_psi_var[i], true_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], ho_psi_var[i], ho_psi_alpha_cov[i], he_psi_var[i], he_psi_alpha_cov[i] = self._twfe_monte_carlo_interior(rng=rng_i)
+            # Single core
+            all_res = [self._monte_carlo_interior(rng) for _ in trange(N)]
+
+        # Extract results
+        for i, res_i in enumerate(all_res):
+            true_psi_var[i], true_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], ho_psi_var[i], ho_psi_alpha_cov[i], he_psi_var[i], he_psi_alpha_cov[i] = res_i
 
         res = {}
 
@@ -222,7 +212,7 @@ class MonteCarlo:
             cre (bool): if True, plot CRE results
         '''
         if not self.monte_carlo_res:
-            warnings.warn('Must run Monte Carlo simulations before results can be plotted. This can be done by running .twfe_monte_carlo().')
+            warnings.warn('Must run Monte Carlo simulations before results can be plotted. This can be done by running .monte_carlo().')
 
         else:
             # Extract results

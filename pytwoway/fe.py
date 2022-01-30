@@ -13,7 +13,6 @@ import time
 import os
 from multiprocessing import Pool, TimeoutError, Value, set_start_method
 from timeit import default_timer as timer
-import itertools
 import pickle
 import time
 import json
@@ -30,80 +29,82 @@ except ImportError:
 #     v2 = df.eval(e2)
 #     return np.cov(v1, v2)[0][1]
 
+# NOTE: multiprocessing isn't compatible with lambda functions
+def _gteq1(a):
+    return a >= 1
+def _0to1(a):
+    return 0 <= a <= 1
+
 # Define default parameter dictionary
 _fe_params_default = ParamsDict({
-    'ncore': (1, 'type', int,
+    'ncore': (1, 'type_constrained', (int, _gteq1),
         '''
             (default=1) Number of cores to use.
-        '''),
-    'batch': (1, 'type', int,
-        '''
-            (default=1) Batch size to send in parallel.
-        '''),
+        ''', '>= 1'),
     'weighted': (True, 'type', bool,
         '''
             (default=True) If True, use weighted estimators.
-        '''),
+        ''', None),
     'statsonly': (False, 'type', bool,
         '''
             (default=False) If True, return only basic statistics.
-        '''),
+        ''', None),
     'feonly': (False, 'type', bool,
         '''
             (default=False) If True, estimate only fixed effects and not variances.
-        '''),
+        ''', None),
     'Q': ('cov(alpha, psi)', 'set', ['cov(alpha, psi)', 'cov(psi_t, psi_{t+1})'],
         '''
             (default='cov(alpha, psi)') Which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'.
-        '''),
-    'ndraw_trace': (5, 'type', int,
+        ''', None),
+    'ndraw_trace': (5, 'type_constrained', (int, _gteq1),
         '''
             (default=5) Number of draws to use in trace approximations.
-        '''),
+        ''', '>= 1'),
     # 'trace_analytical': (False, 'type', bool, # FIXME not used
     #     '''
     #         (default=False) If True, estimate trace analytically.
-    #     ''')
+    #     ''', None)
     'he': (False, 'type', bool,
         '''
             (default=False) If True, estimate heteroskedastic correction.
-        '''),
+        ''', None),
     'he_analytical': (False, 'type', bool,
         '''
             (default=False) If True, estimate heteroskedastic correction using analytical formula; if False, use JL approxmation.
-        '''),
-    'lev_batchsize': (50, 'type', int,
+        ''', None),
+    'lev_batchsize': (50, 'type_constrained', (int, _gteq1),
         '''
             (default=50) Number of draws to use for each batch in approximation of leverages for heteroskedastic correction.
-        '''),
-    'lev_nbatches': (10, 'type', int,
+        ''', '>= 1'),
+    'lev_batchsize_multiprocessing': (10, 'type_constrained', (int, _gteq1),
         '''
-            (default=10) Max number of batches to run in approximation of leverages for heteroskedastic correction.
-        '''),
-    'lev_threshold_obs': (50, 'type', int,
+            (default=10) Batch size to send in parallel. Should evenly divide 'lev_batchsize'.
+        ''', '>= 1'),
+    'lev_nbatches': (5, 'type_constrained', (int, _gteq1),
         '''
-            (default=100) Minimum number of observations with Pii >= threshold where batches will keep running in approximation of leverages for heteroskedastic correction.
-        '''),
-    'lev_threshold_pii': (0.98, 'type', float,
+            (default=5) Maximum number of batches to run in approximation of leverages for heteroskedastic correction.
+        ''', '>= 1'),
+    'lev_threshold_obs': (100, 'type_constrained', (int, _gteq1),
+        '''
+            (default=100) Minimum number of observations with Pii >= threshold where batches will keep running in approximation of leverages for heteroskedastic correction. Once this threshold is met, remaining Pii above threshold will be recomputed analytically.
+        ''', '>= 1'),
+    'lev_threshold_pii': (0.98, 'type_constrained', (float, _0to1),
         '''
             (default=0.98) Threshold Pii value for computing threshold number of Pii observations in approximation of leverages for heteroskedastic correction.
-        '''),
+        ''', 'in [0, 1]'),
     'levfile': ('', 'type', str,
         '''
             (default='') File to load precomputed leverages for heteroskedastic correction.
-        '''),
+        ''', None),
     # 'con': (False, 'type', bool, # FIXME not used
     #     '''
     #         (default=False) Computes the smallest eigen values, this is the filepath where these results are saved.
-    #     '''),
+    #     ''', None),
     'out': ('res_fe.json', 'type', str,
         '''
             (default='res_fe.json') Outputfile where results are saved.
-        '''),
-    'rng': (np.random.default_rng(None), 'type', np.random.Generator,
-        '''
-            (default=np.random.default_rng(None)) NumPy random number generator.
-        ''')
+        ''', None)
 })
 
 def fe_params(update_dict={}):
@@ -235,18 +236,15 @@ class FEEstimator:
         # Number of cores to use
         self.ncore = self.params['ncore']
         # Number of draws to compute leverage for heteroskedastic correction
-        self.ndraw_pii = self.params['lev_batchsize']
+        self.lev_batchsize = self.params['lev_batchsize']
         # Number of draws to use in trace approximations
         self.ndraw_trace = self.params['ndraw_trace']
         self.compute_he = self.params['he']
 
         ## Store some parameters in results dictionary
         self.res['cores'] = self.ncore
-        self.res['ndp'] = self.ndraw_pii
+        self.res['ndp'] = self.lev_batchsize
         self.res['ndt'] = self.ndraw_trace
-
-        # NumPy random number generator
-        self.rng = self.params['rng']
 
         # self.logger.info('FEEstimator object initialized')
 
@@ -295,13 +293,16 @@ class FEEstimator:
         with open(filename, 'wb') as outfile:
             pickle.dump(self, outfile)
 
-    def fit(self):
+    def fit(self, rng=np.random.default_rng(None)):
         '''
         Run FE solver.
+
+        Arguments:
+            rng (np.random.Generator): NumPy random number generator
         '''
         self.fit_1()
         self.construct_Q()
-        self.fit_2()
+        self.fit_2(rng)
 
     def fit_1(self):
         '''
@@ -314,9 +315,12 @@ class FEEstimator:
         self._prep_JWM() # Use cleaned adata to generate some attributes
         self._compute_early_stats() # Use cleaned data to compute some statistics
 
-    def fit_2(self):
+    def fit_2(self, rng=np.random.default_rng(None)):
         '''
         Run FE solver, part 2.
+
+        Arguments:
+            rng (np.random.Generator): NumPy random number generator
         '''
         if self.params['statsonly']:
             # If only returning early statistics
@@ -325,21 +329,21 @@ class FEEstimator:
         else:
             ## If running analysis
             # Solve FE model
-            self._create_fe_solver()
+            self._create_fe_solver(rng)
             # Add fixed effect columns
             self._get_fe_estimates()
 
             if not self.params['feonly']:
                 ## If running full model
                 # Compute trace approximation
-                self._compute_trace_approximation_ho()
+                self._compute_trace_approximation_ho(rng)
 
                 if self.compute_he:
                     ## If computing heteroskedastic correction
                     # Solve heteroskedastic model
-                    self._compute_leverages_Pii()
+                    self._compute_leverages_Pii(rng)
                     # Compute trace approximation
-                    self._compute_trace_approximation_he()
+                    self._compute_trace_approximation_he(rng)
 
                 # Collect all results
                 self._collect_res()
@@ -529,9 +533,12 @@ class FEEstimator:
 
         return Jq, Wq
 
-    def _create_fe_solver(self):
+    def _create_fe_solver(self, rng=np.random.default_rng(None)):
         '''
         Solve FE model.
+
+        Arguments:
+            rng (np.random.Generator): NumPy random number generator
         '''
         self.Y = self.adata.loc[:, 'y'].to_numpy()
 
@@ -543,7 +550,7 @@ class FEEstimator:
         self.psi_hat, self.alpha_hat = self.__solve(self.Y)
 
         self.logger.info('solver time {:2.4f} seconds'.format(self.last_invert_time))
-        self.logger.info('expected total time {:2.4f} minutes'.format( (self.ndraw_trace * (1 + self.compute_he) + self.ndraw_pii * self.compute_he) * self.last_invert_time / 60))
+        self.logger.info('expected total time {:2.4f} minutes'.format( (self.ndraw_trace * (1 + self.compute_he) + self.lev_batchsize * self.params['lev_nbatches'] * self.compute_he) * self.last_invert_time / 60))
 
         self.E = self.Y - self.__mult_A(self.psi_hat, self.alpha_hat)
 
@@ -555,16 +562,19 @@ class FEEstimator:
         # Plug-in variance
         self.var_e_pi = np.var(self.E)
         if self.params['weighted'] and ('w' in self.adata.columns):
-            self._compute_trace_approximation_sigma_2()
+            self._compute_trace_approximation_sigma_2(rng)
             trace_approximation = np.mean(self.tr_sigma_ho_all)
             self.var_e = (self.nn * self.var_e_pi) / (np.sum(1 / self.Dp.data[0]) - trace_approximation)
         else:
             self.var_e = (self.nn * self.var_e_pi) / (self.nn - (self.nw + self.nf - 1))
         self.logger.info('[ho] variance of residuals {:2.4f}'.format(self.var_e))
 
-    def _compute_trace_approximation_ho(self):
+    def _compute_trace_approximation_ho(self, rng=np.random.default_rng(None)):
         '''
         Compute weighted HO trace approximation for arbitrary Q.
+
+        Arguments:
+            rng (np.random.Generator): NumPy random number generator
         '''
         self.logger.info('Starting plug-in estimation')
 
@@ -592,7 +602,7 @@ class FEEstimator:
 
         # for r in trange(self.ndraw_trace):
         #     # Generate -1 or 1 - in this case length nn
-        #     Z = 2 * self.rng.binomial(1, 0.5, self.nn) - 1
+        #     Z = 2 * rng.binomial(1, 0.5, self.nn) - 1
 
         #     # Compute either side of the Trace
         #     R_psi, R_alpha = self.__solve(Z)
@@ -615,8 +625,8 @@ class FEEstimator:
 
         for r in trange(self.ndraw_trace):
             # Generate -1 or 1
-            Zpsi = 2 * self.rng.binomial(1, 0.5, self.nf - 1) - 1
-            Zalpha = 2 * self.rng.binomial(1, 0.5, self.nw) - 1
+            Zpsi = 2 * rng.binomial(1, 0.5, self.nf - 1) - 1
+            Zalpha = 2 * rng.binomial(1, 0.5, self.nw) - 1
 
             R1 = Jq @ Zpsi
             psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
@@ -629,9 +639,12 @@ class FEEstimator:
 
             self.logger.debug('homoskedastic [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
-    # def __compute_trace_approximation_fe(self):
+    # def __compute_trace_approximation_fe(self, rng=np.random.default_rng(None)):
     #     '''
     #     Compute FE trace approximation for arbitrary Q.
+
+    #     Arguments:
+    #         rng (np.random.Generator): NumPy random number generator
     #     '''
     #     self.logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
 
@@ -660,8 +673,8 @@ class FEEstimator:
 
     #     for r in trange(self.ndraw_trace):
     #         # Generate -1 or 1
-    #         Zpsi = 2 * self.rng.binomial(1, 0.5, self.nf - 1) - 1
-    #         Zalpha = 2 * self.rng.binomial(1, 0.5, self.nw) - 1
+    #         Zpsi = 2 * rng.binomial(1, 0.5, self.nf - 1) - 1
+    #         Zalpha = 2 * rng.binomial(1, 0.5, self.nw) - 1
 
     #         R1 = Jq * Zpsi
     #         psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
@@ -686,10 +699,13 @@ class FEEstimator:
 
     #         self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
-    # def compute_trace_approximation_fe(self):
+    # def compute_trace_approximation_fe(self, rng=np.random.default_rng(None)):
     #     '''
     #     Purpose:
     #         Compute FE trace approximation.
+
+    #     Arguments:
+    #         rng (np.random.Generator): NumPy random number generator
     #     '''
     #     self.logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
     #     self.tr_var_ho_all = np.zeros(self.ndraw_trace)
@@ -697,8 +713,8 @@ class FEEstimator:
 
     #     for r in trange(self.ndraw_trace):
     #         # Generate -1 or 1
-    #         Zpsi = 2 * self.rng.binomial(1, 0.5, self.nf - 1) - 1
-    #         Zalpha = 2 * self.rng.binomial(1, 0.5, self.nw) - 1
+    #         Zpsi = 2 * rng.binomial(1, 0.5, self.nf - 1) - 1
+    #         Zalpha = 2 * rng.binomial(1, 0.5, self.nw) - 1
 
     #         R1 = self.Jq * Zpsi
     #         psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
@@ -721,8 +737,8 @@ class FEEstimator:
 
     #     for r in trange(self.ndraw_trace):
     #         # Generate -1 or 1
-    #         Zpsi = 2 * self.rng.binomial(1, 0.5, self.nf - 1) - 1
-    #         Zalpha = 2 * self.rng.binomial(1, 0.5, self.nw) - 1
+    #         Zpsi = 2 * rng.binomial(1, 0.5, self.nf - 1) - 1
+    #         Zalpha = 2 * rng.binomial(1, 0.5, self.nw) - 1
 
     #         R1 = self.J1 * Zpsi
     #         psi1, _ = self.__mult_AAinv(Zpsi, Zalpha)
@@ -732,9 +748,12 @@ class FEEstimator:
     #         self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
     #         self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
-    def _compute_trace_approximation_he(self):
+    def _compute_trace_approximation_he(self, rng=np.random.default_rng(None)):
         '''
         Compute heteroskedastic trace approximation.
+
+        Arguments:
+            rng (np.random.Generator): NumPy random number generator
         '''
         self.logger.info('Starting heteroskedastic trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
         self.tr_var_he_all = np.zeros(self.ndraw_trace)
@@ -744,8 +763,8 @@ class FEEstimator:
 
         for r in trange(self.ndraw_trace):
             # Generate -1 or 1
-            Zpsi = 2 * self.rng.binomial(1, 0.5, self.nf - 1) - 1
-            Zalpha = 2 * self.rng.binomial(1, 0.5, self.nw) - 1
+            Zpsi = 2 * rng.binomial(1, 0.5, self.nf - 1) - 1
+            Zalpha = 2 * rng.binomial(1, 0.5, self.nw) - 1
 
             psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
             R2_psi = Jq * psi1
@@ -760,13 +779,16 @@ class FEEstimator:
 
             self.logger.debug('heteroskedastic [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
-    def _compute_trace_approximation_sigma_2(self):
+    def _compute_trace_approximation_sigma_2(self, rng=np.random.default_rng(None)):
         '''
         Compute weighted sigma^2 trace approximation.
 
         Solving Tr[A'A(A'DA)^{-1}] = Tr[A(A'DA)^{-1}A']. This is for the case where E[epsilon epsilon'|A] = sigma^2 * D^{-1}.
         
         Commented out, complex case: solving Tr[A(A'DA)^{-1}A'DD'A(A'DA)^{-1}A'] = Tr[D'A(A'DA)^{-1}A'A(A'DA)^{-1}A'D] by multiplying the right half by Z, then transposing that to get the left half.
+
+        Arguments:
+            rng (np.random.Generator): NumPy random number generator
         '''
         self.logger.info('Starting weighted sigma^2 trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
 
@@ -775,7 +797,7 @@ class FEEstimator:
 
         for r in trange(self.ndraw_trace):
             # Generate -1 or 1 - in this case length nn
-            Z = 2 * self.rng.binomial(1, 0.5, self.nn) - 1
+            Z = 2 * rng.binomial(1, 0.5, self.nn) - 1
 
             # Compute Trace
             R_psi, R_alpha = self.__solve(Z, Dp2=False)
@@ -1038,9 +1060,12 @@ class FEEstimator:
 
         return A + B + C + D
 
-    def _compute_leverages_Pii(self):
+    def _compute_leverages_Pii(self, rng=np.random.default_rng(None)):
         '''
         Compute leverages for heteroskedastic correction.
+
+        Arguments:
+            rng (np.random.Generator): NumPy random number generator
         '''
         Pii = np.zeros(self.nn)
         # Indices to compute Pii analytically
@@ -1064,40 +1089,26 @@ class FEEstimator:
                     pp = np.load(f)
                     Pii += pp / len(files)
 
-            elif self.ncore > 1:
-                # FIXME get rid of code duplication with this and the else statement
-                self.logger.info('[he] starting heteroskedastic correction p2={}, using {} cores, batch size {}'.format(self.ndraw_pii, self.ncore, self.params['batch']))
-                for batch_i in range(self.params['lev_nbatches']):
-                    Pii_i = np.zeros(self.nn)
-                    set_start_method('spawn')
-                    with Pool(processes=self.ncore) as pool:
-                        Pii_all = pool.starmap(self._leverage_approx, [self.params['batch'] for _ in range(self.ndraw_pii // self.params['batch'])])
-
-                    for pp in Pii_all:
-                        Pii_i += pp / len(Pii_all)
-
-                    # Take weighted average over all Pii draws
-                    Pii = (batch_i * Pii + Pii_i) / (batch_i + 1)
-
-                    # Compute number of bad draws
-                    n_bad_draws = sum(worker_m & (Pii >= self.params['lev_threshold_pii']))
-
-                    # If few enough bad draws, compute them analytically
-                    if n_bad_draws < self.params['lev_threshold_obs']:
-                        leverage_warning = 'Threshold for max Pii is {}, with {} draw(s) per batch and a maximum of {} batch(es) being drawn. There is/are {} observation(s) with Pii above this threshold. These will be recomputed analytically. It took {} batch(es) to get below the threshold of {} bad observations.'.format(self.params['lev_threshold_pii'], self.ndraw_pii, self.params['lev_nbatches'], n_bad_draws, batch_i + 1, self.params['lev_threshold_obs'])
-                        warnings.warn(leverage_warning)
-                        break
-                    elif batch_i == self.params['lev_nbatches'] - 1:
-                        leverage_warning = 'Threshold for max Pii is {}, with {} draw(s) per batch and a maximum of {} batch(es) being drawn. After exhausting the maximum number of batches, there is/are still {} draw(s) with Pii above this threshold. These will be recomputed analytically.'.format(self.params['lev_threshold_pii'], self.ndraw_pii, self.params['lev_nbatches'], n_bad_draws)
-                        warnings.warn(leverage_warning)
-
             else:
+                self.logger.info('[he] starting heteroskedastic correction lev_batchsize={}, lev_nbatches={}, using {} cores'.format(self.params['lev_batchsize'], self.params['lev_nbatches'], self.ncore))
                 for batch_i in range(self.params['lev_nbatches']):
-                    Pii_i = np.zeros(self.nn)
-                    Pii_all = list(itertools.starmap(self._leverage_approx, [[self.params['batch']] for _ in range(self.ndraw_pii // self.params['batch'])]))
+                    if self.ncore > 1:
+                        # Multiprocessing
+                        ndraw_seeds = self.lev_batchsize // self.params['lev_batchsize_multiprocessing']
+                        if np.round(ndraw_seeds * self.params['lev_batchsize_multiprocessing']) != self.lev_batchsize:
+                            # 'lev_batchsize_multiprocessing' must evenly divide 'lev_batchsize'
+                            raise ValueError("'lev_batchsize_multiprocessing' (currently {}) should evenly divide 'lev_batchsize' (currently {}).".format(self.params['lev_batchsize_multiprocessing'], self.lev_batchsize))
+                        # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
+                        seeds = rng.bit_generator._seed_seq.spawn(ndraw_seeds)
+                        set_start_method('spawn')
+                        with Pool(processes=self.ncore) as pool:
+                            Pii_all = pool.starmap(self._leverage_approx, [(self.params['lev_batchsize_multiprocessing'], np.random.default_rng(seed)) for seed in seeds])
 
-                    for pp in Pii_all:
-                        Pii_i += pp / len(Pii_all)
+                        # Take mean over draws
+                        Pii_i = sum(Pii_all) / len(Pii_all)
+                    else:
+                        # Single core
+                        Pii_i = self._leverage_approx(self.lev_batchsize, rng)
 
                     # Take weighted average over all Pii draws
                     Pii = (batch_i * Pii + Pii_i) / (batch_i + 1)
@@ -1107,11 +1118,11 @@ class FEEstimator:
 
                     # If few enough bad draws, compute them analytically
                     if n_bad_draws < self.params['lev_threshold_obs']:
-                        leverage_warning = 'Threshold for max Pii is {}, with {} draw(s) per batch and a maximum of {} batch(es) being drawn. There is/are {} observation(s) with Pii above this threshold. These will be recomputed analytically. It took {} batch(es) to get below the threshold of {} bad observations.'.format(self.params['lev_threshold_pii'], self.ndraw_pii, self.params['lev_nbatches'], n_bad_draws, batch_i + 1, self.params['lev_threshold_obs'])
+                        leverage_warning = 'Threshold for max Pii is {}, with {} draw(s) per batch and a maximum of {} batch(es) being drawn. There is/are {} observation(s) with Pii above this threshold. These will be recomputed analytically. It took {} batch(es) to get below the threshold of {} bad observations.'.format(self.params['lev_threshold_pii'], self.lev_batchsize, self.params['lev_nbatches'], n_bad_draws, batch_i + 1, self.params['lev_threshold_obs'])
                         warnings.warn(leverage_warning)
                         break
                     elif batch_i == self.params['lev_nbatches'] - 1:
-                        leverage_warning = 'Threshold for max Pii is {}, with {} draw(s) per batch and a maximum of {} batch(es) being drawn. After exhausting the maximum number of batches, there is/are still {} draw(s) with Pii above this threshold. These will be recomputed analytically.'.format(self.params['lev_threshold_pii'], self.ndraw_pii, self.params['lev_nbatches'], n_bad_draws)
+                        leverage_warning = 'Threshold for max Pii is {}, with {} draw(s) per batch and a maximum of {} batch(es) being drawn. After exhausting the maximum number of batches, there is/are still {} draw(s) with Pii above this threshold. These will be recomputed analytically.'.format(self.params['lev_threshold_pii'], self.lev_batchsize, self.params['lev_nbatches'], n_bad_draws)
                         warnings.warn(leverage_warning)
 
             # Compute Pii analytically for observations with Pii approximation above threshold value
@@ -1134,7 +1145,7 @@ class FEEstimator:
         self.res['max_lev'] = Pii[worker_m].max()
 
         if self.res['max_lev'] >= 1:
-            leverage_warning = "Max P_ii is {} which is >= 1. This should not happen - increase the value of 'lev_batchsize' or 'lev_nbatches' until this warning is no longer raised ('lev_batchsize' is currently set to {} and 'lev_nbatches' is currently set to {}).".format(self.res['max_lev'], self.ndraw_pii, self.params['lev_nbatches'])
+            leverage_warning = "Max P_ii is {} which is >= 1. This should not happen - increase the value of 'lev_batchsize' or 'lev_nbatches' until this warning is no longer raised ('lev_batchsize' is currently set to {} and 'lev_nbatches' is currently set to {}).".format(self.res['max_lev'], self.lev_batchsize, self.params['lev_nbatches'])
             warnings.warn(leverage_warning)
             self.logger.info(leverage_warning)
             # self.adata['Pii'] = Pii
@@ -1159,12 +1170,13 @@ class FEEstimator:
         self.res['eps_var_he'] = self.Sii.mean()
         self.logger.info('[he] variance of residuals in heteroskedastic case: {:2.4f}'.format(self.res['eps_var_he']))
 
-    def _leverage_approx(self, ndraw_pii):
+    def _leverage_approx(self, ndraw_pii, rng=np.random.default_rng(None)):
         '''
         Draw Pii estimates for use in JL approximation of leverage.
 
         Arguments:
             ndraw_pii (int): number of Pii draws
+            rng (np.random.Generator): NumPy random number generator
 
         Returns:
             Pii (NumPy Array): Pii array
@@ -1173,8 +1185,11 @@ class FEEstimator:
 
         # Compute the different draws
         for _ in range(ndraw_pii):
-            R2 = 2 * self.rng.binomial(1, 0.5, self.nn) - 1
-            Pii += 1 / ndraw_pii * np.power(self.__proj(R2, Dp0='sqrt', Dp2='sqrt'), 2.0)
+            R2 = 2 * rng.binomial(1, 0.5, self.nn) - 1
+            Pii += np.power(self.__proj(R2, Dp0='sqrt', Dp2='sqrt'), 2.0)
+
+        # Take mean over draws
+        Pii /= ndraw_pii
 
         self.logger.info('done with batch')
 

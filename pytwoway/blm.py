@@ -3,7 +3,6 @@ We implement the non-linear estimator from Bonhomme Lamadon & Manresa
 '''
 
 import numpy as np
-from numpy import pi
 import pandas as pd
 from scipy.special import logsumexp
 from scipy.sparse import csc_matrix, diags
@@ -12,15 +11,142 @@ from qpsolvers import solve_qp
 from matplotlib import pyplot as plt
 from multiprocessing import Pool
 import itertools
-import time
 import warnings
 from pytwoway import jitter_scatter
-from bipartitepandas import update_dict
-from tqdm import tqdm, trange
+from bipartitepandas import ParamsDict
+from tqdm import tqdm
 
-####################
-##### New Code #####
-####################
+# NOTE: multiprocessing isn't compatible with lambda functions
+def _gteq1(a):
+    return a >= 1
+def _gteq0(a):
+    return a >= 0
+def _lstdct(a):
+    return (isinstance(a[0], list) and isinstance(a[1], dict))
+
+# Define default parameter dictionaries
+_blm_params_default = ParamsDict({
+    ## Class parameters
+    'nl': (6, 'type_constrained', (int, _gteq1),
+        '''
+            (default=6) Number of worker types.
+        ''', '>= 1'),
+    'nk': (10, 'type_constrained', (int, _gteq1),
+        '''
+            (default=10) Number of firm types.
+        ''', '>= 1'),
+    'fixb': (False, 'type', bool,
+        '''
+            (default=False) If True, set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0).
+        ''', None),
+    'stationary': (False, 'type', bool,
+        '''
+            (default=False) If True, set A1 = A2.
+        ''', None),
+    'simulation': (False, 'type', bool,
+        '''
+            (default=False) If True, using model to simulate data.
+        ''', None),
+    ## fit_movers() and fit_stayers() parameters
+    'n_iters': (100, 'type_constrained', (int, _gteq1),
+        '''
+            (default=100) Number of iterations for EM.
+        ''', '>= 1'),
+    # fit_movers() parameters
+    'threshold': (1e-7, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=1e-7) Threshold to break EM loop.
+        ''', '>= 0'),
+    'update_a': (True, 'type', bool,
+        '''
+            (default=True) If False, do not update A1 or A2.
+        ''', None),
+    'update_s': (True, 'type', bool,
+        '''
+            (default=True) If False, do not update S1 or S2.
+        ''', None),
+    'update_pk1': (True, 'type', bool,
+        '''
+            (default=True) If False, do not update pk1.
+        ''', None),
+    'return_qi': (False, 'type', bool,
+        '''
+            (default=False) If True, return qi matrix after first loop.
+        ''', None),
+    'cons_a': ((['lin'], {'n_periods': 2}), 'type_constrained', (tuple, _lstdct),
+        '''
+            (default=(['lin'], {'n_periods': 2})) Constraints on A1 and A2, where first entry gives list of constraints and second entry gives dictionary of constraint parameters.
+        ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
+    'cons_s': ((['biggerthan'], {'gap_bigger': 1e-7, 'n_periods': 2}), 'type_constrained', (tuple, _lstdct),
+        '''
+            (default=(['biggerthan'], {'gap_bigger': 1e-7, 'n_periods': 2})) Constraints on S1 and S2, where first entry gives list of constraints and second entry gives dictionary of constraint parameters.
+        ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
+    # fit_stayers() parameters
+    'd_prior': (1.0001, 'type_constrained', ((float, int), _gteq1),
+        '''
+            (default=1.0001) Account for probabilities being too small by adding (d_prior - 1).
+        ''', '>= 1'),
+    'verbose': (0, 'set', [0, 1, 2],
+        '''
+            (default=0) If 0, print no output; if 1, print additional output; if 2, print maximum output.
+        ''', None)
+})
+
+def blm_params(update_dict={}):
+    '''
+    Dictionary of default blm_params.
+
+    Arguments:
+        update_dict (dict): user parameter values
+
+    Returns:
+        (ParamsDict) dictionary of blm_params
+    '''
+    new_dict = _blm_params_default.copy()
+    new_dict.update(update_dict)
+    return new_dict
+
+_constraint_params_default = ParamsDict({
+    'gap_akmmono': (0, 'type', (float, int),
+        '''
+            (default=0) Used for akmmono constraint.
+        ''', None),
+    'gap_mono_k': (0, 'type', (float, int),
+        '''
+            (default=0) Used for mono_k constraint.
+        ''', None),
+    'gap_bigger': (0, 'type', (float, int),
+        '''
+            (default=0) Used for biggerthan constraint to determine bound.
+        ''', None),
+    'gap_smaller': (0, 'type', (float, int),
+        '''
+            (default=0) Used for smallerthan constraint to determine bound.
+        ''', None),
+    'n_periods': (2, 'type_constrained', (int, _gteq1),
+        '''
+            (default=2) Number of periods in the data.
+        ''', '>= 1'),
+    'nt': (4, 'type', (float, int),
+        '''
+            (default=4)
+        ''', None)
+})
+
+def constraint_params(update_dict={}):
+    '''
+    Dictionary of default constraint_params.
+
+    Arguments:
+        update_dict (dict): user parameter values
+
+    Returns:
+        (ParamsDict) dictionary of constraint_params
+    '''
+    new_dict = _constraint_params_default.copy()
+    new_dict.update(update_dict)
+    return new_dict
+
 class QPConstrained:
     '''
     Solve a quadratic programming model of the following form:
@@ -42,26 +168,17 @@ class QPConstrained:
         self.A = np.array([]) # Equality constraint matrix
         self.b = np.array([]) # Equality constraint bound
 
-        self.default_constraints = {
-            'gap_akmmono': 0, # Used for akmmono constraint
-            'gap_mono_k': 0, # Used for mono_k constraint
-            'gap_bigger': 0, # Used for biggerthan constraint to determine bound
-            'gap_smaller': 0, # Used for smallerthan constraint to determine bound,
-            'n_periods': 2, # Number of periods in the data
-            'nt': 4
-        }
-
-    def add_constraint_builtin(self, constraint, constraint_params={}):
+    def add_constraint_builtin(self, constraint, params=constraint_params()):
         '''
         Add a built-in constraint.
 
         Arguments:
             constraint (str): name of constraint to add
-            constraint_params (dict): parameters
+            params (ParamsDict): dictionary of parameters for constraint. Run tw.constraint_params().describe_all() for descriptions of all valid parameters.
         '''
         nl = self.nl
         nk = self.nk
-        params = update_dict(self.default_constraints, constraint_params)
+
         G = np.array([])
         h = np.array([])
         A = np.array([])
@@ -153,22 +270,21 @@ class QPConstrained:
             b = - np.zeros(shape=nl)
 
         else:
-            warnings.warn('Invalid constraint entered {}.'.format(constraint))
-            return
+            raise NotImplementedError('Invalid constraint {}.'.format(constraint))
 
         # Add constraints to attributes
         self.add_constraint_manual(G=G, h=h, A=A, b=b)
 
-    def add_constraints_builtin(self, constraints, constraint_params={}):
+    def add_constraints_builtin(self, constraints, params=constraint_params()):
         '''
         Add a built-in constraint.
 
         Arguments:
-            constraints (list of str): names of constraint to add
-            constraint_params (dict): parameters
+            constraints (list of str): names of constraints to add
+            params (ParamsDict): dictionary of parameters for constraints. Run tw.constraint_params().describe_all() for descriptions of all valid parameters.
         '''
         for constraint in constraints:
-            self.add_constraint_builtin(constraint, constraint_params)
+            self.add_constraint_builtin(constraint=constraint, params=params)
 
     def add_constraint_manual(self, G=np.array([]), h=np.array([]), A=np.array([]), b=np.array([])):
         '''
@@ -180,14 +296,16 @@ class QPConstrained:
             A (NumPy Array): equality constraint matrix
             b (NumPy Array): equality constraint bound
         '''
-        if len(G) > 0: # If you have inequality constraints
+        if len(G) > 0:
+            # If inequality constraints
             if len(self.G) > 0:
                 self.G = np.concatenate((self.G, G), axis=0)
                 self.h = np.concatenate((self.h, h), axis=0)
             else:
                 self.G = G
                 self.h = h
-        if len(A) > 0: # If you have equality constraints
+        if len(A) > 0:
+            # If equality constraints
             if len(self.A) > 0:
                 self.A = np.concatenate((self.A, A), axis=0)
                 self.b = np.concatenate((self.b, b), axis=0)
@@ -234,36 +352,48 @@ class QPConstrained:
         Check that constraints are feasible.
 
         Returns:
-            (bool): True if constraints feasiable, False otherwise
+            (bool): True if constraints feasible, False otherwise
         '''
-        # -------  simulate an OLS -------
-        n = 100
-        k = 10
-        # parameters
-
+        # -----  Simulate an OLS -----
         rng = np.random.default_rng()
+        # Parameters
+        n = 2 * self.nl * self.nk # self.A.shape[1]
+        k = self.nl * self.nk
+        # Regressors
         x = rng.normal(size=k)
-        # regressors
         M = rng.normal(size=(n, k))
-        # dependent
+        # Dependent
         Y = M @ x
 
-        # =-------- map to quadprog ---------
-        cons = QPConstrained(k, 1)
+        # ----- Create temporary solver -----
+        cons = QPConstrained(self.nl, self.nk)
+        cons.G = self.G
+        cons.h = self.h
+        cons.A = self.A
+        cons.b = self.b
+
+        # ----- Map to qpsolvers -----
         P = M.T @ M
         q = - M.T @ Y
-        try:
-            self.solve(P, q)
-            return True
-        except ValueError:
-            return False
+
+        # ----- Run solver -----
+        cons.solve(P, q)
+
+        return cons.res is not None
 
     def solve(self, P, q):
         '''
         Solve a quadratic programming model of the following form:
-        min_x(1/2 x.T @ P @ x + q.T @ x)
-        s.t.    Gx <= h
-                Ax = b
+            min_x(1/2 x.T @ P @ x + q.T @ x)
+            s.t.    Gx <= h
+                    Ax = b
+
+        Arguments:
+            P (NumPy Array): P in quadratic programming problem
+            q (NumPy Array): q in quadratic programming problem
+
+        Returns:
+            (NumPy Array): x that solves quadratic programming problem
         '''
         if len(self.G) > 0 and len(self.A) > 0:
             self.res = solve_qp(P=P, q=q, G=self.G, h=self.h, A=self.A, b=self.b)
@@ -275,83 +405,27 @@ class QPConstrained:
             self.res = solve_qp(P=P, q=q)
 
 def lognormpdf(x, mu, sd):
-    return - 0.5 * np.log(2 * pi) - np.log(sd) - (x - mu) ** 2 / (2 * sd ** 2)
+    return - 0.5 * np.log(2 * np.pi) - np.log(sd) - (x - mu) ** 2 / (2 * sd ** 2)
 
 class BLMModel:
     '''
     Class for solving the BLM model using a single set of starting values.
 
     Arguments:
-        user_blm (dict): dictionary of parameters for BLM estimation
-
-                Dictionary parameters:
-
-                    nl (int, default=6): number of worker types
-
-                    nk (int, default=10): number of firm types
-
-                    fixb (bool, default=False): if True, set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)
-
-                    stationary (bool, default=False): if True, set A1 = A2
-
-                    simulation (bool, default=False): if True, using model to simulate data
-
-                    n_iters (int, default=100): number of iterations for EM
-
-                    threshold (float, default=1e-7): threshold to break EM loop
-
-                    update_a (bool, default=True): if False, do not update A1 or A2
-
-                    update_s (bool, default=True): if False, do not update S1 or S2
-
-                    update_pk1 (bool, default=True): if False, do not update pk1
-
-                    return_qi (bool, default=False): if True, return qi matrix after first loop
-
-                    cons_a (tuple, default=(['lin'], {'n_periods': 2})): constraints on A1 and A2, where first entry gives list of constraints and second entry gives a parameter dictionary
-
-                    cons_s (tuple, default=(['biggerthan'], {'gap_bigger': 1e-7, 'n_periods': 2})): constraints on S1 and S2, where first entry gives list of constraints and second entry gives a parameter dictionary
-
-                    d_prior (float, default=1.0001): value >= 1, account for probabilities being too small
-
-                    verbose (int, default=0): if 0, print no output; if 1, print additional output; if 2, print maximum output
-        seed (int or None): seed for np.random.default_rng()
+        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
+        rng (np.random.Generator): NumPy random number generator
     '''
-    def __init__(self, user_blm={}, seed=None):
-        # Default parameters
-        default_blm = {
-            # Class parameters
-            'nl': 6, # Number of worker types
-            'nk': 10, # Number of firm types
-            'fixb': False, # Set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)
-            'stationary': False, # Set A1 = A2
-            'simulation': False, # If True, using model to simulate data
-            # fit_movers() and fit_stayers() parameters
-            'n_iters': 100, # Max number of iterations
-            # fit_movers() parameters
-            'threshold': 1e-7, # Threshold to break fit_movers() and fit_stayers()
-            'update_a': True, # If False, do not update A1 or A2
-            'update_s': True, # If False, do not update S1 or S2
-            'update_pk1': True, # If False, do not update pk1
-            'return_qi': False, # If True, return qi matrix after first loop
-            'cons_a': (['lin'], {'n_periods': 2}), # Constraints on A1 and A2
-            'cons_s': (['biggerthan'], {'gap_bigger': 1e-7, 'n_periods': 2}), # Constraints on S1 and S2
-            # fit_stayers() parameters
-            'd_prior': 1.0001, # Account for probabilities being too small
-            'verbose': 0 # If 0, print no output; if 1, print additional output; if 2, print maximum output
-        }
-        params = update_dict(default_blm, user_blm)
+    def __init__(self, params=blm_params(), rng=np.random.default_rng(None)):
+        # Store parameters
         self.params = params
         nl = params['nl']
         nk = params['nk']
-        self.nl = nl # Number of worker types
-        self.nk = nk # Number of firm types
+        self.nl = nl
+        self.nk = nk
         self.fixb = params['fixb']
         self.stationary = params['stationary']
-
-        # np.random.RandomState().seed() # Required for multiprocessing to ensure different seeds
-        rng = np.random.default_rng(seed) # Required for multiprocessing to ensure different seeds
         self.rng = rng
+
         if params['simulation']:
             # Model for Y1 | Y2, l, k for movers and stayers
             self.A1 = 0.9 * (1 + 0.5 * rng.normal(size=(nk, nl)))
@@ -380,10 +454,14 @@ class BLMModel:
         self.NNm = np.zeros(shape=(nk, nk)).astype(int) + 10
         self.NNs = np.zeros(shape=nk).astype(int) + 10
 
-        self.lik1 = None # Log likelihood for movers
-        self.liks1 = np.array([]) # Path of log likelihoods for movers
-        self.lik0 = None # Log likelihood for stayers
-        self.liks0 = np.array([]) # Path of log likelihoods for stayers
+        # Log likelihood for movers
+        self.lik1 = None
+        # Path of log likelihoods for movers
+        self.liks1 = np.array([])
+        # Log likelihood for stayers
+        self.lik0 = None
+        # Path of log likelihoods for stayers
+        self.liks0 = np.array([])
 
         self.connectedness = None
 
@@ -431,7 +509,7 @@ class BLMModel:
             A = 0.5 * A + 0.5 * A.T
             D = np.diag(np.sum(A, axis=1) ** (- 0.5))
             L = np.eye(nk) - D @ A @ D
-            evals, evects = np.linalg.eig(L)
+            evals, evecs = np.linalg.eig(L)
             EV[kk] = sorted(evals)[1]
 
         if all:
@@ -454,8 +532,10 @@ class BLMModel:
         nl = self.nl
         nk = self.nk
         ni = jdata.shape[0]
-        lik1 = None # Log likelihood for movers
-        liks1 = [] # Path of log likelihoods for movers
+        # Log likelihood for movers
+        lik1 = None
+        # Path of log likelihoods for movers
+        liks1 = []
         prev_lik = np.inf
 
         # Store wage outcomes and groups
@@ -475,7 +555,8 @@ class BLMModel:
         if len(params['cons_s']) > 0:
             cons_s.add_constraints_builtin(params['cons_s'][0], params['cons_s'][1])
 
-        d_prior = params['d_prior'] # Fix error from bad initial guesses causing probabilities to be too low
+        # Fix error from bad initial guesses causing probabilities to be too low
+        d_prior = params['d_prior']
         lp = np.zeros(shape=(ni, nl))
         GG1 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), G1)), shape=(ni, nk))
         GG2 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), G2)), shape=(ni, nk))
@@ -538,7 +619,8 @@ class BLMModel:
                     res_a = cons_a.res
                     A1 = np.reshape(res_a, (2, nl, nk))[0, :, :].T
                     A2 = np.reshape(res_a, (2, nl, nk))[1, :, :].T
-                except ValueError as e: # If constraints inconsistent, keep A1 and A2 the same
+                except ValueError as e:
+                    # If constraints inconsistent, keep A1 and A2 the same
                     if params['verbose'] in [1, 2]:
                         print(str(e) + 'passing 1')
                     pass
@@ -557,7 +639,8 @@ class BLMModel:
                     res_s = cons_s.res
                     S1 = np.sqrt(np.reshape(res_s, (2, nl, nk))[0, :, :]).T
                     S2 = np.sqrt(np.reshape(res_s, (2, nl, nk))[1, :, :]).T
-                except ValueError as e: # If constraints inconsistent, keep S1 and S2 the same
+                except ValueError as e:
+                    # If constraints inconsistent, keep S1 and S2 the same
                     if params['verbose'] in [1, 2]:
                         print(str(e) + 'passing 2')
                     pass
@@ -590,8 +673,10 @@ class BLMModel:
         nl = self.nl
         nk = self.nk
         ni = sdata.shape[0]
-        lik0 = None # Log likelihood for stayers
-        liks0 = [] # Path of log likelihoods for stayers
+        # Log likelihood for stayers
+        lik0 = None
+        # Path of log likelihoods for stayers
+        liks0 = []
         prev_lik = np.inf
 
         # Store wage outcomes and groups
@@ -649,20 +734,24 @@ class BLMModel:
         # Finally use estimated parameters as starting point to run without constraints
         # self.reset_params() # New parameter guesses
         ##### Loop 1 #####
-        self.params['update_a'] = False # First run fixm = True, which fixes A but updates S and pk
+        # First run fixm = True, which fixes A but updates S and pk
+        self.params['update_a'] = False
         self.params['update_s'] = True
         self.params['update_pk1'] = True
         if self.params['verbose'] in [1, 2]:
             print('Running fixm movers')
         self.fit_movers(jdata)
         ##### Loop 2 #####
-        self.params['update_a'] = True # Now update A
-        self.params['cons_a'] = (['lin'], {'n_periods': 2}) # Set constraints
+        # Now update A
+        self.params['update_a'] = True
+        # Set constraints
+        self.params['cons_a'] = (['lin'], {'n_periods': 2})
         if self.params['verbose'] in [1, 2]:
             print('Running constrained movers')
         self.fit_movers(jdata)
         ##### Loop 3 #####
-        self.params['cons_a'] = () # Remove constraints
+        # Remove constraints
+        self.params['cons_a'] = ()
         if self.params['verbose'] in [1, 2]:
             print('Running unconstrained movers')
         self.fit_movers(jdata)
@@ -676,7 +765,8 @@ class BLMModel:
         Arguments:
             jdata (Pandas DataFrame): movers
         '''
-        # self.reset_params() # New parameter guesses
+        # New parameter guesses
+        # self.reset_params()
         self.params['update_a'] = True
         self.params['update_s'] = False
         self.params['update_pk1'] = False
@@ -692,7 +782,8 @@ class BLMModel:
         Arguments:
             jdata (Pandas DataFrame): movers
         '''
-        # self.reset_params() # New parameter guesses
+        # New parameter guesses
+        # self.reset_params()
         self.params['update_a'] = False
         self.params['update_s'] = True
         self.params['update_pk1'] = False
@@ -708,7 +799,8 @@ class BLMModel:
         Arguments:
             jdata (Pandas DataFrame): movers
         '''
-        # self.reset_params() # New parameter guesses
+        # New parameter guesses
+        # self.reset_params()
         self.params['update_a'] = False
         self.params['update_s'] = False
         self.params['update_pk1'] = True
@@ -858,8 +950,9 @@ class BLMModel:
         jdata = self._m2_mixt_simulate_movers(self.NNm * mmult)
         sdata = self._m2_mixt_simulate_stayers(self.NNs * smult)
 
-        # Create some firm ids
-        sdata['j1'] = np.hstack(np.roll(sdata.groupby('g1').apply(lambda df: self.rng.integers(low=0, high=len(df) // fsize + 1, size=len(df))), - 1)) # Random number generation, roll is required because j1 is - 1 for empty rows but they appear at the end of the dataframe
+        ## Create some firm ids
+        # Random number generation, roll is required because j1 is - 1 for empty rows but they appear at the end of the dataframe
+        sdata['j1'] = np.hstack(np.roll(sdata.groupby('g1').apply(lambda df: self.rng.integers(low=0, high=len(df) // fsize + 1, size=len(df))), - 1))
         sdata['j1'] = 'F' + (sdata['g1'].astype(int) + sdata['j1']).astype(str)
         sdata['g1b'] = sdata['g1']
         sdata['g1true'] = sdata['g1']
@@ -881,32 +974,11 @@ class BLMEstimator:
     Class for solving the BLM model using multiple sets of starting values.
 
     Arguments:
-        user_blm (dict): dictionary of parameters for BLM estimation
-
-            Dictionary parameters:
-
-                nl (int, default=6): number of worker types
-
-                nk (int, default=10): number of firm types
-
-                fixb (bool, default=False): if True, set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0)
-
-                stationary (bool, default=False): if True, set A1 = A2
-
-                n_iters (int, default=100): number of iterations for EM
-
-                threshold (float, default=1e-7): threshold to break EM loop
-
-                d_prior (float, default=1.0001): value >= 1, account for probabilities being too small
-
-                verbose (int, default=0): if 0, print no output; if 1, print additional output; if 2, print maximum output
+        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
     '''
 
-    def __init__(self, user_blm={}):
-        default_blm = {
-            'verbose': 0 # If 0, print no output; if 1, print additional output; if 2, print maximum output
-        }
-        self.blm_params = update_dict(default_blm, user_blm)
+    def __init__(self, params=blm_params()):
+        self.params = params
         self.model = None # No initial model
         self.liks_high = None # No likelihoods yet
         self.connectedness_high = None # No connectedness yet
@@ -914,19 +986,19 @@ class BLMEstimator:
         self.connectedness_low = None # No connectedness yet
         self.liks_all = None # No paths of likelihoods yet
 
-    def _sim_model(self, jdata, seed=None):
+    def _sim_model(self, jdata, rng=np.random.default_rng(None)):
         '''
         Generate model and run fit_movers_cstr_uncstr() given parameters.
 
         Arguments:
             jdata (Pandas DataFrame): movers
-            seed (int or None): seed for np.random.default_rng()
+            rng (np.random.Generator): NumPy random number generator
         '''
-        model = BLMModel(self.blm_params, seed)
+        model = BLMModel(self.params, rng)
         model.fit_movers_cstr_uncstr(jdata)
         return model
 
-    def fit(self, jdata, sdata, n_init=10, n_best=1, ncore=1, seed=None):
+    def fit(self, jdata, sdata, n_init=10, n_best=1, ncore=1, rng=np.random.default_rng(None)):
         '''
         EM model for movers and stayers.
 
@@ -936,19 +1008,17 @@ class BLMEstimator:
             n_init (int): number of starting values
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness
             ncore (int): number of cores for multiprocessing
-            seed (int or None): seed to generate list of seeds for np.random.default_rng()
+            rng (np.random.Generator): NumPy random number generator
         '''
-        if seed is None:
-            seeds = [None] * n_init
-        else:
-            np.random.seed(seed)
-            seeds = [np.random.randint(2 ** 32) for _ in range(n_init)]
         # Run sim_model()
         if ncore > 1:
+            ## Multiprocessing
+            # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
+            seeds = rng.bit_generator._seed_seq.spawn(n_init)
             with Pool(processes=ncore) as pool:
-                sim_model_lst = pool.starmap(self._sim_model, tqdm([[jdata, seeds[i]] for i in range(n_init)], total=n_init)) # pool.map for 1 parameter
+                sim_model_lst = pool.starmap(self._sim_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
         else:
-            sim_model_lst = itertools.starmap(self._sim_model, tqdm([[jdata, seeds[i]] for i in range(n_init)], total=n_init)) # map for 1 parameter
+            sim_model_lst = itertools.starmap(self._sim_model, tqdm([(jdata, rng) for _ in range(n_init)], total=n_init))
 
         # Sort by likelihoods
         sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst], reverse=True)
@@ -979,11 +1049,11 @@ class BLMEstimator:
         sorted_zipped_models = sorted([(model.connectedness, model) for model in best_lik_models], reverse=True)
         best_model = sorted_zipped_models[0][1]
 
-        if self.blm_params['verbose'] in [1, 2]:
+        if self.params['verbose'] in [1, 2]:
             print('liks_max:', best_model.lik1)
         self.model = best_model
         # Using best estimated parameters from fit_movers(), run fit_stayers()
-        if self.blm_params['verbose'] in [1, 2]:
+        if self.params['verbose'] in [1, 2]:
             print('Running stayers')
         self.model.fit_stayers(sdata)
         self.model._sort_matrices()
@@ -1008,7 +1078,7 @@ class BLMEstimator:
             jitter (bool): if True, jitter points to prevent overlap
             dpi (float): dpi for plot
         '''
-        if self.model is not None and self.liks_high is not None and self.connectedness_high is not None and self.liks_low is not None and self.connectedness_low is not None:
+        if (self.model is not None) and (self.liks_high is not None) and (self.connectedness_high is not None) and (self.liks_low is not None) and (self.connectedness_low is not None):
             if dpi is not None:
                 plt.figure(dpi=dpi)
             # So best estimation only graphed once, drop index from liks_high and connectedness_high

@@ -7,7 +7,7 @@
 import pyamg
 import numpy as np
 import pandas as pd
-from bipartitepandas import ParamsDict, update_dict, logger_init
+from bipartitepandas import ParamsDict, logger_init
 from scipy.sparse import csc_matrix, coo_matrix, diags, linalg, eye
 import time
 # import pyreadr
@@ -25,35 +25,36 @@ try:
 except ImportError:
     trange = range
 
+# NOTE: multiprocessing isn't compatible with lambda functions
+def _gteq1(a):
+    return a >= 1
+
+# Define default parameter dictionary
 _cre_params_default = ParamsDict({
-    'ncore': (1, 'type', int,
+    'ncore': (1, 'type_constrained', (int, _gteq1),
         '''
             (default=1) Number of cores to use.
-        '''),
+        ''', '>= 1'),
     'posterior': (False, 'type', bool,
         '''
             (default=False) If True, compute posterior variance.
-        '''),
+        ''', None),
     'wo_btw': (False, 'type', bool,
         '''
             (default=False) If True, sets between variation to 0, pure RE.
-        '''),
-    'ndraw_trace': (5, 'type', int,
+        ''', None),
+    'ndraw_trace': (5, 'type_constrained', (int, _gteq1),
         '''
             (default=5) Number of draws to use in trace approximations.
-        '''),
+        ''', '>= 1'),
     'out': ('res_cre.json', 'type', str,
         '''
             (default='res_fe.json') Outputfile where results are saved.
-        '''),
-    # 'ndp': (50, 'type', int, # FIXME not used
+        ''', None)
+    # 'ndp': (50, 'type_constrained', (int, _gteq1), # FIXME not used
     #     '''
     #         (default=50) Number of draws to use in approximation of leverages.
-    #     '''),
-    'rng': (np.random.default_rng(None), 'type', np.random.Generator,
-        '''
-            (default=np.random.default_rng(None)) NumPy random number generator.
-        ''')
+    #     ''', '>= 1')
 })
 
 def cre_params(update_dict={}):
@@ -148,14 +149,14 @@ class CREEstimator:
         self.res['cores'] = self.ncore
         self.res['ndt'] = self.ndraw_trace
 
-        # NumPy random number generator
-        self.rng = self.params['rng']
-
         # self.logger.info('CREEstimator object initialized')
 
-    def fit(self):
+    def fit(self, rng=np.random.default_rng(None)):
         '''
         Run CRE solver.
+
+        Arguments:
+            rng (np.random.Generator): NumPy random number generator
         '''
         self.start_time = time.time()
 
@@ -184,7 +185,7 @@ class CREEstimator:
             self.__prep_posterior_var(jdata, cdata)
 
             self.logger.info('computing posterior variance')
-            self.__compute_posterior_var()
+            self.__compute_posterior_var(rng)
             self.res['var_posterior'] = self.posterior_var
 
         end_time = time.time()
@@ -549,9 +550,12 @@ class CREEstimator:
         M = 1 / self.within_params['var_psi'] * eye(self.nf) + 1 / self.within_params['var_eps'] * Jd.transpose() * Jd
         self.ml = pyamg.ruge_stuben_solver(M)
 
-    def __compute_posterior_var(self):
+    def __compute_posterior_var(self, rng=np.random.default_rng(None)):
         '''
         Compute the posterior variance of the CRE model.
+
+        Arguments:
+            rng (np.random.Generator): NumPy random number generator
         '''
         # We first compute the direct term
         v1 = 1 / self.within_params['var_psi'] * self.Mud
@@ -564,7 +568,7 @@ class CREEstimator:
         # Next we look at the trace term
         tr_var_pos_all = np.zeros(self.ndraw_trace)
         for r in trange(self.ndraw_trace):
-            Zpsi = 2 * self.rng.binomial(1, 0.5, self.nf) - 1
+            Zpsi = 2 * rng.binomial(1, 0.5, self.nf) - 1
 
             R1 = self.Jq * Zpsi
             R2 = self.Jq * self.ml.solve(Zpsi)
