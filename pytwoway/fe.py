@@ -1145,9 +1145,9 @@ class FEEstimator:
         self.res['max_lev'] = Pii[worker_m].max()
 
         if self.res['max_lev'] >= 1:
-            leverage_warning = "Max P_ii is {} which is >= 1. This should not happen - increase the value of 'lev_batchsize' or 'lev_nbatches' until this warning is no longer raised ('lev_batchsize' is currently set to {} and 'lev_nbatches' is currently set to {}).".format(self.res['max_lev'], self.lev_batchsize, self.params['lev_nbatches'])
-            warnings.warn(leverage_warning)
+            leverage_warning = "Max P_ii is {} which is >= 1. This means your data is not leave-one-observation-out connected. The HE estimator requires leave-one-observation-out connected data to work properly. When cleaning your data, please set clean_params['connectedness'] = 'leave_one_observation_out' to correct this.".format(self.res['max_lev'])
             self.logger.info(leverage_warning)
+            raise ValueError(leverage_warning)
             # self.adata['Pii'] = Pii
             # self.adata.to_feather('pii_data.ftr')
             # raise NotImplementedError
