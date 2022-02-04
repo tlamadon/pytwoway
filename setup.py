@@ -23,7 +23,7 @@ setuptools.setup(
         'ConfigArgParse',
         'matplotlib',
         'tqdm',
-        'statsmodel'
+        'statsmodels'
       ],
     entry_points = {
         'console_scripts': ['pytw=pytwoway.command_line:main'],
