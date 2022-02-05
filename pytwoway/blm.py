@@ -681,7 +681,7 @@ class BLMModel:
 
         # Store wage outcomes and groups
         Y1 = sdata['y1'].to_numpy()
-        G1 = sdata['g1'].to_numpy()
+        G1 = sdata['g1'].to_numpy().astype(int)
 
         # Matrix of posterior probabilities
         qi = np.ones(shape=(ni, nl))
@@ -751,7 +751,7 @@ class BLMModel:
         self.fit_movers(jdata)
         ##### Loop 3 #####
         # Remove constraints
-        self.params['cons_a'] = ()
+        self.params['cons_a'] = ([], {})
         if self.params['verbose'] in [1, 2]:
             print('Running unconstrained movers')
         self.fit_movers(jdata)
@@ -770,7 +770,7 @@ class BLMModel:
         self.params['update_a'] = True
         self.params['update_s'] = False
         self.params['update_pk1'] = False
-        self.params['cons_a'] = ()
+        self.params['cons_a'] = ([], {})
         if self.params['verbose'] in [1, 2]:
             print('Running fit_A')
         self.fit_movers(jdata)
@@ -787,7 +787,7 @@ class BLMModel:
         self.params['update_a'] = False
         self.params['update_s'] = True
         self.params['update_pk1'] = False
-        self.params['cons_a'] = ()
+        self.params['cons_a'] = ([], {})
         if self.params['verbose'] in [1, 2]:
             print('Running fit_S')
         self.fit_movers(jdata)
@@ -804,7 +804,7 @@ class BLMModel:
         self.params['update_a'] = False
         self.params['update_s'] = False
         self.params['update_pk1'] = True
-        self.params['cons_a'] = ()
+        self.params['cons_a'] = ([], {})
         if self.params['verbose'] in [1, 2]:
             print('Running fit_pk')
         self.fit_movers(jdata)
@@ -940,34 +940,29 @@ class BLMModel:
         Simulates data (movers and stayers) and attached firms ids. Firms have all same expected size.
 
         Arguments:
-            fsize (int): max number of employees at a firm
+            fsize (int): average number of stayers per firm
             mmult (int): factor by which to increase observations for movers
             smult (int): factor by which to increase observations for stayers
 
         Returns:
-            sim (dict): {'jdata': movers, 'sdata': stayers}
+            (dict): {'jdata': movers, 'sdata': stayers}
         '''
         jdata = self._m2_mixt_simulate_movers(self.NNm * mmult)
         sdata = self._m2_mixt_simulate_stayers(self.NNs * smult)
 
         ## Create some firm ids
-        # Random number generation, roll is required because j1 is - 1 for empty rows but they appear at the end of the dataframe
-        sdata['j1'] = np.hstack(np.roll(sdata.groupby('g1').apply(lambda df: self.rng.integers(low=0, high=len(df) // fsize + 1, size=len(df))), - 1))
-        sdata['j1'] = 'F' + (sdata['g1'].astype(int) + sdata['j1']).astype(str)
-        sdata['g1b'] = sdata['g1']
-        sdata['g1true'] = sdata['g1']
-        jdata['g1c'] = jdata['g1']
-        jdata['g1true'] = jdata['g1']
-        jdata['g2true'] = jdata['g2']
-        jdata['j1'] = np.hstack(jdata.groupby('g1c').apply(lambda df: self.rng.choice(sdata.loc[sdata['g1b'].isin(jdata['g1c']), 'j1'].unique(), size=len(df))))
-        jdata['g2c'] = jdata['g2']
-        jdata['j2'] = np.hstack(jdata.groupby('g2c').apply(lambda df: self.rng.choice(sdata.loc[sdata['g1b'].isin(jdata['g2c']), 'j1'].unique(), size=len(df))))
-        jdata = jdata.drop(['g1c', 'g2c'], axis=1)
-        sdata = sdata.drop(['g1b'], axis=1)
+        # Draw firm ids for stayers (roll is required because j1 is -1 for empty rows but they appear at the end of the dataframe)
+        sdata['j1'] = np.hstack(np.roll(sdata.groupby('g1').apply(lambda df: self.rng.integers(max(1, round(len(df) / fsize)), size=len(df))), -1))
+        # Make firm ids contiguous
+        sdata['j1'] = sdata.groupby(['g1', 'j1']).ngroup()
         sdata['j2'] = sdata['j1']
+        # Link firm ids to clusters
+        j_per_g_dict = sdata.groupby('g1')['j1'].unique().to_dict()
+        # Draw firm ids for movers
+        jdata['j1'] = np.hstack(jdata.groupby('g1').apply(lambda df: self.rng.choice(j_per_g_dict[df.iloc[0]['g1']], size=len(df))))
+        jdata['j2'] = np.hstack(jdata.groupby('g2').apply(lambda df: self.rng.choice(j_per_g_dict[df.iloc[0]['g2']], size=len(df))))
 
-        sim = {'jdata': jdata, 'sdata': sdata}
-        return sim
+        return {'jdata': jdata[['y1', 'y2', 'j1', 'j2', 'g1', 'g2']], 'sdata': sdata[['y1', 'y2', 'j1', 'j2', 'g1', 'g2']]}
 
 class BLMEstimator:
     '''
