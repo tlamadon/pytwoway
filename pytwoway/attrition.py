@@ -44,7 +44,7 @@ _attrition_params_default = ParamsDict({
 
 def attrition_params(update_dict={}):
     '''
-    Dictionary of default attrition_params.
+    Dictionary of default attrition_params. Run tw.attrition_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
         update_dict (dict): user parameter values

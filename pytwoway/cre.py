@@ -59,7 +59,7 @@ _cre_params_default = ParamsDict({
 
 def cre_params(update_dict={}):
     '''
-    Dictionary of default cre_params.
+    Dictionary of default cre_params. Run tw.cre_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
         update_dict (dict): user parameter values

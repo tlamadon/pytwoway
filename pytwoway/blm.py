@@ -94,7 +94,7 @@ _blm_params_default = ParamsDict({
 
 def blm_params(update_dict={}):
     '''
-    Dictionary of default blm_params.
+    Dictionary of default blm_params. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
         update_dict (dict): user parameter values
@@ -135,7 +135,7 @@ _constraint_params_default = ParamsDict({
 
 def constraint_params(update_dict={}):
     '''
-    Dictionary of default constraint_params.
+    Dictionary of default constraint_params. Run tw.constraint_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
         update_dict (dict): user parameter values

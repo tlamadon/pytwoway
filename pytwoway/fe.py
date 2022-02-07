@@ -109,7 +109,7 @@ _fe_params_default = ParamsDict({
 
 def fe_params(update_dict={}):
     '''
-    Dictionary of default fe_params.
+    Dictionary of default fe_params. Run tw.fe_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
         update_dict (dict): user parameter values
