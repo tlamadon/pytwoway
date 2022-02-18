@@ -6,7 +6,7 @@ from pathlib import Path
 import pyamg
 import numpy as np
 import pandas as pd
-from bipartitepandas import ParamsDict, logger_init
+from bipartitepandas.util import ParamsDict, logger_init
 from scipy.sparse import csc_matrix, coo_matrix, diags, linalg, hstack, eye
 import time
 # import pyreadr

@@ -45,7 +45,7 @@ class MonteCarlo:
         # Update parameter dictionaries
         self.fe_params['he'] = True
         # Clean parameters
-        self.clean_params['connectedness'] = 'leave_one_observation_out'
+        self.clean_params['connectedness'] = 'leave_out_observation'
         self.clean_params['is_sorted'] = True
         self.clean_params['force'] = True
         self.clean_params['copy'] = False
@@ -86,27 +86,28 @@ class MonteCarlo:
             he_psi_alpha_cov (float): heteroskedastic-corrected estimate of covariance of psi and alpha
         '''
         ## Simulate data
-        sim_data = self.sim_network.sim_network(rng)
+        sim_data = self.sim_network.simulate(rng)
         ## Compute true sample variance of psi and covariance of psi and alpha
-        psi_var = np.var(sim_data['psi'], ddof=1)
-        psi_alpha_cov = np.cov(sim_data['psi'], sim_data['alpha'], ddof=1)[0, 1]
+        psi_var = np.var(sim_data.loc[:, 'psi'].to_numpy(), ddof=1)
+        psi_alpha_cov = np.cov(sim_data.loc[:, 'psi'].to_numpy(), sim_data.loc[:, 'alpha'].to_numpy(), ddof=1)[0, 1]
+        ## Convert into BipartitePandas dataframe
+        sim_data = bpd.BipartiteLong(sim_data.loc[:, ['i', 'j', 'y', 't']], log=self.log)
         ## Clean data
-        sim_data = bpd.BipartiteLong(sim_data, log=self.log)
         if self.collapse or self.move_to_worker:
             ## Collapsing or setting moves to worker ids
             # Initial clean without connectedness
-            sim_data = sim_data.clean_data(self.clean_params_one)
+            sim_data = sim_data.clean(self.clean_params_one)
             if self.move_to_worker:
                 # Move-to-Worker
-                sim_data = sim_data.get_es(move_to_worker=True, is_sorted=True, copy=False).get_long(is_sorted=True, copy=False)
+                sim_data = sim_data.to_eventstudy(move_to_worker=True, is_sorted=True, copy=False).to_long(is_sorted=True, copy=False)
             if self.collapse:
                 # Collapse
-                sim_data = sim_data.get_collapsed_long(is_sorted=True, copy=False)
+                sim_data = sim_data.collapse(is_sorted=True, copy=False)
             # Final clean with connectedness
-            sim_data = sim_data.clean_data(self.clean_params_two)
+            sim_data = sim_data.clean(self.clean_params_two)
         else:
             # Standard
-            sim_data = sim_data.clean_data(self.clean_params)
+            sim_data = sim_data.clean(self.clean_params)
         ## Estimate FE model
         fe_estimator = tw.FEEstimator(sim_data, self.fe_params)
         fe_estimator.fit(rng)
@@ -116,7 +117,7 @@ class MonteCarlo:
         # Cluster
         sim_data = sim_data.cluster(self.cluster_params)
         # Estimate
-        cre_estimator = tw.CREEstimator(sim_data.get_es(move_to_worker=False, is_sorted=True).get_cs(copy=False), self.cre_params)
+        cre_estimator = tw.CREEstimator(sim_data.to_eventstudy(move_to_worker=False, is_sorted=True, copy=False).get_cs(copy=False), self.cre_params)
         cre_estimator.fit(rng)
         # Save results
         cre_res = cre_estimator.res

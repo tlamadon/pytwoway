@@ -13,7 +13,7 @@ from multiprocessing import Pool
 import itertools
 import warnings
 from pytwoway import jitter_scatter
-from bipartitepandas import ParamsDict
+from bipartitepandas.util import ParamsDict
 from tqdm import tqdm
 
 # NOTE: multiprocessing isn't compatible with lambda functions

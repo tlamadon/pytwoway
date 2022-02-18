@@ -5,7 +5,8 @@ from multiprocessing import Pool, Value
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from bipartitepandas import ParamsDict, to_list, logger_init, cluster_params, clean_params
+from bipartitepandas import clean_params, cluster_params
+from bipartitepandas.util import ParamsDict, to_list, logger_init
 import pytwoway as tw
 from tqdm import tqdm
 import warnings
