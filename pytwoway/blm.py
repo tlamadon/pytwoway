@@ -507,7 +507,7 @@ class BLMModel:
             A = pr[:, :, kk]
             A /= A.sum()
             A = 0.5 * A + 0.5 * A.T
-            D = np.diag(np.sum(A, axis=1) ** (- 0.5))
+            D = np.diag(np.sum(A, axis=1) ** (-0.5))
             L = np.eye(nk) - D @ A @ D
             evals, evecs = np.linalg.eig(L)
             EV[kk] = sorted(evals)[1]
@@ -558,9 +558,9 @@ class BLMModel:
         # Fix error from bad initial guesses causing probabilities to be too low
         d_prior = params['d_prior']
         lp = np.zeros(shape=(ni, nl))
-        GG1 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), G1)), shape=(ni, nk))
-        GG2 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), G2)), shape=(ni, nk))
-        GG12 = csc_matrix((np.ones(ni), (range(jdata.shape[0]), G1 + nk * G2)), shape=(ni, nk * nk))
+        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
+        GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
+        GG12 = csc_matrix((np.ones(ni), (range(ni), G1 + nk * G2)), shape=(ni, nk * nk))
 
         for iter in range(params['n_iters']):
 
@@ -600,25 +600,32 @@ class BLMModel:
             # We also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
             ts = nl * nk # Shift for period 2
             XwXd = np.zeros(shape=2 * ts) # Only store the diagonal
-            XwY = np.zeros(shape=2 * ts)
+            if params['update_a']:
+                XwY = np.zeros(shape=2 * ts)
+            if params['update_s']:
+                XwS = np.zeros(shape=2 * ts)
             for l in range(nl):
-                l_index, r_index = l * nk, (l + 1) * nk
-                # We compute the terms for period 1
                 # (We might be better off trying this within numba or something)
-                XwXd[l_index: r_index] = (GG1.T @ (diags(qi[:, l] / S1[G1, l]) @ GG1)).diagonal()
-                XwY [l_index: r_index] = GG1.T @ (diags(qi[:, l] / S1[G1, l]) @ Y1)
-                # We do the same for period 2
-                XwXd[l_index + ts: r_index + ts] = (GG2.T @ (diags(qi[:, l] / S2[G2, l]) @ GG2)).diagonal()
-                XwY [l_index + ts: r_index + ts] = GG2.T @ (diags(qi[:, l] / S2[G2, l]) @ Y2)
+                l_index, r_index = l * nk, (l + 1) * nk
+                # Compute shared terms
+                GG1_l = GG1.T @ diags(qi[:, l] / S1[G1, l])
+                GG2_l = GG2.T @ diags(qi[:, l] / S2[G2, l])
+                # Compute XwXd terms
+                XwXd[l_index: r_index] = (GG1_l @ GG1).diagonal()
+                XwXd[l_index + ts: r_index + ts] = (GG2_l @ GG2).diagonal()
+                if params['update_a']:
+                    # Compute XwY terms
+                    XwY[l_index: r_index] = GG1_l @ Y1
+                    XwY[l_index + ts: r_index + ts] = GG2_l @ Y2
 
             # We solve the system to get all the parameters
             XwX = np.diag(XwXd)
             if params['update_a']:
                 try:
-                    cons_a.solve(XwX, - XwY)
-                    res_a = cons_a.res
-                    A1 = np.reshape(res_a, (2, nl, nk))[0, :, :].T
-                    A2 = np.reshape(res_a, (2, nl, nk))[1, :, :].T
+                    cons_a.solve(XwX, -XwY)
+                    res_a = np.reshape(cons_a.res, (2, nl, nk)).T
+                    A1 = res_a[:, :, 0]
+                    A2 = res_a[:, :, 1]
                 except ValueError as e:
                     # If constraints inconsistent, keep A1 and A2 the same
                     if params['verbose'] in [1, 2]:
@@ -629,24 +636,24 @@ class BLMModel:
                 XwS = np.zeros(shape=2 * ts)
                 # Next we extract the variances
                 for l in range(nl):
-                    l_index = l * nk
-                    r_index = (l + 1) * nk
-                    XwS[l_index: r_index] = GG1.T @ (diags(qi[:, l] / S1[G1, l]) @ ((Y1 - A1[G1, l]) ** 2))
-                    XwS[l_index + ts: r_index + ts] = GG2.T @ (diags(qi[:, l] / S2[G2, l]) @ ((Y2 - A2[G2, l]) ** 2))
+                    l_index, r_index = l * nk, (l + 1) * nk
+                    XwS[l_index: r_index] = GG1.T @ diags(qi[:, l] / S1[G1, l]) @ ((Y1 - A1[G1, l]) ** 2)
+                    XwS[l_index + ts: r_index + ts] = GG2.T @ diags(qi[:, l] / S2[G2, l]) @ ((Y2 - A2[G2, l]) ** 2)
 
                 try:
-                    cons_s.solve(XwX, - XwS)
-                    res_s = cons_s.res
-                    S1 = np.sqrt(np.reshape(res_s, (2, nl, nk))[0, :, :]).T
-                    S2 = np.sqrt(np.reshape(res_s, (2, nl, nk))[1, :, :]).T
+                    cons_s.solve(XwX, -XwS)
+                    res_s = np.sqrt(np.reshape(cons_s.res, (2, nl, nk))).T
+                    S1 = res_s[:, :, 0]
+                    S2 = res_s[:, :, 1]
                 except ValueError as e:
                     # If constraints inconsistent, keep S1 and S2 the same
                     if params['verbose'] in [1, 2]:
                         print(str(e) + 'passing 2')
                     pass
             if params['update_pk1']:
-                for l in range(nl):
-                    pk1[:, l] = GG12.T * qi[:, l]
+                pk1 = GG12.T @ qi
+                # for l in range(nl):
+                #     pk1[:, l] = GG12.T * qi[:, l]
                 # Normalize rows to sum to 1, and add dirichlet prior
                 pk1 += d_prior - 1
                 pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
@@ -687,7 +694,7 @@ class BLMModel:
         qi = np.ones(shape=(ni, nl))
 
         lp = np.zeros(shape=(ni, nl))
-        GG1 = csc_matrix((np.ones(ni), (range(sdata.shape[0]), G1)), shape=(ni, nk))
+        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
 
         for iter in range(params['n_iters']):
 
@@ -703,7 +710,7 @@ class BLMModel:
             qi = np.exp(lp.T - logsumexp(lp, axis=1)).T
             if params['return_qi']:
                 return qi
-            lik0 = logsumexp(lp, axis=1).sum() # FIXME should this be returned?
+            lik0 = logsumexp(lp, axis=1).mean() # FIXME should this be returned?
             liks0.append(lik0)
             if params['verbose'] == 2:
                 print('loop {}, liks {}'.format(iter, lik0))
@@ -713,8 +720,9 @@ class BLMModel:
             prev_lik = lik0
 
             # --------- M-step ----------
-            for l in range(nl):
-                pk0[:, l] = GG1.T * qi[:, l]
+            pk0 = GG1.T @ qi
+            # for l in range(nl):
+            #     pk0[:, l] = GG1.T * qi[:, l]
             # Normalize rows to sum to 1
             pk0 = (pk0.T / np.sum(pk0, axis=1).T).T
 
