@@ -13,7 +13,7 @@ from multiprocessing import Pool
 import itertools
 import warnings
 from pytwoway import jitter_scatter
-from bipartitepandas.util import ParamsDict
+from bipartitepandas.util import ParamsDict, to_list
 from tqdm import tqdm
 
 # NOTE: multiprocessing isn't compatible with lambda functions
@@ -35,6 +35,18 @@ _blm_params_default = ParamsDict({
         '''
             (default=10) Number of firm types.
         ''', '>= 1'),
+    'custom_independent_dict': (None, 'type_none', dict,
+        '''
+            (default=None) Dictionary of custom general column names (to use as controls) linked to the number of types for that column, where the estimated parameters should be independent of worker/firm type pairs. In other words, any column listed as a member of this parameter will have the same parameter estimated for each worker-firm type pair (the parameter value can still differ over time). None is equivalent to {}.
+        ''', None),
+    'custom_dependent_dict': (None, 'type_none', dict,
+        '''
+            (default=None) Dictionary of custom general column names (to use as controls) linked to the number of types for that column, where the estimated parameters should be dependent on worker/firm type pairs. In other words, any column listed as a member of this parameter will have a different parameter estimated for each worker-firm type pair (the parameter value can still differ over time). None is equivalent to {}.
+        ''', None),
+    'custom_nosplit_columns': (None, 'type_none', (list, tuple),
+        '''
+            (default=None) List of custom general column names (to use as controls), where the estimated parameter values should be constant over the pre- and post-periods. Any column not listed will be estimated separately for the pre- and post-periods. Only works for columns listed as independent of worker-firm type pairs. None is equivalent to [].
+        ''', None),
     'fixb': (False, 'type', bool,
         '''
             (default=False) If True, set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0).
@@ -47,15 +59,19 @@ _blm_params_default = ParamsDict({
         '''
             (default=False) If True, using model to simulate data.
         ''', None),
-    ## fit_movers() and fit_stayers() parameters
-    'n_iters': (100, 'type_constrained', (int, _gteq1),
+    ## fit_movers() and fit_stayers parameters
+    'return_qi': (False, 'type', bool,
         '''
-            (default=100) Number of iterations for EM.
-        ''', '>= 1'),
+            (default=False) If True, return qi matrix after first loop.
+        ''', None),
     # fit_movers() parameters
-    'threshold': (1e-7, 'type_constrained', ((float, int), _gteq0),
+    'n_iters_movers': (100, 'type_constrained', (int, _gteq1),
         '''
-            (default=1e-7) Threshold to break EM loop.
+            (default=100) Number of iterations for EM for movers.
+        ''', '>= 1'),
+    'threshold_movers': (1e-7, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=1e-7) Threshold to break EM loop for movers.
         ''', '>= 0'),
     'update_a': (True, 'type', bool,
         '''
@@ -69,10 +85,6 @@ _blm_params_default = ParamsDict({
         '''
             (default=True) If False, do not update pk1.
         ''', None),
-    'return_qi': (False, 'type', bool,
-        '''
-            (default=False) If True, return qi matrix after first loop.
-        ''', None),
     'cons_a': ((['lin'], {'n_periods': 2}), 'type_constrained', (tuple, _lstdct),
         '''
             (default=(['lin'], {'n_periods': 2})) Constraints on A1 and A2, where first entry gives list of constraints and second entry gives dictionary of constraint parameters.
@@ -82,6 +94,14 @@ _blm_params_default = ParamsDict({
             (default=(['biggerthan'], {'gap_bigger': 1e-7, 'n_periods': 2})) Constraints on S1 and S2, where first entry gives list of constraints and second entry gives dictionary of constraint parameters.
         ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
     # fit_stayers() parameters
+    'n_iters_stayers': (100, 'type_constrained', (int, _gteq1),
+        '''
+            (default=100) Number of iterations for EM for stayers.
+        ''', '>= 1'),
+    'threshold_stayers': (1e-7, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=1e-7) Threshold to break EM loop for stayers.
+        ''', '>= 0'),
     'd_prior': (1.0001, 'type_constrained', ((float, int), _gteq1),
         '''
             (default=1.0001) Account for probabilities being too small by adding (d_prior - 1).
@@ -425,34 +445,95 @@ class BLMModel:
         self.fixb = params['fixb']
         self.stationary = params['stationary']
         self.rng = rng
+        ## Unpack custom column parameters
+        custom_dep_dict = params['custom_dependent_dict']
+        custom_indep_dict = params['custom_independent_dict']
+        custom_nosplit_cols = params['custom_nosplit_columns']
+        ## Check if custom column parameters are None
+        if custom_dep_dict is None:
+            custom_dep_dict = {}
+        if custom_indep_dict is None:
+            custom_indep_dict = {}
+        if custom_nosplit_cols is None:
+            custom_nosplit_cols = []
+        ## Create dictionary of all custom columns
+        custom_cols_dict = custom_dep_dict.copy()
+        custom_cols_dict.update(custom_indep_dict.copy())
+        ## Custom column order
+        custom_dep_cols = sorted(custom_dep_dict.keys())
+        custom_indep_split_cols = [col for col in sorted(custom_indep_dict.keys()) if col not in custom_nosplit_cols]
+        custom_indep_nosplit_cols = [col for col in sorted(custom_indep_dict.keys()) if col in custom_nosplit_cols]
+        custom_cols = custom_dep_cols + custom_indep_split_cols + custom_indep_nosplit_cols
+        ## Store custom column attributes
+        self.custom_dep_dict = custom_dep_dict
+        self.custom_indep_dict = custom_indep_dict
+        self.custom_cols_dict = custom_cols_dict
+        # self.custom_nosplit_cols = custom_nosplit_cols
+        self.custom_dep_cols = custom_dep_cols
+        self.custom_indep_split_cols = custom_indep_split_cols
+        self.custom_indep_nosplit_cols = custom_indep_nosplit_cols
+        self.custom_cols = custom_cols
+
+        for col in custom_indep_dict.keys():
+            if col in custom_dep_cols:
+                # Make sure independent and dependent custom columns don't overlap
+                raise NotImplementedError(f'Custom independent columns and custom dependent columns cannot overlap, but input lists column {col!r} as a member of both.')
+        for col in custom_nosplit_cols:
+            if col not in custom_cols:
+                # Make sure all custom no-split columns are actually used
+                raise NotImplementedError(f'All custom columns listed not be split over time must be included as control variables, but {col!r} is not included.')
+            if col in custom_dep_cols:
+                # Make sure dependent columns are not split
+                raise NotImplementedError(f'Cannot set custom columns that are dependent on worker-firm type pairs to not split, but input indicates column {col!r} should both be dependent and not split.')
+
+        dims = [nl, nk]
+        for col in custom_dep_cols:
+            # dims must account for all dependent columns (and make sure the columns are in the correct order)
+            dims.append(custom_dep_dict[col])
+        self.dims = dims
 
         if params['simulation']:
             # Model for Y1 | Y2, l, k for movers and stayers
-            self.A1 = 0.9 * (1 + 0.5 * rng.normal(size=(nk, nl)))
-            self.S1 = 0.3 * (1 + 0.5 * rng.uniform(size=(nk, nl)))
+            self.A1 = 0.9 * (1 + 0.5 * rng.normal(size=dims))
+            self.S1 = 0.3 * (1 + 0.5 * rng.uniform(size=dims))
             # Model for Y4 | Y3, l, k for movers and stayers
-            self.A2 = 0.9 * (1 + 0.5 * rng.normal(size=(nk, nl)))
-            self.S2 = 0.3 * (1 + 0.5 * rng.uniform(size=(nk, nl)))
+            self.A2 = 0.9 * (1 + 0.5 * rng.normal(size=dims))
+            self.S2 = 0.3 * (1 + 0.5 * rng.uniform(size=dims))
             # Model for p(K | l, l') for movers
             self.pk1 = rng.dirichlet(alpha=[1] * nl, size=nk * nk)
             # Model for p(K | l, l') for stayers
             self.pk0 = rng.dirichlet(alpha=[1] * nl, size=nk)
+            ## Control variables
+            # Split
+            self.A1_indep = {col: 0.9 * (1 + 0.5 * rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
+            self.S1_indep = {col: 0.3 * (1 + 0.5 * rng.uniform(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
+            self.A2_indep = {col: 0.9 * (1 + 0.5 * rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
+            self.S2_indep = {col: 0.3 * (1 + 0.5 * rng.uniform(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
+            # No-split
+            self.A_indep = {col: 0.9 * (1 + 0.5 * rng.normal(size=custom_indep_dict[col])) for col in custom_indep_nosplit_cols}
+            self.S_indep = {col: 0.3 * (1 + 0.5 * rng.uniform(size=custom_indep_dict[col])) for col in custom_indep_nosplit_cols}
             # Sort
             self._sort_matrices()
         else:
             # Model for Y1 | Y2, l, k for movers and stayers
-            self.A1 = np.tile(sorted(rng.normal(size=nl)), (nk, 1))
-            self.S1 = np.ones(shape=(nk, nl))
+            self.A1 = np.tile(sorted(rng.normal(size=nl)), list(reversed(dims[1:])) + [1]).T
+            self.S1 = np.ones(shape=dims)
             # Model for Y4 | Y3, l, k for movers and stayers
             self.A2 = self.A1.copy()
-            self.S2 = np.ones(shape=(nk, nl))
+            self.S2 = np.ones(shape=dims)
             # Model for p(K | l, l') for movers
             self.pk1 = rng.dirichlet(alpha=[1] * nl, size=nk * nk) # np.ones(shape=(nk * nk, nl)) / nl
             # Model for p(K | l, l') for stayers
             self.pk0 = np.ones(shape=(nk, nl)) / nl
-
-        self.NNm = np.zeros(shape=(nk, nk)).astype(int) + 10
-        self.NNs = np.zeros(shape=nk).astype(int) + 10
+            ## Control variables
+            # Split
+            self.A1_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
+            self.S1_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
+            self.A2_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
+            self.S2_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
+            # No-split
+            self.A_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_nosplit_cols}
+            self.S_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_nosplit_cols}
 
         # Log likelihood for movers
         self.lik1 = None
@@ -466,11 +547,11 @@ class BLMModel:
         self.connectedness = None
 
         for l in range(nl):
-            self.A1[:, l] = sorted(self.A1[:, l])
-            self.A2[:, l] = sorted(self.A2[:, l])
+            self.A1[l] = np.sort(self.A1[l], axis=0)
+            self.A2[l] = np.sort(self.A2[l], axis=0)
 
         if self.fixb:
-            self.A2 = np.mean(self.A2, axis=0) + self.A1 - np.mean(self.A1, axis=0)
+            self.A2 = np.mean(self.A2, axis=1) + self.A1 - np.mean(self.A1, axis=1)
 
         if self.stationary:
             self.A2 = self.A1
@@ -496,8 +577,7 @@ class BLMModel:
         Arguments:
             all (bool): if True, set self.connectedness to be the vector of connectedness for all worker types instead of the minimum
         '''
-        nl = self.nl
-        nk = self.nk
+        nl, nk = self.nl, self.nk
         EV = np.zeros(shape=nl)
         pk1 = np.reshape(self.pk1, (nk, nk, nl))
         pr = (self.NNm.T * pk1.T).T
@@ -506,7 +586,7 @@ class BLMModel:
             # Compute adjacency matrix
             A = pr[:, :, kk]
             A /= A.sum()
-            A = 0.5 * A + 0.5 * A.T
+            A = (A + A.T) / 2
             D = np.diag(np.sum(A, axis=1) ** (-0.5))
             L = np.eye(nk) - D @ A @ D
             evals, evecs = np.linalg.eig(L)
@@ -516,63 +596,156 @@ class BLMModel:
             self.connectedness = EV
         self.connectedness = np.abs(EV).min()
 
-    def fit_movers(self, jdata):
+    def fit_movers(self, jdata, compute_NNm=True):
         '''
         EM algorithm for movers.
 
         Arguments:
             jdata (Pandas DataFrame): movers
+            compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
+        # Unpack parameters
         params = self.params
-        A1 = self.A1
-        S1 = self.S1
-        A2 = self.A2
-        S2 = self.S2
+        nl, nk, ni = self.nl, self.nk, jdata.shape[0]
+        A1, S1, A2, S2 = self.A1, self.S1, self.A2, self.S2
+        A1_indep, S1_indep, A2_indep, S2_indep, A_indep, S_indep = self.A1_indep, self.S1_indep, self.A2_indep, self.S2_indep, self.A_indep, self.S_indep
+
+        # Store wage outcomes and groups
+        Y1 = jdata.loc[:, 'y1'].to_numpy()
+        Y2 = jdata.loc[:, 'y2'].to_numpy()
+        G1 = jdata.loc[:, 'g1'].to_numpy().astype(int, copy=False)
+        G2 = jdata.loc[:, 'g2'].to_numpy().astype(int, copy=False)
+        # Control variables
+        C = {}
+        C1 = {}
+        C2 = {}
+        for col in self.custom_cols:
+            # Get subcolumns associated with col
+            subcols = to_list(jdata.col_reference_dict[col])
+            if col in self.custom_indep_nosplit_cols:
+                # If parameter associated with column is constant over time
+                if len(subcols) != 1:
+                    raise NotImplementedError(f'No-split general columns must have one associated column, but {col!r} does not.')
+                C[col] = jdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
+            else:
+                # If parameter associated with column can change over time
+                if len(subcols) != 2:
+                    raise NotImplementedError(f'Split general columns must have two associated columns, but {col!r} does not.')
+                C1[col] = jdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
+                C2[col] = jdata.loc[:, subcols[1]].to_numpy().astype(int, copy=False)
+        ## Sparse matrix representations ##
+        # GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
+        # GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
+        # CC = {col: csc_matrix((np.ones(ni), (range(ni), vec)), shape=(ni, self.custom_cols_dict[col])) for col, vec in C.items()}
+        # CC1 = {col: csc_matrix((np.ones(ni), (range(ni), vec)), shape=(ni, self.custom_cols_dict[col])) for col, vec in C1.items()}
+        # CC2 = {col: csc_matrix((np.ones(ni), (range(ni), vec)), shape=(ni, self.custom_cols_dict[col])) for col, vec in C2.items()}
+        n_param_cols = 1 + len(self.custom_indep_dict)
+        CC1_indicator = np.zeros([ni, n_param_cols])
+        CC2_indicator = np.zeros([ni, n_param_cols])
+        CC1_indicator[:, 0] = G1
+        CC2_indicator[:, 0] = G2
+
+        n_dep_params = nk
+        for col in self.custom_cols:
+            ## First, set indicators for dependent columns ##
+            if col in self.custom_dep_cols:
+                # If column depends on worker-firm type pair
+                CC1_indicator[:, 0] += n_dep_params * C1[col]
+                CC2_indicator[:, 0] += n_dep_params * C2[col]
+                n_dep_params *= self.custom_cols_dict[col]
+        cum_params = n_dep_params
+        i = 0
+        for col in self.custom_cols:
+            ## Second, set indicators for independent split columns ##
+            if col in self.custom_indep_split_cols:
+                # If parameter associated with column can change over time
+                i += 1
+                CC1_indicator[:, i] = cum_params + C1[col]
+                CC2_indicator[:, i] = cum_params + C2[col]
+                cum_params += self.custom_cols_dict[col]
+        n_indep_split_params = cum_params - n_dep_params
+        for col in self.custom_cols:
+            ## Third, set indicators for independent no-split columns ##
+            if col in self.custom_indep_nosplit_cols:
+                # If parameter associated with column is constant over time
+                i += 1
+                CC1_indicator[:, i] = cum_params + C[col]
+                CC2_indicator[:, i] = cum_params + C[col]
+                cum_params += self.custom_cols_dict[col]
+        n_indep_nosplit_params = cum_params - n_dep_params - n_indep_split_params
+
+        CC1 = csc_matrix((np.ones(ni * n_param_cols), (np.repeat(range(ni), n_param_cols), CC1_indicator.flatten())), shape=(ni, cum_params))
+        CC2 = csc_matrix((np.ones(ni * n_param_cols), (np.repeat(range(ni), n_param_cols), CC1_indicator.flatten())), shape=(ni, cum_params))
+
+        # Transition probability matrix
+        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
+        GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
+        GG12 = csc_matrix((np.ones(ni), (range(ni), G1 + nk * G2)), shape=(ni, nk ** 2))
+        del GG1, GG2
+
+        # Matrix of prior probabilities
         pk1 = self.pk1
-        nl = self.nl
-        nk = self.nk
-        ni = jdata.shape[0]
+        # Matrix of posterior probabilities
+        qi = np.ones(shape=(ni, nl))
+        # Log pdfs
+        lp = np.zeros(shape=(ni, nl))
         # Log likelihood for movers
         lik1 = None
         # Path of log likelihoods for movers
         liks1 = []
         prev_lik = np.inf
+        # Fix error from bad initial guesses causing probabilities to be too low
+        d_prior = params['d_prior']
 
-        # Store wage outcomes and groups
-        Y1 = jdata['y1'].to_numpy()
-        Y2 = jdata['y2'].to_numpy()
-        G1 = jdata['g1'].to_numpy().astype(int)
-        G2 = jdata['g2'].to_numpy().astype(int)
-
-        # Matrix of posterior probabilities
-        qi = np.ones(shape=(ni, nl))
-
-        # Constraints
-        cons_a = QPConstrained(nl, nk)
+        # Constraints FIXME should this be nk or cum_params or something else?
+        cons_a = QPConstrained(nl, cum_params)
         if len(params['cons_a']) > 0:
             cons_a.add_constraints_builtin(params['cons_a'][0], params['cons_a'][1])
-        cons_s = QPConstrained(nl, nk)
+        cons_s = QPConstrained(nl, cum_params)
         if len(params['cons_s']) > 0:
             cons_s.add_constraints_builtin(params['cons_s'][0], params['cons_s'][1])
 
-        # Fix error from bad initial guesses causing probabilities to be too low
-        d_prior = params['d_prior']
-        lp = np.zeros(shape=(ni, nl))
-        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
-        GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
-        GG12 = csc_matrix((np.ones(ni), (range(ni), G1 + nk * G2)), shape=(ni, nk * nk))
-
-        for iter in range(params['n_iters']):
+        for iter in range(params['n_iters_movers']):
 
             # -------- E-Step ---------
             # We compute the posterior probabilities for each row
             # We iterate over the worker types, should not be be
             # too costly since the vector is quite large within each iteration
-            for l in range(nl):
-                lp1 = lognormpdf(Y1, A1[G1, l], S1[G1, l])
-                lp2 = lognormpdf(Y2, A2[G2, l], S2[G2, l])
+            ## Independent custom columns
+            if len(self.custom_cols) > len(self.custom_dep_cols):
+                A1_sum = np.zeros(ni)
+                A2_sum = np.zeros(ni)
+                S1_sum_sq = np.zeros(ni)
+                S2_sum_sq = np.zeros(ni)
+                for col in self.custom_indep_nosplit_cols:
+                    # If parameter associated with column is constant over time
+                    A1_sum += A_indep[col][C[col]]
+                    A2_sum += A_indep[col][C[col]]
+                    S1_sum_sq += S_indep[col][C[col]] ** 2
+                    S2_sum_sq += S_indep[col][C[col]] ** 2
+                for col in self.custom_indep_split_cols:
+                    # If parameter associated with column can change over time
+                    A1_sum += A1_indep[col][C1[col]]
+                    A2_sum += A2_indep[col][C2[col]]
+                    S1_sum_sq += S1_indep[col][C1[col]] ** 2
+                    S2_sum_sq += S2_indep[col][C2[col]] ** 2
+
                 KK = G1 + nk * G2
-                lp[:, l] = np.log(pk1[KK, l]) + lp1 + lp2
+                for l in range(nl):
+                    idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
+                    lp1 = lognormpdf(Y1, A1_sum + A1[idx_one], np.sqrt(S1_sum_sq + S1[idx_one] ** 2))
+                    idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
+                    lp2 = lognormpdf(Y2, A2_sum + A2[idx_two], np.sqrt(S2_sum_sq + S2[idx_two] ** 2))
+                    lp[:, l] = np.log(pk1[KK, l]) + lp1 + lp2
+            else:
+                KK = G1 + nk * G2
+                for l in range(nl):
+                    idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
+                    lp1 = lognormpdf(Y1, A1[idx_one], S1[idx_one])
+                    idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
+                    lp2 = lognormpdf(Y2, A2[idx_two], S2[idx_two])
+                    lp[:, l] = np.log(pk1[KK, l]) + lp1 + lp2
+            del idx_one, idx_two
 
             # We compute log sum exp to get likelihoods and probabilities
             qi = np.exp(lp.T - logsumexp(lp, axis=1)).T
@@ -585,7 +758,7 @@ class BLMModel:
             if params['verbose'] == 2:
                 print('loop {}, liks {}'.format(iter, lik1))
 
-            if abs(lik1 - prev_lik) < params['threshold']:
+            if abs(lik1 - prev_lik) < params['threshold_movers']:
                 break
             prev_lik = lik1
 
@@ -598,34 +771,73 @@ class BLMModel:
             # We do not necessarily want to construct the duplicated data by nl
             # Instead we will construct X'X and X'Y by looping over nl
             # We also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
-            ts = nl * nk # Shift for period 2
+            ts = nl * cum_params # Shift for period 2
+            # ts_indep = # Shift for period 2 for independent control variables
             XwXd = np.zeros(shape=2 * ts) # Only store the diagonal
             if params['update_a']:
                 XwY = np.zeros(shape=2 * ts)
-            if params['update_s']:
-                XwS = np.zeros(shape=2 * ts)
             for l in range(nl):
                 # (We might be better off trying this within numba or something)
-                l_index, r_index = l * nk, (l + 1) * nk
-                # Compute shared terms
-                GG1_l = GG1.T @ diags(qi[:, l] / S1[G1, l])
-                GG2_l = GG2.T @ diags(qi[:, l] / S2[G2, l])
-                # Compute XwXd terms
-                XwXd[l_index: r_index] = (GG1_l @ GG1).diagonal()
-                XwXd[l_index + ts: r_index + ts] = (GG2_l @ GG2).diagonal()
+                l_index, r_index = l * cum_params, (l + 1) * cum_params
+                ## Compute shared terms ##
+                # Variances
+                idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
+                idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
+                if len(self.custom_cols) > len(self.custom_dep_cols):
+                    S_l1 = S1[idx_one] ** 2
+                    S_l2 = S2[idx_two] ** 2
+                    for col in self.custom_indep_nosplit_cols:
+                        # If parameter associated with column is constant over time
+                        S_l1 += S_indep[col][C[col]] ** 2
+                        S_l2 += S_indep[col][C[col]] ** 2
+                    for col in self.custom_indep_split_cols:
+                        # If parameter associated with column can change over time
+                        S_l1 += S1_indep[col][C1[col]] ** 2
+                        S_l2 += S2_indep[col][C2[col]] ** 2
+                    S_l1 = np.sqrt(S_l1)
+                    S_l2 = np.sqrt(S_l2)
+                else:
+                    S_l1 = S1[idx_one]
+                    S_l2 = S2[idx_two]
+                del idx_one, idx_two
+                # Shared weighted terms
+                CC1_weighted = CC1.T @ diags(qi[:, l] / S_l1)
+                CC2_weighted = CC2.T @ diags(qi[:, l] / S_l2)
+                ## Compute XwXd terms ##
+                XwXd[l_index: r_index] = (CC1_weighted @ CC1).diagonal()
+                XwXd[l_index + ts: r_index + ts] = (CC2_weighted @ CC2).diagonal()
                 if params['update_a']:
-                    # Compute XwY terms
-                    XwY[l_index: r_index] = GG1_l @ Y1
-                    XwY[l_index + ts: r_index + ts] = GG2_l @ Y2
+                    ## Compute XwY terms ##
+                    XwY[l_index: r_index] = CC1_weighted @ Y1
+                    XwY[l_index + ts: r_index + ts] = CC2_weighted @ Y2
 
-            # We solve the system to get all the parameters
+            # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
             XwX = np.diag(XwXd)
             if params['update_a']:
                 try:
                     cons_a.solve(XwX, -XwY)
-                    res_a = np.reshape(cons_a.res, (2, nl, nk)).T
-                    A1 = res_a[:, :, 0]
-                    A2 = res_a[:, :, 1]
+                    # print('A1:', A1)
+                    # print('A2:', A2)
+                    # print('res:', cons_a.res)
+                    res_a1, res_a2 = cons_a.res[: len(cons_a.res) // 2], cons_a.res[len(cons_a.res) // 2:]
+                    A1 = np.reshape(res_a1[: nl * n_dep_params], self.dims)
+                    A2 = np.reshape(res_a2[: nl * n_dep_params], self.dims)
+                    # print('new A1:', A1)
+                    # print('new A2:', A2)
+                    # stop
+                    params_count = nl * n_dep_params
+                    for col in self.custom_indep_split_cols:
+                        # If parameter associated with column can change over time
+                        n_col_params = self.custom_cols_dict[col]
+                        A1_indep[col] = res_a1[params_count: params_count + n_col_params]
+                        A2_indep[col] = res_a2[params_count: params_count + n_col_params]
+                        params_count += n_col_params
+                    for col in self.custom_indep_nosplit_cols:
+                        # If parameter associated with column is constant over time
+                        # FIXME this shouldn't just take the average over the results from the two periods
+                        n_col_params = self.custom_cols_dict[col]
+                        A_indep[col] = (res_a1[params_count: params_count + n_col_params] + res_a2[params_count: params_count + n_col_params]) / 2
+                        params_count += n_col_params
                 except ValueError as e:
                     # If constraints inconsistent, keep A1 and A2 the same
                     if params['verbose'] in [1, 2]:
@@ -633,18 +845,62 @@ class BLMModel:
                     pass
 
             if params['update_s']:
-                XwS = np.zeros(shape=2 * ts)
                 # Next we extract the variances
+                XwS = np.zeros(shape=2 * ts)
+                if len(self.custom_cols) > len(self.custom_dep_cols):
+                    A1_sum = np.zeros(ni)
+                    A2_sum = np.zeros(ni)
+                    S1_sum_sq = np.zeros(ni)
+                    S2_sum_sq = np.zeros(ni)
+                    for col in self.custom_indep_nosplit_cols:
+                        # If parameter associated with column is constant over time
+                        A1_sum += A_indep[col][C[col]]
+                        A2_sum += A_indep[col][C[col]]
+                        S1_sum_sq += S_indep[col][C[col]] ** 2
+                        S2_sum_sq += S_indep[col][C[col]] ** 2
+                    for col in self.custom_indep_split_cols:
+                        # If parameter associated with column can change over time
+                        A1_sum += A1_indep[col][C1[col]]
+                        A2_sum += A2_indep[col][C2[col]]
+                        S1_sum_sq += S1_indep[col][C1[col]] ** 2
+                        S2_sum_sq += S2_indep[col][C2[col]] ** 2
                 for l in range(nl):
-                    l_index, r_index = l * nk, (l + 1) * nk
-                    XwS[l_index: r_index] = GG1.T @ diags(qi[:, l] / S1[G1, l]) @ ((Y1 - A1[G1, l]) ** 2)
-                    XwS[l_index + ts: r_index + ts] = GG2.T @ diags(qi[:, l] / S2[G2, l]) @ ((Y2 - A2[G2, l]) ** 2)
+                    l_index, r_index = l * cum_params, (l + 1) * cum_params
+                    # Means and variances
+                    idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
+                    idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
+                    A_l1 = A1[idx_one]
+                    A_l2 = A2[idx_one]
+                    S_l1 = S1[idx_one]
+                    S_l2 = S2[idx_two]
+                    if len(self.custom_cols) > len(self.custom_dep_cols):
+                        A_l1 += A1_sum
+                        A_l2 += A2_sum
+                        S_l1 = np.sqrt(S1_sum_sq + S_l1 ** 2)
+                        S_l2 = np.sqrt(S2_sum_sq + S_l2 ** 2)
+                    del idx_one, idx_two
+                    XwS[l_index: r_index] = CC1.T @ diags(qi[:, l] / S_l1) @ ((Y1 - A_l1) ** 2)
+                    XwS[l_index + ts: r_index + ts] = CC2.T @ diags(qi[:, l] / S_l2) @ ((Y2 - A_l2) ** 2)
 
                 try:
                     cons_s.solve(XwX, -XwS)
-                    res_s = np.sqrt(np.reshape(cons_s.res, (2, nl, nk))).T
-                    S1 = res_s[:, :, 0]
-                    S2 = res_s[:, :, 1]
+                    # FIXME using np.maximum(0, S) to set lower bound on variance
+                    res_s1, res_s2 = np.sqrt(cons_s.res[: len(cons_s.res) // 2]), np.sqrt(cons_s.res[len(cons_s.res) // 2:])
+                    S1 = np.reshape(res_s1[: nl * n_dep_params], self.dims)
+                    S2 = np.reshape(res_s2[: nl * n_dep_params], self.dims)
+                    params_count = nl * n_dep_params
+                    for col in self.custom_indep_split_cols:
+                        # If parameter associated with column can change over time
+                        n_col_params = self.custom_cols_dict[col]
+                        S1_indep[col] = res_s1[params_count: params_count + n_col_params]
+                        S2_indep[col] = res_s2[params_count: params_count + n_col_params]
+                        params_count += n_col_params
+                    for col in self.custom_indep_nosplit_cols:
+                        # If parameter associated with column is constant over time
+                        # FIXME this shouldn't just take the average over the results from the two periods
+                        n_col_params = self.custom_cols_dict[col]
+                        S_indep[col] = (res_s1[params_count: params_count + n_col_params] + res_s2[params_count: params_count + n_col_params]) / 2
+                        params_count += n_col_params
                 except ValueError as e:
                     # If constraints inconsistent, keep S1 and S2 the same
                     if params['verbose'] in [1, 2]:
@@ -655,56 +911,97 @@ class BLMModel:
                 # for l in range(nl):
                 #     pk1[:, l] = GG12.T * qi[:, l]
                 # Normalize rows to sum to 1, and add dirichlet prior
+                # pk1 = np.maximum(pk1, 0) # FIXME this isn't okay, but it prevents a bug with NaNs
                 pk1 += d_prior - 1
                 pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
 
-        self.A1 = A1
-        self.S1 = S1
-        self.A2 = A2
-        self.S2 = S2
-        self.pk1 = pk1
-        self.lik1 = lik1
-        self.liks1 = np.array(liks1)
+        self.A1, self.S1, self.A2, self.S2 = A1, S1, A2, S2
+        self.A1_indep, self.S1_indep, self.A2_indep, self.S2_indep, self.A_indep, self.S_indep = A1_indep, S1_indep, A2_indep, S2_indep, A_indep, S_indep
+        self.pk1, self.lik1, self.liks1 = pk1, lik1, np.array(liks1)
 
-    def fit_stayers(self, sdata):
+        # Update NNm
+        if compute_NNm:
+            self.NNm = jdata.groupby('g1')['g2'].value_counts().unstack(fill_value=0).to_numpy()
+
+    def fit_stayers(self, sdata, compute_NNs=True):
         '''
         EM algorithm for stayers.
 
         Arguments:
             sdata (Pandas DataFrame): stayers
+            compute_NNs (bool): if True, compute vector giving the number of stayers at each firm type (e.g. entry (1) gives the number of stayers at firm type 1)
         '''
+        # Unpack parameters
         params = self.params
-        A1 = self.A1
-        S1 = self.S1
+        nl, nk, ni = self.nl, self.nk, sdata.shape[0]
+        A1, S1 = self.A1, self.S1
+        A1_indep, S1_indep, A_indep, S_indep = self.A1_indep, self.S1_indep, self.A_indep, self.S_indep
+
+        # Store wage outcomes and groups
+        Y1 = sdata['y1'].to_numpy()
+        G1 = sdata['g1'].to_numpy().astype(int)
+        # Control variables
+        C = {}
+        C1 = {}
+        for col in self.custom_cols:
+            # Get subcolumns associated with col
+            subcols = to_list(sdata.col_reference_dict[col])
+            if col in self.custom_indep_nosplit_cols:
+                # If parameter associated with column is constant over time
+                if len(subcols) != 1:
+                    raise NotImplementedError(f'No-split general columns must have one associated column, but {col!r} does not.')
+                C[col] = sdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
+            else:
+                # If parameter associated with column can change over time
+                if len(subcols) != 2:
+                    raise NotImplementedError(f'Split general columns must have two associated columns, but {col!r} does not.')
+                C1[col] = sdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
+
+        # Matrix of prior probabilities
         pk0 = self.pk0
-        nl = self.nl
-        nk = self.nk
-        ni = sdata.shape[0]
+        # Matrix of posterior probabilities
+        qi = np.ones(shape=(ni, nl))
+        # Log pdfs
+        lp_stable = np.zeros(shape=(ni, nl))
+        lp = np.zeros(shape=(ni, nl))
         # Log likelihood for stayers
         lik0 = None
         # Path of log likelihoods for stayers
         liks0 = []
         prev_lik = np.inf
 
-        # Store wage outcomes and groups
-        Y1 = sdata['y1'].to_numpy()
-        G1 = sdata['g1'].to_numpy().astype(int)
-
-        # Matrix of posterior probabilities
-        qi = np.ones(shape=(ni, nl))
-
-        lp = np.zeros(shape=(ni, nl))
         GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
 
-        for iter in range(params['n_iters']):
+        if len(self.custom_cols) > len(self.custom_dep_cols):
+            # Custom columns
+            A1_sum = np.zeros(ni)
+            S1_sum_sq = np.zeros(ni)
+            for col in self.custom_indep_nosplit_cols:
+                # If parameter associated with column is constant over time
+                A1_sum += A_indep[col][C[col]]
+                S1_sum_sq += S_indep[col][C[col]] ** 2
+            for col in self.custom_indep_split_cols:
+                # If parameter associated with column can change over time
+                A1_sum += A1_indep[col][C1[col]]
+                S1_sum_sq += S1_indep[col][C1[col]] ** 2
+
+            for l in range(nl):
+                idx_l = (l, G1, *[C1[col] for col in self.custom_dep_cols])
+                lp_stable[:, l] = lognormpdf(Y1, A1_sum + A1[idx_l], np.sqrt(S1_sum_sq + S1[idx_l] ** 2))
+        else:
+            for l in range(nl):
+                idx_l = (l, G1, *[C1[col] for col in self.custom_dep_cols])
+                lp_stable[:, l] = lognormpdf(Y1, A1[idx_l], S1[idx_l])
+        del idx_l
+
+        for iter in range(params['n_iters_stayers']):
 
             # -------- E-Step ---------
             # We compute the posterior probabilities for each row
             # We iterate over the worker types, should not be be
             # too costly since the vector is quite large within each iteration
             for l in range(nl):
-                lp1 = lognormpdf(Y1, A1[G1, l], S1[G1, l])
-                lp[:, l] = np.log(pk0[G1, l]) + lp1
+                lp[:, l] = lp_stable[:, l] + np.log(pk0[G1, l])
 
             # We compute log sum exp to get likelihoods and probabilities
             qi = np.exp(lp.T - logsumexp(lp, axis=1)).T
@@ -715,7 +1012,7 @@ class BLMModel:
             if params['verbose'] == 2:
                 print('loop {}, liks {}'.format(iter, lik0))
 
-            if abs(lik0 - prev_lik) < params['threshold']:
+            if abs(lik0 - prev_lik) < params['threshold_stayers']:
                 break
             prev_lik = lik0
 
@@ -730,12 +1027,19 @@ class BLMModel:
         self.lik0 = lik0
         self.liks0 = np.array(liks0)
 
-    def fit_movers_cstr_uncstr(self, jdata):
+        # Update NNs
+        if compute_NNs:
+            NNs = sdata['g1'].value_counts(sort=False)
+            NNs.sort_index(inplace=True)
+            self.NNs = NNs.to_numpy()
+
+    def fit_movers_cstr_uncstr(self, jdata, compute_NNm=True):
         '''
         Run fit_movers(), first constrained, then using results as starting values, run unconstrained.
 
         Arguments:
             jdata (Pandas DataFrame): movers
+            compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # First, simulate parameters but keep A fixed
         # Second, use estimated parameters as starting point to run with A constrained to be linear
@@ -748,7 +1052,7 @@ class BLMModel:
         self.params['update_pk1'] = True
         if self.params['verbose'] in [1, 2]:
             print('Running fixm movers')
-        self.fit_movers(jdata)
+        self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 2 #####
         # Now update A
         self.params['update_a'] = True
@@ -756,22 +1060,23 @@ class BLMModel:
         self.params['cons_a'] = (['lin'], {'n_periods': 2})
         if self.params['verbose'] in [1, 2]:
             print('Running constrained movers')
-        self.fit_movers(jdata)
+        self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 3 #####
         # Remove constraints
         self.params['cons_a'] = ([], {})
         if self.params['verbose'] in [1, 2]:
             print('Running unconstrained movers')
-        self.fit_movers(jdata)
+        self.fit_movers(jdata, compute_NNm=compute_NNm)
         ##### Compute connectedness #####
         self.compute_connectedness_measure()
 
-    def fit_A(self, jdata):
+    def fit_A(self, jdata, compute_NNm=True):
         '''
         Run fit_movers() and update A while keeping S and pk1 fixed.
 
         Arguments:
             jdata (Pandas DataFrame): movers
+            compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # New parameter guesses
         # self.reset_params()
@@ -781,14 +1086,15 @@ class BLMModel:
         self.params['cons_a'] = ([], {})
         if self.params['verbose'] in [1, 2]:
             print('Running fit_A')
-        self.fit_movers(jdata)
+        self.fit_movers(jdata, compute_NNm=compute_NNm)
 
-    def fit_S(self, jdata):
+    def fit_S(self, jdata, compute_NNm=True):
         '''
         Run fit_movers() and update S while keeping A and pk1 fixed.
 
         Arguments:
             jdata (Pandas DataFrame): movers
+            compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # New parameter guesses
         # self.reset_params()
@@ -798,14 +1104,15 @@ class BLMModel:
         self.params['cons_a'] = ([], {})
         if self.params['verbose'] in [1, 2]:
             print('Running fit_S')
-        self.fit_movers(jdata)
+        self.fit_movers(jdata, compute_NNm=compute_NNm)
 
-    def fit_pk(self, jdata):
+    def fit_pk(self, jdata, compute_NNm=True):
         '''
         Run fit_movers() and update pk1 while keeping A and S fixed.
 
         Arguments:
             jdata (Pandas DataFrame): movers
+            compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # New parameter guesses
         # self.reset_params()
@@ -815,19 +1122,23 @@ class BLMModel:
         self.params['cons_a'] = ([], {})
         if self.params['verbose'] in [1, 2]:
             print('Running fit_pk')
-        self.fit_movers(jdata)
+        self.fit_movers(jdata, compute_NNm=compute_NNm)
 
     def _sort_matrices(self):
         '''
         Sort matrices by cluster means.
         '''
-        worker_effect_order = np.mean(self.A1, axis=0).argsort()
-        self.A1 = self.A1[:, worker_effect_order]
-        self.A2 = self.A2[:, worker_effect_order]
-        self.S1 = self.S1[:, worker_effect_order]
-        self.S2 = self.S2[:, worker_effect_order]
+        n_dims = len(self.A1.shape)
+        worker_effect_order = np.mean(self.A1, axis=tuple(1 + np.arange(n_dims - 1))).argsort()
+        self.A1 = self.A1[worker_effect_order, :]
+        self.A2 = self.A2[worker_effect_order, :]
+        self.S1 = self.S1[worker_effect_order, :]
+        self.S2 = self.S2[worker_effect_order, :]
         self.pk1 = self.pk1[:, worker_effect_order]
         self.pk0 = self.pk0[:, worker_effect_order]
+        # for custom in (self.A1_custom, self.S1_custom, self.A2_custom, self.S2_custom):
+        #     for v in custom.values():
+        #         v.sort()
 
     def plot_A1(self, dpi=None):
         '''
@@ -836,139 +1147,157 @@ class BLMModel:
         Arguments:
             dpi (float): dpi for plot
         '''
+        # Collapse by mean over control variables
+        # FIXME should this weight by number of observations per group?
+        n_dims = len(self.A1.shape)
+        sorted_A1 = np.mean(self.A1, axis=tuple(2 + np.arange(n_dims - 2)))
         # Sort A1 by average effect over firms
-        sorted_A1 = self.A1[np.mean(self.A1, axis=1).argsort()]
         sorted_A1 = sorted_A1.T[np.mean(sorted_A1.T, axis=1).argsort()].T
+        sorted_A1 = sorted_A1[np.mean(sorted_A1, axis=1).argsort()]
 
         if dpi is not None:
             plt.figure(dpi=dpi)
         for l in range(self.nl):
-            plt.plot(sorted_A1[:, l], label='Worker type {}'.format(l))
+            plt.plot(sorted_A1[l, :], label=f'Worker type {l}')
         plt.legend()
         plt.xlabel('Firm type')
         plt.ylabel('A1')
+        plt.xticks(range(self.nk))
         plt.show()
 
-    def _m2_mixt_simulate_movers(self, NNm):
+    def _simulate_movers(self, NNm=None, mmult=1):
         '''
-        Using the model, simulates a dataset of movers.
+        Simulate data for movers.
 
         Arguments:
-            NNm (NumPy Array): FIXME
+            NNm (NumPy Array or None): matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3); if None, default to NNm = np.zeros(shape=(nk, nk)).astype(int) + 10
+            mmult (int): factor by which to increase observations for movers
 
         Returns:
-            jdatae (Pandas DataFrame): movers
+            (Pandas DataFrame): data for movers (y1/y2: wage; g1/g2: firm type; l: worker type)
         '''
-        A1 = self.A1
-        S1 = self.S1
-        A2 = self.A2
-        S2 = self.S2
+        nl, nk = self.nl, self.nk
+        A1, S1, A2, S2 = self.A1, self.S1, self.A2, self.S2
         pk1 = self.pk1
-        nl = self.nl
-        nk = self.nk
 
-        G1 = np.zeros(shape=np.sum(NNm)).astype(int)
-        G2 = np.zeros(shape=np.sum(NNm)).astype(int)
+        if NNm is None:
+            NNm = np.zeros(shape=(nk, nk)).astype(int) + 10
+        NNm *= mmult
+
         Y1 = np.zeros(shape=np.sum(NNm))
         Y2 = np.zeros(shape=np.sum(NNm))
+        G1 = np.zeros(shape=np.sum(NNm)).astype(int)
+        G2 = np.zeros(shape=np.sum(NNm)).astype(int)
         L = np.zeros(shape=np.sum(NNm)).astype(int)
+
+        # Worker types
+        worker_types = np.arange(nl)
 
         i = 0
         for k1 in range(nk):
             for k2 in range(nk):
-                I = np.arange(i, i + NNm[k1, k2])
-                ni = len(I)
+                # Iterate over all firm type combinations a worker can transition between
+                ni = NNm[k1, k2]
+                I = np.arange(i, i + ni)
                 jj = k1 + nk * k2
                 G1[I] = k1
                 G2[I] = k2
 
-                # Draw k
-                draw_vals = np.arange(nl)
-                Li = self.rng.choice(draw_vals, size=ni, replace=True, p=pk1[jj, :])
+                # Draw worker types
+                Li = self.rng.choice(worker_types, size=ni, replace=True, p=pk1[jj, :])
                 L[I] = Li
 
-                # Draw Y2, Y3
-                Y1[I] = A1[k1, Li] + S1[k1, Li] * self.rng.normal(size=ni)
-                Y2[I] = A2[k2, Li] + S2[k2, Li] * self.rng.normal(size=ni)
+                # Draw wages
+                Y1[I] = A1[Li, k1] + S1[Li, k1] * self.rng.normal(size=ni)
+                Y2[I] = A2[Li, k2] + S2[Li, k2] * self.rng.normal(size=ni)
 
-                i += NNm[k1, k2]
+                i += ni
 
-        jdatae = pd.DataFrame(data={'l': L, 'y1': Y1, 'y2': Y2, 'g1': G1, 'g2': G2})
+        return pd.DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G1, 'g2': G2, 'l': L})
 
-        return jdatae
-
-    def _m2_mixt_simulate_stayers(self, NNs):
+    def _simulate_stayers(self, NNs=None, smult=1):
         '''
-        Using the model, simulates a dataset of stayers.
+        Simulate data for stayers.
 
         Arguments:
-            NNs (NumPy Array): FIXME
+            NNs (NumPy Array or None): vector giving the number of stayers at each firm type (e.g. entry (1) gives the number of stayers at firm type 1); if None, default to NNs = np.zeros(shape=nk).astype(int) + 10
+            smult (int): factor by which to increase observations for stayers
 
         Returns:
-            sdatae (Pandas DataFrame): stayers
+            (Pandas DataFrame): data for stayers (y1/y2: wage; g1/g2: firm type; l: worker type)
         '''
-        A1 = self.A1
-        S1 = self.S1
-        A2 = self.A2
-        S2 = self.S2
+        nl, nk = self.nl, self.nk
+        A1, S1, A2, S2 = self.A1, self.S1, self.A2, self.S2
         pk0 = self.pk0
-        nl = self.nl
-        nk = self.nk
 
-        G1 = np.zeros(shape=np.sum(NNs)).astype(int)
-        G2 = np.zeros(shape=np.sum(NNs)).astype(int)
+        if NNs is None:
+            NNs = np.zeros(shape=nk).astype(int) + 10
+        NNs *= smult
+
         Y1 = np.zeros(shape=np.sum(NNs))
         Y2 = np.zeros(shape=np.sum(NNs))
-        K  = np.zeros(shape=np.sum(NNs)).astype(int)
+        G = np.zeros(shape=np.sum(NNs)).astype(int)
+        L = np.zeros(shape=np.sum(NNs)).astype(int)
 
-        # ------ Impute K, Y1, Y4 on jdata ------- #
+        # Worker types
+        worker_types = np.arange(nl)
+
         i = 0
-        for k1 in range(nk):
-            I = np.arange(i, i + NNs[k1])
-            ni = len(I)
-            G1[I] = k1
+        for k in range(nk):
+            # Iterate over firm types
+            ni = NNs[k]
+            I = np.arange(i, i + ni)
+            G[I] = k
 
-            # Draw k
-            draw_vals = np.arange(nl)
-            Ki = self.rng.choice(draw_vals, size=ni, replace=True, p=pk0[k1, :])
-            K[I] = Ki
+            # Draw worker types
+            Li = self.rng.choice(worker_types, size=ni, replace=True, p=pk0[k, :])
+            L[I] = Li
 
-            # Draw Y2, Y3
-            Y1[I] = A1[k1, Ki] + S1[k1, Ki] * self.rng.normal(size=ni)
-            Y2[I] = A2[k1, Ki] + S2[k1, Ki] * self.rng.normal(size=ni)
+            # Draw wages
+            Y1[I] = A1[Li, k] + S1[Li, k] * self.rng.normal(size=ni)
+            Y2[I] = A2[Li, k] + S2[Li, k] * self.rng.normal(size=ni)
 
-            i += NNs[k1]
+            i += ni
 
-        sdatae = pd.DataFrame(data={'k': K, 'y1': Y1, 'y2': Y2, 'g1': G1, 'g2': G1, 'x': 1})
+        return pd.DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G, 'g2': G, 'l': L})
 
-        return sdatae
-
-    def _m2_mixt_simulate_sim(self, fsize=10, mmult=1, smult=1):
+    def _simulate_data(self, fsize=10, NNm=None, NNs=None, mmult=1, smult=1):
         '''
         Simulates data (movers and stayers) and attached firms ids. Firms have all same expected size.
 
         Arguments:
             fsize (int): average number of stayers per firm
+            NNm (NumPy Array or None): matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3); if None, default to NNm = np.zeros(shape=(nk, nk)).astype(int) + 10
+            NNs (NumPy Array or None): vector giving the number of stayers at each firm type (e.g. entry (1) gives the number of stayers at firm type 1); if None, default to NNs = np.zeros(shape=nk).astype(int) + 10
             mmult (int): factor by which to increase observations for movers
             smult (int): factor by which to increase observations for stayers
 
         Returns:
             (dict): {'jdata': movers, 'sdata': stayers}
         '''
-        jdata = self._m2_mixt_simulate_movers(self.NNm * mmult)
-        sdata = self._m2_mixt_simulate_stayers(self.NNs * smult)
+        jdata = self._simulate_movers(NNm=NNm, mmult=mmult)
+        sdata = self._simulate_stayers(NNs=NNs, smult=smult)
 
-        ## Create some firm ids
-        # Draw firm ids for stayers (roll is required because j1 is -1 for empty rows but they appear at the end of the dataframe)
-        sdata['j1'] = np.hstack(np.roll(sdata.groupby('g1').apply(lambda df: self.rng.integers(max(1, round(len(df) / fsize)), size=len(df))), -1))
+        ## Stayers
+        # Draw firm ids for stayers
+        sdata.loc[:, 'j1'] = np.hstack(sdata.groupby('g1').apply(lambda df: self.rng.integers(max(1, round(len(df) / fsize)), size=len(df))))
         # Make firm ids contiguous
-        sdata['j1'] = sdata.groupby(['g1', 'j1']).ngroup()
-        sdata['j2'] = sdata['j1']
+        sdata.loc[:, 'j1'] = sdata.groupby(['g1', 'j1']).ngroup()
+        sdata.loc[:, 'j2'] = sdata.loc[:, 'j1']
         # Link firm ids to clusters
         j_per_g_dict = sdata.groupby('g1')['j1'].unique().to_dict()
+        ## Movers
         # Draw firm ids for movers
-        jdata['j1'] = np.hstack(jdata.groupby('g1').apply(lambda df: self.rng.choice(j_per_g_dict[df.iloc[0]['g1']], size=len(df))))
-        jdata['j2'] = np.hstack(jdata.groupby('g2').apply(lambda df: self.rng.choice(j_per_g_dict[df.iloc[0]['g2']], size=len(df))))
+        jdata.loc[:, 'j1'] = np.hstack(jdata.groupby('g1').apply(lambda df: self.rng.choice(j_per_g_dict[df.iloc[0]['g1']], size=len(df))))
+        groupby_g2 = jdata.groupby('g2')
+        jdata.loc[:, 'j2'] = np.hstack(groupby_g2.apply(lambda df: self.rng.choice(j_per_g_dict[df.iloc[0]['g2']], size=len(df))))
+        # Make sure movers actually move
+        # FIXME find a deterministic way to do this
+        same_firm_mask = (jdata.loc[:, 'j1'].to_numpy() == jdata.loc[:, 'j2'].to_numpy())
+        while same_firm_mask.any():
+            same_firm_rows = jdata.loc[same_firm_mask, :].index
+            jdata.loc[same_firm_rows, 'j2'] = np.hstack(groupby_g2.apply(lambda df: self.rng.choice(j_per_g_dict[df.iloc[0]['g2']], size=len(df))))[same_firm_rows]
+            same_firm_mask = (jdata.loc[:, 'j1'].to_numpy() == jdata.loc[:, 'j2'].to_numpy())
 
         return {'jdata': jdata[['y1', 'y2', 'j1', 'j2', 'g1', 'g2']], 'sdata': sdata[['y1', 'y2', 'j1', 'j2', 'g1', 'g2']]}
 

@@ -561,7 +561,7 @@ class FEEstimator:
 
         # Plug-in variance
         self.var_e_pi = np.var(self.E)
-        if self.params['weighted'] and ('w' in self.adata.columns):
+        if self.params['weighted']:
             self._compute_trace_approximation_sigma_2(rng)
             trace_approximation = np.mean(self.tr_sigma_ho_all)
             self.var_e = (self.nn * self.var_e_pi) / (np.sum(1 / self.Dp.data[0]) - trace_approximation)
