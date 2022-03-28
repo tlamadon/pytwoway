@@ -198,7 +198,7 @@ class FEEstimator:
     Uses multigrid and partialing out to solve two way fixed effect models. This includes AKM, the Andrews et al. homoskedastic correction, and the Kline et al. heteroskedastic correction.
     '''
 
-    def __init__(self, data, params=fe_params()):
+    def __init__(self, data, fe_params=fe_params()):
         '''
         Arguments:
             data (BipartitePandas DataFrame): (collapsed) long format labor data. Data contains the following columns:
@@ -218,7 +218,7 @@ class FEEstimator:
                 w (weight)
 
                 m (0 if stayer, 1 if mover)
-            params (ParamsDict): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters.
+            fe_params (ParamsDict): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters.
         '''
         # Start logger
         logger_init(self)
@@ -226,7 +226,7 @@ class FEEstimator:
 
         self.adata = data
 
-        self.params = params
+        self.params = fe_params
         # Results dictionary
         self.res = {}
         # Summary results dictionary

@@ -49,15 +49,15 @@ _blm_params_default = ParamsDict({
         ''', None),
     'fixb': (False, 'type', bool,
         '''
-            (default=False) If True, set A2 = np.mean(A2, axis=0) + A1 - np.mean(A1, axis=0).
+            (default=False) If True, set A2 = np.mean(A2, axis=1) + A1 - np.mean(A1, axis=1).
         ''', None),
     'stationary': (False, 'type', bool,
         '''
             (default=False) If True, set A1 = A2.
         ''', None),
-    'simulation': (False, 'type', bool,
+    'verbose': (0, 'set', [0, 1, 2],
         '''
-            (default=False) If True, using model to simulate data.
+            (default=0) If 0, print no output; if 1, print additional output; if 2, print maximum output.
         ''', None),
     ## fit_movers() and fit_stayers parameters
     'return_qi': (False, 'type', bool,
@@ -105,11 +105,7 @@ _blm_params_default = ParamsDict({
     'd_prior': (1.0001, 'type_constrained', ((float, int), _gteq1),
         '''
             (default=1.0001) Account for probabilities being too small by adding (d_prior - 1).
-        ''', '>= 1'),
-    'verbose': (0, 'set', [0, 1, 2],
-        '''
-            (default=0) If 0, print no output; if 1, print additional output; if 2, print maximum output.
-        ''', None)
+        ''', '>= 1')
 })
 
 def blm_params(update_dict={}):
@@ -432,23 +428,23 @@ class BLMModel:
     Class for solving the BLM model using a single set of starting values.
 
     Arguments:
-        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
+        blm_params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
         rng (np.random.Generator): NumPy random number generator
     '''
-    def __init__(self, params=blm_params(), rng=np.random.default_rng(None)):
+    def __init__(self, blm_params=blm_params(), rng=np.random.default_rng(None)):
         # Store parameters
-        self.params = params
-        nl = params['nl']
-        nk = params['nk']
+        self.params = blm_params
+        nl = self.params['nl']
+        nk = self.params['nk']
         self.nl = nl
         self.nk = nk
-        self.fixb = params['fixb']
-        self.stationary = params['stationary']
+        self.fixb = self.params['fixb']
+        self.stationary = self.params['stationary']
         self.rng = rng
         ## Unpack custom column parameters
-        custom_dep_dict = params['custom_dependent_dict']
-        custom_indep_dict = params['custom_independent_dict']
-        custom_nosplit_cols = params['custom_nosplit_columns']
+        custom_dep_dict = self.params['custom_dependent_dict']
+        custom_indep_dict = self.params['custom_independent_dict']
+        custom_nosplit_cols = self.params['custom_nosplit_columns']
         ## Check if custom column parameters are None
         if custom_dep_dict is None:
             custom_dep_dict = {}
@@ -491,49 +487,26 @@ class BLMModel:
             # dims must account for all dependent columns (and make sure the columns are in the correct order)
             dims.append(custom_dep_dict[col])
         self.dims = dims
-
-        if params['simulation']:
-            # Model for Y1 | Y2, l, k for movers and stayers
-            self.A1 = 0.9 * (1 + 0.5 * rng.normal(size=dims))
-            self.S1 = 0.3 * (1 + 0.5 * rng.uniform(size=dims))
-            # Model for Y4 | Y3, l, k for movers and stayers
-            self.A2 = 0.9 * (1 + 0.5 * rng.normal(size=dims))
-            self.S2 = 0.3 * (1 + 0.5 * rng.uniform(size=dims))
-            # Model for p(K | l, l') for movers
-            self.pk1 = rng.dirichlet(alpha=[1] * nl, size=nk * nk)
-            # Model for p(K | l, l') for stayers
-            self.pk0 = rng.dirichlet(alpha=[1] * nl, size=nk)
-            ## Control variables
-            # Split
-            self.A1_indep = {col: 0.9 * (1 + 0.5 * rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
-            self.S1_indep = {col: 0.3 * (1 + 0.5 * rng.uniform(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
-            self.A2_indep = {col: 0.9 * (1 + 0.5 * rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
-            self.S2_indep = {col: 0.3 * (1 + 0.5 * rng.uniform(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
-            # No-split
-            self.A_indep = {col: 0.9 * (1 + 0.5 * rng.normal(size=custom_indep_dict[col])) for col in custom_indep_nosplit_cols}
-            self.S_indep = {col: 0.3 * (1 + 0.5 * rng.uniform(size=custom_indep_dict[col])) for col in custom_indep_nosplit_cols}
-            # Sort
-            self._sort_matrices()
-        else:
-            # Model for Y1 | Y2, l, k for movers and stayers
-            self.A1 = np.tile(sorted(rng.normal(size=nl)), list(reversed(dims[1:])) + [1]).T
-            self.S1 = np.ones(shape=dims)
-            # Model for Y4 | Y3, l, k for movers and stayers
-            self.A2 = self.A1.copy()
-            self.S2 = np.ones(shape=dims)
-            # Model for p(K | l, l') for movers
-            self.pk1 = rng.dirichlet(alpha=[1] * nl, size=nk * nk) # np.ones(shape=(nk * nk, nl)) / nl
-            # Model for p(K | l, l') for stayers
-            self.pk0 = np.ones(shape=(nk, nl)) / nl
-            ## Control variables
-            # Split
-            self.A1_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
-            self.S1_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
-            self.A2_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
-            self.S2_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
-            # No-split
-            self.A_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_nosplit_cols}
-            self.S_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_nosplit_cols}
+        
+        # Model for Y1 | Y2, l, k for movers and stayers
+        self.A1 = np.tile(sorted(rng.normal(scale=2, size=nl)), list(reversed(dims[1:])) + [1]).T
+        self.S1 = np.ones(shape=dims)
+        # Model for Y4 | Y3, l, k for movers and stayers
+        self.A2 = self.A1.copy()
+        self.S2 = np.ones(shape=dims)
+        # Model for p(K | l, l') for movers
+        self.pk1 = rng.dirichlet(alpha=np.ones(nl), size=nk ** 2) # np.ones(shape=(nk ** 2, nl)) / nl
+        # Model for p(K | l, l') for stayers
+        self.pk0 = np.ones(shape=(nk, nl)) / nl
+        ## Control variables
+        # Split
+        self.A1_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
+        self.S1_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
+        self.A2_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
+        self.S2_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
+        # No-split
+        self.A_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_nosplit_cols}
+        self.S_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_nosplit_cols}
 
         # Log likelihood for movers
         self.lik1 = None
@@ -607,8 +580,8 @@ class BLMModel:
         # Unpack parameters
         params = self.params
         nl, nk, ni = self.nl, self.nk, jdata.shape[0]
-        A1, S1, A2, S2 = self.A1, self.S1, self.A2, self.S2
-        A1_indep, S1_indep, A2_indep, S2_indep, A_indep, S_indep = self.A1_indep, self.S1_indep, self.A2_indep, self.S2_indep, self.A_indep, self.S_indep
+        A1, A2, S1, S2 = self.A1, self.A2, self.S1, self.S2
+        A1_indep, A2_indep, A_indep, S1_indep, S2_indep, S_indep = self.A1_indep, self.A2_indep, self.A_indep, self.S1_indep, self.S2_indep, self.S_indep
 
         # Store wage outcomes and groups
         Y1 = jdata.loc[:, 'y1'].to_numpy()
@@ -675,7 +648,9 @@ class BLMModel:
         n_indep_nosplit_params = cum_params - n_dep_params - n_indep_split_params
 
         CC1 = csc_matrix((np.ones(ni * n_param_cols), (np.repeat(range(ni), n_param_cols), CC1_indicator.flatten())), shape=(ni, cum_params))
-        CC2 = csc_matrix((np.ones(ni * n_param_cols), (np.repeat(range(ni), n_param_cols), CC1_indicator.flatten())), shape=(ni, cum_params))
+        CC2 = csc_matrix((np.ones(ni * n_param_cols), (np.repeat(range(ni), n_param_cols), CC2_indicator.flatten())), shape=(ni, cum_params))
+        print('CC1.shape:', CC1.shape)
+        print('CC2.shape:', CC2.shape)
 
         # Transition probability matrix
         GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
@@ -713,36 +688,39 @@ class BLMModel:
             # too costly since the vector is quite large within each iteration
             ## Independent custom columns
             if len(self.custom_cols) > len(self.custom_dep_cols):
-                A1_sum = np.zeros(ni)
-                A2_sum = np.zeros(ni)
+                if iter == 0:
+                    A1_sum = np.zeros(ni)
+                    A2_sum = np.zeros(ni)
                 S1_sum_sq = np.zeros(ni)
                 S2_sum_sq = np.zeros(ni)
                 for col in self.custom_indep_nosplit_cols:
                     # If parameter associated with column is constant over time
-                    A1_sum += A_indep[col][C[col]]
-                    A2_sum += A_indep[col][C[col]]
+                    if iter == 0:
+                        A1_sum += A_indep[col][C[col]]
+                        A2_sum += A_indep[col][C[col]]
                     S1_sum_sq += S_indep[col][C[col]] ** 2
                     S2_sum_sq += S_indep[col][C[col]] ** 2
                 for col in self.custom_indep_split_cols:
                     # If parameter associated with column can change over time
-                    A1_sum += A1_indep[col][C1[col]]
-                    A2_sum += A2_indep[col][C2[col]]
+                    if iter == 0:
+                        A1_sum += A1_indep[col][C1[col]]
+                        A2_sum += A2_indep[col][C2[col]]
                     S1_sum_sq += S1_indep[col][C1[col]] ** 2
                     S2_sum_sq += S2_indep[col][C2[col]] ** 2
 
                 KK = G1 + nk * G2
                 for l in range(nl):
                     idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
-                    lp1 = lognormpdf(Y1, A1_sum + A1[idx_one], np.sqrt(S1_sum_sq + S1[idx_one] ** 2))
                     idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
+                    lp1 = lognormpdf(Y1, A1_sum + A1[idx_one], np.sqrt(S1_sum_sq + S1[idx_one] ** 2))
                     lp2 = lognormpdf(Y2, A2_sum + A2[idx_two], np.sqrt(S2_sum_sq + S2[idx_two] ** 2))
                     lp[:, l] = np.log(pk1[KK, l]) + lp1 + lp2
             else:
                 KK = G1 + nk * G2
                 for l in range(nl):
                     idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
-                    lp1 = lognormpdf(Y1, A1[idx_one], S1[idx_one])
                     idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
+                    lp1 = lognormpdf(Y1, A1[idx_one], S1[idx_one])
                     lp2 = lognormpdf(Y2, A2[idx_two], S2[idx_two])
                     lp[:, l] = np.log(pk1[KK, l]) + lp1 + lp2
             del idx_one, idx_two
@@ -778,43 +756,58 @@ class BLMModel:
                 XwY = np.zeros(shape=2 * ts)
             for l in range(nl):
                 # (We might be better off trying this within numba or something)
-                l_index, r_index = l * cum_params, (l + 1) * cum_params
+                l_dep_index, r_dep_index = l * n_dep_params, (l + 1) * n_dep_params
+                l_indep_index, r_indep_index = nl * n_dep_params + l * (cum_params - n_dep_params), nl * n_dep_params + (l + 1) * (cum_params - n_dep_params)
                 ## Compute shared terms ##
                 # Variances
                 idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
                 idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
+                S_l1 = S1[idx_one]
+                S_l2 = S2[idx_two]
                 if len(self.custom_cols) > len(self.custom_dep_cols):
-                    S_l1 = S1[idx_one] ** 2
-                    S_l2 = S2[idx_two] ** 2
-                    for col in self.custom_indep_nosplit_cols:
-                        # If parameter associated with column is constant over time
-                        S_l1 += S_indep[col][C[col]] ** 2
-                        S_l2 += S_indep[col][C[col]] ** 2
-                    for col in self.custom_indep_split_cols:
-                        # If parameter associated with column can change over time
-                        S_l1 += S1_indep[col][C1[col]] ** 2
-                        S_l2 += S2_indep[col][C2[col]] ** 2
-                    S_l1 = np.sqrt(S_l1)
-                    S_l2 = np.sqrt(S_l2)
-                else:
-                    S_l1 = S1[idx_one]
-                    S_l2 = S2[idx_two]
+                    S_l1 = np.sqrt(S1_sum_sq + S_l1 ** 2)
+                    S_l2 = np.sqrt(S2_sum_sq + S_l2 ** 2)
                 del idx_one, idx_two
                 # Shared weighted terms
                 CC1_weighted = CC1.T @ diags(qi[:, l] / S_l1)
                 CC2_weighted = CC2.T @ diags(qi[:, l] / S_l2)
                 ## Compute XwXd terms ##
-                XwXd[l_index: r_index] = (CC1_weighted @ CC1).diagonal()
-                XwXd[l_index + ts: r_index + ts] = (CC2_weighted @ CC2).diagonal()
+                # Split dependent and independent (put dependent at beginning, independent at end)
+                XwXd_1 = (CC1_weighted @ CC1).diagonal()
+                XwXd_2 = (CC2_weighted @ CC2).diagonal()
+                XwXd[l_dep_index: r_dep_index] = XwXd_1[: n_dep_params]
+                XwXd[l_indep_index: r_indep_index] = XwXd_1[n_dep_params:]
+                XwXd[ts + l_dep_index: ts + r_dep_index] = XwXd_2[: n_dep_params]
+                XwXd[ts + l_indep_index: ts + r_indep_index] = XwXd_2[n_dep_params:]
                 if params['update_a']:
                     ## Compute XwY terms ##
-                    XwY[l_index: r_index] = CC1_weighted @ Y1
-                    XwY[l_index + ts: r_index + ts] = CC2_weighted @ Y2
+                    # Split dependent and independent (put dependent at beginning, independent at end)
+                    XwY_1 = CC1_weighted @ Y1
+                    XwY_2 = CC2_weighted @ Y2
+                    XwY[l_dep_index: r_dep_index] = XwY_1[: n_dep_params]
+                    XwY[l_indep_index: r_indep_index] = XwY_1[n_dep_params: ]
+                    XwY[ts + l_dep_index: ts + r_dep_index] = XwY_2[: n_dep_params]
+                    XwY[ts + l_indep_index: ts + r_indep_index] = XwY_2[n_dep_params: ]
+            del XwXd_1, XwXd_2
 
             # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
+            print('A1 before:')
+            print(A1)
+            print('A2 before:')
+            print(A2)
+            print('S1 before:')
+            print(S1)
+            print('S2 before:')
+            print(S2)
+            print('A1_indep before:')
+            print(A1_indep)
+            print('A2_indep before:')
+            print(A2_indep)
             XwX = np.diag(XwXd)
             if params['update_a']:
                 try:
+                    print('XwX.shape:', XwX.shape)
+                    print('XwY.shape:', XwY.shape)
                     cons_a.solve(XwX, -XwY)
                     # print('A1:', A1)
                     # print('A2:', A2)
@@ -841,7 +834,8 @@ class BLMModel:
                 except ValueError as e:
                     # If constraints inconsistent, keep A1 and A2 the same
                     if params['verbose'] in [1, 2]:
-                        print(str(e) + 'passing 1')
+                        print(f'{e}, passing 1')
+                    stop
                     pass
 
             if params['update_s']:
@@ -850,27 +844,22 @@ class BLMModel:
                 if len(self.custom_cols) > len(self.custom_dep_cols):
                     A1_sum = np.zeros(ni)
                     A2_sum = np.zeros(ni)
-                    S1_sum_sq = np.zeros(ni)
-                    S2_sum_sq = np.zeros(ni)
                     for col in self.custom_indep_nosplit_cols:
                         # If parameter associated with column is constant over time
                         A1_sum += A_indep[col][C[col]]
                         A2_sum += A_indep[col][C[col]]
-                        S1_sum_sq += S_indep[col][C[col]] ** 2
-                        S2_sum_sq += S_indep[col][C[col]] ** 2
                     for col in self.custom_indep_split_cols:
                         # If parameter associated with column can change over time
                         A1_sum += A1_indep[col][C1[col]]
                         A2_sum += A2_indep[col][C2[col]]
-                        S1_sum_sq += S1_indep[col][C1[col]] ** 2
-                        S2_sum_sq += S2_indep[col][C2[col]] ** 2
                 for l in range(nl):
-                    l_index, r_index = l * cum_params, (l + 1) * cum_params
+                    l_dep_index, r_dep_index = l * n_dep_params, (l + 1) * n_dep_params
+                    l_indep_index, r_indep_index = nl * n_dep_params + l * (cum_params - n_dep_params), nl * n_dep_params + (l + 1) * (cum_params - n_dep_params)
                     # Means and variances
                     idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
                     idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
                     A_l1 = A1[idx_one]
-                    A_l2 = A2[idx_one]
+                    A_l2 = A2[idx_two]
                     S_l1 = S1[idx_one]
                     S_l2 = S2[idx_two]
                     if len(self.custom_cols) > len(self.custom_dep_cols):
@@ -879,8 +868,14 @@ class BLMModel:
                         S_l1 = np.sqrt(S1_sum_sq + S_l1 ** 2)
                         S_l2 = np.sqrt(S2_sum_sq + S_l2 ** 2)
                     del idx_one, idx_two
-                    XwS[l_index: r_index] = CC1.T @ diags(qi[:, l] / S_l1) @ ((Y1 - A_l1) ** 2)
-                    XwS[l_index + ts: r_index + ts] = CC2.T @ diags(qi[:, l] / S_l2) @ ((Y2 - A_l2) ** 2)
+                    # Split dependent and independent (put dependent at beginning, independent at end)
+                    XwS_1 = CC1.T @ diags(qi[:, l] / S_l1) @ ((Y1 - A_l1) ** 2)
+                    XwS_2 = CC2.T @ diags(qi[:, l] / S_l2) @ ((Y2 - A_l2) ** 2)
+                    XwS[l_dep_index: r_dep_index] = XwS_1[: n_dep_params]
+                    XwS[l_indep_index: r_indep_index] = XwS_1[n_dep_params:]
+                    XwS[ts + l_dep_index: ts + r_dep_index] = XwS_2[: n_dep_params]
+                    XwS[ts + l_indep_index: ts + r_indep_index] = XwS_2[n_dep_params:]
+                del XwS_1, XwS_2
 
                 try:
                     cons_s.solve(XwX, -XwS)
@@ -904,8 +899,26 @@ class BLMModel:
                 except ValueError as e:
                     # If constraints inconsistent, keep S1 and S2 the same
                     if params['verbose'] in [1, 2]:
-                        print(str(e) + 'passing 2')
+                        print(f'{e}, passing 2')
+                    stop
                     pass
+            print('res a:')
+            print(cons_a.res)
+            print('res s:')
+            print(cons_s.res)
+            print('A1 after:')
+            print(A1)
+            print('A2 after:')
+            print(A2)
+            print('S1 after:')
+            print(S1)
+            print('S2 after:')
+            print(S2)
+            print('A1_indep after:')
+            print(A1_indep)
+            print('A2_indep after:')
+            print(A2_indep)
+            stop
             if params['update_pk1']:
                 pk1 = GG12.T @ qi
                 # for l in range(nl):
@@ -915,8 +928,8 @@ class BLMModel:
                 pk1 += d_prior - 1
                 pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
 
-        self.A1, self.S1, self.A2, self.S2 = A1, S1, A2, S2
-        self.A1_indep, self.S1_indep, self.A2_indep, self.S2_indep, self.A_indep, self.S_indep = A1_indep, S1_indep, A2_indep, S2_indep, A_indep, S_indep
+        self.A1, self.A2, self.S1, self.S2 = A1, A2, S1, S2
+        self.A1_indep, self.A2_indep, self.A_indep, self.S1_indep, self.S2_indep, self.S_indep = A1_indep, A2_indep, A_indep, S1_indep, S2_indep, S_indep
         self.pk1, self.lik1, self.liks1 = pk1, lik1, np.array(liks1)
 
         # Update NNm
@@ -935,7 +948,7 @@ class BLMModel:
         params = self.params
         nl, nk, ni = self.nl, self.nk, sdata.shape[0]
         A1, S1 = self.A1, self.S1
-        A1_indep, S1_indep, A_indep, S_indep = self.A1_indep, self.S1_indep, self.A_indep, self.S_indep
+        A1_indep, A_indep, S1_indep, S_indep = self.A1_indep, self.A_indep, self.S1_indep, self.S_indep
 
         # Store wage outcomes and groups
         Y1 = sdata['y1'].to_numpy()
@@ -1023,9 +1036,7 @@ class BLMModel:
             # Normalize rows to sum to 1
             pk0 = (pk0.T / np.sum(pk0, axis=1).T).T
 
-        self.pk0 = pk0
-        self.lik0 = lik0
-        self.liks0 = np.array(liks0)
+        self.pk0, self.lik0, self.liks0 = pk0, lik0, np.array(liks0)
 
         # Update NNs
         if compute_NNs:
@@ -1126,19 +1137,31 @@ class BLMModel:
 
     def _sort_matrices(self):
         '''
-        Sort matrices by cluster means.
+        Sort arrays by cluster means.
         '''
         n_dims = len(self.A1.shape)
-        worker_effect_order = np.mean(self.A1, axis=tuple(1 + np.arange(n_dims - 1))).argsort()
+        nk = self.nk
+        ## Sort worker effects ##
+        worker_effect_order = np.mean(self.A1, axis=tuple(range(n_dims)[1:])).argsort()
         self.A1 = self.A1[worker_effect_order, :]
         self.A2 = self.A2[worker_effect_order, :]
         self.S1 = self.S1[worker_effect_order, :]
         self.S2 = self.S2[worker_effect_order, :]
         self.pk1 = self.pk1[:, worker_effect_order]
         self.pk0 = self.pk0[:, worker_effect_order]
-        # for custom in (self.A1_custom, self.S1_custom, self.A2_custom, self.S2_custom):
-        #     for v in custom.values():
-        #         v.sort()
+        ## Sort firm effects ##
+        firm_effect_order = np.mean(self.A1, axis=(0, *range(n_dims)[2:])).argsort()
+        self.A1 = self.A1[:, firm_effect_order]
+        self.A2 = self.A2[:, firm_effect_order]
+        self.S1 = self.S1[:, firm_effect_order]
+        self.S2 = self.S2[:, firm_effect_order]
+        self.pk0 = self.pk0[firm_effect_order, :]
+        # Reorder part 1: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 1, 0, 3, 2 (i.e. reorder within groups)
+        pk1_order_1 = np.tile(firm_effect_order, nk) + nk * np.repeat(range(nk), nk)
+        self.pk1 = self.pk1[pk1_order_1, :]
+        # Reorder part 2: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 2, 3, 0, 1 (i.e. reorder between groups)
+        pk1_order_2 = nk * np.repeat(firm_effect_order, nk) + np.tile(range(nk), nk)
+        self.pk1 = self.pk1[pk1_order_2, :]
 
     def plot_A1(self, dpi=None):
         '''
@@ -1150,7 +1173,7 @@ class BLMModel:
         # Collapse by mean over control variables
         # FIXME should this weight by number of observations per group?
         n_dims = len(self.A1.shape)
-        sorted_A1 = np.mean(self.A1, axis=tuple(2 + np.arange(n_dims - 2)))
+        sorted_A1 = np.mean(self.A1, axis=tuple(np.arange(n_dims)[2:]))
         # Sort A1 by average effect over firms
         sorted_A1 = sorted_A1.T[np.mean(sorted_A1.T, axis=1).argsort()].T
         sorted_A1 = sorted_A1[np.mean(sorted_A1, axis=1).argsort()]
@@ -1164,142 +1187,6 @@ class BLMModel:
         plt.ylabel('A1')
         plt.xticks(range(self.nk))
         plt.show()
-
-    def _simulate_movers(self, NNm=None, mmult=1):
-        '''
-        Simulate data for movers.
-
-        Arguments:
-            NNm (NumPy Array or None): matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3); if None, default to NNm = np.zeros(shape=(nk, nk)).astype(int) + 10
-            mmult (int): factor by which to increase observations for movers
-
-        Returns:
-            (Pandas DataFrame): data for movers (y1/y2: wage; g1/g2: firm type; l: worker type)
-        '''
-        nl, nk = self.nl, self.nk
-        A1, S1, A2, S2 = self.A1, self.S1, self.A2, self.S2
-        pk1 = self.pk1
-
-        if NNm is None:
-            NNm = np.zeros(shape=(nk, nk)).astype(int) + 10
-        NNm *= mmult
-
-        Y1 = np.zeros(shape=np.sum(NNm))
-        Y2 = np.zeros(shape=np.sum(NNm))
-        G1 = np.zeros(shape=np.sum(NNm)).astype(int)
-        G2 = np.zeros(shape=np.sum(NNm)).astype(int)
-        L = np.zeros(shape=np.sum(NNm)).astype(int)
-
-        # Worker types
-        worker_types = np.arange(nl)
-
-        i = 0
-        for k1 in range(nk):
-            for k2 in range(nk):
-                # Iterate over all firm type combinations a worker can transition between
-                ni = NNm[k1, k2]
-                I = np.arange(i, i + ni)
-                jj = k1 + nk * k2
-                G1[I] = k1
-                G2[I] = k2
-
-                # Draw worker types
-                Li = self.rng.choice(worker_types, size=ni, replace=True, p=pk1[jj, :])
-                L[I] = Li
-
-                # Draw wages
-                Y1[I] = A1[Li, k1] + S1[Li, k1] * self.rng.normal(size=ni)
-                Y2[I] = A2[Li, k2] + S2[Li, k2] * self.rng.normal(size=ni)
-
-                i += ni
-
-        return pd.DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G1, 'g2': G2, 'l': L})
-
-    def _simulate_stayers(self, NNs=None, smult=1):
-        '''
-        Simulate data for stayers.
-
-        Arguments:
-            NNs (NumPy Array or None): vector giving the number of stayers at each firm type (e.g. entry (1) gives the number of stayers at firm type 1); if None, default to NNs = np.zeros(shape=nk).astype(int) + 10
-            smult (int): factor by which to increase observations for stayers
-
-        Returns:
-            (Pandas DataFrame): data for stayers (y1/y2: wage; g1/g2: firm type; l: worker type)
-        '''
-        nl, nk = self.nl, self.nk
-        A1, S1, A2, S2 = self.A1, self.S1, self.A2, self.S2
-        pk0 = self.pk0
-
-        if NNs is None:
-            NNs = np.zeros(shape=nk).astype(int) + 10
-        NNs *= smult
-
-        Y1 = np.zeros(shape=np.sum(NNs))
-        Y2 = np.zeros(shape=np.sum(NNs))
-        G = np.zeros(shape=np.sum(NNs)).astype(int)
-        L = np.zeros(shape=np.sum(NNs)).astype(int)
-
-        # Worker types
-        worker_types = np.arange(nl)
-
-        i = 0
-        for k in range(nk):
-            # Iterate over firm types
-            ni = NNs[k]
-            I = np.arange(i, i + ni)
-            G[I] = k
-
-            # Draw worker types
-            Li = self.rng.choice(worker_types, size=ni, replace=True, p=pk0[k, :])
-            L[I] = Li
-
-            # Draw wages
-            Y1[I] = A1[Li, k] + S1[Li, k] * self.rng.normal(size=ni)
-            Y2[I] = A2[Li, k] + S2[Li, k] * self.rng.normal(size=ni)
-
-            i += ni
-
-        return pd.DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G, 'g2': G, 'l': L})
-
-    def _simulate_data(self, fsize=10, NNm=None, NNs=None, mmult=1, smult=1):
-        '''
-        Simulates data (movers and stayers) and attached firms ids. Firms have all same expected size.
-
-        Arguments:
-            fsize (int): average number of stayers per firm
-            NNm (NumPy Array or None): matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3); if None, default to NNm = np.zeros(shape=(nk, nk)).astype(int) + 10
-            NNs (NumPy Array or None): vector giving the number of stayers at each firm type (e.g. entry (1) gives the number of stayers at firm type 1); if None, default to NNs = np.zeros(shape=nk).astype(int) + 10
-            mmult (int): factor by which to increase observations for movers
-            smult (int): factor by which to increase observations for stayers
-
-        Returns:
-            (dict): {'jdata': movers, 'sdata': stayers}
-        '''
-        jdata = self._simulate_movers(NNm=NNm, mmult=mmult)
-        sdata = self._simulate_stayers(NNs=NNs, smult=smult)
-
-        ## Stayers
-        # Draw firm ids for stayers
-        sdata.loc[:, 'j1'] = np.hstack(sdata.groupby('g1').apply(lambda df: self.rng.integers(max(1, round(len(df) / fsize)), size=len(df))))
-        # Make firm ids contiguous
-        sdata.loc[:, 'j1'] = sdata.groupby(['g1', 'j1']).ngroup()
-        sdata.loc[:, 'j2'] = sdata.loc[:, 'j1']
-        # Link firm ids to clusters
-        j_per_g_dict = sdata.groupby('g1')['j1'].unique().to_dict()
-        ## Movers
-        # Draw firm ids for movers
-        jdata.loc[:, 'j1'] = np.hstack(jdata.groupby('g1').apply(lambda df: self.rng.choice(j_per_g_dict[df.iloc[0]['g1']], size=len(df))))
-        groupby_g2 = jdata.groupby('g2')
-        jdata.loc[:, 'j2'] = np.hstack(groupby_g2.apply(lambda df: self.rng.choice(j_per_g_dict[df.iloc[0]['g2']], size=len(df))))
-        # Make sure movers actually move
-        # FIXME find a deterministic way to do this
-        same_firm_mask = (jdata.loc[:, 'j1'].to_numpy() == jdata.loc[:, 'j2'].to_numpy())
-        while same_firm_mask.any():
-            same_firm_rows = jdata.loc[same_firm_mask, :].index
-            jdata.loc[same_firm_rows, 'j2'] = np.hstack(groupby_g2.apply(lambda df: self.rng.choice(j_per_g_dict[df.iloc[0]['g2']], size=len(df))))[same_firm_rows]
-            same_firm_mask = (jdata.loc[:, 'j1'].to_numpy() == jdata.loc[:, 'j2'].to_numpy())
-
-        return {'jdata': jdata[['y1', 'y2', 'j1', 'j2', 'g1', 'g2']], 'sdata': sdata[['y1', 'y2', 'j1', 'j2', 'g1', 'g2']]}
 
 class BLMEstimator:
     '''
@@ -1353,7 +1240,7 @@ class BLMEstimator:
             sim_model_lst = itertools.starmap(self._sim_model, tqdm([(jdata, rng) for _ in range(n_init)], total=n_init))
 
         # Sort by likelihoods
-        sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst], reverse=True)
+        sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst], reverse=True, key=lambda a: a[0])
         sorted_lik_models = [model for _, model in sorted_zipped_models]
 
         # Save likelihood vs. connectedness for all models
@@ -1378,7 +1265,7 @@ class BLMEstimator:
 
         # Take the n_best best estimates and find the lowest connectedness
         best_lik_models = sorted_lik_models[: n_best]
-        sorted_zipped_models = sorted([(model.connectedness, model) for model in best_lik_models], reverse=True)
+        sorted_zipped_models = sorted([(model.connectedness, model) for model in best_lik_models], reverse=True, key=lambda a: a[0])
         best_model = sorted_zipped_models[0][1]
 
         if self.params['verbose'] in [1, 2]:
@@ -1388,6 +1275,7 @@ class BLMEstimator:
         if self.params['verbose'] in [1, 2]:
             print('Running stayers')
         self.model.fit_stayers(sdata)
+        # FIXME matrices shouldn't sort, because then you can't merge estimated effects into the original dataframe
         self.model._sort_matrices()
 
     def plot_A1(self, dpi=None):
