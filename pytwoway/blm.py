@@ -173,16 +173,28 @@ class QPConstrained:
     Arguments:
         nl (int): number of worker types
         nk (int): number of firm types
+        n_dep (int): number of dependent control variable types
+        n_indep_split (int): number of independent control variable types that can change over time
+        n_indep_nosplit (int): number of independent control variable types that are constant over time
     '''
 
-    def __init__(self, nl, nk):
+    def __init__(self, nl, nk, n_dep, n_indep_split, n_indep_nosplit):
+        # Store attributes
         self.nl = nl
         self.nk = nk
+        self.n_dep = max(1, n_dep)
+        self.n_indep_split = n_indep_split
+        self.n_indep_nosplit = n_indep_nosplit
+        self.cum_params = nk * n_dep + n_indep_split + n_indep_nosplit
 
-        self.G = np.array([]) # Inequality constraint matrix
-        self.h = np.array([]) # Inequality constraint bound
-        self.A = np.array([]) # Equality constraint matrix
-        self.b = np.array([]) # Equality constraint bound
+        # Inequality constraint matrix
+        self.G = np.array([])
+        # Inequality constraint bound
+        self.h = np.array([])
+        # Equality constraint matrix
+        self.A = np.array([])
+        # Equality constraint bound
+        self.b = np.array([])
 
     def add_constraint_builtin(self, constraint, params=constraint_params()):
         '''
@@ -192,8 +204,9 @@ class QPConstrained:
             constraint (str): name of constraint to add
             params (ParamsDict): dictionary of parameters for constraint. Run tw.constraint_params().describe_all() for descriptions of all valid parameters.
         '''
-        nl = self.nl
-        nk = self.nk
+        # Unpack attributes
+        nl, nk = self.nl, self.nk
+        n_dep, n_indep_split, n_indep_nosplit, cum_params = self.n_dep, self.n_indep_split, self.n_indep_nosplit, self.cum_params
 
         G = np.array([])
         h = np.array([])
@@ -208,11 +221,47 @@ class QPConstrained:
                 for l in range(nl - 1):
                     LL[l + row_shift, l + col_shift] = 1
                     LL[l + row_shift, l + col_shift + 1] = - 1
-            KK = np.zeros(shape=(nk - 1, nk))
-            for k in range(nk - 1):
+            KK = np.zeros(shape=(cum_params - 1, cum_params))
+            for k in range(cum_params - 1):
                 KK[k, k] = 1
                 KK[k, k + 1] = - 1
+            # NOTE: commented out code below does the constraint solely for dependent parameters
+            # KK = np.zeros(shape=(nk * n_dep - 1, nk * n_dep))
+            # for k in range(nk * n_dep - 1):
+            #     KK[k, k] = 1
+            #     KK[k, k + 1] = - 1
+            # LL_KK = - np.kron(LL, KK)
+            # A = np.zeros(shape=(LL_KK.shape[0], n_periods * nl * cum_params))
+            # A[:, : LL_KK.shape[1] // 2] = LL_KK[:, : LL_KK.shape[1] // 2]
+            # A[:, A.shape[1] // 2: A.shape[1] // 2 + LL_KK.shape[1] // 2] = LL_KK[:, LL_KK.shape[1] // 2:]
             A = - np.kron(LL, KK)
+            b = - np.zeros(shape=A.shape[0])
+
+        elif constraint == 'stable_within_time':
+            n_periods = params['n_periods']
+            A = np.zeros(shape=(n_periods * (nl - 1) * (n_indep_split + n_indep_nosplit), n_periods * nl * cum_params))
+            for period in range(n_periods):
+                row_shift = period * (nl - 1) * (n_indep_split + n_indep_nosplit)
+                col_shift = period * nl * cum_params + nl * nk * n_dep
+                for _ in range(n_indep_split + n_indep_nosplit):
+                    for k in range(nl - 1):
+                        A[row_shift + k, col_shift + k * nl] = 1
+                        A[row_shift + k, col_shift + (k + 1) * nl] = -1
+                    row_shift += (nl - 1)
+                    col_shift += 1
+
+            b = - np.zeros(shape=A.shape[0])
+
+        elif constraint == 'stable_across_time':
+            n_periods = params['n_periods']
+            A = np.zeros(shape=((n_periods - 1) * n_indep_nosplit, n_periods * nl * cum_params))
+            for period in range(n_periods - 1):
+                row_shift = period * n_indep_nosplit
+                col_shift = period * nl * cum_params + nl * (nk * n_dep + n_indep_split)
+                for k in range(n_indep_nosplit):
+                    A[row_shift + k, col_shift + k] = 1
+                    A[row_shift + k, col_shift + nl * cum_params + k] = -1
+
             b = - np.zeros(shape=A.shape[0])
 
         elif constraint == 'akmmono':
@@ -260,14 +309,14 @@ class QPConstrained:
         elif constraint in ['biggerthan', 'greaterthan']:
             gap = params['gap_bigger']
             n_periods = params['n_periods']
-            G = - np.eye(n_periods * nk * nl)
-            h = - gap * np.ones(shape=n_periods * nk * nl)
+            G = - np.eye(n_periods * nl * cum_params)
+            h = - gap * np.ones(shape=n_periods * nl * cum_params)
 
         elif constraint in ['smallerthan', 'lessthan']:
             gap = params['gap_smaller']
             n_periods = params['n_periods']
-            G = np.eye(n_periods * nk * nl)
-            h = gap * np.ones(shape=n_periods * nk * nl)
+            G = np.eye(n_periods * nl * cum_params)
+            h = gap * np.ones(shape=n_periods * nl * cum_params)
 
         elif constraint == 'stationary':
             LL = np.zeros(shape=(nl - 1, nl))
@@ -649,8 +698,6 @@ class BLMModel:
 
         CC1 = csc_matrix((np.ones(ni * n_param_cols), (np.repeat(range(ni), n_param_cols), CC1_indicator.flatten())), shape=(ni, cum_params))
         CC2 = csc_matrix((np.ones(ni * n_param_cols), (np.repeat(range(ni), n_param_cols), CC2_indicator.flatten())), shape=(ni, cum_params))
-        print('CC1.shape:', CC1.shape)
-        print('CC2.shape:', CC2.shape)
 
         # Transition probability matrix
         GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
@@ -673,10 +720,12 @@ class BLMModel:
         d_prior = params['d_prior']
 
         # Constraints FIXME should this be nk or cum_params or something else?
-        cons_a = QPConstrained(nl, cum_params)
+        cons_a = QPConstrained(nl, nk, n_dep_params // nk, n_indep_split_params, n_indep_nosplit_params)
+        cons_a.add_constraints_builtin(['stable_within_time', 'stable_across_time'], {'n_periods': 2})
         if len(params['cons_a']) > 0:
             cons_a.add_constraints_builtin(params['cons_a'][0], params['cons_a'][1])
-        cons_s = QPConstrained(nl, cum_params)
+        cons_s = QPConstrained(nl, nk, n_dep_params // nk, n_indep_split_params, n_indep_nosplit_params)
+        cons_s.add_constraints_builtin(['stable_within_time', 'stable_across_time'], {'n_periods': 2})
         if len(params['cons_s']) > 0:
             cons_s.add_constraints_builtin(params['cons_s'][0], params['cons_s'][1])
 
@@ -693,13 +742,6 @@ class BLMModel:
                     A2_sum = np.zeros(ni)
                 S1_sum_sq = np.zeros(ni)
                 S2_sum_sq = np.zeros(ni)
-                for col in self.custom_indep_nosplit_cols:
-                    # If parameter associated with column is constant over time
-                    if iter == 0:
-                        A1_sum += A_indep[col][C[col]]
-                        A2_sum += A_indep[col][C[col]]
-                    S1_sum_sq += S_indep[col][C[col]] ** 2
-                    S2_sum_sq += S_indep[col][C[col]] ** 2
                 for col in self.custom_indep_split_cols:
                     # If parameter associated with column can change over time
                     if iter == 0:
@@ -707,6 +749,13 @@ class BLMModel:
                         A2_sum += A2_indep[col][C2[col]]
                     S1_sum_sq += S1_indep[col][C1[col]] ** 2
                     S2_sum_sq += S2_indep[col][C2[col]] ** 2
+                for col in self.custom_indep_nosplit_cols:
+                    # If parameter associated with column is constant over time
+                    if iter == 0:
+                        A1_sum += A_indep[col][C[col]]
+                        A2_sum += A_indep[col][C[col]]
+                    S1_sum_sq += S_indep[col][C[col]] ** 2
+                    S2_sum_sq += S_indep[col][C[col]] ** 2
 
                 KK = G1 + nk * G2
                 for l in range(nl):
@@ -757,7 +806,8 @@ class BLMModel:
             for l in range(nl):
                 # (We might be better off trying this within numba or something)
                 l_dep_index, r_dep_index = l * n_dep_params, (l + 1) * n_dep_params
-                l_indep_index, r_indep_index = nl * n_dep_params + l * (cum_params - n_dep_params), nl * n_dep_params + (l + 1) * (cum_params - n_dep_params)
+                l_indep_split_index, r_indep_split_index = nl * n_dep_params + l * n_indep_split_params, nl * n_dep_params + (l + 1) * n_indep_split_params
+                l_indep_nosplit_index, r_indep_nosplit_index = nl * (n_dep_params + n_indep_split_params) + l * n_indep_nosplit_params, nl * (n_dep_params + n_indep_split_params) + (l + 1) * n_indep_nosplit_params
                 ## Compute shared terms ##
                 # Variances
                 idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
@@ -776,48 +826,46 @@ class BLMModel:
                 XwXd_1 = (CC1_weighted @ CC1).diagonal()
                 XwXd_2 = (CC2_weighted @ CC2).diagonal()
                 XwXd[l_dep_index: r_dep_index] = XwXd_1[: n_dep_params]
-                XwXd[l_indep_index: r_indep_index] = XwXd_1[n_dep_params:]
+                XwXd[l_indep_split_index: r_indep_split_index] = XwXd_1[n_dep_params: n_dep_params + n_indep_split_params]
+                XwXd[l_indep_nosplit_index: r_indep_nosplit_index] = XwXd_1[n_dep_params + n_indep_split_params:]
                 XwXd[ts + l_dep_index: ts + r_dep_index] = XwXd_2[: n_dep_params]
-                XwXd[ts + l_indep_index: ts + r_indep_index] = XwXd_2[n_dep_params:]
+                XwXd[ts + l_indep_split_index: ts + r_indep_split_index] = XwXd_2[n_dep_params: n_dep_params + n_indep_split_params]
+                XwXd[ts + l_indep_nosplit_index: ts + r_indep_nosplit_index] = XwXd_2[n_dep_params + n_indep_split_params:]
                 if params['update_a']:
                     ## Compute XwY terms ##
                     # Split dependent and independent (put dependent at beginning, independent at end)
                     XwY_1 = CC1_weighted @ Y1
                     XwY_2 = CC2_weighted @ Y2
                     XwY[l_dep_index: r_dep_index] = XwY_1[: n_dep_params]
-                    XwY[l_indep_index: r_indep_index] = XwY_1[n_dep_params: ]
+                    XwY[l_indep_split_index: r_indep_split_index] = XwY_1[n_dep_params: n_dep_params + n_indep_split_params]
+                    XwY[l_indep_nosplit_index: r_indep_nosplit_index] = XwY_1[n_dep_params + n_indep_split_params:]
                     XwY[ts + l_dep_index: ts + r_dep_index] = XwY_2[: n_dep_params]
-                    XwY[ts + l_indep_index: ts + r_indep_index] = XwY_2[n_dep_params: ]
+                    XwY[ts + l_indep_split_index: ts + r_indep_split_index] = XwY_2[n_dep_params: n_dep_params + n_indep_split_params]
+                    XwY[ts + l_indep_nosplit_index: ts + r_indep_nosplit_index] = XwY_2[n_dep_params + n_indep_split_params:]
             del XwXd_1, XwXd_2
 
             # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
-            print('A1 before:')
-            print(A1)
-            print('A2 before:')
-            print(A2)
-            print('S1 before:')
-            print(S1)
-            print('S2 before:')
-            print(S2)
-            print('A1_indep before:')
-            print(A1_indep)
-            print('A2_indep before:')
-            print(A2_indep)
+            # print('A1 before:')
+            # print(A1)
+            # print('A2 before:')
+            # print(A2)
+            # print('S1 before:')
+            # print(S1)
+            # print('S2 before:')
+            # print(S2)
+            # print('A1_indep before:')
+            # print(A1_indep)
+            # print('A2_indep before:')
+            # print(A2_indep)
+            # print('A_indep before:')
+            # print(A_indep)
             XwX = np.diag(XwXd)
             if params['update_a']:
                 try:
-                    print('XwX.shape:', XwX.shape)
-                    print('XwY.shape:', XwY.shape)
                     cons_a.solve(XwX, -XwY)
-                    # print('A1:', A1)
-                    # print('A2:', A2)
-                    # print('res:', cons_a.res)
                     res_a1, res_a2 = cons_a.res[: len(cons_a.res) // 2], cons_a.res[len(cons_a.res) // 2:]
                     A1 = np.reshape(res_a1[: nl * n_dep_params], self.dims)
                     A2 = np.reshape(res_a2[: nl * n_dep_params], self.dims)
-                    # print('new A1:', A1)
-                    # print('new A2:', A2)
-                    # stop
                     params_count = nl * n_dep_params
                     for col in self.custom_indep_split_cols:
                         # If parameter associated with column can change over time
@@ -827,9 +875,8 @@ class BLMModel:
                         params_count += n_col_params
                     for col in self.custom_indep_nosplit_cols:
                         # If parameter associated with column is constant over time
-                        # FIXME this shouldn't just take the average over the results from the two periods
                         n_col_params = self.custom_cols_dict[col]
-                        A_indep[col] = (res_a1[params_count: params_count + n_col_params] + res_a2[params_count: params_count + n_col_params]) / 2
+                        A_indep[col] = res_a1[params_count: params_count + n_col_params]
                         params_count += n_col_params
                 except ValueError as e:
                     # If constraints inconsistent, keep A1 and A2 the same
@@ -844,17 +891,18 @@ class BLMModel:
                 if len(self.custom_cols) > len(self.custom_dep_cols):
                     A1_sum = np.zeros(ni)
                     A2_sum = np.zeros(ni)
-                    for col in self.custom_indep_nosplit_cols:
-                        # If parameter associated with column is constant over time
-                        A1_sum += A_indep[col][C[col]]
-                        A2_sum += A_indep[col][C[col]]
                     for col in self.custom_indep_split_cols:
                         # If parameter associated with column can change over time
                         A1_sum += A1_indep[col][C1[col]]
                         A2_sum += A2_indep[col][C2[col]]
+                    for col in self.custom_indep_nosplit_cols:
+                        # If parameter associated with column is constant over time
+                        A1_sum += A_indep[col][C[col]]
+                        A2_sum += A_indep[col][C[col]]
                 for l in range(nl):
                     l_dep_index, r_dep_index = l * n_dep_params, (l + 1) * n_dep_params
-                    l_indep_index, r_indep_index = nl * n_dep_params + l * (cum_params - n_dep_params), nl * n_dep_params + (l + 1) * (cum_params - n_dep_params)
+                    l_indep_split_index, r_indep_split_index = nl * n_dep_params + l * n_indep_split_params, nl * n_dep_params + (l + 1) * n_indep_split_params
+                    l_indep_nosplit_index, r_indep_nosplit_index = nl * (n_dep_params + n_indep_split_params) + l * n_indep_nosplit_params, nl * (n_dep_params + n_indep_split_params) + (l + 1) * n_indep_nosplit_params
                     # Means and variances
                     idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
                     idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
@@ -872,9 +920,11 @@ class BLMModel:
                     XwS_1 = CC1.T @ diags(qi[:, l] / S_l1) @ ((Y1 - A_l1) ** 2)
                     XwS_2 = CC2.T @ diags(qi[:, l] / S_l2) @ ((Y2 - A_l2) ** 2)
                     XwS[l_dep_index: r_dep_index] = XwS_1[: n_dep_params]
-                    XwS[l_indep_index: r_indep_index] = XwS_1[n_dep_params:]
+                    XwS[l_indep_split_index: r_indep_split_index] = XwS_1[n_dep_params: n_dep_params + n_indep_split_params]
+                    XwS[l_indep_nosplit_index: r_indep_nosplit_index] = XwS_1[n_dep_params + n_indep_split_params:]
                     XwS[ts + l_dep_index: ts + r_dep_index] = XwS_2[: n_dep_params]
-                    XwS[ts + l_indep_index: ts + r_indep_index] = XwS_2[n_dep_params:]
+                    XwS[ts + l_indep_split_index: ts + r_indep_split_index] = XwS_2[n_dep_params: n_dep_params + n_indep_split_params]
+                    XwS[ts + l_indep_nosplit_index: ts + r_indep_nosplit_index] = XwS_2[n_dep_params + n_indep_split_params:]
                 del XwS_1, XwS_2
 
                 try:
@@ -892,9 +942,8 @@ class BLMModel:
                         params_count += n_col_params
                     for col in self.custom_indep_nosplit_cols:
                         # If parameter associated with column is constant over time
-                        # FIXME this shouldn't just take the average over the results from the two periods
                         n_col_params = self.custom_cols_dict[col]
-                        S_indep[col] = (res_s1[params_count: params_count + n_col_params] + res_s2[params_count: params_count + n_col_params]) / 2
+                        S_indep[col] = res_s1[params_count: params_count + n_col_params]
                         params_count += n_col_params
                 except ValueError as e:
                     # If constraints inconsistent, keep S1 and S2 the same
@@ -906,18 +955,20 @@ class BLMModel:
             print(cons_a.res)
             print('res s:')
             print(cons_s.res)
-            print('A1 after:')
-            print(A1)
-            print('A2 after:')
-            print(A2)
-            print('S1 after:')
-            print(S1)
-            print('S2 after:')
-            print(S2)
-            print('A1_indep after:')
-            print(A1_indep)
-            print('A2_indep after:')
-            print(A2_indep)
+            # print('A1 after:')
+            # print(A1)
+            # print('A2 after:')
+            # print(A2)
+            # print('S1 after:')
+            # print(S1)
+            # print('S2 after:')
+            # print(S2)
+            # print('A1_indep after:')
+            # print(A1_indep)
+            # print('A2_indep after:')
+            # print(A2_indep)
+            # print('A_indep after:')
+            # print(A_indep)
             stop
             if params['update_pk1']:
                 pk1 = GG12.T @ qi
