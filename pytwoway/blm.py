@@ -13,7 +13,7 @@ from multiprocessing import Pool
 import itertools
 import warnings
 from pytwoway import jitter_scatter
-from bipartitepandas.util import ParamsDict, to_list
+from bipartitepandas.util import ParamsDict, to_list, _is_subtype
 from tqdm import tqdm
 
 # NOTE: multiprocessing isn't compatible with lambda functions
@@ -23,6 +23,8 @@ def _gteq0(a):
     return a >= 0
 def _lstdct(a):
     return (isinstance(a[0], list) and isinstance(a[1], dict))
+def _custom_dict(a):
+    return np.array([_is_subtype(v, int) and (v >= 2) for v in a.values()]).all()
 
 # Define default parameter dictionaries
 _blm_params_default = ParamsDict({
@@ -35,11 +37,11 @@ _blm_params_default = ParamsDict({
         '''
             (default=10) Number of firm types.
         ''', '>= 1'),
-    'custom_independent_dict': (None, 'type_none', dict,
+    'custom_independent_dict': (None, 'type_constrained_none', (dict, _custom_dict),
         '''
             (default=None) Dictionary of custom general column names (to use as controls) linked to the number of types for that column, where the estimated parameters should be independent of worker/firm type pairs. In other words, any column listed as a member of this parameter will have the same parameter estimated for each worker-firm type pair (the parameter value can still differ over time). None is equivalent to {}.
         ''', None),
-    'custom_dependent_dict': (None, 'type_none', dict,
+    'custom_dependent_dict': (None, 'type_constrained_none', (dict, _custom_dict),
         '''
             (default=None) Dictionary of custom general column names (to use as controls) linked to the number of types for that column, where the estimated parameters should be dependent on worker/firm type pairs. In other words, any column listed as a member of this parameter will have a different parameter estimated for each worker-firm type pair (the parameter value can still differ over time). None is equivalent to {}.
         ''', None),
@@ -951,10 +953,10 @@ class BLMModel:
                         print(f'{e}, passing 2')
                     stop
                     pass
-            print('res a:')
-            print(cons_a.res)
-            print('res s:')
-            print(cons_s.res)
+            # print('res a:')
+            # print(cons_a.res)
+            # print('res s:')
+            # print(cons_s.res)
             # print('A1 after:')
             # print(A1)
             # print('A2 after:')
@@ -969,7 +971,7 @@ class BLMModel:
             # print(A2_indep)
             # print('A_indep after:')
             # print(A_indep)
-            stop
+            # stop
             if params['update_pk1']:
                 pk1 = GG12.T @ qi
                 # for l in range(nl):
