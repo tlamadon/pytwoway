@@ -961,13 +961,25 @@ class BLMModel:
                 
                 ## Update S ##
                 for l in range(nl):
-                    l_index, r_index = l * nk, (l + 1) * nk
                     # Generate indices
                     idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
                     idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
-                    ## Compute XwS terms ##
+                    ## XwS terms ##
+                    l_index, r_index = l * nk, (l + 1) * nk
                     XwS[l_index: r_index] = GG1.T @ diags(qi[:, l] / S1[idx_one]) @ ((Y1_adj - A1[idx_one]) ** 2)
                     XwS[ts + l_index: ts + r_index] = GG2.T @ diags(qi[:, l] / S2[idx_two]) @ ((Y2_adj - A2[idx_two]) ** 2)
+                    for split_col in custom_indep_split_cols:
+                        ## XwS_split terms ##
+                        l_index, r_index = l * n_split, (l + 1) * n_split
+                        XwS_split[split_col][l_index: r_index] = CC1[split_col].T @ diags(qi[:, l] / S1_indep[split_col][C1[split_col]]) @ ((Y1_adj - A1[idx_one]) ** 2)
+                        XwS_split[split_col][ts_split[split_col] + l_index: ts_split[split_col] + r_index] = CC2[split_col].T @ diags(qi[:, l] / S2_indep[split_col][C2[split_col]]) @ ((Y2_adj - A2[idx_two]) ** 2)
+                    for nosplit_col in custom_indep_nosplit_cols:
+                        ## XwS_nosplit terms ##
+                        l_index, r_index = l * n_nosplit, (l + 1) * n_nosplit
+                        lhs_l = CC[nosplit_col].T @ diags(qi[:, l] / S_indep[nosplit_col][C[nosplit_col]])
+                        XwS_nosplit[nosplit_col][l_index: r_index] = lhs_l @ ((Y1_adj - A1[idx_one]) ** 2)
+                        XwS_nosplit[nosplit_col][ts_nosplit[nosplit_col] + l_index: ts_nosplit[nosplit_col] + r_index] = idx_two @ ((Y2_adj - A2[idx_two]) ** 2)
+                        del lhs_l
                     del idx_one, idx_two
 
                 try:
@@ -982,20 +994,7 @@ class BLMModel:
                         print(f'{e}, passing 2')
                     # stop
                     pass
-
-                ## Update S - independent split columns ##
-                for split_col in custom_indep_split_cols:
-                    n_split = custom_indep_split_dict[split_col]
-                    for l in range(nl):
-                        l_index, r_index = l * n_split, (l + 1) * n_split
-                        # Generate indices
-                        idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
-                        idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
-                        ## Compute XwS_split terms ##
-                        XwS_split[split_col][l_index: r_index] = CC1[split_col].T @ diags(qi[:, l] / S1_indep[split_col][C1[split_col]]) @ ((Y1_adj - A1[idx_one]) ** 2)
-                        XwS_split[split_col][ts_split[split_col] + l_index: ts_split[split_col] + r_index] = CC2[split_col].T @ diags(qi[:, l] / S2_indep[split_col][C2[split_col]]) @ ((Y2_adj - A2[idx_two]) ** 2)
-                        del idx_one, idx_two
-
+                if len(custom_indep_split_cols) > 0:
                     try:
                         split_solver = cons_s_split[split_col]
                         split_solver.solve(XwXd_split[split_col], -XwS_split[split_col])
@@ -1003,33 +1002,19 @@ class BLMModel:
                         S2_indep[split_col] = np.sqrt(split_solver.res[len(split_solver.res) // 2:][: n_split])
                         
                     except ValueError as e:
-                        # If constraints inconsistent, keep A1 and A2 the same
+                        # If constraints inconsistent, keep S1 and S2 the same
                         if params['verbose'] in [1, 2]:
                             print(f'{e}, passing 2')
                         # stop
                         pass
-
-                ## Update S - independent no-split columns ##
-                for nosplit_col in custom_indep_nosplit_cols:
-                    n_nosplit = custom_indep_nosplit_dict[nosplit_col]
-                    for l in range(nl):
-                        l_index, r_index = l * n_nosplit, (l + 1) * n_nosplit
-                        # Generate indices
-                        idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
-                        idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
-                        lhs_l = CC[nosplit_col].T @ diags(qi[:, l] / S_indep[nosplit_col][C[nosplit_col]])
-                        ## Compute XwS_nosplit terms ##
-                        XwS_nosplit[nosplit_col][l_index: r_index] = lhs_l @ ((Y1_adj - A1[idx_one]) ** 2)
-                        XwS_nosplit[nosplit_col][ts_nosplit[nosplit_col] + l_index: ts_nosplit[nosplit_col] + r_index] = idx_two @ ((Y2_adj - A2[idx_two]) ** 2)
-                        del idx_one, idx_two, lhs_l
-
+                if len(custom_indep_nosplit_cols) > 0:
                     try:
                         nosplit_solver = cons_s_nosplit[nosplit_col]
                         nosplit_solver.solve(XwXd_nosplit[nosplit_col], -XwS_nosplit[nosplit_col])
                         S_indep[nosplit_col] = np.sqrt(nosplit_solver.res[: len(nosplit_solver.res) // 2])
                         
                     except ValueError as e:
-                        # If constraints inconsistent, keep A1 and A2 the same
+                        # If constraints inconsistent, keep S1 and S2 the same
                         if params['verbose'] in [1, 2]:
                             print(f'{e}, passing 2')
                         # stop
