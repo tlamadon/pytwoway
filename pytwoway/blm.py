@@ -37,17 +37,17 @@ _blm_params_default = ParamsDict({
         '''
             (default=10) Number of firm types.
         ''', '>= 1'),
-    'custom_independent_dict': (None, 'type_constrained_none', (dict, _custom_dict),
-        '''
-            (default=None) Dictionary of custom general column names (to use as controls) linked to the number of types for that column, where the estimated parameters should be independent of worker/firm type pairs. In other words, any column listed as a member of this parameter will have the same parameter estimated for each worker-firm type pair (the parameter value can still differ over time). None is equivalent to {}.
-        ''', None),
     'custom_dependent_dict': (None, 'type_constrained_none', (dict, _custom_dict),
         '''
             (default=None) Dictionary of custom general column names (to use as controls) linked to the number of types for that column, where the estimated parameters should be dependent on worker/firm type pairs. In other words, any column listed as a member of this parameter will have a different parameter estimated for each worker-firm type pair (the parameter value can still differ over time). None is equivalent to {}.
         ''', None),
-    'custom_nosplit_columns': (None, 'type_none', (list, tuple),
+    'custom_independent_split_dict': (None, 'type_constrained_none', (dict, _custom_dict),
         '''
-            (default=None) List of custom general column names (to use as controls), where the estimated parameter values should be constant over the pre- and post-periods. Any column not listed will be estimated separately for the pre- and post-periods. Only works for columns listed as independent of worker-firm type pairs. None is equivalent to [].
+            (default=None) Dictionary of custom general column names (to use as controls) linked to the number of types for that column, where the estimated parameters should be independent of worker/firm type pairs and can change over time. In other words, any column listed as a member of this parameter will have the same parameter estimated for each worker-firm type pair (the parameter value can still differ over time). None is equivalent to {}.
+        ''', None),
+    'custom_independent_nosplit_dict': (None, 'type_constrained_none', (dict, _custom_dict),
+        '''
+            (default=None) Dictionary of custom general column names (to use as controls) linked to the number of types for that column, where the estimated parameters should be independent of worker/firm type pairs and must be constant over time. In other words, any column listed as a member of this parameter will have the same parameter estimated for each worker-firm type pair (the parameter value can still differ over time). None is equivalent to {}.
         ''', None),
     'fixb': (False, 'type', bool,
         '''
@@ -175,19 +175,12 @@ class QPConstrained:
     Arguments:
         nl (int): number of worker types
         nk (int): number of firm types
-        n_dep (int): number of dependent control variable types
-        n_indep_split (int): number of independent control variable types that can change over time
-        n_indep_nosplit (int): number of independent control variable types that are constant over time
     '''
 
-    def __init__(self, nl, nk, n_dep, n_indep_split, n_indep_nosplit):
+    def __init__(self, nl, nk):
         # Store attributes
         self.nl = nl
         self.nk = nk
-        self.n_dep = max(1, n_dep)
-        self.n_indep_split = n_indep_split
-        self.n_indep_nosplit = n_indep_nosplit
-        self.cum_params = nk * n_dep + n_indep_split + n_indep_nosplit
 
         # Inequality constraint matrix
         self.G = np.array([])
@@ -208,7 +201,6 @@ class QPConstrained:
         '''
         # Unpack attributes
         nl, nk = self.nl, self.nk
-        n_dep, n_indep_split, n_indep_nosplit, cum_params = self.n_dep, self.n_indep_split, self.n_indep_nosplit, self.cum_params
 
         G = np.array([])
         h = np.array([])
@@ -223,32 +215,23 @@ class QPConstrained:
                 for l in range(nl - 1):
                     LL[l + row_shift, l + col_shift] = 1
                     LL[l + row_shift, l + col_shift + 1] = - 1
-            KK = np.zeros(shape=(cum_params - 1, cum_params))
-            for k in range(cum_params - 1):
+            KK = np.zeros(shape=(nk - 1, nk))
+            for k in range(nk - 1):
                 KK[k, k] = 1
                 KK[k, k + 1] = - 1
-            # NOTE: commented out code below does the constraint solely for dependent parameters
-            # KK = np.zeros(shape=(nk * n_dep - 1, nk * n_dep))
-            # for k in range(nk * n_dep - 1):
-            #     KK[k, k] = 1
-            #     KK[k, k + 1] = - 1
-            # LL_KK = - np.kron(LL, KK)
-            # A = np.zeros(shape=(LL_KK.shape[0], n_periods * nl * cum_params))
-            # A[:, : LL_KK.shape[1] // 2] = LL_KK[:, : LL_KK.shape[1] // 2]
-            # A[:, A.shape[1] // 2: A.shape[1] // 2 + LL_KK.shape[1] // 2] = LL_KK[:, LL_KK.shape[1] // 2:]
             A = - np.kron(LL, KK)
             b = - np.zeros(shape=A.shape[0])
 
         elif constraint == 'stable_within_time':
             n_periods = params['n_periods']
-            A = np.zeros(shape=(n_periods * (nl - 1) * (n_indep_split + n_indep_nosplit), n_periods * nl * cum_params))
+            A = np.zeros(shape=(n_periods * (nl - 1) * nk, n_periods * nl * nk))
             for period in range(n_periods):
-                row_shift = period * (nl - 1) * (n_indep_split + n_indep_nosplit)
-                col_shift = period * nl * cum_params + nl * nk * n_dep
-                for _ in range(n_indep_split + n_indep_nosplit):
-                    for k in range(nl - 1):
-                        A[row_shift + k, col_shift + k * nl] = 1
-                        A[row_shift + k, col_shift + (k + 1) * nl] = -1
+                row_shift = period * (nl - 1) * nk
+                col_shift = period * nl * nk
+                for k in range(nk):
+                    for l in range(nl - 1):
+                        A[row_shift + l, col_shift + nk * l] = 1
+                        A[row_shift + l, col_shift + nk * (l + 1)] = -1
                     row_shift += (nl - 1)
                     col_shift += 1
 
@@ -256,13 +239,13 @@ class QPConstrained:
 
         elif constraint == 'stable_across_time':
             n_periods = params['n_periods']
-            A = np.zeros(shape=((n_periods - 1) * n_indep_nosplit, n_periods * nl * cum_params))
+            A = np.zeros(shape=((n_periods - 1) * nk, n_periods * nl * nk))
             for period in range(n_periods - 1):
-                row_shift = period * n_indep_nosplit
-                col_shift = period * nl * cum_params + nl * (nk * n_dep + n_indep_split)
-                for k in range(n_indep_nosplit):
-                    A[row_shift + k, col_shift + k] = 1
-                    A[row_shift + k, col_shift + nl * cum_params + k] = -1
+                row_shift = period * nk
+                col_shift = period * nl * nk
+                for k in range(nk):
+                    A[row_shift + k, col_shift + nl * k] = 1
+                    A[row_shift + k, col_shift + nl * nk + nl * k] = -1
 
             b = - np.zeros(shape=A.shape[0])
 
@@ -311,14 +294,14 @@ class QPConstrained:
         elif constraint in ['biggerthan', 'greaterthan']:
             gap = params['gap_bigger']
             n_periods = params['n_periods']
-            G = - np.eye(n_periods * nl * cum_params)
-            h = - gap * np.ones(shape=n_periods * nl * cum_params)
+            G = - np.eye(n_periods * nl * nk)
+            h = - gap * np.ones(shape=n_periods * nl * nk)
 
         elif constraint in ['smallerthan', 'lessthan']:
             gap = params['gap_smaller']
             n_periods = params['n_periods']
-            G = np.eye(n_periods * nl * cum_params)
-            h = gap * np.ones(shape=n_periods * nl * cum_params)
+            G = np.eye(n_periods * nl * nk)
+            h = gap * np.ones(shape=n_periods * nl * nk)
 
         elif constraint == 'stationary':
             LL = np.zeros(shape=(nl - 1, nl))
@@ -492,46 +475,49 @@ class BLMModel:
         self.fixb = self.params['fixb']
         self.stationary = self.params['stationary']
         self.rng = rng
+
         ## Unpack custom column parameters
         custom_dep_dict = self.params['custom_dependent_dict']
-        custom_indep_dict = self.params['custom_independent_dict']
-        custom_nosplit_cols = self.params['custom_nosplit_columns']
+        custom_indep_split_dict = self.params['custom_independent_split_dict']
+        custom_indep_nosplit_dict = self.params['custom_independent_nosplit_dict']
         ## Check if custom column parameters are None
         if custom_dep_dict is None:
             custom_dep_dict = {}
-        if custom_indep_dict is None:
-            custom_indep_dict = {}
-        if custom_nosplit_cols is None:
-            custom_nosplit_cols = []
+        if custom_indep_split_dict is None:
+            custom_indep_split_dict = {}
+        if custom_indep_nosplit_dict is None:
+            custom_indep_nosplit_dict = {}
         ## Create dictionary of all custom columns
         custom_cols_dict = custom_dep_dict.copy()
-        custom_cols_dict.update(custom_indep_dict.copy())
+        custom_cols_dict.update(custom_indep_split_dict.copy())
+        custom_cols_dict.update(custom_indep_nosplit_dict.copy())
         ## Custom column order
         custom_dep_cols = sorted(custom_dep_dict.keys())
-        custom_indep_split_cols = [col for col in sorted(custom_indep_dict.keys()) if col not in custom_nosplit_cols]
-        custom_indep_nosplit_cols = [col for col in sorted(custom_indep_dict.keys()) if col in custom_nosplit_cols]
+        custom_indep_split_cols = sorted(custom_indep_split_dict.keys())
+        custom_indep_nosplit_cols = sorted(custom_indep_nosplit_dict.keys())
         custom_cols = custom_dep_cols + custom_indep_split_cols + custom_indep_nosplit_cols
         ## Store custom column attributes
+        # Dictionaries
         self.custom_dep_dict = custom_dep_dict
-        self.custom_indep_dict = custom_indep_dict
+        self.custom_indep_split_dict = custom_indep_split_dict
+        self.custom_indep_nosplit_dict = custom_indep_nosplit_dict
         self.custom_cols_dict = custom_cols_dict
-        # self.custom_nosplit_cols = custom_nosplit_cols
+        # Lists
         self.custom_dep_cols = custom_dep_cols
         self.custom_indep_split_cols = custom_indep_split_cols
         self.custom_indep_nosplit_cols = custom_indep_nosplit_cols
         self.custom_cols = custom_cols
 
-        for col in custom_indep_dict.keys():
-            if col in custom_dep_cols:
-                # Make sure independent and dependent custom columns don't overlap
-                raise NotImplementedError(f'Custom independent columns and custom dependent columns cannot overlap, but input lists column {col!r} as a member of both.')
-        for col in custom_nosplit_cols:
-            if col not in custom_cols:
-                # Make sure all custom no-split columns are actually used
-                raise NotImplementedError(f'All custom columns listed not be split over time must be included as control variables, but {col!r} is not included.')
-            if col in custom_dep_cols:
-                # Make sure dependent columns are not split
-                raise NotImplementedError(f'Cannot set custom columns that are dependent on worker-firm type pairs to not split, but input indicates column {col!r} should both be dependent and not split.')
+        for col in custom_dep_cols:
+            # Make sure independent and dependent custom columns don't overlap
+            if col in custom_indep_split_cols:
+                raise NotImplementedError(f'Custom dependent columns and custom independent split columns cannot overlap, but input includes column {col!r} as a member of both.')
+            if col in custom_indep_nosplit_cols:
+                raise NotImplementedError(f'Custom dependent columns and custom independent no-split columns cannot overlap, but input includes column {col!r} as a member of both.')
+        for col in custom_indep_split_cols:
+            # Make sure independent split and independent no-split custom columns don't overlap
+            if col in custom_indep_nosplit_cols:
+                raise NotImplementedError(f'Custom independent split columns and custom independent no-split columns cannot overlap, but input includes column {col!r} as a member of both.')
 
         dims = [nl, nk]
         for col in custom_dep_cols:
@@ -541,23 +527,23 @@ class BLMModel:
         
         # Model for Y1 | Y2, l, k for movers and stayers
         self.A1 = np.tile(sorted(rng.normal(scale=2, size=nl)), list(reversed(dims[1:])) + [1]).T
-        self.S1 = np.ones(shape=dims)
+        self.S1 = rng.uniform(low=0, high=0.5, size=dims) # np.ones(shape=dims)
         # Model for Y4 | Y3, l, k for movers and stayers
         self.A2 = self.A1.copy()
-        self.S2 = np.ones(shape=dims)
+        self.S2 = rng.uniform(low=0, high=0.5, size=dims) # np.ones(shape=dims)
         # Model for p(K | l, l') for movers
         self.pk1 = rng.dirichlet(alpha=np.ones(nl), size=nk ** 2) # np.ones(shape=(nk ** 2, nl)) / nl
         # Model for p(K | l, l') for stayers
         self.pk0 = np.ones(shape=(nk, nl)) / nl
         ## Control variables
         # Split
-        self.A1_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
-        self.S1_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
-        self.A2_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
-        self.S2_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_split_cols}
+        self.A1_indep = {col: np.sort(rng.normal(loc=0, scale=5, size=custom_indep_split_dict[col])) for col in custom_indep_split_cols}
+        self.S1_indep = {col: np.sort(rng.uniform(low=0, high=0.5, size=custom_indep_split_dict[col])) for col in custom_indep_split_cols}
+        self.A2_indep = {col: np.sort(rng.normal(loc=0, scale=5, size=custom_indep_split_dict[col])) for col in custom_indep_split_cols}
+        self.S2_indep = {col: np.sort(rng.uniform(low=0, high=0.5, size=custom_indep_split_dict[col])) for col in custom_indep_split_cols}
         # No-split
-        self.A_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_nosplit_cols}
-        self.S_indep = {col: np.sort(rng.normal(size=custom_indep_dict[col])) for col in custom_indep_nosplit_cols}
+        self.A_indep = {col: np.sort(rng.normal(loc=0, scale=5, size=custom_indep_nosplit_dict[col])) for col in custom_indep_nosplit_cols}
+        self.S_indep = {col: np.sort(rng.uniform(low=0, high=5, size=custom_indep_nosplit_dict[col])) for col in custom_indep_nosplit_cols}
 
         # Log likelihood for movers
         self.lik1 = None
@@ -633,6 +619,8 @@ class BLMModel:
         nl, nk, ni = self.nl, self.nk, jdata.shape[0]
         A1, A2, S1, S2 = self.A1, self.A2, self.S1, self.S2
         A1_indep, A2_indep, A_indep, S1_indep, S2_indep, S_indep = self.A1_indep, self.A2_indep, self.A_indep, self.S1_indep, self.S2_indep, self.S_indep
+        custom_indep_split_dict, custom_indep_nosplit_dict = self.custom_indep_split_dict, self.custom_indep_nosplit_dict
+        custom_dep_cols, custom_indep_split_cols, custom_indep_nosplit_cols = self.custom_dep_cols, self.custom_indep_split_cols, self.custom_indep_nosplit_cols
 
         # Store wage outcomes and groups
         Y1 = jdata.loc[:, 'y1'].to_numpy()
@@ -658,54 +646,22 @@ class BLMModel:
                 C1[col] = jdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
                 C2[col] = jdata.loc[:, subcols[1]].to_numpy().astype(int, copy=False)
         ## Sparse matrix representations ##
-        # GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
-        # GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
-        # CC = {col: csc_matrix((np.ones(ni), (range(ni), vec)), shape=(ni, self.custom_cols_dict[col])) for col, vec in C.items()}
-        # CC1 = {col: csc_matrix((np.ones(ni), (range(ni), vec)), shape=(ni, self.custom_cols_dict[col])) for col, vec in C1.items()}
-        # CC2 = {col: csc_matrix((np.ones(ni), (range(ni), vec)), shape=(ni, self.custom_cols_dict[col])) for col, vec in C2.items()}
-        n_param_cols = 1 + len(self.custom_indep_dict)
-        CC1_indicator = np.zeros([ni, n_param_cols])
-        CC2_indicator = np.zeros([ni, n_param_cols])
-        CC1_indicator[:, 0] = G1
-        CC2_indicator[:, 0] = G2
-
+        GG1 = G1.copy()
+        GG2 = G2.copy()
         n_dep_params = nk
-        for col in self.custom_cols:
-            ## First, set indicators for dependent columns ##
-            if col in self.custom_dep_cols:
-                # If column depends on worker-firm type pair
-                CC1_indicator[:, 0] += n_dep_params * C1[col]
-                CC2_indicator[:, 0] += n_dep_params * C2[col]
-                n_dep_params *= self.custom_cols_dict[col]
-        cum_params = n_dep_params
-        i = 0
-        for col in self.custom_cols:
-            ## Second, set indicators for independent split columns ##
-            if col in self.custom_indep_split_cols:
-                # If parameter associated with column can change over time
-                i += 1
-                CC1_indicator[:, i] = cum_params + C1[col]
-                CC2_indicator[:, i] = cum_params + C2[col]
-                cum_params += self.custom_cols_dict[col]
-        n_indep_split_params = cum_params - n_dep_params
-        for col in self.custom_cols:
-            ## Third, set indicators for independent no-split columns ##
-            if col in self.custom_indep_nosplit_cols:
-                # If parameter associated with column is constant over time
-                i += 1
-                CC1_indicator[:, i] = cum_params + C[col]
-                CC2_indicator[:, i] = cum_params + C[col]
-                cum_params += self.custom_cols_dict[col]
-        n_indep_nosplit_params = cum_params - n_dep_params - n_indep_split_params
-
-        CC1 = csc_matrix((np.ones(ni * n_param_cols), (np.repeat(range(ni), n_param_cols), CC1_indicator.flatten())), shape=(ni, cum_params))
-        CC2 = csc_matrix((np.ones(ni * n_param_cols), (np.repeat(range(ni), n_param_cols), CC2_indicator.flatten())), shape=(ni, cum_params))
+        for col in custom_dep_cols:
+            # Set indicators for dependent columns
+            GG1 += n_dep_params * C1[col]
+            GG2 += n_dep_params * C2[col]
+            n_dep_params *= self.custom_dep_dict[col]
+        GG1 = csc_matrix((np.ones(ni), (range(ni), GG1)), shape=(ni, n_dep_params))
+        GG2 = csc_matrix((np.ones(ni), (range(ni), GG2)), shape=(ni, n_dep_params))
+        CC1 = {col: csc_matrix((np.ones(ni), (range(ni), vec)), shape=(ni, custom_indep_split_dict[col])) for col, vec in C1.items()}
+        CC2 = {col: csc_matrix((np.ones(ni), (range(ni), vec)), shape=(ni, custom_indep_split_dict[col])) for col, vec in C2.items()}
+        CC = {col: csc_matrix((np.ones(ni), (range(ni), vec)), shape=(ni, custom_indep_nosplit_dict[col])) for col, vec in C.items()}
 
         # Transition probability matrix
-        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
-        GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
         GG12 = csc_matrix((np.ones(ni), (range(ni), G1 + nk * G2)), shape=(ni, nk ** 2))
-        del GG1, GG2
 
         # Matrix of prior probabilities
         pk1 = self.pk1
@@ -721,15 +677,40 @@ class BLMModel:
         # Fix error from bad initial guesses causing probabilities to be too low
         d_prior = params['d_prior']
 
-        # Constraints FIXME should this be nk or cum_params or something else?
-        cons_a = QPConstrained(nl, nk, n_dep_params // nk, n_indep_split_params, n_indep_nosplit_params)
-        cons_a.add_constraints_builtin(['stable_within_time', 'stable_across_time'], {'n_periods': 2})
+        ### Constraints ###
+        ## General ##
+        cons_a = QPConstrained(nl, n_dep_params)
         if len(params['cons_a']) > 0:
-            cons_a.add_constraints_builtin(params['cons_a'][0], params['cons_a'][1])
-        cons_s = QPConstrained(nl, nk, n_dep_params // nk, n_indep_split_params, n_indep_nosplit_params)
-        cons_s.add_constraints_builtin(['stable_within_time', 'stable_across_time'], {'n_periods': 2})
+            cons_a.add_constraints_builtin(*params['cons_a'])
+        cons_s = QPConstrained(nl, n_dep_params)
         if len(params['cons_s']) > 0:
-            cons_s.add_constraints_builtin(params['cons_s'][0], params['cons_s'][1])
+            cons_s.add_constraints_builtin(*params['cons_s'])
+        ## Independent split columns ##
+        if len(custom_indep_split_cols) > 0:
+            cons_a_split = {col: QPConstrained(nl, n_split) for col, n_split in self.custom_indep_split_dict.items()}
+            if len(params['cons_a']) > 0:
+                for col_cons in cons_a_split.values():
+                    col_cons.add_constraints_builtin(*params['cons_a'])
+            cons_s_split = {col: QPConstrained(nl, n_split) for col, n_split in self.custom_indep_split_dict.items()}
+            if len(params['cons_s']) > 0:
+                for col_cons in cons_s_split.values():
+                    col_cons.add_constraints_builtin(*params['cons_s'])
+            for split_col in custom_indep_split_cols:
+                cons_a_split[split_col].add_constraint_builtin('stable_within_time', {'n_periods': 2})
+                cons_s_split[split_col].add_constraint_builtin('stable_within_time', {'n_periods': 2})
+        ## Independent no-split columns ##
+        if len(custom_indep_nosplit_cols) > 0:
+            cons_a_nosplit = {col: QPConstrained(nl, n_nosplit) for col, n_nosplit in self.custom_indep_nosplit_dict.items()}
+            if len(params['cons_a']) > 0:
+                for col_cons in cons_a_nosplit.values():
+                    col_cons.add_constraints_builtin(*params['cons_a'])
+            cons_s_nosplit = {col: QPConstrained(nl, n_nosplit) for col, n_nosplit in self.custom_indep_nosplit_dict.items()}
+            if len(params['cons_s']) > 0:
+                for col_cons in cons_s_nosplit.values():
+                    col_cons.add_constraints_builtin(*params['cons_s'])
+            for nosplit_col in custom_indep_nosplit_cols:
+                cons_a_nosplit[nosplit_col].add_constraints_builtin([['stable_within_time', 'stable_across_time'], {'n_periods': 2}])
+                cons_s_nosplit[nosplit_col].add_constraints_builtin([['stable_within_time', 'stable_across_time'], {'n_periods': 2}])
 
         for iter in range(params['n_iters_movers']):
 
@@ -738,7 +719,7 @@ class BLMModel:
             # We iterate over the worker types, should not be be
             # too costly since the vector is quite large within each iteration
             ## Independent custom columns
-            if len(self.custom_cols) > len(self.custom_dep_cols):
+            if len(custom_indep_split_cols) + len(custom_indep_nosplit_cols) > 0:
                 if iter == 0:
                     A1_sum = np.zeros(ni)
                     A2_sum = np.zeros(ni)
@@ -761,16 +742,16 @@ class BLMModel:
 
                 KK = G1 + nk * G2
                 for l in range(nl):
-                    idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
-                    idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
+                    idx_one = (l, G1, *[C1[col] for col in custom_dep_cols])
+                    idx_two = (l, G2, *[C2[col] for col in custom_dep_cols])
                     lp1 = lognormpdf(Y1, A1_sum + A1[idx_one], np.sqrt(S1_sum_sq + S1[idx_one] ** 2))
                     lp2 = lognormpdf(Y2, A2_sum + A2[idx_two], np.sqrt(S2_sum_sq + S2[idx_two] ** 2))
                     lp[:, l] = np.log(pk1[KK, l]) + lp1 + lp2
             else:
                 KK = G1 + nk * G2
                 for l in range(nl):
-                    idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
-                    idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
+                    idx_one = (l, G1, *[C1[col] for col in custom_dep_cols])
+                    idx_two = (l, G2, *[C2[col] for col in custom_dep_cols])
                     lp1 = lognormpdf(Y1, A1[idx_one], S1[idx_one])
                     lp2 = lognormpdf(Y2, A2[idx_two], S2[idx_two])
                     lp[:, l] = np.log(pk1[KK, l]) + lp1 + lp2
@@ -791,62 +772,6 @@ class BLMModel:
                 break
             prev_lik = lik1
 
-            # --------- M-step ----------
-            # For now we run a simple ols, however later we
-            # want to add constraints!
-            # see https://scaron.info/blog/quadratic-programming-in-python.html
-
-            # The regression has 2 * nl * nk parameters and nl * ni rows
-            # We do not necessarily want to construct the duplicated data by nl
-            # Instead we will construct X'X and X'Y by looping over nl
-            # We also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
-            ts = nl * cum_params # Shift for period 2
-            # ts_indep = # Shift for period 2 for independent control variables
-            XwXd = np.zeros(shape=2 * ts) # Only store the diagonal
-            if params['update_a']:
-                XwY = np.zeros(shape=2 * ts)
-            for l in range(nl):
-                # (We might be better off trying this within numba or something)
-                l_dep_index, r_dep_index = l * n_dep_params, (l + 1) * n_dep_params
-                l_indep_split_index, r_indep_split_index = nl * n_dep_params + l * n_indep_split_params, nl * n_dep_params + (l + 1) * n_indep_split_params
-                l_indep_nosplit_index, r_indep_nosplit_index = nl * (n_dep_params + n_indep_split_params) + l * n_indep_nosplit_params, nl * (n_dep_params + n_indep_split_params) + (l + 1) * n_indep_nosplit_params
-                ## Compute shared terms ##
-                # Variances
-                idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
-                idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
-                S_l1 = S1[idx_one]
-                S_l2 = S2[idx_two]
-                if len(self.custom_cols) > len(self.custom_dep_cols):
-                    S_l1 = np.sqrt(S1_sum_sq + S_l1 ** 2)
-                    S_l2 = np.sqrt(S2_sum_sq + S_l2 ** 2)
-                del idx_one, idx_two
-                # Shared weighted terms
-                CC1_weighted = CC1.T @ diags(qi[:, l] / S_l1)
-                CC2_weighted = CC2.T @ diags(qi[:, l] / S_l2)
-                ## Compute XwXd terms ##
-                # Split dependent and independent (put dependent at beginning, independent at end)
-                XwXd_1 = (CC1_weighted @ CC1).diagonal()
-                XwXd_2 = (CC2_weighted @ CC2).diagonal()
-                XwXd[l_dep_index: r_dep_index] = XwXd_1[: n_dep_params]
-                XwXd[l_indep_split_index: r_indep_split_index] = XwXd_1[n_dep_params: n_dep_params + n_indep_split_params]
-                XwXd[l_indep_nosplit_index: r_indep_nosplit_index] = XwXd_1[n_dep_params + n_indep_split_params:]
-                XwXd[ts + l_dep_index: ts + r_dep_index] = XwXd_2[: n_dep_params]
-                XwXd[ts + l_indep_split_index: ts + r_indep_split_index] = XwXd_2[n_dep_params: n_dep_params + n_indep_split_params]
-                XwXd[ts + l_indep_nosplit_index: ts + r_indep_nosplit_index] = XwXd_2[n_dep_params + n_indep_split_params:]
-                if params['update_a']:
-                    ## Compute XwY terms ##
-                    # Split dependent and independent (put dependent at beginning, independent at end)
-                    XwY_1 = CC1_weighted @ Y1
-                    XwY_2 = CC2_weighted @ Y2
-                    XwY[l_dep_index: r_dep_index] = XwY_1[: n_dep_params]
-                    XwY[l_indep_split_index: r_indep_split_index] = XwY_1[n_dep_params: n_dep_params + n_indep_split_params]
-                    XwY[l_indep_nosplit_index: r_indep_nosplit_index] = XwY_1[n_dep_params + n_indep_split_params:]
-                    XwY[ts + l_dep_index: ts + r_dep_index] = XwY_2[: n_dep_params]
-                    XwY[ts + l_indep_split_index: ts + r_indep_split_index] = XwY_2[n_dep_params: n_dep_params + n_indep_split_params]
-                    XwY[ts + l_indep_nosplit_index: ts + r_indep_nosplit_index] = XwY_2[n_dep_params + n_indep_split_params:]
-            del XwXd_1, XwXd_2
-
-            # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
             # print('A1 before:')
             # print(A1)
             # print('A2 before:')
@@ -861,98 +786,255 @@ class BLMModel:
             # print(A2_indep)
             # print('A_indep before:')
             # print(A_indep)
+            # print('S1_indep before:')
+            # print(S1_indep)
+            # print('S2_indep before:')
+            # print(S2_indep)
+            # print('S_indep before:')
+            # print(S_indep)
+
+            # --------- M-step ----------
+            # For now we run a simple ols, however later we
+            # want to add constraints!
+            # see https://scaron.info/blog/quadratic-programming-in-python.html
+
+            # The regression has 2 * nl * nk parameters and nl * ni rows
+            # We do not necessarily want to construct the duplicated data by nl
+            # Instead we will construct X'X and X'Y by looping over nl
+            # We also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
+            ts = nl * nk # Shift for period 2
+            # Only store the diagonal
+            XwXd = np.zeros(shape=2 * ts)
+            if params['update_a']:
+                XwY = np.zeros(shape=2 * ts)
+
+            if len(custom_indep_split_cols) > 0:
+                ts_split = {col: nl * n_split for col, n_split in custom_indep_split_dict.items()}
+                XwXd_split = {col: np.zeros(shape=2 * col_ts_split) for col, col_ts_split in ts_split.items()}
+                if params['update_a']:
+                    XwY_split = {col: np.zeros(shape=2 * col_ts_split) for col, col_ts_split in ts_split.items()}
+            if len(custom_indep_nosplit_cols) > 0:
+                ts_nosplit = {col: nl * n_nosplit for col, n_nosplit in custom_indep_nosplit_dict.items()}
+                XwXd_nosplit = {col: np.zeros(shape=2 * col_ts_nosplit) for col, col_ts_nosplit in ts_nosplit.items()}
+                if params['update_a']:
+                    XwY_nosplit = {col: np.zeros(shape=2 * col_ts_nosplit) for col, col_ts_nosplit in ts_nosplit.items()}
+
+            if iter == 0:
+                if len(custom_indep_split_cols) + len(custom_indep_nosplit_cols) > 0:
+                    Y1_adj = Y1.copy()
+                    Y2_adj = Y2.copy()
+                    Y1_adj -= A1_sum
+                    Y2_adj -= A2_sum
+                else:
+                    Y1_adj = Y1
+                    Y2_adj = Y2
+
+            ## Update A ##
+            for l in range(nl):
+                # (We might be better off trying this within numba or something)
+                l_index, r_index = l * nk, (l + 1) * nk
+                ## Compute shared terms ##
+                idx_one = (l, G1, *[C1[col] for col in custom_dep_cols])
+                idx_two = (l, G2, *[C2[col] for col in custom_dep_cols])
+                # Shared weighted terms
+                GG1_weighted = GG1.T @ diags(qi[:, l] / S1[idx_one])
+                GG2_weighted = GG2.T @ diags(qi[:, l] / S2[idx_two])
+                del idx_one, idx_two
+                ## Compute XwXd terms ##
+                XwXd[l_index: r_index] = (GG1_weighted @ GG1).diagonal()
+                XwXd[ts + l_index: ts + r_index] = (GG2_weighted @ GG2).diagonal()
+                if params['update_a']:
+                    ## Compute XwY terms ##
+                    XwY[l_index: r_index] = GG1_weighted @ Y1_adj
+                    XwY[ts + l_index: ts + r_index] = GG2_weighted @ Y2_adj
+                del GG1_weighted, GG2_weighted
+
+            # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
             XwX = np.diag(XwXd)
             if params['update_a']:
                 try:
                     cons_a.solve(XwX, -XwY)
                     res_a1, res_a2 = cons_a.res[: len(cons_a.res) // 2], cons_a.res[len(cons_a.res) // 2:]
-                    A1 = np.reshape(res_a1[: nl * n_dep_params], self.dims)
-                    A2 = np.reshape(res_a2[: nl * n_dep_params], self.dims)
-                    params_count = nl * n_dep_params
-                    for col in self.custom_indep_split_cols:
-                        # If parameter associated with column can change over time
-                        n_col_params = self.custom_cols_dict[col]
-                        A1_indep[col] = res_a1[params_count: params_count + n_col_params]
-                        A2_indep[col] = res_a2[params_count: params_count + n_col_params]
-                        params_count += n_col_params
-                    for col in self.custom_indep_nosplit_cols:
-                        # If parameter associated with column is constant over time
-                        n_col_params = self.custom_cols_dict[col]
-                        A_indep[col] = res_a1[params_count: params_count + n_col_params]
-                        params_count += n_col_params
+                    A1 = np.reshape(res_a1, self.dims)
+                    A2 = np.reshape(res_a2, self.dims)
+                    
                 except ValueError as e:
                     # If constraints inconsistent, keep A1 and A2 the same
                     if params['verbose'] in [1, 2]:
                         print(f'{e}, passing 1')
-                    stop
+                    # stop
                     pass
+
+            ## Update A - independent split columns ##
+            for split_col in custom_indep_split_cols:
+                n_split = custom_indep_split_dict[split_col]
+                Y1_adj += A1_indep[split_col][C1[split_col]]
+                Y2_adj += A2_indep[split_col][C2[split_col]]
+                for l in range(nl):
+                    l_index, r_index = l * n_split, (l + 1) * n_split
+                    ## Compute shared terms ##
+                    CC1_weighted = CC1[split_col].T @ diags(qi[:, l] / S1_indep[split_col][C1[split_col]])
+                    CC2_weighted = CC2[split_col].T @ diags(qi[:, l] / S2_indep[split_col][C2[split_col]])
+                    ## Compute XwXd_split terms ##
+                    XwXd_split[split_col][l_index: r_index] = (CC1_weighted @ CC1[split_col]).diagonal()
+                    XwXd_split[split_col][ts_split[split_col] + l_index: ts_split[split_col] + r_index] = (CC2_weighted @ CC2[split_col]).diagonal()
+                    if params['update_a']:
+                        ## Compute XwY_split terms ##
+                        idx_one = (l, G1, *[C1[col] for col in custom_dep_cols])
+                        idx_two = (l, G2, *[C2[col] for col in custom_dep_cols])
+                        XwY_split[split_col][l_index: r_index] = CC1_weighted @ (Y1_adj - A1[idx_one])
+                        XwY_split[split_col][ts_split[split_col] + l_index: ts_split[split_col] + r_index] = CC2_weighted @ (Y2_adj - A2[idx_two])
+                        del idx_one, idx_two
+                del CC1_weighted, CC2_weighted
+
+                # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
+                XwXd_split[split_col] = np.diag(XwXd_split[split_col])
+                if params['update_a']:
+                    try:
+                        split_solver = cons_a_split[split_col]
+                        split_solver.solve(XwXd_split[split_col], -XwY_split[split_col])
+                        A1_indep[split_col] = split_solver.res[: len(split_solver.res) // 2][: n_split]
+                        A2_indep[split_col] = split_solver.res[len(split_solver.res) // 2:][: n_split]
+                        
+                    except ValueError as e:
+                        # If constraints inconsistent, keep A1 and A2 the same
+                        if params['verbose'] in [1, 2]:
+                            print(f'{e}, passing 1')
+                        # stop
+                        pass
+
+                Y1_adj -= A1_indep[split_col][C1[split_col]]
+                Y2_adj -= A2_indep[split_col][C2[split_col]]
+
+            ## Update A - independent no-split columns ##
+            for nosplit_col in custom_indep_nosplit_cols:
+                n_nosplit = custom_indep_nosplit_dict[nosplit_col]
+                Y1_adj += A_indep[nosplit_col][C[nosplit_col]]
+                Y2_adj += A_indep[nosplit_col][C[nosplit_col]]
+                for l in range(nl):
+                    l_index, r_index = l * n_nosplit, (l + 1) * n_nosplit
+                    ## Compute shared terms ##
+                    CC_weighted = CC[nosplit_col].T @ diags(qi[:, l] / S_indep[nosplit_col][C[nosplit_col]])
+                    ## Compute XwXd_nosplit terms ##
+                    XwXd_nosplit[nosplit_col][l_index: r_index] = (CC_weighted @ CC[nosplit_col]).diagonal()
+                    XwXd_nosplit[nosplit_col][ts_nosplit[nosplit_col] + l_index: ts_nosplit[nosplit_col] + r_index] = XwXd_nosplit[nosplit_col][l_index: r_index]
+                    if params['update_a']:
+                        ## Compute XwY_nosplit terms ##
+                        idx_one = (l, G1, *[C1[col] for col in custom_dep_cols])
+                        idx_two = (l, G2, *[C2[col] for col in custom_dep_cols])
+                        XwY_nosplit[nosplit_col][l_index: r_index] = CC_weighted @ (Y1_adj - A1[idx_one])
+                        XwY_nosplit[nosplit_col][ts_nosplit[nosplit_col] + l_index: ts_nosplit[nosplit_col] + r_index] = CC_weighted @ (Y2_adj - A2[idx_two])
+                        del idx_one, idx_two
+                del CC_weighted
+
+                # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
+                XwXd_nosplit[nosplit_col] = np.diag(XwXd_nosplit[nosplit_col])
+                if params['update_a']:
+                    try:
+                        nosplit_solver = cons_a_nosplit[nosplit_col]
+                        nosplit_solver.solve(XwXd_nosplit[nosplit_col], -XwY_nosplit[nosplit_col])
+                        A_indep[nosplit_col] = nosplit_solver.res[: len(nosplit_solver.res) // 2]
+                        
+                    except ValueError as e:
+                        # If constraints inconsistent, keep A1 and A2 the same
+                        if params['verbose'] in [1, 2]:
+                            print(f'{e}, passing 1')
+                        # stop
+                        pass
+
+                Y1_adj -= A_indep[nosplit_col][C[nosplit_col]]
+                Y2_adj -= A_indep[nosplit_col][C[nosplit_col]]
+
+            if (len(custom_indep_split_cols) + len(custom_indep_nosplit_cols) > 0):
+                # Update A1_sum and A2_sum
+                A1_sum = Y1 - Y1_adj
+                A2_sum = Y2 - Y2_adj
 
             if params['update_s']:
                 # Next we extract the variances
                 XwS = np.zeros(shape=2 * ts)
-                if len(self.custom_cols) > len(self.custom_dep_cols):
-                    A1_sum = np.zeros(ni)
-                    A2_sum = np.zeros(ni)
-                    for col in self.custom_indep_split_cols:
-                        # If parameter associated with column can change over time
-                        A1_sum += A1_indep[col][C1[col]]
-                        A2_sum += A2_indep[col][C2[col]]
-                    for col in self.custom_indep_nosplit_cols:
-                        # If parameter associated with column is constant over time
-                        A1_sum += A_indep[col][C[col]]
-                        A2_sum += A_indep[col][C[col]]
+
+                if len(custom_indep_split_cols) > 0:
+                    XwS_split = {col: np.zeros(shape=2 * col_ts_split) for col, col_ts_split in ts_split.items()}
+                if len(custom_indep_nosplit_cols) > 0:
+                    XwS_nosplit = {col: np.zeros(shape=2 * col_ts_nosplit) for col, col_ts_nosplit in ts_nosplit.items()}
+                
+                ## Update S ##
                 for l in range(nl):
-                    l_dep_index, r_dep_index = l * n_dep_params, (l + 1) * n_dep_params
-                    l_indep_split_index, r_indep_split_index = nl * n_dep_params + l * n_indep_split_params, nl * n_dep_params + (l + 1) * n_indep_split_params
-                    l_indep_nosplit_index, r_indep_nosplit_index = nl * (n_dep_params + n_indep_split_params) + l * n_indep_nosplit_params, nl * (n_dep_params + n_indep_split_params) + (l + 1) * n_indep_nosplit_params
-                    # Means and variances
+                    l_index, r_index = l * nk, (l + 1) * nk
+                    # Generate indices
                     idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
                     idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
-                    A_l1 = A1[idx_one]
-                    A_l2 = A2[idx_two]
-                    S_l1 = S1[idx_one]
-                    S_l2 = S2[idx_two]
-                    if len(self.custom_cols) > len(self.custom_dep_cols):
-                        A_l1 += A1_sum
-                        A_l2 += A2_sum
-                        S_l1 = np.sqrt(S1_sum_sq + S_l1 ** 2)
-                        S_l2 = np.sqrt(S2_sum_sq + S_l2 ** 2)
+                    ## Compute XwS terms ##
+                    XwS[l_index: r_index] = GG1.T @ diags(qi[:, l] / S1[idx_one]) @ ((Y1_adj - A1[idx_one]) ** 2)
+                    XwS[ts + l_index: ts + r_index] = GG2.T @ diags(qi[:, l] / S2[idx_two]) @ ((Y2_adj - A2[idx_two]) ** 2)
                     del idx_one, idx_two
-                    # Split dependent and independent (put dependent at beginning, independent at end)
-                    XwS_1 = CC1.T @ diags(qi[:, l] / S_l1) @ ((Y1 - A_l1) ** 2)
-                    XwS_2 = CC2.T @ diags(qi[:, l] / S_l2) @ ((Y2 - A_l2) ** 2)
-                    XwS[l_dep_index: r_dep_index] = XwS_1[: n_dep_params]
-                    XwS[l_indep_split_index: r_indep_split_index] = XwS_1[n_dep_params: n_dep_params + n_indep_split_params]
-                    XwS[l_indep_nosplit_index: r_indep_nosplit_index] = XwS_1[n_dep_params + n_indep_split_params:]
-                    XwS[ts + l_dep_index: ts + r_dep_index] = XwS_2[: n_dep_params]
-                    XwS[ts + l_indep_split_index: ts + r_indep_split_index] = XwS_2[n_dep_params: n_dep_params + n_indep_split_params]
-                    XwS[ts + l_indep_nosplit_index: ts + r_indep_nosplit_index] = XwS_2[n_dep_params + n_indep_split_params:]
-                del XwS_1, XwS_2
 
                 try:
                     cons_s.solve(XwX, -XwS)
-                    # FIXME using np.maximum(0, S) to set lower bound on variance
-                    res_s1, res_s2 = np.sqrt(cons_s.res[: len(cons_s.res) // 2]), np.sqrt(cons_s.res[len(cons_s.res) // 2:])
-                    S1 = np.reshape(res_s1[: nl * n_dep_params], self.dims)
-                    S2 = np.reshape(res_s2[: nl * n_dep_params], self.dims)
-                    params_count = nl * n_dep_params
-                    for col in self.custom_indep_split_cols:
-                        # If parameter associated with column can change over time
-                        n_col_params = self.custom_cols_dict[col]
-                        S1_indep[col] = res_s1[params_count: params_count + n_col_params]
-                        S2_indep[col] = res_s2[params_count: params_count + n_col_params]
-                        params_count += n_col_params
-                    for col in self.custom_indep_nosplit_cols:
-                        # If parameter associated with column is constant over time
-                        n_col_params = self.custom_cols_dict[col]
-                        S_indep[col] = res_s1[params_count: params_count + n_col_params]
-                        params_count += n_col_params
+                    res_s1, res_s2 = cons_s.res[: len(cons_s.res) // 2], cons_s.res[len(cons_s.res) // 2:]
+                    S1 = np.sqrt(np.reshape(res_s1, self.dims))
+                    S2 = np.sqrt(np.reshape(res_s2, self.dims))
+
                 except ValueError as e:
                     # If constraints inconsistent, keep S1 and S2 the same
                     if params['verbose'] in [1, 2]:
                         print(f'{e}, passing 2')
-                    stop
+                    # stop
                     pass
+
+                ## Update S - independent split columns ##
+                for split_col in custom_indep_split_cols:
+                    n_split = custom_indep_split_dict[split_col]
+                    for l in range(nl):
+                        l_index, r_index = l * n_split, (l + 1) * n_split
+                        # Generate indices
+                        idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
+                        idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
+                        ## Compute XwS_split terms ##
+                        XwS_split[split_col][l_index: r_index] = CC1[split_col].T @ diags(qi[:, l] / S1_indep[split_col][C1[split_col]]) @ ((Y1_adj - A1[idx_one]) ** 2)
+                        XwS_split[split_col][ts_split[split_col] + l_index: ts_split[split_col] + r_index] = CC2[split_col].T @ diags(qi[:, l] / S2_indep[split_col][C2[split_col]]) @ ((Y2_adj - A2[idx_two]) ** 2)
+                        del idx_one, idx_two
+
+                    try:
+                        split_solver = cons_s_split[split_col]
+                        split_solver.solve(XwXd_split[split_col], -XwS_split[split_col])
+                        S1_indep[split_col] = np.sqrt(split_solver.res[: len(split_solver.res) // 2][: n_split])
+                        S2_indep[split_col] = np.sqrt(split_solver.res[len(split_solver.res) // 2:][: n_split])
+                        
+                    except ValueError as e:
+                        # If constraints inconsistent, keep A1 and A2 the same
+                        if params['verbose'] in [1, 2]:
+                            print(f'{e}, passing 2')
+                        # stop
+                        pass
+
+                ## Update S - independent no-split columns ##
+                for nosplit_col in custom_indep_nosplit_cols:
+                    n_nosplit = custom_indep_nosplit_dict[nosplit_col]
+                    for l in range(nl):
+                        l_index, r_index = l * n_nosplit, (l + 1) * n_nosplit
+                        # Generate indices
+                        idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
+                        idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
+                        lhs_l = CC[nosplit_col].T @ diags(qi[:, l] / S_indep[nosplit_col][C[nosplit_col]])
+                        ## Compute XwS_nosplit terms ##
+                        XwS_nosplit[nosplit_col][l_index: r_index] = lhs_l @ ((Y1_adj - A1[idx_one]) ** 2)
+                        XwS_nosplit[nosplit_col][ts_nosplit[nosplit_col] + l_index: ts_nosplit[nosplit_col] + r_index] = idx_two @ ((Y2_adj - A2[idx_two]) ** 2)
+                        del idx_one, idx_two, lhs_l
+
+                    try:
+                        nosplit_solver = cons_s_nosplit[nosplit_col]
+                        nosplit_solver.solve(XwXd_nosplit[nosplit_col], -XwS_nosplit[nosplit_col])
+                        S_indep[nosplit_col] = np.sqrt(nosplit_solver.res[: len(nosplit_solver.res) // 2])
+                        
+                    except ValueError as e:
+                        # If constraints inconsistent, keep A1 and A2 the same
+                        if params['verbose'] in [1, 2]:
+                            print(f'{e}, passing 2')
+                        # stop
+                        pass
+
             # print('res a:')
             # print(cons_a.res)
             # print('res s:')
@@ -971,6 +1053,12 @@ class BLMModel:
             # print(A2_indep)
             # print('A_indep after:')
             # print(A_indep)
+            # print('S1_indep after:')
+            # print(S1_indep)
+            # print('S2_indep after:')
+            # print(S2_indep)
+            # print('S_indep after:')
+            # print(S_indep)
             # stop
             if params['update_pk1']:
                 pk1 = GG12.T @ qi
@@ -1292,8 +1380,8 @@ class BLMEstimator:
         else:
             sim_model_lst = itertools.starmap(self._sim_model, tqdm([(jdata, rng) for _ in range(n_init)], total=n_init))
 
-        # Sort by likelihoods
-        sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst], reverse=True, key=lambda a: a[0])
+        # Sort by likelihoods FIXME better handling of lik1 is None
+        sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst if model.lik1 is not None], reverse=True, key=lambda a: a[0])
         sorted_lik_models = [model for _, model in sorted_zipped_models]
 
         # Save likelihood vs. connectedness for all models
