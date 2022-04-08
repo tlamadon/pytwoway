@@ -857,7 +857,7 @@ class BLMModel:
                     res_a1, res_a2 = cons_a.res[: len(cons_a.res) // 2], cons_a.res[len(cons_a.res) // 2:]
                     A1 = np.reshape(res_a1, self.dims)
                     A2 = np.reshape(res_a2, self.dims)
-                    
+
                 except ValueError as e:
                     # If constraints inconsistent, keep A1 and A2 the same
                     if params['verbose'] in [1, 2]:

@@ -6,6 +6,8 @@ from pandas import DataFrame
 from bipartitepandas.util import ParamsDict, _is_subtype
 
 # NOTE: multiprocessing isn't compatible with lambda functions
+def _gteq2(a):
+    return a >= 2
 def _gteq1(a):
     return a >= 1
 def _gteq0(a):
@@ -14,22 +16,9 @@ def _gt0(a):
     return a > 0
 def _min_gt0(a):
     return np.min(a) > 0
-def _indep_split_dict(a):
-    for v in a.values():
-        if not((len(v) == 9) and _is_subtype(v['n'], int) and (v['n'] >= 2) and _is_subtype(v['a1_mu'], (float, int)) and _is_subtype(v['a2_mu'], (float, int)) and _is_subtype(v['a1_sig'], (float, int)) and (v['a1_sig'] >= 0) and _is_subtype(v['a2_sig'], (float, int)) and (v['a2_sig'] >= 0) and _is_subtype(v['s1_low'], (float, int)) and (v['s1_low'] >= 0) and _is_subtype(v['s2_low'], (float, int)) and (v['s2_low'] >= 0) and _is_subtype(v['s1_high'], (float, int)) and (v['s1_high'] >= 0) and _is_subtype(v['s2_high'], (float, int)) and (v['s2_high'] >= 0) and (v['s1_high'] >= v['s1_low']) and (v['s2_high'] >= v['s2_low'])):
-            return False
-    return True
-def _indep_nosplit_dict(a):
-    for v in a.values():
-        if not ((len(v) == 5) and _is_subtype(v['n'], int) and (v['n'] >= 2) and _is_subtype(v['a_mu'], (float, int)) and _is_subtype(v['a_sig'], (float, int)) and (v['a_sig'] >= 0) and _is_subtype(v['s_low'], (float, int)) and (v['s_low'] >= 0) and _is_subtype(v['s_high'], (float, int)) and (v['s_high'] >= 0) and (v['s_high'] >= v['s_low'])):
-            return False
-    return True
-def _dep_dict(a):
-    return np.array([_is_subtype(v, int) and (v >= 2) for v in a.values()]).all()
 
-# Define default parameter dictionary
+# Define default parameter dictionaries
 _sim_params_default = ParamsDict({
-    ## Class parameters
     'nl': (6, 'type_constrained', (int, _gteq1),
         '''
             (default=6) Number of worker types.
@@ -42,17 +31,37 @@ _sim_params_default = ParamsDict({
         '''
             (default=10) Average number of stayers per firm.
         ''', '>= 1'),
-    'custom_dependent_dict': (None, 'type_constrained_none', (dict, _dep_dict),
+    'categorical_time_varying_worker_interaction_controls_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary of custom general column names (to use as controls) linked to the number of types for that column, where the estimated parameters should be dependent on worker/firm type pairs. In other words, any column listed as a member of this parameter will have a different parameter estimated for each worker-firm type pair (the parameter value can still differ over time). None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.sim_categorical_time_varying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and can vary between the first and second periods. Run tw.sim_categorical_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'custom_independent_split_dict': (None, 'type_constrained_none', (dict, _indep_split_dict),
+    'categorical_time_nonvarying_worker_interaction_controls_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary of custom general column names (to use as controls) linked to a dictionary with keys: 'n': the number of types for that column; 'a1_mu': mean of simulated mean for the first period; 'a1_sig': standard deviation of simulated mean for the first period; 's1_low': minimum value of simulated standard deviation for the first period; 's1_high': maximum value of simulated standard deviation for the first period; and 'a2_mu', 'a2_sig', 's2_low', and 's2_high' are equivalent for the second period; where the estimated parameters should be independent of worker/firm type pairs. In other words, any column listed as a member of this parameter will have the same parameter estimated for each worker-firm type pair (the parameter value can still differ over time). None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.sim_categorical_time_nonvarying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and is the same in the first and second periods. Run tw.sim_categorical_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'custom_independent_nosplit_dict': (None, 'type_constrained_none', (dict, _indep_nosplit_dict),
+    'categorical_time_varying_controls_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary of custom general column names (to use as controls) linked to a dictionary with keys: 'n': the number of types for that column; 'a_mu': mean of simulated mean for both periods; 'a_sig': standard deviation of simulated mean for both periods; 's_low': minimum value of simulated standard deviation for both periods; 's_high': maximum value of simulated standard deviation for both periods; where the estimated parameters should be independent of worker/firm type pairs. In other words, any column listed as a member of this parameter will have the same parameter estimated for each worker-firm type pair (the parameter value can still differ over time). None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.sim_categorical_time_varying_params(). Each instance specifies a new control variable where the effect can vary between the first and second periods. Run tw.sim_categorical_time_varying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+        ''', None),
+    'categorical_time_nonvarying_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+        '''
+            (default=None) Dictionary linking column names to instances of tw.sim_categorical_time_nonvarying_params(). Each instance specifies a new control variable where the effect is the same in the first and second periods. Run tw.sim_categorical_time_nonvarying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+        ''', None),
+    'continuous_time_varying_worker_interaction_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+        '''
+            (default=None) Dictionary linking column names to instances of tw.sim_continuous_time_varying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and can vary between the first and second periods. Run tw.sim_continuous_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+        ''', None),
+    'continuous_time_nonvarying_worker_interaction_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+        '''
+            (default=None) Dictionary linking column names to instances of tw.sim_continuous_time_nonvarying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and is the same in the first and second periods. Run tw.sim_continuous_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+        ''', None),
+    'continuous_time_varying_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+        '''
+            (default=None) Dictionary linking column names to instances of tw.sim_continuous_time_varying_params(). Each instance specifies a new control variable where the effect can vary between the first and second periods. Run tw.sim_continuous_time_varying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+        ''', None),
+    'continuous_time_nonvarying_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+        '''
+            (default=None) Dictionary linking column names to instances of tw.sim_continuous_time_nonvarying_params(). Each instance specifies a new control variable where the effect is the same in the first and second periods. Run tw.sim_continuous_time_nonvarying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
     'NNm': (None, 'array_of_type_constrained_none', ('int', _min_gt0),
         '''
@@ -86,19 +95,19 @@ _sim_params_default = ParamsDict({
         '''
             (default=0.5) Standard error of simulated A2 (mean of fixed effects in second period).
         ''', '>= 0'),
-    's1_min': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's1_low': (0.3, 'type_constrained', ((float, int), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S1 (standard deviation of fixed effects in first period).
         ''', '>= 0'),
-    's1_max': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's1_high': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S1 (standard deviation of fixed effects in first period).
         ''', '>= 0'),
-    's2_min': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2_low': (0.3, 'type_constrained', ((float, int), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S2 (standard deviation of fixed effects in second period).
         ''', '>= 0'),
-    's2_max': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S2 (standard deviation of fixed effects in second period).
         ''', '>= 0'),
@@ -112,7 +121,7 @@ _sim_params_default = ParamsDict({
         ''', 'min > 0'),
     'strictly_monotone_a': (False, 'type', bool,
         '''
-            (default=False) If True, set A1 and A2 to be strictly increasing by firm type for each worker type (otherwise, they must simply be increasing by firm type over the average for all worker types).
+            (default=False) If True, set A1 and A2 to be strictly increasing by firm type for each worker type (otherwise, they are required to be increasing only by firm type over the average for all worker types).
         ''', None),
     'fixb': (False, 'type', bool,
         '''
@@ -139,6 +148,358 @@ def sim_params(update_dict=None):
         new_dict.update(update_dict)
     return new_dict
 
+_sim_categorical_time_varying_worker_interaction_params_default = ParamsDict({
+    'n': (6, 'type_constrained', (int, _gteq2),
+        '''
+            (default=6) Number of types for the parameter.
+        ''', '>= 2'),
+    'a1_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A1_cat_wi (mean of fixed effects in first period).
+        ''', None),
+    'a1_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A1_cat_wi (mean of fixed effects in first period).
+        ''', '>= 0'),
+    'a2_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A2_cat_wi (mean of fixed effects in second period).
+        ''', None),
+    'a2_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A2_cat_wi (mean of fixed effects in second period).
+        ''', '>= 0'),
+    's1_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S1_cat_wi (standard deviation of fixed effects in first period).
+        ''', '>= 0'),
+    's1_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S1_cat_wi (standard deviation of fixed effects in first period).
+        ''', '>= 0'),
+    's2_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S2_cat_wi (standard deviation of fixed effects in second period).
+        ''', '>= 0'),
+    's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S2_cat_wi (standard deviation of fixed effects in second period).
+        ''', '>= 0')
+})
+
+def sim_categorical_time_varying_worker_interaction_params(update_dict=None):
+    '''
+    Dictionary of default sim_categorical_time_varying_worker_interaction_params. Run tw.sim_categorical_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters.
+
+    Arguments:
+        update_dict (dict): user parameter values
+
+    Returns:
+        (ParamsDict) dictionary of sim_categorical_time_varying_worker_interaction_params
+    '''
+    new_dict = _sim_categorical_time_varying_worker_interaction_params_default.copy()
+    if update_dict is not None:
+        new_dict.update(update_dict)
+    return new_dict
+
+_sim_categorical_time_nonvarying_worker_interaction_params_default = ParamsDict({
+    'n': (6, 'type_constrained', (int, _gteq2),
+        '''
+            (default=6) Number of types for the parameter.
+        ''', '>= 2'),
+    'a_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A_cat_wi (mean of fixed effects in first and second periods).
+        ''', None),
+    'a_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A_cat_wi (mean of fixed effects in first and second periods).
+        ''', '>= 0'),
+    's_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S_cat_wi (standard deviation of fixed effects in first and second periods).
+        ''', '>= 0'),
+    's_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S_cat_wi (standard deviation of fixed effects in first and second periods).
+        ''', '>= 0')
+})
+
+def sim_categorical_time_nonvarying_worker_interaction_params(update_dict=None):
+    '''
+    Dictionary of default sim_categorical_time_nonvarying_worker_interaction_params. Run tw.sim_categorical_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters.
+
+    Arguments:
+        update_dict (dict): user parameter values
+
+    Returns:
+        (ParamsDict) dictionary of sim_categorical_time_nonvarying_worker_interaction_params
+    '''
+    new_dict = _sim_categorical_time_nonvarying_worker_interaction_params_default.copy()
+    if update_dict is not None:
+        new_dict.update(update_dict)
+    return new_dict
+
+_sim_categorical_time_varying_params_default = ParamsDict({
+    'n': (6, 'type_constrained', (int, _gteq2),
+        '''
+            (default=6) Number of types for the parameter.
+        ''', '>= 2'),
+    'a1_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A1_cat (mean of fixed effects in first period).
+        ''', None),
+    'a1_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A1_cat (mean of fixed effects in first period).
+        ''', '>= 0'),
+    'a2_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A2_cat (mean of fixed effects in second period).
+        ''', None),
+    'a2_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A2_cat (mean of fixed effects in second period).
+        ''', '>= 0'),
+    's1_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S1_cat (standard deviation of fixed effects in first period).
+        ''', '>= 0'),
+    's1_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S1_cat (standard deviation of fixed effects in first period).
+        ''', '>= 0'),
+    's2_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S2_cat (standard deviation of fixed effects in second period).
+        ''', '>= 0'),
+    's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S2_cat (standard deviation of fixed effects in second period).
+        ''', '>= 0')
+})
+
+def sim_categorical_time_varying_params(update_dict=None):
+    '''
+    Dictionary of default sim_categorical_time_varying_params. Run tw.sim_categorical_time_varying_params().describe_all() for descriptions of all valid parameters.
+
+    Arguments:
+        update_dict (dict): user parameter values
+
+    Returns:
+        (ParamsDict) dictionary of sim_categorical_time_varying_params
+    '''
+    new_dict = _sim_categorical_time_varying_params_default.copy()
+    if update_dict is not None:
+        new_dict.update(update_dict)
+    return new_dict
+
+_sim_categorical_time_nonvarying_params_default = ParamsDict({
+    'n': (6, 'type_constrained', (int, _gteq2),
+        '''
+            (default=6) Number of types for the parameter.
+        ''', '>= 2'),
+    'a_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A_cat (mean of fixed effects in first and second periods).
+        ''', None),
+    'a_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A_cat (mean of fixed effects in first and second periods).
+        ''', '>= 0'),
+    's_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S_cat (standard deviation of fixed effects in first and second periods).
+        ''', '>= 0'),
+    's_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S_cat (standard deviation of fixed effects in first and second periods).
+        ''', '>= 0')
+})
+
+def sim_categorical_time_nonvarying_params(update_dict=None):
+    '''
+    Dictionary of default sim_categorical_time_nonvarying_params. Run tw.sim_categorical_time_nonvarying_params().describe_all() for descriptions of all valid parameters.
+
+    Arguments:
+        update_dict (dict): user parameter values
+
+    Returns:
+        (ParamsDict) dictionary of sim_categorical_time_nonvarying_params
+    '''
+    new_dict = _sim_categorical_time_nonvarying_params_default.copy()
+    if update_dict is not None:
+        new_dict.update(update_dict)
+    return new_dict
+
+_sim_continuous_time_varying_worker_interaction_params_default = ParamsDict({
+    'a1_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A1_cts_wi (mean of coefficient in first period).
+        ''', None),
+    'a1_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A1_cts_wi (mean of coefficient in first period).
+        ''', '>= 0'),
+    'a2_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A2_cts_wi (mean of coefficient in second period).
+        ''', None),
+    'a2_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A2_cts_wi (mean of coefficient in second period).
+        ''', '>= 0'),
+    's1_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S1_cts_wi (standard deviation of coefficient in first period).
+        ''', '>= 0'),
+    's1_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S1_cts_wi (standard deviation of coefficient in first period).
+        ''', '>= 0'),
+    's2_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S2_cts_wi (standard deviation of coefficient in second period).
+        ''', '>= 0'),
+    's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S2_cts_wi (standard deviation of coefficient in second period).
+        ''', '>= 0')
+})
+
+def sim_continuous_time_varying_worker_interaction_params(update_dict=None):
+    '''
+    Dictionary of default sim_continuous_time_varying_worker_interaction_params. Run tw.sim_continuous_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters.
+
+    Arguments:
+        update_dict (dict): user parameter values
+
+    Returns:
+        (ParamsDict) dictionary of sim_continuous_time_varying_worker_interaction_params
+    '''
+    new_dict = _sim_continuous_time_varying_worker_interaction_params_default.copy()
+    if update_dict is not None:
+        new_dict.update(update_dict)
+    return new_dict
+
+_sim_continuous_time_nonvarying_worker_interaction_params_default = ParamsDict({
+    'a_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A_cts_wi (mean of coefficient in first and second periods).
+        ''', None),
+    'a_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A_cts_wi (mean of coefficient in first and second periods).
+        ''', '>= 0'),
+    's_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S_cts_wi (standard deviation of coefficient in first and second periods).
+        ''', '>= 0'),
+    's_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S_cts_wi (standard deviation of coefficient in first and second periods).
+        ''', '>= 0')
+})
+
+def sim_continuous_time_nonvarying_worker_interaction_params(update_dict=None):
+    '''
+    Dictionary of default sim_continuous_time_nonvarying_worker_interaction_params. Run tw.sim_continuous_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters.
+
+    Arguments:
+        update_dict (dict): user parameter values
+
+    Returns:
+        (ParamsDict) dictionary of sim_continuous_time_nonvarying_worker_interaction_params
+    '''
+    new_dict = _sim_continuous_time_nonvarying_worker_interaction_params_default.copy()
+    if update_dict is not None:
+        new_dict.update(update_dict)
+    return new_dict
+
+_sim_continuous_time_varying_params_default = ParamsDict({
+    'a1_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A1_cts (mean of coefficient in first period).
+        ''', None),
+    'a1_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A1_cts (mean of coefficient in first period).
+        ''', '>= 0'),
+    'a2_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A2_cts (mean of coefficient in second period).
+        ''', None),
+    'a2_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A2_cts (mean of coefficient in second period).
+        ''', '>= 0'),
+    's1_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S1_cts (standard deviation of coefficient in first period).
+        ''', '>= 0'),
+    's1_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S1_cts (standard deviation of coefficient in first period).
+        ''', '>= 0'),
+    's2_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S2_cts (standard deviation of coefficient in second period).
+        ''', '>= 0'),
+    's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S2_cts (standard deviation of coefficient in second period).
+        ''', '>= 0')
+})
+
+def sim_continuous_time_varying_params(update_dict=None):
+    '''
+    Dictionary of default sim_continuous_time_varying_params. Run tw.sim_continuous_time_varying_params().describe_all() for descriptions of all valid parameters.
+
+    Arguments:
+        update_dict (dict): user parameter values
+
+    Returns:
+        (ParamsDict) dictionary of sim_continuous_time_varying_params
+    '''
+    new_dict = _sim_continuous_time_varying_params_default.copy()
+    if update_dict is not None:
+        new_dict.update(update_dict)
+    return new_dict
+
+_sim_continuous_time_nonvarying_params_default = ParamsDict({
+    'a_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A_cat (mean of coefficient in first and second periods).
+        ''', None),
+    'a_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A_cat (mean of coefficient in first and second periods).
+        ''', '>= 0'),
+    's_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S_cat (standard deviation of coefficient in first and second periods).
+        ''', '>= 0'),
+    's_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S_cat (standard deviation of coefficient in first and second periods).
+        ''', '>= 0')
+})
+
+def sim_continuous_time_nonvarying_params(update_dict=None):
+    '''
+    Dictionary of default sim_continuous_time_nonvarying_params. Run tw.sim_continuous_time_nonvarying_params().describe_all() for descriptions of all valid parameters.
+
+    Arguments:
+        update_dict (dict): user parameter values
+
+    Returns:
+        (ParamsDict) dictionary of sim_continuous_time_nonvarying_params
+    '''
+    new_dict = _sim_continuous_time_nonvarying_params_default.copy()
+    if update_dict is not None:
+        new_dict.update(update_dict)
+    return new_dict
+
 class SimBLM:
     '''
     Class of SimBLM, where SimBLM simulates a bipartite BLM network of firms and workers.
@@ -161,54 +522,79 @@ class SimBLM:
         else:
             self.NNs = NNs
 
-        ## Unpack custom column parameters
-        custom_dep_dict = self.params['custom_dependent_dict']
-        custom_indep_split_dict = self.params['custom_independent_split_dict']
-        custom_indep_nosplit_dict = self.params['custom_independent_nosplit_dict']
-        ## Check if custom column parameters are None
-        if custom_dep_dict is None:
-            custom_dep_dict = {}
-        if custom_indep_split_dict is None:
-            custom_indep_split_dict = {}
-        if custom_indep_nosplit_dict is None:
-            custom_indep_nosplit_dict = {}
-        ## Create dictionary of all custom columns
-        custom_cols_dict = custom_dep_dict.copy()
-        custom_cols_dict.update(custom_indep_split_dict.copy())
-        custom_cols_dict.update(custom_indep_nosplit_dict.copy())
-        ## Custom column order
-        custom_dep_cols = sorted(custom_dep_dict.keys())
-        custom_indep_split_cols = sorted(custom_indep_split_dict.keys())
-        custom_indep_nosplit_cols = sorted(custom_indep_nosplit_dict.keys())
-        custom_cols = custom_dep_cols + custom_indep_split_cols + custom_indep_nosplit_cols
-        ## Store custom column attributes
+        ## Unpack control variable parameters
+        cat_tv_wi_dict = self.params['categorical_time_varying_worker_interaction_controls_dict']
+        cat_tnv_wi_dict = self.params['categorical_time_nonvarying_worker_interaction_controls_dict']
+        cat_tv_dict = self.params['categorical_time_varying_controls_dict']
+        cat_tnv_dict = self.params['categorical_time_nonvarying_controls_dict']
+        cts_tv_wi_dict = self.params['continuous_time_varying_worker_interaction_controls_dict']
+        cts_tnv_wi_dict = self.params['continuous_time_nonvarying_worker_interaction_controls_dict']
+        cts_tv_dict = self.params['continuous_time_varying_controls_dict']
+        cts_tnv_dict = self.params['continuous_time_nonvarying_controls_dict']
+        ## Check if control variable parameters are None
+        if cat_tv_wi_dict is None:
+            cat_tv_wi_dict = {}
+        if cat_tnv_wi_dict is None:
+            cat_tnv_wi_dict = {}
+        if cat_tv_dict is None:
+            cat_tv_dict = {}
+        if cat_tnv_dict is None:
+            cat_tnv_dict = {}
+        if cts_tv_wi_dict is None:
+            cts_tv_wi_dict = {}
+        if cts_tnv_wi_dict is None:
+            cts_tnv_wi_dict = {}
+        if cts_tv_dict is None:
+            cts_tv_dict = {}
+        if cts_tnv_dict is None:
+            cts_tnv_dict = {}
+        ## Create dictionary of all control variables
+        controls_dict = cat_tv_wi_dict.copy()
+        controls_dict.update(cat_tnv_wi_dict)
+        controls_dict.update(cat_tv_dict)
+        controls_dict.update(cat_tnv_dict)
+        controls_dict.update(cts_tv_wi_dict)
+        controls_dict.update(cts_tnv_wi_dict)
+        controls_dict.update(cts_tv_dict)
+        controls_dict.update(cts_tnv_dict)
+        ## Control variable ordering
+        cat_tv_wi_cols = sorted(cat_tv_wi_dict.keys())
+        cat_tnv_wi_cols = sorted(cat_tnv_wi_dict.keys())
+        cat_tv_cols = sorted(cat_tv_dict.keys())
+        cat_tnv_cols = sorted(cat_tnv_dict.keys())
+        cts_tv_wi_cols = sorted(cts_tv_wi_dict.keys())
+        cts_tnv_wi_cols = sorted(cts_tnv_wi_dict.keys())
+        cts_tv_cols = sorted(cts_tv_dict.keys())
+        cts_tnv_cols = sorted(cts_tnv_dict.keys())
+        ## Store control variable attributes
         # Dictionaries
-        self.custom_dep_dict = custom_dep_dict
-        self.custom_indep_split_dict = custom_indep_split_dict
-        self.custom_indep_nosplit_dict = custom_indep_nosplit_dict
-        self.custom_cols_dict = custom_cols_dict
+        self.controls_dict = controls_dict
+        self.cat_tv_wi_dict = cat_tv_wi_dict
+        self.cat_tnv_wi_dict = cat_tnv_wi_dict
+        self.cat_tv_dict = cat_tv_dict
+        self.cat_tnv_dict = cat_tnv_dict
+        self.cts_tv_wi_dict = cts_tv_wi_dict
+        self.cts_tnv_wi_dict = cts_tnv_wi_dict
+        self.cts_tv_dict = cts_tv_dict
+        self.cts_tnv_dict = cts_tnv_dict
         # Lists
-        self.custom_dep_cols = custom_dep_cols
-        self.custom_indep_split_cols = custom_indep_split_cols
-        self.custom_indep_nosplit_cols = custom_indep_nosplit_cols
-        self.custom_cols = custom_cols
+        self.cat_tv_wi_cols = cat_tv_wi_cols
+        self.cat_tnv_wi_cols = cat_tnv_wi_cols
+        self.cat_tv_cols = cat_tv_cols
+        self.cat_tnv_cols = cat_tnv_cols
+        self.cts_tv_wi_cols = cts_tv_wi_cols
+        self.cts_tnv_wi_cols = cts_tnv_wi_cols
+        self.cts_tv_cols = cts_tv_cols
+        self.cts_tnv_cols = cts_tnv_cols
 
-        for col in custom_dep_cols:
-            # Make sure independent and dependent custom columns don't overlap
-            if col in custom_indep_split_cols:
-                raise NotImplementedError(f'Custom dependent columns and custom independent split columns cannot overlap, but input includes column {col!r} as a member of both.')
-            if col in custom_indep_nosplit_cols:
-                raise NotImplementedError(f'Custom dependent columns and custom independent no-split columns cannot overlap, but input includes column {col!r} as a member of both.')
-        for col in custom_indep_split_cols:
-            # Make sure independent split and independent no-split custom columns don't overlap
-            if col in custom_indep_nosplit_cols:
-                raise NotImplementedError(f'Custom independent split columns and custom independent no-split columns cannot overlap, but input includes column {col!r} as a member of both.')
+        # Check that no control variables appear in multiple groups
+        all_cols = cat_tv_wi_cols + cat_tnv_wi_cols + cat_tv_cols + cat_tnv_cols + cts_tv_wi_cols + cts_tnv_wi_cols + cts_tv_cols + cts_tnv_cols
+        if len(all_cols) > len(set(all_cols)):
+            for col in all_cols:
+                if all_cols.count(col) > 1:
+                    raise ValueError(f'Control variable names must be unique, but {col!r} appears in multiple groups.')
 
-        dims = [nl, nk]
-        for col in custom_dep_cols:
-            # dims must account for all dependent columns (and make sure the columns are in the correct order)
-            dims.append(custom_dep_dict[col])
-        self.dims = dims
+        self.dims = (nl, nk)
 
     def _sort_A(self, A1, A2):
         '''
@@ -223,7 +609,6 @@ class SimBLM:
         '''
         # Extract parameters
         nl, strictly_monotone_a = self.params.get_multiple(('nl', 'strictly_monotone_a'))
-        n_dims = len(self.dims)
         A_mean = (A1 + A2) / 2
 
         if strictly_monotone_a:
@@ -233,13 +618,13 @@ class SimBLM:
                 A2[l] = np.sort(A2[l], axis=0)
 
         ## Sort worker effects ##
-        worker_effect_order = np.mean(A1, axis=tuple(range(n_dims)[1:])).argsort()
+        worker_effect_order = np.mean(A1, axis=1).argsort()
         A1 = A1[worker_effect_order, :]
         A2 = A2[worker_effect_order, :]
 
         if not strictly_monotone_a:
             ## Sort firm effects ##
-            firm_effect_order = np.mean(A1, axis=(0, *range(n_dims)[2:])).argsort()
+            firm_effect_order = np.mean(A_mean, axis=0).argsort()
             A1 = A1[:, firm_effect_order]
             A2 = A2[:, firm_effect_order]
 
@@ -253,25 +638,25 @@ class SimBLM:
             rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            (dict): keys are 'A1', 'A2', 'S1', 'S2', 'pk1', 'pk0', 'A1_indep', 'A2_indep', 'A_indep', 'S1_indep', 'S2_indep', and 'S_indep'. 'A1' gives the mean of fixed effects in the first period; 'A2' gives the mean of fixed effects in the second period; 'S1' gives the standard deviation of fixed effects in the first period; 'S2' gives the standard deviation of fixed effects in the second period; 'pk1' gives the probability of being at each combination of firm types for movers; 'pk0' gives the probability of being at each firm type for stayers; 'A1_indep' gives the mean of fixed effects for custom split columns in the first period; 'A2_indep' gives the mean of fixed effects for custom split columns in the second period; 'A_indep' gives the mean of fixed effects for custom no-split columns; 'S1_indep' gives the standard deviation of fixed effects for custom split columns in the first period; 'S2_indep' gives the standard deviation of fixed effects for custom split columns in the second period; 'S_indep' gives the standard deviation of fixed effects for custom no-split columns.
+            (dict): keys are 'A1', 'A2', 'S1', 'S2', 'pk1', 'pk0', 'A1_cat_wi', 'A2_cat_wi', 'A_cat_wi', 'S1_cat_wi', 'S2_cat_wi', 'S_cat_wi', 'A1_cat', 'A2_cat', 'A_cat', 'S1_cat', 'S2_cat', 'S_cat', 'A1_cts_wi', 'A2_cts_wi', 'A_cts_wi', 'S1_cts_wi', 'S2_cts_wi', 'S_cts_wi', 'A1_cts', 'A2_cts', 'A_cts', 'S1_cts', 'S2_cts', and 'S_cts'. 'A1' gives the mean of fixed effects in the first period; 'A2' gives the mean of fixed effects in the second period; 'S1' gives the standard deviation of fixed effects in the first period; 'S2' gives the standard deviation of fixed effects in the second period; 'pk1' gives the probability of being at each combination of firm types for movers; and 'pk0' gives the probability of being at each firm type for stayers. 'cat' indicates a categorical variable, 'cts' indicates a continuous variable, and 'wi' indicates worker-interaction (the effect interacts with the unobserved worker types).
         '''
         if rng is None:
             rng = np.random.default_rng(None)
 
         # Extract parameters
         nl, nk = self.params.get_multiple(('nl', 'nk'))
-        a1_mu, a1_sig, a2_mu, a2_sig, s1_min, s1_max, s2_min, s2_max, pk1_prior, pk0_prior = self.params.get_multiple(('a1_mu', 'a1_sig', 'a2_mu', 'a2_sig', 's1_min', 's1_max', 's2_min', 's2_max', 'pk1_prior', 'pk0_prior'))
-        custom_cols_dict, split_cols, nosplit_cols = self.custom_cols_dict, self.custom_indep_split_cols, self.custom_indep_nosplit_cols
+        a1_mu, a1_sig, a2_mu, a2_sig, s1_low, s1_high, s2_low, s2_high, pk1_prior, pk0_prior = self.params.get_multiple(('a1_mu', 'a1_sig', 'a2_mu', 'a2_sig', 's1_low', 's1_high', 's2_low', 's2_high', 'pk1_prior', 'pk0_prior'))
+        controls_dict, cat_tv_wi_cols, cat_tnv_wi_cols, cat_tv_cols, cat_tnv_cols, cts_tv_wi_cols, cts_tnv_wi_cols, cts_tv_cols, cts_tnv_cols = self.controls_dict, self.cat_tv_wi_cols, self.cat_tnv_wi_cols, self.cat_tv_cols, self.cat_tnv_cols, self.cts_tv_wi_cols, self.cts_tnv_wi_cols, self.cts_tv_cols, self.cts_tnv_cols
         fixb, stationary = self.params.get_multiple(('fixb', 'stationary'))
         dims = self.dims
 
-        ### Draw parameters ###
+        ##### Draw parameters #####
         # Model for Y1 | Y2, l, k for movers and stayers
         A1 = rng.normal(loc=a1_mu, scale=a1_sig, size=dims)
-        S1 = rng.uniform(low=s1_min, high=s1_max, size=dims)
+        S1 = rng.uniform(low=s1_low, high=s1_high, size=dims)
         # Model for Y4 | Y3, l, k for movers and stayers
         A2 = rng.normal(loc=a2_mu, scale=a2_sig, size=dims)
-        S2 = rng.uniform(low=s2_min, high=s2_max, size=dims)
+        S2 = rng.uniform(low=s2_low, high=s2_high, size=dims)
         # Model for p(K | l, l') for movers
         if pk1_prior is None:
             pk1_prior = np.ones(nl)
@@ -280,15 +665,45 @@ class SimBLM:
         if pk0_prior is None:
             pk0_prior = np.ones(nl)
         pk0 = rng.dirichlet(alpha=pk0_prior, size=nk)
-        ## Control variables ##
-        # Split
-        A1_indep = {col: rng.normal(loc=custom_cols_dict[col]['a1_mu'], scale=custom_cols_dict[col]['a1_sig'], size=custom_cols_dict[col]['n']) for col in split_cols}
-        S1_indep = {col: rng.uniform(low=custom_cols_dict[col]['s1_low'], high=custom_cols_dict[col]['s1_high'], size=custom_cols_dict[col]['n']) for col in split_cols}
-        A2_indep = {col: rng.normal(loc=custom_cols_dict[col]['a2_mu'], scale=custom_cols_dict[col]['a2_sig'], size=custom_cols_dict[col]['n']) for col in split_cols}
-        S2_indep = {col: rng.uniform(low=custom_cols_dict[col]['s2_low'], high=custom_cols_dict[col]['s2_high'], size=custom_cols_dict[col]['n']) for col in split_cols}
-        # No-split
-        A_indep = {col: rng.normal(loc=custom_cols_dict[col]['a_mu'], scale=custom_cols_dict[col]['a_sig'], size=custom_cols_dict[col]['n']) for col in nosplit_cols}
-        S_indep = {col: rng.uniform(low=custom_cols_dict[col]['s_low'], high=custom_cols_dict[col]['s_high'], size=custom_cols_dict[col]['n']) for col in nosplit_cols}
+        #### Control variables ####
+        ### Categorical ###
+        ## Worker-interaction ##
+        # Time-variable
+        A1_cat_wi = {col: rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=(nl, controls_dict[col]['n'])) for col in cat_tv_wi_cols}
+        S1_cat_wi = {col: rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=(nl, controls_dict[col]['n'])) for col in cat_tv_wi_cols}
+        A2_cat_wi = {col: rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=(nl, controls_dict[col]['n'])) for col in cat_tv_wi_cols}
+        S2_cat_wi = {col: rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=(nl, controls_dict[col]['n'])) for col in cat_tv_wi_cols}
+        # Time non-variable
+        A_cat_wi = {col: rng.normal(loc=controls_dict[col]['a_mu'], scale=controls_dict[col]['a_sig'], size=(nl, controls_dict[col]['n'])) for col in cat_tnv_wi_cols}
+        S_cat_wi = {col: rng.uniform(low=controls_dict[col]['s_low'], high=controls_dict[col]['s_high'], size=(nl, controls_dict[col]['n'])) for col in cat_tnv_wi_cols}
+        ## Non-worker-interaction ##
+        # Time-variable
+        A1_cat = {col: rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=controls_dict[col]['n']) for col in cat_tv_cols}
+        S1_cat = {col: rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=controls_dict[col]['n']) for col in cat_tv_cols}
+        A2_cat = {col: rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=controls_dict[col]['n']) for col in cat_tv_cols}
+        S2_cat = {col: rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=controls_dict[col]['n']) for col in cat_tv_cols}
+        # Time non-variable
+        A_cat = {col: rng.normal(loc=controls_dict[col]['a_mu'], scale=controls_dict[col]['a_sig'], size=controls_dict[col]['n']) for col in cat_tnv_cols}
+        S_cat = {col: rng.uniform(low=controls_dict[col]['s_low'], high=controls_dict[col]['s_high'], size=controls_dict[col]['n']) for col in cat_tnv_cols}
+        ### Continuous ###
+        ## Worker-interaction ##
+        # Time-variable
+        A1_cts_wi = {col: rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=nl) for col in cts_tv_wi_cols}
+        S1_cts_wi = {col: rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=nl) for col in cat_tv_wi_cols}
+        A2_cts_wi = {col: rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=nl) for col in cts_tv_wi_cols}
+        S2_cts_wi = {col: rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=nl) for col in cts_tv_wi_cols}
+        # Time non-variable
+        A_cts_wi = {col: rng.normal(loc=controls_dict[col]['a_mu'], scale=controls_dict[col]['a_sig'], size=nl) for col in cts_tnv_wi_cols}
+        S_cts_wi = {col: rng.uniform(low=controls_dict[col]['s_low'], high=controls_dict[col]['s_high'], size=nl) for col in cts_tnv_wi_cols}
+        ## Non-worker-interaction ##
+        # Time-variable
+        A1_cts = {col: rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=1) for col in cts_tv_cols}
+        S1_cts = {col: rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=1) for col in cts_tv_cols}
+        A2_cts = {col: rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=1) for col in cts_tv_cols}
+        S2_cts = {col: rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=1) for col in cts_tv_cols}
+        # Time non-variable
+        A_cts = {col: rng.normal(loc=controls_dict[col]['a_mu'], scale=controls_dict[col]['a_sig'], size=1) for col in cts_tnv_cols}
+        S_cts = {col: rng.uniform(low=controls_dict[col]['s_low'], high=controls_dict[col]['s_high'], size=1) for col in cts_tnv_cols}
 
         ## Sort parameters ##
         A1, A2 = self._sort_A(A1, A2)
@@ -299,9 +714,9 @@ class SimBLM:
         if stationary:
             A2 = A1
 
-        return {'A1': A1, 'A2': A2, 'S1': S1, 'S2': S2, 'pk1': pk1, 'pk0': pk0, 'A1_indep': A1_indep, 'A2_indep': A2_indep, 'A_indep': A_indep, 'S1_indep': S1_indep, 'S2_indep': S2_indep, 'S_indep': S_indep}
+        return {'A1': A1, 'A2': A2, 'S1': S1, 'S2': S2, 'pk1': pk1, 'pk0': pk0, 'A1_cat_wi': A1_cat_wi, 'A2_cat_wi': A2_cat_wi, 'A_cat_wi': A_cat_wi, 'S1_cat_wi': S1_cat_wi, 'S2_cat_wi': S2_cat_wi, 'S_cat_wi': S_cat_wi, 'A1_cat': A1_cat, 'A2_cat': A2_cat, 'A_cat': A_cat, 'S1_cat': S1_cat, 'S2_cat': S2_cat, 'S_cat': S_cat, 'A1_cts_wi': A1_cts_wi, 'A2_cts_wi': A2_cts_wi, 'A_cts_wi': A_cts_wi, 'S1_cts_wi': S1_cts_wi, 'S2_cts_wi': S2_cts_wi, 'S_cts_wi': S_cts_wi, 'A1_cts': A1_cts, 'A2_cts': A2_cts, 'A_cts': A_cts, 'S1_cts': S1_cts, 'S2_cts': S2_cts, 'S_cts': S_cts}
 
-    def _simulate_movers(self, A1, A2, S1, S2, pk1, pk0, A1_indep, A2_indep, A_indep,  S1_indep, S2_indep, S_indep, rng=None):
+    def _simulate_movers(self, A1, A2, S1, S2, pk1, pk0, A1_cat_wi, A2_cat_wi, A_cat_wi,  S1_cat_wi, S2_cat_wi, S_cat_wi, A1_cat, A2_cat, A_cat, S1_cat, S2_cat, S_cat, A1_cts_wi, A2_cts_wi, A_cts_wi,  S1_cts_wi, S2_cts_wi, S_cts_wi, A1_cts, A2_cts, A_cts, S1_cts, S2_cts, S_cts, rng=None):
         '''
         Simulate data for movers (simulates firm types, not firms).
 
@@ -312,12 +727,30 @@ class SimBLM:
             S2 (NumPy Array): standard deviation of fixed effects in the second period
             pk1 (NumPy Array): probability of being at each combination of firm types for movers
             pk0 (NumPy Array): probability of being at each firm type for stayers (used only for _simulate_stayers)
-            A1_indep (NumPy Array): mean of fixed effects for custom split columns in the first period
-            A2_indep (NumPy Array): mean of fixed effects for custom split columns in the second period
-            A_indep (NumPy Array): mean of fixed effects for custom no-split columns
-            S1_indep (NumPy Array): standard deviation of fixed effects for custom split columns in the first period
-            S2_indep (NumPy Array): standard deviation of fixed effects for custom split columns in the second period
-            S_indep (NumPy Array): standard deviation of fixed effects for custom no-split columns
+            A1_cat_wi (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in the first period for categorical control variables that interact with worker types
+            A2_cat_wi (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in the second period for categorical control variables that interact with worker types
+            A_cat_wi (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in both periods for categorical control variables that interact with worker types
+            S1_cat_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in the first period for categorical control variables that interact with worker types
+            S2_cat_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in the second period for categorical control variables that interact with worker types
+            S_cat_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in both periods for categorical control variables that interact with worker types
+            A1_cat (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in the first period for categorical control variables
+            A2_cat (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in the second period for categorical control variables
+            A_cat (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in both periods for categorical control variables
+            S1_cat (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in the first period for categorical control variables
+            S2_cat (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in the second period for categorical control variables
+            S_cat (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in both periods for categorical control variables
+            A1_cts_wi (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in the first period for continuous control variables that interact with worker types
+            A2_cts_wi (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in the second period for continuous control variables that interact with worker types
+            A_cts_wi (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in both periods for continuous control variables that interact with worker types
+            S1_cts_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in the first period for continuous control variables that interact with worker types
+            S2_cts_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in the second period for continuous control variables that interact with worker types
+            S_cts_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in both periods for continuous control variables that interact with worker types
+            A1_cts (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in the first period for continuous control variables
+            A2_cts (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in the second period for continuous control variables
+            A_cts (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in both periods for continuous control variables
+            S1_cts (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in the first period for continuous control variables
+            S2_cts (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in the second period for continuous control variables
+            S_cts (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in both periods for continuous control variables
             rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
@@ -362,42 +795,99 @@ class SimBLM:
 
                 i += ni
 
-        if len(self.custom_cols) > 0:
-            # Draw custom columns FIXME add custom probabilities?
-            A1_draws = {split_col: rng.choice(np.arange(split_dict['n']), size=nmi, replace=True) for split_col, split_dict in self.custom_indep_split_dict.items()}
-            A2_draws = {split_col: rng.choice(np.arange(split_dict['n']), size=nmi, replace=True) for split_col, split_dict in self.custom_indep_split_dict.items()}
-            A_draws = {nosplit_col: rng.choice(np.arange(nosplit_dict['n']), size=nmi, replace=True) for nosplit_col, nosplit_dict in self.custom_indep_nosplit_dict.items()}
-            S1_draws = A1_draws
-            S2_draws = A2_draws
-            S_draws = A_draws
+        if len(self.controls_dict) > 0:
+            #### Draw custom columns #### FIXME add custom probabilities?
+            ### Categorical ###
+            ## Worker-interaction ##
+            A1_cat_wi_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nmi, replace=True) for cat_col, cat_dict in self.cat_tv_wi_dict.items()}
+            A2_cat_wi_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nmi, replace=True) for cat_col, cat_dict in self.cat_tv_wi_dict.items()}
+            A_cat_wi_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nmi, replace=True) for cat_col, cat_dict in self.cat_tnv_wi_dict.items()}
+            ## Non-worker-interaction ##
+            A1_cat_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nmi, replace=True) for cat_col, cat_dict in self.cat_tv_dict.items()}
+            A2_cat_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nmi, replace=True) for cat_col, cat_dict in self.cat_tv_dict.items()}
+            A_cat_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nmi, replace=True) for cat_col, cat_dict in self.cat_tnv_dict.items()}
+            ## Variances ##
+            S1_cat_wi_draws = A1_cat_wi_draws
+            S2_cat_wi_draws = A2_cat_wi_draws
+            S_cat_wi_draws = A_cat_wi_draws
+            S1_cat_draws = A1_cat_draws
+            S2_cat_draws = A2_cat_draws
+            S_cat_draws = A_cat_draws
+            ### Continuous ###
+            ## Worker-interaction ##
+            A1_cts_wi_draws = {cts_col: rng.normal(size=nmi) for cts_col in self.cts_tv_wi_dict.keys()}
+            A2_cts_wi_draws = {cts_col: rng.normal(size=nmi) for cts_col in self.cts_tv_wi_dict.keys()}
+            A_cts_wi_draws = {cts_col: rng.normal(size=nmi) for cts_col in self.cts_tnv_wi_dict.keys()}
+            ## Non-worker-interaction ##
+            A1_cts_draws = {cts_col: rng.normal(size=nmi) for cts_col in self.cts_tv_dict.keys()}
+            A2_cts_draws = {cts_col: rng.normal(size=nmi) for cts_col in self.cts_tv_dict.keys()}
+            A_cts_draws = {cts_col: rng.normal(size=nmi) for cts_col in self.cts_tnv_dict.keys()}
 
-            # Simulate custom column wages
+            # Simulate control variable wages
             A1_sum = np.zeros(shape=nmi)
             A2_sum = np.zeros(shape=nmi)
             S1_sum_sq = np.zeros(shape=nmi)
             S2_sum_sq = np.zeros(shape=nmi)
-            for split_col in self.custom_indep_split_cols:
-                A1_sum += A1_indep[split_col][A1_draws[split_col]]
-                A2_sum += A2_indep[split_col][A2_draws[split_col]]
-                S1_sum_sq += S1_indep[split_col][S1_draws[split_col]] ** 2
-                S2_sum_sq += S2_indep[split_col][S2_draws[split_col]] ** 2
-            for nosplit_col in self.custom_indep_nosplit_cols:
-                A1_sum += A_indep[nosplit_col][A_draws[nosplit_col]]
-                A2_sum += A_indep[nosplit_col][A_draws[nosplit_col]]
-                S1_sum_sq += S_indep[nosplit_col][S_draws[nosplit_col]] ** 2
-                S2_sum_sq += S_indep[nosplit_col][S_draws[nosplit_col]] ** 2
+            ### Categorical ###
+            ## Worker-interaction ##
+            for cat_col in self.cat_tv_wi_cols:
+                A1_sum += A1_cat_wi[cat_col][A1_cat_wi_draws[cat_col], L]
+                A2_sum += A2_cat_wi[cat_col][A2_cat_wi_draws[cat_col], L]
+                S1_sum_sq += S1_cat_wi[cat_col][S1_cat_wi_draws[cat_col], L] ** 2
+                S2_sum_sq += S2_cat_wi[cat_col][S2_cat_wi_draws[cat_col], L] ** 2
+            for cat_col in self.cat_tnv_wi_cols:
+                A1_sum += A_cat_wi[cat_col][A_cat_wi_draws[cat_col], L]
+                A2_sum += A_cat_wi[cat_col][A_cat_wi_draws[cat_col], L]
+                S1_sum_sq += S_cat_wi[cat_col][S_cat_wi_draws[cat_col], L] ** 2
+                S2_sum_sq += S_cat_wi[cat_col][S_cat_wi_draws[cat_col], L] ** 2
+            ## Non-worker-interaction ##
+            for cat_col in self.cat_tv_cols:
+                A1_sum += A1_cat[cat_col][A1_cat_draws[cat_col]]
+                A2_sum += A2_cat[cat_col][A2_cat_draws[cat_col]]
+                S1_sum_sq += S1_cat[cat_col][S1_cat_draws[cat_col]] ** 2
+                S2_sum_sq += S2_cat[cat_col][S2_cat_draws[cat_col]] ** 2
+            for cat_col in self.cat_tnv_cols:
+                A1_sum += A_cat[cat_col][A_cat_draws[cat_col]]
+                A2_sum += A_cat[cat_col][A_cat_draws[cat_col]]
+                S1_sum_sq += S_cat[cat_col][S_cat_draws[cat_col]] ** 2
+                S2_sum_sq += S_cat[cat_col][S_cat_draws[cat_col]] ** 2
+            ### Continuous ###
+            ## Worker-interaction ##
+            for cts_col in self.cts_tv_wi_cols:
+                A1_sum += A1_cts_wi[cts_col][L] * A1_cts_wi_draws[cts_col]
+                A2_sum += A2_cts_wi[cts_col][L] * A2_cts_wi_draws[cts_col]
+                S1_sum_sq += S1_cts_wi[cts_col][L] ** 2
+                S2_sum_sq += S2_cts_wi[cts_col][L] ** 2
+            for cts_col in self.cts_tnv_wi_cols:
+                A1_sum += A_cts_wi[cts_col][L] * A_cts_wi_draws[cts_col]
+                A2_sum += A_cts_wi[cts_col][L] * A_cts_wi_draws[cts_col]
+                S1_sum_sq += S_cts_wi[cts_col][L] ** 2
+                S2_sum_sq += S_cts_wi[cts_col][L] ** 2
+            ## Non-worker-interaction ##
+            for cts_col in self.cts_tv_cols:
+                A1_sum += A1_cts[cts_col] * A1_cts_draws[cts_col]
+                A2_sum += A2_cts[cts_col] * A2_cts_draws[cts_col]
+                S1_sum_sq += S1_cts[cts_col] ** 2
+                S2_sum_sq += S2_cts[cts_col] ** 2
+            for cts_col in self.cts_tnv_cols:
+                A1_sum += A_cts[cts_col] * A_cts_draws[cts_col]
+                A2_sum += A_cts[cts_col] * A_cts_draws[cts_col]
+                S1_sum_sq += S_cts[cts_col] ** 2
+                S2_sum_sq += S_cts[cts_col] ** 2
 
             Y1 += rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq), size=nmi)
             Y2 += rng.normal(loc=A2_sum, scale=np.sqrt(S2_sum_sq), size=nmi)
 
-            A1_draws = {k + '1': v for k, v in A1_draws.items()}
-            A2_draws = {k + '2': v for k, v in A2_draws.items()}
+            A1_cat_wi_draws = {k + '1': v for k, v in A1_cat_wi_draws.items()}
+            A2_cat_wi_draws = {k + '2': v for k, v in A2_cat_wi_draws.items()}
+            A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
+            A2_cat_draws = {k + '2': v for k, v in A2_cat_draws.items()}
 
-            return DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G1, 'g2': G2, 'l': L, **A1_draws, **A2_draws, **A_draws})
+            return DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G1, 'g2': G2, 'l': L, **A1_cat_wi_draws, **A2_cat_wi_draws, **A_cat_wi_draws, **A1_cat_draws, **A2_cat_draws, **A_cat_draws, **A1_cts_wi_draws, **A2_cts_wi_draws, **A_cts_wi_draws, **A1_cts_draws, **A2_cts_draws, **A_cts_draws})
 
         return DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G1, 'g2': G2, 'l': L})
 
-    def _simulate_stayers(self, A1, A2, S1, S2, pk1, pk0, A1_indep, A2_indep, A_indep,  S1_indep, S2_indep, S_indep, rng=None):
+    def _simulate_stayers(self, A1, A2, S1, S2, pk1, pk0, A1_cat_wi, A2_cat_wi, A_cat_wi,  S1_cat_wi, S2_cat_wi, S_cat_wi, A1_cat, A2_cat, A_cat, S1_cat, S2_cat, S_cat, A1_cts_wi, A2_cts_wi, A_cts_wi,  S1_cts_wi, S2_cts_wi, S_cts_wi, A1_cts, A2_cts, A_cts, S1_cts, S2_cts, S_cts, rng=None):
         '''
         Simulate data for stayers (simulates firm types, not firms).
 
@@ -408,12 +898,30 @@ class SimBLM:
             S2 (NumPy Array): standard deviation of fixed effects in the second period
             pk1 (NumPy Array): probability of being at each combination of firm types for movers (used only for _simulate_movers)
             pk0 (NumPy Array): probability of being at each firm type for stayers
-            A1_indep (NumPy Array): mean of fixed effects for custom split columns in the first period
-            A2_indep (NumPy Array): mean of fixed effects for custom split columns in the second period
-            A_indep (NumPy Array): mean of fixed effects for custom no-split columns
-            S1_indep (NumPy Array): standard deviation of fixed effects for custom split columns in the first period
-            S2_indep (NumPy Array): standard deviation of fixed effects for custom split columns in the second period
-            S_indep (NumPy Array): standard deviation of fixed effects for custom no-split columns
+            A1_cat_wi (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in the first period for categorical control variables that interact with worker types
+            A2_cat_wi (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in the second period for categorical control variables that interact with worker types
+            A_cat_wi (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in both periods for categorical control variables that interact with worker types
+            S1_cat_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in the first period for categorical control variables that interact with worker types
+            S2_cat_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in the second period for categorical control variables that interact with worker types
+            S_cat_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in both periods for categorical control variables that interact with worker types
+            A1_cat (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in the first period for categorical control variables
+            A2_cat (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in the second period for categorical control variables
+            A_cat (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in both periods for categorical control variables
+            S1_cat (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in the first period for categorical control variables
+            S2_cat (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in the second period for categorical control variables
+            S_cat (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in both periods for categorical control variables
+            A1_cts_wi (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in the first period for continuous control variables that interact with worker types
+            A2_cts_wi (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in the second period for continuous control variables that interact with worker types
+            A_cts_wi (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in both periods for continuous control variables that interact with worker types
+            S1_cts_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in the first period for continuous control variables that interact with worker types
+            S2_cts_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in the second period for continuous control variables that interact with worker types
+            S_cts_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in both periods for continuous control variables that interact with worker types
+            A1_cts (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in the first period for continuous control variables
+            A2_cts (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in the second period for continuous control variables
+            A_cts (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in both periods for continuous control variables
+            S1_cts (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in the first period for continuous control variables
+            S2_cts (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in the second period for continuous control variables
+            S_cts (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in both periods for continuous control variables
             rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
@@ -454,38 +962,95 @@ class SimBLM:
 
             i += ni
 
-        if len(self.custom_cols) > 0:
-            # Draw custom columns FIXME add custom probabilities?
-            A1_draws = {split_col: rng.choice(np.arange(split_dict['n']), size=nsi, replace=True) for split_col, split_dict in self.custom_indep_split_dict.items()}
-            A2_draws = {split_col: rng.choice(np.arange(split_dict['n']), size=nsi, replace=True) for split_col, split_dict in self.custom_indep_split_dict.items()}
-            A_draws = {nosplit_col: rng.choice(np.arange(nosplit_dict['n']), size=nsi, replace=True) for nosplit_col, nosplit_dict in self.custom_indep_nosplit_dict.items()}
-            S1_draws = A1_draws
-            S2_draws = A2_draws
-            S_draws = A_draws
+        if len(self.controls_dict) > 0:
+            #### Draw custom columns #### FIXME add custom probabilities?
+            ### Categorical ###
+            ## Worker-interaction ##
+            A1_cat_wi_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nsi, replace=True) for cat_col, cat_dict in self.cat_tv_wi_dict.items()}
+            A2_cat_wi_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nsi, replace=True) for cat_col, cat_dict in self.cat_tv_wi_dict.items()}
+            A_cat_wi_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nsi, replace=True) for cat_col, cat_dict in self.cat_tnv_wi_dict.items()}
+            ## Non-worker-interaction ##
+            A1_cat_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nsi, replace=True) for cat_col, cat_dict in self.cat_tv_dict.items()}
+            A2_cat_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nsi, replace=True) for cat_col, cat_dict in self.cat_tv_dict.items()}
+            A_cat_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nsi, replace=True) for cat_col, cat_dict in self.cat_tnv_dict.items()}
+            ## Variances ##
+            S1_cat_wi_draws = A1_cat_wi_draws
+            S2_cat_wi_draws = A2_cat_wi_draws
+            S_cat_wi_draws = A_cat_wi_draws
+            S1_cat_draws = A1_cat_draws
+            S2_cat_draws = A2_cat_draws
+            S_cat_draws = A_cat_draws
+            ### Continuous ###
+            ## Worker-interaction ##
+            A1_cts_wi_draws = {cts_col: rng.normal(size=nsi) for cts_col in self.cts_tv_wi_dict.keys()}
+            A2_cts_wi_draws = {cts_col: rng.normal(size=nsi) for cts_col in self.cts_tv_wi_dict.keys()}
+            A_cts_wi_draws = {cts_col: rng.normal(size=nsi) for cts_col in self.cts_tnv_wi_dict.keys()}
+            ## Non-worker-interaction ##
+            A1_cts_draws = {cts_col: rng.normal(size=nsi) for cts_col in self.cts_tv_dict.keys()}
+            A2_cts_draws = {cts_col: rng.normal(size=nsi) for cts_col in self.cts_tv_dict.keys()}
+            A_cts_draws = {cts_col: rng.normal(size=nsi) for cts_col in self.cts_tnv_dict.keys()}
 
-            # Simulate custom column wages
+            # Simulate control variable wages
             A1_sum = np.zeros(shape=nsi)
             A2_sum = np.zeros(shape=nsi)
             S1_sum_sq = np.zeros(shape=nsi)
             S2_sum_sq = np.zeros(shape=nsi)
-            for split_col in self.custom_indep_split_cols:
-                A1_sum += A1_indep[split_col][A1_draws[split_col]]
-                A2_sum += A2_indep[split_col][A2_draws[split_col]]
-                S1_sum_sq += S1_indep[split_col][S1_draws[split_col]] ** 2
-                S2_sum_sq += S2_indep[split_col][S2_draws[split_col]] ** 2
-            for nosplit_col in self.custom_indep_nosplit_cols:
-                A1_sum += A_indep[nosplit_col][A_draws[nosplit_col]]
-                A2_sum += A_indep[nosplit_col][A_draws[nosplit_col]]
-                S1_sum_sq += S_indep[nosplit_col][S_draws[nosplit_col]] ** 2
-                S2_sum_sq += S_indep[nosplit_col][S_draws[nosplit_col]] ** 2
+            ### Categorical ###
+            ## Worker-interaction ##
+            for cat_col in self.cat_tv_wi_cols:
+                A1_sum += A1_cat_wi[cat_col][A1_cat_wi_draws[cat_col], L]
+                A2_sum += A2_cat_wi[cat_col][A2_cat_wi_draws[cat_col], L]
+                S1_sum_sq += S1_cat_wi[cat_col][S1_cat_wi_draws[cat_col], L] ** 2
+                S2_sum_sq += S2_cat_wi[cat_col][S2_cat_wi_draws[cat_col], L] ** 2
+            for cat_col in self.cat_tnv_wi_cols:
+                A1_sum += A_cat_wi[cat_col][A_cat_wi_draws[cat_col], L]
+                A2_sum += A_cat_wi[cat_col][A_cat_wi_draws[cat_col], L]
+                S1_sum_sq += S_cat_wi[cat_col][S_cat_wi_draws[cat_col], L] ** 2
+                S2_sum_sq += S_cat_wi[cat_col][S_cat_wi_draws[cat_col], L] ** 2
+            ## Non-worker-interaction ##
+            for cat_col in self.cat_tv_cols:
+                A1_sum += A1_cat[cat_col][A1_cat_draws[cat_col]]
+                A2_sum += A2_cat[cat_col][A2_cat_draws[cat_col]]
+                S1_sum_sq += S1_cat[cat_col][S1_cat_draws[cat_col]] ** 2
+                S2_sum_sq += S2_cat[cat_col][S2_cat_draws[cat_col]] ** 2
+            for cat_col in self.cat_tnv_cols:
+                A1_sum += A_cat[cat_col][A_cat_draws[cat_col]]
+                A2_sum += A_cat[cat_col][A_cat_draws[cat_col]]
+                S1_sum_sq += S_cat[cat_col][S_cat_draws[cat_col]] ** 2
+                S2_sum_sq += S_cat[cat_col][S_cat_draws[cat_col]] ** 2
+            ### Continuous ###
+            ## Worker-interaction ##
+            for cts_col in self.cts_tv_wi_cols:
+                A1_sum += A1_cts_wi[cts_col][L] * A1_cts_wi_draws[cts_col]
+                A2_sum += A2_cts_wi[cts_col][L] * A2_cts_wi_draws[cts_col]
+                S1_sum_sq += S1_cts_wi[cts_col][L] ** 2
+                S2_sum_sq += S2_cts_wi[cts_col][L] ** 2
+            for cts_col in self.cts_tnv_wi_cols:
+                A1_sum += A_cts_wi[cts_col][L] * A_cts_wi_draws[cts_col]
+                A2_sum += A_cts_wi[cts_col][L] * A_cts_wi_draws[cts_col]
+                S1_sum_sq += S_cts_wi[cts_col][L] ** 2
+                S2_sum_sq += S_cts_wi[cts_col][L] ** 2
+            ## Non-worker-interaction ##
+            for cts_col in self.cts_tv_cols:
+                A1_sum += A1_cts[cts_col] * A1_cts_draws[cts_col]
+                A2_sum += A2_cts[cts_col] * A2_cts_draws[cts_col]
+                S1_sum_sq += S1_cts[cts_col] ** 2
+                S2_sum_sq += S2_cts[cts_col] ** 2
+            for cts_col in self.cts_tnv_cols:
+                A1_sum += A_cts[cts_col] * A_cts_draws[cts_col]
+                A2_sum += A_cts[cts_col] * A_cts_draws[cts_col]
+                S1_sum_sq += S_cts[cts_col] ** 2
+                S2_sum_sq += S_cts[cts_col] ** 2
 
             Y1 += rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq), size=nsi)
             Y2 += rng.normal(loc=A2_sum, scale=np.sqrt(S2_sum_sq), size=nsi)
 
-            A1_draws = {k + '1': v for k, v in A1_draws.items()}
-            A2_draws = {k + '2': v for k, v in A2_draws.items()}
+            A1_cat_wi_draws = {k + '1': v for k, v in A1_cat_wi_draws.items()}
+            A2_cat_wi_draws = {k + '2': v for k, v in A2_cat_wi_draws.items()}
+            A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
+            A2_cat_draws = {k + '2': v for k, v in A2_cat_draws.items()}
 
-            return DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G, 'g2': G, 'l': L, **A1_draws, **A2_draws, **A_draws})
+            return DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G, 'g2': G, 'l': L, **A1_cat_wi_draws, **A2_cat_wi_draws, **A_cat_wi_draws, **A1_cat_draws, **A2_cat_draws, **A_cat_draws, **A1_cts_wi_draws, **A2_cts_wi_draws, **A_cts_wi_draws, **A1_cts_draws, **A2_cts_draws, **A_cts_draws})
 
         return DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G, 'g2': G, 'l': L})
 
@@ -498,7 +1063,7 @@ class SimBLM:
             rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            (dict or tuple of dicts): sim_data gives {'jdata': movers data, 'sdata': stayers data}, while sim_params gives {'A1': A1, 'A2': A2, 'S1': S1, 'S2': S2, 'pk1': pk1, 'pk0': pk0, 'A1_indep': A1_indep, 'A2_indep': A2_indep, 'A_indep': A_indep, 'S1_indep': S1_indep, 'S2_indep': S2_indep, 'S_indep': S_indep}; if return_parameters=True, returns (sim_data, sim_params); if return_parameters=False, returns sim_data
+            (dict or tuple of dicts): sim_data gives {'jdata': movers data, 'sdata': stayers data}, while sim_params gives {'A1': A1, 'A2': A2, 'S1': S1, 'S2': S2, 'pk1': pk1, 'pk0': pk0, 'A1_cat_wi': A1_cat_wi, 'A2_cat_wi': A2_cat_wi, 'A_cat_wi': A_cat_wi, 'S1_cat_wi': S1_cat_wi, 'S2_cat_wi': S2_cat_wi, 'S_cat_wi': S_cat_wi, 'A1_cat': A1_cat, 'A2_cat': A2_cat, 'A_cat': A_cat, 'S1_cat': S1_cat, 'S2_cat': S2_cat, 'S_cat': S_cat}; if return_parameters=True, returns (sim_data, sim_params); if return_parameters=False, returns sim_data
         '''
         if rng is None:
             rng = np.random.default_rng(None)
