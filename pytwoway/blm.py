@@ -148,9 +148,9 @@ _blm_params_default = ParamsDict({
         '''
             (default=True) If False, do not update pk1.
         ''', None),
-    'cons_a': ((['lin'], {'n_periods': 2}), 'type_constrained', (tuple, _lstdct),
+    'cons_a': (([], {}), 'type_constrained', (tuple, _lstdct),
         '''
-            (default=(['lin'], {'n_periods': 2})) Constraints on A1 and A2, where first entry gives list of constraints and second entry gives dictionary of constraint parameters.
+            (default=([], {})) Constraints on A1 and A2, where first entry gives list of string constraint names and second entry gives dictionary of constraint parameters.
         ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
     'cons_s': ((['biggerthan'], {'gap_bigger': 1e-7, 'n_periods': 2}), 'type_constrained', (tuple, _lstdct),
         '''
@@ -658,7 +658,7 @@ class BLMModel:
         ## Worker-interaction ##
         # Time-variable
         self.A1_cts_wi = {col: rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=nl) for col in cts_tv_wi_cols}
-        self.S1_cts_wi = {col: rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=nl) for col in cat_tv_wi_cols}
+        self.S1_cts_wi = {col: rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=nl) for col in cts_tv_wi_cols}
         self.A2_cts_wi = {col: rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=nl) for col in cts_tv_wi_cols}
         self.S2_cts_wi = {col: rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=nl) for col in cts_tv_wi_cols}
         # Time non-variable
@@ -1076,27 +1076,6 @@ class BLMModel:
                 break
             prev_lik = lik1
 
-            # print('A1 before:')
-            # print(A1)
-            # print('A2 before:')
-            # print(A2)
-            # print('S1 before:')
-            # print(S1)
-            # print('S2 before:')
-            # print(S2)
-            # print('A1_indep before:')
-            # print(A1_indep)
-            # print('A2_indep before:')
-            # print(A2_indep)
-            # print('A_indep before:')
-            # print(A_indep)
-            # print('S1_indep before:')
-            # print(S1_indep)
-            # print('S2_indep before:')
-            # print(S2_indep)
-            # print('S_indep before:')
-            # print(S_indep)
-
             # --------- M-step ----------
             # For now we run a simple ols, however later we
             # want to add constraints!
@@ -1194,11 +1173,16 @@ class BLMModel:
                     ## Compute XwY terms ##
                     XwY[l_index: r_index] = GG1_weighted @ (Y1_adj - A1_sum_l)
                     XwY[ts + l_index: ts + r_index] = GG2_weighted @ (Y2_adj - A2_sum_l)
+                    del A1_sum_l, A2_sum_l
             del GG1_weighted, GG2_weighted
 
             # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
             XwX = np.diag(XwXd)
             if params['update_a']:
+                # print('A1 before:')
+                # print(A1)
+                # print('A2 before:')
+                # print(A2)
                 try:
                     cons_a.solve(XwX, -XwY)
                     res_a1, res_a2 = cons_a.res[: len(cons_a.res) // 2], cons_a.res[len(cons_a.res) // 2:]
@@ -1208,13 +1192,21 @@ class BLMModel:
                 except ValueError as e:
                     # If constraints inconsistent, keep A1 and A2 the same
                     if params['verbose'] in [1, 2]:
-                        print(f'{e}, passing 1')
+                        print(f'{e}, passing 1 for A')
                     # stop
                     pass
+                # print('A1 after:')
+                # print(A1)
+                # print('A2 after:')
+                # print(A2)
 
             ### Categorical ###
             ## Worker-interaction ##
             # Time-varying #
+            # print('A1_cat_wi before:')
+            # print(A1_cat_wi)
+            # print('A2_cat_wi before:')
+            # print(A2_cat_wi)
             for col in cat_tv_wi_cols:
                 col_n = cat_tv_wi_dict[col]['n']
                 for l in range(nl):
@@ -1227,13 +1219,14 @@ class BLMModel:
                     XwXd_cat_tv_wi[col][ts_cat_tv_wi[col] + l_index: ts_cat_tv_wi[col] + r_index] = (CC2_weighted @ CC2[col]).diagonal()
                     if params['update_a']:
                         # Update A1_sum and A2_sum to account for worker-interaction terms
-                        if len(cat_tnv_wi_cols + cts_tv_wi_cols + cts_tnv_wi_cols) > 0:
+                        if len(cat_tv_wi_cols + cat_tnv_wi_cols + cts_tv_wi_cols + cts_tnv_wi_cols) > 0:
                             A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
                         else:
                             A1_sum_l, A2_sum_l = [0] * 2
                         ## Compute XwY_cat_tv_wi terms ##
                         XwY_cat_tv_wi[col][l_index: r_index] = CC1_weighted @ (Y1_adj - (A1_sum_l - A1_cat_wi[col][l, C1[col]]) - A1[l, G1])
                         XwY_cat_tv_wi[col][ts_cat_tv_wi[col] + l_index: ts_cat_tv_wi[col] + r_index] = CC2_weighted @ (Y2_adj - (A2_sum_l - A2_cat_wi[col][l, C2[col]]) - A2[l, G2])
+                        del A1_sum_l, A2_sum_l
                 del CC1_weighted, CC2_weighted
 
                 # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
@@ -1248,9 +1241,13 @@ class BLMModel:
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
                         if params['verbose'] in [1, 2]:
-                            print(f'{e}, passing 1')
+                            print(f'{e}, passing 1 for column {col!r}')
                         # stop
                         pass
+            # print('A1_cat_wi after:')
+            # print(A1_cat_wi)
+            # print('A2_cat_wi after:')
+            # print(A2_cat_wi)
             # Time non-varying #
             for col in cat_tnv_wi_cols:
                 col_n = cat_tnv_wi_dict[col]['n']
@@ -1264,13 +1261,14 @@ class BLMModel:
                     XwXd_cat_tnv_wi[col][ts_cat_tnv_wi[col] + l_index: ts_cat_tnv_wi[col] + r_index] = (CC2_weighted @ CC2[col]).diagonal()
                     if params['update_a']:
                         # Update A1_sum and A2_sum to account for worker-interaction terms
-                        if len(cat_tv_wi_cols + cts_tv_wi_cols + cts_tnv_wi_cols) > 0:
+                        if len(cat_tv_wi_cols + cat_tnv_wi_cols + cts_tv_wi_cols + cts_tnv_wi_cols) > 0:
                             A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
                         else:
                             A1_sum_l, A2_sum_l = [0] * 2
                         ## Compute XwY_cat_tnv_wi terms ##
                         XwY_cat_tnv_wi[col][l_index: r_index] = CC1_weighted @ (Y1_adj - (A1_sum_l - A_cat_wi[col][l, C1[col]]) - A1[l, G1])
                         XwY_cat_tnv_wi[col][ts_cat_tnv_wi[col] + l_index: ts_cat_tnv_wi[col] + r_index] = CC2_weighted @ (Y2_adj - (A2_sum_l - A_cat_wi[col][l, C2[col]]) - A2[l, G2])
+                        del A1_sum_l, A2_sum_l
                 del CC1_weighted, CC2_weighted
 
                 # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
@@ -1284,7 +1282,7 @@ class BLMModel:
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
                         if params['verbose'] in [1, 2]:
-                            print(f'{e}, passing 1')
+                            print(f'{e}, passing 1 for column {col!r}')
                         # stop
                         pass
             ## Non-worker-interaction ##
@@ -1310,6 +1308,7 @@ class BLMModel:
                         ## Compute XwY_cat_tv terms ##
                         XwY_cat_tv[col][l_index: r_index] = CC1_weighted @ (Y1_adj - A1_sum_l - A1[l, G1])
                         XwY_cat_tv[col][ts_cat_tv[col] + l_index: ts_cat_tv[col] + r_index] = CC2_weighted @ (Y2_adj - A2_sum_l - A2[l, G2])
+                        del A1_sum_l, A2_sum_l
                 del CC1_weighted, CC2_weighted
 
                 # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
@@ -1324,7 +1323,7 @@ class BLMModel:
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
                         if params['verbose'] in [1, 2]:
-                            print(f'{e}, passing 1')
+                            print(f'{e}, passing 1 for column {col!r}')
                         # stop
                         pass
                 Y1_adj -= A1_cat[col][C1[col]]
@@ -1351,6 +1350,7 @@ class BLMModel:
                         ## Compute XwY_cat_tnv terms ##
                         XwY_cat_tnv[col][l_index: r_index] = CC1_weighted @ (Y1_adj - A1_sum_l - A1[l, G1])
                         XwY_cat_tnv[col][ts_cat_tnv[col] + l_index: ts_cat_tnv[col] + r_index] = CC2_weighted @ (Y2_adj - A2_sum_l - A2[l, G2])
+                        del A1_sum_l, A2_sum_l
                 del CC1_weighted, CC2_weighted
 
                 # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
@@ -1364,7 +1364,7 @@ class BLMModel:
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
                         if params['verbose'] in [1, 2]:
-                            print(f'{e}, passing 1')
+                            print(f'{e}, passing 1 for column {col!r}')
                         # stop
                         pass
                 Y1_adj -= A_cat[col][C1[col]]
@@ -1382,13 +1382,14 @@ class BLMModel:
                     XwXd_cts_tv_wi[col][nl + l] = (CC2_weighted @ C2[col])
                     if params['update_a']:
                         # Update A1_sum and A2_sum to account for worker-interaction terms
-                        if len(cat_tv_wi_cols + cat_tnv_wi_cols + cts_tnv_wi_cols) > 0:
+                        if len(cat_tv_wi_cols + cat_tnv_wi_cols + cts_tv_wi_cols + cts_tnv_wi_cols) > 0:
                             A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
                         else:
                             A1_sum_l, A2_sum_l = [0] * 2
                         ## Compute XwY_cts_tv_wi terms ##
                         XwY_cts_tv_wi[col][l] = CC1_weighted @ (Y1_adj - (A1_sum_l - A1_cts_wi[col][l] * C1[col]) - A1[l, G1])
                         XwY_cts_tv_wi[col][nl + l] = CC2_weighted @ (Y2_adj - (A2_sum_l - A2_cts_wi[col][l] * C2[col]) - A2[l, G2])
+                        del A1_sum_l, A2_sum_l
                 del CC1_weighted, CC2_weighted
 
                 # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
@@ -1403,7 +1404,7 @@ class BLMModel:
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
                         if params['verbose'] in [1, 2]:
-                            print(f'{e}, passing 1')
+                            print(f'{e}, passing 1 for column {col!r}')
                         # stop
                         pass
             # Time non-varying #
@@ -1417,13 +1418,14 @@ class BLMModel:
                     XwXd_cts_tnv_wi[col][nl + l] = (CC2_weighted @ C2[col])
                     if params['update_a']:
                         # Update A1_sum and A2_sum to account for worker-interaction terms
-                        if len(cat_tv_wi_cols + cat_tnv_wi_cols + cts_tv_wi_cols) > 0:
+                        if len(cat_tv_wi_cols + cat_tnv_wi_cols + cts_tv_wi_cols + cts_tnv_wi_cols) > 0:
                             A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
                         else:
                             A1_sum_l, A2_sum_l = [0] * 2
                         ## Compute XwY_cts_tnv_wi terms ##
                         XwY_cts_tnv_wi[col][l] = CC1_weighted @ (Y1_adj - (A1_sum_l - A_cts_wi[col][l] * C1[col]) - A1[l, G1])
                         XwY_cts_tnv_wi[col][nl + l] = CC2_weighted @ (Y2_adj - (A2_sum_l - A_cts_wi[col][l] * C2[col]) - A2[l, G2])
+                        del A1_sum_l, A2_sum_l
                 del CC1_weighted, CC2_weighted
 
                 # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
@@ -1437,7 +1439,7 @@ class BLMModel:
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
                         if params['verbose'] in [1, 2]:
-                            print(f'{e}, passing 1')
+                            print(f'{e}, passing 1 for column {col!r}')
                         # stop
                         pass
             ## Non-worker-interaction ##
@@ -1461,6 +1463,7 @@ class BLMModel:
                         ## Compute XwY_cts_tv terms ##
                         XwY_cts_tv[col][l] = CC1_weighted @ (Y1_adj - A1_sum_l - A1[l, G1])
                         XwY_cts_tv[col][nl + l] = CC2_weighted @ (Y2_adj - A2_sum_l - A2[l, G2])
+                        del A1_sum_l, A2_sum_l
                 del CC1_weighted, CC2_weighted
 
                 # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
@@ -1475,7 +1478,7 @@ class BLMModel:
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
                         if params['verbose'] in [1, 2]:
-                            print(f'{e}, passing 1')
+                            print(f'{e}, passing 1 for column {col!r}')
                         # stop
                         pass
                 Y1_adj -= A1_cts[col] * C1[col]
@@ -1500,6 +1503,7 @@ class BLMModel:
                         ## Compute XwY_cts_tnv terms ##
                         XwY_cts_tnv[col][l] = CC1_weighted @ (Y1_adj - A1_sum_l - A1[l, G1])
                         XwY_cts_tnv[col][nl + l] = CC2_weighted @ (Y2_adj - A2_sum_l - A2[l, G2])
+                        del A1_sum_l, A2_sum_l
                 del CC1_weighted, CC2_weighted
 
                 # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
@@ -1513,7 +1517,7 @@ class BLMModel:
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
                         if params['verbose'] in [1, 2]:
-                            print(f'{e}, passing 1')
+                            print(f'{e}, passing 1 for column {col!r}')
                         # stop
                         pass
                 Y1_adj -= A_cts[col] * C1[col]
@@ -1577,30 +1581,30 @@ class BLMModel:
                     ## Worker-interaction ##
                     # Time-varying #
                     for col in cat_tv_wi_cols:
-                        col_n = cat_tv_wi_dict[col]['n']
                         ## XwS_cat_tv_wi terms ##
+                        col_n = cat_tv_wi_dict[col]['n']
                         l_index, r_index = l * col_n, (l + 1) * col_n
                         XwS_cat_tv_wi[col][l_index: r_index] = CC1[col].T @ diags(qi[:, l] / S1_cat_wi[col][l, C1[col]]) @ eps1_l_sq
                         XwS_cat_tv_wi[col][ts_cat_tv_wi[col] + l_index: ts_cat_tv_wi[col] + r_index] = CC2[col].T @ diags(qi[:, l] / S2_cat_wi[col][l, C2[col]]) @ eps2_l_sq
                     # Time non-varying #
                     for col in cat_tnv_wi_cols:
-                        col_n = cat_tnv_wi_dict[col]['n']
                         ## XwS_cat_tnv_wi terms ##
+                        col_n = cat_tnv_wi_dict[col]['n']
                         l_index, r_index = l * col_n, (l + 1) * col_n
                         XwS_cat_tnv_wi[col][l_index: r_index] = CC1[col].T @ diags(qi[:, l] / S_cat_wi[col][l, C1[col]]) @ eps1_l_sq
                         XwS_cat_tnv_wi[col][ts_cat_tnv_wi[col] + l_index: ts_cat_tnv_wi[col] + r_index] = CC2[col].T @ diags(qi[:, l] / S_cat_wi[col][l, C2[col]]) @ eps2_l_sq
                     ## Non-worker-interaction ##
                     # Time-varying #
                     for col in cat_tv_cols:
-                        col_n = cat_tv_dict[col]['n']
                         ## XwS_cat_tv terms ##
+                        col_n = cat_tv_dict[col]['n']
                         l_index, r_index = l * col_n, (l + 1) * col_n
                         XwS_cat_tv[col][l_index: r_index] = CC1[col].T @ diags(qi[:, l] / S1_cat[col][C1[col]]) @ eps1_l_sq
                         XwS_cat_tv[col][ts_cat_tv[col] + l_index: ts_cat_tv[col] + r_index] = CC2[col].T @ diags(qi[:, l] / S2_cat[col][C2[col]]) @ eps2_l_sq
                     # Time non-varying #
                     for col in cat_tnv_cols:
-                        col_n = cat_tnv_dict[col]['n']
                         ## XwS_cat_tnv terms ##
+                        col_n = cat_tnv_dict[col]['n']
                         l_index, r_index = l * col_n, (l + 1) * col_n
                         XwS_cat_tnv[col][l_index: r_index] = CC1[col].T @ diags(qi[:, l] / S_cat[col][C1[col]]) @ eps1_l_sq
                         XwS_cat_tnv[col][ts_cat_tnv[col] + l_index: ts_cat_tnv[col] + r_index] = CC2[col].T @ diags(qi[:, l] / S_cat[col][C2[col]]) @ eps2_l_sq
@@ -1627,8 +1631,7 @@ class BLMModel:
                         ## XwS_cts_tnv terms ##
                         XwS_cts_tnv[col][l] = C1[col].T @ diags(qi[:, l] / S_cts[col]) @ eps1_l_sq
                         XwS_cts_tnv[col][nl + l] = C2[col].T @ diags(qi[:, l] / S_cts[col]) @ eps2_l_sq
-
-                del eps1_l_sq, eps2_l_sq
+                del A1_sum_l, A2_sum_l, eps1_l_sq, eps2_l_sq
 
                 try:
                     cons_s.solve(XwX, -XwS)
@@ -1639,13 +1642,19 @@ class BLMModel:
                 except ValueError as e:
                     # If constraints inconsistent, keep S1 and S2 the same
                     if params['verbose'] in [1, 2]:
-                        print(f'{e}, passing 2')
+                        print(f'{e}, passing 2 for S')
                     # stop
                     pass
                 ### Categorical ###
                 ## Worker-interaction ##
                 # Time-varying #
                 for col in cat_tv_wi_cols:
+                    s1_prev = S1_cat_wi['cat_tv_wi_control'].copy()
+                    s2_prev = S2_cat_wi['cat_tv_wi_control'].copy()
+                    # print('S1_cat_wi before:')
+                    # print(S1_cat_wi)
+                    # print('S2_cat_wi before:')
+                    # print(S2_cat_wi)
                     try:
                         col_n = cat_tv_wi_dict[col]['n']
                         s_solver = cons_s_cat_tv_wi[col]
@@ -1659,6 +1668,15 @@ class BLMModel:
                             print(f'{e}, passing 2 for column {col!r}')
                         # stop
                         pass
+                    # print('S1_cat_wi after:')
+                    # print(S1_cat_wi)
+                    # print('S2_cat_wi after:')
+                    # print(S2_cat_wi)
+                    # print('S1 ratio:')
+                    # print(s1_prev / S1_cat_wi['cat_tv_wi_control'])
+                    # print('S2 ratio:')
+                    # print(s2_prev / S2_cat_wi['cat_tv_wi_control'])
+                    # stop
                 # Time non-varying #
                 for col in cat_tnv_wi_cols:
                     try:
@@ -1761,31 +1779,6 @@ class BLMModel:
                         # stop
                         pass
 
-            # print('res a:')
-            # print(cons_a.res)
-            # print('res s:')
-            # print(cons_s.res)
-            # print('A1 after:')
-            # print(A1)
-            # print('A2 after:')
-            # print(A2)
-            # print('S1 after:')
-            # print(S1)
-            # print('S2 after:')
-            # print(S2)
-            # print('A1_indep after:')
-            # print(A1_indep)
-            # print('A2_indep after:')
-            # print(A2_indep)
-            # print('A_indep after:')
-            # print(A_indep)
-            # print('S1_indep after:')
-            # print(S1_indep)
-            # print('S2_indep after:')
-            # print(S2_indep)
-            # print('S_indep after:')
-            # print(S_indep)
-            # stop
             if params['update_pk1']:
                 pk1 = GG12.T @ qi
                 # for l in range(nl):
@@ -1796,8 +1789,8 @@ class BLMModel:
 
         self.A1, self.A2, self.S1, self.S2 = A1, A2, S1, S2
         self.A1_cat_wi, self.A2_cat_wi, self.A_cat_wi, self.S1_cat_wi, self.S2_cat_wi, self.S_cat_wi = A1_cat_wi, A2_cat_wi, A_cat_wi, S1_cat_wi, S2_cat_wi, S_cat_wi
-        self.A1_cts_wi, self.A2_cts_wi, self.A_cts_wi, self.S1_cts_wi, self.S2_cts_wi, self.S_cts_wi = A1_cat, A2_cat, A_cat, S1_cat, S2_cat, S_cat = self.A1_cat, self.A2_cat, self.A_cat, self.S1_cat, self.S2_cat, self.S_cat
-        A1_cts_wi, A2_cts_wi, A_cts_wi, S1_cts_wi, S2_cts_wi, S_cts_wi
+        self.A1_cat, self.A2_cat, self.A_cat, self.S1_cat, self.S2_cat, self.S_cat = A1_cat, A2_cat, A_cat, S1_cat, S2_cat, S_cat
+        self.A1_cts_wi, self.A2_cts_wi, self.A_cts_wi, self.S1_cts_wi, self.S2_cts_wi, self.S_cts_wi = A1_cts_wi, A2_cts_wi, A_cts_wi, S1_cts_wi, S2_cts_wi, S_cts_wi
         self.A1_cts, self.A2_cts, self.A_cts, self.S1_cts, self.S2_cts, self.S_cts = A1_cts, A2_cts, A_cts, S1_cts, S2_cts, S_cts
         self.pk1, self.lik1, self.liks1 = pk1, lik1, np.array(liks1)
 
@@ -1820,6 +1813,7 @@ class BLMModel:
         A1_cat, A2_cat, A_cat, S1_cat, S2_cat, S_cat = self.A1_cat, self.A2_cat, self.A_cat, self.S1_cat, self.S2_cat, self.S_cat
         A1_cts, A2_cts, A_cts, S1_cts, S2_cts, S_cts = self.A1_cts, self.A2_cts, self.A_cts, self.S1_cts, self.S2_cts, self.S_cts
         control_cols = self.control_cols
+        cat_tv_wi_cols, cat_tnv_wi_cols, cat_tv_cols, cat_tnv_cols = self.cat_tv_wi_cols, self.cat_tnv_wi_cols, self.cat_tv_cols, self.cat_tnv_cols
         # Fix error from bad initial guesses causing probabilities to be too low
         d_prior = params['d_prior_s']
 
@@ -1840,12 +1834,20 @@ class BLMModel:
             subcols = to_list(sdata.col_reference_dict[col])
             if len(subcols) == 1:
                 # If parameter associated with column is constant over time
-                C1[col] = sdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
-                C2[col] = sdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
+                if col in (cat_tv_wi_cols + cat_tnv_wi_cols + cat_tv_cols + cat_tnv_cols):
+                    C1[col] = sdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
+                    C2[col] = sdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
+                else:
+                    C1[col] = sdata.loc[:, subcols[0]].to_numpy()
+                    C2[col] = sdata.loc[:, subcols[0]].to_numpy()
             elif len(subcols) == 2:
                 # If parameter associated with column can change over time
-                C1[col] = sdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
-                C2[col] = sdata.loc[:, subcols[1]].to_numpy().astype(int, copy=False)
+                if col in (cat_tv_wi_cols + cat_tnv_wi_cols + cat_tv_cols + cat_tnv_cols):
+                    C1[col] = sdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
+                    C2[col] = sdata.loc[:, subcols[1]].to_numpy().astype(int, copy=False)
+                else:
+                    C1[col] = sdata.loc[:, subcols[0]].to_numpy()
+                    C2[col] = sdata.loc[:, subcols[1]].to_numpy()
             else:
                 raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {len(subcols)!r} associated subcolumns.')
 

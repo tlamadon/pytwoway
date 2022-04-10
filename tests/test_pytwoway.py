@@ -585,25 +585,61 @@ def test_fe_cre_1():
 
 def test_blm_monotonic_1_1():
     # Test whether BLM likelihoods are monotonic, using default fit.
-    nl = 6
-    nk = 10
-    mmult = 100
-    smult = 100
-    # Initiate BLMModel object
-    blm_true = tw.BLMModel({'nl': nl, 'nk': nk, 'simulation': True}, seed=1234)
-    # Make variance of worker types small
-    blm_true.S1 /= 4
-    blm_true.S2 /= 4
-    jdata = blm_true._m2_mixt_simulate_movers(blm_true.NNm * mmult)
-    sdata = blm_true._m2_mixt_simulate_stayers(blm_true.NNs * smult)
-    blm_fit = tw.BLMModel({'nl': nl, 'nk': nk, 'maxiters': 30}, seed=5678)
-    blm_fit.fit_movers(jdata)
-    blm_fit.fit_stayers(sdata)
-    liks1 = blm_fit.liks1[2:] - blm_fit.liks1[1: - 1] # Skip first
-    liks0 = blm_fit.liks0[2:] - blm_fit.liks0[1: - 1] # Skip first
+    rng = np.random.default_rng(1234)
+    ## Set parameters ##
+    nl = 3
+    nk = 4
+    n_control = 2
+    cat_tv_wi_params = tw.sim_categorical_time_varying_worker_interaction_params({'n': n_control})
+    cat_tnv_wi_params = tw.sim_categorical_time_nonvarying_worker_interaction_params({'n': n_control})
+    cat_tv_params = tw.sim_categorical_time_varying_params({'n': n_control})
+    cat_tnv_params = tw.sim_categorical_time_nonvarying_params({'n': n_control})
+    cts_tv_wi_params = tw.sim_continuous_time_varying_worker_interaction_params()
+    cts_tnv_wi_params = tw.sim_continuous_time_nonvarying_worker_interaction_params()
+    cts_tv_params = tw.sim_continuous_time_varying_params()
+    cts_tnv_params = tw.sim_continuous_time_nonvarying_params()
+    blm_sim_params = tw.sim_params({
+        'nl': nl,
+        'nk': nk,
+        'firm_size': 10,
+        'NNm': np.ones(shape=(nk, nk)).astype(int, copy=False),
+        'NNs': np.ones(shape=nk).astype(int, copy=False),
+        'mmult': 1000, 'smult': 1000,
+        'a1_sig': 1, 'a2_sig': 1, 's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01,
+        'categorical_time_varying_worker_interaction_controls_dict': {'cat_tv_wi_control': cat_tv_wi_params},
+        'categorical_time_nonvarying_worker_interaction_controls_dict': {'cat_tnv_wi_control': cat_tnv_wi_params},
+        'categorical_time_varying_controls_dict': {'cat_tv_control': cat_tv_params},
+        'categorical_time_nonvarying_controls_dict': {'cat_tnv_control': cat_tnv_params},
+        'continuous_time_varying_worker_interaction_controls_dict': {'cts_tv_wi_control': cts_tv_wi_params},
+        'continuous_time_nonvarying_worker_interaction_controls_dict': {'cts_tnv_wi_control': cts_tnv_wi_params},
+        'continuous_time_varying_controls_dict': {'cts_tv_control': cts_tv_params},
+        'continuous_time_nonvarying_controls_dict': {'cts_tnv_control': cts_tnv_params}
+    })
+    blm_params = tw.blm_params({
+        'nl': nl,
+        'nk': nk,
+        'n_iters_movers': 150,
+        'categorical_time_varying_worker_interaction_controls_dict': {'cat_tv_wi_control': cat_tv_wi_params},
+        'categorical_time_nonvarying_worker_interaction_controls_dict': {'cat_tnv_wi_control': cat_tnv_wi_params},
+        'categorical_time_varying_controls_dict': {'cat_tv_control': cat_tv_params},
+        'categorical_time_nonvarying_controls_dict': {'cat_tnv_control': cat_tnv_params},
+        'continuous_time_varying_worker_interaction_controls_dict': {'cts_tv_wi_control': cts_tv_wi_params},
+        'continuous_time_nonvarying_worker_interaction_controls_dict': {'cts_tnv_wi_control': cts_tnv_wi_params},
+        'continuous_time_varying_controls_dict': {'cts_tv_control': cts_tv_params},
+        'continuous_time_nonvarying_controls_dict': {'cts_tnv_control': cts_tnv_params}
+    })
+    ## Simulate data ##
+    blm_true = tw.SimBLM(blm_sim_params)
+    sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
+    sim_data['jdata'] = bpd.BipartiteDataFrame(i=np.arange(len(sim_data['jdata'])), **sim_data['jdata'])
+    sim_data['sdata'] = bpd.BipartiteDataFrame(i=len(sim_data['jdata']) + np.arange(len(sim_data['sdata'])), **sim_data['sdata'])
+    ## Estimate model ##
+    blm_fit = tw.BLMModel(blm_params, rng=rng)
+    blm_fit.fit_movers(jdata=sim_data['jdata'])
+    blm_fit.fit_stayers(sdata=sim_data['sdata'])
 
-    assert liks1.min() > 0
-    assert liks0.min() > 0
+    assert np.min(np.diff(blm_fit.liks1)) > 0
+    assert np.min(np.diff(blm_fit.liks0)) > 0
 
 def test_blm_monotonic_1_2():
     # Test whether BLM likelihoods are monotonic, using constrained-unconstrained fit.

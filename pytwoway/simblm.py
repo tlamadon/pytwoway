@@ -689,7 +689,7 @@ class SimBLM:
         ## Worker-interaction ##
         # Time-variable
         A1_cts_wi = {col: rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=nl) for col in cts_tv_wi_cols}
-        S1_cts_wi = {col: rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=nl) for col in cat_tv_wi_cols}
+        S1_cts_wi = {col: rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=nl) for col in cts_tv_wi_cols}
         A2_cts_wi = {col: rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=nl) for col in cts_tv_wi_cols}
         S2_cts_wi = {col: rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=nl) for col in cts_tv_wi_cols}
         # Time non-variable
@@ -831,15 +831,15 @@ class SimBLM:
             ### Categorical ###
             ## Worker-interaction ##
             for cat_col in self.cat_tv_wi_cols:
-                A1_sum += A1_cat_wi[cat_col][A1_cat_wi_draws[cat_col], L]
-                A2_sum += A2_cat_wi[cat_col][A2_cat_wi_draws[cat_col], L]
-                S1_sum_sq += S1_cat_wi[cat_col][S1_cat_wi_draws[cat_col], L] ** 2
-                S2_sum_sq += S2_cat_wi[cat_col][S2_cat_wi_draws[cat_col], L] ** 2
+                A1_sum += A1_cat_wi[cat_col][L, A1_cat_wi_draws[cat_col]]
+                A2_sum += A2_cat_wi[cat_col][L, A2_cat_wi_draws[cat_col]]
+                S1_sum_sq += S1_cat_wi[cat_col][L, S1_cat_wi_draws[cat_col]] ** 2
+                S2_sum_sq += S2_cat_wi[cat_col][L, S2_cat_wi_draws[cat_col]] ** 2
             for cat_col in self.cat_tnv_wi_cols:
-                A1_sum += A_cat_wi[cat_col][A_cat_wi_draws[cat_col], L]
-                A2_sum += A_cat_wi[cat_col][A_cat_wi_draws[cat_col], L]
-                S1_sum_sq += S_cat_wi[cat_col][S_cat_wi_draws[cat_col], L] ** 2
-                S2_sum_sq += S_cat_wi[cat_col][S_cat_wi_draws[cat_col], L] ** 2
+                A1_sum += A_cat_wi[cat_col][L, A_cat_wi_draws[cat_col]]
+                A2_sum += A_cat_wi[cat_col][L, A_cat_wi_draws[cat_col]]
+                S1_sum_sq += S_cat_wi[cat_col][L, S_cat_wi_draws[cat_col]] ** 2
+                S2_sum_sq += S_cat_wi[cat_col][L, S_cat_wi_draws[cat_col]] ** 2
             ## Non-worker-interaction ##
             for cat_col in self.cat_tv_cols:
                 A1_sum += A1_cat[cat_col][A1_cat_draws[cat_col]]
@@ -882,6 +882,10 @@ class SimBLM:
             A2_cat_wi_draws = {k + '2': v for k, v in A2_cat_wi_draws.items()}
             A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
             A2_cat_draws = {k + '2': v for k, v in A2_cat_draws.items()}
+            A1_cts_wi_draws = {k + '1': v for k, v in A1_cts_wi_draws.items()}
+            A2_cts_wi_draws = {k + '2': v for k, v in A2_cts_wi_draws.items()}
+            A1_cts_draws = {k + '1': v for k, v in A1_cts_draws.items()}
+            A2_cts_draws = {k + '2': v for k, v in A2_cts_draws.items()}
 
             return DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G1, 'g2': G2, 'l': L, **A1_cat_wi_draws, **A2_cat_wi_draws, **A_cat_wi_draws, **A1_cat_draws, **A2_cat_draws, **A_cat_draws, **A1_cts_wi_draws, **A2_cts_wi_draws, **A_cts_wi_draws, **A1_cts_draws, **A2_cts_draws, **A_cts_draws})
 
@@ -998,15 +1002,15 @@ class SimBLM:
             ### Categorical ###
             ## Worker-interaction ##
             for cat_col in self.cat_tv_wi_cols:
-                A1_sum += A1_cat_wi[cat_col][A1_cat_wi_draws[cat_col], L]
-                A2_sum += A2_cat_wi[cat_col][A2_cat_wi_draws[cat_col], L]
-                S1_sum_sq += S1_cat_wi[cat_col][S1_cat_wi_draws[cat_col], L] ** 2
-                S2_sum_sq += S2_cat_wi[cat_col][S2_cat_wi_draws[cat_col], L] ** 2
+                A1_sum += A1_cat_wi[cat_col][L, A1_cat_wi_draws[cat_col]]
+                A2_sum += A2_cat_wi[cat_col][L, A2_cat_wi_draws[cat_col]]
+                S1_sum_sq += S1_cat_wi[cat_col][L, S1_cat_wi_draws[cat_col]] ** 2
+                S2_sum_sq += S2_cat_wi[cat_col][L, S2_cat_wi_draws[cat_col]] ** 2
             for cat_col in self.cat_tnv_wi_cols:
-                A1_sum += A_cat_wi[cat_col][A_cat_wi_draws[cat_col], L]
-                A2_sum += A_cat_wi[cat_col][A_cat_wi_draws[cat_col], L]
-                S1_sum_sq += S_cat_wi[cat_col][S_cat_wi_draws[cat_col], L] ** 2
-                S2_sum_sq += S_cat_wi[cat_col][S_cat_wi_draws[cat_col], L] ** 2
+                A1_sum += A_cat_wi[cat_col][L, A_cat_wi_draws[cat_col]]
+                A2_sum += A_cat_wi[cat_col][L, A_cat_wi_draws[cat_col]]
+                S1_sum_sq += S_cat_wi[cat_col][L, S_cat_wi_draws[cat_col]] ** 2
+                S2_sum_sq += S_cat_wi[cat_col][L, S_cat_wi_draws[cat_col]] ** 2
             ## Non-worker-interaction ##
             for cat_col in self.cat_tv_cols:
                 A1_sum += A1_cat[cat_col][A1_cat_draws[cat_col]]
@@ -1049,6 +1053,10 @@ class SimBLM:
             A2_cat_wi_draws = {k + '2': v for k, v in A2_cat_wi_draws.items()}
             A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
             A2_cat_draws = {k + '2': v for k, v in A2_cat_draws.items()}
+            A1_cts_wi_draws = {k + '1': v for k, v in A1_cts_wi_draws.items()}
+            A2_cts_wi_draws = {k + '2': v for k, v in A2_cts_wi_draws.items()}
+            A1_cts_draws = {k + '1': v for k, v in A1_cts_draws.items()}
+            A2_cts_draws = {k + '2': v for k, v in A2_cts_draws.items()}
 
             return DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G, 'g2': G, 'l': L, **A1_cat_wi_draws, **A2_cat_wi_draws, **A_cat_wi_draws, **A1_cat_draws, **A2_cat_draws, **A_cat_draws, **A1_cts_wi_draws, **A2_cts_wi_draws, **A_cts_wi_draws, **A1_cts_draws, **A2_cts_draws, **A_cts_draws})
 
