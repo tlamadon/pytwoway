@@ -21,10 +21,10 @@ def _gteq1(a):
     return a >= 1
 def _gteq0(a):
     return a >= 0
+def _min_gt0(a):
+    return np.min(a) > 0
 def _lstdct(a):
     return (isinstance(a[0], list) and isinstance(a[1], dict))
-def _custom_dict(a):
-    return np.array([_is_subtype(v, int) and (v >= 2) for v in a.values()]).all()
 
 # Define default parameter dictionaries
 _blm_params_default = ParamsDict({
@@ -37,18 +37,79 @@ _blm_params_default = ParamsDict({
         '''
             (default=10) Number of firm types.
         ''', '>= 1'),
-    'custom_dependent_dict': (None, 'type_constrained_none', (dict, _custom_dict),
+    'categorical_time_varying_worker_interaction_controls_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary of custom general column names (to use as controls) linked to the number of types for that column, where the estimated parameters should be dependent on worker/firm type pairs. In other words, any column listed as a member of this parameter will have a different parameter estimated for each worker-firm type pair (the parameter value can still differ over time). None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.sim_categorical_time_varying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and can vary between the first and second periods. Run tw.sim_categorical_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'custom_independent_split_dict': (None, 'type_constrained_none', (dict, _custom_dict),
+    'categorical_time_nonvarying_worker_interaction_controls_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary of custom general column names (to use as controls) linked to the number of types for that column, where the estimated parameters should be independent of worker/firm type pairs and can change over time. In other words, any column listed as a member of this parameter will have the same parameter estimated for each worker-firm type pair (the parameter value can still differ over time). None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.sim_categorical_time_nonvarying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and is the same in the first and second periods. Run tw.sim_categorical_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'custom_independent_nosplit_dict': (None, 'type_constrained_none', (dict, _custom_dict),
+    'categorical_time_varying_controls_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary of custom general column names (to use as controls) linked to the number of types for that column, where the estimated parameters should be independent of worker/firm type pairs and must be constant over time. In other words, any column listed as a member of this parameter will have the same parameter estimated for each worker-firm type pair (the parameter value can still differ over time). None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.sim_categorical_time_varying_params(). Each instance specifies a new control variable where the effect can vary between the first and second periods. Run tw.sim_categorical_time_varying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
+    'categorical_time_nonvarying_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+        '''
+            (default=None) Dictionary linking column names to instances of tw.sim_categorical_time_nonvarying_params(). Each instance specifies a new control variable where the effect is the same in the first and second periods. Run tw.sim_categorical_time_nonvarying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+        ''', None),
+    'continuous_time_varying_worker_interaction_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+        '''
+            (default=None) Dictionary linking column names to instances of tw.sim_continuous_time_varying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and can vary between the first and second periods. Run tw.sim_continuous_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+        ''', None),
+    'continuous_time_nonvarying_worker_interaction_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+        '''
+            (default=None) Dictionary linking column names to instances of tw.sim_continuous_time_nonvarying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and is the same in the first and second periods. Run tw.sim_continuous_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+        ''', None),
+    'continuous_time_varying_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+        '''
+            (default=None) Dictionary linking column names to instances of tw.sim_continuous_time_varying_params(). Each instance specifies a new control variable where the effect can vary between the first and second periods. Run tw.sim_continuous_time_varying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+        ''', None),
+    'continuous_time_nonvarying_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+        '''
+            (default=None) Dictionary linking column names to instances of tw.sim_continuous_time_nonvarying_params(). Each instance specifies a new control variable where the effect is the same in the first and second periods. Run tw.sim_continuous_time_nonvarying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+        ''', None),
+    ## Starting values
+    'a1_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A1 (mean of fixed effects in first period).
+        ''', None),
+    'a1_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A1 (mean of fixed effects in first period).
+        ''', '>= 0'),
+    'a2_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A2 (mean of fixed effects in second period).
+        ''', None),
+    'a2_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A2 (mean of fixed effects in second period).
+        ''', '>= 0'),
+    's1_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S1 (standard deviation of fixed effects in first period).
+        ''', '>= 0'),
+    's1_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S1 (standard deviation of fixed effects in first period).
+        ''', '>= 0'),
+    's2_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S2 (standard deviation of fixed effects in second period).
+        ''', '>= 0'),
+    's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S2 (standard deviation of fixed effects in second period).
+        ''', '>= 0'),
+    'pk1_prior': (None, 'array_of_type_constrained_none', (('float', 'int'), _min_gt0),
+        '''
+            (default=None) Dirichlet prior for pk1 (probability of being at each combination of firm types for movers). Must have length nl. None is equivalent to np.ones(nl).
+        ''', 'min > 0'),
+    'pk0_prior': (None, 'array_of_type_constrained_none', (('float', 'int'), _min_gt0),
+        '''
+            (default=None) Dirichlet prior for pk0 (probability of being at each firm type for stayers). Must have length nl. None is equivalent to np.ones(nl).
+        ''', 'min > 0'),
     'fixb': (False, 'type', bool,
         '''
             (default=False) If True, set A2 = np.mean(A2, axis=1) + A1 - np.mean(A1, axis=1).
@@ -95,6 +156,10 @@ _blm_params_default = ParamsDict({
         '''
             (default=(['biggerthan'], {'gap_bigger': 1e-7, 'n_periods': 2})) Constraints on S1 and S2, where first entry gives list of constraints and second entry gives dictionary of constraint parameters.
         ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
+    'd_prior_j': (1.0001, 'type_constrained', ((float, int), _gteq1),
+        '''
+            (default=1.0001) Account for probabilities being too small by adding (d_prior - 1) to pk1.
+        ''', '>= 1'),
     # fit_stayers() parameters
     'n_iters_stayers': (100, 'type_constrained', (int, _gteq1),
         '''
@@ -104,9 +169,9 @@ _blm_params_default = ParamsDict({
         '''
             (default=1e-7) Threshold to break EM loop for stayers.
         ''', '>= 0'),
-    'd_prior': (1.0001, 'type_constrained', ((float, int), _gteq1),
+    'd_prior_s': (1.0001, 'type_constrained', ((float, int), _gteq1),
         '''
-            (default=1.0001) Account for probabilities being too small by adding (d_prior - 1).
+            (default=1.0001) Account for probabilities being too small by adding (d_prior - 1) to pk0.
         ''', '>= 1')
 })
 
@@ -463,87 +528,151 @@ class BLMModel:
 
     Arguments:
         blm_params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
-        rng (np.random.Generator): NumPy random number generator
+        rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
     '''
-    def __init__(self, blm_params=blm_params(), rng=np.random.default_rng(None)):
+    def __init__(self, blm_params=blm_params(), rng=None):
+        if rng is None:
+            rng = np.random.default_rng(None)
+
         # Store parameters
         self.params = blm_params
-        nl = self.params['nl']
-        nk = self.params['nk']
-        self.nl = nl
-        self.nk = nk
+        nl, nk = self.params.get_multiple(('nl', 'nk'))
+        self.nl, self.nk = nl, nk
         self.fixb = self.params['fixb']
         self.stationary = self.params['stationary']
         self.rng = rng
 
-        ## Unpack custom column parameters
-        custom_dep_dict = self.params['custom_dependent_dict']
-        custom_indep_split_dict = self.params['custom_independent_split_dict']
-        custom_indep_nosplit_dict = self.params['custom_independent_nosplit_dict']
-        ## Check if custom column parameters are None
-        if custom_dep_dict is None:
-            custom_dep_dict = {}
-        if custom_indep_split_dict is None:
-            custom_indep_split_dict = {}
-        if custom_indep_nosplit_dict is None:
-            custom_indep_nosplit_dict = {}
-        ## Create dictionary of all custom columns
-        custom_cols_dict = custom_dep_dict.copy()
-        custom_cols_dict.update(custom_indep_split_dict.copy())
-        custom_cols_dict.update(custom_indep_nosplit_dict.copy())
-        ## Custom column order
-        custom_dep_cols = sorted(custom_dep_dict.keys())
-        custom_indep_split_cols = sorted(custom_indep_split_dict.keys())
-        custom_indep_nosplit_cols = sorted(custom_indep_nosplit_dict.keys())
-        custom_cols = custom_dep_cols + custom_indep_split_cols + custom_indep_nosplit_cols
-        ## Store custom column attributes
+        ## Unpack control variable parameters
+        cat_tv_wi_dict = self.params['categorical_time_varying_worker_interaction_controls_dict']
+        cat_tnv_wi_dict = self.params['categorical_time_nonvarying_worker_interaction_controls_dict']
+        cat_tv_dict = self.params['categorical_time_varying_controls_dict']
+        cat_tnv_dict = self.params['categorical_time_nonvarying_controls_dict']
+        cts_tv_wi_dict = self.params['continuous_time_varying_worker_interaction_controls_dict']
+        cts_tnv_wi_dict = self.params['continuous_time_nonvarying_worker_interaction_controls_dict']
+        cts_tv_dict = self.params['continuous_time_varying_controls_dict']
+        cts_tnv_dict = self.params['continuous_time_nonvarying_controls_dict']
+        ## Check if control variable parameters are None
+        if cat_tv_wi_dict is None:
+            cat_tv_wi_dict = {}
+        if cat_tnv_wi_dict is None:
+            cat_tnv_wi_dict = {}
+        if cat_tv_dict is None:
+            cat_tv_dict = {}
+        if cat_tnv_dict is None:
+            cat_tnv_dict = {}
+        if cts_tv_wi_dict is None:
+            cts_tv_wi_dict = {}
+        if cts_tnv_wi_dict is None:
+            cts_tnv_wi_dict = {}
+        if cts_tv_dict is None:
+            cts_tv_dict = {}
+        if cts_tnv_dict is None:
+            cts_tnv_dict = {}
+        ## Create dictionary of all control variables
+        controls_dict = cat_tv_wi_dict.copy()
+        controls_dict.update(cat_tnv_wi_dict)
+        controls_dict.update(cat_tv_dict)
+        controls_dict.update(cat_tnv_dict)
+        controls_dict.update(cts_tv_wi_dict)
+        controls_dict.update(cts_tnv_wi_dict)
+        controls_dict.update(cts_tv_dict)
+        controls_dict.update(cts_tnv_dict)
+        ## Control variable ordering
+        cat_tv_wi_cols = sorted(cat_tv_wi_dict.keys())
+        cat_tnv_wi_cols = sorted(cat_tnv_wi_dict.keys())
+        cat_tv_cols = sorted(cat_tv_dict.keys())
+        cat_tnv_cols = sorted(cat_tnv_dict.keys())
+        cts_tv_wi_cols = sorted(cts_tv_wi_dict.keys())
+        cts_tnv_wi_cols = sorted(cts_tnv_wi_dict.keys())
+        cts_tv_cols = sorted(cts_tv_dict.keys())
+        cts_tnv_cols = sorted(cts_tnv_dict.keys())
+        control_cols = cat_tv_wi_cols + cat_tnv_wi_cols + cat_tv_cols + cat_tnv_cols + cts_tv_wi_cols + cts_tnv_wi_cols + cts_tv_cols + cts_tnv_cols
+        ## Store control variable attributes
         # Dictionaries
-        self.custom_dep_dict = custom_dep_dict
-        self.custom_indep_split_dict = custom_indep_split_dict
-        self.custom_indep_nosplit_dict = custom_indep_nosplit_dict
-        self.custom_cols_dict = custom_cols_dict
+        self.controls_dict = controls_dict
+        self.cat_tv_wi_dict = cat_tv_wi_dict
+        self.cat_tnv_wi_dict = cat_tnv_wi_dict
+        self.cat_tv_dict = cat_tv_dict
+        self.cat_tnv_dict = cat_tnv_dict
+        self.cts_tv_wi_dict = cts_tv_wi_dict
+        self.cts_tnv_wi_dict = cts_tnv_wi_dict
+        self.cts_tv_dict = cts_tv_dict
+        self.cts_tnv_dict = cts_tnv_dict
         # Lists
-        self.custom_dep_cols = custom_dep_cols
-        self.custom_indep_split_cols = custom_indep_split_cols
-        self.custom_indep_nosplit_cols = custom_indep_nosplit_cols
-        self.custom_cols = custom_cols
+        self.control_cols = control_cols
+        self.cat_tv_wi_cols = cat_tv_wi_cols
+        self.cat_tnv_wi_cols = cat_tnv_wi_cols
+        self.cat_tv_cols = cat_tv_cols
+        self.cat_tnv_cols = cat_tnv_cols
+        self.cts_tv_wi_cols = cts_tv_wi_cols
+        self.cts_tnv_wi_cols = cts_tnv_wi_cols
+        self.cts_tv_cols = cts_tv_cols
+        self.cts_tnv_cols = cts_tnv_cols
 
-        for col in custom_dep_cols:
-            # Make sure independent and dependent custom columns don't overlap
-            if col in custom_indep_split_cols:
-                raise NotImplementedError(f'Custom dependent columns and custom independent split columns cannot overlap, but input includes column {col!r} as a member of both.')
-            if col in custom_indep_nosplit_cols:
-                raise NotImplementedError(f'Custom dependent columns and custom independent no-split columns cannot overlap, but input includes column {col!r} as a member of both.')
-        for col in custom_indep_split_cols:
-            # Make sure independent split and independent no-split custom columns don't overlap
-            if col in custom_indep_nosplit_cols:
-                raise NotImplementedError(f'Custom independent split columns and custom independent no-split columns cannot overlap, but input includes column {col!r} as a member of both.')
+        # Check that no control variables appear in multiple groups
+        if len(control_cols) > len(set(control_cols)):
+            for col in control_cols:
+                if control_cols.count(col) > 1:
+                    raise ValueError(f'Control variable names must be unique, but {col!r} appears in multiple groups.')
 
-        dims = [nl, nk]
-        for col in custom_dep_cols:
-            # dims must account for all dependent columns (and make sure the columns are in the correct order)
-            dims.append(custom_dep_dict[col])
+        dims = (nl, nk)
         self.dims = dims
-        
+
+        ## Generate starting values ##
+        a1_mu, a1_sig, a2_mu, a2_sig, s1_low, s1_high, s2_low, s2_high, pk1_prior, pk0_prior = self.params.get_multiple(('a1_mu', 'a1_sig', 'a2_mu', 'a2_sig', 's1_low', 's1_high', 's2_low', 's2_high', 'pk1_prior', 'pk0_prior'))
         # Model for Y1 | Y2, l, k for movers and stayers
-        self.A1 = np.tile(sorted(rng.normal(scale=2, size=nl)), list(reversed(dims[1:])) + [1]).T
-        self.S1 = rng.uniform(low=0, high=0.5, size=dims) # np.ones(shape=dims)
+        self.A1 = rng.normal(loc=a1_mu, scale=a1_sig, size=dims)
+        self.S1 = rng.uniform(low=s1_low, high=s1_high, size=dims)
         # Model for Y4 | Y3, l, k for movers and stayers
-        self.A2 = self.A1.copy()
-        self.S2 = rng.uniform(low=0, high=0.5, size=dims) # np.ones(shape=dims)
+        self.A2 = rng.normal(loc=a2_mu, scale=a2_sig, size=dims)
+        self.S2 = rng.uniform(low=s2_low, high=s2_high, size=dims)
         # Model for p(K | l, l') for movers
-        self.pk1 = rng.dirichlet(alpha=np.ones(nl), size=nk ** 2) # np.ones(shape=(nk ** 2, nl)) / nl
+        if pk1_prior is None:
+            pk1_prior = np.ones(nl)
+        self.pk1 = rng.dirichlet(alpha=pk1_prior, size=nk ** 2)
         # Model for p(K | l, l') for stayers
-        self.pk0 = np.ones(shape=(nk, nl)) / nl
-        ## Control variables
-        # Split
-        self.A1_indep = {col: np.sort(rng.normal(loc=0, scale=5, size=custom_indep_split_dict[col])) for col in custom_indep_split_cols}
-        self.S1_indep = {col: np.sort(rng.uniform(low=0, high=0.5, size=custom_indep_split_dict[col])) for col in custom_indep_split_cols}
-        self.A2_indep = {col: np.sort(rng.normal(loc=0, scale=5, size=custom_indep_split_dict[col])) for col in custom_indep_split_cols}
-        self.S2_indep = {col: np.sort(rng.uniform(low=0, high=0.5, size=custom_indep_split_dict[col])) for col in custom_indep_split_cols}
-        # No-split
-        self.A_indep = {col: np.sort(rng.normal(loc=0, scale=5, size=custom_indep_nosplit_dict[col])) for col in custom_indep_nosplit_cols}
-        self.S_indep = {col: np.sort(rng.uniform(low=0, high=5, size=custom_indep_nosplit_dict[col])) for col in custom_indep_nosplit_cols}
+        if pk0_prior is None:
+            pk0_prior = np.ones(nl)
+        self.pk0 = rng.dirichlet(alpha=pk0_prior, size=nk)
+        #### Control variables ####
+        ### Categorical ###
+        ## Worker-interaction ##
+        # Time-variable
+        self.A1_cat_wi = {col: rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=(nl, controls_dict[col]['n'])) for col in cat_tv_wi_cols}
+        self.S1_cat_wi = {col: rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=(nl, controls_dict[col]['n'])) for col in cat_tv_wi_cols}
+        self.A2_cat_wi = {col: rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=(nl, controls_dict[col]['n'])) for col in cat_tv_wi_cols}
+        self.S2_cat_wi = {col: rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=(nl, controls_dict[col]['n'])) for col in cat_tv_wi_cols}
+        # Time non-variable
+        self.A_cat_wi = {col: rng.normal(loc=controls_dict[col]['a_mu'], scale=controls_dict[col]['a_sig'], size=(nl, controls_dict[col]['n'])) for col in cat_tnv_wi_cols}
+        self.S_cat_wi = {col: rng.uniform(low=controls_dict[col]['s_low'], high=controls_dict[col]['s_high'], size=(nl, controls_dict[col]['n'])) for col in cat_tnv_wi_cols}
+        ## Non-worker-interaction ##
+        # Time-variable
+        self.A1_cat = {col: rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=controls_dict[col]['n']) for col in cat_tv_cols}
+        self.S1_cat = {col: rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=controls_dict[col]['n']) for col in cat_tv_cols}
+        self.A2_cat = {col: rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=controls_dict[col]['n']) for col in cat_tv_cols}
+        self.S2_cat = {col: rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=controls_dict[col]['n']) for col in cat_tv_cols}
+        # Time non-variable
+        self.A_cat = {col: rng.normal(loc=controls_dict[col]['a_mu'], scale=controls_dict[col]['a_sig'], size=controls_dict[col]['n']) for col in cat_tnv_cols}
+        self.S_cat = {col: rng.uniform(low=controls_dict[col]['s_low'], high=controls_dict[col]['s_high'], size=controls_dict[col]['n']) for col in cat_tnv_cols}
+        ### Continuous ###
+        ## Worker-interaction ##
+        # Time-variable
+        self.A1_cts_wi = {col: rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=nl) for col in cts_tv_wi_cols}
+        self.S1_cts_wi = {col: rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=nl) for col in cat_tv_wi_cols}
+        self.A2_cts_wi = {col: rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=nl) for col in cts_tv_wi_cols}
+        self.S2_cts_wi = {col: rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=nl) for col in cts_tv_wi_cols}
+        # Time non-variable
+        self.A_cts_wi = {col: rng.normal(loc=controls_dict[col]['a_mu'], scale=controls_dict[col]['a_sig'], size=nl) for col in cts_tnv_wi_cols}
+        self.S_cts_wi = {col: rng.uniform(low=controls_dict[col]['s_low'], high=controls_dict[col]['s_high'], size=nl) for col in cts_tnv_wi_cols}
+        ## Non-worker-interaction ##
+        # Time-variable
+        self.A1_cts = {col: rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=1) for col in cts_tv_cols}
+        self.S1_cts = {col: rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=1) for col in cts_tv_cols}
+        self.A2_cts = {col: rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=1) for col in cts_tv_cols}
+        self.S2_cts = {col: rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=1) for col in cts_tv_cols}
+        # Time non-variable
+        self.A_cts = {col: rng.normal(loc=controls_dict[col]['a_mu'], scale=controls_dict[col]['a_sig'], size=1) for col in cts_tnv_cols}
+        self.S_cts = {col: rng.uniform(low=controls_dict[col]['s_low'], high=controls_dict[col]['s_high'], size=1) for col in cts_tnv_cols}
 
         # Log likelihood for movers
         self.lik1 = None
@@ -579,6 +708,80 @@ class BLMModel:
     #     self.pk1 = np.ones(shape=(nk * nk, nl)) / nl
     #     # Model for p(K | l, l') for stayers
     #     self.pk0 = np.ones(shape=(nk, nl)) / nl
+
+    def _sum_by_nl_l(self, ni, l, C1, C2, compute_A=True, compute_S=True):
+        '''
+        Compute A1_sum/A2_sum/S1_sum_sq/S2_sum_sq to account for worker-interaction terms for a particular worker type.
+
+        Arguments:
+            ni (int): number of observations
+            l (int): worker type (must be in range(0, nl))
+            C1 (dict of NumPy Arrays): dictionary linking column names to control variable data for the first period
+            C2 (dict of NumPy Arrays): dictionary linking column names to control variable data for the second period
+            compute_A (bool): if True, compute and return A terms
+            compute_S (bool): if True, compute and return S terms
+
+        Returns:
+            (tuple of NumPy Arrays): (A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l), where each term gives the sum of estimated effects for control variables that interact with worker type, specifically for worker type l (A terms are dropped if compute_A=False, and S terms are dropped if compute_S=False)
+        '''
+        if (not compute_A) and (not compute_S):
+            raise ValueError('compute_A=False and compute_S=False. Must specify at least one to be True.')
+
+        A1_cat_wi, A2_cat_wi, A_cat_wi, S1_cat_wi, S2_cat_wi, S_cat_wi = self.A1_cat_wi, self.A2_cat_wi, self.A_cat_wi, self.S1_cat_wi, self.S2_cat_wi, self.S_cat_wi
+        A1_cts_wi, A2_cts_wi, A_cts_wi, S1_cts_wi, S2_cts_wi, S_cts_wi = self.A1_cts_wi, self.A2_cts_wi, self.A_cts_wi, self.S1_cts_wi, self.S2_cts_wi, self.S_cts_wi
+        cat_tv_wi_cols, cat_tnv_wi_cols = self.cat_tv_wi_cols, self.cat_tnv_wi_cols
+        cts_tv_wi_cols, cts_tnv_wi_cols = self.cts_tv_wi_cols, self.cts_tnv_wi_cols
+
+        if compute_A:
+            A1_sum_l = np.zeros(ni)
+            A2_sum_l = np.zeros(ni)
+        if compute_S:
+            S1_sum_sq_l = np.zeros(ni)
+            S2_sum_sq_l = np.zeros(ni)
+
+        ### Categorical ###
+        ## Worker-interaction ##
+        # Time-varying #
+        for col in cat_tv_wi_cols:
+            if compute_A:
+                A1_sum_l += A1_cat_wi[col][l, C1[col]]
+                A2_sum_l += A2_cat_wi[col][l, C2[col]]
+            if compute_S:
+                S1_sum_sq_l += S1_cat_wi[col][l, C1[col]] ** 2
+                S2_sum_sq_l += S2_cat_wi[col][l, C2[col]] ** 2
+        # Time non-varying #
+        for col in cat_tnv_wi_cols:
+            if compute_A:
+                A1_sum_l += A_cat_wi[col][l, C1[col]]
+                A2_sum_l += A_cat_wi[col][l, C2[col]]
+            if compute_S:
+                S1_sum_sq_l += S_cat_wi[col][l, C1[col]] ** 2
+                S2_sum_sq_l += S_cat_wi[col][l, C2[col]] ** 2
+        ### Continuous ###
+        ## Worker-interaction ##
+        # Time-varying #
+        for col in cts_tv_wi_cols:
+            if compute_A:
+                A1_sum_l += A1_cts_wi[col][l] * C1[col]
+                A2_sum_l += A2_cts_wi[col][l] * C2[col]
+            if compute_S:
+                S1_sum_sq_l += S1_cts_wi[col][l] ** 2
+                S2_sum_sq_l += S2_cts_wi[col][l] ** 2
+        # Time non-varying #
+        for col in cts_tnv_wi_cols:
+            if compute_A:
+                A1_sum_l += A_cts_wi[col][l] * C1[col]
+                A2_sum_l += A_cts_wi[col][l] * C2[col]
+            if compute_S:
+                S1_sum_sq_l += S_cts_wi[col][l] ** 2
+                S2_sum_sq_l += S_cts_wi[col][l] ** 2
+
+        if compute_A and compute_S:
+            return (A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l)
+        if compute_A:
+            return (A1_sum_l, A2_sum_l)
+        if compute_S:
+            return (S1_sum_sq_l, S2_sum_sq_l)
 
     def compute_connectedness_measure(self, all=False):
         '''
@@ -618,9 +821,15 @@ class BLMModel:
         params = self.params
         nl, nk, ni = self.nl, self.nk, jdata.shape[0]
         A1, A2, S1, S2 = self.A1, self.A2, self.S1, self.S2
-        A1_indep, A2_indep, A_indep, S1_indep, S2_indep, S_indep = self.A1_indep, self.A2_indep, self.A_indep, self.S1_indep, self.S2_indep, self.S_indep
-        custom_indep_split_dict, custom_indep_nosplit_dict = self.custom_indep_split_dict, self.custom_indep_nosplit_dict
-        custom_dep_cols, custom_indep_split_cols, custom_indep_nosplit_cols = self.custom_dep_cols, self.custom_indep_split_cols, self.custom_indep_nosplit_cols
+        A1_cat_wi, A2_cat_wi, A_cat_wi, S1_cat_wi, S2_cat_wi, S_cat_wi = self.A1_cat_wi, self.A2_cat_wi, self.A_cat_wi, self.S1_cat_wi, self.S2_cat_wi, self.S_cat_wi
+        A1_cat, A2_cat, A_cat, S1_cat, S2_cat, S_cat = self.A1_cat, self.A2_cat, self.A_cat, self.S1_cat, self.S2_cat, self.S_cat
+        A1_cts_wi, A2_cts_wi, A_cts_wi, S1_cts_wi, S2_cts_wi, S_cts_wi = self.A1_cts_wi, self.A2_cts_wi, self.A_cts_wi, self.S1_cts_wi, self.S2_cts_wi, self.S_cts_wi
+        A1_cts, A2_cts, A_cts, S1_cts, S2_cts, S_cts = self.A1_cts, self.A2_cts, self.A_cts, self.S1_cts, self.S2_cts, self.S_cts
+        control_cols, controls_dict = self.control_cols, self.controls_dict
+        cat_tv_wi_cols, cat_tnv_wi_cols, cat_tv_cols, cat_tnv_cols = self.cat_tv_wi_cols, self.cat_tnv_wi_cols, self.cat_tv_cols, self.cat_tnv_cols
+        cat_tv_wi_dict, cat_tnv_wi_dict, cat_tv_dict, cat_tnv_dict = self.cat_tv_wi_dict, self.cat_tnv_wi_dict, self.cat_tv_dict, self.cat_tnv_dict
+        cts_tv_wi_cols, cts_tnv_wi_cols, cts_tv_cols, cts_tnv_cols = self.cts_tv_wi_cols, self.cts_tnv_wi_cols, self.cts_tv_cols, self.cts_tnv_cols
+        cts_tv_wi_dict, cts_tnv_wi_dict, cts_tv_dict, cts_tnv_dict = self.cts_tv_wi_dict, self.cts_tnv_wi_dict, self.cts_tv_dict, self.cts_tnv_dict
 
         # Store wage outcomes and groups
         Y1 = jdata.loc[:, 'y1'].to_numpy()
@@ -628,37 +837,34 @@ class BLMModel:
         G1 = jdata.loc[:, 'g1'].to_numpy().astype(int, copy=False)
         G2 = jdata.loc[:, 'g2'].to_numpy().astype(int, copy=False)
         # Control variables
-        C = {}
         C1 = {}
         C2 = {}
-        for col in self.custom_cols:
+        for col in control_cols:
             # Get subcolumns associated with col
             subcols = to_list(jdata.col_reference_dict[col])
-            if col in self.custom_indep_nosplit_cols:
+            if len(subcols) == 1:
                 # If parameter associated with column is constant over time
-                if len(subcols) != 1:
-                    raise NotImplementedError(f'No-split general columns must have one associated column, but {col!r} does not.')
-                C[col] = jdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
-            else:
+                if col in (cat_tv_wi_cols + cat_tnv_wi_cols + cat_tv_cols + cat_tnv_cols):
+                    C1[col] = jdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
+                    C2[col] = jdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
+                else:
+                    C1[col] = jdata.loc[:, subcols[0]].to_numpy()
+                    C2[col] = jdata.loc[:, subcols[0]].to_numpy()
+            elif len(subcols) == 2:
                 # If parameter associated with column can change over time
-                if len(subcols) != 2:
-                    raise NotImplementedError(f'Split general columns must have two associated columns, but {col!r} does not.')
-                C1[col] = jdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
-                C2[col] = jdata.loc[:, subcols[1]].to_numpy().astype(int, copy=False)
+                if col in (cat_tv_wi_cols + cat_tnv_wi_cols + cat_tv_cols + cat_tnv_cols):
+                    C1[col] = jdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
+                    C2[col] = jdata.loc[:, subcols[1]].to_numpy().astype(int, copy=False)
+                else:
+                    C1[col] = jdata.loc[:, subcols[0]].to_numpy()
+                    C2[col] = jdata.loc[:, subcols[1]].to_numpy()
+            else:
+                raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {len(subcols)!r} associated subcolumns.')
         ## Sparse matrix representations ##
-        GG1 = G1.copy()
-        GG2 = G2.copy()
-        n_dep_params = nk
-        for col in custom_dep_cols:
-            # Set indicators for dependent columns
-            GG1 += n_dep_params * C1[col]
-            GG2 += n_dep_params * C2[col]
-            n_dep_params *= self.custom_dep_dict[col]
-        GG1 = csc_matrix((np.ones(ni), (range(ni), GG1)), shape=(ni, n_dep_params))
-        GG2 = csc_matrix((np.ones(ni), (range(ni), GG2)), shape=(ni, n_dep_params))
-        CC1 = {col: csc_matrix((np.ones(ni), (range(ni), vec)), shape=(ni, custom_indep_split_dict[col])) for col, vec in C1.items()}
-        CC2 = {col: csc_matrix((np.ones(ni), (range(ni), vec)), shape=(ni, custom_indep_split_dict[col])) for col, vec in C2.items()}
-        CC = {col: csc_matrix((np.ones(ni), (range(ni), vec)), shape=(ni, custom_indep_nosplit_dict[col])) for col, vec in C.items()}
+        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
+        GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
+        CC1 = {col: csc_matrix((np.ones(ni), (range(ni), C1[col])), shape=(ni, controls_dict[col]['n'])) for col in (cat_tv_wi_cols + cat_tnv_wi_cols + cat_tv_cols + cat_tnv_cols)}
+        CC2 = {col: csc_matrix((np.ones(ni), (range(ni), C2[col])), shape=(ni, controls_dict[col]['n'])) for col in (cat_tv_wi_cols + cat_tnv_wi_cols + cat_tv_cols + cat_tnv_cols)}
 
         # Transition probability matrix
         GG12 = csc_matrix((np.ones(ni), (range(ni), G1 + nk * G2)), shape=(ni, nk ** 2))
@@ -675,42 +881,121 @@ class BLMModel:
         liks1 = []
         prev_lik = np.inf
         # Fix error from bad initial guesses causing probabilities to be too low
-        d_prior = params['d_prior']
+        d_prior = params['d_prior_j']
 
         ### Constraints ###
         ## General ##
-        cons_a = QPConstrained(nl, n_dep_params)
+        cons_a = QPConstrained(nl, nk)
         if len(params['cons_a']) > 0:
             cons_a.add_constraints_builtin(*params['cons_a'])
-        cons_s = QPConstrained(nl, n_dep_params)
+        cons_s = QPConstrained(nl, nk)
         if len(params['cons_s']) > 0:
             cons_s.add_constraints_builtin(*params['cons_s'])
-        ## Independent split columns ##
-        if len(custom_indep_split_cols) > 0:
-            cons_a_split = {col: QPConstrained(nl, n_split) for col, n_split in self.custom_indep_split_dict.items()}
+        ### Categorical ###
+        ## Worker-interaction ##
+        # Time-varying #
+        if len(cat_tv_wi_cols) > 0:
+            cons_a_cat_tv_wi = {col: QPConstrained(nl, col_dict['n']) for col, col_dict in cat_tv_wi_dict.items()}
+            cons_s_cat_tv_wi = {col: QPConstrained(nl, col_dict['n']) for col, col_dict in cat_tv_wi_dict.items()}
             if len(params['cons_a']) > 0:
-                for col_cons in cons_a_split.values():
+                for col_cons in cons_a_cat_tv_wi.values():
                     col_cons.add_constraints_builtin(*params['cons_a'])
-            cons_s_split = {col: QPConstrained(nl, n_split) for col, n_split in self.custom_indep_split_dict.items()}
             if len(params['cons_s']) > 0:
-                for col_cons in cons_s_split.values():
+                for col_cons in cons_s_cat_tv_wi.values():
                     col_cons.add_constraints_builtin(*params['cons_s'])
-            for split_col in custom_indep_split_cols:
-                cons_a_split[split_col].add_constraint_builtin('stable_within_time', {'n_periods': 2})
-                cons_s_split[split_col].add_constraint_builtin('stable_within_time', {'n_periods': 2})
-        ## Independent no-split columns ##
-        if len(custom_indep_nosplit_cols) > 0:
-            cons_a_nosplit = {col: QPConstrained(nl, n_nosplit) for col, n_nosplit in self.custom_indep_nosplit_dict.items()}
+        # Time non-varying #
+        if len(cat_tnv_wi_cols) > 0:
+            cons_a_cat_tnv_wi = {col: QPConstrained(nl, col_dict['n']) for col, col_dict in cat_tnv_wi_dict.items()}
+            cons_s_cat_tnv_wi = {col: QPConstrained(nl, col_dict['n']) for col, col_dict in cat_tnv_wi_dict.items()}
             if len(params['cons_a']) > 0:
-                for col_cons in cons_a_nosplit.values():
+                for col_cons in cons_a_cat_tnv_wi.values():
                     col_cons.add_constraints_builtin(*params['cons_a'])
-            cons_s_nosplit = {col: QPConstrained(nl, n_nosplit) for col, n_nosplit in self.custom_indep_nosplit_dict.items()}
             if len(params['cons_s']) > 0:
-                for col_cons in cons_s_nosplit.values():
+                for col_cons in cons_s_cat_tnv_wi.values():
                     col_cons.add_constraints_builtin(*params['cons_s'])
-            for nosplit_col in custom_indep_nosplit_cols:
-                cons_a_nosplit[nosplit_col].add_constraints_builtin([['stable_within_time', 'stable_across_time'], {'n_periods': 2}])
-                cons_s_nosplit[nosplit_col].add_constraints_builtin([['stable_within_time', 'stable_across_time'], {'n_periods': 2}])
+            for col in cat_tnv_wi_cols:
+                cons_a_cat_tnv_wi[col].add_constraint_builtin('stable_across_time', {'n_periods': 2})
+                cons_s_cat_tnv_wi[col].add_constraint_builtin('stable_across_time', {'n_periods': 2})
+        ## Non-worker-interaction ##
+        # Time-varying #
+        if len(cat_tv_cols) > 0:
+            cons_a_cat_tv = {col: QPConstrained(nl, col_dict['n']) for col, col_dict in cat_tv_dict.items()}
+            cons_s_cat_tv = {col: QPConstrained(nl, col_dict['n']) for col, col_dict in cat_tv_dict.items()}
+            if len(params['cons_a']) > 0:
+                for col_cons in cons_a_cat_tv.values():
+                    col_cons.add_constraints_builtin(*params['cons_a'])
+            if len(params['cons_s']) > 0:
+                for col_cons in cons_s_cat_tv.values():
+                    col_cons.add_constraints_builtin(*params['cons_s'])
+            for col in cat_tv_cols:
+                cons_a_cat_tv[col].add_constraint_builtin('stable_within_time', {'n_periods': 2})
+                cons_s_cat_tv[col].add_constraint_builtin('stable_within_time', {'n_periods': 2})
+        # Time non-varying #
+        if len(cat_tnv_cols) > 0:
+            cons_a_cat_tnv = {col: QPConstrained(nl, col_dict['n']) for col, col_dict in cat_tnv_dict.items()}
+            cons_s_cat_tnv = {col: QPConstrained(nl, col_dict['n']) for col, col_dict in cat_tnv_dict.items()}
+            if len(params['cons_a']) > 0:
+                for col_cons in cons_a_cat_tnv.values():
+                    col_cons.add_constraints_builtin(*params['cons_a'])
+            if len(params['cons_s']) > 0:
+                for col_cons in cons_s_cat_tnv.values():
+                    col_cons.add_constraints_builtin(*params['cons_s'])
+            for col in cat_tnv_cols:
+                cons_a_cat_tnv[col].add_constraints_builtin(['stable_within_time', 'stable_across_time'], {'n_periods': 2})
+                cons_s_cat_tnv[col].add_constraints_builtin(['stable_within_time', 'stable_across_time'], {'n_periods': 2})
+        ### Continuous ###
+        ## Worker-interaction ##
+        # Time-varying #
+        if len(cts_tv_wi_cols) > 0:
+            cons_a_cts_tv_wi = {col: QPConstrained(nl, 1) for col in cts_tv_wi_cols}
+            cons_s_cts_tv_wi = {col: QPConstrained(nl, 1) for col in cts_tv_wi_cols}
+            if len(params['cons_a']) > 0:
+                for col_cons in cons_a_cts_tv_wi.values():
+                    col_cons.add_constraints_builtin(*params['cons_a'])
+            if len(params['cons_s']) > 0:
+                for col_cons in cons_s_cts_tv_wi.values():
+                    col_cons.add_constraints_builtin(*params['cons_s'])
+        # Time non-varying #
+        if len(cts_tnv_wi_cols) > 0:
+            cons_a_cts_tnv_wi = {col: QPConstrained(nl, 1) for col in cts_tnv_wi_cols}
+            cons_s_cts_tnv_wi = {col: QPConstrained(nl, 1) for col in cts_tnv_wi_cols}
+            if len(params['cons_a']) > 0:
+                for col_cons in cons_a_cts_tnv_wi.values():
+                    col_cons.add_constraints_builtin(*params['cons_a'])
+            if len(params['cons_s']) > 0:
+                for col_cons in cons_s_cts_tnv_wi.values():
+                    col_cons.add_constraints_builtin(*params['cons_s'])
+            for col in cts_tnv_wi_cols:
+                cons_a_cts_tnv_wi[col].add_constraint_builtin('stable_across_time', {'n_periods': 2})
+                cons_s_cts_tnv_wi[col].add_constraint_builtin('stable_across_time', {'n_periods': 2})
+        ## Non-worker-interaction ##
+        # Time-varying #
+        if len(cts_tv_cols) > 0:
+            cons_a_cts_tv = {col: QPConstrained(nl, 1) for col in cts_tv_cols}
+            cons_s_cts_tv = {col: QPConstrained(nl, 1) for col in cts_tv_cols}
+            if len(params['cons_a']) > 0:
+                for col_cons in cons_a_cts_tv.values():
+                    col_cons.add_constraints_builtin(*params['cons_a'])
+            if len(params['cons_s']) > 0:
+                for col_cons in cons_s_cts_tv.values():
+                    col_cons.add_constraints_builtin(*params['cons_s'])
+            for col in cts_tv_cols:
+                cons_a_cts_tv[col].add_constraint_builtin('stable_within_time', {'n_periods': 2})
+                cons_s_cts_tv[col].add_constraint_builtin('stable_within_time', {'n_periods': 2})
+        # Time non-varying #
+        if len(cts_tnv_cols) > 0:
+            cons_a_cts_tnv = {col: QPConstrained(nl, 1) for col in cts_tnv_cols}
+            cons_s_cts_tnv = {col: QPConstrained(nl, 1) for col in cts_tnv_cols}
+            if len(params['cons_a']) > 0:
+                for col_cons in cons_a_cts_tnv.values():
+                    col_cons.add_constraints_builtin(*params['cons_a'])
+            if len(params['cons_s']) > 0:
+                for col_cons in cons_s_cts_tnv.values():
+                    col_cons.add_constraints_builtin(*params['cons_s'])
+            for col in cts_tnv_cols:
+                cons_a_cts_tnv[col].add_constraints_builtin(['stable_within_time', 'stable_across_time'], {'n_periods': 2})
+                cons_s_cts_tnv[col].add_constraints_builtin(['stable_within_time', 'stable_across_time'], {'n_periods': 2})
+
 
         for iter in range(params['n_iters_movers']):
 
@@ -719,43 +1004,62 @@ class BLMModel:
             # We iterate over the worker types, should not be be
             # too costly since the vector is quite large within each iteration
             ## Independent custom columns
-            if len(custom_indep_split_cols) + len(custom_indep_nosplit_cols) > 0:
+            if len(control_cols) > 0:
                 if iter == 0:
                     A1_sum = np.zeros(ni)
                     A2_sum = np.zeros(ni)
                 S1_sum_sq = np.zeros(ni)
                 S2_sum_sq = np.zeros(ni)
-                for col in self.custom_indep_split_cols:
-                    # If parameter associated with column can change over time
+                ### Categorical ###
+                ## Non-worker-interaction ##
+                # Time-varying #
+                for col in cat_tv_cols:
                     if iter == 0:
-                        A1_sum += A1_indep[col][C1[col]]
-                        A2_sum += A2_indep[col][C2[col]]
-                    S1_sum_sq += S1_indep[col][C1[col]] ** 2
-                    S2_sum_sq += S2_indep[col][C2[col]] ** 2
-                for col in self.custom_indep_nosplit_cols:
-                    # If parameter associated with column is constant over time
+                        A1_sum += A1_cat[col][C1[col]]
+                        A2_sum += A2_cat[col][C2[col]]
+                    S1_sum_sq += S1_cat[col][C1[col]] ** 2
+                    S2_sum_sq += S2_cat[col][C2[col]] ** 2
+                # Time non-varying #
+                for col in cat_tnv_cols:
                     if iter == 0:
-                        A1_sum += A_indep[col][C[col]]
-                        A2_sum += A_indep[col][C[col]]
-                    S1_sum_sq += S_indep[col][C[col]] ** 2
-                    S2_sum_sq += S_indep[col][C[col]] ** 2
+                        A1_sum += A_cat[col][C1[col]]
+                        A2_sum += A_cat[col][C2[col]]
+                    S1_sum_sq += S_cat[col][C1[col]] ** 2
+                    S2_sum_sq += S_cat[col][C2[col]] ** 2
+                ### Continuous ###
+                ## Non-worker-interaction ##
+                # Time-varying #
+                for col in cts_tv_cols:
+                    if iter == 0:
+                        A1_sum += A1_cts[col] * C1[col]
+                        A2_sum += A2_cts[col] * C2[col]
+                    S1_sum_sq += S1_cts[col] ** 2
+                    S2_sum_sq += S2_cts[col] ** 2
+                # Time non-varying #
+                for col in cts_tnv_cols:
+                    if iter == 0:
+                        A1_sum += A_cts[col] * C1[col]
+                        A2_sum += A_cts[col] * C2[col]
+                    S1_sum_sq += S_cts[col] ** 2
+                    S2_sum_sq += S_cts[col] ** 2
 
                 KK = G1 + nk * G2
                 for l in range(nl):
-                    idx_one = (l, G1, *[C1[col] for col in custom_dep_cols])
-                    idx_two = (l, G2, *[C2[col] for col in custom_dep_cols])
-                    lp1 = lognormpdf(Y1, A1_sum + A1[idx_one], np.sqrt(S1_sum_sq + S1[idx_one] ** 2))
-                    lp2 = lognormpdf(Y2, A2_sum + A2[idx_two], np.sqrt(S2_sum_sq + S2[idx_two] ** 2))
+                    # Update A1_sum/A2_sum/S1_sum_sq/S2_sum_sq to account for worker-interaction terms
+                    if len(cat_tv_wi_cols + cat_tnv_wi_cols + cts_tv_wi_cols + cts_tnv_wi_cols) > 0:
+                        A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2)
+                    else:
+                        A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = [0] * 4
+                    lp1 = lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
+                    lp2 = lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
                     lp[:, l] = np.log(pk1[KK, l]) + lp1 + lp2
             else:
                 KK = G1 + nk * G2
                 for l in range(nl):
-                    idx_one = (l, G1, *[C1[col] for col in custom_dep_cols])
-                    idx_two = (l, G2, *[C2[col] for col in custom_dep_cols])
-                    lp1 = lognormpdf(Y1, A1[idx_one], S1[idx_one])
-                    lp2 = lognormpdf(Y2, A2[idx_two], S2[idx_two])
+                    lp1 = lognormpdf(Y1, A1[l, G1], S1[l, G1])
+                    lp2 = lognormpdf(Y2, A2[l, G2], S2[l, G2])
                     lp[:, l] = np.log(pk1[KK, l]) + lp1 + lp2
-            del idx_one, idx_two
+            del lp1, lp2
 
             # We compute log sum exp to get likelihoods and probabilities
             qi = np.exp(lp.T - logsumexp(lp, axis=1)).T
@@ -802,25 +1106,67 @@ class BLMModel:
             # We do not necessarily want to construct the duplicated data by nl
             # Instead we will construct X'X and X'Y by looping over nl
             # We also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
-            ts = nl * nk # Shift for period 2
+            ## General ##
+            # Shift for period 2
+            ts = nl * nk
             # Only store the diagonal
             XwXd = np.zeros(shape=2 * ts)
             if params['update_a']:
                 XwY = np.zeros(shape=2 * ts)
 
-            if len(custom_indep_split_cols) > 0:
-                ts_split = {col: nl * n_split for col, n_split in custom_indep_split_dict.items()}
-                XwXd_split = {col: np.zeros(shape=2 * col_ts_split) for col, col_ts_split in ts_split.items()}
+            ### Categorical ###
+            ## Worker-interaction ##
+            # Time-varying #
+            if len(cat_tv_wi_cols) > 0:
+                ts_cat_tv_wi = {col: nl * col_dict['n'] for col, col_dict in cat_tv_wi_dict.items()}
+                XwXd_cat_tv_wi = {col: np.zeros(shape=2 * col_ts_cat_tv_wi) for col, col_ts_cat_tv_wi in ts_cat_tv_wi.items()}
                 if params['update_a']:
-                    XwY_split = {col: np.zeros(shape=2 * col_ts_split) for col, col_ts_split in ts_split.items()}
-            if len(custom_indep_nosplit_cols) > 0:
-                ts_nosplit = {col: nl * n_nosplit for col, n_nosplit in custom_indep_nosplit_dict.items()}
-                XwXd_nosplit = {col: np.zeros(shape=2 * col_ts_nosplit) for col, col_ts_nosplit in ts_nosplit.items()}
+                    XwY_cat_tv_wi = {col: np.zeros(shape=2 * col_ts_cat_tv_wi) for col, col_ts_cat_tv_wi in ts_cat_tv_wi.items()}
+            # Time non-varying #
+            if len(cat_tnv_wi_cols) > 0:
+                ts_cat_tnv_wi = {col: nl * col_dict['n'] for col, col_dict in cat_tnv_wi_dict.items()}
+                XwXd_cat_tnv_wi = {col: np.zeros(shape=2 * col_ts_cat_tnv_wi) for col, col_ts_cat_tnv_wi in ts_cat_tnv_wi.items()}
                 if params['update_a']:
-                    XwY_nosplit = {col: np.zeros(shape=2 * col_ts_nosplit) for col, col_ts_nosplit in ts_nosplit.items()}
+                    XwY_cat_tnv_wi = {col: np.zeros(shape=2 * col_ts_cat_tnv_wi) for col, col_ts_cat_tnv_wi in ts_cat_tnv_wi.items()}
+            ## Non-worker-interaction ##
+            # Time-varying #
+            if len(cat_tv_cols) > 0:
+                ts_cat_tv = {col: nl * col_dict['n'] for col, col_dict in cat_tv_dict.items()}
+                XwXd_cat_tv = {col: np.zeros(shape=2 * col_ts_cat_tv) for col, col_ts_cat_tv in ts_cat_tv.items()}
+                if params['update_a']:
+                    XwY_cat_tv = {col: np.zeros(shape=2 * col_ts_cat_tv) for col, col_ts_cat_tv in ts_cat_tv.items()}
+            # Time non-varying #
+            if len(cat_tnv_cols) > 0:
+                ts_cat_tnv = {col: nl * col_dict['n'] for col, col_dict in cat_tnv_dict.items()}
+                XwXd_cat_tnv = {col: np.zeros(shape=2 * col_ts_cat_tnv) for col, col_ts_cat_tnv in ts_cat_tnv.items()}
+                if params['update_a']:
+                    XwY_cat_tnv = {col: np.zeros(shape=2 * col_ts_cat_tnv) for col, col_ts_cat_tnv in ts_cat_tnv.items()}
+            ### Continuous ###
+            ## Worker-interaction ##
+            # Time-varying #
+            if len(cts_tv_wi_cols) > 0:
+                XwXd_cts_tv_wi = {col: np.zeros(shape=2 * nl) for col in cts_tv_wi_cols}
+                if params['update_a']:
+                    XwY_cts_tv_wi = {col: np.zeros(shape=2 * nl) for col in cts_tv_wi_cols}
+            # Time non-varying #
+            if len(cts_tnv_wi_cols) > 0:
+                XwXd_cts_tnv_wi = {col: np.zeros(shape=2 * nl) for col in cts_tnv_wi_cols}
+                if params['update_a']:
+                    XwY_cts_tnv_wi = {col: np.zeros(shape=2 * nl) for col in cts_tnv_wi_cols}
+            ## Non-worker-interaction ##
+            # Time-varying #
+            if len(cts_tv_cols) > 0:
+                XwXd_cts_tv = {col: np.zeros(shape=2 * nl) for col in cts_tv_cols}
+                if params['update_a']:
+                    XwY_cts_tv = {col: np.zeros(shape=2 * nl) for col in cts_tv_cols}
+            # Time non-varying #
+            if len(cts_tnv_cols) > 0:
+                XwXd_cts_tnv = {col: np.zeros(shape=2 * nl) for col in cts_tnv_cols}
+                if params['update_a']:
+                    XwY_cts_tnv = {col: np.zeros(shape=2 * nl) for col in cts_tnv_cols}
 
             if iter == 0:
-                if len(custom_indep_split_cols) + len(custom_indep_nosplit_cols) > 0:
+                if len(control_cols) > 0:
                     Y1_adj = Y1.copy()
                     Y2_adj = Y2.copy()
                     Y1_adj -= A1_sum
@@ -833,21 +1179,22 @@ class BLMModel:
             for l in range(nl):
                 # (We might be better off trying this within numba or something)
                 l_index, r_index = l * nk, (l + 1) * nk
-                ## Compute shared terms ##
-                idx_one = (l, G1, *[C1[col] for col in custom_dep_cols])
-                idx_two = (l, G2, *[C2[col] for col in custom_dep_cols])
                 # Shared weighted terms
-                GG1_weighted = GG1.T @ diags(qi[:, l] / S1[idx_one])
-                GG2_weighted = GG2.T @ diags(qi[:, l] / S2[idx_two])
-                del idx_one, idx_two
+                GG1_weighted = GG1.T @ diags(qi[:, l] / S1[l, G1])
+                GG2_weighted = GG2.T @ diags(qi[:, l] / S2[l, G2])
                 ## Compute XwXd terms ##
                 XwXd[l_index: r_index] = (GG1_weighted @ GG1).diagonal()
                 XwXd[ts + l_index: ts + r_index] = (GG2_weighted @ GG2).diagonal()
                 if params['update_a']:
+                    # Update A1_sum and A2_sum to account for worker-interaction terms
+                    if len(cat_tv_wi_cols + cat_tnv_wi_cols + cts_tv_wi_cols + cts_tnv_wi_cols) > 0:
+                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
+                    else:
+                        A1_sum_l, A2_sum_l = [0] * 2
                     ## Compute XwY terms ##
-                    XwY[l_index: r_index] = GG1_weighted @ Y1_adj
-                    XwY[ts + l_index: ts + r_index] = GG2_weighted @ Y2_adj
-                del GG1_weighted, GG2_weighted
+                    XwY[l_index: r_index] = GG1_weighted @ (Y1_adj - A1_sum_l)
+                    XwY[ts + l_index: ts + r_index] = GG2_weighted @ (Y2_adj - A2_sum_l)
+            del GG1_weighted, GG2_weighted
 
             # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
             XwX = np.diag(XwXd)
@@ -865,122 +1212,423 @@ class BLMModel:
                     # stop
                     pass
 
-            ## Update A - independent split columns ##
-            for split_col in custom_indep_split_cols:
-                n_split = custom_indep_split_dict[split_col]
-                Y1_adj += A1_indep[split_col][C1[split_col]]
-                Y2_adj += A2_indep[split_col][C2[split_col]]
+            ### Categorical ###
+            ## Worker-interaction ##
+            # Time-varying #
+            for col in cat_tv_wi_cols:
+                col_n = cat_tv_wi_dict[col]['n']
                 for l in range(nl):
-                    l_index, r_index = l * n_split, (l + 1) * n_split
+                    l_index, r_index = l * col_n, (l + 1) * col_n
                     ## Compute shared terms ##
-                    CC1_weighted = CC1[split_col].T @ diags(qi[:, l] / S1_indep[split_col][C1[split_col]])
-                    CC2_weighted = CC2[split_col].T @ diags(qi[:, l] / S2_indep[split_col][C2[split_col]])
-                    ## Compute XwXd_split terms ##
-                    XwXd_split[split_col][l_index: r_index] = (CC1_weighted @ CC1[split_col]).diagonal()
-                    XwXd_split[split_col][ts_split[split_col] + l_index: ts_split[split_col] + r_index] = (CC2_weighted @ CC2[split_col]).diagonal()
+                    CC1_weighted = CC1[col].T @ diags(qi[:, l] / S1_cat_wi[col][l, C1[col]])
+                    CC2_weighted = CC2[col].T @ diags(qi[:, l] / S2_cat_wi[col][l, C2[col]])
+                    ## Compute XwXd_cat_tv_wi terms ##
+                    XwXd_cat_tv_wi[col][l_index: r_index] = (CC1_weighted @ CC1[col]).diagonal()
+                    XwXd_cat_tv_wi[col][ts_cat_tv_wi[col] + l_index: ts_cat_tv_wi[col] + r_index] = (CC2_weighted @ CC2[col]).diagonal()
                     if params['update_a']:
-                        ## Compute XwY_split terms ##
-                        idx_one = (l, G1, *[C1[col] for col in custom_dep_cols])
-                        idx_two = (l, G2, *[C2[col] for col in custom_dep_cols])
-                        XwY_split[split_col][l_index: r_index] = CC1_weighted @ (Y1_adj - A1[idx_one])
-                        XwY_split[split_col][ts_split[split_col] + l_index: ts_split[split_col] + r_index] = CC2_weighted @ (Y2_adj - A2[idx_two])
-                        del idx_one, idx_two
+                        # Update A1_sum and A2_sum to account for worker-interaction terms
+                        if len(cat_tnv_wi_cols + cts_tv_wi_cols + cts_tnv_wi_cols) > 0:
+                            A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
+                        else:
+                            A1_sum_l, A2_sum_l = [0] * 2
+                        ## Compute XwY_cat_tv_wi terms ##
+                        XwY_cat_tv_wi[col][l_index: r_index] = CC1_weighted @ (Y1_adj - (A1_sum_l - A1_cat_wi[col][l, C1[col]]) - A1[l, G1])
+                        XwY_cat_tv_wi[col][ts_cat_tv_wi[col] + l_index: ts_cat_tv_wi[col] + r_index] = CC2_weighted @ (Y2_adj - (A2_sum_l - A2_cat_wi[col][l, C2[col]]) - A2[l, G2])
                 del CC1_weighted, CC2_weighted
 
                 # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
-                XwXd_split[split_col] = np.diag(XwXd_split[split_col])
+                XwXd_cat_tv_wi[col] = np.diag(XwXd_cat_tv_wi[col])
                 if params['update_a']:
                     try:
-                        split_solver = cons_a_split[split_col]
-                        split_solver.solve(XwXd_split[split_col], -XwY_split[split_col])
-                        A1_indep[split_col] = split_solver.res[: len(split_solver.res) // 2][: n_split]
-                        A2_indep[split_col] = split_solver.res[len(split_solver.res) // 2:][: n_split]
-                        
+                        a_solver = cons_a_cat_tv_wi[col]
+                        a_solver.solve(XwXd_cat_tv_wi[col], -XwY_cat_tv_wi[col])
+                        A1_cat_wi[col] = np.reshape(a_solver.res[: len(a_solver.res) // 2], (nl, col_n))
+                        A2_cat_wi[col] = np.reshape(a_solver.res[len(a_solver.res) // 2:], (nl, col_n))
+
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
                         if params['verbose'] in [1, 2]:
                             print(f'{e}, passing 1')
                         # stop
                         pass
-
-                Y1_adj -= A1_indep[split_col][C1[split_col]]
-                Y2_adj -= A2_indep[split_col][C2[split_col]]
-
-            ## Update A - independent no-split columns ##
-            for nosplit_col in custom_indep_nosplit_cols:
-                n_nosplit = custom_indep_nosplit_dict[nosplit_col]
-                Y1_adj += A_indep[nosplit_col][C[nosplit_col]]
-                Y2_adj += A_indep[nosplit_col][C[nosplit_col]]
+            # Time non-varying #
+            for col in cat_tnv_wi_cols:
+                col_n = cat_tnv_wi_dict[col]['n']
                 for l in range(nl):
-                    l_index, r_index = l * n_nosplit, (l + 1) * n_nosplit
+                    l_index, r_index = l * col_n, (l + 1) * col_n
                     ## Compute shared terms ##
-                    CC_weighted = CC[nosplit_col].T @ diags(qi[:, l] / S_indep[nosplit_col][C[nosplit_col]])
-                    ## Compute XwXd_nosplit terms ##
-                    XwXd_nosplit[nosplit_col][l_index: r_index] = (CC_weighted @ CC[nosplit_col]).diagonal()
-                    XwXd_nosplit[nosplit_col][ts_nosplit[nosplit_col] + l_index: ts_nosplit[nosplit_col] + r_index] = XwXd_nosplit[nosplit_col][l_index: r_index]
+                    CC1_weighted = CC1[col].T @ diags(qi[:, l] / S_cat_wi[col][l, C1[col]])
+                    CC2_weighted = CC2[col].T @ diags(qi[:, l] / S_cat_wi[col][l, C2[col]])
+                    ## Compute XwXd_cat_tnv_wi terms ##
+                    XwXd_cat_tnv_wi[col][l_index: r_index] = (CC1_weighted @ CC1[col]).diagonal()
+                    XwXd_cat_tnv_wi[col][ts_cat_tnv_wi[col] + l_index: ts_cat_tnv_wi[col] + r_index] = (CC2_weighted @ CC2[col]).diagonal()
                     if params['update_a']:
-                        ## Compute XwY_nosplit terms ##
-                        idx_one = (l, G1, *[C1[col] for col in custom_dep_cols])
-                        idx_two = (l, G2, *[C2[col] for col in custom_dep_cols])
-                        XwY_nosplit[nosplit_col][l_index: r_index] = CC_weighted @ (Y1_adj - A1[idx_one])
-                        XwY_nosplit[nosplit_col][ts_nosplit[nosplit_col] + l_index: ts_nosplit[nosplit_col] + r_index] = CC_weighted @ (Y2_adj - A2[idx_two])
-                        del idx_one, idx_two
-                del CC_weighted
+                        # Update A1_sum and A2_sum to account for worker-interaction terms
+                        if len(cat_tv_wi_cols + cts_tv_wi_cols + cts_tnv_wi_cols) > 0:
+                            A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
+                        else:
+                            A1_sum_l, A2_sum_l = [0] * 2
+                        ## Compute XwY_cat_tnv_wi terms ##
+                        XwY_cat_tnv_wi[col][l_index: r_index] = CC1_weighted @ (Y1_adj - (A1_sum_l - A_cat_wi[col][l, C1[col]]) - A1[l, G1])
+                        XwY_cat_tnv_wi[col][ts_cat_tnv_wi[col] + l_index: ts_cat_tnv_wi[col] + r_index] = CC2_weighted @ (Y2_adj - (A2_sum_l - A_cat_wi[col][l, C2[col]]) - A2[l, G2])
+                del CC1_weighted, CC2_weighted
 
                 # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
-                XwXd_nosplit[nosplit_col] = np.diag(XwXd_nosplit[nosplit_col])
+                XwXd_cat_tnv_wi[col] = np.diag(XwXd_cat_tnv_wi[col])
                 if params['update_a']:
                     try:
-                        nosplit_solver = cons_a_nosplit[nosplit_col]
-                        nosplit_solver.solve(XwXd_nosplit[nosplit_col], -XwY_nosplit[nosplit_col])
-                        A_indep[nosplit_col] = nosplit_solver.res[: len(nosplit_solver.res) // 2]
-                        
+                        a_solver = cons_a_cat_tnv_wi[col]
+                        a_solver.solve(XwXd_cat_tnv_wi[col], -XwY_cat_tnv_wi[col])
+                        A_cat_wi[col] = np.reshape(a_solver.res[: len(a_solver.res) // 2], (nl, col_n))
+
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
                         if params['verbose'] in [1, 2]:
                             print(f'{e}, passing 1')
                         # stop
                         pass
+            ## Non-worker-interaction ##
+            # Time-varying #
+            for col in cat_tv_cols:
+                col_n = cat_tv_dict[col]['n']
+                Y1_adj += A1_cat[col][C1[col]]
+                Y2_adj += A2_cat[col][C2[col]]
+                for l in range(nl):
+                    l_index, r_index = l * col_n, (l + 1) * col_n
+                    ## Compute shared terms ##
+                    CC1_weighted = CC1[col].T @ diags(qi[:, l] / S1_cat[col][C1[col]])
+                    CC2_weighted = CC2[col].T @ diags(qi[:, l] / S2_cat[col][C2[col]])
+                    ## Compute XwXd_cat_tv terms ##
+                    XwXd_cat_tv[col][l_index: r_index] = (CC1_weighted @ CC1[col]).diagonal()
+                    XwXd_cat_tv[col][ts_cat_tv[col] + l_index: ts_cat_tv[col] + r_index] = (CC2_weighted @ CC2[col]).diagonal()
+                    if params['update_a']:
+                        # Update A1_sum and A2_sum to account for worker-interaction terms
+                        if len(cat_tv_wi_cols + cat_tnv_wi_cols + cts_tv_wi_cols + cts_tnv_wi_cols) > 0:
+                            A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
+                        else:
+                            A1_sum_l, A2_sum_l = [0] * 2
+                        ## Compute XwY_cat_tv terms ##
+                        XwY_cat_tv[col][l_index: r_index] = CC1_weighted @ (Y1_adj - A1_sum_l - A1[l, G1])
+                        XwY_cat_tv[col][ts_cat_tv[col] + l_index: ts_cat_tv[col] + r_index] = CC2_weighted @ (Y2_adj - A2_sum_l - A2[l, G2])
+                del CC1_weighted, CC2_weighted
 
-                Y1_adj -= A_indep[nosplit_col][C[nosplit_col]]
-                Y2_adj -= A_indep[nosplit_col][C[nosplit_col]]
+                # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
+                XwXd_cat_tv[col] = np.diag(XwXd_cat_tv[col])
+                if params['update_a']:
+                    try:
+                        a_solver = cons_a_cat_tv[col]
+                        a_solver.solve(XwXd_cat_tv[col], -XwY_cat_tv[col])
+                        A1_cat[col] = a_solver.res[: len(a_solver.res) // 2][: col_n]
+                        A2_cat[col] = a_solver.res[len(a_solver.res) // 2:][: col_n]
 
-            if (len(custom_indep_split_cols) + len(custom_indep_nosplit_cols) > 0):
+                    except ValueError as e:
+                        # If constraints inconsistent, keep A1 and A2 the same
+                        if params['verbose'] in [1, 2]:
+                            print(f'{e}, passing 1')
+                        # stop
+                        pass
+                Y1_adj -= A1_cat[col][C1[col]]
+                Y2_adj -= A2_cat[col][C2[col]]
+            # Time non-varying #
+            for col in cat_tnv_cols:
+                col_n = cat_tnv_dict[col]['n']
+                Y1_adj += A_cat[col][C1[col]]
+                Y2_adj += A_cat[col][C2[col]]
+                for l in range(nl):
+                    l_index, r_index = l * col_n, (l + 1) * col_n
+                    ## Compute shared terms ##
+                    CC1_weighted = CC1[col].T @ diags(qi[:, l] / S_cat[col][C1[col]])
+                    CC2_weighted = CC2[col].T @ diags(qi[:, l] / S_cat[col][C2[col]])
+                    ## Compute XwXd_cat_tnv terms ##
+                    XwXd_cat_tnv[col][l_index: r_index] = (CC1_weighted @ CC1[col]).diagonal()
+                    XwXd_cat_tnv[col][ts_cat_tnv[col] + l_index: ts_cat_tnv[col] + r_index] = (CC2_weighted @ CC2[col]).diagonal()
+                    if params['update_a']:
+                        # Update A1_sum and A2_sum to account for worker-interaction terms
+                        if len(cat_tv_wi_cols + cat_tnv_wi_cols + cts_tv_wi_cols + cts_tnv_wi_cols) > 0:
+                            A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
+                        else:
+                            A1_sum_l, A2_sum_l = [0] * 2
+                        ## Compute XwY_cat_tnv terms ##
+                        XwY_cat_tnv[col][l_index: r_index] = CC1_weighted @ (Y1_adj - A1_sum_l - A1[l, G1])
+                        XwY_cat_tnv[col][ts_cat_tnv[col] + l_index: ts_cat_tnv[col] + r_index] = CC2_weighted @ (Y2_adj - A2_sum_l - A2[l, G2])
+                del CC1_weighted, CC2_weighted
+
+                # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
+                XwXd_cat_tnv[col] = np.diag(XwXd_cat_tnv[col])
+                if params['update_a']:
+                    try:
+                        a_solver = cons_a_cat_tnv[col]
+                        a_solver.solve(XwXd_cat_tnv[col], -XwY_cat_tnv[col])
+                        A_cat[col] = a_solver.res[: len(a_solver.res) // 2][: col_n]
+
+                    except ValueError as e:
+                        # If constraints inconsistent, keep A1 and A2 the same
+                        if params['verbose'] in [1, 2]:
+                            print(f'{e}, passing 1')
+                        # stop
+                        pass
+                Y1_adj -= A_cat[col][C1[col]]
+                Y2_adj -= A_cat[col][C2[col]]
+            ### Continuous ###
+            ## Worker-interaction ##
+            # Time-varying #
+            for col in cts_tv_wi_cols:
+                for l in range(nl):
+                    ## Compute shared terms ##
+                    CC1_weighted = C1[col].T @ diags(qi[:, l] / S1_cts_wi[col][l])
+                    CC2_weighted = C2[col].T @ diags(qi[:, l] / S2_cts_wi[col][l])
+                    ## Compute XwXd_cts_tv_wi terms ##
+                    XwXd_cts_tv_wi[col][l] = (CC1_weighted @ C1[col])
+                    XwXd_cts_tv_wi[col][nl + l] = (CC2_weighted @ C2[col])
+                    if params['update_a']:
+                        # Update A1_sum and A2_sum to account for worker-interaction terms
+                        if len(cat_tv_wi_cols + cat_tnv_wi_cols + cts_tnv_wi_cols) > 0:
+                            A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
+                        else:
+                            A1_sum_l, A2_sum_l = [0] * 2
+                        ## Compute XwY_cts_tv_wi terms ##
+                        XwY_cts_tv_wi[col][l] = CC1_weighted @ (Y1_adj - (A1_sum_l - A1_cts_wi[col][l] * C1[col]) - A1[l, G1])
+                        XwY_cts_tv_wi[col][nl + l] = CC2_weighted @ (Y2_adj - (A2_sum_l - A2_cts_wi[col][l] * C2[col]) - A2[l, G2])
+                del CC1_weighted, CC2_weighted
+
+                # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
+                XwXd_cts_tv_wi[col] = np.diag(XwXd_cts_tv_wi[col])
+                if params['update_a']:
+                    try:
+                        a_solver = cons_a_cts_tv_wi[col]
+                        a_solver.solve(XwXd_cts_tv_wi[col], -XwY_cts_tv_wi[col])
+                        A1_cts_wi[col] = a_solver.res[: len(a_solver.res) // 2]
+                        A2_cts_wi[col] = a_solver.res[len(a_solver.res) // 2:]
+
+                    except ValueError as e:
+                        # If constraints inconsistent, keep A1 and A2 the same
+                        if params['verbose'] in [1, 2]:
+                            print(f'{e}, passing 1')
+                        # stop
+                        pass
+            # Time non-varying #
+            for col in cts_tnv_wi_cols:
+                for l in range(nl):
+                    ## Compute shared terms ##
+                    CC1_weighted = C1[col].T @ diags(qi[:, l] / S_cts_wi[col][l])
+                    CC2_weighted = C2[col].T @ diags(qi[:, l] / S_cts_wi[col][l])
+                    ## Compute XwXd_cts_tnv_wi terms ##
+                    XwXd_cts_tnv_wi[col][l] = (CC1_weighted @ C1[col])
+                    XwXd_cts_tnv_wi[col][nl + l] = (CC2_weighted @ C2[col])
+                    if params['update_a']:
+                        # Update A1_sum and A2_sum to account for worker-interaction terms
+                        if len(cat_tv_wi_cols + cat_tnv_wi_cols + cts_tv_wi_cols) > 0:
+                            A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
+                        else:
+                            A1_sum_l, A2_sum_l = [0] * 2
+                        ## Compute XwY_cts_tnv_wi terms ##
+                        XwY_cts_tnv_wi[col][l] = CC1_weighted @ (Y1_adj - (A1_sum_l - A_cts_wi[col][l] * C1[col]) - A1[l, G1])
+                        XwY_cts_tnv_wi[col][nl + l] = CC2_weighted @ (Y2_adj - (A2_sum_l - A_cts_wi[col][l] * C2[col]) - A2[l, G2])
+                del CC1_weighted, CC2_weighted
+
+                # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
+                XwXd_cts_tnv_wi[col] = np.diag(XwXd_cts_tnv_wi[col])
+                if params['update_a']:
+                    try:
+                        a_solver = cons_a_cts_tnv_wi[col]
+                        a_solver.solve(XwXd_cts_tnv_wi[col], -XwY_cts_tnv_wi[col])
+                        A_cts_wi[col] = a_solver.res[: len(a_solver.res) // 2]
+
+                    except ValueError as e:
+                        # If constraints inconsistent, keep A1 and A2 the same
+                        if params['verbose'] in [1, 2]:
+                            print(f'{e}, passing 1')
+                        # stop
+                        pass
+            ## Non-worker-interaction ##
+            # Time-varying #
+            for col in cts_tv_cols:
+                Y1_adj += A1_cts[col] * C1[col]
+                Y2_adj += A2_cts[col] * C2[col]
+                for l in range(nl):
+                    ## Compute shared terms ##
+                    CC1_weighted = C1[col].T @ diags(qi[:, l] / S1_cts[col])
+                    CC2_weighted = C2[col].T @ diags(qi[:, l] / S2_cts[col])
+                    ## Compute XwXd_cts_tv terms ##
+                    XwXd_cts_tv[col][l] = (CC1_weighted @ C1[col])
+                    XwXd_cts_tv[col][nl + l] = (CC2_weighted @ C2[col])
+                    if params['update_a']:
+                        # Update A1_sum and A2_sum to account for worker-interaction terms
+                        if len(cat_tv_wi_cols + cat_tnv_wi_cols + cts_tv_wi_cols + cts_tnv_wi_cols) > 0:
+                            A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
+                        else:
+                            A1_sum_l, A2_sum_l = [0] * 2
+                        ## Compute XwY_cts_tv terms ##
+                        XwY_cts_tv[col][l] = CC1_weighted @ (Y1_adj - A1_sum_l - A1[l, G1])
+                        XwY_cts_tv[col][nl + l] = CC2_weighted @ (Y2_adj - A2_sum_l - A2[l, G2])
+                del CC1_weighted, CC2_weighted
+
+                # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
+                XwXd_cts_tv[col] = np.diag(XwXd_cts_tv[col])
+                if params['update_a']:
+                    try:
+                        a_solver = cons_a_cts_tv[col]
+                        a_solver.solve(XwXd_cts_tv[col], -XwY_cts_tv[col])
+                        A1_cts[col] = a_solver.res[: len(a_solver.res) // 2][0]
+                        A2_cts[col] = a_solver.res[len(a_solver.res) // 2:][0]
+
+                    except ValueError as e:
+                        # If constraints inconsistent, keep A1 and A2 the same
+                        if params['verbose'] in [1, 2]:
+                            print(f'{e}, passing 1')
+                        # stop
+                        pass
+                Y1_adj -= A1_cts[col] * C1[col]
+                Y2_adj -= A2_cts[col] * C2[col]
+            # Time non-varying #
+            for col in cts_tnv_cols:
+                Y1_adj += A_cts[col] * C1[col]
+                Y2_adj += A_cts[col] * C2[col]
+                for l in range(nl):
+                    ## Compute shared terms ##
+                    CC1_weighted = C1[col].T @ diags(qi[:, l] / S_cts[col])
+                    CC2_weighted = C2[col].T @ diags(qi[:, l] / S_cts[col])
+                    ## Compute XwXd_cts_tnv terms ##
+                    XwXd_cts_tnv[col][l] = (CC1_weighted @ C1[col])
+                    XwXd_cts_tnv[col][nl + l] = (CC2_weighted @ C2[col])
+                    if params['update_a']:
+                        # Update A1_sum and A2_sum to account for worker-interaction terms
+                        if len(cat_tv_wi_cols + cat_tnv_wi_cols + cts_tv_wi_cols + cts_tnv_wi_cols) > 0:
+                            A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
+                        else:
+                            A1_sum_l, A2_sum_l = [0] * 2
+                        ## Compute XwY_cts_tnv terms ##
+                        XwY_cts_tnv[col][l] = CC1_weighted @ (Y1_adj - A1_sum_l - A1[l, G1])
+                        XwY_cts_tnv[col][nl + l] = CC2_weighted @ (Y2_adj - A2_sum_l - A2[l, G2])
+                del CC1_weighted, CC2_weighted
+
+                # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
+                XwXd_cts_tnv[col] = np.diag(XwXd_cts_tnv[col])
+                if params['update_a']:
+                    try:
+                        a_solver = cons_a_cts_tnv[col]
+                        a_solver.solve(XwXd_cts_tnv[col], -XwY_cts_tnv[col])
+                        A_cts[col] = a_solver.res[: len(a_solver.res) // 2][0]
+
+                    except ValueError as e:
+                        # If constraints inconsistent, keep A1 and A2 the same
+                        if params['verbose'] in [1, 2]:
+                            print(f'{e}, passing 1')
+                        # stop
+                        pass
+                Y1_adj -= A_cts[col] * C1[col]
+                Y2_adj -= A_cts[col] * C2[col]
+
+            if len(cat_tv_cols + cat_tnv_cols + cts_tv_cols + cts_tnv_cols) > 0:
                 # Update A1_sum and A2_sum
                 A1_sum = Y1 - Y1_adj
                 A2_sum = Y2 - Y2_adj
 
             if params['update_s']:
                 # Next we extract the variances
-                XwS = np.zeros(shape=2 * ts)
+                if iter == 0:
+                    XwS = np.zeros(shape=2 * ts)
 
-                if len(custom_indep_split_cols) > 0:
-                    XwS_split = {col: np.zeros(shape=2 * col_ts_split) for col, col_ts_split in ts_split.items()}
-                if len(custom_indep_nosplit_cols) > 0:
-                    XwS_nosplit = {col: np.zeros(shape=2 * col_ts_nosplit) for col, col_ts_nosplit in ts_nosplit.items()}
-                
+                    ### Categorical ###
+                    ## Worker-interaction ##
+                    # Time-varying #
+                    if len(cat_tv_wi_cols) > 0:
+                        XwS_cat_tv_wi = {col: np.zeros(shape=2 * col_ts_cat_tv_wi) for col, col_ts_cat_tv_wi in ts_cat_tv_wi.items()}
+                    # Time non-varying #
+                    if len(cat_tnv_wi_cols) > 0:
+                        XwS_cat_tnv_wi = {col: np.zeros(shape=2 * col_ts_cat_tnv_wi) for col, col_ts_cat_tnv_wi in ts_cat_tnv_wi.items()}
+                    ## Non-worker-interaction ##
+                    # Time-varying #
+                    if len(cat_tv_cols) > 0:
+                        XwS_cat_tv = {col: np.zeros(shape=2 * col_ts_cat_tv) for col, col_ts_cat_tv in ts_cat_tv.items()}
+                    # Time non-varying #
+                    if len(cat_tnv_cols) > 0:
+                        XwS_cat_tnv = {col: np.zeros(shape=2 * col_ts_cat_tnv) for col, col_ts_cat_tnv in ts_cat_tnv.items()}
+                    ### Continuous ###
+                    ## Worker-interaction ##
+                    # Time-varying #
+                    if len(cts_tv_wi_cols) > 0:
+                        XwS_cts_tv_wi = {col: np.zeros(shape=2 * nl) for col in cts_tv_wi_cols}
+                    # Time non-varying #
+                    if len(cts_tnv_wi_cols) > 0:
+                        XwS_cts_tnv_wi = {col: np.zeros(shape=2 * nl) for col in cts_tnv_wi_cols}
+                    ## Non-worker-interaction ##
+                    # Time-varying #
+                    if len(cts_tv_cols) > 0:
+                        XwS_cts_tv = {col: np.zeros(shape=2 * nl) for col in cts_tv_cols}
+                    # Time non-varying #
+                    if len(cts_tnv_cols) > 0:
+                        XwS_cts_tnv = {col: np.zeros(shape=2 * nl) for col in cts_tnv_cols}
+
                 ## Update S ##
                 for l in range(nl):
-                    # Generate indices
-                    idx_one = (l, G1, *[C1[col] for col in self.custom_dep_cols])
-                    idx_two = (l, G2, *[C2[col] for col in self.custom_dep_cols])
+                    # Update A1_sum and A2_sum to account for worker-interaction terms
+                    if len(cat_tv_wi_cols + cat_tnv_wi_cols + cts_tv_wi_cols + cts_tnv_wi_cols) > 0:
+                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
+                    else:
+                        A1_sum_l, A2_sum_l = [0] * 2
+                    eps1_l_sq = (Y1_adj - A1_sum_l - A1[l, G1]) ** 2
+                    eps2_l_sq = (Y2_adj - A2_sum_l - A2[l, G2]) ** 2
                     ## XwS terms ##
                     l_index, r_index = l * nk, (l + 1) * nk
-                    XwS[l_index: r_index] = GG1.T @ diags(qi[:, l] / S1[idx_one]) @ ((Y1_adj - A1[idx_one]) ** 2)
-                    XwS[ts + l_index: ts + r_index] = GG2.T @ diags(qi[:, l] / S2[idx_two]) @ ((Y2_adj - A2[idx_two]) ** 2)
-                    for split_col in custom_indep_split_cols:
-                        ## XwS_split terms ##
-                        l_index, r_index = l * n_split, (l + 1) * n_split
-                        XwS_split[split_col][l_index: r_index] = CC1[split_col].T @ diags(qi[:, l] / S1_indep[split_col][C1[split_col]]) @ ((Y1_adj - A1[idx_one]) ** 2)
-                        XwS_split[split_col][ts_split[split_col] + l_index: ts_split[split_col] + r_index] = CC2[split_col].T @ diags(qi[:, l] / S2_indep[split_col][C2[split_col]]) @ ((Y2_adj - A2[idx_two]) ** 2)
-                    for nosplit_col in custom_indep_nosplit_cols:
-                        ## XwS_nosplit terms ##
-                        l_index, r_index = l * n_nosplit, (l + 1) * n_nosplit
-                        lhs_l = CC[nosplit_col].T @ diags(qi[:, l] / S_indep[nosplit_col][C[nosplit_col]])
-                        XwS_nosplit[nosplit_col][l_index: r_index] = lhs_l @ ((Y1_adj - A1[idx_one]) ** 2)
-                        XwS_nosplit[nosplit_col][ts_nosplit[nosplit_col] + l_index: ts_nosplit[nosplit_col] + r_index] = idx_two @ ((Y2_adj - A2[idx_two]) ** 2)
-                        del lhs_l
-                    del idx_one, idx_two
+                    XwS[l_index: r_index] = GG1.T @ diags(qi[:, l] / S1[l, G1]) @ eps1_l_sq
+                    XwS[ts + l_index: ts + r_index] = GG2.T @ diags(qi[:, l] / S2[l, G2]) @ eps2_l_sq
+                    ### Categorical ###
+                    ## Worker-interaction ##
+                    # Time-varying #
+                    for col in cat_tv_wi_cols:
+                        col_n = cat_tv_wi_dict[col]['n']
+                        ## XwS_cat_tv_wi terms ##
+                        l_index, r_index = l * col_n, (l + 1) * col_n
+                        XwS_cat_tv_wi[col][l_index: r_index] = CC1[col].T @ diags(qi[:, l] / S1_cat_wi[col][l, C1[col]]) @ eps1_l_sq
+                        XwS_cat_tv_wi[col][ts_cat_tv_wi[col] + l_index: ts_cat_tv_wi[col] + r_index] = CC2[col].T @ diags(qi[:, l] / S2_cat_wi[col][l, C2[col]]) @ eps2_l_sq
+                    # Time non-varying #
+                    for col in cat_tnv_wi_cols:
+                        col_n = cat_tnv_wi_dict[col]['n']
+                        ## XwS_cat_tnv_wi terms ##
+                        l_index, r_index = l * col_n, (l + 1) * col_n
+                        XwS_cat_tnv_wi[col][l_index: r_index] = CC1[col].T @ diags(qi[:, l] / S_cat_wi[col][l, C1[col]]) @ eps1_l_sq
+                        XwS_cat_tnv_wi[col][ts_cat_tnv_wi[col] + l_index: ts_cat_tnv_wi[col] + r_index] = CC2[col].T @ diags(qi[:, l] / S_cat_wi[col][l, C2[col]]) @ eps2_l_sq
+                    ## Non-worker-interaction ##
+                    # Time-varying #
+                    for col in cat_tv_cols:
+                        col_n = cat_tv_dict[col]['n']
+                        ## XwS_cat_tv terms ##
+                        l_index, r_index = l * col_n, (l + 1) * col_n
+                        XwS_cat_tv[col][l_index: r_index] = CC1[col].T @ diags(qi[:, l] / S1_cat[col][C1[col]]) @ eps1_l_sq
+                        XwS_cat_tv[col][ts_cat_tv[col] + l_index: ts_cat_tv[col] + r_index] = CC2[col].T @ diags(qi[:, l] / S2_cat[col][C2[col]]) @ eps2_l_sq
+                    # Time non-varying #
+                    for col in cat_tnv_cols:
+                        col_n = cat_tnv_dict[col]['n']
+                        ## XwS_cat_tnv terms ##
+                        l_index, r_index = l * col_n, (l + 1) * col_n
+                        XwS_cat_tnv[col][l_index: r_index] = CC1[col].T @ diags(qi[:, l] / S_cat[col][C1[col]]) @ eps1_l_sq
+                        XwS_cat_tnv[col][ts_cat_tnv[col] + l_index: ts_cat_tnv[col] + r_index] = CC2[col].T @ diags(qi[:, l] / S_cat[col][C2[col]]) @ eps2_l_sq
+                    ### Continuous ###
+                    ## Worker-interaction ##
+                    # Time-varying #
+                    for col in cts_tv_wi_cols:
+                        ## XwS_cts_tv_wi terms ##
+                        XwS_cts_tv_wi[col][l] = C1[col].T @ diags(qi[:, l] / S1_cts_wi[col][l]) @ eps1_l_sq
+                        XwS_cts_tv_wi[col][nl + l] = C2[col].T @ diags(qi[:, l] / S2_cts_wi[col][l]) @ eps2_l_sq
+                    # Time non-varying #
+                    for col in cts_tnv_wi_cols:
+                        ## XwS_cts_tnv_wi terms ##
+                        XwS_cts_tnv_wi[col][l] = C1[col].T @ diags(qi[:, l] / S_cts_wi[col][l]) @ eps1_l_sq
+                        XwS_cts_tnv_wi[col][nl + l] = C2[col].T @ diags(qi[:, l] / S_cts_wi[col][l]) @ eps2_l_sq
+                    ## Non-worker-interaction ##
+                    # Time-varying #
+                    for col in cts_tv_cols:
+                        ## XwS_cts_tv terms ##
+                        XwS_cts_tv[col][l] = C1[col].T @ diags(qi[:, l] / S1_cts[col]) @ eps1_l_sq
+                        XwS_cts_tv[col][nl + l] = C2[col].T @ diags(qi[:, l] / S2_cts[col]) @ eps2_l_sq
+                    # Time non-varying #
+                    for col in cts_tnv_cols:
+                        ## XwS_cts_tnv terms ##
+                        XwS_cts_tnv[col][l] = C1[col].T @ diags(qi[:, l] / S_cts[col]) @ eps1_l_sq
+                        XwS_cts_tnv[col][nl + l] = C2[col].T @ diags(qi[:, l] / S_cts[col]) @ eps2_l_sq
+
+                del eps1_l_sq, eps2_l_sq
 
                 try:
                     cons_s.solve(XwX, -XwS)
@@ -994,29 +1642,122 @@ class BLMModel:
                         print(f'{e}, passing 2')
                     # stop
                     pass
-                if len(custom_indep_split_cols) > 0:
+                ### Categorical ###
+                ## Worker-interaction ##
+                # Time-varying #
+                for col in cat_tv_wi_cols:
                     try:
-                        split_solver = cons_s_split[split_col]
-                        split_solver.solve(XwXd_split[split_col], -XwS_split[split_col])
-                        S1_indep[split_col] = np.sqrt(split_solver.res[: len(split_solver.res) // 2][: n_split])
-                        S2_indep[split_col] = np.sqrt(split_solver.res[len(split_solver.res) // 2:][: n_split])
-                        
+                        col_n = cat_tv_wi_dict[col]['n']
+                        s_solver = cons_s_cat_tv_wi[col]
+                        s_solver.solve(XwXd_cat_tv_wi[col], -XwS_cat_tv_wi[col])
+                        S1_cat_wi[col] = np.sqrt(np.reshape(s_solver.res[: len(s_solver.res) // 2], (nl, col_n)))
+                        S2_cat_wi[col] = np.sqrt(np.reshape(s_solver.res[len(s_solver.res) // 2:], (nl, col_n)))
+
                     except ValueError as e:
                         # If constraints inconsistent, keep S1 and S2 the same
                         if params['verbose'] in [1, 2]:
-                            print(f'{e}, passing 2')
+                            print(f'{e}, passing 2 for column {col!r}')
                         # stop
                         pass
-                if len(custom_indep_nosplit_cols) > 0:
+                # Time non-varying #
+                for col in cat_tnv_wi_cols:
                     try:
-                        nosplit_solver = cons_s_nosplit[nosplit_col]
-                        nosplit_solver.solve(XwXd_nosplit[nosplit_col], -XwS_nosplit[nosplit_col])
-                        S_indep[nosplit_col] = np.sqrt(nosplit_solver.res[: len(nosplit_solver.res) // 2])
-                        
+                        col_n = cat_tnv_wi_dict[col]['n']
+                        s_solver = cons_s_cat_tnv_wi[col]
+                        s_solver.solve(XwXd_cat_tnv_wi[col], -XwS_cat_tnv_wi[col])
+                        S_cat_wi[col] = np.sqrt(np.reshape(s_solver.res[: len(s_solver.res) // 2], (nl, col_n)))
+
                     except ValueError as e:
                         # If constraints inconsistent, keep S1 and S2 the same
                         if params['verbose'] in [1, 2]:
-                            print(f'{e}, passing 2')
+                            print(f'{e}, passing 2 for column {col!r}')
+                        # stop
+                        pass
+                ## Non-worker-interaction ##
+                # Time-varying #
+                for col in cat_tv_cols:
+                    try:
+                        col_n = cat_tv_dict[col]['n']
+                        s_solver = cons_s_cat_tv[col]
+                        s_solver.solve(XwXd_cat_tv[col], -XwS_cat_tv[col])
+                        S1_cat[col] = np.sqrt(s_solver.res[: len(s_solver.res) // 2][: col_n])
+                        S2_cat[col] = np.sqrt(s_solver.res[len(s_solver.res) // 2:][: col_n])
+
+                    except ValueError as e:
+                        # If constraints inconsistent, keep S1 and S2 the same
+                        if params['verbose'] in [1, 2]:
+                            print(f'{e}, passing 2 for column {col!r}')
+                        # stop
+                        pass
+                # Time non-varying #
+                for col in cat_tnv_cols:
+                    try:
+                        col_n = cat_tnv_dict[col]['n']
+                        s_solver = cons_s_cat_tnv[col]
+                        s_solver.solve(XwXd_cat_tnv[col], -XwS_cat_tnv[col])
+                        S_cat[col] = np.sqrt(s_solver.res[: len(s_solver.res) // 2][: col_n])
+
+                    except ValueError as e:
+                        # If constraints inconsistent, keep S1 and S2 the same
+                        if params['verbose'] in [1, 2]:
+                            print(f'{e}, passing 2 for column {col!r}')
+                        # stop
+                        pass
+                ### Continuous ###
+                ## Worker-interaction ##
+                # Time-varying #
+                for col in cts_tv_wi_cols:
+                    try:
+                        s_solver = cons_s_cts_tv_wi[col]
+                        s_solver.solve(XwXd_cts_tv_wi[col], -XwS_cts_tv_wi[col])
+                        S1_cts_wi[col] = np.sqrt(s_solver.res[: len(s_solver.res) // 2])
+                        S2_cts_wi[col] = np.sqrt(s_solver.res[len(s_solver.res) // 2:])
+
+                    except ValueError as e:
+                        # If constraints inconsistent, keep S1 and S2 the same
+                        if params['verbose'] in [1, 2]:
+                            print(f'{e}, passing 2 for column {col!r}')
+                        # stop
+                        pass
+                # Time non-varying #
+                for col in cts_tnv_wi_cols:
+                    try:
+                        s_solver = cons_s_cts_tnv_wi[col]
+                        s_solver.solve(XwXd_cts_tnv_wi[col], -XwS_cts_tnv_wi[col])
+                        S_cts_wi[col] = np.sqrt(s_solver.res[: len(s_solver.res) // 2])
+
+                    except ValueError as e:
+                        # If constraints inconsistent, keep S1 and S2 the same
+                        if params['verbose'] in [1, 2]:
+                            print(f'{e}, passing 2 for column {col!r}')
+                        # stop
+                        pass
+                ## Non-worker-interaction ##
+                # Time-varying #
+                for col in cts_tv_cols:
+                    try:
+                        s_solver = cons_s_cts_tv[col]
+                        s_solver.solve(XwXd_cts_tv[col], -XwS_cts_tv[col])
+                        S1_cts[col] = np.sqrt(s_solver.res[: len(s_solver.res) // 2][0])
+                        S2_cts[col] = np.sqrt(s_solver.res[len(s_solver.res) // 2:][0])
+
+                    except ValueError as e:
+                        # If constraints inconsistent, keep S1 and S2 the same
+                        if params['verbose'] in [1, 2]:
+                            print(f'{e}, passing 2 for column {col!r}')
+                        # stop
+                        pass
+                # Time non-varying #
+                for col in cts_tnv_cols:
+                    try:
+                        s_solver = cons_s_cts_tnv[col]
+                        s_solver.solve(XwXd_cts_tnv[col], -XwS_cts_tnv[col])
+                        S_cts[col] = np.sqrt(s_solver.res[: len(s_solver.res) // 2][0])
+
+                    except ValueError as e:
+                        # If constraints inconsistent, keep S1 and S2 the same
+                        if params['verbose'] in [1, 2]:
+                            print(f'{e}, passing 2 for column {col!r}')
                         # stop
                         pass
 
@@ -1050,12 +1791,14 @@ class BLMModel:
                 # for l in range(nl):
                 #     pk1[:, l] = GG12.T * qi[:, l]
                 # Normalize rows to sum to 1, and add dirichlet prior
-                # pk1 = np.maximum(pk1, 0) # FIXME this isn't okay, but it prevents a bug with NaNs
                 pk1 += d_prior - 1
                 pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
 
         self.A1, self.A2, self.S1, self.S2 = A1, A2, S1, S2
-        self.A1_indep, self.A2_indep, self.A_indep, self.S1_indep, self.S2_indep, self.S_indep = A1_indep, A2_indep, A_indep, S1_indep, S2_indep, S_indep
+        self.A1_cat_wi, self.A2_cat_wi, self.A_cat_wi, self.S1_cat_wi, self.S2_cat_wi, self.S_cat_wi = A1_cat_wi, A2_cat_wi, A_cat_wi, S1_cat_wi, S2_cat_wi, S_cat_wi
+        self.A1_cts_wi, self.A2_cts_wi, self.A_cts_wi, self.S1_cts_wi, self.S2_cts_wi, self.S_cts_wi = A1_cat, A2_cat, A_cat, S1_cat, S2_cat, S_cat = self.A1_cat, self.A2_cat, self.A_cat, self.S1_cat, self.S2_cat, self.S_cat
+        A1_cts_wi, A2_cts_wi, A_cts_wi, S1_cts_wi, S2_cts_wi, S_cts_wi
+        self.A1_cts, self.A2_cts, self.A_cts, self.S1_cts, self.S2_cts, self.S_cts = A1_cts, A2_cts, A_cts, S1_cts, S2_cts, S_cts
         self.pk1, self.lik1, self.liks1 = pk1, lik1, np.array(liks1)
 
         # Update NNm
@@ -1074,27 +1817,37 @@ class BLMModel:
         params = self.params
         nl, nk, ni = self.nl, self.nk, sdata.shape[0]
         A1, S1 = self.A1, self.S1
-        A1_indep, A_indep, S1_indep, S_indep = self.A1_indep, self.A_indep, self.S1_indep, self.S_indep
+        A1_cat, A2_cat, A_cat, S1_cat, S2_cat, S_cat = self.A1_cat, self.A2_cat, self.A_cat, self.S1_cat, self.S2_cat, self.S_cat
+        A1_cts, A2_cts, A_cts, S1_cts, S2_cts, S_cts = self.A1_cts, self.A2_cts, self.A_cts, self.S1_cts, self.S2_cts, self.S_cts
+        control_cols = self.control_cols
+        # Fix error from bad initial guesses causing probabilities to be too low
+        d_prior = params['d_prior_s']
 
         # Store wage outcomes and groups
         Y1 = sdata['y1'].to_numpy()
         G1 = sdata['g1'].to_numpy().astype(int)
-        # Control variables
-        C = {}
-        C1 = {}
-        for col in self.custom_cols:
+        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
+        if len(control_cols) > 0:
+            A2, S2 = self.A2, self.S2
+            Y2 = sdata['y1'].to_numpy()
+            G2 = sdata['g1'].to_numpy().astype(int)
+            GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
+            # Control variables
+            C1 = {}
+            C2 = {}
+        for col in control_cols:
             # Get subcolumns associated with col
             subcols = to_list(sdata.col_reference_dict[col])
-            if col in self.custom_indep_nosplit_cols:
+            if len(subcols) == 1:
                 # If parameter associated with column is constant over time
-                if len(subcols) != 1:
-                    raise NotImplementedError(f'No-split general columns must have one associated column, but {col!r} does not.')
-                C[col] = sdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
-            else:
-                # If parameter associated with column can change over time
-                if len(subcols) != 2:
-                    raise NotImplementedError(f'Split general columns must have two associated columns, but {col!r} does not.')
                 C1[col] = sdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
+                C2[col] = sdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
+            elif len(subcols) == 2:
+                # If parameter associated with column can change over time
+                C1[col] = sdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
+                C2[col] = sdata.loc[:, subcols[1]].to_numpy().astype(int, copy=False)
+            else:
+                raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {len(subcols)!r} associated subcolumns.')
 
         # Matrix of prior probabilities
         pk0 = self.pk0
@@ -1109,29 +1862,54 @@ class BLMModel:
         liks0 = []
         prev_lik = np.inf
 
-        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
-
-        if len(self.custom_cols) > len(self.custom_dep_cols):
-            # Custom columns
+        if len(control_cols) > 0:
+            # Control variables
             A1_sum = np.zeros(ni)
+            A2_sum = np.zeros(ni)
             S1_sum_sq = np.zeros(ni)
-            for col in self.custom_indep_nosplit_cols:
-                # If parameter associated with column is constant over time
-                A1_sum += A_indep[col][C[col]]
-                S1_sum_sq += S_indep[col][C[col]] ** 2
-            for col in self.custom_indep_split_cols:
-                # If parameter associated with column can change over time
-                A1_sum += A1_indep[col][C1[col]]
-                S1_sum_sq += S1_indep[col][C1[col]] ** 2
+            S2_sum_sq = np.zeros(ni)
+            ### Categorical ###
+            ## Non-worker-interaction ##
+            # Time-varying #
+            for col in self.cat_tv_cols:
+                A1_sum += A1_cat[col][C1[col]]
+                A2_sum += A2_cat[col][C2[col]]
+                S1_sum_sq += S1_cat[col][C1[col]] ** 2
+                S2_sum_sq += S2_cat[col][C2[col]] ** 2
+            # Time non-varying #
+            for col in self.cat_tnv_cols:
+                A1_sum += A_cat[col][C1[col]]
+                A2_sum += A_cat[col][C2[col]]
+                S1_sum_sq += S_cat[col][C1[col]] ** 2
+                S2_sum_sq += S_cat[col][C2[col]] ** 2
+            ### Continuous ###
+            ## Non-worker-interaction ##
+            # Time-varying #
+            for col in self.cts_tv_cols:
+                A1_sum += A1_cts[col] * C1[col]
+                A2_sum += A2_cts[col] * C2[col]
+                S1_sum_sq += S1_cts[col] ** 2
+                S2_sum_sq += S2_cts[col] ** 2
+            # Time non-varying #
+            for col in self.cts_tnv_cols:
+                A1_sum += A_cts[col] * C1[col]
+                A2_sum += A_cts[col] * C2[col]
+                S1_sum_sq += S_cts[col] ** 2
+                S2_sum_sq += S_cts[col] ** 2
 
             for l in range(nl):
-                idx_l = (l, G1, *[C1[col] for col in self.custom_dep_cols])
-                lp_stable[:, l] = lognormpdf(Y1, A1_sum + A1[idx_l], np.sqrt(S1_sum_sq + S1[idx_l] ** 2))
+                # Update A1_sum/S1_sum_sq to account for worker-interaction terms
+                if len(self.cat_tv_wi_cols + self.cat_tnv_wi_cols + self.cts_tv_wi_cols + self.cts_tnv_wi_cols) > 0:
+                    A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2)
+                else:
+                    A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = [0] * 4
+                lp1 = lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
+                lp2 = lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
+                lp_stable[:, l] = lp1 + lp2
+            del lp1, lp2
         else:
             for l in range(nl):
-                idx_l = (l, G1, *[C1[col] for col in self.custom_dep_cols])
-                lp_stable[:, l] = lognormpdf(Y1, A1[idx_l], S1[idx_l])
-        del idx_l
+                lp_stable[:, l] = lognormpdf(Y1, A1[l, G1], S1[l, G1])
 
         for iter in range(params['n_iters_stayers']):
 
@@ -1160,6 +1938,7 @@ class BLMModel:
             # for l in range(nl):
             #     pk0[:, l] = GG1.T * qi[:, l]
             # Normalize rows to sum to 1
+            pk0 += d_prior - 1
             pk0 = (pk0.T / np.sum(pk0, axis=1).T).T
 
         self.pk0, self.lik0, self.liks0 = pk0, lik0, np.array(liks0)
@@ -1265,10 +2044,9 @@ class BLMModel:
         '''
         Sort arrays by cluster means.
         '''
-        n_dims = len(self.A1.shape)
         nk = self.nk
         ## Sort worker effects ##
-        worker_effect_order = np.mean(self.A1, axis=tuple(range(n_dims)[1:])).argsort()
+        worker_effect_order = np.mean(self.A1, axis=1).argsort()
         self.A1 = self.A1[worker_effect_order, :]
         self.A2 = self.A2[worker_effect_order, :]
         self.S1 = self.S1[worker_effect_order, :]
@@ -1276,7 +2054,7 @@ class BLMModel:
         self.pk1 = self.pk1[:, worker_effect_order]
         self.pk0 = self.pk0[:, worker_effect_order]
         ## Sort firm effects ##
-        firm_effect_order = np.mean(self.A1, axis=(0, *range(n_dims)[2:])).argsort()
+        firm_effect_order = np.mean(self.A1, axis=0).argsort()
         self.A1 = self.A1[:, firm_effect_order]
         self.A2 = self.A2[:, firm_effect_order]
         self.S1 = self.S1[:, firm_effect_order]
@@ -1296,12 +2074,8 @@ class BLMModel:
         Arguments:
             dpi (float): dpi for plot
         '''
-        # Collapse by mean over control variables
-        # FIXME should this weight by number of observations per group?
-        n_dims = len(self.A1.shape)
-        sorted_A1 = np.mean(self.A1, axis=tuple(np.arange(n_dims)[2:]))
         # Sort A1 by average effect over firms
-        sorted_A1 = sorted_A1.T[np.mean(sorted_A1.T, axis=1).argsort()].T
+        sorted_A1 = self.A1.T[np.mean(self.A1.T, axis=1).argsort()].T
         sorted_A1 = sorted_A1[np.mean(sorted_A1, axis=1).argsort()]
 
         if dpi is not None:
