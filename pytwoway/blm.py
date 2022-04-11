@@ -37,35 +37,35 @@ _blm_params_default = ParamsDict({
         '''
             (default=10) Number of firm types.
         ''', '>= 1'),
-    'categorical_time_varying_worker_interaction_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+    'categorical_time_varying_worker_interaction_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
             (default=None) Dictionary linking column names to instances of tw.sim_categorical_time_varying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and can vary between the first and second periods. Run tw.sim_categorical_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'categorical_time_nonvarying_worker_interaction_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+    'categorical_time_nonvarying_worker_interaction_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
             (default=None) Dictionary linking column names to instances of tw.sim_categorical_time_nonvarying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and is the same in the first and second periods. Run tw.sim_categorical_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'categorical_time_varying_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+    'categorical_time_varying_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
             (default=None) Dictionary linking column names to instances of tw.sim_categorical_time_varying_params(). Each instance specifies a new control variable where the effect can vary between the first and second periods. Run tw.sim_categorical_time_varying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'categorical_time_nonvarying_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+    'categorical_time_nonvarying_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
             (default=None) Dictionary linking column names to instances of tw.sim_categorical_time_nonvarying_params(). Each instance specifies a new control variable where the effect is the same in the first and second periods. Run tw.sim_categorical_time_nonvarying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'continuous_time_varying_worker_interaction_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+    'continuous_time_varying_worker_interaction_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
             (default=None) Dictionary linking column names to instances of tw.sim_continuous_time_varying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and can vary between the first and second periods. Run tw.sim_continuous_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'continuous_time_nonvarying_worker_interaction_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+    'continuous_time_nonvarying_worker_interaction_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
             (default=None) Dictionary linking column names to instances of tw.sim_continuous_time_nonvarying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and is the same in the first and second periods. Run tw.sim_continuous_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'continuous_time_varying_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+    'continuous_time_varying_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
             (default=None) Dictionary linking column names to instances of tw.sim_continuous_time_varying_params(). Each instance specifies a new control variable where the effect can vary between the first and second periods. Run tw.sim_continuous_time_varying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'continuous_time_nonvarying_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+    'continuous_time_nonvarying_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
             (default=None) Dictionary linking column names to instances of tw.sim_continuous_time_nonvarying_params(). Each instance specifies a new control variable where the effect is the same in the first and second periods. Run tw.sim_continuous_time_nonvarying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
@@ -156,7 +156,7 @@ _blm_params_default = ParamsDict({
         '''
             (default=(['biggerthan'], {'gap_bigger': 1e-7, 'n_periods': 2})) Constraints on S1 and S2, where first entry gives list of constraints and second entry gives dictionary of constraint parameters.
         ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
-    'd_prior_j': (1.0001, 'type_constrained', ((float, int), _gteq1),
+    'd_prior_movers': (1.0001, 'type_constrained', ((float, int), _gteq1),
         '''
             (default=1.0001) Account for probabilities being too small by adding (d_prior - 1) to pk1.
         ''', '>= 1'),
@@ -169,24 +169,25 @@ _blm_params_default = ParamsDict({
         '''
             (default=1e-7) Threshold to break EM loop for stayers.
         ''', '>= 0'),
-    'd_prior_s': (1.0001, 'type_constrained', ((float, int), _gteq1),
+    'd_prior_stayers': (1.0001, 'type_constrained', ((float, int), _gteq1),
         '''
             (default=1.0001) Account for probabilities being too small by adding (d_prior - 1) to pk0.
         ''', '>= 1')
 })
 
-def blm_params(update_dict={}):
+def blm_params(update_dict=None):
     '''
     Dictionary of default blm_params. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values
+        update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
         (ParamsDict) dictionary of blm_params
     '''
     new_dict = _blm_params_default.copy()
-    new_dict.update(update_dict)
+    if update_dict is not None:
+        new_dict.update(update_dict)
     return new_dict
 
 _constraint_params_default = ParamsDict({
@@ -216,18 +217,19 @@ _constraint_params_default = ParamsDict({
         ''', None)
 })
 
-def constraint_params(update_dict={}):
+def constraint_params(update_dict=None):
     '''
     Dictionary of default constraint_params. Run tw.constraint_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values
+        update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
         (ParamsDict) dictionary of constraint_params
     '''
     new_dict = _constraint_params_default.copy()
-    new_dict.update(update_dict)
+    if update_dict is not None:
+        new_dict.update(update_dict)
     return new_dict
 
 class QPConstrained:
@@ -256,14 +258,16 @@ class QPConstrained:
         # Equality constraint bound
         self.b = np.array([])
 
-    def add_constraint_builtin(self, constraint, params=constraint_params()):
+    def add_constraint_builtin(self, constraint, params=None):
         '''
         Add a built-in constraint.
 
         Arguments:
             constraint (str): name of constraint to add
-            params (ParamsDict): dictionary of parameters for constraint. Run tw.constraint_params().describe_all() for descriptions of all valid parameters.
+            params (ParamsDict): dictionary of parameters for constraint. Run tw.constraint_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.constraint_params().
         '''
+        if params is None:
+            params = constraint_params()
         # Unpack attributes
         nl, nk = self.nl, self.nk
 
@@ -390,27 +394,38 @@ class QPConstrained:
         # Add constraints to attributes
         self.add_constraint_manual(G=G, h=h, A=A, b=b)
 
-    def add_constraints_builtin(self, constraints, params=constraint_params()):
+    def add_constraints_builtin(self, constraints, params=None):
         '''
         Add a built-in constraint.
 
         Arguments:
             constraints (list of str): names of constraints to add
-            params (ParamsDict): dictionary of parameters for constraints. Run tw.constraint_params().describe_all() for descriptions of all valid parameters.
+            params (ParamsDict): dictionary of parameters for constraints. Run tw.constraint_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.constraint_params().
         '''
+        if params is None:
+            params = constraint_params()
         for constraint in constraints:
             self.add_constraint_builtin(constraint=constraint, params=params)
 
-    def add_constraint_manual(self, G=np.array([]), h=np.array([]), A=np.array([]), b=np.array([])):
+    def add_constraint_manual(self, G=None, h=None, A=None, b=None):
         '''
         Manually add a constraint. If setting inequality constraints, must set both G and h to have the same dimension 0. If setting equality constraints, must set both A and b to have the same dimension 0.
 
         Arguments:
-            G (NumPy Array): inequality constraint matrix
-            h (NumPy Array): inequality constraint bound
-            A (NumPy Array): equality constraint matrix
-            b (NumPy Array): equality constraint bound
+            G (NumPy Array): inequality constraint matrix; None is equivalent to np.array([])
+            h (NumPy Array): inequality constraint bound; None is equivalent to np.array([])
+            A (NumPy Array): equality constraint matrix; None is equivalent to np.array([])
+            b (NumPy Array): equality constraint bound; None is equivalent to np.array([])
         '''
+        if G is None:
+            G = np.array([])
+        if h is None:
+            h = np.array([])
+        if A is None:
+            A = np.array([])
+        if b is None:
+            b = np.array([])
+
         if len(G) > 0:
             # If inequality constraints
             if len(self.G) > 0:
@@ -527,10 +542,12 @@ class BLMModel:
     Class for solving the BLM model using a single set of starting values.
 
     Arguments:
-        blm_params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
+        blm_params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.blm_params().
         rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
     '''
-    def __init__(self, blm_params=blm_params(), rng=None):
+    def __init__(self, blm_params=None, rng=None):
+        if blm_params is None:
+            blm_params = blm_params()
         if rng is None:
             rng = np.random.default_rng(None)
 
@@ -543,14 +560,14 @@ class BLMModel:
         self.rng = rng
 
         ## Unpack control variable parameters
-        cat_tv_wi_dict = self.params['categorical_time_varying_worker_interaction_controls_dict']
-        cat_tnv_wi_dict = self.params['categorical_time_nonvarying_worker_interaction_controls_dict']
-        cat_tv_dict = self.params['categorical_time_varying_controls_dict']
-        cat_tnv_dict = self.params['categorical_time_nonvarying_controls_dict']
-        cts_tv_wi_dict = self.params['continuous_time_varying_worker_interaction_controls_dict']
-        cts_tnv_wi_dict = self.params['continuous_time_nonvarying_worker_interaction_controls_dict']
-        cts_tv_dict = self.params['continuous_time_varying_controls_dict']
-        cts_tnv_dict = self.params['continuous_time_nonvarying_controls_dict']
+        cat_tv_wi_dict = self.params['categorical_time_varying_worker_interaction_dict']
+        cat_tnv_wi_dict = self.params['categorical_time_nonvarying_worker_interaction_dict']
+        cat_tv_dict = self.params['categorical_time_varying_dict']
+        cat_tnv_dict = self.params['categorical_time_nonvarying_dict']
+        cts_tv_wi_dict = self.params['continuous_time_varying_worker_interaction_dict']
+        cts_tnv_wi_dict = self.params['continuous_time_nonvarying_worker_interaction_dict']
+        cts_tv_dict = self.params['continuous_time_varying_dict']
+        cts_tnv_dict = self.params['continuous_time_nonvarying_dict']
         ## Check if control variable parameters are None
         if cat_tv_wi_dict is None:
             cat_tv_wi_dict = {}
@@ -881,7 +898,7 @@ class BLMModel:
         liks1 = []
         prev_lik = np.inf
         # Fix error from bad initial guesses causing probabilities to be too low
-        d_prior = params['d_prior_j']
+        d_prior = params['d_prior_movers']
 
         ### Constraints ###
         ## General ##
@@ -1179,10 +1196,6 @@ class BLMModel:
             # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
             XwX = np.diag(XwXd)
             if params['update_a']:
-                # print('A1 before:')
-                # print(A1)
-                # print('A2 before:')
-                # print(A2)
                 try:
                     cons_a.solve(XwX, -XwY)
                     res_a1, res_a2 = cons_a.res[: len(cons_a.res) // 2], cons_a.res[len(cons_a.res) // 2:]
@@ -1195,18 +1208,10 @@ class BLMModel:
                         print(f'{e}, passing 1 for A')
                     # stop
                     pass
-                # print('A1 after:')
-                # print(A1)
-                # print('A2 after:')
-                # print(A2)
 
             ### Categorical ###
             ## Worker-interaction ##
             # Time-varying #
-            # print('A1_cat_wi before:')
-            # print(A1_cat_wi)
-            # print('A2_cat_wi before:')
-            # print(A2_cat_wi)
             for col in cat_tv_wi_cols:
                 col_n = cat_tv_wi_dict[col]['n']
                 for l in range(nl):
@@ -1244,10 +1249,6 @@ class BLMModel:
                             print(f'{e}, passing 1 for column {col!r}')
                         # stop
                         pass
-            # print('A1_cat_wi after:')
-            # print(A1_cat_wi)
-            # print('A2_cat_wi after:')
-            # print(A2_cat_wi)
             # Time non-varying #
             for col in cat_tnv_wi_cols:
                 col_n = cat_tnv_wi_dict[col]['n']
@@ -1649,12 +1650,6 @@ class BLMModel:
                 ## Worker-interaction ##
                 # Time-varying #
                 for col in cat_tv_wi_cols:
-                    s1_prev = S1_cat_wi['cat_tv_wi_control'].copy()
-                    s2_prev = S2_cat_wi['cat_tv_wi_control'].copy()
-                    # print('S1_cat_wi before:')
-                    # print(S1_cat_wi)
-                    # print('S2_cat_wi before:')
-                    # print(S2_cat_wi)
                     try:
                         col_n = cat_tv_wi_dict[col]['n']
                         s_solver = cons_s_cat_tv_wi[col]
@@ -1668,15 +1663,6 @@ class BLMModel:
                             print(f'{e}, passing 2 for column {col!r}')
                         # stop
                         pass
-                    # print('S1_cat_wi after:')
-                    # print(S1_cat_wi)
-                    # print('S2_cat_wi after:')
-                    # print(S2_cat_wi)
-                    # print('S1 ratio:')
-                    # print(s1_prev / S1_cat_wi['cat_tv_wi_control'])
-                    # print('S2 ratio:')
-                    # print(s2_prev / S2_cat_wi['cat_tv_wi_control'])
-                    # stop
                 # Time non-varying #
                 for col in cat_tnv_wi_cols:
                     try:
@@ -1815,7 +1801,7 @@ class BLMModel:
         control_cols = self.control_cols
         cat_tv_wi_cols, cat_tnv_wi_cols, cat_tv_cols, cat_tnv_cols = self.cat_tv_wi_cols, self.cat_tnv_wi_cols, self.cat_tv_cols, self.cat_tnv_cols
         # Fix error from bad initial guesses causing probabilities to be too low
-        d_prior = params['d_prior_s']
+        d_prior = params['d_prior_stayers']
 
         # Store wage outcomes and groups
         Y1 = sdata['y1'].to_numpy()
@@ -2095,10 +2081,13 @@ class BLMEstimator:
     Class for solving the BLM model using multiple sets of starting values.
 
     Arguments:
-        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
+        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.blm_params().
     '''
 
-    def __init__(self, params=blm_params()):
+    def __init__(self, params=None):
+        if params is None:
+            params = blm_params()
+
         self.params = params
         self.model = None # No initial model
         self.liks_high = None # No likelihoods yet
@@ -2107,19 +2096,22 @@ class BLMEstimator:
         self.connectedness_low = None # No connectedness yet
         self.liks_all = None # No paths of likelihoods yet
 
-    def _sim_model(self, jdata, rng=np.random.default_rng(None)):
+    def _sim_model(self, jdata, rng=None):
         '''
         Generate model and run fit_movers_cstr_uncstr() given parameters.
 
         Arguments:
             jdata (Pandas DataFrame): movers
-            rng (np.random.Generator): NumPy random number generator
+            rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
         model = BLMModel(self.params, rng)
         model.fit_movers_cstr_uncstr(jdata)
         return model
 
-    def fit(self, jdata, sdata, n_init=10, n_best=1, ncore=1, rng=np.random.default_rng(None)):
+    def fit(self, jdata, sdata, n_init=10, n_best=1, ncore=1, rng=None):
         '''
         EM model for movers and stayers.
 
@@ -2129,8 +2121,11 @@ class BLMEstimator:
             n_init (int): number of starting values
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness
             ncore (int): number of cores for multiprocessing
-            rng (np.random.Generator): NumPy random number generator
+            rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
         # Run sim_model()
         if ncore > 1:
             ## Multiprocessing
@@ -2178,7 +2173,7 @@ class BLMEstimator:
             print('Running stayers')
         self.model.fit_stayers(sdata)
         # FIXME matrices shouldn't sort, because then you can't merge estimated effects into the original dataframe
-        self.model._sort_matrices()
+        # self.model._sort_matrices()
 
     def plot_A1(self, dpi=None):
         '''

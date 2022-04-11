@@ -31,37 +31,37 @@ _sim_params_default = ParamsDict({
         '''
             (default=10) Average number of stayers per firm.
         ''', '>= 1'),
-    'categorical_time_varying_worker_interaction_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+    'categorical_time_varying_worker_interaction_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary linking column names to instances of tw.sim_categorical_time_varying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and can vary between the first and second periods. Run tw.sim_categorical_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.categorical_time_varying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and can vary between the first and second periods. Run tw.categorical_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'categorical_time_nonvarying_worker_interaction_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+    'categorical_time_nonvarying_worker_interaction_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary linking column names to instances of tw.sim_categorical_time_nonvarying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and is the same in the first and second periods. Run tw.sim_categorical_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.categorical_time_nonvarying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and is the same in the first and second periods. Run tw.categorical_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'categorical_time_varying_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+    'categorical_time_varying_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary linking column names to instances of tw.sim_categorical_time_varying_params(). Each instance specifies a new control variable where the effect can vary between the first and second periods. Run tw.sim_categorical_time_varying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.categorical_time_varying_params(). Each instance specifies a new control variable where the effect can vary between the first and second periods. Run tw.categorical_time_varying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'categorical_time_nonvarying_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+    'categorical_time_nonvarying_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary linking column names to instances of tw.sim_categorical_time_nonvarying_params(). Each instance specifies a new control variable where the effect is the same in the first and second periods. Run tw.sim_categorical_time_nonvarying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.categorical_time_nonvarying_params(). Each instance specifies a new control variable where the effect is the same in the first and second periods. Run tw.categorical_time_nonvarying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'continuous_time_varying_worker_interaction_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+    'continuous_time_varying_worker_interaction_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary linking column names to instances of tw.sim_continuous_time_varying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and can vary between the first and second periods. Run tw.sim_continuous_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.continuous_time_varying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and can vary between the first and second periods. Run tw.continuous_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'continuous_time_nonvarying_worker_interaction_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+    'continuous_time_nonvarying_worker_interaction_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary linking column names to instances of tw.sim_continuous_time_nonvarying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and is the same in the first and second periods. Run tw.sim_continuous_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.continuous_time_nonvarying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and is the same in the first and second periods. Run tw.continuous_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'continuous_time_varying_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+    'continuous_time_varying_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary linking column names to instances of tw.sim_continuous_time_varying_params(). Each instance specifies a new control variable where the effect can vary between the first and second periods. Run tw.sim_continuous_time_varying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.continuous_time_varying_params(). Each instance specifies a new control variable where the effect can vary between the first and second periods. Run tw.continuous_time_varying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
-    'continuous_time_nonvarying_controls_dict': (None, 'dict_of_type_none', ParamsDict,
+    'continuous_time_nonvarying_dict': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary linking column names to instances of tw.sim_continuous_time_nonvarying_params(). Each instance specifies a new control variable where the effect is the same in the first and second periods. Run tw.sim_continuous_time_nonvarying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.continuous_time_nonvarying_params(). Each instance specifies a new control variable where the effect is the same in the first and second periods. Run tw.continuous_time_nonvarying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
         ''', None),
     'NNm': (None, 'array_of_type_constrained_none', ('int', _min_gt0),
         '''
@@ -138,7 +138,7 @@ def sim_params(update_dict=None):
     Dictionary of default sim_params. Run tw.sim_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values
+        update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
         (ParamsDict) dictionary of sim_params
@@ -148,7 +148,7 @@ def sim_params(update_dict=None):
         new_dict.update(update_dict)
     return new_dict
 
-_sim_categorical_time_varying_worker_interaction_params_default = ParamsDict({
+_categorical_time_varying_worker_interaction_params_default = ParamsDict({
     'n': (6, 'type_constrained', (int, _gteq2),
         '''
             (default=6) Number of types for the parameter.
@@ -187,22 +187,22 @@ _sim_categorical_time_varying_worker_interaction_params_default = ParamsDict({
         ''', '>= 0')
 })
 
-def sim_categorical_time_varying_worker_interaction_params(update_dict=None):
+def categorical_time_varying_worker_interaction_params(update_dict=None):
     '''
-    Dictionary of default sim_categorical_time_varying_worker_interaction_params. Run tw.sim_categorical_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default categorical_time_varying_worker_interaction_params. Run tw.categorical_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values
+        update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of sim_categorical_time_varying_worker_interaction_params
+        (ParamsDict) dictionary of categorical_time_varying_worker_interaction_params
     '''
-    new_dict = _sim_categorical_time_varying_worker_interaction_params_default.copy()
+    new_dict = _categorical_time_varying_worker_interaction_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
 
-_sim_categorical_time_nonvarying_worker_interaction_params_default = ParamsDict({
+_categorical_time_nonvarying_worker_interaction_params_default = ParamsDict({
     'n': (6, 'type_constrained', (int, _gteq2),
         '''
             (default=6) Number of types for the parameter.
@@ -225,22 +225,22 @@ _sim_categorical_time_nonvarying_worker_interaction_params_default = ParamsDict(
         ''', '>= 0')
 })
 
-def sim_categorical_time_nonvarying_worker_interaction_params(update_dict=None):
+def categorical_time_nonvarying_worker_interaction_params(update_dict=None):
     '''
-    Dictionary of default sim_categorical_time_nonvarying_worker_interaction_params. Run tw.sim_categorical_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default categorical_time_nonvarying_worker_interaction_params. Run tw.categorical_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values
+        update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of sim_categorical_time_nonvarying_worker_interaction_params
+        (ParamsDict) dictionary of categorical_time_nonvarying_worker_interaction_params
     '''
-    new_dict = _sim_categorical_time_nonvarying_worker_interaction_params_default.copy()
+    new_dict = _categorical_time_nonvarying_worker_interaction_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
 
-_sim_categorical_time_varying_params_default = ParamsDict({
+_categorical_time_varying_params_default = ParamsDict({
     'n': (6, 'type_constrained', (int, _gteq2),
         '''
             (default=6) Number of types for the parameter.
@@ -279,22 +279,22 @@ _sim_categorical_time_varying_params_default = ParamsDict({
         ''', '>= 0')
 })
 
-def sim_categorical_time_varying_params(update_dict=None):
+def categorical_time_varying_params(update_dict=None):
     '''
-    Dictionary of default sim_categorical_time_varying_params. Run tw.sim_categorical_time_varying_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default categorical_time_varying_params. Run tw.categorical_time_varying_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values
+        update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of sim_categorical_time_varying_params
+        (ParamsDict) dictionary of categorical_time_varying_params
     '''
-    new_dict = _sim_categorical_time_varying_params_default.copy()
+    new_dict = _categorical_time_varying_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
 
-_sim_categorical_time_nonvarying_params_default = ParamsDict({
+_categorical_time_nonvarying_params_default = ParamsDict({
     'n': (6, 'type_constrained', (int, _gteq2),
         '''
             (default=6) Number of types for the parameter.
@@ -317,22 +317,22 @@ _sim_categorical_time_nonvarying_params_default = ParamsDict({
         ''', '>= 0')
 })
 
-def sim_categorical_time_nonvarying_params(update_dict=None):
+def categorical_time_nonvarying_params(update_dict=None):
     '''
-    Dictionary of default sim_categorical_time_nonvarying_params. Run tw.sim_categorical_time_nonvarying_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default categorical_time_nonvarying_params. Run tw.categorical_time_nonvarying_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values
+        update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of sim_categorical_time_nonvarying_params
+        (ParamsDict) dictionary of categorical_time_nonvarying_params
     '''
-    new_dict = _sim_categorical_time_nonvarying_params_default.copy()
+    new_dict = _categorical_time_nonvarying_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
 
-_sim_continuous_time_varying_worker_interaction_params_default = ParamsDict({
+_continuous_time_varying_worker_interaction_params_default = ParamsDict({
     'a1_mu': (1, 'type', (float, int),
         '''
             (default=1) Mean of simulated A1_cts_wi (mean of coefficient in first period).
@@ -367,22 +367,22 @@ _sim_continuous_time_varying_worker_interaction_params_default = ParamsDict({
         ''', '>= 0')
 })
 
-def sim_continuous_time_varying_worker_interaction_params(update_dict=None):
+def continuous_time_varying_worker_interaction_params(update_dict=None):
     '''
-    Dictionary of default sim_continuous_time_varying_worker_interaction_params. Run tw.sim_continuous_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default continuous_time_varying_worker_interaction_params. Run tw.continuous_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values
+        update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of sim_continuous_time_varying_worker_interaction_params
+        (ParamsDict) dictionary of continuous_time_varying_worker_interaction_params
     '''
-    new_dict = _sim_continuous_time_varying_worker_interaction_params_default.copy()
+    new_dict = _continuous_time_varying_worker_interaction_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
 
-_sim_continuous_time_nonvarying_worker_interaction_params_default = ParamsDict({
+_continuous_time_nonvarying_worker_interaction_params_default = ParamsDict({
     'a_mu': (1, 'type', (float, int),
         '''
             (default=1) Mean of simulated A_cts_wi (mean of coefficient in first and second periods).
@@ -401,22 +401,22 @@ _sim_continuous_time_nonvarying_worker_interaction_params_default = ParamsDict({
         ''', '>= 0')
 })
 
-def sim_continuous_time_nonvarying_worker_interaction_params(update_dict=None):
+def continuous_time_nonvarying_worker_interaction_params(update_dict=None):
     '''
-    Dictionary of default sim_continuous_time_nonvarying_worker_interaction_params. Run tw.sim_continuous_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default continuous_time_nonvarying_worker_interaction_params. Run tw.continuous_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values
+        update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of sim_continuous_time_nonvarying_worker_interaction_params
+        (ParamsDict) dictionary of continuous_time_nonvarying_worker_interaction_params
     '''
-    new_dict = _sim_continuous_time_nonvarying_worker_interaction_params_default.copy()
+    new_dict = _continuous_time_nonvarying_worker_interaction_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
 
-_sim_continuous_time_varying_params_default = ParamsDict({
+_continuous_time_varying_params_default = ParamsDict({
     'a1_mu': (1, 'type', (float, int),
         '''
             (default=1) Mean of simulated A1_cts (mean of coefficient in first period).
@@ -451,22 +451,22 @@ _sim_continuous_time_varying_params_default = ParamsDict({
         ''', '>= 0')
 })
 
-def sim_continuous_time_varying_params(update_dict=None):
+def continuous_time_varying_params(update_dict=None):
     '''
-    Dictionary of default sim_continuous_time_varying_params. Run tw.sim_continuous_time_varying_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default continuous_time_varying_params. Run tw.continuous_time_varying_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values
+        update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of sim_continuous_time_varying_params
+        (ParamsDict) dictionary of continuous_time_varying_params
     '''
-    new_dict = _sim_continuous_time_varying_params_default.copy()
+    new_dict = _continuous_time_varying_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
 
-_sim_continuous_time_nonvarying_params_default = ParamsDict({
+_continuous_time_nonvarying_params_default = ParamsDict({
     'a_mu': (1, 'type', (float, int),
         '''
             (default=1) Mean of simulated A_cat (mean of coefficient in first and second periods).
@@ -485,17 +485,17 @@ _sim_continuous_time_nonvarying_params_default = ParamsDict({
         ''', '>= 0')
 })
 
-def sim_continuous_time_nonvarying_params(update_dict=None):
+def continuous_time_nonvarying_params(update_dict=None):
     '''
-    Dictionary of default sim_continuous_time_nonvarying_params. Run tw.sim_continuous_time_nonvarying_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default continuous_time_nonvarying_params. Run tw.continuous_time_nonvarying_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values
+        update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of sim_continuous_time_nonvarying_params
+        (ParamsDict) dictionary of continuous_time_nonvarying_params
     '''
-    new_dict = _sim_continuous_time_nonvarying_params_default.copy()
+    new_dict = _continuous_time_nonvarying_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
@@ -505,10 +505,12 @@ class SimBLM:
     Class of SimBLM, where SimBLM simulates a bipartite BLM network of firms and workers.
 
     Arguments:
-        sim_params (ParamsDict): dictionary of parameters for simulating data. Run tw.sim_params().describe_all() for descriptions of all valid parameters.
+        sim_params (ParamsDict): dictionary of parameters for simulating data. Run tw.sim_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.sim_params().
     '''
 
-    def __init__(self, sim_params=sim_params()):
+    def __init__(self, sim_params=None):
+        if sim_params is None:
+            sim_params = sim_params()
         # Store parameters
         self.params = sim_params
         nl, nk, NNm, NNs = self.params.get_multiple(('nl', 'nk', 'NNm', 'NNs'))
@@ -523,14 +525,14 @@ class SimBLM:
             self.NNs = NNs
 
         ## Unpack control variable parameters
-        cat_tv_wi_dict = self.params['categorical_time_varying_worker_interaction_controls_dict']
-        cat_tnv_wi_dict = self.params['categorical_time_nonvarying_worker_interaction_controls_dict']
-        cat_tv_dict = self.params['categorical_time_varying_controls_dict']
-        cat_tnv_dict = self.params['categorical_time_nonvarying_controls_dict']
-        cts_tv_wi_dict = self.params['continuous_time_varying_worker_interaction_controls_dict']
-        cts_tnv_wi_dict = self.params['continuous_time_nonvarying_worker_interaction_controls_dict']
-        cts_tv_dict = self.params['continuous_time_varying_controls_dict']
-        cts_tnv_dict = self.params['continuous_time_nonvarying_controls_dict']
+        cat_tv_wi_dict = self.params['categorical_time_varying_worker_interaction_dict']
+        cat_tnv_wi_dict = self.params['categorical_time_nonvarying_worker_interaction_dict']
+        cat_tv_dict = self.params['categorical_time_varying_dict']
+        cat_tnv_dict = self.params['categorical_time_nonvarying_dict']
+        cts_tv_wi_dict = self.params['continuous_time_varying_worker_interaction_dict']
+        cts_tnv_wi_dict = self.params['continuous_time_nonvarying_worker_interaction_dict']
+        cts_tv_dict = self.params['continuous_time_varying_dict']
+        cts_tnv_dict = self.params['continuous_time_nonvarying_dict']
         ## Check if control variable parameters are None
         if cat_tv_wi_dict is None:
             cat_tv_wi_dict = {}

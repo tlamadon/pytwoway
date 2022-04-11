@@ -107,18 +107,19 @@ _fe_params_default = ParamsDict({
         ''', None)
 })
 
-def fe_params(update_dict={}):
+def fe_params(update_dict=None):
     '''
     Dictionary of default fe_params. Run tw.fe_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values
+        update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
         (ParamsDict) dictionary of fe_params
     '''
     new_dict = _fe_params_default.copy()
-    new_dict.update(update_dict)
+    if update_dict is not None:
+        new_dict.update(update_dict)
     return new_dict
 
 def _weighted_quantile(values, quantiles, sample_weight=None, values_sorted=False, old_style=False):
