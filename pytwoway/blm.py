@@ -291,7 +291,7 @@ class QPConstrained:
             A = - np.kron(LL, KK)
             b = - np.zeros(shape=A.shape[0])
 
-        elif constraint == 'stable_within_time':
+        elif constraint == 'stable_across_worker_types':
             n_periods = params['n_periods']
             A = np.zeros(shape=(n_periods * (nl - 1) * nk, n_periods * nl * nk))
             for period in range(n_periods):
@@ -306,7 +306,19 @@ class QPConstrained:
 
             b = - np.zeros(shape=A.shape[0])
 
-        elif constraint == 'stable_across_time':
+        elif constraint == 'stable_across_time_full':
+            # If not also using 'stable_across_worker_types' constraint
+            n_periods = params['n_periods']
+            A = np.zeros(shape=((n_periods - 1) * nl * nk, n_periods * nl * nk))
+            col_shift = nl * nk
+            for row in range((n_periods - 1) * nl * nk):
+                A[row, row] = 1
+                A[row, row + col_shift] = -1
+
+            b = - np.zeros(shape=A.shape[0])
+
+        elif constraint == 'stable_across_time_partial':
+            # If also using 'stable_across_worker_types' constraint
             n_periods = params['n_periods']
             A = np.zeros(shape=((n_periods - 1) * nk, n_periods * nl * nk))
             for period in range(n_periods - 1):
@@ -344,9 +356,9 @@ class QPConstrained:
             h = - gap * np.ones(shape=(nl * (nk - 1)))
 
         elif constraint == 'fixb':
-            if len(self.G) > 0 or len(self.A) > 0:
-                self.clear_constraints()
-                warnings.warn("Constraint 'fixb' requires different dimensions than other constraints, existing constraints have been removed. It is recommended to manually run clear_constraints() prior to adding the constraint 'fixb' in order to ensure you are not unintentionally removing existing constraints.")
+            # if len(self.G) > 0 or len(self.A) > 0:
+            #     self.clear_constraints()
+            #     warnings.warn("Constraint 'fixb' requires different dimensions than other constraints, existing constraints have been removed. It is recommended to manually run clear_constraints() prior to adding the constraint 'fixb' in order to ensure you are not unintentionally removing existing constraints.")
             nt = params['nt']
             KK = np.zeros(shape=(nk - 1, nk))
             for k in range(nk - 1):
@@ -702,15 +714,15 @@ class BLMModel:
 
         self.connectedness = None
 
-        for l in range(nl):
-            self.A1[l] = np.sort(self.A1[l], axis=0)
-            self.A2[l] = np.sort(self.A2[l], axis=0)
+        # for l in range(nl):
+        #     self.A1[l] = np.sort(self.A1[l], axis=0)
+        #     self.A2[l] = np.sort(self.A2[l], axis=0)
 
-        if self.fixb:
-            self.A2 = np.mean(self.A2, axis=1) + self.A1 - np.mean(self.A1, axis=1)
+        # if self.fixb:
+        #     self.A2 = np.mean(self.A2, axis=1) + self.A1 - np.mean(self.A1, axis=1)
 
-        if self.stationary:
-            self.A2 = self.A1
+        # if self.stationary:
+        #     self.A2 = self.A1
 
     # def reset_params(self):
     #     nl = self.nl
@@ -908,6 +920,11 @@ class BLMModel:
         cons_s = QPConstrained(nl, nk)
         if len(params['cons_s']) > 0:
             cons_s.add_constraints_builtin(*params['cons_s'])
+        if self.fixb:
+            cons_a.add_constraint_builtin('fixb', {'nt': 2})
+        if self.stationary:
+            cons_a.add_constraint_builtin('stable_across_time_full', {'n_periods': 2})
+            cons_s.add_constraint_builtin('stable_across_time_full', {'n_periods': 2})
         ### Categorical ###
         ## Worker-interaction ##
         # Time-varying #
@@ -920,6 +937,14 @@ class BLMModel:
             if len(params['cons_s']) > 0:
                 for col_cons in cons_s_cat_tv_wi.values():
                     col_cons.add_constraints_builtin(*params['cons_s'])
+            if self.fixb:
+                for col_cons in cons_a_cat_tv_wi.values():
+                    col_cons.add_constraint_builtin('fixb', {'nt': 2})
+            if self.stationary:
+                for col_cons in cons_a_cat_tv_wi.values():
+                    col_cons.add_constraint_builtin('stable_across_time_full', {'n_periods': 2})
+                for col_cons in cons_s_cat_tv_wi.values():
+                    col_cons.add_constraint_builtin('stable_across_time_full', {'n_periods': 2})
         # Time non-varying #
         if len(cat_tnv_wi_cols) > 0:
             cons_a_cat_tnv_wi = {col: QPConstrained(nl, col_dict['n']) for col, col_dict in cat_tnv_wi_dict.items()}
@@ -931,8 +956,11 @@ class BLMModel:
                 for col_cons in cons_s_cat_tnv_wi.values():
                     col_cons.add_constraints_builtin(*params['cons_s'])
             for col in cat_tnv_wi_cols:
-                cons_a_cat_tnv_wi[col].add_constraint_builtin('stable_across_time', {'n_periods': 2})
-                cons_s_cat_tnv_wi[col].add_constraint_builtin('stable_across_time', {'n_periods': 2})
+                cons_a_cat_tnv_wi[col].add_constraint_builtin('stable_across_time_full', {'n_periods': 2})
+                cons_s_cat_tnv_wi[col].add_constraint_builtin('stable_across_time_full', {'n_periods': 2})
+            if self.fixb:
+                for col_cons in cons_a_cat_tnv_wi.values():
+                    col_cons.add_constraint_builtin('fixb', {'nt': 2})
         ## Non-worker-interaction ##
         # Time-varying #
         if len(cat_tv_cols) > 0:
@@ -945,8 +973,16 @@ class BLMModel:
                 for col_cons in cons_s_cat_tv.values():
                     col_cons.add_constraints_builtin(*params['cons_s'])
             for col in cat_tv_cols:
-                cons_a_cat_tv[col].add_constraint_builtin('stable_within_time', {'n_periods': 2})
-                cons_s_cat_tv[col].add_constraint_builtin('stable_within_time', {'n_periods': 2})
+                cons_a_cat_tv[col].add_constraint_builtin('stable_across_worker_types', {'n_periods': 2})
+                cons_s_cat_tv[col].add_constraint_builtin('stable_across_worker_types', {'n_periods': 2})
+            if self.fixb:
+                for col_cons in cons_a_cat_tv.values():
+                    col_cons.add_constraint_builtin('fixb', {'nt': 2})
+            if self.stationary:
+                for col_cons in cons_a_cat_tv.values():
+                    col_cons.add_constraint_builtin('stable_across_time_partial', {'n_periods': 2})
+                for col_cons in cons_s_cat_tv.values():
+                    col_cons.add_constraint_builtin('stable_across_time_partial', {'n_periods': 2})
         # Time non-varying #
         if len(cat_tnv_cols) > 0:
             cons_a_cat_tnv = {col: QPConstrained(nl, col_dict['n']) for col, col_dict in cat_tnv_dict.items()}
@@ -958,8 +994,11 @@ class BLMModel:
                 for col_cons in cons_s_cat_tnv.values():
                     col_cons.add_constraints_builtin(*params['cons_s'])
             for col in cat_tnv_cols:
-                cons_a_cat_tnv[col].add_constraints_builtin(['stable_within_time', 'stable_across_time'], {'n_periods': 2})
-                cons_s_cat_tnv[col].add_constraints_builtin(['stable_within_time', 'stable_across_time'], {'n_periods': 2})
+                cons_a_cat_tnv[col].add_constraints_builtin(['stable_across_worker_types', 'stable_across_time_partial'], {'n_periods': 2})
+                cons_s_cat_tnv[col].add_constraints_builtin(['stable_across_worker_types', 'stable_across_time_partial'], {'n_periods': 2})
+            if self.fixb:
+                for col_cons in cons_a_cat_tnv.values():
+                    col_cons.add_constraint_builtin('fixb', {'nt': 2})
         ### Continuous ###
         ## Worker-interaction ##
         # Time-varying #
@@ -972,6 +1011,14 @@ class BLMModel:
             if len(params['cons_s']) > 0:
                 for col_cons in cons_s_cts_tv_wi.values():
                     col_cons.add_constraints_builtin(*params['cons_s'])
+            if self.fixb:
+                for col_cons in cons_a_cts_tv_wi.values():
+                    col_cons.add_constraint_builtin('fixb', {'nt': 2})
+            if self.stationary:
+                for col_cons in cons_a_cts_tv_wi.values():
+                    col_cons.add_constraint_builtin('stable_across_time_full', {'n_periods': 2})
+                for col_cons in cons_s_cts_tv_wi.values():
+                    col_cons.add_constraint_builtin('stable_across_time_full', {'n_periods': 2})
         # Time non-varying #
         if len(cts_tnv_wi_cols) > 0:
             cons_a_cts_tnv_wi = {col: QPConstrained(nl, 1) for col in cts_tnv_wi_cols}
@@ -983,8 +1030,11 @@ class BLMModel:
                 for col_cons in cons_s_cts_tnv_wi.values():
                     col_cons.add_constraints_builtin(*params['cons_s'])
             for col in cts_tnv_wi_cols:
-                cons_a_cts_tnv_wi[col].add_constraint_builtin('stable_across_time', {'n_periods': 2})
-                cons_s_cts_tnv_wi[col].add_constraint_builtin('stable_across_time', {'n_periods': 2})
+                cons_a_cts_tnv_wi[col].add_constraint_builtin('stable_across_time_full', {'n_periods': 2})
+                cons_s_cts_tnv_wi[col].add_constraint_builtin('stable_across_time_full', {'n_periods': 2})
+            if self.fixb:
+                for col_cons in cons_a_cts_tnv_wi.values():
+                    col_cons.add_constraint_builtin('fixb', {'nt': 2})
         ## Non-worker-interaction ##
         # Time-varying #
         if len(cts_tv_cols) > 0:
@@ -997,8 +1047,16 @@ class BLMModel:
                 for col_cons in cons_s_cts_tv.values():
                     col_cons.add_constraints_builtin(*params['cons_s'])
             for col in cts_tv_cols:
-                cons_a_cts_tv[col].add_constraint_builtin('stable_within_time', {'n_periods': 2})
-                cons_s_cts_tv[col].add_constraint_builtin('stable_within_time', {'n_periods': 2})
+                cons_a_cts_tv[col].add_constraint_builtin('stable_across_worker_types', {'n_periods': 2})
+                cons_s_cts_tv[col].add_constraint_builtin('stable_across_worker_types', {'n_periods': 2})
+            if self.fixb:
+                for col_cons in cons_a_cts_tv.values():
+                    col_cons.add_constraint_builtin('fixb', {'nt': 2})
+            if self.stationary:
+                for col_cons in cons_a_cts_tv.values():
+                    col_cons.add_constraint_builtin('stable_across_time_partial', {'n_periods': 2})
+                for col_cons in cons_s_cts_tv.values():
+                    col_cons.add_constraint_builtin('stable_across_time_partial', {'n_periods': 2})
         # Time non-varying #
         if len(cts_tnv_cols) > 0:
             cons_a_cts_tnv = {col: QPConstrained(nl, 1) for col in cts_tnv_cols}
@@ -1010,13 +1068,15 @@ class BLMModel:
                 for col_cons in cons_s_cts_tnv.values():
                     col_cons.add_constraints_builtin(*params['cons_s'])
             for col in cts_tnv_cols:
-                cons_a_cts_tnv[col].add_constraints_builtin(['stable_within_time', 'stable_across_time'], {'n_periods': 2})
-                cons_s_cts_tnv[col].add_constraints_builtin(['stable_within_time', 'stable_across_time'], {'n_periods': 2})
-
+                cons_a_cts_tnv[col].add_constraints_builtin(['stable_across_worker_types', 'stable_across_time_partial'], {'n_periods': 2})
+                cons_s_cts_tnv[col].add_constraints_builtin(['stable_across_worker_types', 'stable_across_time_partial'], {'n_periods': 2})
+            if self.fixb:
+                for col_cons in cons_a_cts_tnv.values():
+                    col_cons.add_constraint_builtin('fixb', {'nt': 2})
 
         for iter in range(params['n_iters_movers']):
 
-            # -------- E-Step ---------
+            # ---------- E-Step ----------
             # We compute the posterior probabilities for each row
             # We iterate over the worker types, should not be be
             # too costly since the vector is quite large within each iteration
@@ -1093,7 +1153,7 @@ class BLMModel:
                 break
             prev_lik = lik1
 
-            # --------- M-step ----------
+            # ---------- M-step ----------
             # For now we run a simple ols, however later we
             # want to add constraints!
             # see https://scaron.info/blog/quadratic-programming-in-python.html
@@ -1767,10 +1827,9 @@ class BLMModel:
 
             if params['update_pk1']:
                 pk1 = GG12.T @ qi
-                # for l in range(nl):
-                #     pk1[:, l] = GG12.T * qi[:, l]
-                # Normalize rows to sum to 1, and add dirichlet prior
+                # Add dirichlet prior
                 pk1 += d_prior - 1
+                # Normalize rows to sum to 1
                 pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
 
         self.A1, self.A2, self.S1, self.S2 = A1, A2, S1, S2
@@ -1795,7 +1854,7 @@ class BLMModel:
         # Unpack parameters
         params = self.params
         nl, nk, ni = self.nl, self.nk, sdata.shape[0]
-        A1, S1 = self.A1, self.S1
+        A1, A2, S1, S2 = self.A1, self.A2, self.S1, self.S2
         A1_cat, A2_cat, A_cat, S1_cat, S2_cat, S_cat = self.A1_cat, self.A2_cat, self.A_cat, self.S1_cat, self.S2_cat, self.S_cat
         A1_cts, A2_cts, A_cts, S1_cts, S2_cts, S_cts = self.A1_cts, self.A2_cts, self.A_cts, self.S1_cts, self.S2_cts, self.S_cts
         control_cols = self.control_cols
@@ -1805,13 +1864,11 @@ class BLMModel:
 
         # Store wage outcomes and groups
         Y1 = sdata['y1'].to_numpy()
-        G1 = sdata['g1'].to_numpy().astype(int)
+        Y2 = sdata['y2'].to_numpy()
+        G1 = sdata['g1'].to_numpy().astype(int, copy=False)
+        G2 = sdata['g2'].to_numpy().astype(int, copy=False)
         GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
         if len(control_cols) > 0:
-            A2, S2 = self.A2, self.S2
-            Y2 = sdata['y1'].to_numpy()
-            G2 = sdata['g1'].to_numpy().astype(int)
-            GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
             # Control variables
             C1 = {}
             C2 = {}
@@ -1894,14 +1951,16 @@ class BLMModel:
                 lp1 = lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
                 lp2 = lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
                 lp_stable[:, l] = lp1 + lp2
-            del lp1, lp2
         else:
             for l in range(nl):
-                lp_stable[:, l] = lognormpdf(Y1, A1[l, G1], S1[l, G1])
+                lp1 = lognormpdf(Y1, A1[l, G1], S1[l, G1])
+                lp2 = lognormpdf(Y2, A2[l, G2], S2[l, G2])
+                lp_stable[:, l] = lp1 + lp2
+        del lp1, lp2
 
         for iter in range(params['n_iters_stayers']):
 
-            # -------- E-Step ---------
+            # ---------- E-Step ----------
             # We compute the posterior probabilities for each row
             # We iterate over the worker types, should not be be
             # too costly since the vector is quite large within each iteration
@@ -1921,12 +1980,11 @@ class BLMModel:
                 break
             prev_lik = lik0
 
-            # --------- M-step ----------
+            # ---------- M-step ----------
             pk0 = GG1.T @ qi
-            # for l in range(nl):
-            #     pk0[:, l] = GG1.T * qi[:, l]
-            # Normalize rows to sum to 1
+            # Add dirichlet prior
             pk0 += d_prior - 1
+            # Normalize rows to sum to 1
             pk0 = (pk0.T / np.sum(pk0, axis=1).T).T
 
         self.pk0, self.lik0, self.liks0 = pk0, lik0, np.array(liks0)
@@ -2034,7 +2092,7 @@ class BLMModel:
         '''
         nk = self.nk
         ## Sort worker effects ##
-        worker_effect_order = np.mean(self.A1, axis=1).argsort()
+        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
         self.A1 = self.A1[worker_effect_order, :]
         self.A2 = self.A2[worker_effect_order, :]
         self.S1 = self.S1[worker_effect_order, :]
@@ -2042,7 +2100,7 @@ class BLMModel:
         self.pk1 = self.pk1[:, worker_effect_order]
         self.pk0 = self.pk0[:, worker_effect_order]
         ## Sort firm effects ##
-        firm_effect_order = np.mean(self.A1, axis=0).argsort()
+        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
         self.A1 = self.A1[:, firm_effect_order]
         self.A2 = self.A2[:, firm_effect_order]
         self.S1 = self.S1[:, firm_effect_order]

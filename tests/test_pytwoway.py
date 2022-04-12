@@ -665,295 +665,250 @@ def test_blm_monotonic_1_2():
 
 def test_blm_qi_1():
     # Test whether BLM posterior probabilities are giving the most weight to the correct type.
+    rng = np.random.default_rng(1234)
     nl = 3
     nk = 4
-    mmult = 1
-    # Initiate BLMModel object
-    blm = tw.BLMModel({'nl': nl, 'nk': nk, 'simulation': True, 'return_qi': True}, seed=1234)
-    # Make variance of worker types small
-    blm.S1 /= 10
-    blm.S2 /= 10
-    jdata = blm._m2_mixt_simulate_movers(blm.NNm * mmult)
-    # Update BLM class attributes to equal model's
+    # Define parameter dictionaries
+    blm_sim_params = tw.sim_params({
+        'nl': nl,
+        'nk': nk,
+        'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
+        's1_low': 0, 's1_high': 1, 's2_low': 0, 's2_high': 1
+    })
+    blm_params = tw.blm_params({
+        'nl': nl,
+        'nk': nk,
+        'return_qi': True,
+        'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
+        's1_low': 0, 's1_high': 1, 's2_low': 0, 's2_high': 1
+    })
+    # Simulate data
+    blm_true = tw.SimBLM(blm_sim_params)
+    sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
+    jdata = bpd.BipartiteDataFrame(i=np.arange(len(sim_data['jdata'])), **sim_data['jdata'])
+    # Initialize BLM estimator
+    blm_fit = tw.BLMModel(blm_params, rng=rng)
+    # Update BLM class attributes to equal truth
+    blm_fit.A1 = sim_params['A1']
+    blm_fit.A2 = sim_params['A2']
+    blm_fit.S1 = sim_params['S1']
+    blm_fit.S2 = sim_params['S2']
     # Estimate qi matrix
-    qi_estimate = blm.fit_movers(jdata)
+    qi_estimate = blm_fit.fit_movers(jdata=jdata)
     max_qi_col = np.argmax(qi_estimate, axis=1)
     n_correct_qi = np.sum(max_qi_col == jdata['l'])
 
     assert (n_correct_qi / len(max_qi_col)) >= 0.95
 
-def test_blm_A_3():
-    # Test whether BLM estimates A properly, given true S and pk1.
-    nl = 6
-    nk = 10
-    mmult = 100
-    min_A1 = np.inf
-    min_A2 = np.inf
-    lik = - np.inf
-    for i in range(4):
-        # Initiate BLMModel object
-        blm_true = tw.BLMModel({'nl': nl, 'nk': nk, 'simulation': True}, seed=1234 + i)
-        # Make variance of worker types small
-        blm_true.S1 /= 4
-        blm_true.S2 /= 4
-        jdata = blm_true._m2_mixt_simulate_movers(blm_true.NNm * mmult)
-        blm_fit = tw.BLMModel({'nl': nl, 'nk': nk, 'maxiters': 1, 'update_s': False, 'update_pk1': False}, seed=5678 + i)
-        ## Start at truth for A1 and A2
-        blm_fit.A1 = blm_true.A1.copy()
-        blm_fit.A2 = blm_true.A2.copy()
-        ##
-        blm_fit.S1 = blm_true.S1
-        blm_fit.S2 = blm_true.S2
-        blm_fit.pk1 = blm_true.pk1
-        blm_fit.fit_movers(jdata)
-        # blm_fit._sort_matrices()
+def test_blm_start_at_truth_no_controls():
+    # Test whether BLM estimator works when starting at truth with no controls
+    rng = np.random.default_rng(1234)
+    nl = 2 # Number of worker types
+    nk = 3 # Number of firm types
+    # Define parameter dictionaries
+    blm_sim_params = tw.sim_params({
+        'nl': nl,
+        'nk': nk,
+        'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
+        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+    })
+    blm_params = tw.blm_params({
+        'nl': nl,
+        'nk': nk,
+        'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
+        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+    })
+    # Simulate data
+    blm_true = tw.SimBLM(blm_sim_params)
+    sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
+    jdata, sdata = sim_data['jdata'], sim_data['sdata']
+    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
+    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
+    # Initialize BLM estimator
+    blm_fit = tw.BLMModel(blm_params, rng=rng)
+    # Update BLM class attributes to equal truth
+    blm_fit.A1 = sim_params['A1']
+    blm_fit.A2 = sim_params['A2']
+    blm_fit.S1 = sim_params['S1']
+    blm_fit.S2 = sim_params['S2']
+    # Fit BLM estimator
+    blm_fit.fit_movers(jdata=jdata)
+    blm_fit.fit_stayers(sdata=sdata)
 
-        # Compute average percent difference from truth
-        val_1 = abs(np.mean(
-            (blm_true.A1.flatten() - blm_fit.A1.flatten()) / blm_true.A1.flatten()
-        ))
-        val_2 = abs(np.mean(
-            (blm_true.A2.flatten() - blm_fit.A2.flatten()) / blm_true.A2.flatten()
-        ))
-        if blm_fit.lik1 > lik:
-            lik = blm_fit.lik1
-            min_A1 = val_1
-            min_A2 = val_2
+    assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-3
+    assert np.max(np.abs((blm_fit.A2 - sim_params['A2']) / sim_params['A2'])) < 1e-2
+    assert np.prod(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) ** (1 / sim_params['S1'].size) < 0.1
+    assert np.prod(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) ** (1 / sim_params['S2'].size) < 0.2
+    assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.15
+    assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.15
 
-    assert 0 < min_A1 < 0.2
-    assert 0 < min_A2 < 0.15
+def test_blm_full_estimation_no_controls():
+    # Test whether BLM estimator works for full estimation with no controls
+    rng = np.random.default_rng(1235)
+    nl = 2 # Number of worker types
+    nk = 3 # Number of firm types
+    # Define parameter dictionaries
+    blm_sim_params = tw.sim_params({
+        'nl': nl,
+        'nk': nk,
+        'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
+        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+    })
+    blm_params = tw.blm_params({
+        'nl': nl,
+        'nk': nk,
+        'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
+        's1_low': 0, 's1_high': 0.05, 's2_low': 0, 's2_high': 0.05
+    })
+    # Simulate data
+    blm_true = tw.SimBLM(blm_sim_params)
+    sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
+    jdata, sdata = sim_data['jdata'], sim_data['sdata']
+    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
+    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
+    # Initialize BLM estimator
+    blm_fit = tw.BLMEstimator(blm_params)
+    # Fit BLM estimator
+    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=80, n_best=5, ncore=4, rng=rng)
+    blm_fit = blm_fit.model
+    blm_fit._sort_matrices()
 
-def test_blm_S_4():
-    # Test whether BLM estimates S properly, given true A and pk1.
-    nl = 6
-    nk = 10
-    mmult = 100
-    min_S1 = np.inf
-    min_S2 = np.inf
-    lik = - np.inf
-    for i in range(3):
-        # Initiate BLMModel object
-        blm_true = tw.BLMModel({'nl': nl, 'nk': nk, 'simulation': True}, seed=1234 + i)
-        # Make variance of worker types small
-        # blm_true.S1 /= 4
-        # blm_true.S2 /= 4
-        jdata = blm_true._m2_mixt_simulate_movers(blm_true.NNm * mmult)
-        blm_fit = tw.BLMModel({'nl': nl, 'nk': nk, 'maxiters': 1, 'update_a': False, 'update_pk1': False}, seed=5678 + i)
-        blm_fit.A1 = blm_true.A1
-        blm_fit.A2 = blm_true.A2
-        ## Start at truth for S1 and S2
-        blm_fit.S1 = blm_true.S1.copy()
-        blm_fit.S2 = blm_true.S2.copy()
-        ##
-        blm_fit.pk1 = blm_true.pk1
-        blm_fit.fit_movers(jdata)
-        # blm_fit._sort_matrices()
+    assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-3
+    assert np.max(np.abs((blm_fit.A2 - sim_params['A2']) / sim_params['A2'])) < 1e-2
+    assert np.prod(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) ** (1 / sim_params['S1'].size) < 0.15
+    assert np.prod(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) ** (1 / sim_params['S2'].size) < 0.15
+    assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.3
+    assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.25
 
-        # Compute average percent difference from truth
-        val_1 = abs(np.mean(
-            (blm_true.S1.flatten() - blm_fit.S1.flatten()) / blm_true.S1.flatten()
-        ))
-        val_2 = abs(np.mean(
-            (blm_true.S2.flatten() - blm_fit.S2.flatten()) / blm_true.S2.flatten()
-        ))
-        if blm_fit.lik1 > lik:
-            lik = blm_fit.lik1
-            min_S1 = val_1
-            min_S2 = val_2
+def test_blm_start_at_truth_cat_tv_wi():
+    # Test whether BLM estimator works when starting at truth for categorical, time-varying, worker-interaction control variables
+    rng = np.random.default_rng(1236)
+    nl = 2 # Number of worker types
+    nk = 3 # Number of firm types
+    n_control = 2 # Number of types for control variable
+    # Define parameter dictionaries
+    cat_tv_wi_params = tw.categorical_time_varying_worker_interaction_params({
+        'n': n_control,
+        'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
+        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+    })
+    blm_sim_params = tw.sim_params({
+        'nl': nl,
+        'nk': nk,
+        'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
+        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01,
+        'categorical_time_varying_worker_interaction_dict': {'cat_tv_wi_control': cat_tv_wi_params}
+    })
+    blm_params = tw.blm_params({
+        'nl': nl,
+        'nk': nk,
+        'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
+        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01,
+        'categorical_time_varying_worker_interaction_dict': {'cat_tv_wi_control': cat_tv_wi_params}
+    })
+    # Simulate data
+    blm_true = tw.SimBLM(blm_sim_params)
+    sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
+    jdata, sdata = sim_data['jdata'], sim_data['sdata']
+    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
+    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
+    # Initialize BLM estimator
+    blm_fit = tw.BLMModel(blm_params, rng=rng)
+    # Update BLM class attributes to equal truth
+    blm_fit.A1 = sim_params['A1']
+    blm_fit.A2 = sim_params['A2']
+    blm_fit.S1 = sim_params['S1']
+    blm_fit.S2 = sim_params['S2']
+    blm_fit.A1_cat_wi = sim_params['A1_cat_wi']
+    blm_fit.A2_cat_wi = sim_params['A2_cat_wi']
+    blm_fit.S1_cat_wi = sim_params['S1_cat_wi']
+    blm_fit.S2_cat_wi = sim_params['S2_cat_wi']
+    # Fit BLM estimator
+    blm_fit.fit_movers(jdata=jdata)
+    blm_fit.fit_stayers(sdata=sdata)
 
-    assert 0 < min_S1 < 0.015
-    assert 0 < min_S2 < 0.01
+    assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-2
+    assert np.max(np.abs((blm_fit.A2 - sim_params['A2']) / sim_params['A2'])) < 1e-2
+    assert np.prod(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) ** (1 / sim_params['S1'].size) < 0.3
+    assert np.prod(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) ** (1 / sim_params['S2'].size) < 0.5
+    assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.3
+    assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.1
+    A1_ctrl_sim = sim_params['A1_cat_wi']['cat_tv_wi_control']
+    A2_ctrl_sim = sim_params['A2_cat_wi']['cat_tv_wi_control']
+    A1_ctrl_fit = blm_fit.A1_cat_wi['cat_tv_wi_control']
+    A2_ctrl_fit = blm_fit.A2_cat_wi['cat_tv_wi_control']
+    S1_ctrl_sim = sim_params['S1_cat_wi']['cat_tv_wi_control']
+    S2_ctrl_sim = sim_params['S2_cat_wi']['cat_tv_wi_control']
+    S1_ctrl_fit = blm_fit.S1_cat_wi['cat_tv_wi_control']
+    S2_ctrl_fit = blm_fit.S2_cat_wi['cat_tv_wi_control']
+    assert np.max(np.abs((A1_ctrl_fit - A1_ctrl_sim) / A1_ctrl_sim)) == 0
+    assert np.max(np.abs((A2_ctrl_fit - A2_ctrl_sim) / A2_ctrl_sim)) == 0
+    assert np.prod(np.abs((S1_ctrl_fit - S1_ctrl_sim) / S1_ctrl_sim)) ** (1 / S1_ctrl_sim.size) == 0
+    assert np.prod(np.abs((S2_ctrl_fit - S2_ctrl_sim) / S2_ctrl_sim)) ** (1 / S2_ctrl_sim.size) == 0
 
-def test_blm_pk_5():
-    # Test whether BLM estimates pk1 and pk0 properly, given true A and S.
-    nl = 6
-    nk = 10
-    mmult = 100
-    smult = 100
-    min_pk1 = np.inf
-    min_pk0 = np.inf
-    lik1 = - np.inf
-    lik0 = - np.inf
-    for i in range(3):
-        # Initiate BLMModel object
-        blm_true = tw.BLMModel({'nl': nl, 'nk': nk, 'simulation': True}, seed=1234 + i)
-        # Make variance of worker types small
-        blm_true.S1 /= 10
-        blm_true.S2 /= 10
-        jdata = blm_true._m2_mixt_simulate_movers(blm_true.NNm * mmult)
-        sdata = blm_true._m2_mixt_simulate_stayers(blm_true.NNs * smult)
-        blm_fit = tw.BLMModel({'nl': nl, 'nk': nk, 'maxiters': 1, 'update_a': False, 'update_s': False}, seed=5678 + i)
-        blm_fit.A1 = blm_true.A1
-        blm_fit.A2 = blm_true.A2
-        blm_fit.S1 = blm_true.S1
-        blm_fit.S2 = blm_true.S2
-        ## Start at truth for pk1
-        blm_fit.pk1 = blm_true.pk1.copy()
-        ##
-        blm_fit.fit_movers(jdata)
-        # blm_fit._sort_matrices()
-        blm_fit.fit_stayers(sdata)
-        # blm_fit._sort_matrices()
+def test_blm_full_estimation_cat_tv_wi():
+    # Test whether BLM estimator works for full estimation for categorical, time-varying, worker-interaction control variables
+    rng = np.random.default_rng(1237)
+    nl = 2 # Number of worker types
+    nk = 3 # Number of firm types
+    n_control = 2 # Number of types for control variable
+    # Define parameter dictionaries
+    cat_tv_wi_params = tw.categorical_time_varying_worker_interaction_params({
+        'n': n_control,
+        'a1_mu': -0.5, 'a1_sig': 0.25, 'a2_mu': 0.5, 'a2_sig': 0.25,
+        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+    })
+    blm_sim_params = tw.sim_params({
+        'nl': nl,
+        'nk': nk,
+        'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
+        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01,
+        'categorical_time_varying_worker_interaction_dict': {'cat_tv_wi_control': cat_tv_wi_params}
+    })
+    blm_params = tw.blm_params({
+        'nl': nl,
+        'nk': nk,
+        'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
+        's1_low': 0, 's1_high': 0.05, 's2_low': 0, 's2_high': 0.05,
+        'categorical_time_varying_worker_interaction_dict': {'cat_tv_wi_control': cat_tv_wi_params}
+    })
+    # Simulate data
+    blm_true = tw.SimBLM(blm_sim_params)
+    sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
+    jdata, sdata = sim_data['jdata'], sim_data['sdata']
+    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
+    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
+    # Initialize BLM estimator
+    blm_fit = tw.BLMEstimator(blm_params)
+    # Fit BLM estimator
+    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=80, n_best=5, ncore=4, rng=rng)
+    blm_fit = blm_fit.model
+    blm_fit._sort_matrices()
 
-        # Compute average percent difference from truth
-        val_1 = abs(np.mean(
-            (blm_true.pk1.flatten() - blm_fit.pk1.flatten()) / blm_true.pk1.flatten()
-        ))
-        val_0 = abs(np.mean(
-            (blm_true.pk0.flatten() - blm_fit.pk0.flatten()) / blm_true.pk0.flatten()
-        ))
-        if blm_fit.lik1 > lik1:
-            lik1 = blm_fit.lik1
-            min_pk1 = val_1
-        if blm_fit.lik0 > lik0:
-            lik0 = blm_fit.lik0
-            min_pk0 = val_0
+    A1_sum_0_sim = sim_params['A1'].T + sim_params['A1_cat_wi']['cat_tv_wi_control'][:, 0]
+    A1_sum_1_sim = sim_params['A1'].T + sim_params['A1_cat_wi']['cat_tv_wi_control'][:, 1]
+    A2_sum_0_sim = sim_params['A2'].T + sim_params['A2_cat_wi']['cat_tv_wi_control'][:, 0]
+    A2_sum_1_sim = sim_params['A2'].T + sim_params['A2_cat_wi']['cat_tv_wi_control'][:, 1]
+    A1_sum_0_fit = blm_fit.A1.T + blm_fit.A1_cat_wi['cat_tv_wi_control'][:, 0]
+    A1_sum_1_fit = blm_fit.A1.T + blm_fit.A1_cat_wi['cat_tv_wi_control'][:, 1]
+    A2_sum_0_fit = blm_fit.A2.T + blm_fit.A2_cat_wi['cat_tv_wi_control'][:, 0]
+    A2_sum_1_fit = blm_fit.A2.T + blm_fit.A2_cat_wi['cat_tv_wi_control'][:, 1]
+    S1_sum_0_sim = np.sqrt(sim_params['S1'].T ** 2 + sim_params['S1_cat_wi']['cat_tv_wi_control'][:, 0] ** 2)
+    S1_sum_1_sim = np.sqrt(sim_params['S1'].T ** 2 + sim_params['S1_cat_wi']['cat_tv_wi_control'][:, 1] ** 2)
+    S2_sum_0_sim = np.sqrt(sim_params['S2'].T ** 2 + sim_params['S2_cat_wi']['cat_tv_wi_control'][:, 0] ** 2)
+    S2_sum_1_sim = np.sqrt(sim_params['S2'].T ** 2 + sim_params['S2_cat_wi']['cat_tv_wi_control'][:, 1] ** 2)
+    S1_sum_0_fit = np.sqrt(blm_fit.S1.T ** 2 + blm_fit.S1_cat_wi['cat_tv_wi_control'][:, 0] ** 2)
+    S1_sum_1_fit = np.sqrt(blm_fit.S1.T ** 2 + blm_fit.S1_cat_wi['cat_tv_wi_control'][:, 1] ** 2)
+    S2_sum_0_fit = np.sqrt(blm_fit.S2.T ** 2 + blm_fit.S2_cat_wi['cat_tv_wi_control'][:, 0] ** 2)
+    S2_sum_1_fit = np.sqrt(blm_fit.S2.T ** 2 + blm_fit.S2_cat_wi['cat_tv_wi_control'][:, 1] ** 2)
 
-    assert 0 < min_pk1 < 0.05
-    assert 0 < min_pk0 < 0.15 # 0.7 # This error has gone up to 4.096 @FIXME FIX THIS
-
-def test_blm_fit_6_1():
-    # Test whether BLM fit_movers() method works properly.
-    nl = 6
-    nk = 10
-    mmult = 100
-    smult = 100
-    min_A1 = np.inf
-    min_A2 = np.inf
-    min_S1 = np.inf
-    min_S2 = np.inf
-    min_pk1 = np.inf
-    min_pk0 = np.inf
-    lik1 = - np.inf
-    lik0 = - np.inf
-    for i in range(4):
-        # Initiate BLMModel object
-        blm_true = tw.BLMModel({'nl': nl, 'nk': nk, 'simulation': True}, seed=1234 + i)
-        # Make variance of worker types small
-        blm_true.S1 /= 4
-        blm_true.S2 /= 4
-        jdata = blm_true._m2_mixt_simulate_movers(blm_true.NNm * mmult)
-        sdata = blm_true._m2_mixt_simulate_stayers(blm_true.NNs * smult)
-        blm_fit = tw.BLMModel({'nl': nl, 'nk': nk, 'maxiters': 1}, seed=5678 + i)
-        ## Start at truth for all parameters
-        blm_fit.A1 = blm_true.A1.copy()
-        blm_fit.A2 = blm_true.A2.copy()
-        blm_fit.S1 = blm_true.S1.copy()
-        blm_fit.S2 = blm_true.S2.copy()
-        blm_fit.pk1 = blm_true.pk1.copy()
-        ##
-        blm_fit.fit_movers(jdata)
-        # blm_fit._sort_matrices()
-        blm_fit.fit_stayers(sdata)
-        # blm_fit._sort_matrices()
-
-        # Compute average percent difference from truth
-        val_A1 = abs(np.mean(
-            (blm_true.A1.flatten() - blm_fit.A1.flatten()) / blm_true.A1.flatten()
-        ))
-        val_A2 = abs(np.mean(
-            (blm_true.A2.flatten() - blm_fit.A2.flatten()) / blm_true.A2.flatten()
-        ))
-        val_S1 = abs(np.mean(
-            (blm_true.S1.flatten() - blm_fit.S1.flatten()) / blm_true.S1.flatten()
-        ))
-        val_S2 = abs(np.mean(
-            (blm_true.S2.flatten() - blm_fit.S2.flatten()) / blm_true.S2.flatten()
-        ))
-        val_pk1 = abs(np.mean(
-            (blm_true.pk1.flatten() - blm_fit.pk1.flatten()) / blm_true.pk1.flatten()
-        ))
-        val_pk0 = abs(np.mean(
-            (blm_true.pk0.flatten() - blm_fit.pk0.flatten()) / blm_true.pk0.flatten()
-        ))
-        if blm_fit.lik1 > lik1:
-            lik1 = blm_fit.lik1
-            min_A1 = val_A1
-            min_A2 = val_A2
-            min_S1 = val_S1
-            min_S2 = val_S2
-            min_pk1 = val_pk1
-        if blm_fit.lik0 > lik0:
-            lik0 = blm_fit.lik0
-            min_pk0 = val_pk0
-
-    # Compute average percent difference from truth
-    assert 0 < min_A1 < 0.04
-    assert 0 < min_A2 < 0.15
-    assert 0 < min_S1 < 0.4
-    assert 0 < min_S2 < 0.35
-    # assert 0 < min_pk1 < 5 # This error has gone up to 4.791 @FIXME FIX THIS
-    # assert 0 < min_pk0 < 6 # This error has gone up to 5.093 @FIXME FIX THIS
-
-def test_blm_fit_6_2():
-    # Test whether BLM fit_movers_cstr_uncstr() method works properly.
-    nl = 6
-    nk = 10
-    mmult = 100
-    smult = 100
-    min_A1 = np.inf
-    min_A2 = np.inf
-    min_S1 = np.inf
-    min_S2 = np.inf
-    min_pk1 = np.inf
-    min_pk0 = np.inf
-    lik1 = - np.inf
-    lik0 = - np.inf
-    for i in range(4):
-        # Initiate BLMModel object
-        blm_true = tw.BLMModel({'nl': nl, 'nk': nk, 'simulation': True}, seed=1234 + i)
-        # Make variance of worker types small
-        blm_true.S1 /= 4
-        blm_true.S2 /= 4
-        jdata = blm_true._m2_mixt_simulate_movers(blm_true.NNm * mmult)
-        sdata = blm_true._m2_mixt_simulate_stayers(blm_true.NNs * smult)
-        blm_fit = tw.BLMModel({'nl': nl, 'nk': nk, 'maxiters': 1}, seed=5678 + i)
-        ## Start at truth for all parameters
-        blm_fit.A1 = blm_true.A1.copy()
-        blm_fit.A2 = blm_true.A2.copy()
-        blm_fit.S1 = blm_true.S1.copy()
-        blm_fit.S2 = blm_true.S2.copy()
-        blm_fit.pk1 = blm_true.pk1.copy()
-        ##
-        blm_fit.fit_movers_cstr_uncstr(jdata)
-        # blm_fit._sort_matrices()
-        blm_fit.fit_stayers(sdata)
-        # blm_fit._sort_matrices()
-
-        # Compute average percent difference from truth
-        val_A1 = abs(np.mean(
-            (blm_true.A1.flatten() - blm_fit.A1.flatten()) / blm_true.A1.flatten()
-        ))
-        val_A2 = abs(np.mean(
-            (blm_true.A2.flatten() - blm_fit.A2.flatten()) / blm_true.A2.flatten()
-        ))
-        val_S1 = abs(np.mean(
-            (blm_true.S1.flatten() - blm_fit.S1.flatten()) / blm_true.S1.flatten()
-        ))
-        val_S2 = abs(np.mean(
-            (blm_true.S2.flatten() - blm_fit.S2.flatten()) / blm_true.S2.flatten()
-        ))
-        val_pk1 = abs(np.mean(
-            (blm_true.pk1.flatten() - blm_fit.pk1.flatten()) / blm_true.pk1.flatten()
-        ))
-        val_pk0 = abs(np.mean(
-            (blm_true.pk0.flatten() - blm_fit.pk0.flatten()) / blm_true.pk0.flatten()
-        ))
-        if blm_fit.lik1 > lik1:
-            lik1 = blm_fit.lik1
-            min_A1 = val_A1
-            min_A2 = val_A2
-            min_S1 = val_S1
-            min_S2 = val_S2
-            min_pk1 = val_pk1
-        if blm_fit.lik0 > lik0:
-            lik0 = blm_fit.lik0
-            min_pk0 = val_pk0
-
-    # Compute average percent difference from truth
-    assert min_A1 < 0.05 # 0.15
-    assert min_A2 < 0.2 # 0.05
-    assert min_S1 < 0.07 # 0.05
-    assert min_S2 < 0.05 # 0.15
-    # assert min_pk1 < 5 # This error has gone up to 4.216 @FIXME FIX THIS
-    # assert min_pk0 < 5 # This error has gone up to 4.353 @FIXME FIX THIS
+    assert np.max(np.abs((A1_sum_0_fit - A1_sum_0_sim) / A1_sum_0_sim)) < 1e-3
+    assert np.max(np.abs((A1_sum_1_fit - A1_sum_1_sim) / A1_sum_1_sim)) < 1e-2
+    assert np.max(np.abs((A2_sum_0_fit - A2_sum_0_sim) / A2_sum_0_sim)) < 1e-2
+    assert np.max(np.abs((A2_sum_1_fit - A2_sum_1_sim) / A2_sum_1_sim)) < 1e-3
+    assert np.prod(np.abs((S1_sum_0_fit - S1_sum_0_sim) / S1_sum_0_sim)) ** (1 / S1_sum_0_sim.size) < 0.55
+    assert np.prod(np.abs((S1_sum_1_fit - S1_sum_1_sim) / S1_sum_1_sim)) ** (1 / S1_sum_1_sim.size) < 0.5
+    assert np.prod(np.abs((S2_sum_0_fit - S2_sum_0_sim) / S2_sum_0_sim)) ** (1 / S2_sum_0_sim.size) < 0.35
+    assert np.prod(np.abs((S2_sum_1_fit - S2_sum_1_sim) / S2_sum_1_sim)) ** (1 / S2_sum_1_sim.size) < 0.5
+    assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.2
+    assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.2
