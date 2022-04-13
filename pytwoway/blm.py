@@ -2148,12 +2148,13 @@ class BLMModel:
             print('Running fit_pk')
         self.fit_movers(jdata, compute_NNm=compute_NNm)
 
-    def _sort_matrices(self, firm_effects=False):
+    def _sort_matrices(self, firm_effects=False, reverse=False):
         '''
         Sort arrays by cluster means.
 
         Arguments:
             firm_effects (bool): if True, also sort by average firm effect
+            reverse (bool): if True, sort in reverse order
         '''
         nk = self.nk
         ## Compute sum of all effects ##
@@ -2164,6 +2165,8 @@ class BLMModel:
                 A_sum = (A_sum.T + np.mean(control_col, axis=1)).T
         ## Sort worker effects ##
         worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
+        if reverse:
+            worker_effect_order = list(reversed(worker_effect_order))
         self.A1 = self.A1[worker_effect_order, :]
         self.A2 = self.A2[worker_effect_order, :]
         self.S1 = self.S1[worker_effect_order, :]
@@ -2180,6 +2183,8 @@ class BLMModel:
         if firm_effects:
             ## Sort firm effects ##
             firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
+            if reverse:
+                firm_effect_order = list(reversed(firm_effect_order))
             self.A1 = self.A1[:, firm_effect_order]
             self.A2 = self.A2[:, firm_effect_order]
             self.S1 = self.S1[:, firm_effect_order]
