@@ -152,9 +152,9 @@ _blm_params_default = ParamsDict({
         '''
             (default=([], {})) Constraints on A1 and A2, where first entry gives list of string constraint names and second entry gives dictionary of constraint parameters.
         ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
-    'cons_s': ((['biggerthan'], {'gap_bigger': 1e-7, 'n_periods': 2}), 'type_constrained', (tuple, _lstdct),
+    'cons_s': ((['bounded_below'], {'lower_bound': 1e-10, 'n_periods': 2}), 'type_constrained', (tuple, _lstdct),
         '''
-            (default=(['biggerthan'], {'gap_bigger': 1e-7, 'n_periods': 2})) Constraints on S1 and S2, where first entry gives list of constraints and second entry gives dictionary of constraint parameters.
+            (default=(['bounded_below'], {'lower_bound': 1e-10, 'n_periods': 2})) Constraints on S1 and S2, where first entry gives list of constraints and second entry gives dictionary of constraint parameters.
         ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
     'd_prior_movers': (1.0001, 'type_constrained', ((float, int), _gteq1),
         '''
@@ -199,13 +199,13 @@ _constraint_params_default = ParamsDict({
         '''
             (default=0) Used for mono_k constraint.
         ''', None),
-    'gap_bigger': (0, 'type', (float, int),
+    'lower_bound': (0, 'type', (float, int),
         '''
-            (default=0) Used for biggerthan constraint to determine bound.
+            (default=0) Used for bounded_below constraint to determine lower bound.
         ''', None),
-    'gap_smaller': (0, 'type', (float, int),
+    'upper_bound': (0, 'type', (float, int),
         '''
-            (default=0) Used for smallerthan constraint to determine bound.
+            (default=0) Used for bounded_above constraint to determine upper bound.
         ''', None),
     'n_periods': (2, 'type_constrained', (int, _gteq1),
         '''
@@ -372,17 +372,17 @@ class QPConstrained:
             A = - np.kron(MM, A)
             b = - np.zeros(shape=nl * (nk - 1) * (nt - 1))
 
-        elif constraint in ['biggerthan', 'greaterthan']:
-            gap = params['gap_bigger']
+        elif constraint == 'bounded_below':
+            lower_bound = params['lower_bound']
             n_periods = params['n_periods']
             G = - np.eye(n_periods * nl * nk)
-            h = - gap * np.ones(shape=n_periods * nl * nk)
+            h = - lower_bound * np.ones(shape=n_periods * nl * nk)
 
-        elif constraint in ['smallerthan', 'lessthan']:
-            gap = params['gap_smaller']
+        elif constraint == 'bounded_above':
+            upper_bound = params['upper_bound']
             n_periods = params['n_periods']
             G = np.eye(n_periods * nl * nk)
-            h = gap * np.ones(shape=n_periods * nl * nk)
+            h = upper_bound * np.ones(shape=n_periods * nl * nk)
 
         elif constraint == 'stationary':
             LL = np.zeros(shape=(nl - 1, nl))
@@ -1140,6 +1140,10 @@ class BLMModel:
 
             # We compute log sum exp to get likelihoods and probabilities
             qi = np.exp(lp.T - logsumexp(lp, axis=1)).T
+            # # Add dirichlet prior
+            # qi += d_prior - 1
+            # # Normalize rows to sum to 1
+            # qi = (qi.T / np.sum(qi, axis=1).T).T
             if params['return_qi']:
                 return qi
             lik1 = logsumexp(lp, axis=1).mean() # FIXME should this be returned?
@@ -1253,12 +1257,31 @@ class BLMModel:
                     del A1_sum_l, A2_sum_l
             del GG1_weighted, GG2_weighted
 
+            # print('A1 before:')
+            # print(A1)
+            # print('A2 before:')
+            # print(A2)
+            # print('S1 before:')
+            # print(S1)
+            # print('S2 before:')
+            # print(S2)
+            # print('A1_cat_wi before:')
+            # print(A1_cat_wi)
+            # print('A2_cat_wi before:')
+            # print(A2_cat_wi)
+            # print('S1_cat_wi before:')
+            # print(S1_cat_wi)
+            # print('S2_cat_wi before:')
+            # print(S2_cat_wi)
+
             # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
             XwX = np.diag(XwXd)
             if params['update_a']:
                 try:
                     cons_a.solve(XwX, -XwY)
                     res_a1, res_a2 = cons_a.res[: len(cons_a.res) // 2], cons_a.res[len(cons_a.res) // 2:]
+                    # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
+                    #     raise ValueError('Estimated A1/A2 has NaN values')
                     A1 = np.reshape(res_a1, self.dims)
                     A2 = np.reshape(res_a2, self.dims)
 
@@ -1300,8 +1323,11 @@ class BLMModel:
                     try:
                         a_solver = cons_a_cat_tv_wi[col]
                         a_solver.solve(XwXd_cat_tv_wi[col], -XwY_cat_tv_wi[col])
-                        A1_cat_wi[col] = np.reshape(a_solver.res[: len(a_solver.res) // 2], (nl, col_n))
-                        A2_cat_wi[col] = np.reshape(a_solver.res[len(a_solver.res) // 2:], (nl, col_n))
+                        res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2], a_solver.res[len(a_solver.res) // 2:]
+                        # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
+                        #     raise ValueError('Estimated A1_cat_wi/A2_cat_wi has NaN values')
+                        A1_cat_wi[col] = np.reshape(res_a1, (nl, col_n))
+                        A2_cat_wi[col] = np.reshape(res_a2, (nl, col_n))
 
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
@@ -1338,7 +1364,10 @@ class BLMModel:
                     try:
                         a_solver = cons_a_cat_tnv_wi[col]
                         a_solver.solve(XwXd_cat_tnv_wi[col], -XwY_cat_tnv_wi[col])
-                        A_cat_wi[col] = np.reshape(a_solver.res[: len(a_solver.res) // 2], (nl, col_n))
+                        res_a = a_solver.res[: len(a_solver.res) // 2]
+                        # if pd.isna(res_a).any():
+                        #     raise ValueError('Estimated A_cat_wi has NaN values')
+                        A_cat_wi[col] = np.reshape(res_a, (nl, col_n))
 
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
@@ -1378,8 +1407,11 @@ class BLMModel:
                     try:
                         a_solver = cons_a_cat_tv[col]
                         a_solver.solve(XwXd_cat_tv[col], -XwY_cat_tv[col])
-                        A1_cat[col] = a_solver.res[: len(a_solver.res) // 2][: col_n]
-                        A2_cat[col] = a_solver.res[len(a_solver.res) // 2:][: col_n]
+                        res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2][: col_n], a_solver.res[len(a_solver.res) // 2:][: col_n]
+                        # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
+                        #     raise ValueError('Estimated A1_cat/A2_cat has NaN values')
+                        A1_cat[col] = res_a1
+                        A2_cat[col] = res_a2
 
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
@@ -1420,7 +1452,10 @@ class BLMModel:
                     try:
                         a_solver = cons_a_cat_tnv[col]
                         a_solver.solve(XwXd_cat_tnv[col], -XwY_cat_tnv[col])
-                        A_cat[col] = a_solver.res[: len(a_solver.res) // 2][: col_n]
+                        res_a = a_solver.res[: len(a_solver.res) // 2][: col_n]
+                        # if pd.isna(res_a).any():
+                        #     raise ValueError('Estimated A_cat has NaN values')
+                        A_cat[col] = res_a
 
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
@@ -1459,8 +1494,11 @@ class BLMModel:
                     try:
                         a_solver = cons_a_cts_tv_wi[col]
                         a_solver.solve(XwXd_cts_tv_wi[col], -XwY_cts_tv_wi[col])
-                        A1_cts_wi[col] = a_solver.res[: len(a_solver.res) // 2]
-                        A2_cts_wi[col] = a_solver.res[len(a_solver.res) // 2:]
+                        res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2], a_solver.res[len(a_solver.res) // 2:]
+                        # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
+                        #     raise ValueError('Estimated A1_cts_wi/A2_cts_wi has NaN values')
+                        A1_cts_wi[col] = res_a1
+                        A2_cts_wi[col] = res_a2
 
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
@@ -1495,7 +1533,10 @@ class BLMModel:
                     try:
                         a_solver = cons_a_cts_tnv_wi[col]
                         a_solver.solve(XwXd_cts_tnv_wi[col], -XwY_cts_tnv_wi[col])
-                        A_cts_wi[col] = a_solver.res[: len(a_solver.res) // 2]
+                        res_a = a_solver.res[: len(a_solver.res) // 2]
+                        # if pd.isna(res_a).any():
+                        #     raise ValueError('Estimated A_cts_wi has NaN values')
+                        A_cts_wi[col] = res_a
 
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
@@ -1533,8 +1574,11 @@ class BLMModel:
                     try:
                         a_solver = cons_a_cts_tv[col]
                         a_solver.solve(XwXd_cts_tv[col], -XwY_cts_tv[col])
-                        A1_cts[col] = a_solver.res[: len(a_solver.res) // 2][0]
-                        A2_cts[col] = a_solver.res[len(a_solver.res) // 2:][0]
+                        res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2][0], a_solver.res[len(a_solver.res) // 2:][0]
+                        # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
+                        #     raise ValueError('Estimated A1_cts/A2_cts has NaN values')
+                        A1_cts[col] = res_a1
+                        A2_cts[col] = res_a2
 
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
@@ -1573,7 +1617,10 @@ class BLMModel:
                     try:
                         a_solver = cons_a_cts_tnv[col]
                         a_solver.solve(XwXd_cts_tnv[col], -XwY_cts_tnv[col])
-                        A_cts[col] = a_solver.res[: len(a_solver.res) // 2][0]
+                        res_a = a_solver.res[: len(a_solver.res) // 2][0]
+                        # if pd.isna(res_a).any():
+                        #     raise ValueError('Estimated A_cts has NaN values')
+                        A_cts[col] = res_a
 
                     except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
@@ -1696,9 +1743,8 @@ class BLMModel:
 
                 try:
                     cons_s.solve(XwX, -XwS)
-                    res_s1, res_s2 = cons_s.res[: len(cons_s.res) // 2], cons_s.res[len(cons_s.res) // 2:]
-                    S1 = np.sqrt(np.reshape(res_s1, self.dims))
-                    S2 = np.sqrt(np.reshape(res_s2, self.dims))
+                    S1 = np.sqrt(np.reshape(cons_s.res[: len(cons_s.res) // 2], self.dims))
+                    S2 = np.sqrt(np.reshape(cons_s.res[len(cons_s.res) // 2:], self.dims))
 
                 except ValueError as e:
                     # If constraints inconsistent, keep S1 and S2 the same
@@ -1824,6 +1870,22 @@ class BLMModel:
                             print(f'{e}, passing 2 for column {col!r}')
                         # stop
                         pass
+            # print('A1 after:')
+            # print(A1)
+            # print('A2 after:')
+            # print(A2)
+            # print('S1 after:')
+            # print(S1)
+            # print('S2 after:')
+            # print(S2)
+            # print('A1_cat_wi after:')
+            # print(A1_cat_wi)
+            # print('A2_cat_wi after:')
+            # print(A2_cat_wi)
+            # print('S1_cat_wi after:')
+            # print(S1_cat_wi)
+            # print('S2_cat_wi after:')
+            # print(S2_cat_wi)
 
             if params['update_pk1']:
                 pk1 = GG12.T @ qi
@@ -2086,11 +2148,20 @@ class BLMModel:
             print('Running fit_pk')
         self.fit_movers(jdata, compute_NNm=compute_NNm)
 
-    def _sort_matrices(self):
+    def _sort_matrices(self, firm_effects=False):
         '''
         Sort arrays by cluster means.
+
+        Arguments:
+            firm_effects (bool): if True, also sort by average firm effect
         '''
         nk = self.nk
+        ## Compute sum of all effects ##
+        A_sum = self.A1 + self.A2
+        for control_dict in (self.A1_cat_wi, self.A2_cat_wi, self.A_cat_wi, self.A_cat_wi):
+            # Note: add A twice because it appears in both the first and second periods
+            for control_col in control_dict.values():
+                A_sum = (A_sum.T + np.mean(control_col, axis=1)).T
         ## Sort worker effects ##
         worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
         self.A1 = self.A1[worker_effect_order, :]
@@ -2099,19 +2170,27 @@ class BLMModel:
         self.S2 = self.S2[worker_effect_order, :]
         self.pk1 = self.pk1[:, worker_effect_order]
         self.pk0 = self.pk0[:, worker_effect_order]
-        ## Sort firm effects ##
-        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
-        self.A1 = self.A1[:, firm_effect_order]
-        self.A2 = self.A2[:, firm_effect_order]
-        self.S1 = self.S1[:, firm_effect_order]
-        self.S2 = self.S2[:, firm_effect_order]
-        self.pk0 = self.pk0[firm_effect_order, :]
-        # Reorder part 1: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 1, 0, 3, 2 (i.e. reorder within groups)
-        pk1_order_1 = np.tile(firm_effect_order, nk) + nk * np.repeat(range(nk), nk)
-        self.pk1 = self.pk1[pk1_order_1, :]
-        # Reorder part 2: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 2, 3, 0, 1 (i.e. reorder between groups)
-        pk1_order_2 = nk * np.repeat(firm_effect_order, nk) + np.tile(range(nk), nk)
-        self.pk1 = self.pk1[pk1_order_2, :]
+        for control_dict in (self.A1_cat_wi, self.A2_cat_wi, self.A_cat_wi, self.S1_cat_wi, self.S2_cat_wi, self.S_cat_wi):
+            for control_name, control_array in control_dict.items():
+                control_dict[control_name] = control_array[worker_effect_order, :]
+        for control_dict in (self.A1_cts_wi, self.A2_cts_wi, self.A_cts_wi, self.S1_cts_wi, self.S2_cts_wi, self.S_cts_wi):
+            for control_name, control_array in control_dict.items():
+                control_dict[control_name] = control_array[worker_effect_order]
+
+        if firm_effects:
+            ## Sort firm effects ##
+            firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
+            self.A1 = self.A1[:, firm_effect_order]
+            self.A2 = self.A2[:, firm_effect_order]
+            self.S1 = self.S1[:, firm_effect_order]
+            self.S2 = self.S2[:, firm_effect_order]
+            self.pk0 = self.pk0[firm_effect_order, :]
+            # Reorder part 1: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 1, 0, 3, 2 (i.e. reorder within groups)
+            pk1_order_1 = np.tile(firm_effect_order, nk) + nk * np.repeat(range(nk), nk)
+            self.pk1 = self.pk1[pk1_order_1, :]
+            # Reorder part 2: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 2, 3, 0, 1 (i.e. reorder between groups)
+            pk1_order_2 = nk * np.repeat(firm_effect_order, nk) + np.tile(range(nk), nk)
+            self.pk1 = self.pk1[pk1_order_2, :]
 
     def plot_A1(self, dpi=None):
         '''
@@ -2165,7 +2244,7 @@ class BLMEstimator:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        model = BLMModel(self.params, rng)
+        model = BLMModel(self.params.copy(), rng)
         model.fit_movers_cstr_uncstr(jdata)
         return model
 
