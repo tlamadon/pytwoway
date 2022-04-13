@@ -611,13 +611,14 @@ class SimBLM:
         '''
         # Extract parameters
         nl, strictly_monotone_a = self.params.get_multiple(('nl', 'strictly_monotone_a'))
-        A_sum = A1 + A2
 
         if strictly_monotone_a:
             ## Make A1 and A2 monotone by worker type ##
             for l in range(nl):
                 A1[l] = np.sort(A1[l], axis=0)
                 A2[l] = np.sort(A2[l], axis=0)
+
+        A_sum = A1 + A2
 
         ## Sort worker effects ##
         worker_effect_order = np.mean(A_sum, axis=1).argsort()
