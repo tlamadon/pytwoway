@@ -31,37 +31,13 @@ _sim_params_default = ParamsDict({
         '''
             (default=10) Average number of stayers per firm.
         ''', '>= 1'),
-    'categorical_time_varying_worker_interaction_dict': (None, 'dict_of_type_none', ParamsDict,
+    'categorical_controls': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary linking column names to instances of tw.categorical_time_varying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and can vary between the first and second periods. Run tw.categorical_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.categorical_control_params(). Each instance specifies a new categorical control variable. Run tw.categorical_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
-    'categorical_time_nonvarying_worker_interaction_dict': (None, 'dict_of_type_none', ParamsDict,
+    'continuous_controls': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary linking column names to instances of tw.categorical_time_nonvarying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and is the same in the first and second periods. Run tw.categorical_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
-        ''', None),
-    'categorical_time_varying_dict': (None, 'dict_of_type_none', ParamsDict,
-        '''
-            (default=None) Dictionary linking column names to instances of tw.categorical_time_varying_params(). Each instance specifies a new control variable where the effect can vary between the first and second periods. Run tw.categorical_time_varying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
-        ''', None),
-    'categorical_time_nonvarying_dict': (None, 'dict_of_type_none', ParamsDict,
-        '''
-            (default=None) Dictionary linking column names to instances of tw.categorical_time_nonvarying_params(). Each instance specifies a new control variable where the effect is the same in the first and second periods. Run tw.categorical_time_nonvarying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
-        ''', None),
-    'continuous_time_varying_worker_interaction_dict': (None, 'dict_of_type_none', ParamsDict,
-        '''
-            (default=None) Dictionary linking column names to instances of tw.continuous_time_varying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and can vary between the first and second periods. Run tw.continuous_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
-        ''', None),
-    'continuous_time_nonvarying_worker_interaction_dict': (None, 'dict_of_type_none', ParamsDict,
-        '''
-            (default=None) Dictionary linking column names to instances of tw.continuous_time_nonvarying_worker_interaction_params(). Each instance specifies a new control variable where the effect interacts with worker types and is the same in the first and second periods. Run tw.continuous_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
-        ''', None),
-    'continuous_time_varying_dict': (None, 'dict_of_type_none', ParamsDict,
-        '''
-            (default=None) Dictionary linking column names to instances of tw.continuous_time_varying_params(). Each instance specifies a new control variable where the effect can vary between the first and second periods. Run tw.continuous_time_varying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
-        ''', None),
-    'continuous_time_nonvarying_dict': (None, 'dict_of_type_none', ParamsDict,
-        '''
-            (default=None) Dictionary linking column names to instances of tw.continuous_time_nonvarying_params(). Each instance specifies a new control variable where the effect is the same in the first and second periods. Run tw.continuous_time_nonvarying_params().describe_all() for descriptions of all valid parameters. None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.continuous_control_params(). Each instance specifies a new continuous control variable. Run tw.continuous_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
     'NNm': (None, 'array_of_type_constrained_none', ('int', _min_gt0),
         '''
@@ -127,9 +103,13 @@ _sim_params_default = ParamsDict({
         '''
             (default=False) If True, set A2 = np.mean(A2, axis=1) + A1 - np.mean(A1, axis=1).
         ''', None),
-    'stationary': (False, 'type', bool,
+    'stationary_A': (False, 'type', bool,
         '''
             (default=False) If True, set A1 = A2.
+        ''', None),
+    'stationary_S': (False, 'type', bool,
+        '''
+            (default=False) If True, set S1 = S2.
         ''', None)
 })
 
@@ -148,99 +128,7 @@ def sim_params(update_dict=None):
         new_dict.update(update_dict)
     return new_dict
 
-_categorical_time_varying_worker_interaction_params_default = ParamsDict({
-    'n': (6, 'type_constrained', (int, _gteq2),
-        '''
-            (default=6) Number of types for the parameter.
-        ''', '>= 2'),
-    'a1_mu': (1, 'type', (float, int),
-        '''
-            (default=1) Mean of simulated A1_cat_wi (mean of fixed effects in first period).
-        ''', None),
-    'a1_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Standard error of simulated A1_cat_wi (mean of fixed effects in first period).
-        ''', '>= 0'),
-    'a2_mu': (1, 'type', (float, int),
-        '''
-            (default=1) Mean of simulated A2_cat_wi (mean of fixed effects in second period).
-        ''', None),
-    'a2_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Standard error of simulated A2_cat_wi (mean of fixed effects in second period).
-        ''', '>= 0'),
-    's1_low': (0.3, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.3) Minimum value of simulated S1_cat_wi (standard deviation of fixed effects in first period).
-        ''', '>= 0'),
-    's1_high': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Maximum value of simulated S1_cat_wi (standard deviation of fixed effects in first period).
-        ''', '>= 0'),
-    's2_low': (0.3, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.3) Minimum value of simulated S2_cat_wi (standard deviation of fixed effects in second period).
-        ''', '>= 0'),
-    's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Maximum value of simulated S2_cat_wi (standard deviation of fixed effects in second period).
-        ''', '>= 0')
-})
-
-def categorical_time_varying_worker_interaction_params(update_dict=None):
-    '''
-    Dictionary of default categorical_time_varying_worker_interaction_params. Run tw.categorical_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of categorical_time_varying_worker_interaction_params
-    '''
-    new_dict = _categorical_time_varying_worker_interaction_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
-
-_categorical_time_nonvarying_worker_interaction_params_default = ParamsDict({
-    'n': (6, 'type_constrained', (int, _gteq2),
-        '''
-            (default=6) Number of types for the parameter.
-        ''', '>= 2'),
-    'a_mu': (1, 'type', (float, int),
-        '''
-            (default=1) Mean of simulated A_cat_wi (mean of fixed effects in first and second periods).
-        ''', None),
-    'a_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Standard error of simulated A_cat_wi (mean of fixed effects in first and second periods).
-        ''', '>= 0'),
-    's_low': (0.3, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.3) Minimum value of simulated S_cat_wi (standard deviation of fixed effects in first and second periods).
-        ''', '>= 0'),
-    's_high': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Maximum value of simulated S_cat_wi (standard deviation of fixed effects in first and second periods).
-        ''', '>= 0')
-})
-
-def categorical_time_nonvarying_worker_interaction_params(update_dict=None):
-    '''
-    Dictionary of default categorical_time_nonvarying_worker_interaction_params. Run tw.categorical_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of categorical_time_nonvarying_worker_interaction_params
-    '''
-    new_dict = _categorical_time_nonvarying_worker_interaction_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
-
-_categorical_time_varying_params_default = ParamsDict({
+_categorical_control_params_default = ParamsDict({
     'n': (6, 'type_constrained', (int, _gteq2),
         '''
             (default=6) Number of types for the parameter.
@@ -276,147 +164,37 @@ _categorical_time_varying_params_default = ParamsDict({
     's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S2_cat (standard deviation of fixed effects in second period).
-        ''', '>= 0')
+        ''', '>= 0'),
+    'stationary_A': (False, 'type', bool,
+        '''
+            (default=False) If True, A1_cat and A2_cat must be equal.
+        ''', None),
+    'stationary_S': (False, 'type', bool,
+        '''
+            (default=False) If True, S1_cat and S2_cat must be equal.
+        ''', None),
+    'worker_type_interaction': (False, 'type', bool,
+        '''
+            (default=False) If True, effect can differ by worker type.
+        ''', None)
 })
 
-def categorical_time_varying_params(update_dict=None):
+def categorical_control_params(update_dict=None):
     '''
-    Dictionary of default categorical_time_varying_params. Run tw.categorical_time_varying_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default categorical_control_params. Run tw.categorical_control_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
         update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of categorical_time_varying_params
+        (ParamsDict) dictionary of categorical_control_params
     '''
-    new_dict = _categorical_time_varying_params_default.copy()
+    new_dict = _categorical_control_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
 
-_categorical_time_nonvarying_params_default = ParamsDict({
-    'n': (6, 'type_constrained', (int, _gteq2),
-        '''
-            (default=6) Number of types for the parameter.
-        ''', '>= 2'),
-    'a_mu': (1, 'type', (float, int),
-        '''
-            (default=1) Mean of simulated A_cat (mean of fixed effects in first and second periods).
-        ''', None),
-    'a_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Standard error of simulated A_cat (mean of fixed effects in first and second periods).
-        ''', '>= 0'),
-    's_low': (0.3, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.3) Minimum value of simulated S_cat (standard deviation of fixed effects in first and second periods).
-        ''', '>= 0'),
-    's_high': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Maximum value of simulated S_cat (standard deviation of fixed effects in first and second periods).
-        ''', '>= 0')
-})
-
-def categorical_time_nonvarying_params(update_dict=None):
-    '''
-    Dictionary of default categorical_time_nonvarying_params. Run tw.categorical_time_nonvarying_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of categorical_time_nonvarying_params
-    '''
-    new_dict = _categorical_time_nonvarying_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
-
-_continuous_time_varying_worker_interaction_params_default = ParamsDict({
-    'a1_mu': (1, 'type', (float, int),
-        '''
-            (default=1) Mean of simulated A1_cts_wi (mean of coefficient in first period).
-        ''', None),
-    'a1_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Standard error of simulated A1_cts_wi (mean of coefficient in first period).
-        ''', '>= 0'),
-    'a2_mu': (1, 'type', (float, int),
-        '''
-            (default=1) Mean of simulated A2_cts_wi (mean of coefficient in second period).
-        ''', None),
-    'a2_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Standard error of simulated A2_cts_wi (mean of coefficient in second period).
-        ''', '>= 0'),
-    's1_low': (0.3, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.3) Minimum value of simulated S1_cts_wi (standard deviation of coefficient in first period).
-        ''', '>= 0'),
-    's1_high': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Maximum value of simulated S1_cts_wi (standard deviation of coefficient in first period).
-        ''', '>= 0'),
-    's2_low': (0.3, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.3) Minimum value of simulated S2_cts_wi (standard deviation of coefficient in second period).
-        ''', '>= 0'),
-    's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Maximum value of simulated S2_cts_wi (standard deviation of coefficient in second period).
-        ''', '>= 0')
-})
-
-def continuous_time_varying_worker_interaction_params(update_dict=None):
-    '''
-    Dictionary of default continuous_time_varying_worker_interaction_params. Run tw.continuous_time_varying_worker_interaction_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of continuous_time_varying_worker_interaction_params
-    '''
-    new_dict = _continuous_time_varying_worker_interaction_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
-
-_continuous_time_nonvarying_worker_interaction_params_default = ParamsDict({
-    'a_mu': (1, 'type', (float, int),
-        '''
-            (default=1) Mean of simulated A_cts_wi (mean of coefficient in first and second periods).
-        ''', None),
-    'a_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Standard error of simulated A_cts_wi (mean of coefficient in first and second periods).
-        ''', '>= 0'),
-    's_low': (0.3, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.3) Minimum value of simulated S_cts_wi (standard deviation of coefficient in first and second periods).
-        ''', '>= 0'),
-    's_high': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Maximum value of simulated S_cts_wi (standard deviation of coefficient in first and second periods).
-        ''', '>= 0')
-})
-
-def continuous_time_nonvarying_worker_interaction_params(update_dict=None):
-    '''
-    Dictionary of default continuous_time_nonvarying_worker_interaction_params. Run tw.continuous_time_nonvarying_worker_interaction_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of continuous_time_nonvarying_worker_interaction_params
-    '''
-    new_dict = _continuous_time_nonvarying_worker_interaction_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
-
-_continuous_time_varying_params_default = ParamsDict({
+_continuous_control_params_default = ParamsDict({
     'a1_mu': (1, 'type', (float, int),
         '''
             (default=1) Mean of simulated A1_cts (mean of coefficient in first period).
@@ -448,54 +226,32 @@ _continuous_time_varying_params_default = ParamsDict({
     's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S2_cts (standard deviation of coefficient in second period).
-        ''', '>= 0')
-})
-
-def continuous_time_varying_params(update_dict=None):
-    '''
-    Dictionary of default continuous_time_varying_params. Run tw.continuous_time_varying_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of continuous_time_varying_params
-    '''
-    new_dict = _continuous_time_varying_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
-
-_continuous_time_nonvarying_params_default = ParamsDict({
-    'a_mu': (1, 'type', (float, int),
+        ''', '>= 0'),
+    'stationary_A': (False, 'type', bool,
         '''
-            (default=1) Mean of simulated A_cat (mean of coefficient in first and second periods).
+            (default=False) If True, A1_cts and A2_cts must be equal.
         ''', None),
-    'a_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'stationary_S': (False, 'type', bool,
         '''
-            (default=0.5) Standard error of simulated A_cat (mean of coefficient in first and second periods).
-        ''', '>= 0'),
-    's_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+            (default=False) If True, S1_cts and S2_cts must be equal.
+        ''', None),
+    'worker_type_interaction': (False, 'type', bool,
         '''
-            (default=0.3) Minimum value of simulated S_cat (standard deviation of coefficient in first and second periods).
-        ''', '>= 0'),
-    's_high': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Maximum value of simulated S_cat (standard deviation of coefficient in first and second periods).
-        ''', '>= 0')
+            (default=False) If True, effect can differ by worker type.
+        ''', None)
 })
 
-def continuous_time_nonvarying_params(update_dict=None):
+def continuous_control_params(update_dict=None):
     '''
-    Dictionary of default continuous_time_nonvarying_params. Run tw.continuous_time_nonvarying_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default continuous_control_params. Run tw.continuous_control_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
         update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of continuous_time_nonvarying_params
+        (ParamsDict) dictionary of continuous_control_params
     '''
-    new_dict = _continuous_time_nonvarying_params_default.copy()
+    new_dict = _continuous_control_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
@@ -524,77 +280,35 @@ class SimBLM:
         else:
             self.NNs = NNs
 
-        ## Unpack control variable parameters
-        cat_tv_wi_dict = self.params['categorical_time_varying_worker_interaction_dict']
-        cat_tnv_wi_dict = self.params['categorical_time_nonvarying_worker_interaction_dict']
-        cat_tv_dict = self.params['categorical_time_varying_dict']
-        cat_tnv_dict = self.params['categorical_time_nonvarying_dict']
-        cts_tv_wi_dict = self.params['continuous_time_varying_worker_interaction_dict']
-        cts_tnv_wi_dict = self.params['continuous_time_nonvarying_worker_interaction_dict']
-        cts_tv_dict = self.params['continuous_time_varying_dict']
-        cts_tnv_dict = self.params['continuous_time_nonvarying_dict']
-        ## Check if control variable parameters are None
-        if cat_tv_wi_dict is None:
-            cat_tv_wi_dict = {}
-        if cat_tnv_wi_dict is None:
-            cat_tnv_wi_dict = {}
-        if cat_tv_dict is None:
-            cat_tv_dict = {}
-        if cat_tnv_dict is None:
-            cat_tnv_dict = {}
-        if cts_tv_wi_dict is None:
-            cts_tv_wi_dict = {}
-        if cts_tnv_wi_dict is None:
-            cts_tnv_wi_dict = {}
-        if cts_tv_dict is None:
-            cts_tv_dict = {}
-        if cts_tnv_dict is None:
-            cts_tnv_dict = {}
-        ## Create dictionary of all control variables
-        controls_dict = cat_tv_wi_dict.copy()
-        controls_dict.update(cat_tnv_wi_dict)
-        controls_dict.update(cat_tv_dict)
-        controls_dict.update(cat_tnv_dict)
-        controls_dict.update(cts_tv_wi_dict)
-        controls_dict.update(cts_tnv_wi_dict)
-        controls_dict.update(cts_tv_dict)
-        controls_dict.update(cts_tnv_dict)
-        ## Control variable ordering
-        cat_tv_wi_cols = sorted(cat_tv_wi_dict.keys())
-        cat_tnv_wi_cols = sorted(cat_tnv_wi_dict.keys())
-        cat_tv_cols = sorted(cat_tv_dict.keys())
-        cat_tnv_cols = sorted(cat_tnv_dict.keys())
-        cts_tv_wi_cols = sorted(cts_tv_wi_dict.keys())
-        cts_tnv_wi_cols = sorted(cts_tnv_wi_dict.keys())
-        cts_tv_cols = sorted(cts_tv_dict.keys())
-        cts_tnv_cols = sorted(cts_tnv_dict.keys())
-        ## Store control variable attributes
-        # Dictionaries
+        ## Unpack control variable parameters ##
+        cat_dict = self.params['categorical_controls']
+        cts_dict = self.params['continuous_controls']
+        ## Check if control variable parameters are None ##
+        if cat_dict is None:
+            cat_dict = {}
+        if cts_dict is None:
+            cts_dict = {}
+        ## Create dictionary of all control variables ##
+        controls_dict = cat_dict.copy()
+        controls_dict.update(cts_dict.copy())
+        ## Control variable ordering ##
+        cat_cols = sorted(cat_dict.keys())
+        cts_cols = sorted(cts_dict.keys())
+        ## Store control variable attributes ##
+        # Dictionaries #
         self.controls_dict = controls_dict
-        self.cat_tv_wi_dict = cat_tv_wi_dict
-        self.cat_tnv_wi_dict = cat_tnv_wi_dict
-        self.cat_tv_dict = cat_tv_dict
-        self.cat_tnv_dict = cat_tnv_dict
-        self.cts_tv_wi_dict = cts_tv_wi_dict
-        self.cts_tnv_wi_dict = cts_tnv_wi_dict
-        self.cts_tv_dict = cts_tv_dict
-        self.cts_tnv_dict = cts_tnv_dict
-        # Lists
-        self.cat_tv_wi_cols = cat_tv_wi_cols
-        self.cat_tnv_wi_cols = cat_tnv_wi_cols
-        self.cat_tv_cols = cat_tv_cols
-        self.cat_tnv_cols = cat_tnv_cols
-        self.cts_tv_wi_cols = cts_tv_wi_cols
-        self.cts_tnv_wi_cols = cts_tnv_wi_cols
-        self.cts_tv_cols = cts_tv_cols
-        self.cts_tnv_cols = cts_tnv_cols
+        self.cat_dict = cat_dict
+        self.cts_dict = cts_dict
+        # Lists #
+        self.cat_cols = cat_cols
+        self.cts_cols = cts_cols
 
-        # Check that no control variables appear in multiple groups
-        all_cols = cat_tv_wi_cols + cat_tnv_wi_cols + cat_tv_cols + cat_tnv_cols + cts_tv_wi_cols + cts_tnv_wi_cols + cts_tv_cols + cts_tnv_cols
+        # Check that no control variables appear multiple times
+        all_cols = cat_cols + cts_cols
         if len(all_cols) > len(set(all_cols)):
             for col in all_cols:
                 if all_cols.count(col) > 1:
-                    raise ValueError(f'Control variable names must be unique, but {col!r} appears in multiple groups.')
+                    raise ValueError(f'Control variable names must be unique, but {col!r} appears multiple times.')
 
         self.dims = (nl, nk)
 
@@ -641,7 +355,7 @@ class SimBLM:
             rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            (dict): keys are 'A1', 'A2', 'S1', 'S2', 'pk1', 'pk0', 'A1_cat_wi', 'A2_cat_wi', 'A_cat_wi', 'S1_cat_wi', 'S2_cat_wi', 'S_cat_wi', 'A1_cat', 'A2_cat', 'A_cat', 'S1_cat', 'S2_cat', 'S_cat', 'A1_cts_wi', 'A2_cts_wi', 'A_cts_wi', 'S1_cts_wi', 'S2_cts_wi', 'S_cts_wi', 'A1_cts', 'A2_cts', 'A_cts', 'S1_cts', 'S2_cts', and 'S_cts'. 'A1' gives the mean of fixed effects in the first period; 'A2' gives the mean of fixed effects in the second period; 'S1' gives the standard deviation of fixed effects in the first period; 'S2' gives the standard deviation of fixed effects in the second period; 'pk1' gives the probability of being at each combination of firm types for movers; and 'pk0' gives the probability of being at each firm type for stayers. 'cat' indicates a categorical variable, 'cts' indicates a continuous variable, and 'wi' indicates worker-interaction (the effect interacts with the unobserved worker types).
+            (dict): keys are 'A1', 'A2', 'S1', 'S2', 'pk1', 'pk0', 'A1_cat', 'A2_cat', 'S1_cat', 'S2_cat', 'A1_cts', 'A2_cts', 'S1_cts', and 'S2_cts'. 'A1' gives the mean of fixed effects in the first period; 'A2' gives the mean of fixed effects in the second period; 'S1' gives the standard deviation of fixed effects in the first period; 'S2' gives the standard deviation of fixed effects in the second period; 'pk1' gives the probability of being at each combination of firm types for movers; and 'pk0' gives the probability of being at each firm type for stayers. 'cat' indicates a categorical control variable and 'cts' indicates a continuous control variable.
         '''
         if rng is None:
             rng = np.random.default_rng(None)
@@ -649,11 +363,11 @@ class SimBLM:
         # Extract parameters
         nl, nk = self.params.get_multiple(('nl', 'nk'))
         a1_mu, a1_sig, a2_mu, a2_sig, s1_low, s1_high, s2_low, s2_high, pk1_prior, pk0_prior = self.params.get_multiple(('a1_mu', 'a1_sig', 'a2_mu', 'a2_sig', 's1_low', 's1_high', 's2_low', 's2_high', 'pk1_prior', 'pk0_prior'))
-        controls_dict, cat_tv_wi_cols, cat_tnv_wi_cols, cat_tv_cols, cat_tnv_cols, cts_tv_wi_cols, cts_tnv_wi_cols, cts_tv_cols, cts_tnv_cols = self.controls_dict, self.cat_tv_wi_cols, self.cat_tnv_wi_cols, self.cat_tv_cols, self.cat_tnv_cols, self.cts_tv_wi_cols, self.cts_tnv_wi_cols, self.cts_tv_cols, self.cts_tnv_cols
-        fixb, stationary = self.params.get_multiple(('fixb', 'stationary'))
+        controls_dict, cat_cols, cts_cols = self.controls_dict, self.cat_cols, self.cts_cols
+        fixb, stationary_A, stationary_S = self.params.get_multiple(('fixb', 'stationary_A', 'stationary_S'))
         dims = self.dims
 
-        ##### Draw parameters #####
+        #### Draw parameters ####
         # Model for Y1 | Y2, l, k for movers and stayers
         A1 = rng.normal(loc=a1_mu, scale=a1_sig, size=dims)
         S1 = rng.uniform(low=s1_low, high=s1_high, size=dims)
@@ -668,45 +382,62 @@ class SimBLM:
         if pk0_prior is None:
             pk0_prior = np.ones(nl)
         pk0 = rng.dirichlet(alpha=pk0_prior, size=nk)
-        #### Control variables ####
-        ### Categorical ###
-        ## Worker-interaction ##
-        # Time-variable
-        A1_cat_wi = {col: rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=(nl, controls_dict[col]['n'])) for col in cat_tv_wi_cols}
-        S1_cat_wi = {col: rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=(nl, controls_dict[col]['n'])) for col in cat_tv_wi_cols}
-        A2_cat_wi = {col: rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=(nl, controls_dict[col]['n'])) for col in cat_tv_wi_cols}
-        S2_cat_wi = {col: rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=(nl, controls_dict[col]['n'])) for col in cat_tv_wi_cols}
-        # Time non-variable
-        A_cat_wi = {col: rng.normal(loc=controls_dict[col]['a_mu'], scale=controls_dict[col]['a_sig'], size=(nl, controls_dict[col]['n'])) for col in cat_tnv_wi_cols}
-        S_cat_wi = {col: rng.uniform(low=controls_dict[col]['s_low'], high=controls_dict[col]['s_high'], size=(nl, controls_dict[col]['n'])) for col in cat_tnv_wi_cols}
-        ## Non-worker-interaction ##
-        # Time-variable
-        A1_cat = {col: rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=controls_dict[col]['n']) for col in cat_tv_cols}
-        S1_cat = {col: rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=controls_dict[col]['n']) for col in cat_tv_cols}
-        A2_cat = {col: rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=controls_dict[col]['n']) for col in cat_tv_cols}
-        S2_cat = {col: rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=controls_dict[col]['n']) for col in cat_tv_cols}
-        # Time non-variable
-        A_cat = {col: rng.normal(loc=controls_dict[col]['a_mu'], scale=controls_dict[col]['a_sig'], size=controls_dict[col]['n']) for col in cat_tnv_cols}
-        S_cat = {col: rng.uniform(low=controls_dict[col]['s_low'], high=controls_dict[col]['s_high'], size=controls_dict[col]['n']) for col in cat_tnv_cols}
-        ### Continuous ###
-        ## Worker-interaction ##
-        # Time-variable
-        A1_cts_wi = {col: rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=nl) for col in cts_tv_wi_cols}
-        S1_cts_wi = {col: rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=nl) for col in cts_tv_wi_cols}
-        A2_cts_wi = {col: rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=nl) for col in cts_tv_wi_cols}
-        S2_cts_wi = {col: rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=nl) for col in cts_tv_wi_cols}
-        # Time non-variable
-        A_cts_wi = {col: rng.normal(loc=controls_dict[col]['a_mu'], scale=controls_dict[col]['a_sig'], size=nl) for col in cts_tnv_wi_cols}
-        S_cts_wi = {col: rng.uniform(low=controls_dict[col]['s_low'], high=controls_dict[col]['s_high'], size=nl) for col in cts_tnv_wi_cols}
-        ## Non-worker-interaction ##
-        # Time-variable
-        A1_cts = {col: rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=1) for col in cts_tv_cols}
-        S1_cts = {col: rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=1) for col in cts_tv_cols}
-        A2_cts = {col: rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=1) for col in cts_tv_cols}
-        S2_cts = {col: rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=1) for col in cts_tv_cols}
-        # Time non-variable
-        A_cts = {col: rng.normal(loc=controls_dict[col]['a_mu'], scale=controls_dict[col]['a_sig'], size=1) for col in cts_tnv_cols}
-        S_cts = {col: rng.uniform(low=controls_dict[col]['s_low'], high=controls_dict[col]['s_high'], size=1) for col in cts_tnv_cols}
+
+        ### Control variables ###
+        ## Categorical ##
+        A1_cat = {col:
+                rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=(nl, controls_dict[col]['n']))
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=controls_dict[col]['n'])
+            for col in cat_cols}
+        A2_cat = {col:
+                rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=(nl, controls_dict[col]['n']))
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=controls_dict[col]['n'])
+            for col in cat_cols}
+        S1_cat = {col:
+                rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=(nl, controls_dict[col]['n']))
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=controls_dict[col]['n'])
+            for col in cat_cols}
+        S2_cat = {col:
+                rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=(nl, controls_dict[col]['n']))
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=controls_dict[col]['n'])
+            for col in cat_cols}
+        # Stationary #
+        for col in cat_cols:
+            if controls_dict[col]['stationary_A']:
+                A2_cat[col] = A1_cat[col]
+            if controls_dict[col]['stationary_S']:
+                S2_cat[col] = S1_cat[col]
+        ## Continuous ##
+        A1_cts = {col:
+                rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=nl)
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=1)
+            for col in cts_cols}
+        A2_cts = {col:
+                rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=nl)
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=1)
+            for col in cts_cols}
+        S1_cts = {col:
+                rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=nl)
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=1)
+            for col in cts_cols}
+        S2_cts = {col:
+                rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=nl)
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=1)
+            for col in cts_cols}
+        # Stationary #
+        for col in cts_cols:
+            if controls_dict[col]['stationary_A']:
+                A2_cts[col] = A1_cts[col]
+            if controls_dict[col]['stationary_S']:
+                S2_cts[col] = S1_cts[col]
 
         ## Sort parameters ##
         A1, A2 = self._sort_A(A1, A2)
@@ -714,12 +445,15 @@ class SimBLM:
         if fixb:
             A2 = np.mean(A2, axis=1) + A1 - np.mean(A1, axis=1)
 
-        if stationary:
+        if stationary_A:
             A2 = A1
 
-        return {'A1': A1, 'A2': A2, 'S1': S1, 'S2': S2, 'pk1': pk1, 'pk0': pk0, 'A1_cat_wi': A1_cat_wi, 'A2_cat_wi': A2_cat_wi, 'A_cat_wi': A_cat_wi, 'S1_cat_wi': S1_cat_wi, 'S2_cat_wi': S2_cat_wi, 'S_cat_wi': S_cat_wi, 'A1_cat': A1_cat, 'A2_cat': A2_cat, 'A_cat': A_cat, 'S1_cat': S1_cat, 'S2_cat': S2_cat, 'S_cat': S_cat, 'A1_cts_wi': A1_cts_wi, 'A2_cts_wi': A2_cts_wi, 'A_cts_wi': A_cts_wi, 'S1_cts_wi': S1_cts_wi, 'S2_cts_wi': S2_cts_wi, 'S_cts_wi': S_cts_wi, 'A1_cts': A1_cts, 'A2_cts': A2_cts, 'A_cts': A_cts, 'S1_cts': S1_cts, 'S2_cts': S2_cts, 'S_cts': S_cts}
+        if stationary_S:
+            S2 = S1
 
-    def _simulate_movers(self, A1, A2, S1, S2, pk1, pk0, A1_cat_wi, A2_cat_wi, A_cat_wi,  S1_cat_wi, S2_cat_wi, S_cat_wi, A1_cat, A2_cat, A_cat, S1_cat, S2_cat, S_cat, A1_cts_wi, A2_cts_wi, A_cts_wi,  S1_cts_wi, S2_cts_wi, S_cts_wi, A1_cts, A2_cts, A_cts, S1_cts, S2_cts, S_cts, rng=None):
+        return {'A1': A1, 'A2': A2, 'S1': S1, 'S2': S2, 'pk1': pk1, 'pk0': pk0, 'A1_cat': A1_cat, 'A2_cat': A2_cat, 'S1_cat': S1_cat, 'S2_cat': S2_cat, 'A1_cts': A1_cts, 'A2_cts': A2_cts, 'S1_cts': S1_cts, 'S2_cts': S2_cts}
+
+    def _simulate_movers(self, A1, A2, S1, S2, pk1, pk0, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, rng=None):
         '''
         Simulate data for movers (simulates firm types, not firms).
 
@@ -730,30 +464,14 @@ class SimBLM:
             S2 (NumPy Array): standard deviation of fixed effects in the second period
             pk1 (NumPy Array): probability of being at each combination of firm types for movers
             pk0 (NumPy Array): probability of being at each firm type for stayers (used only for _simulate_stayers)
-            A1_cat_wi (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in the first period for categorical control variables that interact with worker types
-            A2_cat_wi (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in the second period for categorical control variables that interact with worker types
-            A_cat_wi (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in both periods for categorical control variables that interact with worker types
-            S1_cat_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in the first period for categorical control variables that interact with worker types
-            S2_cat_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in the second period for categorical control variables that interact with worker types
-            S_cat_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in both periods for categorical control variables that interact with worker types
             A1_cat (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in the first period for categorical control variables
             A2_cat (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in the second period for categorical control variables
-            A_cat (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in both periods for categorical control variables
             S1_cat (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in the first period for categorical control variables
             S2_cat (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in the second period for categorical control variables
-            S_cat (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in both periods for categorical control variables
-            A1_cts_wi (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in the first period for continuous control variables that interact with worker types
-            A2_cts_wi (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in the second period for continuous control variables that interact with worker types
-            A_cts_wi (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in both periods for continuous control variables that interact with worker types
-            S1_cts_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in the first period for continuous control variables that interact with worker types
-            S2_cts_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in the second period for continuous control variables that interact with worker types
-            S_cts_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in both periods for continuous control variables that interact with worker types
             A1_cts (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in the first period for continuous control variables
             A2_cts (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in the second period for continuous control variables
-            A_cts (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in both periods for continuous control variables
             S1_cts (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in the first period for continuous control variables
             S2_cts (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in the second period for continuous control variables
-            S_cts (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in both periods for continuous control variables
             rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
@@ -764,6 +482,8 @@ class SimBLM:
 
         # Extract parameters
         nl, nk, mmult = self.params.get_multiple(('nl', 'nk', 'mmult'))
+        cat_cols, cts_cols = self.cat_cols, self.cts_cols
+        controls_dict = self.controls_dict
 
         # Number of movers who transition between each combination of firm types
         NNm = mmult * self.NNm
@@ -798,33 +518,17 @@ class SimBLM:
 
                 i += ni
 
-        if len(self.controls_dict) > 0:
-            #### Draw custom columns #### FIXME add custom probabilities?
-            ### Categorical ###
-            ## Worker-interaction ##
-            A1_cat_wi_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nmi, replace=True) for cat_col, cat_dict in self.cat_tv_wi_dict.items()}
-            A2_cat_wi_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nmi, replace=True) for cat_col, cat_dict in self.cat_tv_wi_dict.items()}
-            A_cat_wi_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nmi, replace=True) for cat_col, cat_dict in self.cat_tnv_wi_dict.items()}
-            ## Non-worker-interaction ##
-            A1_cat_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nmi, replace=True) for cat_col, cat_dict in self.cat_tv_dict.items()}
-            A2_cat_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nmi, replace=True) for cat_col, cat_dict in self.cat_tv_dict.items()}
-            A_cat_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nmi, replace=True) for cat_col, cat_dict in self.cat_tnv_dict.items()}
-            ## Variances ##
-            S1_cat_wi_draws = A1_cat_wi_draws
-            S2_cat_wi_draws = A2_cat_wi_draws
-            S_cat_wi_draws = A_cat_wi_draws
+        if len(controls_dict) > 0:
+            ### Draw custom columns ### FIXME add custom probabilities?
+            ## Categorical ##
+            A1_cat_draws = {col: rng.choice(np.arange(col_dict['n']), size=nmi, replace=True) for col, col_dict in self.cat_dict.items()}
+            A2_cat_draws = {col: rng.choice(np.arange(col_dict['n']), size=nmi, replace=True) for col, col_dict in self.cat_dict.items()}
+            # Variances #
             S1_cat_draws = A1_cat_draws
             S2_cat_draws = A2_cat_draws
-            S_cat_draws = A_cat_draws
-            ### Continuous ###
-            ## Worker-interaction ##
-            A1_cts_wi_draws = {cts_col: rng.normal(size=nmi) for cts_col in self.cts_tv_wi_dict.keys()}
-            A2_cts_wi_draws = {cts_col: rng.normal(size=nmi) for cts_col in self.cts_tv_wi_dict.keys()}
-            A_cts_wi_draws = {cts_col: rng.normal(size=nmi) for cts_col in self.cts_tnv_wi_dict.keys()}
-            ## Non-worker-interaction ##
-            A1_cts_draws = {cts_col: rng.normal(size=nmi) for cts_col in self.cts_tv_dict.keys()}
-            A2_cts_draws = {cts_col: rng.normal(size=nmi) for cts_col in self.cts_tv_dict.keys()}
-            A_cts_draws = {cts_col: rng.normal(size=nmi) for cts_col in self.cts_tnv_dict.keys()}
+            ## Continuous ##
+            A1_cts_draws = {col: rng.normal(size=nmi) for col in cts_cols}
+            A2_cts_draws = {col: rng.normal(size=nmi) for col in cts_cols}
 
             # Simulate control variable wages
             A1_sum = np.zeros(shape=nmi)
@@ -832,69 +536,47 @@ class SimBLM:
             S1_sum_sq = np.zeros(shape=nmi)
             S2_sum_sq = np.zeros(shape=nmi)
             ### Categorical ###
-            ## Worker-interaction ##
-            for cat_col in self.cat_tv_wi_cols:
-                A1_sum += A1_cat_wi[cat_col][L, A1_cat_wi_draws[cat_col]]
-                A2_sum += A2_cat_wi[cat_col][L, A2_cat_wi_draws[cat_col]]
-                S1_sum_sq += S1_cat_wi[cat_col][L, S1_cat_wi_draws[cat_col]] ** 2
-                S2_sum_sq += S2_cat_wi[cat_col][L, S2_cat_wi_draws[cat_col]] ** 2
-            for cat_col in self.cat_tnv_wi_cols:
-                A1_sum += A_cat_wi[cat_col][L, A_cat_wi_draws[cat_col]]
-                A2_sum += A_cat_wi[cat_col][L, A_cat_wi_draws[cat_col]]
-                S1_sum_sq += S_cat_wi[cat_col][L, S_cat_wi_draws[cat_col]] ** 2
-                S2_sum_sq += S_cat_wi[cat_col][L, S_cat_wi_draws[cat_col]] ** 2
-            ## Non-worker-interaction ##
-            for cat_col in self.cat_tv_cols:
-                A1_sum += A1_cat[cat_col][A1_cat_draws[cat_col]]
-                A2_sum += A2_cat[cat_col][A2_cat_draws[cat_col]]
-                S1_sum_sq += S1_cat[cat_col][S1_cat_draws[cat_col]] ** 2
-                S2_sum_sq += S2_cat[cat_col][S2_cat_draws[cat_col]] ** 2
-            for cat_col in self.cat_tnv_cols:
-                A1_sum += A_cat[cat_col][A_cat_draws[cat_col]]
-                A2_sum += A_cat[cat_col][A_cat_draws[cat_col]]
-                S1_sum_sq += S_cat[cat_col][S_cat_draws[cat_col]] ** 2
-                S2_sum_sq += S_cat[cat_col][S_cat_draws[cat_col]] ** 2
+            for col in cat_cols:
+                if controls_dict[col]['worker_type_interaction']:
+                    ## Worker-interaction ##
+                    A1_sum += A1_cat[col][L, A1_cat_draws[col]]
+                    A2_sum += A2_cat[col][L, A2_cat_draws[col]]
+                    S1_sum_sq += S1_cat[col][L, S1_cat_draws[col]] ** 2
+                    S2_sum_sq += S2_cat[col][L, S2_cat_draws[col]] ** 2
+                else:
+                    ## Non-worker-interaction ##
+                    A1_sum += A1_cat[col][A1_cat_draws[col]]
+                    A2_sum += A2_cat[col][A2_cat_draws[col]]
+                    S1_sum_sq += S1_cat[col][S1_cat_draws[col]] ** 2
+                    S2_sum_sq += S2_cat[col][S2_cat_draws[col]] ** 2
             ### Continuous ###
-            ## Worker-interaction ##
-            for cts_col in self.cts_tv_wi_cols:
-                A1_sum += A1_cts_wi[cts_col][L] * A1_cts_wi_draws[cts_col]
-                A2_sum += A2_cts_wi[cts_col][L] * A2_cts_wi_draws[cts_col]
-                S1_sum_sq += S1_cts_wi[cts_col][L] ** 2
-                S2_sum_sq += S2_cts_wi[cts_col][L] ** 2
-            for cts_col in self.cts_tnv_wi_cols:
-                A1_sum += A_cts_wi[cts_col][L] * A_cts_wi_draws[cts_col]
-                A2_sum += A_cts_wi[cts_col][L] * A_cts_wi_draws[cts_col]
-                S1_sum_sq += S_cts_wi[cts_col][L] ** 2
-                S2_sum_sq += S_cts_wi[cts_col][L] ** 2
-            ## Non-worker-interaction ##
-            for cts_col in self.cts_tv_cols:
-                A1_sum += A1_cts[cts_col] * A1_cts_draws[cts_col]
-                A2_sum += A2_cts[cts_col] * A2_cts_draws[cts_col]
-                S1_sum_sq += S1_cts[cts_col] ** 2
-                S2_sum_sq += S2_cts[cts_col] ** 2
-            for cts_col in self.cts_tnv_cols:
-                A1_sum += A_cts[cts_col] * A_cts_draws[cts_col]
-                A2_sum += A_cts[cts_col] * A_cts_draws[cts_col]
-                S1_sum_sq += S_cts[cts_col] ** 2
-                S2_sum_sq += S_cts[cts_col] ** 2
+            for col in cts_cols:
+                if controls_dict[col]['worker_type_interaction']:
+                    ## Worker-interaction ##
+                    A1_sum += A1_cts[col][L] * A1_cts_draws[col]
+                    A2_sum += A2_cts[col][L] * A2_cts_draws[col]
+                    S1_sum_sq += S1_cts[col][L] ** 2
+                    S2_sum_sq += S2_cts[col][L] ** 2
+                else:
+                    ## Non-worker-interaction ##
+                    A1_sum += A1_cts[col] * A1_cts_draws[col]
+                    A2_sum += A2_cts[col] * A2_cts_draws[col]
+                    S1_sum_sq += S1_cts[col] ** 2
+                    S2_sum_sq += S2_cts[col] ** 2
 
             Y1 += rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq), size=nmi)
             Y2 += rng.normal(loc=A2_sum, scale=np.sqrt(S2_sum_sq), size=nmi)
 
-            A1_cat_wi_draws = {k + '1': v for k, v in A1_cat_wi_draws.items()}
-            A2_cat_wi_draws = {k + '2': v for k, v in A2_cat_wi_draws.items()}
             A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
             A2_cat_draws = {k + '2': v for k, v in A2_cat_draws.items()}
-            A1_cts_wi_draws = {k + '1': v for k, v in A1_cts_wi_draws.items()}
-            A2_cts_wi_draws = {k + '2': v for k, v in A2_cts_wi_draws.items()}
             A1_cts_draws = {k + '1': v for k, v in A1_cts_draws.items()}
             A2_cts_draws = {k + '2': v for k, v in A2_cts_draws.items()}
 
-            return DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G1, 'g2': G2, 'l': L, **A1_cat_wi_draws, **A2_cat_wi_draws, **A_cat_wi_draws, **A1_cat_draws, **A2_cat_draws, **A_cat_draws, **A1_cts_wi_draws, **A2_cts_wi_draws, **A_cts_wi_draws, **A1_cts_draws, **A2_cts_draws, **A_cts_draws})
+            return DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G1, 'g2': G2, 'l': L, **A1_cat_draws, **A2_cat_draws, **A1_cts_draws, **A2_cts_draws})
 
         return DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G1, 'g2': G2, 'l': L})
 
-    def _simulate_stayers(self, A1, A2, S1, S2, pk1, pk0, A1_cat_wi, A2_cat_wi, A_cat_wi,  S1_cat_wi, S2_cat_wi, S_cat_wi, A1_cat, A2_cat, A_cat, S1_cat, S2_cat, S_cat, A1_cts_wi, A2_cts_wi, A_cts_wi,  S1_cts_wi, S2_cts_wi, S_cts_wi, A1_cts, A2_cts, A_cts, S1_cts, S2_cts, S_cts, rng=None):
+    def _simulate_stayers(self, A1, A2, S1, S2, pk1, pk0, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, rng=None):
         '''
         Simulate data for stayers (simulates firm types, not firms).
 
@@ -905,30 +587,14 @@ class SimBLM:
             S2 (NumPy Array): standard deviation of fixed effects in the second period
             pk1 (NumPy Array): probability of being at each combination of firm types for movers (used only for _simulate_movers)
             pk0 (NumPy Array): probability of being at each firm type for stayers
-            A1_cat_wi (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in the first period for categorical control variables that interact with worker types
-            A2_cat_wi (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in the second period for categorical control variables that interact with worker types
-            A_cat_wi (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in both periods for categorical control variables that interact with worker types
-            S1_cat_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in the first period for categorical control variables that interact with worker types
-            S2_cat_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in the second period for categorical control variables that interact with worker types
-            S_cat_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in both periods for categorical control variables that interact with worker types
             A1_cat (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in the first period for categorical control variables
             A2_cat (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in the second period for categorical control variables
-            A_cat (dict of NumPy Arrays): dictionary of column names linked to mean of fixed effects in both periods for categorical control variables
             S1_cat (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in the first period for categorical control variables
             S2_cat (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in the second period for categorical control variables
-            S_cat (dict of NumPy Arrays): dictionary of column names linked to standard deviation of fixed effects in both periods for categorical control variables
-            A1_cts_wi (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in the first period for continuous control variables that interact with worker types
-            A2_cts_wi (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in the second period for continuous control variables that interact with worker types
-            A_cts_wi (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in both periods for continuous control variables that interact with worker types
-            S1_cts_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in the first period for continuous control variables that interact with worker types
-            S2_cts_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in the second period for continuous control variables that interact with worker types
-            S_cts_wi (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in both periods for continuous control variables that interact with worker types
             A1_cts (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in the first period for continuous control variables
             A2_cts (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in the second period for continuous control variables
-            A_cts (dict of NumPy Arrays): dictionary of column names linked to mean of coefficients in both periods for continuous control variables
             S1_cts (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in the first period for continuous control variables
             S2_cts (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in the second period for continuous control variables
-            S_cts (dict of NumPy Arrays): dictionary of column names linked to standard deviation of coefficients in both periods for continuous control variables
             rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
@@ -939,6 +605,8 @@ class SimBLM:
 
         # Extract parameters
         nl, nk, smult = self.params.get_multiple(('nl', 'nk', 'smult'))
+        cat_cols, cts_cols = self.cat_cols, self.cts_cols
+        controls_dict = self.controls_dict
 
         # Number of stayers at each firm type
         NNs = smult * self.NNs
@@ -969,33 +637,17 @@ class SimBLM:
 
             i += ni
 
-        if len(self.controls_dict) > 0:
-            #### Draw custom columns #### FIXME add custom probabilities?
-            ### Categorical ###
-            ## Worker-interaction ##
-            A1_cat_wi_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nsi, replace=True) for cat_col, cat_dict in self.cat_tv_wi_dict.items()}
-            A2_cat_wi_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nsi, replace=True) for cat_col, cat_dict in self.cat_tv_wi_dict.items()}
-            A_cat_wi_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nsi, replace=True) for cat_col, cat_dict in self.cat_tnv_wi_dict.items()}
-            ## Non-worker-interaction ##
-            A1_cat_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nsi, replace=True) for cat_col, cat_dict in self.cat_tv_dict.items()}
-            A2_cat_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nsi, replace=True) for cat_col, cat_dict in self.cat_tv_dict.items()}
-            A_cat_draws = {cat_col: rng.choice(np.arange(cat_dict['n']), size=nsi, replace=True) for cat_col, cat_dict in self.cat_tnv_dict.items()}
-            ## Variances ##
-            S1_cat_wi_draws = A1_cat_wi_draws
-            S2_cat_wi_draws = A2_cat_wi_draws
-            S_cat_wi_draws = A_cat_wi_draws
+        if len(controls_dict) > 0:
+            ### Draw custom columns ### FIXME add custom probabilities?
+            ## Categorical ##
+            A1_cat_draws = {col: rng.choice(np.arange(col_dict['n']), size=nsi, replace=True) for col, col_dict in self.cat_dict.items()}
+            A2_cat_draws = {col: rng.choice(np.arange(col_dict['n']), size=nsi, replace=True) for col, col_dict in self.cat_dict.items()}
+            # Variances #
             S1_cat_draws = A1_cat_draws
             S2_cat_draws = A2_cat_draws
-            S_cat_draws = A_cat_draws
-            ### Continuous ###
-            ## Worker-interaction ##
-            A1_cts_wi_draws = {cts_col: rng.normal(size=nsi) for cts_col in self.cts_tv_wi_dict.keys()}
-            A2_cts_wi_draws = {cts_col: rng.normal(size=nsi) for cts_col in self.cts_tv_wi_dict.keys()}
-            A_cts_wi_draws = {cts_col: rng.normal(size=nsi) for cts_col in self.cts_tnv_wi_dict.keys()}
-            ## Non-worker-interaction ##
-            A1_cts_draws = {cts_col: rng.normal(size=nsi) for cts_col in self.cts_tv_dict.keys()}
-            A2_cts_draws = {cts_col: rng.normal(size=nsi) for cts_col in self.cts_tv_dict.keys()}
-            A_cts_draws = {cts_col: rng.normal(size=nsi) for cts_col in self.cts_tnv_dict.keys()}
+            ## Continuous ##
+            A1_cts_draws = {col: rng.normal(size=nsi) for col in cts_cols}
+            A2_cts_draws = {col: rng.normal(size=nsi) for col in cts_cols}
 
             # Simulate control variable wages
             A1_sum = np.zeros(shape=nsi)
@@ -1003,78 +655,56 @@ class SimBLM:
             S1_sum_sq = np.zeros(shape=nsi)
             S2_sum_sq = np.zeros(shape=nsi)
             ### Categorical ###
-            ## Worker-interaction ##
-            for cat_col in self.cat_tv_wi_cols:
-                A1_sum += A1_cat_wi[cat_col][L, A1_cat_wi_draws[cat_col]]
-                A2_sum += A2_cat_wi[cat_col][L, A2_cat_wi_draws[cat_col]]
-                S1_sum_sq += S1_cat_wi[cat_col][L, S1_cat_wi_draws[cat_col]] ** 2
-                S2_sum_sq += S2_cat_wi[cat_col][L, S2_cat_wi_draws[cat_col]] ** 2
-            for cat_col in self.cat_tnv_wi_cols:
-                A1_sum += A_cat_wi[cat_col][L, A_cat_wi_draws[cat_col]]
-                A2_sum += A_cat_wi[cat_col][L, A_cat_wi_draws[cat_col]]
-                S1_sum_sq += S_cat_wi[cat_col][L, S_cat_wi_draws[cat_col]] ** 2
-                S2_sum_sq += S_cat_wi[cat_col][L, S_cat_wi_draws[cat_col]] ** 2
-            ## Non-worker-interaction ##
-            for cat_col in self.cat_tv_cols:
-                A1_sum += A1_cat[cat_col][A1_cat_draws[cat_col]]
-                A2_sum += A2_cat[cat_col][A2_cat_draws[cat_col]]
-                S1_sum_sq += S1_cat[cat_col][S1_cat_draws[cat_col]] ** 2
-                S2_sum_sq += S2_cat[cat_col][S2_cat_draws[cat_col]] ** 2
-            for cat_col in self.cat_tnv_cols:
-                A1_sum += A_cat[cat_col][A_cat_draws[cat_col]]
-                A2_sum += A_cat[cat_col][A_cat_draws[cat_col]]
-                S1_sum_sq += S_cat[cat_col][S_cat_draws[cat_col]] ** 2
-                S2_sum_sq += S_cat[cat_col][S_cat_draws[cat_col]] ** 2
+            for col in cat_cols:
+                if controls_dict[col]['worker_type_interaction']:
+                    ## Worker-interaction ##
+                    A1_sum += A1_cat[col][L, A1_cat_draws[col]]
+                    A2_sum += A2_cat[col][L, A2_cat_draws[col]]
+                    S1_sum_sq += S1_cat[col][L, S1_cat_draws[col]] ** 2
+                    S2_sum_sq += S2_cat[col][L, S2_cat_draws[col]] ** 2
+                else:
+                    ## Non-worker-interaction ##
+                    A1_sum += A1_cat[col][A1_cat_draws[col]]
+                    A2_sum += A2_cat[col][A2_cat_draws[col]]
+                    S1_sum_sq += S1_cat[col][S1_cat_draws[col]] ** 2
+                    S2_sum_sq += S2_cat[col][S2_cat_draws[col]] ** 2
             ### Continuous ###
-            ## Worker-interaction ##
-            for cts_col in self.cts_tv_wi_cols:
-                A1_sum += A1_cts_wi[cts_col][L] * A1_cts_wi_draws[cts_col]
-                A2_sum += A2_cts_wi[cts_col][L] * A2_cts_wi_draws[cts_col]
-                S1_sum_sq += S1_cts_wi[cts_col][L] ** 2
-                S2_sum_sq += S2_cts_wi[cts_col][L] ** 2
-            for cts_col in self.cts_tnv_wi_cols:
-                A1_sum += A_cts_wi[cts_col][L] * A_cts_wi_draws[cts_col]
-                A2_sum += A_cts_wi[cts_col][L] * A_cts_wi_draws[cts_col]
-                S1_sum_sq += S_cts_wi[cts_col][L] ** 2
-                S2_sum_sq += S_cts_wi[cts_col][L] ** 2
-            ## Non-worker-interaction ##
-            for cts_col in self.cts_tv_cols:
-                A1_sum += A1_cts[cts_col] * A1_cts_draws[cts_col]
-                A2_sum += A2_cts[cts_col] * A2_cts_draws[cts_col]
-                S1_sum_sq += S1_cts[cts_col] ** 2
-                S2_sum_sq += S2_cts[cts_col] ** 2
-            for cts_col in self.cts_tnv_cols:
-                A1_sum += A_cts[cts_col] * A_cts_draws[cts_col]
-                A2_sum += A_cts[cts_col] * A_cts_draws[cts_col]
-                S1_sum_sq += S_cts[cts_col] ** 2
-                S2_sum_sq += S_cts[cts_col] ** 2
+            for col in cts_cols:
+                if controls_dict[col]['worker_type_interaction']:
+                    ## Worker-interaction ##
+                    A1_sum += A1_cts[col][L] * A1_cts_draws[col]
+                    A2_sum += A2_cts[col][L] * A2_cts_draws[col]
+                    S1_sum_sq += S1_cts[col][L] ** 2
+                    S2_sum_sq += S2_cts[col][L] ** 2
+                else:
+                    ## Non-worker-interaction ##
+                    A1_sum += A1_cts[col] * A1_cts_draws[col]
+                    A2_sum += A2_cts[col] * A2_cts_draws[col]
+                    S1_sum_sq += S1_cts[col] ** 2
+                    S2_sum_sq += S2_cts[col] ** 2
 
             Y1 += rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq), size=nsi)
             Y2 += rng.normal(loc=A2_sum, scale=np.sqrt(S2_sum_sq), size=nsi)
 
-            A1_cat_wi_draws = {k + '1': v for k, v in A1_cat_wi_draws.items()}
-            A2_cat_wi_draws = {k + '2': v for k, v in A2_cat_wi_draws.items()}
             A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
             A2_cat_draws = {k + '2': v for k, v in A2_cat_draws.items()}
-            A1_cts_wi_draws = {k + '1': v for k, v in A1_cts_wi_draws.items()}
-            A2_cts_wi_draws = {k + '2': v for k, v in A2_cts_wi_draws.items()}
             A1_cts_draws = {k + '1': v for k, v in A1_cts_draws.items()}
             A2_cts_draws = {k + '2': v for k, v in A2_cts_draws.items()}
 
-            return DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G, 'g2': G, 'l': L, **A1_cat_wi_draws, **A2_cat_wi_draws, **A_cat_wi_draws, **A1_cat_draws, **A2_cat_draws, **A_cat_draws, **A1_cts_wi_draws, **A2_cts_wi_draws, **A_cts_wi_draws, **A1_cts_draws, **A2_cts_draws, **A_cts_draws})
+            return DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G, 'g2': G, 'l': L, **A1_cat_draws, **A2_cat_draws, **A1_cts_draws, **A2_cts_draws})
 
         return DataFrame(data={'y1': Y1, 'y2': Y2, 'g1': G, 'g2': G, 'l': L})
 
     def simulate(self, return_parameters=False, rng=None):
         '''
-        Simulates data (movers and stayers) and attached firms ids. All firms have the same expected size. Columns are as follows: y1/y2=wage; j1/j2=firm id; g1/g2=firm type; l=worker type
+        Simulates data (movers and stayers) and attached firms ids. All firms have the same expected size. Columns are as follows: y1/y2=wage; j1/j2=firm id; g1/g2=firm type; l=worker type.
 
         Arguments:
             return_parameters (bool): if True, return tuple of (simulated data, simulated parameters); otherwise, return only simulated data
             rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            (dict or tuple of dicts): sim_data gives {'jdata': movers data, 'sdata': stayers data}, while sim_params gives {'A1': A1, 'A2': A2, 'S1': S1, 'S2': S2, 'pk1': pk1, 'pk0': pk0, 'A1_cat_wi': A1_cat_wi, 'A2_cat_wi': A2_cat_wi, 'A_cat_wi': A_cat_wi, 'S1_cat_wi': S1_cat_wi, 'S2_cat_wi': S2_cat_wi, 'S_cat_wi': S_cat_wi, 'A1_cat': A1_cat, 'A2_cat': A2_cat, 'A_cat': A_cat, 'S1_cat': S1_cat, 'S2_cat': S2_cat, 'S_cat': S_cat}; if return_parameters=True, returns (sim_data, sim_params); if return_parameters=False, returns sim_data
+            (dict or tuple of dicts): sim_data gives {'jdata': movers data, 'sdata': stayers data}, while sim_params gives {'A1': A1, 'A2': A2, 'S1': S1, 'S2': S2, 'pk1': pk1, 'pk0': pk0, 'A1_cat': A1_cat, 'A2_cat': A2_cat, 'S1_cat': S1_cat, 'S2_cat': S2_cat, 'A1_cts': A1_cts, 'A2_cts': A2_cts, 'S1_cts': S1_cts, 'S2_cts': S2_cts}; if return_parameters=True, returns (sim_data, sim_params); if return_parameters=False, returns sim_data
         '''
         if rng is None:
             rng = np.random.default_rng(None)
