@@ -1432,17 +1432,17 @@ class BLMModel:
                         res_s1, res_s2 = s_solver.res[: len(s_solver.res) // 2], s_solver.res[len(s_solver.res) // 2:]
                         # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
                         #     raise ValueError(f'Estimated S1_cts/S2_cts has NaN values for column {col!r}')
-                        if cat_dict[col]['worker_type_interaction']:
-                            S1_cat[col] = np.sqrt(res_s1)
-                            S2_cat[col] = np.sqrt(res_s2)
+                        if cts_dict[col]['worker_type_interaction']:
+                            S1_cts[col] = np.sqrt(res_s1)
+                            S2_cts[col] = np.sqrt(res_s2)
                         else:
-                            S1_cat[col] = np.sqrt(res_s1[0])
-                            S2_cat[col] = np.sqrt(res_s2[0])
+                            S1_cts[col] = np.sqrt(res_s1[0])
+                            S2_cts[col] = np.sqrt(res_s2[0])
 
                     except ValueError as e:
                         # If constraints inconsistent, keep S1_cts and S2_cts the same
                         if params['verbose'] in [1, 2]:
-                            print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
+                            print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
                         # stop
                         pass
 
@@ -1720,7 +1720,7 @@ class BLMModel:
         for control_dict in (self.A1_cat, self.A2_cat):
             for control_col, control_array in control_dict.items():
                 if controls_dict[control_col]['worker_type_interaction']:
-                    A_sum = (A_sum.T + np.mean(control_col, axis=1)).T
+                    A_sum = (A_sum.T + np.mean(control_array, axis=1)).T
         ## Sort worker effects ##
         worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
         if reverse:
