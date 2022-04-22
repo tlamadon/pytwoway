@@ -26,11 +26,13 @@ def _gt0(a):
 def _min_gt0(a):
     return np.min(a) > 0
 def _lstdct(a):
-    return (isinstance(a[0], list) and isinstance(a[1], dict))
+    return (isinstance(a[0], list) and isinstance(a[1], ParamsDict))
+def _dctlstdct(a):
+    return all([_lstdct(sub_a) for sub_a in a.values()])
 
 # Define default parameter dictionaries
 _blm_params_default = ParamsDict({
-    ## Class parameters
+    ## Class parameters ##
     'nl': (6, 'type_constrained', (int, _gteq1),
         '''
             (default=6) Number of worker types.
@@ -47,7 +49,7 @@ _blm_params_default = ParamsDict({
         '''
             (default=None) Dictionary linking column names to instances of tw.continuous_control_params(). Each instance specifies a new continuous control variable and how its starting values should be generated. Run tw.continuous_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
-    ## Starting values
+    ## Starting values ##
     'a1_mu': (1, 'type', (float, int),
         '''
             (default=1) Mean of simulated A1 (mean of fixed effects in first period).
@@ -88,32 +90,16 @@ _blm_params_default = ParamsDict({
         '''
             (default=None) Dirichlet prior for pk0 (probability of being at each firm type for stayers). Must have length nl. None is equivalent to np.ones(nl).
         ''', 'min > 0'),
-    'fixb': (False, 'type', bool,
-        '''
-            (default=False) If True, set constraints so that A2 = np.mean(A2, axis=1) + A1 - np.mean(A1, axis=1).
-        ''', None),
-    'linear': (False, 'type', bool,
-        '''
-            (default=False) If True, set constraints for A1/A2/A1_cat/A2_cat/A1_cts/A2_cts such that for a given firm type, the change in effect between worker types is linear.
-        ''', None),
-    'stationary_A': (False, 'type', bool,
-        '''
-            (default=False) If True, set constraints so that A1 = A2, A1_cat = A2_cat, and A1_cts = A2_cts.
-        ''', None),
-    'stationary_S': (False, 'type', bool,
-        '''
-            (default=False) If True, set constraints so that S1 = S2, S1_cat = S2_cat, and S1_cts = S2_cts.
-        ''', None),
     'verbose': (0, 'set', [0, 1, 2],
         '''
             (default=0) If 0, print no output; if 1, print additional output; if 2, print maximum output.
         ''', None),
-    ## fit_movers() and fit_stayers parameters
+    ## fit_movers() and fit_stayers() parameters ##
     'return_qi': (False, 'type', bool,
         '''
             (default=False) If True, return qi matrix after first loop.
         ''', None),
-    # fit_movers() parameters
+    # fit_movers() parameters ##
     'n_iters_movers': (100, 'type_constrained', (int, _gteq1),
         '''
             (default=100) Number of iterations for EM for movers.
@@ -134,13 +120,45 @@ _blm_params_default = ParamsDict({
         '''
             (default=True) If False, do not update pk1.
         ''', None),
-    'cons_a': (([], {}), 'type_constrained', (tuple, _lstdct),
+    'fixb': (False, 'type', bool,
         '''
-            (default=([], {})) Constraints on A1 and A2, where first entry gives list of string constraint names and second entry gives dictionary of constraint parameters.
+            (default=False) If True, set constraints for A1/A2/A1_cat/A2_cat/A1_cts/A2_cts so that A2 = np.mean(A2, axis=1) + A1 - np.mean(A1, axis=1).
+        ''', None),
+    'linear': (False, 'type', bool,
+        '''
+            (default=False) If True, set constraints for A1/A2/A1_cat/A2_cat/A1_cts/A2_cts so that for a given firm type, the change in effect between worker types is linear.
+        ''', None),
+    'stationary_A': (False, 'type', bool,
+        '''
+            (default=False) If True, set constraints so that A1 = A2, A1_cat = A2_cat, and A1_cts = A2_cts.
+        ''', None),
+    'stationary_S': (False, 'type', bool,
+        '''
+            (default=False) If True, set constraints so that S1 = S2, S1_cat = S2_cat, and S1_cts = S2_cts.
+        ''', None),
+    'cons_a': (None, 'type_constrained_none', (tuple, _lstdct),
+        '''
+            (default=None) Constraints on A1 and A2, where first entry gives list of string constraint names and second entry gives dictionary of constraint parameters. None is equivalent to ([], tw.constraint_params()).
         ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
-    'cons_s': (([], {}), 'type_constrained', (tuple, _lstdct),
+    'cons_s': (None, 'type_constrained_none', (tuple, _lstdct),
         '''
-            (default=([], {})) Constraints on S1 and S2, where first entry gives list of constraints and second entry gives dictionary of constraint parameters.
+            (default=None) Constraints on S1 and S2, where first entry gives list of constraints and second entry gives dictionary of constraint parameters. None is equivalent to ([], tw.constraint_params()).
+        ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
+    'cons_a_cat': (None, 'type_constrained_none', (dict, _dctlstdct),
+        '''
+            (default=None) Dictionary of constraints on A1_cat and A2_cat, where each column name links to a tuple where the first entry gives list of string constraint names and the second entry gives dictionary of constraint parameters. None is equivalent to {}.
+        ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
+    'cons_s_cat': (None, 'type_constrained_none', (dict, _dctlstdct),
+        '''
+            (default=None) Dictionary of constraints on S1_cat and S2_cat, where each column name links to a tuple where the first entry gives list of string constraint names and the second entry gives dictionary of constraint parameters. None is equivalent to {}.
+        ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
+    'cons_a_cts': (None, 'type_constrained_none', (dict, _dctlstdct),
+        '''
+            (default=None) Dictionary of constraints on A1_cts and A2_cts, where each column name links to a tuple where the first entry gives list of string constraint names and the second entry gives dictionary of constraint parameters. None is equivalent to {}.
+        ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
+    'cons_s_cts': (None, 'type_constrained_none', (dict, _dctlstdct),
+        '''
+            (default=None) Dictionary of constraints on S1_cts and S2_cts, where each column name links to a tuple where the first entry gives list of string constraint names and the second entry gives dictionary of constraint parameters. None is equivalent to {}.
         ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
     's_lower_bound': (1e-10, 'type_constrained', ((float, int), _gt0),
         '''
@@ -150,7 +168,7 @@ _blm_params_default = ParamsDict({
         '''
             (default=1.0001) Account for probabilities being too small by adding (d_prior - 1) to pk1.
         ''', '>= 1'),
-    # fit_stayers() parameters
+    # fit_stayers() parameters ##
     'n_iters_stayers': (100, 'type_constrained', (int, _gteq1),
         '''
             (default=100) Number of iterations for EM for stayers.
@@ -967,14 +985,14 @@ class BLMModel:
         ### Constraints ###
         ## General ##
         cons_a = QPConstrained(nl, nk)
-        if len(params['cons_a']) > 0:
-            cons_a.add_constraints_builtin(*params['cons_a'])
         cons_s = QPConstrained(nl, nk)
+        if params['cons_a'] is not None:
+            cons_a.add_constraints_builtin(*params['cons_a'])
+        if params['cons_s'] is not None:
+            cons_s.add_constraints_builtin(*params['cons_s'])
 
         # Set lower bound on standard deviations
         cons_s.add_constraint_builtin('bounded_below', {'lower_bound': params['s_lower_bound'], 'n_periods': 2})
-        if len(params['cons_s']) > 0:
-            cons_s.add_constraints_builtin(*params['cons_s'])
         if fixb:
             cons_a.add_constraint_builtin('fixb', {'nt': 2})
         if linear:
@@ -990,13 +1008,11 @@ class BLMModel:
             col_dict = controls_dict[col]
             cons_a_cat[col] = QPConstrained(nl, col_dict['n'])
             cons_s_cat[col] = QPConstrained(nl, col_dict['n'])
-            
+
             # Set lower bound on standard deviations
             cons_s_cat[col].add_constraint_builtin('bounded_below', {'lower_bound': params['s_lower_bound'], 'n_periods': 2})
-
             if fixb:
                 cons_a_cat[col].add_constraint_builtin('fixb', {'nt': 2})
-
             if col_dict['worker_type_interaction']:
                 if linear:
                     cons_a_cat[col].add_constraint_builtin('linear', {'n_periods': 2})
@@ -1017,6 +1033,12 @@ class BLMModel:
                     cons_a_cat[col].add_constraint_builtin('stable_across_time_partial_1', {'n_periods': 2})
                 if stationary_S or col_dict['stationary_S']:
                     cons_s_cat[col].add_constraint_builtin('stable_across_time_partial_1', {'n_periods': 2})
+        if params['cons_a_cat'] is not None:
+            for col, cons_a_col in params['cons_a_cat'].items():
+                cons_a_cat[col].add_constraints_builtin(*cons_a_col)
+        if params['cons_s_cat'] is not None:
+            for col, cons_s_col in params['cons_s_cat'].items():
+                cons_s_cat[col].add_constraints_builtin(*cons_s_col)
         ## Continuous ##
         cons_a_cts = {}
         cons_s_cts = {}
@@ -1024,13 +1046,10 @@ class BLMModel:
             col_dict = controls_dict[col]
             cons_a_cts[col] = QPConstrained(nl, 1)
             cons_s_cts[col] = QPConstrained(nl, 1)
-
             # Set lower bound on standard deviations
             cons_s_cts[col].add_constraint_builtin('bounded_below', {'lower_bound': params['s_lower_bound'], 'n_periods': 2})
-
             if fixb:
                 cons_a_cts[col].add_constraint_builtin('fixb', {'nt': 2})
-
             if col_dict['worker_type_interaction']:
                 if linear:
                     cons_a_cts[col].add_constraint_builtin('linear', {'n_periods': 2})
@@ -1051,7 +1070,12 @@ class BLMModel:
                     cons_a_cts[col].add_constraint_builtin('stable_across_time_partial_1', {'n_periods': 2})
                 if stationary_S or col_dict['stationary_S']:
                     cons_s_cts[col].add_constraint_builtin('stable_across_time_partial_1', {'n_periods': 2})
-
+        if params['cons_a_cts'] is not None:
+            for col, cons_a_col in params['cons_a_cts'].items():
+                cons_a_cts[col].add_constraints_builtin(*cons_a_col)
+        if params['cons_s_cts'] is not None:
+            for col, cons_s_col in params['cons_s_cts'].items():
+                cons_s_cts[col].add_constraints_builtin(*cons_s_col)
 
         for iter in range(params['n_iters_movers']):
 
@@ -1586,11 +1610,11 @@ class BLMModel:
             jdata (Pandas DataFrame): movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
-        # First, simulate parameters but keep A fixed
-        # Second, use estimated parameters as starting point to run with A constrained to be linear
-        # Finally use estimated parameters as starting point to run without constraints
-        # self.reset_params() # New parameter guesses
-        original_linear = self.params['linear']
+        ## First, simulate parameters but keep A fixed ##
+        ## Second, use estimated parameters as starting point to run with A constrained to be linear ##
+        ## Finally use estimated parameters as starting point to run without constraints ##
+        # Save original parameters
+        user_params = self.params.copy()
         ##### Loop 1 #####
         # First run fixm = True, which fixes A but updates S and pk
         self.params['update_a'] = False
@@ -1606,18 +1630,17 @@ class BLMModel:
         self.params['linear'] = True
         if self.params['verbose'] in [1, 2]:
             print('Running constrained movers')
-        if original_linear:
-            self.fit_movers(jdata, compute_NNm=True)
-        else:
-            self.fit_movers(jdata, compute_NNm=False)
-            ##### Loop 3 #####
-            # Remove constraints
-            self.params['linear'] = False
-            if self.params['verbose'] in [1, 2]:
-                print('Running unconstrained movers')
-            self.fit_movers(jdata, compute_NNm=compute_NNm)
+        self.fit_movers(jdata, compute_NNm=False)
+        ##### Loop 3 #####
+        # Remove constraints
+        self.params['linear'] = False
+        if self.params['verbose'] in [1, 2]:
+            print('Running unconstrained movers')
+        self.fit_movers(jdata, compute_NNm=compute_NNm)
         ##### Compute connectedness #####
         self.compute_connectedness_measure()
+        # Restore original parameters
+        self.params = user_params
 
     def fit_A(self, jdata, compute_NNm=True):
         '''
@@ -1627,15 +1650,18 @@ class BLMModel:
             jdata (Pandas DataFrame): movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
-        # New parameter guesses
-        # self.reset_params()
+        # Save original parameters
+        user_params = self.params.copy()
+        # Update parameters
         self.params['update_a'] = True
         self.params['update_s'] = False
         self.params['update_pk1'] = False
-        # self.params['cons_a'] = ([], {})
+        # Estimate
         if self.params['verbose'] in [1, 2]:
             print('Running fit_A')
         self.fit_movers(jdata, compute_NNm=compute_NNm)
+        # Restore original parameters
+        self.params = user_params
 
     def fit_S(self, jdata, compute_NNm=True):
         '''
@@ -1645,15 +1671,18 @@ class BLMModel:
             jdata (Pandas DataFrame): movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
-        # New parameter guesses
-        # self.reset_params()
+        # Save original parameters
+        user_params = self.params.copy()
+        # Update parameters
         self.params['update_a'] = False
         self.params['update_s'] = True
         self.params['update_pk1'] = False
-        # self.params['cons_a'] = ([], {})
+        # Estimate
         if self.params['verbose'] in [1, 2]:
             print('Running fit_S')
         self.fit_movers(jdata, compute_NNm=compute_NNm)
+        # Restore original parameters
+        self.params = user_params
 
     def fit_pk(self, jdata, compute_NNm=True):
         '''
@@ -1663,15 +1692,18 @@ class BLMModel:
             jdata (Pandas DataFrame): movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
-        # New parameter guesses
-        # self.reset_params()
+        # Save original parameters
+        user_params = self.params.copy()
+        # Update parameters
         self.params['update_a'] = False
         self.params['update_s'] = False
         self.params['update_pk1'] = True
-        # self.params['cons_a'] = ([], {})
+        # Estimate
         if self.params['verbose'] in [1, 2]:
             print('Running fit_pk')
         self.fit_movers(jdata, compute_NNm=compute_NNm)
+        # Restore original parameters
+        self.params = user_params
 
     def _sort_matrices(self, firm_effects=False, reverse=False):
         '''
@@ -1747,6 +1779,27 @@ class BLMModel:
         plt.xticks(range(self.nk))
         plt.show()
 
+    def plot_A2(self, dpi=None):
+        '''
+        Plot self.A2.
+
+        Arguments:
+            dpi (float): dpi for plot
+        '''
+        # Sort A2 by average effect over firms
+        sorted_A2 = self.A2.T[np.mean(self.A2.T, axis=1).argsort()].T
+        sorted_A2 = sorted_A2[np.mean(sorted_A2, axis=1).argsort()]
+
+        if dpi is not None:
+            plt.figure(dpi=dpi)
+        for l in range(self.nl):
+            plt.plot(sorted_A2[l, :], label=f'Worker type {l}')
+        plt.legend()
+        plt.xlabel('Firm type')
+        plt.ylabel('A2')
+        plt.xticks(range(self.nk))
+        plt.show()
+
 class BLMEstimator:
     '''
     Class for solving the BLM model using multiple sets of starting values.
@@ -1760,12 +1813,16 @@ class BLMEstimator:
             params = blm_params()
 
         self.params = params
-        self.model = None # No initial model
-        self.liks_high = None # No likelihoods yet
-        self.connectedness_high = None # No connectedness yet
-        self.liks_low = None # No likelihoods yet
-        self.connectedness_low = None # No connectedness yet
-        self.liks_all = None # No paths of likelihoods yet
+        # No initial model
+        self.model = None
+        # No likelihoods yet
+        self.liks_high = None
+        self.liks_low = None
+        # No paths of likelihoods yet
+        self.liks_all = None
+        # No connectedness yet
+        self.connectedness_high = None
+        self.connectedness_low = None
 
     def _sim_model(self, jdata, rng=None):
         '''
@@ -1855,6 +1912,18 @@ class BLMEstimator:
         '''
         if self.model is not None:
             self.model.plot_A1(dpi)
+        else:
+            warnings.warn('Estimation has not yet been run.')
+
+    def plot_A2(self, dpi=None):
+        '''
+        Plot self.model.A2.
+
+        Arguments:
+            dpi (float): dpi for plot
+        '''
+        if self.model is not None:
+            self.model.plot_A2(dpi)
         else:
             warnings.warn('Estimation has not yet been run.')
 
