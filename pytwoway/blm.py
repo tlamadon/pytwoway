@@ -1454,46 +1454,163 @@ class BLMModel:
             pk1_order_2 = nk * np.repeat(firm_effect_order, nk) + np.tile(range(nk), nk)
             self.pk1 = self.pk1[pk1_order_2, :]
 
-    def plot_A1(self, dpi=None):
+    def plot_A1(self, grid=True, dpi=None):
         '''
-        Plot self.A1.
+        Plot A1 (log-earnings in first period) by worker-firm type pairs.
 
         Arguments:
+            grid (bool): if True, plot grid
             dpi (float): dpi for plot
         '''
         # Sort A1 by average effect over firms
         sorted_A1 = self.A1.T[np.mean(self.A1.T, axis=1).argsort()].T
         sorted_A1 = sorted_A1[np.mean(sorted_A1, axis=1).argsort()]
 
+        # Plot
         if dpi is not None:
             plt.figure(dpi=dpi)
+        x_axis = np.arange(1, self.nk + 1)
         for l in range(self.nl):
-            plt.plot(sorted_A1[l, :], label=f'Worker type {l}')
+            plt.plot(x_axis, sorted_A1[l, :])
         plt.legend()
-        plt.xlabel('Firm type')
-        plt.ylabel('A1')
-        plt.xticks(range(self.nk))
+        plt.xlabel('firm class k')
+        plt.ylabel('log-earnings in first period')
+        plt.xticks(x_axis)
+        if grid:
+            plt.grid()
         plt.show()
 
-    def plot_A2(self, dpi=None):
+    def plot_A2(self, grid=True, dpi=None):
         '''
-        Plot self.A2.
+        Plot A2 (log-earnings in second period) by worker-firm type pairs.
 
         Arguments:
+            grid (bool): if True, plot grid
             dpi (float): dpi for plot
         '''
         # Sort A2 by average effect over firms
         sorted_A2 = self.A2.T[np.mean(self.A2.T, axis=1).argsort()].T
         sorted_A2 = sorted_A2[np.mean(sorted_A2, axis=1).argsort()]
 
+        # Plot
         if dpi is not None:
             plt.figure(dpi=dpi)
+        x_axis = np.arange(1, self.nk + 1)
         for l in range(self.nl):
-            plt.plot(sorted_A2[l, :], label=f'Worker type {l}')
+            plt.plot(x_axis, sorted_A2[l, :])
         plt.legend()
-        plt.xlabel('Firm type')
-        plt.ylabel('A2')
-        plt.xticks(range(self.nk))
+        plt.xlabel('firm class k')
+        plt.ylabel('log-earnings in second period')
+        plt.xticks(x_axis)
+        if grid:
+            plt.grid()
+        plt.show()
+
+    def plot_log_earnings(self, grid=True, dpi=None):
+        '''
+        Plot log-earnings by worker-firm type pairs.
+
+        Arguments:
+            grid (bool): if True, plot grid
+            dpi (float): dpi for plot
+        '''
+        nl, nk = self.nl, self.nk
+
+        # Generate type proportions
+        reshaped_pk1 = np.reshape(self.pk1, (nk, nk, nl))
+        pk1_period1 = np.mean(reshaped_pk1, axis=1).T
+        pk1_period2 = np.mean(reshaped_pk1, axis=0).T
+
+        weighted_A = (pk1_period1 * self.A1 + pk1_period2 * self.A2) / (pk1_period1 + pk1_period2)
+
+        # Plot
+        if dpi is not None:
+            plt.figure(dpi=dpi)
+        x_axis = np.arange(1, nk + 1)
+        for l in range(nl):
+            plt.plot(x_axis, weighted_A[l, :])
+        plt.xlabel('firm class k')
+        plt.ylabel('log-earnings')
+        plt.xticks(x_axis)
+        if grid:
+            plt.grid()
+        plt.show()
+
+    def plot_pk1_1(self, dpi=None):
+        '''
+        Plot pk1 (proportions of worker types at each firm class) in the first period.
+
+        Arguments:
+            dpi (float): dpi for plot
+        '''
+        nl, nk = self.nl, self.nk
+
+        # Generate type proportions
+        reshaped_pk1 = np.reshape(self.pk1, (nk, nk, nl))
+        pk1_mean = np.mean(reshaped_pk1, axis=1)
+        pk1_cumsum = np.cumsum(pk1_mean, axis=1)
+
+        # Plot
+        fig, ax = plt.subplots(dpi=dpi)
+        x_axis = np.arange(1, nk + 1).astype(str)
+        ax.bar(x_axis, pk1_mean.T[0, :])
+        for l in range(1, nl):
+            ax.bar(x_axis, pk1_mean.T[l, :], bottom=pk1_cumsum.T[l - 1, :])
+        ax.set_xlabel('firm class k')
+        ax.set_ylabel('type proportions')
+        ax.set_title('Proportions of worker types')
+        plt.show()
+
+    def plot_pk1_2(self, dpi=None):
+        '''
+        Plot pk1 (proportions of worker types at each firm class) in the second period.
+
+        Arguments:
+            dpi (float): dpi for plot
+        '''
+        nl, nk = self.nl, self.nk
+
+        # Generate type proportions
+        reshaped_pk1 = np.reshape(self.pk1, (nk, nk, nl))
+        pk1_mean = np.mean(reshaped_pk1, axis=0)
+        pk1_cumsum = np.cumsum(pk1_mean, axis=1)
+
+        # Plot
+        fig, ax = plt.subplots(dpi=dpi)
+        x_axis = np.arange(1, nk + 1).astype(str)
+        ax.bar(x_axis, pk1_mean.T[0, :])
+        for l in range(1, nl):
+            ax.bar(x_axis, pk1_mean.T[l, :], bottom=pk1_cumsum.T[l - 1, :])
+        ax.set_xlabel('firm class k')
+        ax.set_ylabel('type proportions')
+        ax.set_title('Proportions of worker types')
+        plt.show()
+    
+    def plot_type_proportions(self, dpi=None):
+        '''
+        Plot proportions of worker types at each firm class.
+
+        Arguments:
+            dpi (float): dpi for plot
+        '''
+        nl, nk = self.nl, self.nk
+
+        # Generate type proportions
+        reshaped_pk1 = np.reshape(self.pk1, (nk, nk, nl))
+        pk1_period1 = np.mean(reshaped_pk1, axis=1)
+        pk1_period2 = np.mean(reshaped_pk1, axis=0)
+        pk1_mean = (pk1_period1 + pk1_period2) / 2
+        pk1_cumsum = np.cumsum(pk1_mean, axis=1)
+
+        # Plot
+        fig, ax = plt.subplots(dpi=dpi)
+        x_axis = np.arange(1, nk + 1).astype(str)
+        ax.bar(x_axis, pk1_mean.T[0, :])
+        for l in range(1, nl):
+            ax.bar(x_axis, pk1_mean.T[l, :], bottom=pk1_cumsum.T[l - 1, :])
+        ax.set_xlabel('firm class k')
+        ax.set_ylabel('type proportions')
+        ax.set_title('Proportions of worker types')
         plt.show()
 
 class BLMEstimator:
@@ -1599,27 +1716,54 @@ class BLMEstimator:
         # FIXME matrices shouldn't sort, because then you can't merge estimated effects into the original dataframe
         # self.model._sort_matrices()
 
-    def plot_A1(self, dpi=None):
+    def plot_A1(self, grid=True, dpi=None):
         '''
-        Plot self.model.A1.
+        Plot A1 (log-earnings in first period) by worker-firm type pairs.
 
         Arguments:
+            grid (bool): if True, plot grid
             dpi (float): dpi for plot
         '''
         if self.model is not None:
-            self.model.plot_A1(dpi)
+            self.model.plot_A1(grid=grid, dpi=dpi)
         else:
             warnings.warn('Estimation has not yet been run.')
 
-    def plot_A2(self, dpi=None):
+    def plot_A2(self, grid=True, dpi=None):
         '''
-        Plot self.model.A2.
+        Plot A2 (log-earnings in second period) by worker-firm type pairs.
+
+        Arguments:
+            grid (bool): if True, plot grid
+            dpi (float): dpi for plot
+        '''
+        if self.model is not None:
+            self.model.plot_A2(grid=grid, dpi=dpi)
+        else:
+            warnings.warn('Estimation has not yet been run.')
+
+    def plot_log_earnings(self, grid=True, dpi=None):
+        '''
+        Plot log-earnings by worker-firm type pairs.
+
+        Arguments:
+            grid (bool): if True, plot grid
+            dpi (float): dpi for plot
+        '''
+        if self.model is not None:
+            self.model.plot_log_earnings(grid=grid, dpi=dpi)
+        else:
+            warnings.warn('Estimation has not yet been run.')
+
+    def plot_type_proportions(self, dpi=None):
+        '''
+        Plot proportions of worker types at each firm class.
 
         Arguments:
             dpi (float): dpi for plot
         '''
         if self.model is not None:
-            self.model.plot_A2(dpi)
+            self.model.plot_type_proportions(dpi)
         else:
             warnings.warn('Estimation has not yet been run.')
 
