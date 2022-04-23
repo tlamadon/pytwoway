@@ -93,6 +93,10 @@ _blm_params_default = ParamsDict({
             (default=0) If 0, print no output; if 1, print additional output; if 2, print maximum output.
         ''', None),
     ## fit_movers() and fit_stayers() parameters ##
+    'weighted': (True, 'type', bool,
+        '''
+            (default=True) If True, run estimator with weights. These comes from data columns 'w1' and 'w2'.
+        ''', None),
     'return_qi': (False, 'type', bool,
         '''
             (default=False) If True, return qi matrix after first loop.
@@ -653,6 +657,13 @@ class BLMModel:
         Y2 = jdata.loc[:, 'y2'].to_numpy()
         G1 = jdata.loc[:, 'g1'].to_numpy().astype(int, copy=False)
         G2 = jdata.loc[:, 'g2'].to_numpy().astype(int, copy=False)
+        # Weights
+        if params['weighted'] and jdata._col_included('w'):
+            W1 = jdata.loc[:, 'w1'].to_numpy()
+            W2 = jdata.loc[:, 'w2'].to_numpy()
+        else:
+            W1 = 1
+            W2 = 1
         # Control variables
         C1 = {}
         C2 = {}
@@ -775,6 +786,7 @@ class BLMModel:
                     lp1 = lognormpdf(Y1, A1[l, G1], S1[l, G1])
                     lp2 = lognormpdf(Y2, A2[l, G2], S2[l, G2])
                     lp[:, l] = np.log(pk1[KK, l]) + lp1 + lp2
+            lp = (lp.T + np.log(W1) + np.log(W2)).T
             del lp1, lp2
 
             # We compute log sum exp to get likelihoods and probabilities
@@ -840,8 +852,8 @@ class BLMModel:
                 # (We might be better off trying this within numba or something)
                 l_index, r_index = l * nk, (l + 1) * nk
                 # Shared weighted terms
-                GG1_weighted = GG1.T @ diags(qi[:, l] / S1[l, G1])
-                GG2_weighted = GG2.T @ diags(qi[:, l] / S2[l, G2])
+                GG1_weighted = GG1.T @ diags(W1 * qi[:, l] / S1[l, G1])
+                GG2_weighted = GG2.T @ diags(W2 * qi[:, l] / S2[l, G2])
                 ## Compute XwXd terms ##
                 XwXd[l_index: r_index] = (GG1_weighted @ GG1).diagonal()
                 XwXd[ts + l_index: ts + r_index] = (GG2_weighted @ GG2).diagonal()
@@ -904,8 +916,8 @@ class BLMModel:
                     else:
                         S1_cat_l = S1_cat[col][C1[col]]
                         S2_cat_l = S2_cat[col][C2[col]]
-                    CC1_weighted = CC1[col].T @ diags(qi[:, l] / S1_cat_l)
-                    CC2_weighted = CC2[col].T @ diags(qi[:, l] / S2_cat_l)
+                    CC1_weighted = CC1[col].T @ diags(W1 * qi[:, l] / S1_cat_l)
+                    CC2_weighted = CC2[col].T @ diags(W2 * qi[:, l] / S2_cat_l)
                     del S1_cat_l, S2_cat_l
                     ## Compute XwX_cat terms ##
                     XwX_cat[col][l_index: r_index] = (CC1_weighted @ CC1[col]).diagonal()
@@ -960,8 +972,8 @@ class BLMModel:
                     else:
                         S1_cts_l = S1_cts[col]
                         S2_cts_l = S2_cts[col]
-                    CC1_weighted = C1[col].T @ diags(qi[:, l] / S1_cts_l)
-                    CC2_weighted = C2[col].T @ diags(qi[:, l] / S2_cts_l)
+                    CC1_weighted = C1[col].T @ diags(W1 * qi[:, l] / S1_cts_l)
+                    CC2_weighted = C2[col].T @ diags(W2 * qi[:, l] / S2_cts_l)
                     del S1_cts_l, S2_cts_l
                     ## Compute XwX_cts terms ##
                     XwX_cts[col][l] = (CC1_weighted @ C1[col])
@@ -1030,8 +1042,8 @@ class BLMModel:
                     del A1_sum_l, A2_sum_l
                     ## XwS terms ##
                     l_index, r_index = l * nk, (l + 1) * nk
-                    XwS[l_index: r_index] = GG1.T @ diags(qi[:, l] / S1[l, G1]) @ eps1_l_sq
-                    XwS[ts + l_index: ts + r_index] = GG2.T @ diags(qi[:, l] / S2[l, G2]) @ eps2_l_sq
+                    XwS[l_index: r_index] = GG1.T @ diags(W1 * qi[:, l] / S1[l, G1]) @ eps1_l_sq
+                    XwS[ts + l_index: ts + r_index] = GG2.T @ diags(W2 * qi[:, l] / S2[l, G2]) @ eps2_l_sq
                     ## Categorical ##
                     for col in cat_cols:
                         col_n = cat_dict[col]['n']
@@ -1043,8 +1055,8 @@ class BLMModel:
                             S1_cat_l = S1_cat[col][C1[col]]
                             S2_cat_l = S2_cat[col][C2[col]]
                         ## XwS_cat terms ##
-                        XwS_cat[col][l_index: r_index] = CC1[col].T @ diags(qi[:, l] / S1_cat_l) @ eps1_l_sq
-                        XwS_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = CC2[col].T @ diags(qi[:, l] / S2_cat_l) @ eps2_l_sq
+                        XwS_cat[col][l_index: r_index] = CC1[col].T @ diags(W1 * qi[:, l] / S1_cat_l) @ eps1_l_sq
+                        XwS_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = CC2[col].T @ diags(W2 * qi[:, l] / S2_cat_l) @ eps2_l_sq
                         del S1_cat_l, S2_cat_l
                     ## Continuous ##
                     for col in cts_cols:
@@ -1056,8 +1068,8 @@ class BLMModel:
                             S2_cts_l = S2_cts[col]
                         ## XwS_cts terms ##
                         # NOTE: take absolute value
-                        XwS_cts[col][l] = np.abs(C1[col].T @ diags(qi[:, l] / S1_cts_l) @ eps1_l_sq)
-                        XwS_cts[col][nl + l] = np.abs(C2[col].T @ diags(qi[:, l] / S2_cts_l) @ eps2_l_sq)
+                        XwS_cts[col][l] = np.abs(C1[col].T @ diags(W1 * qi[:, l] / S1_cts_l) @ eps1_l_sq)
+                        XwS_cts[col][nl + l] = np.abs(C2[col].T @ diags(W2 * qi[:, l] / S2_cts_l) @ eps2_l_sq)
                         del S1_cts_l, S2_cts_l
                     del eps1_l_sq, eps2_l_sq
 
@@ -1137,7 +1149,7 @@ class BLMModel:
             # print(S2_cat_wi)
 
             if params['update_pk1']:
-                pk1 = GG12.T @ qi
+                pk1 = GG12.T @ ((W1 + W2) * qi.T).T
                 # Add dirichlet prior
                 pk1 += d_prior - 1
                 # Normalize rows to sum to 1
@@ -1176,8 +1188,15 @@ class BLMModel:
         G1 = sdata['g1'].to_numpy().astype(int, copy=False)
         G2 = sdata['g2'].to_numpy().astype(int, copy=False)
         GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
+        # Weights
+        if params['weighted'] and sdata._col_included('w'):
+            W1 = sdata.loc[:, 'w1'].to_numpy()
+            W2 = sdata.loc[:, 'w2'].to_numpy()
+        else:
+            W1 = 1
+            W2 = 1
         if any_controls:
-            ## Account for control variables ##
+            ## Control variables ##
             C1 = {}
             C2 = {}
             for col in cat_cols:
@@ -1237,6 +1256,7 @@ class BLMModel:
                 lp1 = lognormpdf(Y1, A1[l, G1], S1[l, G1])
                 lp2 = lognormpdf(Y2, A2[l, G2], S2[l, G2])
                 lp_stable[:, l] = lp1 + lp2
+        lp_stable = (lp_stable.T + np.log(W1) + np.log(W2)).T
         del lp1, lp2
 
         for iter in range(params['n_iters_stayers']):
@@ -1262,7 +1282,7 @@ class BLMModel:
             prev_lik = lik0
 
             # ---------- M-step ----------
-            pk0 = GG1.T @ qi
+            pk0 = GG1.T @ ((W1 + W2) * qi.T).T
             # Add dirichlet prior
             pk0 += d_prior - 1
             # Normalize rows to sum to 1
