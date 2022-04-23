@@ -1644,7 +1644,7 @@ def test_blm_start_at_truth_cts_tv_wi():
     assert np.max(np.abs((blm_fit.A1_cts['cts_tv_wi_control'] - sim_params['A1_cts']['cts_tv_wi_control']) / sim_params['A1_cts']['cts_tv_wi_control'])) < 1e-2
     assert np.max(np.abs((blm_fit.A2_cts['cts_tv_wi_control'] - sim_params['A2_cts']['cts_tv_wi_control']) / sim_params['A2_cts']['cts_tv_wi_control'])) < 1e-4
     assert np.prod(np.abs((blm_fit.S1_cts['cts_tv_wi_control'] - sim_params['S1_cts']['cts_tv_wi_control']) / sim_params['S1_cts']['cts_tv_wi_control'])) ** (1 / sim_params['S1_cts']['cts_tv_wi_control'].size) < 0.85
-    assert np.prod(np.abs((blm_fit.S2_cts['cts_tv_wi_control'] - sim_params['S2_cts']['cts_tv_wi_control']) / sim_params['S2_cts']['cts_tv_wi_control'])) ** (1 / sim_params['S2_cts']['cts_tv_wi_control'].size) < 1
+    assert np.prod(np.abs((blm_fit.S2_cts['cts_tv_wi_control'] - sim_params['S2_cts']['cts_tv_wi_control']) / sim_params['S2_cts']['cts_tv_wi_control'])) ** (1 / sim_params['S2_cts']['cts_tv_wi_control'].size) < 0.85
     assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.03
     assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.025
 
@@ -1698,8 +1698,8 @@ def test_blm_full_estimation_cts_tv_wi():
     assert np.prod(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) ** (1 / sim_params['S2'].size) < 0.06
     assert np.max(np.abs((blm_fit.A1_cts['cts_tv_wi_control'] - sim_params['A1_cts']['cts_tv_wi_control']) / sim_params['A1_cts']['cts_tv_wi_control'])) < 1e-4
     assert np.max(np.abs((blm_fit.A2_cts['cts_tv_wi_control'] - sim_params['A2_cts']['cts_tv_wi_control']) / sim_params['A2_cts']['cts_tv_wi_control'])) < 1e-3
-    assert np.prod(np.abs((blm_fit.S1_cts['cts_tv_wi_control'] - sim_params['S1_cts']['cts_tv_wi_control']) / sim_params['S1_cts']['cts_tv_wi_control'])) ** (1 / sim_params['S1_cts']['cts_tv_wi_control'].size) < 0.45
-    assert np.prod(np.abs((blm_fit.S2_cts['cts_tv_wi_control'] - sim_params['S2_cts']['cts_tv_wi_control']) / sim_params['S2_cts']['cts_tv_wi_control'])) ** (1 / sim_params['S2_cts']['cts_tv_wi_control'].size) < 1.6
+    assert np.prod(np.abs((blm_fit.S1_cts['cts_tv_wi_control'] - sim_params['S1_cts']['cts_tv_wi_control']) / sim_params['S1_cts']['cts_tv_wi_control'])) ** (1 / sim_params['S1_cts']['cts_tv_wi_control'].size) < 0.85
+    assert np.prod(np.abs((blm_fit.S2_cts['cts_tv_wi_control'] - sim_params['S2_cts']['cts_tv_wi_control']) / sim_params['S2_cts']['cts_tv_wi_control'])) ** (1 / sim_params['S2_cts']['cts_tv_wi_control'].size) < 0.9
     assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 1e-2
     assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 1e-2
 
@@ -1760,7 +1760,7 @@ def test_blm_start_at_truth_cts_tnv_wi():
     assert np.prod(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) ** (1 / sim_params['S1'].size) < 1.2
     assert np.prod(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) ** (1 / sim_params['S2'].size) < 0.5
     assert np.max(np.abs((blm_fit.A1_cts['cts_tnv_wi_control'] - sim_params['A1_cts']['cts_tnv_wi_control']) / sim_params['A1_cts']['cts_tnv_wi_control'])) < 1e-4
-    assert np.prod(np.abs((blm_fit.S1_cts['cts_tnv_wi_control'] - sim_params['S1_cts']['cts_tnv_wi_control']) / sim_params['S1_cts']['cts_tnv_wi_control'])) ** (1 / sim_params['S1_cts']['cts_tnv_wi_control'].size) < 1
+    assert np.prod(np.abs((blm_fit.S1_cts['cts_tnv_wi_control'] - sim_params['S1_cts']['cts_tnv_wi_control']) / sim_params['S1_cts']['cts_tnv_wi_control'])) ** (1 / sim_params['S1_cts']['cts_tnv_wi_control'].size) < 0.8
     assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.025
     assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.015
     assert np.all(np.isclose(blm_fit.A1_cts['cts_tnv_wi_control'], blm_fit.A2_cts['cts_tnv_wi_control']))
@@ -1768,7 +1768,6 @@ def test_blm_start_at_truth_cts_tnv_wi():
 
 def test_blm_full_estimation_cts_tnv_wi():
     # Test whether BLM estimator works for full estimation for continuous, time non-varying, worker-interaction control variables.
-    # NOTE: n_init increased to 40; d_prior_movers increased to 1.001
     rng = np.random.default_rng(1247)
     nl = 2 # Number of worker types
     nk = 3 # Number of firm types
@@ -1796,8 +1795,7 @@ def test_blm_full_estimation_cts_tnv_wi():
         'nl': nl, 'nk': nk,
         'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
         's1_low': 0, 's1_high': 0.05, 's2_low': 0, 's2_high': 0.05,
-        'continuous_controls': {'cts_tnv_wi_control': cts_tnv_wi_params},
-        'd_prior_movers': 1.001
+        'continuous_controls': {'cts_tnv_wi_control': cts_tnv_wi_params}
     })
     # Simulate data
     blm_true = tw.SimBLM(blm_sim_params)
@@ -1808,16 +1806,16 @@ def test_blm_full_estimation_cts_tnv_wi():
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
-    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=40, n_best=5, ncore=4, rng=rng)
+    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
     blm_fit = blm_fit.model
     blm_fit._sort_matrices()
 
-    assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-2
+    assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-3
     assert np.max(np.abs((blm_fit.A2 - sim_params['A2']) / sim_params['A2'])) < 1e-3
-    assert np.prod(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) ** (1 / sim_params['S1'].size) < 7.2
-    assert np.prod(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) ** (1 / sim_params['S2'].size) < 6.6
-    assert np.max(np.abs((blm_fit.A1_cts['cts_tnv_wi_control'] - sim_params['A1_cts']['cts_tnv_wi_control']) / sim_params['A1_cts']['cts_tnv_wi_control'])) < 0.025
-    assert np.prod(np.abs((blm_fit.S1_cts['cts_tnv_wi_control'] - sim_params['S1_cts']['cts_tnv_wi_control']) / sim_params['S1_cts']['cts_tnv_wi_control'])) ** (1 / sim_params['S1_cts']['cts_tnv_wi_control'].size) < 0.95
+    assert np.prod(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) ** (1 / sim_params['S1'].size) < 1.15
+    assert np.prod(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) ** (1 / sim_params['S2'].size) < 0.95
+    assert np.max(np.abs((blm_fit.A1_cts['cts_tnv_wi_control'] - sim_params['A1_cts']['cts_tnv_wi_control']) / sim_params['A1_cts']['cts_tnv_wi_control'])) < 1e-4
+    assert np.prod(np.abs((blm_fit.S1_cts['cts_tnv_wi_control'] - sim_params['S1_cts']['cts_tnv_wi_control']) / sim_params['S1_cts']['cts_tnv_wi_control'])) ** (1 / sim_params['S1_cts']['cts_tnv_wi_control'].size) < 0.85
     assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.015
     assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.02
     assert np.all(np.isclose(blm_fit.A1_cts['cts_tnv_wi_control'], blm_fit.A2_cts['cts_tnv_wi_control']))
@@ -1934,10 +1932,10 @@ def test_blm_full_estimation_cts_tv():
     assert np.max(np.abs((blm_fit.A2 - sim_params['A2']) / sim_params['A2'])) < 1e-3
     assert np.prod(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) ** (1 / sim_params['S1'].size) < 1.6
     assert np.prod(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) ** (1 / sim_params['S2'].size) < 0.8
-    assert np.max(np.abs((blm_fit.A1_cts['cts_tv_control'] - sim_params['A1_cts']['cts_tv_control']) / sim_params['A1_cts']['cts_tv_control'])) < 1e-3
-    assert np.max(np.abs((blm_fit.A2_cts['cts_tv_control'] - sim_params['A2_cts']['cts_tv_control']) / sim_params['A2_cts']['cts_tv_control'])) < 1e-3
-    assert np.prod(np.abs((blm_fit.S1_cts['cts_tv_control'] - sim_params['S1_cts']['cts_tv_control']) / sim_params['S1_cts']['cts_tv_control'])) ** (1 / sim_params['S1_cts']['cts_tv_control'].size) < 1
-    assert np.prod(np.abs((blm_fit.S2_cts['cts_tv_control'] - sim_params['S2_cts']['cts_tv_control']) / sim_params['S2_cts']['cts_tv_control'])) ** (1 / sim_params['S2_cts']['cts_tv_control'].size) < 1
+    assert np.max(np.abs((blm_fit.A1_cts['cts_tv_control'] - sim_params['A1_cts']['cts_tv_control']) / sim_params['A1_cts']['cts_tv_control'])) < 1e-4
+    assert np.max(np.abs((blm_fit.A2_cts['cts_tv_control'] - sim_params['A2_cts']['cts_tv_control']) / sim_params['A2_cts']['cts_tv_control'])) < 1e-5
+    assert np.prod(np.abs((blm_fit.S1_cts['cts_tv_control'] - sim_params['S1_cts']['cts_tv_control']) / sim_params['S1_cts']['cts_tv_control'])) ** (1 / sim_params['S1_cts']['cts_tv_control'].size) < 0.9
+    assert np.prod(np.abs((blm_fit.S2_cts['cts_tv_control'] - sim_params['S2_cts']['cts_tv_control']) / sim_params['S2_cts']['cts_tv_control'])) ** (1 / sim_params['S2_cts']['cts_tv_control'].size) < 0.85
     assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.015
     assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.015
 
@@ -1998,7 +1996,7 @@ def test_blm_start_at_truth_cts_tnv():
     assert np.prod(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) ** (1 / sim_params['S1'].size) < 0.75
     assert np.prod(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) ** (1 / sim_params['S2'].size) < 0.75
     assert np.max(np.abs((blm_fit.A1_cts['cts_tnv_control'] - sim_params['A1_cts']['cts_tnv_control']) / sim_params['A1_cts']['cts_tnv_control'])) < 1e-3
-    assert np.prod(np.abs((blm_fit.S1_cts['cts_tnv_control'] - sim_params['S1_cts']['cts_tnv_control']) / sim_params['S1_cts']['cts_tnv_control'])) ** (1 / sim_params['S1_cts']['cts_tnv_control'].size) < 1
+    assert np.prod(np.abs((blm_fit.S1_cts['cts_tnv_control'] - sim_params['S1_cts']['cts_tnv_control']) / sim_params['S1_cts']['cts_tnv_control'])) ** (1 / sim_params['S1_cts']['cts_tnv_control'].size) < 0.8
     assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.035
     assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.025
     assert np.all(np.isclose(blm_fit.A1_cts['cts_tnv_control'], blm_fit.A2_cts['cts_tnv_control']))
@@ -2054,7 +2052,7 @@ def test_blm_full_estimation_cts_tnv():
     assert np.prod(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) ** (1 / sim_params['S1'].size) < 1.25
     assert np.prod(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) ** (1 / sim_params['S2'].size) < 1.35
     assert np.max(np.abs((blm_fit.A1_cts['cts_tnv_control'] - sim_params['A1_cts']['cts_tnv_control']) / sim_params['A1_cts']['cts_tnv_control'])) < 1e-4
-    assert np.prod(np.abs((blm_fit.S1_cts['cts_tnv_control'] - sim_params['S1_cts']['cts_tnv_control']) / sim_params['S1_cts']['cts_tnv_control'])) ** (1 / sim_params['S1_cts']['cts_tnv_control'].size) < 1
+    assert np.prod(np.abs((blm_fit.S1_cts['cts_tnv_control'] - sim_params['S1_cts']['cts_tnv_control']) / sim_params['S1_cts']['cts_tnv_control'])) ** (1 / sim_params['S1_cts']['cts_tnv_control'].size) < 0.8
     assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.025
     assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 1e-2
     assert np.all(np.isclose(blm_fit.A1_cts['cts_tnv_control'], blm_fit.A2_cts['cts_tnv_control']))
