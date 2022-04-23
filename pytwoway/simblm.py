@@ -33,11 +33,11 @@ _sim_params_default = ParamsDict({
         ''', '>= 1'),
     'categorical_controls': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary linking column names to instances of tw.categorical_control_params(). Each instance specifies a new categorical control variable. Run tw.categorical_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.sim_categorical_control_params(). Each instance specifies a new categorical control variable. Run tw.sim_categorical_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
     'continuous_controls': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary linking column names to instances of tw.continuous_control_params(). Each instance specifies a new continuous control variable. Run tw.continuous_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.sim_continuous_control_params(). Each instance specifies a new continuous control variable. Run tw.sim_continuous_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
     'NNm': (None, 'array_of_type_constrained_none', ('int', _min_gt0),
         '''
@@ -99,10 +99,6 @@ _sim_params_default = ParamsDict({
         '''
             (default=False) If True, set A1 and A2 to be strictly increasing by firm type for each worker type (otherwise, they are required to be increasing only by firm type over the average for all worker types).
         ''', None),
-    'fixb': (False, 'type', bool,
-        '''
-            (default=False) If True, set A2 = np.mean(A2, axis=1) + A1 - np.mean(A1, axis=1).
-        ''', None),
     'stationary_A': (False, 'type', bool,
         '''
             (default=False) If True, set A1 = A2.
@@ -110,6 +106,10 @@ _sim_params_default = ParamsDict({
     'stationary_S': (False, 'type', bool,
         '''
             (default=False) If True, set S1 = S2.
+        ''', None),
+    'stationary_firm_type_variation': (False, 'type', bool,
+        '''
+            (default=False) If True, set constraints for A1 and A2 so that the firm type induced variation of worker-firm pair effects is the same in all periods. In particular, this sets A2 = np.mean(A2, axis=1) + A1 - np.mean(A1, axis=1).
         ''', None)
 })
 
@@ -128,7 +128,7 @@ def sim_params(update_dict=None):
         new_dict.update(update_dict)
     return new_dict
 
-_categorical_control_params_default = ParamsDict({
+_sim_categorical_control_params_default = ParamsDict({
     'n': (6, 'type_constrained', (int, _gteq2),
         '''
             (default=6) Number of types for the parameter.
@@ -173,28 +173,32 @@ _categorical_control_params_default = ParamsDict({
         '''
             (default=False) If True, S1_cat and S2_cat must be equal.
         ''', None),
+    'stationary_firm_type_variation': (False, 'type', bool,
+        '''
+            (default=False) If True, set constraints for A1_cat and A2_cat so that the firm type induced variation of worker-firm pair effects is the same in all periods. In particular, this sets A2_cat = np.mean(A2_cat, axis=1) + A1_cat - np.mean(A1_cat, axis=1).
+        ''', None),
     'worker_type_interaction': (False, 'type', bool,
         '''
             (default=False) If True, effect can differ by worker type.
         ''', None)
 })
 
-def categorical_control_params(update_dict=None):
+def sim_categorical_control_params(update_dict=None):
     '''
-    Dictionary of default categorical_control_params. Run tw.categorical_control_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default sim_categorical_control_params. Run tw.sim_categorical_control_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
         update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of categorical_control_params
+        (ParamsDict) dictionary of sim_categorical_control_params
     '''
-    new_dict = _categorical_control_params_default.copy()
+    new_dict = _sim_categorical_control_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
 
-_continuous_control_params_default = ParamsDict({
+_sim_continuous_control_params_default = ParamsDict({
     'a1_mu': (1, 'type', (float, int),
         '''
             (default=1) Mean of simulated A1_cts (mean of coefficient in first period).
@@ -235,23 +239,27 @@ _continuous_control_params_default = ParamsDict({
         '''
             (default=False) If True, S1_cts and S2_cts must be equal.
         ''', None),
+    'stationary_firm_type_variation': (False, 'type', bool,
+        '''
+            (default=False) If True, set constraints for A1_cts and A2_cts so that the firm type induced variation of worker-firm pair effects is the same in all periods. In particular, this sets A2_cts = np.mean(A2_cts) + A1_cts - np.mean(A1_cts).
+        ''', None),
     'worker_type_interaction': (False, 'type', bool,
         '''
             (default=False) If True, effect can differ by worker type.
         ''', None)
 })
 
-def continuous_control_params(update_dict=None):
+def sim_continuous_control_params(update_dict=None):
     '''
-    Dictionary of default continuous_control_params. Run tw.continuous_control_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default sim_continuous_control_params. Run tw.sim_continuous_control_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
         update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of continuous_control_params
+        (ParamsDict) dictionary of sim_continuous_control_params
     '''
-    new_dict = _continuous_control_params_default.copy()
+    new_dict = _sim_continuous_control_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
@@ -364,7 +372,7 @@ class SimBLM:
         nl, nk = self.params.get_multiple(('nl', 'nk'))
         a1_mu, a1_sig, a2_mu, a2_sig, s1_low, s1_high, s2_low, s2_high, pk1_prior, pk0_prior = self.params.get_multiple(('a1_mu', 'a1_sig', 'a2_mu', 'a2_sig', 's1_low', 's1_high', 's2_low', 's2_high', 'pk1_prior', 'pk0_prior'))
         controls_dict, cat_cols, cts_cols = self.controls_dict, self.cat_cols, self.cts_cols
-        fixb, stationary_A, stationary_S = self.params.get_multiple(('fixb', 'stationary_A', 'stationary_S'))
+        stationary_firm_type_variation, stationary_A, stationary_S = self.params.get_multiple(('stationary_firm_type_variation', 'stationary_A', 'stationary_S'))
         dims = self.dims
 
         #### Draw parameters ####
@@ -411,6 +419,13 @@ class SimBLM:
                 A2_cat[col] = A1_cat[col]
             if controls_dict[col]['stationary_S']:
                 S2_cat[col] = S1_cat[col]
+        # Stationary firm type variation #
+        for col in cat_cols:
+            if controls_dict[col]['stationary_firm_type_variation']:
+                if controls_dict[col]['worker_type_interaction']:
+                    A2_cat[col] = np.mean(A2_cat[col], axis=1) + A1_cat[col] - np.mean(A1_cat[col], axis=1)
+                else:
+                    A2_cat[col] = np.mean(A2_cat[col]) + A1_cat[col] - np.mean(A1_cat[col])
         ## Continuous ##
         A1_cts = {col:
                 rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=nl)
@@ -438,11 +453,15 @@ class SimBLM:
                 A2_cts[col] = A1_cts[col]
             if controls_dict[col]['stationary_S']:
                 S2_cts[col] = S1_cts[col]
+        # Stationary firm type variation #
+        for col in cts_cols:
+            if controls_dict[col]['stationary_firm_type_variation']:
+                A2_cts[col] = np.mean(A2_cts[col]) + A1_cts[col] - np.mean(A1_cts[col])
 
         ## Sort parameters ##
         A1, A2 = self._sort_A(A1, A2)
 
-        if fixb:
+        if stationary_firm_type_variation:
             A2 = np.mean(A2, axis=1) + A1 - np.mean(A1, axis=1)
 
         if stationary_A:

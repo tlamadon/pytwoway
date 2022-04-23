@@ -7,16 +7,18 @@ import pandas as pd
 from scipy.special import logsumexp
 from scipy.sparse import csc_matrix, diags
 from scipy.stats import norm
-from qpsolvers import solve_qp
 from matplotlib import pyplot as plt
 from multiprocessing import Pool
 import itertools
 import warnings
 from pytwoway import jitter_scatter
+from pytwoway import constraints as cons
 from bipartitepandas.util import ParamsDict, to_list, _is_subtype
 from tqdm import tqdm
 
 # NOTE: multiprocessing isn't compatible with lambda functions
+def _gteq2(a):
+    return a >= 2
 def _gteq1(a):
     return a >= 1
 def _gteq0(a):
@@ -25,10 +27,6 @@ def _gt0(a):
     return a > 0
 def _min_gt0(a):
     return np.min(a) > 0
-def _lstdct(a):
-    return (isinstance(a[0], list) and isinstance(a[1], ParamsDict))
-def _dctlstdct(a):
-    return all([_lstdct(sub_a) for sub_a in a.values()])
 
 # Define default parameter dictionaries
 _blm_params_default = ParamsDict({
@@ -120,49 +118,25 @@ _blm_params_default = ParamsDict({
         '''
             (default=True) If False, do not update pk1.
         ''', None),
-    'fixb': (False, 'type', bool,
+    'cons_a': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=False) If True, set constraints for A1/A2/A1_cat/A2_cat/A1_cts/A2_cts so that A2 = np.mean(A2, axis=1) + A1 - np.mean(A1, axis=1).
+            (default=None) Constraint object or list of constraint objects with class method .get_constraints() that defines constraints on A1 and A2. None is equivalent to [].
         ''', None),
-    'linear': (False, 'type', bool,
+    'cons_s': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=False) If True, set constraints for A1/A2/A1_cat/A2_cat/A1_cts/A2_cts so that for a given firm type, the change in effect between worker types is linear.
+            (default=None) Constraint object or list of constraint objects with class method .get_constraints() that defines constraints on S1 and S2. None is equivalent to [].
         ''', None),
-    'stationary_A': (False, 'type', bool,
+    'cons_a_all': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=False) If True, set constraints so that A1 = A2, A1_cat = A2_cat, and A1_cts = A2_cts.
+            (default=None) Constraint object or list of constraint objects with class method .get_constraints() that defines constraints on A1/A2/A1_cat/A2_cat/A1_cts/A2_cts. None is equivalent to [].
         ''', None),
-    'stationary_S': (False, 'type', bool,
+    'cons_s_all': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=False) If True, set constraints so that S1 = S2, S1_cat = S2_cat, and S1_cts = S2_cts.
+            (default=None) Constraint object or list of constraint objects with class method .get_constraints() that defines constraints on S1/S2/S1_cat/S2_cat/S1_cts/S2_cts. None is equivalent to [].
         ''', None),
-    'cons_a': (None, 'type_constrained_none', (tuple, _lstdct),
-        '''
-            (default=None) Constraints on A1 and A2, where first entry gives list of string constraint names and second entry gives dictionary of constraint parameters. None is equivalent to ([], tw.constraint_params()).
-        ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
-    'cons_s': (None, 'type_constrained_none', (tuple, _lstdct),
-        '''
-            (default=None) Constraints on S1 and S2, where first entry gives list of constraints and second entry gives dictionary of constraint parameters. None is equivalent to ([], tw.constraint_params()).
-        ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
-    'cons_a_cat': (None, 'type_constrained_none', (dict, _dctlstdct),
-        '''
-            (default=None) Dictionary of constraints on A1_cat and A2_cat, where each column name links to a tuple where the first entry gives list of string constraint names and the second entry gives dictionary of constraint parameters. None is equivalent to {}.
-        ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
-    'cons_s_cat': (None, 'type_constrained_none', (dict, _dctlstdct),
-        '''
-            (default=None) Dictionary of constraints on S1_cat and S2_cat, where each column name links to a tuple where the first entry gives list of string constraint names and the second entry gives dictionary of constraint parameters. None is equivalent to {}.
-        ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
-    'cons_a_cts': (None, 'type_constrained_none', (dict, _dctlstdct),
-        '''
-            (default=None) Dictionary of constraints on A1_cts and A2_cts, where each column name links to a tuple where the first entry gives list of string constraint names and the second entry gives dictionary of constraint parameters. None is equivalent to {}.
-        ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
-    'cons_s_cts': (None, 'type_constrained_none', (dict, _dctlstdct),
-        '''
-            (default=None) Dictionary of constraints on S1_cts and S2_cts, where each column name links to a tuple where the first entry gives list of string constraint names and the second entry gives dictionary of constraint parameters. None is equivalent to {}.
-        ''', 'first entry gives list of constraints, second entry gives dictionary of constraint parameters'),
     's_lower_bound': (1e-10, 'type_constrained', ((float, int), _gt0),
         '''
-            (default=1e-10) Lower bound on estimated S1, S2, S1_cat, S2_cat, S1_cts, and S2_cts. Must be greater than 0.
+            (default=1e-10) Lower bound on estimated S1/S2/S1_cat/S2_cat/S1_cts/S2_cts.
         ''', '> 0'),
     'd_prior_movers': (1.0001, 'type_constrained', ((float, int), _gteq1),
         '''
@@ -198,390 +172,133 @@ def blm_params(update_dict=None):
         new_dict.update(update_dict)
     return new_dict
 
-_constraint_params_default = ParamsDict({
-    'gap_akmmono': (0, 'type', (float, int),
+_categorical_control_params_default = ParamsDict({
+    'n': (6, 'type_constrained', (int, _gteq2),
         '''
-            (default=0) Used for akmmono constraint.
+            (default=6) Number of types for the parameter.
+        ''', '>= 2'),
+    'a1_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of starting values for A1_cat (mean of fixed effects in first period).
         ''', None),
-    'gap_mono_k': (0, 'type', (float, int),
+    'a1_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0) Used for mono_k constraint.
+            (default=0.5) Standard error of starting values for A1_cat (mean of fixed effects in first period).
+        ''', '>= 0'),
+    'a2_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of starting values for A2_cat (mean of fixed effects in second period).
         ''', None),
-    'lower_bound': (0, 'type', (float, int),
+    'a2_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0) Used for bounded_below constraint to determine lower bound.
+            (default=0.5) Standard error of starting values for A2_cat (mean of fixed effects in second period).
+        ''', '>= 0'),
+    's1_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S1_cat (standard deviation of fixed effects in first period).
+        ''', '>= 0'),
+    's1_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S1_cat (standard deviation of fixed effects in first period).
+        ''', '>= 0'),
+    's2_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S2_cat (standard deviation of fixed effects in second period).
+        ''', '>= 0'),
+    's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S2_cat (standard deviation of fixed effects in second period).
+        ''', '>= 0'),
+    'worker_type_interaction': (False, 'type', bool,
+        '''
+            (default=False) If True, effect can differ by worker type.
         ''', None),
-    'upper_bound': (0, 'type', (float, int),
+    'cons_a': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=0) Used for bounded_above constraint to determine upper bound.
+            (default=None) Constraint object or list of constraint objects with class method .get_constraints() that defines constraints on A1 and A2. None is equivalent to [].
         ''', None),
-    'n_periods': (2, 'type_constrained', (int, _gteq1),
+    'cons_s': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=2) Number of periods in the data.
-        ''', '>= 1'),
-    'nt': (4, 'type', (float, int),
-        '''
-            (default=4)
+            (default=None) Constraint object or list of constraint objects with class method .get_constraints() that defines constraints on S1 and S2. None is equivalent to [].
         ''', None)
 })
 
-def constraint_params(update_dict=None):
+def categorical_control_params(update_dict=None):
     '''
-    Dictionary of default constraint_params. Run tw.constraint_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default categorical_control_params. Run tw.categorical_control_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
         update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of constraint_params
+        (ParamsDict) dictionary of categorical_control_params
     '''
-    new_dict = _constraint_params_default.copy()
+    new_dict = _categorical_control_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
 
-class QPConstrained:
+_continuous_control_params_default = ParamsDict({
+    'a1_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of starting values for A1_cts (mean of coefficient in first period).
+        ''', None),
+    'a1_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of starting values for A1_cts (mean of coefficient in first period).
+        ''', '>= 0'),
+    'a2_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of starting values for A2_cts (mean of coefficient in second period).
+        ''', None),
+    'a2_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of starting values for A2_cts (mean of coefficient in second period).
+        ''', '>= 0'),
+    's1_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S1_cts (standard deviation of coefficient in first period).
+        ''', '>= 0'),
+    's1_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S1_cts (standard deviation of coefficient in first period).
+        ''', '>= 0'),
+    's2_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S2_cts (standard deviation of coefficient in second period).
+        ''', '>= 0'),
+    's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S2_cts (standard deviation of coefficient in second period).
+        ''', '>= 0'),
+    'worker_type_interaction': (False, 'type', bool,
+        '''
+            (default=False) If True, effect can differ by worker type.
+        ''', None),
+    'cons_a': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
+        '''
+            (default=None) Constraint object or list of constraint objects with class method .get_constraints() that defines constraints on A1 and A2. None is equivalent to [].
+        ''', None),
+    'cons_s': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
+        '''
+            (default=None) Constraint object or list of constraint objects with class method .get_constraints() that defines constraints on S1 and S2. None is equivalent to [].
+        ''', None)
+})
+
+def continuous_control_params(update_dict=None):
     '''
-    Solve a quadratic programming model of the following form:
-        min_x(1/2 x.T @ P @ x + q.T @ x)
-        s.t.    Gx <= h
-                Ax = b
+    Dictionary of default continuous_control_params. Run tw.continuous_control_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        nl (int): number of worker types
-        nk (int): number of firm types
+        update_dict (dict): user parameter values; None is equivalent to {}
+
+    Returns:
+        (ParamsDict) dictionary of continuous_control_params
     '''
-
-    def __init__(self, nl, nk):
-        # Store attributes
-        self.nl = nl
-        self.nk = nk
-
-        # Inequality constraint matrix
-        self.G = np.array([])
-        # Inequality constraint bound
-        self.h = np.array([])
-        # Equality constraint matrix
-        self.A = np.array([])
-        # Equality constraint bound
-        self.b = np.array([])
-
-    def add_constraint_builtin(self, constraint, params=None):
-        '''
-        Add a built-in constraint.
-
-        Arguments:
-            constraint (str): name of constraint to add. Valid constraints are 'linear', 'stable_across_worker_types', 'stable_across_time_full', 'stable_across_time_partial_1', 'stable_across_time_partial_2', 'akmmono', 'mono_k', 'fixb', 'bounded_below', 'bounded_above', 'stationary', 'none', and 'sum'.
-            params (ParamsDict): dictionary of parameters for constraint. Run tw.constraint_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.constraint_params().
-        '''
-        if params is None:
-            params = constraint_params()
-        # Unpack attributes
-        nl, nk = self.nl, self.nk
-
-        G = np.array([])
-        h = np.array([])
-        A = np.array([])
-        b = np.array([])
-        if constraint == 'linear':
-            n_periods = params['n_periods']
-        #     LL = np.zeros(shape=(n_periods * (nl - 1), n_periods * nl))
-        #     for period in range(n_periods):
-        #         row_shift = period * (nl - 1)
-        #         col_shift = period * nl
-        #         for l in range(nl - 1):
-        #             LL[l + row_shift, l + col_shift] = 1
-        #             LL[l + row_shift, l + col_shift + 1] = - 1
-        #     KK = np.zeros(shape=(nk - 1, nk))
-        #     for k in range(nk - 1):
-        #         KK[k, k] = 1
-        #         KK[k, k + 1] = - 1
-        #     A = - np.kron(LL, KK)
-        #     b = - np.zeros(shape=A.shape[0])
-            A = np.zeros(shape=(n_periods * (nl - 2) * nk, n_periods * nl * nk))
-            for period in range(n_periods):
-                row_shift = period * (nl - 2) * nk
-                col_shift = period * nl * nk
-                for k in range(nk):
-                    for l in range(nl - 2):
-                        A[row_shift + l, col_shift + l] = 1
-                        A[row_shift + l, col_shift + l + 1] = 2
-                        A[row_shift + l, col_shift + l + 2] = -1
-                    row_shift += (nl - 2)
-                    col_shift += nl
-
-            b = - np.zeros(shape=A.shape[0])
-
-        elif constraint == 'stable_across_worker_types':
-            n_periods = params['n_periods']
-            A = np.zeros(shape=(n_periods * (nl - 1) * nk, n_periods * nl * nk))
-            for period in range(n_periods):
-                row_shift = period * (nl - 1) * nk
-                col_shift = period * nl * nk
-                for k in range(nk):
-                    for l in range(nl - 1):
-                        A[row_shift + l, col_shift + nk * l] = 1
-                        A[row_shift + l, col_shift + nk * (l + 1)] = -1
-                    row_shift += (nl - 1)
-                    col_shift += 1
-
-            b = - np.zeros(shape=A.shape[0])
-
-        elif constraint == 'stable_across_time_full':
-            # If not also using 'stable_across_worker_types' or 'linear' constraint
-            n_periods = params['n_periods']
-            A = np.zeros(shape=((n_periods - 1) * nl * nk, n_periods * nl * nk))
-            col_shift = nl * nk
-            for row in range((n_periods - 1) * nl * nk):
-                A[row, row] = 1
-                A[row, row + col_shift] = -1
-
-            b = - np.zeros(shape=A.shape[0])
-
-        elif constraint == 'stable_across_time_partial_1':
-            # If also using 'stable_across_worker_types' constraint but not 'linear' constraint
-            n_periods = params['n_periods']
-            A = np.zeros(shape=((n_periods - 1) * nk, n_periods * nl * nk))
-            for period in range(n_periods - 1):
-                row_shift = period * nk
-                col_shift = period * nl * nk
-                for k in range(nk):
-                    A[row_shift + k, col_shift + nl * k] = 1
-                    A[row_shift + k, col_shift + nl * nk + nl * k] = -1
-
-            b = - np.zeros(shape=A.shape[0])
-
-        elif constraint == 'stable_across_time_partial_2':
-            # If also using 'stable_across_worker_types' or 'linear' constraint
-            n_periods = params['n_periods']
-            nl_adj = min(nl, 2)
-            A = np.zeros(shape=((n_periods - 1) * nl_adj * nk, n_periods * nl * nk))
-            for period in range(n_periods - 1):
-                row_shift = period * nl_adj * nk
-                col_shift = period * nl * nk
-                for k in range(nk):
-                    for l in range(nl_adj):
-                        A[row_shift + k + l, col_shift + nl * k + l] = 1
-                        A[row_shift + k + l, col_shift + nl * nk + nl * k + l] = -1
-                    row_shift += (nl_adj - 1)
-
-            b = - np.zeros(shape=A.shape[0])
-
-        elif constraint == 'akmmono':
-            gap = params['gap_akmmono']
-            LL = np.zeros(shape=(nl - 1, nl))
-            for l in range(nl - 1):
-                LL[l, l] = 1
-                LL[l, l + 1] = - 1
-            KK = np.zeros(shape=(nk - 1, nk))
-            for k in range(nk - 1):
-                KK[k, k] = 1
-                KK[k, k + 1] = - 1
-            G = np.kron(np.eye(nl), KK)
-            h = - gap * np.ones(shape=(nl * (nk - 1)))
-
-            A = - np.kron(LL, KK)
-            b = - np.zeros(shape=A.shape[0])
-
-        elif constraint == 'mono_k':
-            gap = params['gap_mono_k']
-            KK = np.zeros(shape=(nk - 1, nk))
-            for k in range(nk - 1):
-                KK[k, k] = 1
-                KK[k, k + 1] = - 1
-            G = np.kron(np.eye(nl), KK)
-            h = - gap * np.ones(shape=(nl * (nk - 1)))
-
-        elif constraint == 'fixb':
-            # if len(self.G) > 0 or len(self.A) > 0:
-            #     self.clear_constraints()
-            #     warnings.warn("Constraint 'fixb' requires different dimensions than other constraints, existing constraints have been removed. It is recommended to manually run clear_constraints() prior to adding the constraint 'fixb' in order to ensure you are not unintentionally removing existing constraints.")
-            nt = params['nt']
-            KK = np.zeros(shape=(nk - 1, nk))
-            for k in range(nk - 1):
-                KK[k, k] = 1
-                KK[k, k + 1] = - 1
-            A = - np.kron(np.eye(nl), KK)
-            MM = np.zeros(shape=(nt - 1, nt))
-            for m in range(nt - 1):
-                MM[m, m] = 1
-                MM[m, m + 1] = - 1
-            A = - np.kron(MM, A)
-            b = - np.zeros(shape=nl * (nk - 1) * (nt - 1))
-
-        elif constraint == 'bounded_below':
-            lower_bound = params['lower_bound']
-            n_periods = params['n_periods']
-            G = - np.eye(n_periods * nl * nk)
-            h = - lower_bound * np.ones(shape=n_periods * nl * nk)
-
-        elif constraint == 'bounded_above':
-            upper_bound = params['upper_bound']
-            n_periods = params['n_periods']
-            G = np.eye(n_periods * nl * nk)
-            h = upper_bound * np.ones(shape=n_periods * nl * nk)
-
-        elif constraint == 'stationary':
-            LL = np.zeros(shape=(nl - 1, nl))
-            for l in range(nl - 1):
-                LL[l, l] = 1
-                LL[l, l + 1] = - 1
-            A = np.kron(LL, np.eye(nk))
-            b = - np.zeros(shape=(nl - 1) * nk)
-
-        elif constraint == 'none':
-            G = - np.zeros(shape=(1, nk * nl))
-            h = - np.array([0])
-
-        elif constraint == 'sum':
-            A = - np.kron(np.eye(nl), np.ones(shape=nk).T)
-            b = - np.zeros(shape=nl)
-
-        else:
-            raise NotImplementedError('Invalid constraint {}.'.format(constraint))
-
-        # Add constraints to attributes
-        self.add_constraint_manual(G=G, h=h, A=A, b=b)
-
-    def add_constraints_builtin(self, constraints, params=None):
-        '''
-        Add a built-in constraint.
-
-        Arguments:
-            constraints (list of str): names of constraints to add
-            params (ParamsDict): dictionary of parameters for constraints. Run tw.constraint_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.constraint_params().
-        '''
-        if params is None:
-            params = constraint_params()
-        for constraint in constraints:
-            self.add_constraint_builtin(constraint=constraint, params=params)
-
-    def add_constraint_manual(self, G=None, h=None, A=None, b=None):
-        '''
-        Manually add a constraint. If setting inequality constraints, must set both G and h to have the same dimension 0. If setting equality constraints, must set both A and b to have the same dimension 0.
-
-        Arguments:
-            G (NumPy Array): inequality constraint matrix; None is equivalent to np.array([])
-            h (NumPy Array): inequality constraint bound; None is equivalent to np.array([])
-            A (NumPy Array): equality constraint matrix; None is equivalent to np.array([])
-            b (NumPy Array): equality constraint bound; None is equivalent to np.array([])
-        '''
-        if G is None:
-            G = np.array([])
-        if h is None:
-            h = np.array([])
-        if A is None:
-            A = np.array([])
-        if b is None:
-            b = np.array([])
-
-        if len(G) > 0:
-            # If inequality constraints
-            if len(self.G) > 0:
-                self.G = np.concatenate((self.G, G), axis=0)
-                self.h = np.concatenate((self.h, h), axis=0)
-            else:
-                self.G = G
-                self.h = h
-        if len(A) > 0:
-            # If equality constraints
-            if len(self.A) > 0:
-                self.A = np.concatenate((self.A, A), axis=0)
-                self.b = np.concatenate((self.b, b), axis=0)
-            else:
-                self.A = A
-                self.b = b
-
-    def pad(self, l=0, r=0):
-        '''
-        Add padding to the left and/or right of C matrix.
-
-        Arguments:
-            l (int): how many columns to add on left
-            r (int): how many columns to add on right
-        '''
-        if len(self.G) > 0:
-            self.G = np.concatenate((
-                    np.zeros(shape=(self.G.shape[0], l)),
-                    self.G,
-                    np.zeros(shape=(self.G.shape[0], r)),
-                ), axis=1)
-        else:
-            self.G = np.zeros(shape=l + r)
-        if len(self.A) > 0:
-            self.A = np.concatenate((
-                    np.zeros(shape=(self.A.shape[0], l)),
-                    self.A,
-                    np.zeros(shape=(self.A.shape[0], r)),
-                ), axis=1)
-        else:
-            self.A = np.zeros(shape=l + r)
-
-    def clear_constraints(self):
-        '''
-        Remove all constraints.
-        '''
-        self.G = np.array([])
-        self.h = np.array([])
-        self.A = np.array([])
-        self.b = np.array([])
-
-    def check_feasible(self):
-        '''
-        Check that constraints are feasible.
-
-        Returns:
-            (bool): True if constraints feasible, False otherwise
-        '''
-        # -----  Simulate an OLS -----
-        rng = np.random.default_rng()
-        # Parameters
-        n = 2 * self.nl * self.nk # self.A.shape[1]
-        k = self.nl * self.nk
-        # Regressors
-        x = rng.normal(size=k)
-        M = rng.normal(size=(n, k))
-        # Dependent
-        Y = M @ x
-
-        # ----- Create temporary solver -----
-        cons = QPConstrained(self.nl, self.nk)
-        cons.G = self.G
-        cons.h = self.h
-        cons.A = self.A
-        cons.b = self.b
-
-        # ----- Map to qpsolvers -----
-        P = M.T @ M
-        q = - M.T @ Y
-
-        # ----- Run solver -----
-        cons.solve(P, q)
-
-        return cons.res is not None
-
-    def solve(self, P, q):
-        '''
-        Solve a quadratic programming model of the following form:
-            min_x(1/2 x.T @ P @ x + q.T @ x)
-            s.t.    Gx <= h
-                    Ax = b
-
-        Arguments:
-            P (NumPy Array): P in quadratic programming problem
-            q (NumPy Array): q in quadratic programming problem
-
-        Returns:
-            (NumPy Array): x that solves quadratic programming problem
-        '''
-        if len(self.G) > 0 and len(self.A) > 0:
-            self.res = solve_qp(P=P, q=q, G=self.G, h=self.h, A=self.A, b=self.b)
-        elif len(self.G) > 0:
-            self.res = solve_qp(P=P, q=q, G=self.G, h=self.h)
-        elif len(self.A) > 0:
-            self.res = solve_qp(P=P, q=q, A=self.A, b=self.b)
-        else:
-            self.res = solve_qp(P=P, q=q)
+    new_dict = _continuous_control_params_default.copy()
+    if update_dict is not None:
+        new_dict.update(update_dict)
+    return new_dict
 
 def lognormpdf(x, mu, sd):
     return - 0.5 * np.log(2 * np.pi) - np.log(sd) - (x - mu) ** 2 / (2 * sd ** 2)
@@ -896,7 +613,11 @@ class BLMModel:
             A = (A + A.T) / 2
             D = np.diag(np.sum(A, axis=1) ** (-0.5))
             L = np.eye(nk) - D @ A @ D
-            evals, evecs = np.linalg.eig(L)
+            try:
+                evals, evecs = np.linalg.eig(L)
+            except np.linalg.LinAlgError as e:
+                warnings.warn("Linear algebra error encountered when computing connectedness measure. This can likely be corrected by increasing the value of 'd_prior_movers' in tw.blm_params().")
+                raise np.linalg.LinAlgError(e)
             EV[kk] = sorted(evals)[1]
 
         if all:
@@ -920,7 +641,6 @@ class BLMModel:
         cat_cols, cts_cols = self.cat_cols, self.cts_cols
         cat_dict, cts_dict = self.cat_dict, self.cts_dict
         controls_dict = self.controls_dict
-        fixb, linear, stationary_A, stationary_S = params.get_multiple(('fixb', 'linear', 'stationary_A', 'stationary_S'))
         any_controls, any_non_worker_type_interactions = self.any_controls, self.any_non_worker_type_interactions
 
         # Store wage outcomes and groups
@@ -984,98 +704,45 @@ class BLMModel:
 
         ### Constraints ###
         ## General ##
-        cons_a = QPConstrained(nl, nk)
-        cons_s = QPConstrained(nl, nk)
-        if params['cons_a'] is not None:
-            cons_a.add_constraints_builtin(*params['cons_a'])
-        if params['cons_s'] is not None:
-            cons_s.add_constraints_builtin(*params['cons_s'])
+        cons_a = cons.QPConstrained(nl, nk)
+        cons_s = cons.QPConstrained(nl, nk)
+        cons_s.add_constraints(cons.BoundedBelow(lb=params['s_lower_bound']))
 
-        # Set lower bound on standard deviations
-        cons_s.add_constraint_builtin('bounded_below', {'lower_bound': params['s_lower_bound'], 'n_periods': 2})
-        if fixb:
-            cons_a.add_constraint_builtin('fixb', {'nt': 2})
-        if linear:
-            cons_a.add_constraint_builtin('linear', {'n_periods': 2})
-        if stationary_A:
-            cons_a.add_constraint_builtin('stable_across_time_full', {'n_periods': 2})
-        if stationary_S:
-            cons_s.add_constraint_builtin('stable_across_time_full', {'n_periods': 2})
-        ## Categorical ##
-        cons_a_cat = {}
-        cons_s_cat = {}
+        if params['cons_a'] is not None:
+            cons_a.add_constraints(params['cons_a'])
+        if params['cons_a_all'] is not None:
+            cons_a.add_constraints(params['cons_a_all'])
+        if params['cons_s'] is not None:
+            cons_s.add_constraints(params['cons_s'])
+        if params['cons_s_all'] is not None:
+            cons_s.add_constraints(params['cons_s_all'])
+
+        ## Control variables ##
+        cons_a_dict = {}
+        cons_s_dict = {}
         for col in cat_cols:
             col_dict = controls_dict[col]
-            cons_a_cat[col] = QPConstrained(nl, col_dict['n'])
-            cons_s_cat[col] = QPConstrained(nl, col_dict['n'])
-
-            # Set lower bound on standard deviations
-            cons_s_cat[col].add_constraint_builtin('bounded_below', {'lower_bound': params['s_lower_bound'], 'n_periods': 2})
-            if fixb:
-                cons_a_cat[col].add_constraint_builtin('fixb', {'nt': 2})
-            if col_dict['worker_type_interaction']:
-                if linear:
-                    cons_a_cat[col].add_constraint_builtin('linear', {'n_periods': 2})
-                    if stationary_A or col_dict['stationary_A']:
-                        cons_a_cat[col].add_constraint_builtin('stable_across_time_partial_2', {'n_periods': 2})
-                    if stationary_S or col_dict['stationary_S']:
-                        cons_s_cat[col].add_constraint_builtin('stable_across_time_partial_2', {'n_periods': 2})
-                else:
-                    if stationary_A or col_dict['stationary_A']:
-                        cons_a_cat[col].add_constraint_builtin('stable_across_time_full', {'n_periods': 2})
-                    if stationary_S or col_dict['stationary_S']:
-                        cons_s_cat[col].add_constraint_builtin('stable_across_time_full', {'n_periods': 2})
-            else:
-                cons_a_cat[col].add_constraint_builtin('stable_across_worker_types', {'n_periods': 2})
-                cons_s_cat[col].add_constraint_builtin('stable_across_worker_types', {'n_periods': 2})
-
-                if stationary_A or col_dict['stationary_A']:
-                    cons_a_cat[col].add_constraint_builtin('stable_across_time_partial_1', {'n_periods': 2})
-                if stationary_S or col_dict['stationary_S']:
-                    cons_s_cat[col].add_constraint_builtin('stable_across_time_partial_1', {'n_periods': 2})
-        if params['cons_a_cat'] is not None:
-            for col, cons_a_col in params['cons_a_cat'].items():
-                cons_a_cat[col].add_constraints_builtin(*cons_a_col)
-        if params['cons_s_cat'] is not None:
-            for col, cons_s_col in params['cons_s_cat'].items():
-                cons_s_cat[col].add_constraints_builtin(*cons_s_col)
-        ## Continuous ##
-        cons_a_cts = {}
-        cons_s_cts = {}
+            cons_a_dict[col] = cons.QPConstrained(nl, col_dict['n'])
+            cons_s_dict[col] = cons.QPConstrained(nl, col_dict['n'])
         for col in cts_cols:
             col_dict = controls_dict[col]
-            cons_a_cts[col] = QPConstrained(nl, 1)
-            cons_s_cts[col] = QPConstrained(nl, 1)
-            # Set lower bound on standard deviations
-            cons_s_cts[col].add_constraint_builtin('bounded_below', {'lower_bound': params['s_lower_bound'], 'n_periods': 2})
-            if fixb:
-                cons_a_cts[col].add_constraint_builtin('fixb', {'nt': 2})
-            if col_dict['worker_type_interaction']:
-                if linear:
-                    cons_a_cts[col].add_constraint_builtin('linear', {'n_periods': 2})
-                    if stationary_A or col_dict['stationary_A']:
-                        cons_a_cts[col].add_constraint_builtin('stable_across_time_partial_2', {'n_periods': 2})
-                    if stationary_S or col_dict['stationary_S']:
-                        cons_s_cts[col].add_constraint_builtin('stable_across_time_partial_2', {'n_periods': 2})
-                else:
-                    if stationary_A or col_dict['stationary_A']:
-                        cons_a_cts[col].add_constraint_builtin('stable_across_time_full', {'n_periods': 2})
-                    if stationary_S or col_dict['stationary_S']:
-                        cons_s_cts[col].add_constraint_builtin('stable_across_time_full', {'n_periods': 2})
-            else:
-                cons_a_cts[col].add_constraint_builtin('stable_across_worker_types', {'n_periods': 2})
-                cons_s_cts[col].add_constraint_builtin('stable_across_worker_types', {'n_periods': 2})
+            cons_a_dict[col] = cons.QPConstrained(nl, 1)
+            cons_s_dict[col] = cons.QPConstrained(nl, 1)
+        for col in cat_cols + cts_cols:
+            cons_s_dict[col].add_constraints(cons.BoundedBelow(lb=params['s_lower_bound']))
 
-                if stationary_A or col_dict['stationary_A']:
-                    cons_a_cts[col].add_constraint_builtin('stable_across_time_partial_1', {'n_periods': 2})
-                if stationary_S or col_dict['stationary_S']:
-                    cons_s_cts[col].add_constraint_builtin('stable_across_time_partial_1', {'n_periods': 2})
-        if params['cons_a_cts'] is not None:
-            for col, cons_a_col in params['cons_a_cts'].items():
-                cons_a_cts[col].add_constraints_builtin(*cons_a_col)
-        if params['cons_s_cts'] is not None:
-            for col, cons_s_col in params['cons_s_cts'].items():
-                cons_s_cts[col].add_constraints_builtin(*cons_s_col)
+            if not controls_dict[col]['worker_type_interaction']:
+                cons_a_dict[col].add_constraints(cons.NoWorkerTypeInteraction())
+                cons_s_dict[col].add_constraints(cons.NoWorkerTypeInteraction())
+
+            if controls_dict[col]['cons_a'] is not None:
+                cons_a_dict[col].add_constraints(controls_dict[col]['cons_a'])
+            if params['cons_a_all'] is not None:
+                cons_a_dict[col].add_constraints(params['cons_a_all'])
+            if controls_dict[col]['cons_s'] is not None:
+                cons_s_dict[col].add_constraints(controls_dict[col]['cons_s'])
+            if params['cons_s_all'] is not None:
+                cons_s_dict[col].add_constraints(params['cons_s_all'])
 
         for iter in range(params['n_iters_movers']):
 
@@ -1254,7 +921,7 @@ class BLMModel:
                 XwX_cat[col] = np.diag(XwX_cat[col])
                 if params['update_a']:
                     try:
-                        a_solver = cons_a_cat[col]
+                        a_solver = cons_a_dict[col]
                         a_solver.solve(XwX_cat[col], -XwY_cat[col])
                         res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2], a_solver.res[len(a_solver.res) // 2:]
                         # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
@@ -1310,7 +977,7 @@ class BLMModel:
                 XwX_cts[col] = np.diag(XwX_cts[col])
                 if params['update_a']:
                     try:
-                        a_solver = cons_a_cts[col]
+                        a_solver = cons_a_dict[col]
                         a_solver.solve(XwX_cts[col], -XwY_cts[col])
                         res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2], a_solver.res[len(a_solver.res) // 2:]
                         # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
@@ -1383,8 +1050,9 @@ class BLMModel:
                             S1_cts_l = S1_cts[col]
                             S2_cts_l = S2_cts[col]
                         ## XwS_cts terms ##
-                        XwS_cts[col][l] = C1[col].T @ diags(qi[:, l] / S1_cts_l) @ eps1_l_sq
-                        XwS_cts[col][nl + l] = C2[col].T @ diags(qi[:, l] / S2_cts_l) @ eps2_l_sq
+                        # NOTE: take absolute value
+                        XwS_cts[col][l] = np.abs(C1[col].T @ diags(qi[:, l] / S1_cts_l) @ eps1_l_sq)
+                        XwS_cts[col][nl + l] = np.abs(C2[col].T @ diags(qi[:, l] / S2_cts_l) @ eps2_l_sq)
                         del S1_cts_l, S2_cts_l
                     del eps1_l_sq, eps2_l_sq
 
@@ -1406,7 +1074,7 @@ class BLMModel:
                 for col in cat_cols:
                     try:
                         col_n = cat_dict[col]['n']
-                        s_solver = cons_s_cat[col]
+                        s_solver = cons_s_dict[col]
                         s_solver.solve(XwX_cat[col], -XwS_cat[col])
                         res_s1, res_s2 = s_solver.res[: len(s_solver.res) // 2], s_solver.res[len(s_solver.res) // 2:]
                         # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
@@ -1427,7 +1095,7 @@ class BLMModel:
                 ## Continuous ##
                 for col in cts_cols:
                     try:
-                        s_solver = cons_s_cts[col]
+                        s_solver = cons_s_dict[col]
                         s_solver.solve(XwX_cts[col], -XwS_cts[col])
                         res_s1, res_s2 = s_solver.res[: len(s_solver.res) // 2], s_solver.res[len(s_solver.res) // 2:]
                         # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
@@ -1473,7 +1141,8 @@ class BLMModel:
         self.A1, self.A2, self.S1, self.S2 = A1, A2, S1, S2
         self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat = A1_cat, A2_cat, S1_cat, S2_cat
         self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts = A1_cts, A2_cts, S1_cts, S2_cts
-        self.pk1, self.lik1, self.liks1 = pk1, lik1, np.array(liks1)
+        self.pk1, self.lik1 = pk1, lik1
+        self.liks1 = liks1 # np.concatenate([self.liks1, liks1])
 
         # Update NNm
         if compute_NNm:
@@ -1594,7 +1263,8 @@ class BLMModel:
             # Normalize rows to sum to 1
             pk0 = (pk0.T / np.sum(pk0, axis=1).T).T
 
-        self.pk0, self.lik0, self.liks0 = pk0, lik0, np.array(liks0)
+        self.pk0, self.lik0 = pk0, lik0
+        self.liks0 = liks0 # np.concatenate([self.liks0, liks0])
 
         # Update NNs
         if compute_NNs:
@@ -1616,26 +1286,27 @@ class BLMModel:
         # Save original parameters
         user_params = self.params.copy()
         ##### Loop 1 #####
-        # First run fixm = True, which fixes A but updates S and pk
+        # First fix A but update S and pk
         self.params['update_a'] = False
         self.params['update_s'] = True
         self.params['update_pk1'] = True
         if self.params['verbose'] in [1, 2]:
-            print('Running fixm movers')
+            print('Fitting movers with A fixed')
         self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 2 #####
         # Now update A
         self.params['update_a'] = True
-        # Set constraints
-        self.params['linear'] = True
-        if self.params['verbose'] in [1, 2]:
-            print('Running constrained movers')
-        self.fit_movers(jdata, compute_NNm=False)
+        if self.nl > 2:
+            # Set constraints
+            self.params['cons_a_all'] = cons.Linear()
+            if self.params['verbose'] in [1, 2]:
+                print('Fitting movers with linear constraint on A')
+            self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 3 #####
         # Remove constraints
-        self.params['linear'] = False
+        self.params['cons_a_all'] = None
         if self.params['verbose'] in [1, 2]:
-            print('Running unconstrained movers')
+            print('Fitting unconstrained movers')
         self.fit_movers(jdata, compute_NNm=compute_NNm)
         ##### Compute connectedness #####
         self.compute_connectedness_measure()
