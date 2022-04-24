@@ -166,7 +166,7 @@ def blm_params(update_dict=None):
     Dictionary of default blm_params. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values; None is equivalent to {}
+        update_dict (dict or None): user parameter values; None is equivalent to {}
 
     Returns:
         (ParamsDict) dictionary of blm_params
@@ -232,7 +232,7 @@ def categorical_control_params(update_dict=None):
     Dictionary of default categorical_control_params. Run tw.categorical_control_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values; None is equivalent to {}
+        update_dict (dict or None): user parameter values; None is equivalent to {}
 
     Returns:
         (ParamsDict) dictionary of categorical_control_params
@@ -294,7 +294,7 @@ def continuous_control_params(update_dict=None):
     Dictionary of default continuous_control_params. Run tw.continuous_control_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values; None is equivalent to {}
+        update_dict (dict or None): user parameter values; None is equivalent to {}
 
     Returns:
         (ParamsDict) dictionary of continuous_control_params
@@ -312,8 +312,8 @@ class BLMModel:
     Class for solving the BLM model using a single set of starting values.
 
     Arguments:
-        blm_params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.blm_params().
-        rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+        blm_params (ParamsDict or None): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.blm_params().
+        rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
     '''
     def __init__(self, blm_params=None, rng=None):
         if blm_params is None:
@@ -1460,7 +1460,7 @@ class BLMModel:
 
         Arguments:
             grid (bool): if True, plot grid
-            dpi (float): dpi for plot
+            dpi (float or None): dpi for plot
         '''
         # Sort A1 by average effect over firms
         sorted_A1 = self.A1.T[np.mean(self.A1.T, axis=1).argsort()].T
@@ -1486,7 +1486,7 @@ class BLMModel:
 
         Arguments:
             grid (bool): if True, plot grid
-            dpi (float): dpi for plot
+            dpi (float or None): dpi for plot
         '''
         # Sort A2 by average effect over firms
         sorted_A2 = self.A2.T[np.mean(self.A2.T, axis=1).argsort()].T
@@ -1512,7 +1512,7 @@ class BLMModel:
 
         Arguments:
             grid (bool): if True, plot grid
-            dpi (float): dpi for plot
+            dpi (float or None): dpi for plot
         '''
         nl, nk = self.nl, self.nk
 
@@ -1541,7 +1541,7 @@ class BLMModel:
         Plot pk1 (proportions of worker types at each firm class) in the first period.
 
         Arguments:
-            dpi (float): dpi for plot
+            dpi (float or None): dpi for plot
         '''
         nl, nk = self.nl, self.nk
 
@@ -1566,7 +1566,7 @@ class BLMModel:
         Plot pk1 (proportions of worker types at each firm class) in the second period.
 
         Arguments:
-            dpi (float): dpi for plot
+            dpi (float or None): dpi for plot
         '''
         nl, nk = self.nl, self.nk
 
@@ -1591,7 +1591,7 @@ class BLMModel:
         Plot proportions of worker types at each firm class.
 
         Arguments:
-            dpi (float): dpi for plot
+            dpi (float or None): dpi for plot
         '''
         nl, nk = self.nl, self.nk
 
@@ -1618,7 +1618,7 @@ class BLMEstimator:
     Class for solving the BLM model using multiple sets of starting values.
 
     Arguments:
-        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.blm_params().
+        params (ParamsDict or None): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.blm_params().
     '''
 
     def __init__(self, params=None):
@@ -1643,7 +1643,7 @@ class BLMEstimator:
 
         Arguments:
             jdata (Pandas DataFrame): movers
-            rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
         if rng is None:
             rng = np.random.default_rng(None)
@@ -1662,7 +1662,7 @@ class BLMEstimator:
             n_init (int): number of starting values
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness
             ncore (int): number of cores for multiprocessing
-            rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
         if rng is None:
             rng = np.random.default_rng(None)
@@ -1722,7 +1722,7 @@ class BLMEstimator:
 
         Arguments:
             grid (bool): if True, plot grid
-            dpi (float): dpi for plot
+            dpi (float or None): dpi for plot
         '''
         if self.model is not None:
             self.model.plot_A1(grid=grid, dpi=dpi)
@@ -1735,7 +1735,7 @@ class BLMEstimator:
 
         Arguments:
             grid (bool): if True, plot grid
-            dpi (float): dpi for plot
+            dpi (float or None): dpi for plot
         '''
         if self.model is not None:
             self.model.plot_A2(grid=grid, dpi=dpi)
@@ -1748,7 +1748,7 @@ class BLMEstimator:
 
         Arguments:
             grid (bool): if True, plot grid
-            dpi (float): dpi for plot
+            dpi (float or None): dpi for plot
         '''
         if self.model is not None:
             self.model.plot_log_earnings(grid=grid, dpi=dpi)
@@ -1760,7 +1760,7 @@ class BLMEstimator:
         Plot proportions of worker types at each firm class.
 
         Arguments:
-            dpi (float): dpi for plot
+            dpi (float or None): dpi for plot
         '''
         if self.model is not None:
             self.model.plot_type_proportions(dpi)
@@ -1773,7 +1773,7 @@ class BLMEstimator:
 
         Arguments:
             jitter (bool): if True, jitter points to prevent overlap
-            dpi (float): dpi for plot
+            dpi (float or None): dpi for plot
         '''
         if (self.model is not None) and (self.liks_high is not None) and (self.connectedness_high is not None) and (self.liks_low is not None) and (self.connectedness_low is not None):
             if dpi is not None:

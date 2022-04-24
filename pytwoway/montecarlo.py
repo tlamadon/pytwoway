@@ -15,17 +15,27 @@ class MonteCarlo:
     Class of MonteCarlo, where MonteCarlo runs a Monte Carlo estimation by simulating bipartite networks of firms and workers.
 
     Arguments:
-        sim_params (ParamsDict): dictionary of parameters for simulating data. Run bpd.sim_params().describe_all() for descriptions of all valid parameters.
-        fe_params (ParamsDict): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters.
-        cre_params (ParamsDict): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters.
-        cluster_params (ParamsDict): dictionary of parameters for clustering in CRE estimation. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters.
-        clean_params (ParamsDict): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters.
+        sim_params (ParamsDict or None): dictionary of parameters for simulating data. Run bpd.sim_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.sim_params().
+        fe_params (ParamsDict or None): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().
+        cre_params (ParamsDict or None): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.cre_params().
+        cluster_params (ParamsDict or None): dictionary of parameters for clustering in CRE estimation. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.cluster_params().
+        clean_params (ParamsDict or None): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.clean_params().
         collapse (bool): if True, run estimators on data collapsed at the worker-firm spell level
         move_to_worker (bool): if True, each move is treated as a new worker
         log (bool): if True, will create log file(s)
     '''
 
-    def __init__(self, sim_params=bpd.sim_params(), fe_params=tw.fe_params(), cre_params=tw.cre_params(), cluster_params=bpd.cluster_params(), clean_params=bpd.clean_params(), collapse=True, move_to_worker=False, log=False):
+    def __init__(self, sim_params=None, fe_params=None, cre_params=None, cluster_params=None, clean_params=None, collapse=True, move_to_worker=False, log=False):
+        if sim_params is None:
+            sim_params = bpd.sim_params()
+        if fe_params is None:
+            fe_params = tw.fe_params()
+        if cre_params is None:
+            cre_params = tw.cre_params()
+        if cluster_params is None:
+            cluster_params = bpd.cluster_params()
+        if clean_params is None:
+            clean_params = bpd.clean_params()
         # Start logger
         # logger_init(self)
         # self.logger.info('initializing MonteCarlo object')
@@ -66,12 +76,12 @@ class MonteCarlo:
 
     # Cannot include two underscores because isn't compatible with starmap for multiprocessing
     # Source: https://stackoverflow.com/questions/27054963/python-attribute-error-object-has-no-attribute
-    def _monte_carlo_interior(self, rng=np.random.default_rng(None)):
+    def _monte_carlo_interior(self, rng=None):
         '''
         Run Monte Carlo simulations of two way fixed effect models to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. This is the interior function to monte_carlo.
 
         Arguments:
-            rng (np.random.Generator): NumPy random number generator
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
             true_psi_var (float): true simulated sample variance of psi
@@ -85,6 +95,9 @@ class MonteCarlo:
             he_psi_var (float): heteroskedastic-corrected estimate of variance of psi
             he_psi_alpha_cov (float): heteroskedastic-corrected estimate of covariance of psi and alpha
         '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
         ## Simulate data
         sim_data = self.sim_network.simulate(rng)
         ## Compute true sample variance of psi and covariance of psi and alpha
@@ -128,7 +141,7 @@ class MonteCarlo:
                 fe_res['var_ho'], fe_res['cov_ho'], \
                 fe_res['var_he'], fe_res['cov_he']
 
-    def monte_carlo(self, N=10, ncore=1, rng=np.random.default_rng(None)):
+    def monte_carlo(self, N=10, ncore=1, rng=None):
         '''
         Run Monte Carlo simulations of two way fixed effect models to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:
 
@@ -155,8 +168,11 @@ class MonteCarlo:
         Arguments:
             N (int): number of simulations
             ncore (int): number of cores to use
-            rng (np.random.Generator): NumPy random number generator. This overrides the random number generators for simulating, FE, and CRE.
+            rng (np.random.Generator or None): NumPy random number generator. This overrides the random number generators for simulating, FE, and CRE. None is equivalent to np.random.default_rng(None).
         '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
         # Initialize NumPy arrays to store results
         true_psi_var = np.zeros(N)
         true_psi_alpha_cov = np.zeros(N)
@@ -177,6 +193,7 @@ class MonteCarlo:
             with Pool(processes=ncore) as pool:
                 # Multiprocessing tqdm source: https://stackoverflow.com/a/45276885/17333120
                 all_res = list(tqdm(pool.imap(self._monte_carlo_interior, [np.random.default_rng(seed) for seed in seeds]), total=N))
+                # all_res = pool.starmap(self._monte_carlo_interior, tqdm([(np.random.default_rng(seed)) for seed in seeds], total=N))
         else:
             # Single core
             all_res = [self._monte_carlo_interior(rng) for _ in trange(N)]
