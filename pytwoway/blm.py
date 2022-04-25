@@ -1627,7 +1627,8 @@ class BLMModel:
         # Second, take mean over pk1 and pk0 #
         nm = np.sum(self.NNm)
         ns = np.sum(self.NNs)
-        pk_mean = (nm * pk1_mean + ns * self.pk0) / (nm + ns)
+        # Multiply nm by 2 because each mover has observations in the first and second periods
+        pk_mean = (2 * nm * pk1_mean + ns * self.pk0) / (2 * nm + ns)
         pk_cumsum = np.cumsum(pk_mean, axis=1)
 
         ## Plot ##
