@@ -35,9 +35,9 @@ _blm_params_default = ParamsDict({
         '''
             (default=6) Number of worker types.
         ''', '>= 1'),
-    'nk': (10, 'type_constrained', (int, _gteq1),
+    'nk': (None, 'type_constrained_none', (int, _gteq1),
         '''
-            (default=10) Number of firm types.
+            (default=None) Number of firm types. None will raise an error when running the estimator.
         ''', '>= 1'),
     'categorical_controls': (None, 'dict_of_type_none', ParamsDict,
         '''
@@ -325,6 +325,9 @@ class BLMModel:
         self.params = blm_params
         self.rng = rng
         nl, nk = self.params.get_multiple(('nl', 'nk'))
+        # Make sure that nk is specified
+        if nk is None:
+            raise ValueError(f"tw.blm_params() key 'nk' must be changed from the default value of None.")
         self.nl, self.nk = nl, nk
 
         # Log likelihood for movers
