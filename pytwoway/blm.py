@@ -142,9 +142,9 @@ _blm_params_default = ParamsDict({
         '''
             (default=1e-10) Lower bound on estimated S1/S2/S1_cat/S2_cat/S1_cts/S2_cts.
         ''', '> 0'),
-    'd_prior_movers': (1.0001, 'type_constrained', ((float, int), _gteq1),
+    'd_prior_movers': (1 + 1e-7, 'type_constrained', ((float, int), _gteq1),
         '''
-            (default=1.0001) Account for probabilities being too small by adding (d_prior - 1) to pk1.
+            (default=1 + 1e-7) Account for probabilities being too small by adding (d_prior - 1) to pk1.
         ''', '>= 1'),
     # fit_stayers() parameters ##
     'n_iters_stayers': (100, 'type_constrained', (int, _gteq1),
@@ -155,9 +155,9 @@ _blm_params_default = ParamsDict({
         '''
             (default=1e-7) Threshold to break EM loop for stayers.
         ''', '>= 0'),
-    'd_prior_stayers': (1.0001, 'type_constrained', ((float, int), _gteq1),
+    'd_prior_stayers': (1 + 1e-7, 'type_constrained', ((float, int), _gteq1),
         '''
-            (default=1.0001) Account for probabilities being too small by adding (d_prior - 1) to pk0.
+            (default=1 + 1e-7) Account for probabilities being too small by adding (d_prior - 1) to pk0.
         ''', '>= 1')
 })
 
@@ -798,7 +798,7 @@ class BLMModel:
             if params['return_qi']:
                 return qi
             lik1 = logsumexp(lp, axis=1).mean() # FIXME should this be returned?
-            # lik_prior = (params['d_prior'] - 1) * np.sum(np.log(pk1))
+            # lik_prior = (d_prior - 1) * np.sum(np.log(pk1))
             # lik1 += lik_prior
             liks1.append(lik1)
             if params['verbose'] == 2:
@@ -1150,9 +1150,11 @@ class BLMModel:
 
             if params['update_pk1']:
                 pk1 = GG12.T @ ((W1 + W2) * qi.T).T
+                # Normalize rows to sum to 1
+                pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
                 # Add dirichlet prior
                 pk1 += d_prior - 1
-                # Normalize rows to sum to 1
+                # Re-normalize rows to sum to 1
                 pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
 
         self.A1, self.A2, self.S1, self.S2 = A1, A2, S1, S2
@@ -1283,9 +1285,11 @@ class BLMModel:
 
             # ---------- M-step ----------
             pk0 = GG1.T @ ((W1 + W2) * qi.T).T
+            # Normalize rows to sum to 1
+            pk0 = (pk0.T / np.sum(pk0, axis=1).T).T
             # Add dirichlet prior
             pk0 += d_prior - 1
-            # Normalize rows to sum to 1
+            # Re-normalize rows to sum to 1
             pk0 = (pk0.T / np.sum(pk0, axis=1).T).T
 
         self.pk0, self.lik0 = pk0, lik0
@@ -1315,18 +1319,18 @@ class BLMModel:
         self.params['update_a'] = False
         self.params['update_s'] = True
         self.params['update_pk1'] = True
-        if self.params['verbose'] in [1, 2]:
-            print('Fitting movers with A fixed')
-        self.fit_movers(jdata, compute_NNm=False)
+        # if self.params['verbose'] in [1, 2]:
+        #     print('Fitting movers with A fixed')
+        # self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 2 #####
         # Now update A
         self.params['update_a'] = True
-        if self.nl > 2:
-            # Set constraints
-            self.params['cons_a_all'] = cons.Linear()
-            if self.params['verbose'] in [1, 2]:
-                print('Fitting movers with linear constraint on A')
-            self.fit_movers(jdata, compute_NNm=False)
+        # if self.nl > 2:
+        #     # Set constraints
+        #     self.params['cons_a_all'] = cons.Linear()
+        #     if self.params['verbose'] in [1, 2]:
+        #         print('Fitting movers with linear constraint on A')
+        #     self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 3 #####
         # Remove constraints
         self.params['cons_a_all'] = None
@@ -1516,19 +1520,15 @@ class BLMModel:
         '''
         nl, nk = self.nl, self.nk
 
-        # Generate type proportions
-        reshaped_pk1 = np.reshape(self.pk1, (nk, nk, nl))
-        pk1_period1 = np.mean(reshaped_pk1, axis=1).T
-        pk1_period2 = np.mean(reshaped_pk1, axis=0).T
-
-        weighted_A = (pk1_period1 * self.A1 + pk1_period2 * self.A2) / (pk1_period1 + pk1_period2)
+        # Compute average log-earnings
+        A_mean = np.log((np.exp(self.A1) + np.exp(self.A2)) / 2)
 
         # Plot
         if dpi is not None:
             plt.figure(dpi=dpi)
         x_axis = np.arange(1, nk + 1)
         for l in range(nl):
-            plt.plot(x_axis, weighted_A[l, :])
+            plt.plot(x_axis, A_mean[l, :])
         plt.xlabel('firm class k')
         plt.ylabel('log-earnings')
         plt.xticks(x_axis)
@@ -1538,7 +1538,7 @@ class BLMModel:
 
     def plot_pk1_1(self, dpi=None):
         '''
-        Plot pk1 (proportions of worker types at each firm class) in the first period.
+        Plot pk1 (proportions of worker types at each firm class for movers) in the first period.
 
         Arguments:
             dpi (float or None): dpi for plot
@@ -1563,7 +1563,7 @@ class BLMModel:
 
     def plot_pk1_2(self, dpi=None):
         '''
-        Plot pk1 (proportions of worker types at each firm class) in the second period.
+        Plot pk1 (proportions of worker types at each firm class for movers) in the second period.
 
         Arguments:
             dpi (float or None): dpi for plot
@@ -1585,6 +1585,29 @@ class BLMModel:
         ax.set_ylabel('type proportions')
         ax.set_title('Proportions of worker types')
         plt.show()
+
+    def plot_pk0(self, dpi=None):
+        '''
+        Plot pk0 (proportions of worker types at each firm class for stayers).
+
+        Arguments:
+            dpi (float or None): dpi for plot
+        '''
+        nl, nk = self.nl, self.nk
+
+        # Generate type proportions
+        pk0_cumsum = np.cumsum(self.pk0, axis=1)
+
+        # Plot
+        fig, ax = plt.subplots(dpi=dpi)
+        x_axis = np.arange(1, nk + 1).astype(str)
+        ax.bar(x_axis, self.pk0.T[0, :])
+        for l in range(1, nl):
+            ax.bar(x_axis, self.pk0.T[l, :], bottom=pk0_cumsum.T[l - 1, :])
+        ax.set_xlabel('firm class k')
+        ax.set_ylabel('type proportions')
+        ax.set_title('Proportions of worker types')
+        plt.show()
     
     def plot_type_proportions(self, dpi=None):
         '''
@@ -1595,19 +1618,24 @@ class BLMModel:
         '''
         nl, nk = self.nl, self.nk
 
-        # Generate type proportions
+        ## Generate type proportions ##
+        # First, pk1 #
         reshaped_pk1 = np.reshape(self.pk1, (nk, nk, nl))
         pk1_period1 = np.mean(reshaped_pk1, axis=1)
         pk1_period2 = np.mean(reshaped_pk1, axis=0)
         pk1_mean = (pk1_period1 + pk1_period2) / 2
-        pk1_cumsum = np.cumsum(pk1_mean, axis=1)
+        # Second, take mean over pk1 and pk0 #
+        nm = np.sum(self.NNm)
+        ns = np.sum(self.NNs)
+        pk_mean = (nm * pk1_mean + ns * self.pk0) / (nm + ns)
+        pk_cumsum = np.cumsum(pk_mean, axis=1)
 
-        # Plot
+        ## Plot ##
         fig, ax = plt.subplots(dpi=dpi)
         x_axis = np.arange(1, nk + 1).astype(str)
-        ax.bar(x_axis, pk1_mean.T[0, :])
+        ax.bar(x_axis, pk_mean.T[0, :])
         for l in range(1, nl):
-            ax.bar(x_axis, pk1_mean.T[l, :], bottom=pk1_cumsum.T[l - 1, :])
+            ax.bar(x_axis, pk_mean.T[l, :], bottom=pk_cumsum.T[l - 1, :])
         ax.set_xlabel('firm class k')
         ax.set_ylabel('type proportions')
         ax.set_title('Proportions of worker types')
