@@ -102,9 +102,9 @@ _blm_params_default = ParamsDict({
             (default=False) If True, return qi matrix after first loop.
         ''', None),
     # fit_movers() parameters ##
-    'n_iters_movers': (100, 'type_constrained', (int, _gteq1),
+    'n_iters_movers': (1000, 'type_constrained', (int, _gteq1),
         '''
-            (default=100) Number of iterations for EM for movers.
+            (default=1000) Maximum number of EM iterations for movers.
         ''', '>= 1'),
     'threshold_movers': (1e-7, 'type_constrained', ((float, int), _gteq0),
         '''
@@ -147,9 +147,9 @@ _blm_params_default = ParamsDict({
             (default=1 + 1e-7) Account for probabilities being too small by adding (d_prior - 1) to pk1.
         ''', '>= 1'),
     # fit_stayers() parameters ##
-    'n_iters_stayers': (100, 'type_constrained', (int, _gteq1),
+    'n_iters_stayers': (1000, 'type_constrained', (int, _gteq1),
         '''
-            (default=100) Number of iterations for EM for stayers.
+            (default=1000) Maximum number of EM iterations for stayers.
         ''', '>= 1'),
     'threshold_stayers': (1e-7, 'type_constrained', ((float, int), _gteq0),
         '''
@@ -1467,13 +1467,15 @@ class BLMModel:
         # Sort effects to be increasing in worker and firm type
         worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
         firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
+        A1 = self.A1[worker_effect_order, :]
+        A1 = A1[:, firm_effect_order]
 
         # Plot
         if dpi is not None:
             plt.figure(dpi=dpi)
         x_axis = np.arange(1, self.nk + 1)
         for l in range(self.nl):
-            plt.plot(x_axis, self.A1[worker_effect_order, firm_effect_order][l, :])
+            plt.plot(x_axis, A1[l, :])
         plt.legend()
         plt.xlabel('firm class k')
         plt.ylabel('log-earnings in first period')
@@ -1493,13 +1495,15 @@ class BLMModel:
         # Sort effects to be increasing in worker and firm type
         worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
         firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
+        A2 = self.A2[worker_effect_order, :]
+        A2 = A2[:, firm_effect_order]
 
         # Plot
         if dpi is not None:
             plt.figure(dpi=dpi)
         x_axis = np.arange(1, self.nk + 1)
         for l in range(self.nl):
-            plt.plot(x_axis, self.A2[worker_effect_order, firm_effect_order][l, :])
+            plt.plot(x_axis, A2[l, :])
         plt.legend()
         plt.xlabel('firm class k')
         plt.ylabel('log-earnings in second period')
@@ -1518,19 +1522,21 @@ class BLMModel:
         '''
         nl, nk = self.nl, self.nk
 
+        # Compute average log-earnings # FIXME should the mean account for the log?
+        A_mean = (self.A1 + self.A2) / 2 # np.log((np.exp(self.A1) + np.exp(self.A2)) / 2)
+
         # Sort effects to be increasing in worker and firm type
         worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
         firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
-
-        # Compute average log-earnings # FIXME should the mean account for the log?
-        A_mean = (self.A1 + self.A2) / 2 # np.log((np.exp(self.A1) + np.exp(self.A2)) / 2)
+        A_mean = A_mean[worker_effect_order, :]
+        A_mean = A_mean[:, firm_effect_order]
 
         # Plot
         if dpi is not None:
             plt.figure(dpi=dpi)
         x_axis = np.arange(1, nk + 1)
         for l in range(nl):
-            plt.plot(x_axis, A_mean[worker_effect_order, :][:, firm_effect_order][l, :])
+            plt.plot(x_axis, A_mean[l, :])
         plt.xlabel('firm class k')
         plt.ylabel('log-earnings')
         plt.xticks(x_axis)
@@ -1547,21 +1553,23 @@ class BLMModel:
         '''
         nl, nk = self.nl, self.nk
 
-        # Sort effects to be increasing in worker and firm type
-        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
-        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
-
         # Generate type proportions
         reshaped_pk1 = np.reshape(self.pk1, (nk, nk, nl))
         pk1_mean = np.mean(reshaped_pk1, axis=1)
-        pk1_cumsum = np.cumsum(pk1_mean, axis=1)
+
+        # Sort effects to be increasing in worker and firm type
+        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
+        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
+        sorted_pk1_mean = pk1_mean.T[worker_effect_order, :]
+        sorted_pk1_mean = sorted_pk1_mean[:, firm_effect_order]
+        pk1_cumsum = np.cumsum(sorted_pk1_mean, axis=0)
 
         # Plot
         fig, ax = plt.subplots(dpi=dpi)
         x_axis = np.arange(1, nk + 1).astype(str)
         ax.bar(x_axis, pk1_mean.T[0, :])
         for l in range(1, nl):
-            ax.bar(x_axis, pk1_mean.T[worker_effect_order, :][:, firm_effect_order][l, :], bottom=pk1_cumsum.T[worker_effect_order, :][:, firm_effect_order][l - 1, :])
+            ax.bar(x_axis, sorted_pk1_mean[l, :], bottom=pk1_cumsum[l - 1, :])
         ax.set_xlabel('firm class k')
         ax.set_ylabel('type proportions')
         ax.set_title('Proportions of worker types')
@@ -1576,21 +1584,23 @@ class BLMModel:
         '''
         nl, nk = self.nl, self.nk
 
-        # Sort effects to be increasing in worker and firm type
-        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
-        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
-
         # Generate type proportions
         reshaped_pk1 = np.reshape(self.pk1, (nk, nk, nl))
         pk1_mean = np.mean(reshaped_pk1, axis=0)
-        pk1_cumsum = np.cumsum(pk1_mean, axis=1)
+
+        # Sort effects to be increasing in worker and firm type
+        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
+        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
+        sorted_pk1_mean = pk1_mean.T[worker_effect_order, :]
+        sorted_pk1_mean = sorted_pk1_mean[:, firm_effect_order]
+        pk1_cumsum = np.cumsum(sorted_pk1_mean, axis=0)
 
         # Plot
         fig, ax = plt.subplots(dpi=dpi)
         x_axis = np.arange(1, nk + 1).astype(str)
         ax.bar(x_axis, pk1_mean.T[0, :])
         for l in range(1, nl):
-            ax.bar(x_axis, pk1_mean.T[worker_effect_order, :][:, firm_effect_order][l, :], bottom=pk1_cumsum.T[worker_effect_order, :][:, firm_effect_order][l - 1, :])
+            ax.bar(x_axis, sorted_pk1_mean[l, :], bottom=pk1_cumsum[l - 1, :])
         ax.set_xlabel('firm class k')
         ax.set_ylabel('type proportions')
         ax.set_title('Proportions of worker types')
@@ -1608,16 +1618,18 @@ class BLMModel:
         # Sort effects to be increasing in worker and firm type
         worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
         firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
+        sorted_pk0 = self.pk0.T[worker_effect_order, :]
+        sorted_pk0 = sorted_pk0[:, firm_effect_order]
 
         # Generate type proportions
-        pk0_cumsum = np.cumsum(self.pk0, axis=1)
+        pk0_cumsum = np.cumsum(sorted_pk0, axis=0)
 
         # Plot
         fig, ax = plt.subplots(dpi=dpi)
         x_axis = np.arange(1, nk + 1).astype(str)
-        ax.bar(x_axis, self.pk0.T[0, :])
+        ax.bar(x_axis, sorted_pk0[0, :])
         for l in range(1, nl):
-            ax.bar(x_axis, self.pk0.T[worker_effect_order, :][:, firm_effect_order][l, :], bottom=pk0_cumsum.T[worker_effect_order, :][:, firm_effect_order][l - 1, :])
+            ax.bar(x_axis, sorted_pk0[l, :], bottom=pk0_cumsum[l - 1, :])
         ax.set_xlabel('firm class k')
         ax.set_ylabel('type proportions')
         ax.set_title('Proportions of worker types')
@@ -1632,10 +1644,6 @@ class BLMModel:
         '''
         nl, nk = self.nl, self.nk
 
-        # Sort effects to be increasing in worker and firm type
-        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
-        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
-
         ## Generate type proportions ##
         # First, pk1 #
         reshaped_pk1 = np.reshape(self.pk1, (nk, nk, nl))
@@ -1647,14 +1655,20 @@ class BLMModel:
         ns = np.sum(self.NNs)
         # Multiply nm by 2 because each mover has observations in the first and second periods
         pk_mean = (2 * nm * pk1_mean + ns * self.pk0) / (2 * nm + ns)
-        pk_cumsum = np.cumsum(pk_mean, axis=1)
+
+        # Sort effects to be increasing in worker and firm type
+        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
+        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
+        sorted_pk_mean = pk_mean.T[worker_effect_order, :]
+        sorted_pk_mean = sorted_pk_mean[:, firm_effect_order]
+        pk_cumsum = np.cumsum(sorted_pk_mean, axis=0)
 
         ## Plot ##
         fig, ax = plt.subplots(dpi=dpi)
         x_axis = np.arange(1, nk + 1).astype(str)
-        ax.bar(x_axis, pk_mean.T[0, :])
+        ax.bar(x_axis, sorted_pk_mean[0, :])
         for l in range(1, nl):
-            ax.bar(x_axis, pk_mean.T[worker_effect_order, :][:, firm_effect_order][l, :], bottom=pk_cumsum.T[worker_effect_order, :][:, firm_effect_order][l - 1, :])
+            ax.bar(x_axis, sorted_pk_mean[l, :], bottom=pk_cumsum[l - 1, :])
         ax.set_xlabel('firm class k')
         ax.set_ylabel('type proportions')
         ax.set_title('Proportions of worker types')
