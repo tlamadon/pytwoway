@@ -309,20 +309,18 @@ def lognormpdf(x, mu, sd):
 
 class BLMModel:
     '''
-    Class for solving the BLM model using a single set of starting values.
+    Class for estimating BLM using a single set of starting values.
 
     Arguments:
-        blm_params (ParamsDict or None): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.blm_params().
+        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
         rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
     '''
-    def __init__(self, blm_params=None, rng=None):
-        if blm_params is None:
-            blm_params = blm_params()
+    def __init__(self, params, rng=None):
         if rng is None:
             rng = np.random.default_rng(None)
 
         # Store parameters
-        self.params = blm_params
+        self.params = params
         self.rng = rng
         nl, nk = self.params.get_multiple(('nl', 'nk'))
         # Make sure that nk is specified
@@ -543,7 +541,7 @@ class BLMModel:
             return (A1_sum, A2_sum)
         if compute_S:
             return (S1_sum_sq, S2_sum_sq)
-    
+
     def _sum_by_nl_l(self, ni, l, C1, C2, compute_A=True, compute_S=True):
         '''
         Compute A1_sum/A2_sum/S1_sum_sq/S2_sum_sq to account for worker-interaction terms for a particular worker type.
@@ -641,7 +639,7 @@ class BLMModel:
         EM algorithm for movers.
 
         Arguments:
-            jdata (Pandas DataFrame): movers
+            jdata (BipartitePandas DataFrame): movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # Unpack parameters
@@ -1153,11 +1151,9 @@ class BLMModel:
 
             if params['update_pk1']:
                 pk1 = GG12.T @ ((W1 + W2) * qi.T).T
-                # Normalize rows to sum to 1
-                pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
                 # Add dirichlet prior
                 pk1 += d_prior - 1
-                # Re-normalize rows to sum to 1
+                # Normalize rows to sum to 1
                 pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
 
         self.A1, self.A2, self.S1, self.S2 = A1, A2, S1, S2
@@ -1175,7 +1171,7 @@ class BLMModel:
         EM algorithm for stayers.
 
         Arguments:
-            sdata (Pandas DataFrame): stayers
+            sdata (BipartitePandas DataFrame): stayers
             compute_NNs (bool): if True, compute vector giving the number of stayers at each firm type (e.g. entry (1) gives the number of stayers at firm type 1)
         '''
         # Unpack parameters
@@ -1288,11 +1284,9 @@ class BLMModel:
 
             # ---------- M-step ----------
             pk0 = GG1.T @ ((W1 + W2) * qi.T).T
-            # Normalize rows to sum to 1
-            pk0 = (pk0.T / np.sum(pk0, axis=1).T).T
             # Add dirichlet prior
             pk0 += d_prior - 1
-            # Re-normalize rows to sum to 1
+            # Normalize rows to sum to 1
             pk0 = (pk0.T / np.sum(pk0, axis=1).T).T
 
         self.pk0, self.lik0 = pk0, lik0
@@ -1309,7 +1303,7 @@ class BLMModel:
         Run fit_movers(), first constrained, then using results as starting values, run unconstrained.
 
         Arguments:
-            jdata (Pandas DataFrame): movers
+            jdata (BipartitePandas DataFrame): movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         ## First, simulate parameters but keep A fixed ##
@@ -1341,7 +1335,8 @@ class BLMModel:
             print('Fitting unconstrained movers')
         self.fit_movers(jdata, compute_NNm=compute_NNm)
         ##### Compute connectedness #####
-        self.compute_connectedness_measure()
+        if not pd.isna(self.pk1).any():
+            self.compute_connectedness_measure()
         # Restore original parameters
         self.params = user_params
 
@@ -1350,7 +1345,7 @@ class BLMModel:
         Run fit_movers() and update A while keeping S and pk1 fixed.
 
         Arguments:
-            jdata (Pandas DataFrame): movers
+            jdata (BipartitePandas DataFrame): movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # Save original parameters
@@ -1371,7 +1366,7 @@ class BLMModel:
         Run fit_movers() and update S while keeping A and pk1 fixed.
 
         Arguments:
-            jdata (Pandas DataFrame): movers
+            jdata (BipartitePandas DataFrame): movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # Save original parameters
@@ -1392,7 +1387,7 @@ class BLMModel:
         Run fit_movers() and update pk1 while keeping A and S fixed.
 
         Arguments:
-            jdata (Pandas DataFrame): movers
+            jdata (BipartitePandas DataFrame): movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # Save original parameters
@@ -1469,16 +1464,16 @@ class BLMModel:
             grid (bool): if True, plot grid
             dpi (float or None): dpi for plot
         '''
-        # Sort A1 by average effect over firms
-        sorted_A1 = self.A1.T[np.mean(self.A1.T, axis=1).argsort()].T
-        sorted_A1 = sorted_A1[np.mean(sorted_A1, axis=1).argsort()]
+        # Sort effects to be increasing in worker and firm type
+        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
+        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
 
         # Plot
         if dpi is not None:
             plt.figure(dpi=dpi)
         x_axis = np.arange(1, self.nk + 1)
         for l in range(self.nl):
-            plt.plot(x_axis, sorted_A1[l, :])
+            plt.plot(x_axis, self.A1[worker_effect_order, firm_effect_order][l, :])
         plt.legend()
         plt.xlabel('firm class k')
         plt.ylabel('log-earnings in first period')
@@ -1495,16 +1490,16 @@ class BLMModel:
             grid (bool): if True, plot grid
             dpi (float or None): dpi for plot
         '''
-        # Sort A2 by average effect over firms
-        sorted_A2 = self.A2.T[np.mean(self.A2.T, axis=1).argsort()].T
-        sorted_A2 = sorted_A2[np.mean(sorted_A2, axis=1).argsort()]
+        # Sort effects to be increasing in worker and firm type
+        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
+        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
 
         # Plot
         if dpi is not None:
             plt.figure(dpi=dpi)
         x_axis = np.arange(1, self.nk + 1)
         for l in range(self.nl):
-            plt.plot(x_axis, sorted_A2[l, :])
+            plt.plot(x_axis, self.A2[worker_effect_order, firm_effect_order][l, :])
         plt.legend()
         plt.xlabel('firm class k')
         plt.ylabel('log-earnings in second period')
@@ -1523,15 +1518,19 @@ class BLMModel:
         '''
         nl, nk = self.nl, self.nk
 
-        # Compute average log-earnings
-        A_mean = np.log((np.exp(self.A1) + np.exp(self.A2)) / 2)
+        # Sort effects to be increasing in worker and firm type
+        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
+        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
+
+        # Compute average log-earnings # FIXME should the mean account for the log?
+        A_mean = (self.A1 + self.A2) / 2 # np.log((np.exp(self.A1) + np.exp(self.A2)) / 2)
 
         # Plot
         if dpi is not None:
             plt.figure(dpi=dpi)
         x_axis = np.arange(1, nk + 1)
         for l in range(nl):
-            plt.plot(x_axis, A_mean[l, :])
+            plt.plot(x_axis, A_mean[worker_effect_order, :][:, firm_effect_order][l, :])
         plt.xlabel('firm class k')
         plt.ylabel('log-earnings')
         plt.xticks(x_axis)
@@ -1548,6 +1547,10 @@ class BLMModel:
         '''
         nl, nk = self.nl, self.nk
 
+        # Sort effects to be increasing in worker and firm type
+        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
+        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
+
         # Generate type proportions
         reshaped_pk1 = np.reshape(self.pk1, (nk, nk, nl))
         pk1_mean = np.mean(reshaped_pk1, axis=1)
@@ -1558,7 +1561,7 @@ class BLMModel:
         x_axis = np.arange(1, nk + 1).astype(str)
         ax.bar(x_axis, pk1_mean.T[0, :])
         for l in range(1, nl):
-            ax.bar(x_axis, pk1_mean.T[l, :], bottom=pk1_cumsum.T[l - 1, :])
+            ax.bar(x_axis, pk1_mean.T[worker_effect_order, :][:, firm_effect_order][l, :], bottom=pk1_cumsum.T[worker_effect_order, :][:, firm_effect_order][l - 1, :])
         ax.set_xlabel('firm class k')
         ax.set_ylabel('type proportions')
         ax.set_title('Proportions of worker types')
@@ -1573,6 +1576,10 @@ class BLMModel:
         '''
         nl, nk = self.nl, self.nk
 
+        # Sort effects to be increasing in worker and firm type
+        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
+        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
+
         # Generate type proportions
         reshaped_pk1 = np.reshape(self.pk1, (nk, nk, nl))
         pk1_mean = np.mean(reshaped_pk1, axis=0)
@@ -1583,7 +1590,7 @@ class BLMModel:
         x_axis = np.arange(1, nk + 1).astype(str)
         ax.bar(x_axis, pk1_mean.T[0, :])
         for l in range(1, nl):
-            ax.bar(x_axis, pk1_mean.T[l, :], bottom=pk1_cumsum.T[l - 1, :])
+            ax.bar(x_axis, pk1_mean.T[worker_effect_order, :][:, firm_effect_order][l, :], bottom=pk1_cumsum.T[worker_effect_order, :][:, firm_effect_order][l - 1, :])
         ax.set_xlabel('firm class k')
         ax.set_ylabel('type proportions')
         ax.set_title('Proportions of worker types')
@@ -1598,6 +1605,10 @@ class BLMModel:
         '''
         nl, nk = self.nl, self.nk
 
+        # Sort effects to be increasing in worker and firm type
+        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
+        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
+
         # Generate type proportions
         pk0_cumsum = np.cumsum(self.pk0, axis=1)
 
@@ -1606,12 +1617,12 @@ class BLMModel:
         x_axis = np.arange(1, nk + 1).astype(str)
         ax.bar(x_axis, self.pk0.T[0, :])
         for l in range(1, nl):
-            ax.bar(x_axis, self.pk0.T[l, :], bottom=pk0_cumsum.T[l - 1, :])
+            ax.bar(x_axis, self.pk0.T[worker_effect_order, :][:, firm_effect_order][l, :], bottom=pk0_cumsum.T[worker_effect_order, :][:, firm_effect_order][l - 1, :])
         ax.set_xlabel('firm class k')
         ax.set_ylabel('type proportions')
         ax.set_title('Proportions of worker types')
         plt.show()
-    
+
     def plot_type_proportions(self, dpi=None):
         '''
         Plot proportions of worker types at each firm class.
@@ -1620,6 +1631,10 @@ class BLMModel:
             dpi (float or None): dpi for plot
         '''
         nl, nk = self.nl, self.nk
+
+        # Sort effects to be increasing in worker and firm type
+        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
+        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
 
         ## Generate type proportions ##
         # First, pk1 #
@@ -1639,7 +1654,7 @@ class BLMModel:
         x_axis = np.arange(1, nk + 1).astype(str)
         ax.bar(x_axis, pk_mean.T[0, :])
         for l in range(1, nl):
-            ax.bar(x_axis, pk_mean.T[l, :], bottom=pk_cumsum.T[l - 1, :])
+            ax.bar(x_axis, pk_mean.T[worker_effect_order, :][:, firm_effect_order][l, :], bottom=pk_cumsum.T[worker_effect_order, :][:, firm_effect_order][l - 1, :])
         ax.set_xlabel('firm class k')
         ax.set_ylabel('type proportions')
         ax.set_title('Proportions of worker types')
@@ -1647,16 +1662,13 @@ class BLMModel:
 
 class BLMEstimator:
     '''
-    Class for solving the BLM model using multiple sets of starting values.
+    Class for estimating BLM using multiple sets of starting values.
 
     Arguments:
-        params (ParamsDict or None): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.blm_params().
+        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
     '''
 
-    def __init__(self, params=None):
-        if params is None:
-            params = blm_params()
-
+    def __init__(self, params):
         self.params = params
         # No initial model
         self.model = None
@@ -1674,7 +1686,7 @@ class BLMEstimator:
         Generate model and run fit_movers_cstr_uncstr() given parameters.
 
         Arguments:
-            jdata (Pandas DataFrame): movers
+            jdata (BipartitePandas DataFrame): movers
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
         if rng is None:
@@ -1684,13 +1696,13 @@ class BLMEstimator:
         model.fit_movers_cstr_uncstr(jdata)
         return model
 
-    def fit(self, jdata, sdata, n_init=10, n_best=1, ncore=1, rng=None):
+    def fit(self, jdata, sdata, n_init=20, n_best=5, ncore=1, rng=None):
         '''
         EM model for movers and stayers.
 
         Arguments:
-            jdata (Pandas DataFrame): movers
-            sdata (Pandas DataFrame): stayers
+            jdata (BipartitePandas DataFrame): movers
+            sdata (BipartitePandas DataFrame): stayers
             n_init (int): number of starting values
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness
             ncore (int): number of cores for multiprocessing
@@ -1709,8 +1721,8 @@ class BLMEstimator:
         else:
             sim_model_lst = itertools.starmap(self._sim_model, tqdm([(jdata, rng) for _ in range(n_init)], total=n_init))
 
-        # Sort by likelihoods FIXME better handling of lik1 is None
-        sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst if model.lik1 is not None], reverse=True, key=lambda a: a[0])
+        # Sort by likelihoods FIXME better handling if connectedness is None
+        sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst if model.connectedness is not None], reverse=True, key=lambda a: a[0])
         sorted_lik_models = [model for _, model in sorted_zipped_models]
 
         # Save likelihood vs. connectedness for all models
@@ -1745,8 +1757,7 @@ class BLMEstimator:
         if self.params['verbose'] in [1, 2]:
             print('Running stayers')
         self.model.fit_stayers(sdata)
-        # FIXME matrices shouldn't sort, because then you can't merge estimated effects into the original dataframe
-        # self.model._sort_matrices()
+        self.model._sort_matrices()
 
     def plot_A1(self, grid=True, dpi=None):
         '''
@@ -1784,6 +1795,42 @@ class BLMEstimator:
         '''
         if self.model is not None:
             self.model.plot_log_earnings(grid=grid, dpi=dpi)
+        else:
+            warnings.warn('Estimation has not yet been run.')
+
+    def plot_pk1_1(self, dpi=None):
+        '''
+        Plot pk1 (proportions of worker types at each firm class for movers) in the first period.
+
+        Arguments:
+            dpi (float or None): dpi for plot
+        '''
+        if self.model is not None:
+            self.model.plot_pk1_1(dpi=dpi)
+        else:
+            warnings.warn('Estimation has not yet been run.')
+
+    def plot_pk1_2(self, dpi=None):
+        '''
+        Plot pk1 (proportions of worker types at each firm class for movers) in the second period.
+
+        Arguments:
+            dpi (float or None): dpi for plot
+        '''
+        if self.model is not None:
+            self.model.plot_pk1_2(dpi=dpi)
+        else:
+            warnings.warn('Estimation has not yet been run.')
+
+    def plot_pk0(self, dpi=None):
+        '''
+        Plot pk0 (proportions of worker types at each firm class for stayers).
+
+        Arguments:
+            dpi (float or None): dpi for plot
+        '''
+        if self.model is not None:
+            self.model.plot_pk0(dpi=dpi)
         else:
             warnings.warn('Estimation has not yet been run.')
 
@@ -1829,3 +1876,144 @@ class BLMEstimator:
             plt.show()
         else:
             warnings.warn('Estimation has not yet been run.')
+
+class BLMBootstrap:
+    '''
+    Class for estimating BLM using bootstrapping.
+
+    Arguments:
+        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
+    '''
+
+    def __init__(self, params):
+        self.params = params
+        # No initial models
+        self.models = None
+
+    def fit(self, jdata, sdata, n_samples=5, frac_movers=0.1, frac_stayers=0.1, n_init_estimator=20, n_best=5, ncore=1, rng=None):
+        '''
+        EM model for movers and stayers.
+
+        Arguments:
+            jdata (BipartitePandas DataFrame): movers
+            sdata (BipartitePandas DataFrame): stayers
+            n_samples (int): number of bootstrap samples to estimate
+            frac_movers (float): fraction of movers to draw (with replacement) for each bootstrap sample
+            frac_stayers (float): fraction of stayers to draw (with replacement) for each bootstrap sample
+            n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
+            n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
+            ncore (int): number of cores for multiprocessing
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+        '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
+        wj = None
+        if self.params['weighted'] and jdata._col_included('w'):
+            wj = jdata['w1'].to_numpy() + jdata['w2'].to_numpy()
+        ws = None
+        if self.params['weighted'] and sdata._col_included('w'):
+            ws = sdata['w1'].to_numpy() + sdata['w2'].to_numpy()
+
+        models = []
+        for _ in tqdm(range(n_samples)):
+            jdata_i = jdata.sample(frac=frac_movers, replace=True, weights=wj, random_state=rng)
+            sdata_i = sdata.sample(frac=frac_stayers, replace=True, weights=ws, random_state=rng)
+            blm_fit_i = BLMEstimator(self.params)
+            blm_fit_i.fit(jdata_i, sdata_i, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
+            blm_fit_i.model._sort_matrices()
+            models.append(blm_fit_i.model)
+            del jdata_i, sdata_i, blm_fit_i
+
+        self.models = models
+
+    def plot_log_earnings(self, grid=True, dpi=None):
+        '''
+        Plot log-earnings by worker-firm type pairs.
+
+        Arguments:
+            grid (bool): if True, plot grid
+            dpi (float or None): dpi for plot
+        '''
+        if self.models is None:
+            warnings.warn('Estimation has not yet been run.')
+        else:
+            nl, nk = self.params.get_multiple(('nl', 'nk'))
+
+            # Compute average log-earnings # FIXME should the mean account for the log?
+            A_means = np.zeros((len(self.models), nl, nk))
+            for i, model in enumerate(self.models):
+                A_means[i, :, :] = (model.A1 + model.A2) / 2 # np.log((np.exp(model.A1) + np.exp(model.A2)) / 2)
+            A_means_mean = np.mean(A_means, axis=0)
+
+            A_lb = np.percentile(A_means, 2.5, axis=0)
+            A_ub = np.percentile(A_means, 97.5, axis=0)
+            A_ci = np.stack([A_means_mean - A_lb, A_ub - A_means_mean], axis=0)
+
+            # Sort by firm effects
+            firm_effect_order = np.mean(A_means_mean, axis=0).argsort()
+            A_means_mean = A_means_mean[:, firm_effect_order]
+            A_ci = A_ci[:, :, firm_effect_order]
+
+            # Plot
+            if dpi is not None:
+                plt.figure(dpi=dpi)
+            x_axis = np.arange(1, nk + 1)
+            for l in range(nl):
+                plt.errorbar(x_axis, A_means_mean[l, :], yerr=A_ci[:, l, :], capsize=3)
+            plt.xlabel('firm class k')
+            plt.ylabel('log-earnings')
+            plt.xticks(x_axis)
+            if grid:
+                plt.grid()
+            plt.show()
+
+    def plot_type_proportions(self, dpi=None):
+        '''
+        Plot proportions of worker types at each firm class.
+
+        Arguments:
+            dpi (float or None): dpi for plot
+        '''
+        if self.models is None:
+            warnings.warn('Estimation has not yet been run.')
+        else:
+            nl, nk = self.params.get_multiple(('nl', 'nk'))
+
+            # Compute average log-earnings - this is needed to compute the proper firm effect order # FIXME should the mean account for the log?
+            A_means = np.zeros((len(self.models), nl, nk))
+            for i, model in enumerate(self.models):
+                A_means[i, :, :] = (model.A1 + model.A2) / 2 # np.log((np.exp(model.A1) + np.exp(model.A2)) / 2)
+            A_means_mean = np.mean(A_means, axis=0)
+
+            pk_mean = np.zeros((nk, nl))
+            for model in self.models:
+                ## Generate type proportions ##
+                # First, pk1 #
+                reshaped_pk1 = np.reshape(model.pk1, (nk, nk, nl))
+                pk1_period1 = np.mean(reshaped_pk1, axis=1)
+                pk1_period2 = np.mean(reshaped_pk1, axis=0)
+                pk1_mean = (pk1_period1 + pk1_period2) / 2
+                # Second, take mean over pk1 and pk0 #
+                nm = np.sum(model.NNm)
+                ns = np.sum(model.NNs)
+                # Multiply nm by 2 because each mover has observations in the first and second periods
+                pk_mean += (2 * nm * pk1_mean + ns * model.pk0) / (2 * nm + ns)
+            pk_mean /= len(self.models)
+            pk_cumsum = np.cumsum(pk_mean, axis=1)
+
+            # Sort by firm effects
+            firm_effect_order = np.mean(A_means_mean, axis=0).argsort()
+            pk_mean = pk_mean[firm_effect_order, :]
+            pk_cumsum = pk_cumsum[firm_effect_order, :]
+
+            ## Plot ##
+            fig, ax = plt.subplots(dpi=dpi)
+            x_axis = np.arange(1, nk + 1).astype(str)
+            ax.bar(x_axis, pk_mean.T[0, :])
+            for l in range(1, nl):
+                ax.bar(x_axis, pk_mean.T[l, :], bottom=pk_cumsum.T[l - 1, :])
+            ax.set_xlabel('firm class k')
+            ax.set_ylabel('type proportions')
+            ax.set_title('Proportions of worker types')
+            plt.show()
