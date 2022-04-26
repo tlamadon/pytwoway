@@ -2002,6 +2002,8 @@ class BLMBootstrap:
                         model.A2[l, :] -= adj_val
                         model.A1_cat[cat_col][l, :] += adj_val
                         model.A2_cat[cat_col][l, :] += adj_val
+                    # Re-sort parameters (adjustments might re-order worker types)
+                    model._sort_matrices()
             else:
                 # If no categorical worker-type interactions
                 for model in models:
