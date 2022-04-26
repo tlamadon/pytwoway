@@ -634,12 +634,13 @@ class BLMModel:
             self.connectedness = EV
         self.connectedness = np.abs(EV).min()
 
-    def fit_movers(self, jdata, compute_NNm=True):
+    def fit_movers(self, jdata, normalize=True, compute_NNm=True):
         '''
         EM algorithm for movers.
 
         Arguments:
             jdata (BipartitePandas DataFrame): movers
+            normalize (bool): if True and using categorical controls, normalize the lowest firm-worker pair to have effect 0
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # Unpack parameters
@@ -1162,6 +1163,18 @@ class BLMModel:
         self.pk1, self.lik1 = pk1, lik1
         self.liks1 = liks1 # np.concatenate([self.liks1, liks1])
 
+        # Sort parameters
+        self._sort_matrices()
+
+        if normalize and (len(cat_cols) > 0):
+            # Normalize lowest firm-worker pair to have effect 0 if there are categorical controls
+            min_firm_type = np.mean(self.A1 + self.A2, axis=0).argsort()[0]
+            adj_val = (self.A1[0, min_firm_type] + self.A2[0, min_firm_type]) / 2
+            self.A1 -= adj_val
+            self.A2 -= adj_val
+            self.A1_cat[cat_cols[0]] += adj_val
+            self.A2_cat[cat_cols[0]] += adj_val
+
         # Update NNm
         if compute_NNm:
             self.NNm = jdata.groupby('g1')['g2'].value_counts().unstack(fill_value=0).to_numpy()
@@ -1298,12 +1311,13 @@ class BLMModel:
             NNs.sort_index(inplace=True)
             self.NNs = NNs.to_numpy()
 
-    def fit_movers_cstr_uncstr(self, jdata, compute_NNm=True):
+    def fit_movers_cstr_uncstr(self, jdata, normalize=True, compute_NNm=True):
         '''
         Run fit_movers(), first constrained, then using results as starting values, run unconstrained.
 
         Arguments:
             jdata (BipartitePandas DataFrame): movers
+            normalize (bool): if True and using categorical controls, normalize the lowest firm-worker pair to have effect 0
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         ## First, simulate parameters but keep A fixed ##
@@ -1316,24 +1330,24 @@ class BLMModel:
         self.params['update_a'] = False
         self.params['update_s'] = True
         self.params['update_pk1'] = True
-        # if self.params['verbose'] in [1, 2]:
-        #     print('Fitting movers with A fixed')
-        # self.fit_movers(jdata, compute_NNm=False)
+        if self.params['verbose'] in [1, 2]:
+            print('Fitting movers with A fixed')
+        self.fit_movers(jdata, normalize=False, compute_NNm=False)
         ##### Loop 2 #####
         # Now update A
         self.params['update_a'] = True
-        # if self.nl > 2:
-        #     # Set constraints
-        #     self.params['cons_a_all'] = cons.Linear()
-        #     if self.params['verbose'] in [1, 2]:
-        #         print('Fitting movers with linear constraint on A')
-        #     self.fit_movers(jdata, compute_NNm=False)
+        if self.nl > 2:
+            # Set constraints
+            self.params['cons_a_all'] = cons.Linear()
+            if self.params['verbose'] in [1, 2]:
+                print('Fitting movers with linear constraint on A')
+            self.fit_movers(jdata, normalize=False, compute_NNm=False)
         ##### Loop 3 #####
         # Remove constraints
         self.params['cons_a_all'] = None
         if self.params['verbose'] in [1, 2]:
             print('Fitting unconstrained movers')
-        self.fit_movers(jdata, compute_NNm=compute_NNm)
+        self.fit_movers(jdata, normalize=normalize, compute_NNm=compute_NNm)
         ##### Compute connectedness #####
         if not pd.isna(self.pk1).any():
             self.compute_connectedness_measure()
@@ -1697,22 +1711,23 @@ class BLMEstimator:
         self.connectedness_high = None
         self.connectedness_low = None
 
-    def _sim_model(self, jdata, rng=None):
+    def _sim_model(self, jdata, normalize=True, rng=None):
         '''
         Generate model and run fit_movers_cstr_uncstr() given parameters.
 
         Arguments:
             jdata (BipartitePandas DataFrame): movers
+            normalize (bool): if True and using categorical controls, normalize the lowest firm-worker pair to have effect 0
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
         if rng is None:
             rng = np.random.default_rng(None)
 
         model = BLMModel(self.params.copy(), rng)
-        model.fit_movers_cstr_uncstr(jdata)
+        model.fit_movers_cstr_uncstr(jdata, normalize=normalize)
         return model
 
-    def fit(self, jdata, sdata, n_init=20, n_best=5, ncore=1, rng=None):
+    def fit(self, jdata, sdata, n_init=20, n_best=5, normalize=True, ncore=1, rng=None):
         '''
         EM model for movers and stayers.
 
@@ -1721,6 +1736,7 @@ class BLMEstimator:
             sdata (BipartitePandas DataFrame): stayers
             n_init (int): number of starting values
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness
+            normalize (bool): if True and using categorical controls, normalize the lowest firm-worker pair to have effect 0
             ncore (int): number of cores for multiprocessing
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
@@ -1733,9 +1749,9 @@ class BLMEstimator:
             # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
             seeds = rng.bit_generator._seed_seq.spawn(n_init)
             with Pool(processes=ncore) as pool:
-                sim_model_lst = pool.starmap(self._sim_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
+                sim_model_lst = pool.starmap(self._sim_model, tqdm([(jdata, normalize, np.random.default_rng(seed)) for seed in seeds], total=n_init))
         else:
-            sim_model_lst = itertools.starmap(self._sim_model, tqdm([(jdata, rng) for _ in range(n_init)], total=n_init))
+            sim_model_lst = itertools.starmap(self._sim_model, tqdm([(jdata, normalize, rng) for _ in range(n_init)], total=n_init))
 
         # Sort by likelihoods FIXME better handling if connectedness is None
         sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst if model.connectedness is not None], reverse=True, key=lambda a: a[0])
@@ -1773,7 +1789,6 @@ class BLMEstimator:
         if self.params['verbose'] in [1, 2]:
             print('Running stayers')
         self.model.fit_stayers(sdata)
-        self.model._sort_matrices()
 
     def plot_A1(self, grid=True, dpi=None):
         '''
@@ -1906,7 +1921,7 @@ class BLMBootstrap:
         # No initial models
         self.models = None
 
-    def fit(self, jdata, sdata, n_samples=5, frac_movers=0.1, frac_stayers=0.1, n_init_estimator=20, n_best=5, ncore=1, rng=None):
+    def fit(self, jdata, sdata, n_samples=5, frac_movers=0.1, frac_stayers=0.1, n_init_estimator=20, n_best=5, normalize=True, ncore=1, rng=None):
         '''
         EM model for movers and stayers.
 
@@ -1918,6 +1933,7 @@ class BLMBootstrap:
             frac_stayers (float): fraction of stayers to draw (with replacement) for each bootstrap sample
             n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
+            normalize (bool): if True and using categorical controls, normalize the lowest firm-worker pair to have effect 0
             ncore (int): number of cores for multiprocessing
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
@@ -1936,10 +1952,30 @@ class BLMBootstrap:
             jdata_i = jdata.sample(frac=frac_movers, replace=True, weights=wj, random_state=rng)
             sdata_i = sdata.sample(frac=frac_stayers, replace=True, weights=ws, random_state=rng)
             blm_fit_i = BLMEstimator(self.params)
-            blm_fit_i.fit(jdata_i, sdata_i, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
-            blm_fit_i.model._sort_matrices()
+            # Set normalize=False, because want to make sure the same firm type is always normalized - normalize manually later
+            blm_fit_i.fit(jdata=jdata_i, sdata=sdata_i, n_init=n_init_estimator, n_best=n_best, normalize=False, ncore=ncore, rng=rng)
             models.append(blm_fit_i.model)
             del jdata_i, sdata_i, blm_fit_i
+
+        cat_cols = models[0].cat_cols
+        if normalize and (len(cat_cols) > 0):
+            # Normalize lowest firm-worker pair to have effect 0 if there are categorical controls
+            nl, nk = self.params.get_multiple(('nl', 'nk'))
+
+            # Compute average log-earnings # FIXME should the mean account for the log?
+            A_means = np.zeros((len(self.models), nl, nk))
+            for i, model in enumerate(self.models):
+                A_means[i, :, :] = (model.A1 + model.A2) / 2 # np.log((np.exp(model.A1) + np.exp(model.A2)) / 2)
+            A_means_mean = np.mean(A_means, axis=0)
+
+            min_firm_type = np.mean(A_means_mean, axis=0).argsort()[0]
+
+            for model in models:
+                adj_val = (model.A1[0, min_firm_type] + model.A2[0, min_firm_type]) / 2
+                model.A1 -= adj_val
+                model.A2 -= adj_val
+                model.A1_cat[cat_cols[0]] += adj_val
+                model.A2_cat[cat_cols[0]] += adj_val
 
         self.models = models
 
