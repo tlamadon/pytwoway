@@ -1169,11 +1169,29 @@ class BLMModel:
         if normalize and (len(cat_cols) > 0):
             # Normalize lowest firm-worker pair to have effect 0 if there are categorical controls
             min_firm_type = np.mean(self.A1 + self.A2, axis=0).argsort()[0]
-            adj_val = (self.A1[0, min_firm_type] + self.A2[0, min_firm_type]) / 2
-            self.A1 -= adj_val
-            self.A2 -= adj_val
-            self.A1_cat[cat_cols[0]] += adj_val
-            self.A2_cat[cat_cols[0]] += adj_val
+            cat_wi = False
+            if self.any_worker_type_interactions:
+                # Check if any categorical worker-type interactions
+                for col in cat_cols:
+                    if controls_dict[col]['worker_type_interaction']:
+                        cat_wi = True
+                        cat_col = col
+                        break
+            if cat_wi:
+                # If any categorical worker-type interactions
+                for l in range(nl):
+                    adj_val = (self.A1[l, min_firm_type] + self.A2[l, min_firm_type]) / 2
+                    self.A1[l, :] -= adj_val
+                    self.A2[l, :] -= adj_val
+                    self.A1_cat[cat_col][l, :] += adj_val
+                    self.A2_cat[cat_col][l, :] += adj_val
+            else:
+                # If no categorical worker-type interactions
+                adj_val = (self.A1[0, min_firm_type] + self.A2[0, min_firm_type]) / 2
+                self.A1 -= adj_val
+                self.A2 -= adj_val
+                self.A1_cat[cat_cols[0]] += adj_val
+                self.A2_cat[cat_cols[0]] += adj_val
 
         # Update NNm
         if compute_NNm:
@@ -1963,19 +1981,38 @@ class BLMBootstrap:
             nl, nk = self.params.get_multiple(('nl', 'nk'))
 
             # Compute average log-earnings # FIXME should the mean account for the log?
-            A_means = np.zeros((len(self.models), nl, nk))
-            for i, model in enumerate(self.models):
+            A_means = np.zeros((n_samples, nl, nk))
+            for i, model in enumerate(models):
                 A_means[i, :, :] = (model.A1 + model.A2) / 2 # np.log((np.exp(model.A1) + np.exp(model.A2)) / 2)
             A_means_mean = np.mean(A_means, axis=0)
 
             min_firm_type = np.mean(A_means_mean, axis=0).argsort()[0]
 
-            for model in models:
-                adj_val = (model.A1[0, min_firm_type] + model.A2[0, min_firm_type]) / 2
-                model.A1 -= adj_val
-                model.A2 -= adj_val
-                model.A1_cat[cat_cols[0]] += adj_val
-                model.A2_cat[cat_cols[0]] += adj_val
+            cat_wi = False
+            if models[0].any_worker_type_interactions:
+                # Check if any categorical worker-type interactions
+                for col in cat_cols:
+                    if models[0].controls_dict[col]['worker_type_interaction']:
+                        cat_wi = True
+                        cat_col = col
+                        break
+            if cat_wi:
+                # If any categorical worker-type interactions
+                for model in models:
+                    for l in range(nl):
+                        adj_val = (model.A1[l, min_firm_type] + model.A2[l, min_firm_type]) / 2
+                        model.A1[l, :] -= adj_val
+                        model.A2[l, :] -= adj_val
+                        model.A1_cat[cat_col][l, :] += adj_val
+                        model.A2_cat[cat_col][l, :] += adj_val
+            else:
+                # If no categorical worker-type interactions
+                for model in models:
+                    adj_val = (model.A1[0, min_firm_type] + model.A2[0, min_firm_type]) / 2
+                    model.A1 -= adj_val
+                    model.A2 -= adj_val
+                    model.A1_cat[cat_cols[0]] += adj_val
+                    model.A2_cat[cat_cols[0]] += adj_val
 
         self.models = models
 

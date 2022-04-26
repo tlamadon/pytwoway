@@ -936,7 +936,6 @@ def test_blm_full_estimation_no_controls():
     # Fit BLM estimator
     blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
     blm_fit = blm_fit.model
-    blm_fit._sort_matrices()
 
     assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-4
     assert np.max(np.abs((blm_fit.A2 - sim_params['A2']) / sim_params['A2'])) < 1e-3
@@ -1073,24 +1072,27 @@ def test_blm_full_estimation_cat_tv_wi():
     # Fit BLM estimator
     blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
     blm_fit = blm_fit.model
-    blm_fit._sort_matrices()
 
-    A1_sum_0_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_tv_wi_control'][:, 0]
-    A1_sum_1_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_tv_wi_control'][:, 1]
-    A2_sum_0_sim = sim_params['A2'].T + sim_params['A2_cat']['cat_tv_wi_control'][:, 0]
-    A2_sum_1_sim = sim_params['A2'].T + sim_params['A2_cat']['cat_tv_wi_control'][:, 1]
+    adj_order = (1, 0)
+    A1_sum_0_sim = (sim_params['A1'].T + sim_params['A1_cat']['cat_tv_wi_control'][:, 0])[:, adj_order]
+    A1_sum_1_sim = (sim_params['A1'].T + sim_params['A1_cat']['cat_tv_wi_control'][:, 1])[:, adj_order]
+    A2_sum_0_sim = (sim_params['A2'].T + sim_params['A2_cat']['cat_tv_wi_control'][:, 0])[:, adj_order]
+    A2_sum_1_sim = (sim_params['A2'].T + sim_params['A2_cat']['cat_tv_wi_control'][:, 1])[:, adj_order]
     A1_sum_0_fit = blm_fit.A1.T + blm_fit.A1_cat['cat_tv_wi_control'][:, 0]
     A1_sum_1_fit = blm_fit.A1.T + blm_fit.A1_cat['cat_tv_wi_control'][:, 1]
     A2_sum_0_fit = blm_fit.A2.T + blm_fit.A2_cat['cat_tv_wi_control'][:, 0]
     A2_sum_1_fit = blm_fit.A2.T + blm_fit.A2_cat['cat_tv_wi_control'][:, 1]
-    S1_sum_0_sim = np.sqrt(sim_params['S1'].T ** 2 + sim_params['S1_cat']['cat_tv_wi_control'][:, 0] ** 2)
-    S1_sum_1_sim = np.sqrt(sim_params['S1'].T ** 2 + sim_params['S1_cat']['cat_tv_wi_control'][:, 1] ** 2)
-    S2_sum_0_sim = np.sqrt(sim_params['S2'].T ** 2 + sim_params['S2_cat']['cat_tv_wi_control'][:, 0] ** 2)
-    S2_sum_1_sim = np.sqrt(sim_params['S2'].T ** 2 + sim_params['S2_cat']['cat_tv_wi_control'][:, 1] ** 2)
+    S1_sum_0_sim = (np.sqrt(sim_params['S1'].T ** 2 + sim_params['S1_cat']['cat_tv_wi_control'][:, 0] ** 2))[:, adj_order]
+    S1_sum_1_sim = (np.sqrt(sim_params['S1'].T ** 2 + sim_params['S1_cat']['cat_tv_wi_control'][:, 1] ** 2))[:, adj_order]
+    S2_sum_0_sim = (np.sqrt(sim_params['S2'].T ** 2 + sim_params['S2_cat']['cat_tv_wi_control'][:, 0] ** 2))[:, adj_order]
+    S2_sum_1_sim = (np.sqrt(sim_params['S2'].T ** 2 + sim_params['S2_cat']['cat_tv_wi_control'][:, 1] ** 2))[:, adj_order]
     S1_sum_0_fit = np.sqrt(blm_fit.S1.T ** 2 + blm_fit.S1_cat['cat_tv_wi_control'][:, 0] ** 2)
     S1_sum_1_fit = np.sqrt(blm_fit.S1.T ** 2 + blm_fit.S1_cat['cat_tv_wi_control'][:, 1] ** 2)
     S2_sum_0_fit = np.sqrt(blm_fit.S2.T ** 2 + blm_fit.S2_cat['cat_tv_wi_control'][:, 0] ** 2)
     S2_sum_1_fit = np.sqrt(blm_fit.S2.T ** 2 + blm_fit.S2_cat['cat_tv_wi_control'][:, 1] ** 2)
+
+    sorted_pk1 = np.reshape(np.reshape(sim_params['pk1'], (nk, nk, nl))[:, :, adj_order], (nk * nk, nl))
+    sorted_pk0 = sim_params['pk0'][:, adj_order]
 
     assert np.max(np.abs((A1_sum_0_fit - A1_sum_0_sim) / A1_sum_0_sim)) < 1e-3
     assert np.max(np.abs((A1_sum_1_fit - A1_sum_1_sim) / A1_sum_1_sim)) < 1e-4
@@ -1100,8 +1102,8 @@ def test_blm_full_estimation_cat_tv_wi():
     assert np.prod(np.abs((S1_sum_1_fit - S1_sum_1_sim) / S1_sum_1_sim)) ** (1 / S1_sum_1_sim.size) < 0.65
     assert np.prod(np.abs((S2_sum_0_fit - S2_sum_0_sim) / S2_sum_0_sim)) ** (1 / S2_sum_0_sim.size) < 0.45
     assert np.prod(np.abs((S2_sum_1_fit - S2_sum_1_sim) / S2_sum_1_sim)) ** (1 / S2_sum_1_sim.size) < 0.55
-    assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 1e-2
-    assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.03
+    assert np.prod(np.abs((blm_fit.pk1 - sorted_pk1) / sorted_pk1)) ** (1 / sorted_pk1.size) < 1e-2
+    assert np.prod(np.abs((blm_fit.pk0 - sorted_pk0) / sorted_pk0)) ** (1 / sorted_pk0.size) < 0.03
 
 def test_blm_start_at_truth_cat_tnv_wi():
     # Test whether BLM estimator works when starting at truth for categorical, time non-varying, worker-interaction control variables.
@@ -1233,7 +1235,6 @@ def test_blm_full_estimation_cat_tnv_wi():
     # Fit BLM estimator
     blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
     blm_fit = blm_fit.model
-    blm_fit._sort_matrices()
 
     A1_sum_0_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_tnv_wi_control'][:, 0]
     A1_sum_1_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_tnv_wi_control'][:, 1]
@@ -1350,6 +1351,7 @@ def test_blm_start_at_truth_cat_tv():
 
 def test_blm_full_estimation_cat_tv():
     # Test whether BLM estimator works for full estimation for categorical, time-varying control variables.
+    # NOTE: n_init increased to 40
     rng = np.random.default_rng(1241)
     nl = 2 # Number of worker types
     nk = 3 # Number of firm types
@@ -1391,9 +1393,8 @@ def test_blm_full_estimation_cat_tv():
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
-    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
+    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=40, n_best=5, ncore=4, rng=rng)
     blm_fit = blm_fit.model
-    blm_fit._sort_matrices()
 
     A1_sum_0_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_tv_control'][0]
     A1_sum_1_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_tv_control'][1]
@@ -1553,7 +1554,6 @@ def test_blm_full_estimation_cat_tnv():
     # Fit BLM estimator
     blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
     blm_fit = blm_fit.model
-    blm_fit._sort_matrices()
 
     A1_sum_0_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_tnv_control'][0]
     A1_sum_1_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_tnv_control'][1]
@@ -1690,7 +1690,6 @@ def test_blm_full_estimation_cts_tv_wi():
     # Fit BLM estimator
     blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
     blm_fit = blm_fit.model
-    blm_fit._sort_matrices()
 
     assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-3
     assert np.max(np.abs((blm_fit.A2 - sim_params['A2']) / sim_params['A2'])) < 1e-3
@@ -1808,7 +1807,6 @@ def test_blm_full_estimation_cts_tnv_wi():
     # Fit BLM estimator
     blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
     blm_fit = blm_fit.model
-    blm_fit._sort_matrices()
 
     assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-3
     assert np.max(np.abs((blm_fit.A2 - sim_params['A2']) / sim_params['A2'])) < 1e-3
@@ -1926,7 +1924,6 @@ def test_blm_full_estimation_cts_tv():
     # Fit BLM estimator
     blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
     blm_fit = blm_fit.model
-    blm_fit._sort_matrices()
 
     assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-3
     assert np.max(np.abs((blm_fit.A2 - sim_params['A2']) / sim_params['A2'])) < 1e-3
@@ -2045,7 +2042,6 @@ def test_blm_full_estimation_cts_tnv():
     # Fit BLM estimator
     blm_fit.fit(jdata=jdata, sdata=sdata, n_init=40, n_best=5, ncore=4, rng=rng)
     blm_fit = blm_fit.model
-    blm_fit._sort_matrices()
 
     assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-4
     assert np.max(np.abs((blm_fit.A2 - sim_params['A2']) / sim_params['A2'])) < 1e-3
@@ -2110,11 +2106,14 @@ def test_blm_control_constraints_linear():
     blm_fit.S1_cat = sim_params['S1_cat'].copy()
     blm_fit.S2_cat = sim_params['S2_cat'].copy()
     # Fit BLM estimator
-    blm_fit.fit_movers(jdata=jdata)
+    blm_fit.fit_movers(jdata=jdata, normalize=False)
     blm_fit.fit_stayers(sdata=sdata)
 
-    assert np.max(np.abs(np.diff(np.diff(blm_fit.A1_cat['cat_tv_control'], axis=0), axis=0))) < 1e-15
-    assert np.max(np.abs(np.diff(np.diff(blm_fit.A2_cat['cat_tv_control'], axis=0), axis=0))) < 1e-15
+    # Adjust order because worker types are now sorted
+    adj_order = (1, 2, 0)
+
+    assert np.max(np.abs(np.diff(np.diff(blm_fit.A1_cat['cat_tv_control'][adj_order, :], axis=0), axis=0))) < 1e-15
+    assert np.max(np.abs(np.diff(np.diff(blm_fit.A2_cat['cat_tv_control'][adj_order, :], axis=0), axis=0))) < 1e-15
 
 def test_blm_control_constraints_monotonic():
     # Test whether Monotonic() constraint for control variables works for BLM estimator.
@@ -2168,13 +2167,16 @@ def test_blm_control_constraints_monotonic():
     blm_fit.S1_cat = sim_params['S1_cat'].copy()
     blm_fit.S2_cat = sim_params['S2_cat'].copy()
     # Fit BLM estimator
-    blm_fit.fit_movers(jdata=jdata)
+    blm_fit.fit_movers(jdata=jdata, normalize=False)
     blm_fit.fit_stayers(sdata=sdata)
 
+    # Adjust order because worker types are now sorted
+    adj_order = (2, 0, 1)
+
     assert np.min(np.diff(sim_params['A1_cat']['cat_tv_control'], axis=0)) < 0
-    assert np.min(np.diff(blm_fit.A1_cat['cat_tv_control'], axis=0)) >= 0
+    assert np.min(np.diff(blm_fit.A1_cat['cat_tv_control'][adj_order, :], axis=0)) >= 0
     assert np.min(np.diff(sim_params['A2_cat']['cat_tv_control'], axis=0)) < 0
-    assert np.min(np.diff(blm_fit.A2_cat['cat_tv_control'], axis=0)) >= 0
+    assert np.min(np.diff(blm_fit.A2_cat['cat_tv_control'][adj_order, :], axis=0)) >= 0
 
 def test_blm_control_constraints_stationary_firm_type_variation():
     # Test whether StationaryFirmTypeVariation() constraint for control variables works for BLM estimator.
@@ -2228,13 +2230,13 @@ def test_blm_control_constraints_stationary_firm_type_variation():
     blm_fit.S1_cat = sim_params['S1_cat'].copy()
     blm_fit.S2_cat = sim_params['S2_cat'].copy()
     # Fit BLM estimator
-    blm_fit.fit_movers(jdata=jdata)
+    blm_fit.fit_movers(jdata=jdata, normalize=False)
     blm_fit.fit_stayers(sdata=sdata)
 
     A1 = blm_fit.A1_cat['cat_tv_control']
     A2 = blm_fit.A2_cat['cat_tv_control']
 
-    assert np.max(np.abs((A2.T - np.mean(A2, axis=1)) - (A1.T - np.mean(A1, axis=1)))) < 1e-15
+    assert np.max(np.abs((A2.T - np.mean(A2, axis=1)) - (A1.T - np.mean(A1, axis=1)))) < 1e-14
 
 def test_blm_control_constraints_lb_ub():
     # Test whether BoundedBelow() and BoundedAbove() constraints for control variables work for BLM estimator.
@@ -2288,7 +2290,7 @@ def test_blm_control_constraints_lb_ub():
     blm_fit.S1_cat = sim_params['S1_cat'].copy()
     blm_fit.S2_cat = sim_params['S2_cat'].copy()
     # Fit BLM estimator
-    blm_fit.fit_movers(jdata=jdata)
+    blm_fit.fit_movers(jdata=jdata, normalize=False)
     blm_fit.fit_stayers(sdata=sdata)
 
     assert np.min(blm_fit.A1_cat['cat_tv_control']) >= -0.25
@@ -2313,7 +2315,7 @@ def test_blm_control_normalization():
     sim_cat_params_two = tw.sim_categorical_control_params({
         'n': n_control,
         'stationary_A': True, 'stationary_S': True,
-        'worker_type_interaction': False,
+        'worker_type_interaction': True,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
@@ -2341,7 +2343,7 @@ def test_blm_control_normalization():
     cat_params_two = tw.categorical_control_params({
         'n': n_control,
         'cons_a': cons.Stationary(), 'cons_s': cons.Stationary(),
-        'worker_type_interaction': False,
+        'worker_type_interaction': True,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
@@ -2383,29 +2385,30 @@ def test_blm_control_normalization():
     blm_fit.fit_movers(jdata=jdata)
     blm_fit.fit_stayers(sdata=sdata)
 
-    A1_sum_0_0_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_control_one'][0] + sim_params['A1_cat']['cat_control_two'][0]
-    A1_sum_0_1_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_control_one'][0] + sim_params['A1_cat']['cat_control_two'][1]
-    A1_sum_1_0_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_control_one'][1] + sim_params['A1_cat']['cat_control_two'][0]
-    A1_sum_1_1_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_control_one'][1] + sim_params['A1_cat']['cat_control_two'][1]
-    A2_sum_0_0_sim = sim_params['A2'].T + sim_params['A2_cat']['cat_control_one'][0] + sim_params['A2_cat']['cat_control_two'][0]
-    A2_sum_0_1_sim = sim_params['A2'].T + sim_params['A2_cat']['cat_control_one'][0] + sim_params['A2_cat']['cat_control_two'][1]
-    A2_sum_1_0_sim = sim_params['A2'].T + sim_params['A2_cat']['cat_control_one'][1] + sim_params['A2_cat']['cat_control_two'][0]
-    A2_sum_1_1_sim = sim_params['A2'].T + sim_params['A2_cat']['cat_control_one'][1] + sim_params['A2_cat']['cat_control_two'][1]
-    A1_sum_0_0_fit = blm_fit.A1.T + blm_fit.A1_cat['cat_control_one'][0] + blm_fit.A1_cat['cat_control_two'][0]
-    A1_sum_0_1_fit = blm_fit.A1.T + blm_fit.A1_cat['cat_control_one'][0] + blm_fit.A1_cat['cat_control_two'][1]
-    A1_sum_1_0_fit = blm_fit.A1.T + blm_fit.A1_cat['cat_control_one'][1] + blm_fit.A1_cat['cat_control_two'][0]
-    A1_sum_1_1_fit = blm_fit.A1.T + blm_fit.A1_cat['cat_control_one'][1] + blm_fit.A1_cat['cat_control_two'][1]
-    A2_sum_0_0_fit = blm_fit.A2.T + blm_fit.A2_cat['cat_control_one'][0] + blm_fit.A2_cat['cat_control_two'][0]
-    A2_sum_0_1_fit = blm_fit.A2.T + blm_fit.A2_cat['cat_control_one'][0] + blm_fit.A2_cat['cat_control_two'][1]
-    A2_sum_1_0_fit = blm_fit.A2.T + blm_fit.A2_cat['cat_control_one'][1] + blm_fit.A2_cat['cat_control_two'][0]
-    A2_sum_1_1_fit = blm_fit.A2.T + blm_fit.A2_cat['cat_control_one'][1] + blm_fit.A2_cat['cat_control_two'][1]
+    A1_sum_0_0_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_control_one'][0] + sim_params['A1_cat']['cat_control_two'][:, 0]
+    A1_sum_0_1_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_control_one'][0] + sim_params['A1_cat']['cat_control_two'][:, 1]
+    A1_sum_1_0_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_control_one'][1] + sim_params['A1_cat']['cat_control_two'][:, 0]
+    A1_sum_1_1_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_control_one'][1] + sim_params['A1_cat']['cat_control_two'][:, 1]
+    A2_sum_0_0_sim = sim_params['A2'].T + sim_params['A2_cat']['cat_control_one'][0] + sim_params['A2_cat']['cat_control_two'][:, 0]
+    A2_sum_0_1_sim = sim_params['A2'].T + sim_params['A2_cat']['cat_control_one'][0] + sim_params['A2_cat']['cat_control_two'][:, 1]
+    A2_sum_1_0_sim = sim_params['A2'].T + sim_params['A2_cat']['cat_control_one'][1] + sim_params['A2_cat']['cat_control_two'][:, 0]
+    A2_sum_1_1_sim = sim_params['A2'].T + sim_params['A2_cat']['cat_control_one'][1] + sim_params['A2_cat']['cat_control_two'][:, 1]
+    A1_sum_0_0_fit = blm_fit.A1.T + blm_fit.A1_cat['cat_control_one'][0] + blm_fit.A1_cat['cat_control_two'][:, 0]
+    A1_sum_0_1_fit = blm_fit.A1.T + blm_fit.A1_cat['cat_control_one'][0] + blm_fit.A1_cat['cat_control_two'][:, 1]
+    A1_sum_1_0_fit = blm_fit.A1.T + blm_fit.A1_cat['cat_control_one'][1] + blm_fit.A1_cat['cat_control_two'][:, 0]
+    A1_sum_1_1_fit = blm_fit.A1.T + blm_fit.A1_cat['cat_control_one'][1] + blm_fit.A1_cat['cat_control_two'][:, 1]
+    A2_sum_0_0_fit = blm_fit.A2.T + blm_fit.A2_cat['cat_control_one'][0] + blm_fit.A2_cat['cat_control_two'][:, 0]
+    A2_sum_0_1_fit = blm_fit.A2.T + blm_fit.A2_cat['cat_control_one'][0] + blm_fit.A2_cat['cat_control_two'][:, 1]
+    A2_sum_1_0_fit = blm_fit.A2.T + blm_fit.A2_cat['cat_control_one'][1] + blm_fit.A2_cat['cat_control_two'][:, 0]
+    A2_sum_1_1_fit = blm_fit.A2.T + blm_fit.A2_cat['cat_control_one'][1] + blm_fit.A2_cat['cat_control_two'][:, 1]
 
-    assert ((blm_fit.A1 + blm_fit.A2) / 2)[0, 0] == 0
     assert np.max(np.abs((A1_sum_0_0_fit - A1_sum_0_0_sim) / A1_sum_0_0_sim)) < 1e-2
     assert np.max(np.abs((A1_sum_0_1_fit - A1_sum_0_1_sim) / A1_sum_0_1_sim)) < 1e-3
     assert np.max(np.abs((A1_sum_1_0_fit - A1_sum_1_0_sim) / A1_sum_1_0_sim)) < 1e-2
     assert np.max(np.abs((A1_sum_1_1_fit - A1_sum_1_1_sim) / A1_sum_1_1_sim)) < 1e-3
-    assert np.max(np.abs((A2_sum_0_0_fit - A2_sum_0_0_sim) / A2_sum_0_0_sim)) < 1e-4
+    assert np.max(np.abs((A2_sum_0_0_fit - A2_sum_0_0_sim) / A2_sum_0_0_sim)) < 1e-3
     assert np.max(np.abs((A2_sum_0_1_fit - A2_sum_0_1_sim) / A2_sum_0_1_sim)) < 1e-3
-    assert np.max(np.abs((A2_sum_1_0_fit - A2_sum_1_0_sim) / A2_sum_1_0_sim)) < 1e-4
+    assert np.max(np.abs((A2_sum_1_0_fit - A2_sum_1_0_sim) / A2_sum_1_0_sim)) < 1e-3
     assert np.max(np.abs((A2_sum_1_1_fit - A2_sum_1_1_sim) / A2_sum_1_1_sim)) < 1e-3
+    assert np.all(((blm_fit.A1 + blm_fit.A2) / 2)[:, 0] == 0)
+    assert np.all(blm_fit.A1_cat['cat_control_two'] == blm_fit.A2_cat['cat_control_two'])
