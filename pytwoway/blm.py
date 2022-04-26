@@ -1337,6 +1337,8 @@ class BLMModel:
         ##### Compute connectedness #####
         if not pd.isna(self.pk1).any():
             self.compute_connectedness_measure()
+        else:
+            warnings.warn('Estimated pk1 has NaN values. Please try a different set of starting values.')
         # Restore original parameters
         self.params = user_params
 
