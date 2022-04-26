@@ -1185,6 +1185,8 @@ class BLMModel:
                     self.A2[l, :] -= adj_val
                     self.A1_cat[cat_col][l, :] += adj_val
                     self.A2_cat[cat_col][l, :] += adj_val
+                # Re-sort parameters (adjustments might re-order worker types)
+                self._sort_matrices()
             else:
                 # If no categorical worker-type interactions
                 adj_val = (self.A1[0, min_firm_type] + self.A2[0, min_firm_type]) / 2
@@ -1980,13 +1982,8 @@ class BLMBootstrap:
             # Normalize lowest firm-worker pair to have effect 0 if there are categorical controls
             nl, nk = self.params.get_multiple(('nl', 'nk'))
 
-            # Compute average log-earnings # FIXME should the mean account for the log?
-            A_means = np.zeros((n_samples, nl, nk))
-            for i, model in enumerate(models):
-                A_means[i, :, :] = (model.A1 + model.A2) / 2 # np.log((np.exp(model.A1) + np.exp(model.A2)) / 2)
-            A_means_mean = np.mean(A_means, axis=0)
-
-            min_firm_type = np.mean(A_means_mean, axis=0).argsort()[0]
+            ## Start by normalizing firm type 0 ##
+            min_firm_type_1 = 0
 
             cat_wi = False
             if models[0].any_worker_type_interactions:
@@ -2000,7 +1997,7 @@ class BLMBootstrap:
                 # If any categorical worker-type interactions
                 for model in models:
                     for l in range(nl):
-                        adj_val = (model.A1[l, min_firm_type] + model.A2[l, min_firm_type]) / 2
+                        adj_val = (model.A1[l, min_firm_type_1] + model.A2[l, min_firm_type_1]) / 2
                         model.A1[l, :] -= adj_val
                         model.A2[l, :] -= adj_val
                         model.A1_cat[cat_col][l, :] += adj_val
@@ -2008,11 +2005,37 @@ class BLMBootstrap:
             else:
                 # If no categorical worker-type interactions
                 for model in models:
-                    adj_val = (model.A1[0, min_firm_type] + model.A2[0, min_firm_type]) / 2
+                    adj_val = (model.A1[0, min_firm_type_1] + model.A2[0, min_firm_type_1]) / 2
                     model.A1 -= adj_val
                     model.A2 -= adj_val
                     model.A1_cat[cat_cols[0]] += adj_val
                     model.A2_cat[cat_cols[0]] += adj_val
+
+            ## Check if normalizing changed the lowest firm-worker pair ##
+            A_means = np.zeros((n_samples, nl, nk))
+            for i, model in enumerate(models):
+                A_means[i, :, :] = (model.A1 + model.A2) / 2 # np.log((np.exp(model.A1) + np.exp(model.A2)) / 2)
+            A_means_mean = np.mean(A_means, axis=0)
+
+            min_firm_type_2 = np.mean(A_means_mean, axis=0).argsort()[0]
+            if min_firm_type_2 != min_firm_type_1:
+                if cat_wi:
+                    # If any categorical worker-type interactions
+                    for model in models:
+                        for l in range(nl):
+                            adj_val = (model.A1[l, min_firm_type_2] + model.A2[l, min_firm_type_2]) / 2
+                            model.A1[l, :] -= adj_val
+                            model.A2[l, :] -= adj_val
+                            model.A1_cat[cat_col][l, :] += adj_val
+                            model.A2_cat[cat_col][l, :] += adj_val
+                else:
+                    # If no categorical worker-type interactions
+                    for model in models:
+                        adj_val = (model.A1[0, min_firm_type_2] + model.A2[0, min_firm_type_2]) / 2
+                        model.A1 -= adj_val
+                        model.A2 -= adj_val
+                        model.A1_cat[cat_cols[0]] += adj_val
+                        model.A2_cat[cat_cols[0]] += adj_val
 
         self.models = models
 
