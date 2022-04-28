@@ -14,7 +14,7 @@ import warnings
 from pytwoway import jitter_scatter
 from pytwoway import constraints as cons
 from bipartitepandas.util import ParamsDict, to_list, _is_subtype
-from tqdm import tqdm
+from tqdm import tqdm, trange
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq2(a):
@@ -1968,7 +1968,7 @@ class BLMBootstrap:
             ws = sdata['w1'].to_numpy() + sdata['w2'].to_numpy()
 
         models = []
-        for _ in tqdm(range(n_samples)):
+        for _ in trange(n_samples):
             jdata_i = jdata.sample(frac=frac_movers, replace=True, weights=wj, random_state=rng)
             sdata_i = sdata.sample(frac=frac_stayers, replace=True, weights=ws, random_state=rng)
             blm_fit_i = BLMEstimator(self.params)

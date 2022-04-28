@@ -1,6 +1,5 @@
 '''
-    Estimates the CRE model and computes posterior using Trace
-    Approximation.
+Defines class CREEstimator, which uses a trace approximation to estimate the CRE model.
 '''
 # import logging
 # from pathlib import Path
@@ -47,9 +46,9 @@ _cre_params_default = ParamsDict({
         '''
             (default=5) Number of draws to use in trace approximations.
         ''', '>= 1'),
-    'out': ('res_cre.json', 'type', str,
+    'outputfile': (None, 'type_none', str,
         '''
-            (default='res_fe.json') Outputfile where results are saved.
+            (default=None) Outputfile where results will be saved in json format. If None, results will not be saved.
         ''', None)
     # 'ndp': (50, 'type_constrained', (int, _gteq1), # FIXME not used
     #     '''
@@ -62,7 +61,7 @@ def cre_params(update_dict=None):
     Dictionary of default cre_params. Run tw.cre_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values; None is equivalent to {}
+        update_dict (dict or None): user parameter values; None is equivalent to {}
 
     Returns:
         (ParamsDict) dictionary of cre_params
@@ -100,7 +99,7 @@ class CREEstimator:
     '''
     Uses multigrid and partialing out to solve two way Fixed Effect model.
     '''
-    def __init__(self, data, cre_params=cre_params()):
+    def __init__(self, data, params=None):
         '''
         Arguments:
             data (Pandas DataFrame): cross-section labor data. Data contains the following columns:
@@ -126,25 +125,28 @@ class CREEstimator:
                 m (0 if stayer, 1 if mover)
 
                 cs (0 if not in cross section, 1 if in cross section)
-            cre_params (ParamsDict): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters.
+            cre_params (ParamsDict or None): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.cre_params().
         '''
         # Start logger
         logger_init(self)
         # self.logger.info('initializing CREEstimator object')
 
+        if params is None:
+            params = cre_params()
+
         self.adata = data
 
-        self.params = cre_params
+        self.params = params
         self.res = {} # Results dictionary
         self.summary = {} # Summary results dictionary
 
         ## Save some commonly used parameters as attributes
         # Number of cores to use
-        self.ncore = self.params['ncore']
+        self.ncore = params['ncore']
         # Number of draws to use in trace approximations
-        self.ndraw_trace = self.params['ndraw_trace']
+        self.ndraw_trace = params['ndraw_trace']
         # If True, sets between variation to 0, pure RE
-        self.wo_btw = self.params['wo_btw']
+        self.wo_btw = params['wo_btw']
 
         ## Store some parameters in results dictionary
         self.res['cores'] = self.ncore
@@ -152,14 +154,18 @@ class CREEstimator:
 
         # self.logger.info('CREEstimator object initialized')
 
-    def fit(self, rng=np.random.default_rng(None)):
+    def fit(self, rng=None):
         '''
         Run CRE solver.
 
         Arguments:
-            rng (np.random.Generator): NumPy random number generator
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
+        self.logger.info('----- STARTING CRE ESTIMATION -----')
         self.start_time = time.time()
+
+        if rng is None:
+            rng = np.random.default_rng(None)
 
         # Begin cleaning and analysis
         self.__prep_vars() # Prepare data
@@ -196,7 +202,7 @@ class CREEstimator:
 
         self.__save_res() # Save results to json
 
-        self.logger.info('------ DONE -------')
+        self.logger.info('----- DONE WITH CRE ESTIMATION -----')
 
     def __prep_vars(self):
         '''
@@ -228,12 +234,11 @@ class CREEstimator:
         self.nf = max(self.adata['j1'].max(), self.adata['j2'].max()) + 1 # Number of firms
         self.nw = self.adata['i'].max() + 1 # Number of workers
         self.nc = max(self.adata['g1'].max(), self.adata['g2'].max()) + 1 # Number of clusters
-        nn = len(self.adata) # Number of observations
-        self.logger.info('data firms={} workers={} clusters={} observations={}'.format(self.nf, self.nw, self.nc, nn))
+        self.logger.info(f'data firms={self.nf} workers={self.nw} clusters={self.nc} observations={len(self.adata)}')
 
         nm = self.adata.loc[self.adata['m'] == 1, 'i'].nunique() # Number of movers
         self.ns = self.nw - nm # Number of stayers
-        self.logger.info('data movers={} stayers={}'.format(nm, self.ns))
+        self.logger.info(f'data movers={nm} stayers={self.ns}')
 
         self.res['n_firms'] = self.nf
         self.res['n_workers'] = self.nw
@@ -488,7 +493,7 @@ class CREEstimator:
             Yq (Pandas Series): income for movers
         '''
         self.res['var_y'] = Yq.var()
-        self.logger.info('total variance: {:0.4f}'.format(self.res['var_y']))
+        self.logger.info(f"total variance: {self.res['var_y']:0.4f}")
 
         # Compute the between terms
         cov_mat_between = cdata.cov()
@@ -502,8 +507,8 @@ class CREEstimator:
         self.res['tot_cov'] = self.res['cov_bw'] + self.res['cov_wt']
         self.res['var_y'] = np.var(Yq)
 
-        self.logger.info('[cre] VAR bw={:4f} wt={:4f} tot={:4f}'.format(self.res['var_bw'], self.res['var_wt'], self.res['var_bw'] + self.res['var_wt']))
-        self.logger.info('[cre] COV bw={:4f} wt={:4f} tot={:4f}'.format(self.res['cov_bw'], self.res['cov_wt'], self.res['cov_bw'] + self.res['cov_wt']))
+        self.logger.info(f"[cre] VAR bw={self.res['var_bw']:4f} wt={self.res['var_wt']:4f} tot={self.res['var_bw'] + self.res['var_wt']:4f}")
+        self.logger.info(f"[cre] COV bw={self.res['cov_bw']:4f} wt={self.res['cov_wt']:4f} tot={self.res['cov_bw'] + self.res['cov_wt']:4f}")
 
         # Create summary variable
         self.summary['var_y'] = self.res['var_y']
@@ -551,13 +556,16 @@ class CREEstimator:
         M = 1 / self.within_params['var_psi'] * eye(self.nf) + 1 / self.within_params['var_eps'] * Jd.transpose() * Jd
         self.ml = pyamg.ruge_stuben_solver(M)
 
-    def __compute_posterior_var(self, rng=np.random.default_rng(None)):
+    def __compute_posterior_var(self, rng=None):
         '''
         Compute the posterior variance of the CRE model.
 
         Arguments:
-            rng (np.random.Generator): NumPy random number generator
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
         # We first compute the direct term
         v1 = 1 / self.within_params['var_psi'] * self.Mud
         v1 += 1 / self.within_params['var_eps'] * self.Jd.transpose() * self.Yd
@@ -578,17 +586,21 @@ class CREEstimator:
         t2 = np.mean(tr_var_pos_all)
         self.posterior_var = t1 + t2
 
-        self.logger.info('[cre] posterior variance of psi = {:4f}'.format(self.posterior_var))
+        self.logger.info(f'[cre] posterior variance of psi = {self.posterior_var:4f}')
 
     def __save_res(self):
         '''
         Save results as json.
         '''
-        # Convert results into strings to prevent JSON errors
-        for key, val in self.res.items():
-            self.res[key] = str(val)
+        outputfile = self.params['outputfile']
+        if outputfile is not None:
+            # Convert results into strings to prevent JSON errors
+            for key, val in self.res.items():
+                self.res[key] = str(val)
 
-        with open(self.params['out'], 'w') as outfile:
-            json.dump(self.res, outfile)
+            with open(outputfile, 'w') as outfile:
+                json.dump(self.res, outfile)
 
-        self.logger.info('saved results to {}'.format(self.params['out']))
+            self.logger.info(f'saved results to {outputfile}')
+        else:
+            self.logger.info('outputfile=None, so results not saved')

@@ -26,6 +26,10 @@ class MonteCarlo:
     '''
 
     def __init__(self, sim_params=None, fe_params=None, cre_params=None, cluster_params=None, clean_params=None, collapse=True, move_to_worker=False, log=False):
+        # Start logger
+        # logger_init(self)
+        # self.logger.info('initializing MonteCarlo object')
+
         if sim_params is None:
             sim_params = bpd.sim_params()
         if fe_params is None:
@@ -36,9 +40,6 @@ class MonteCarlo:
             cluster_params = bpd.cluster_params()
         if clean_params is None:
             clean_params = bpd.clean_params()
-        # Start logger
-        # logger_init(self)
-        # self.logger.info('initializing MonteCarlo object')
 
         ## Save attributes
         # Parameter dictionaries
@@ -122,7 +123,7 @@ class MonteCarlo:
             # Standard
             sim_data = sim_data.clean(self.clean_params)
         ## Estimate FE model
-        fe_estimator = tw.FEEstimator(sim_data, self.fe_params)
+        fe_estimator = tw.FEEstimator(sim_data, params=self.fe_params)
         fe_estimator.fit(rng)
         # Save results
         fe_res = fe_estimator.res
@@ -130,7 +131,7 @@ class MonteCarlo:
         # Cluster
         sim_data = sim_data.cluster(self.cluster_params)
         # Estimate
-        cre_estimator = tw.CREEstimator(sim_data.to_eventstudy(move_to_worker=False, is_sorted=True, copy=False).get_cs(copy=False), self.cre_params)
+        cre_estimator = tw.CREEstimator(sim_data.to_eventstudy(move_to_worker=False, is_sorted=True, copy=False).get_cs(copy=False), params=self.cre_params)
         cre_estimator.fit(rng)
         # Save results
         cre_res = cre_estimator.res
@@ -218,9 +219,9 @@ class MonteCarlo:
         self.res = res
         self.monte_carlo_res = True
 
-    def plot_monte_carlo(self, density=False, fe=True, ho=True, he=True, cre=True):
+    def hist(self, density=False, fe=True, ho=True, he=True, cre=True):
         '''
-        Plot results from Monte Carlo simulations.
+        Plot histogram of how Monte Carlo simulation results differ from truth.
 
         Arguments:
             density (bool): if True, plot density; if False, plot count
@@ -230,7 +231,7 @@ class MonteCarlo:
             cre (bool): if True, plot CRE results
         '''
         if not self.monte_carlo_res:
-            warnings.warn('Must run Monte Carlo simulations before results can be plotted. This can be done by running .monte_carlo().')
+            warnings.warn('Must run Monte Carlo simulations before histogram can be generated. This can be done by running the method .fit().')
 
         else:
             # Extract results
@@ -256,6 +257,7 @@ class MonteCarlo:
             he_psi_alpha_diff = sorted(he_psi_alpha_cov - true_psi_alpha_cov)
 
             # Plot histograms
+            fig, axs = plt.subplots(nrows=1, ncols=2, sharex=False, sharey=False)
             # First, var(psi)
             # Source for fixing bin size:
             # https://stackoverflow.com/a/50864765
@@ -286,17 +288,19 @@ class MonteCarlo:
             else:
                 max_err *= 0.95
             plt_range = (min_err, max_err)
-            plt.axvline(x=0, color='purple', linestyle='--', label=r'$\Delta$Truth=0')
+            axs[0].axvline(x=0, color='purple', linestyle='--', label=r'$\Delta$truth=0')
             if fe:
-                plt.hist(fe_psi_diff, bins=50, range=plt_range, density=density, label='FE var(psi)')
+                axs[0].hist(fe_psi_diff, bins=50, range=plt_range, density=density, color='C0', label='FE')
             if ho:
-                plt.hist(ho_psi_diff, bins=50, range=plt_range, density=density, label='HO-corrected var(psi)')
+                axs[0].hist(ho_psi_diff, bins=50, range=plt_range, density=density, color='C1', label='HO-corrected')
             if he:
-                plt.hist(he_psi_diff, bins=50, range=plt_range, density=density, label='HE-corrected var(psi)')
+                axs[0].hist(he_psi_diff, bins=50, range=plt_range, density=density, color='C2', label='HE-corrected')
             if cre:
-                plt.hist(cre_psi_diff, bins=50, range=plt_range, density=density, label='CRE var(psi)')
-            plt.legend()
-            plt.show()
+                axs[0].hist(cre_psi_diff, bins=50, range=plt_range, density=density, color='C3', label='CRE')
+            # axs[0].legend()
+            axs[0].set_title(r'var($\psi$)')
+            axs[0].set_xlabel(r'$\Delta$truth')
+            axs[0].set_ylabel('# occurrences')
 
             # Second, cov(psi, alpha)
             min_err = np.inf
@@ -326,14 +330,21 @@ class MonteCarlo:
             else:
                 max_err *= 0.95
             plt_range = (min_err, max_err)
-            plt.axvline(x=0, color='purple', linestyle='--', label=r'$\Delta$Truth=0')
+            axs[1].axvline(x=0, color='purple', linestyle='--', label=r'$\Delta$truth=0')
             if fe:
-                plt.hist(fe_psi_alpha_diff, bins=50, range=plt_range, density=density, label='FE cov(psi, alpha)')
+                axs[1].hist(fe_psi_alpha_diff, bins=50, range=plt_range, density=density, color='C0', label='FE')
             if ho:
-                plt.hist(ho_psi_alpha_diff, bins=50, range=plt_range, density=density, label='HO-corrected cov(psi, alpha)')
+                axs[1].hist(ho_psi_alpha_diff, bins=50, range=plt_range, density=density, color='C1', label='HO-corrected')
             if he:
-                plt.hist(he_psi_alpha_diff, bins=50, range=plt_range, density=density, label='HE-corrected cov(psi, alpha)')
+                axs[1].hist(he_psi_alpha_diff, bins=50, range=plt_range, density=density, color='C2', label='HE-corrected')
             if cre:
-                plt.hist(cre_psi_alpha_diff, bins=50, range=plt_range, density=density, label='CRE cov(psi, alpha)')
-            plt.legend()
+                axs[1].hist(cre_psi_alpha_diff, bins=50, range=plt_range, density=density, color='C3', label='CRE')
+            # axs[1].legend()
+            axs[1].set_title(r'cov($\psi$, $\alpha$)')
+            axs[1].set_xlabel(r'$\Delta$truth')
+
+            # Shared legend (source: https://stackoverflow.com/a/46921590/17333120)
+            handles, labels = axs[1].get_legend_handles_labels()
+            fig.legend(handles, labels, loc='upper center')
+            fig.tight_layout()
             plt.show()

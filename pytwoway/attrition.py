@@ -5,7 +5,7 @@ from multiprocessing import Pool, Value
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from bipartitepandas import clean_params, cluster_params
+import bipartitepandas as bpd
 from bipartitepandas.util import ParamsDict, to_list, logger_init
 import pytwoway as tw
 from tqdm import tqdm
@@ -43,23 +43,24 @@ _attrition_params_default = ParamsDict({
         ''', None)
 })
 
-def attrition_params(update_dict={}):
+def attrition_params(update_dict=None):
     '''
     Dictionary of default attrition_params. Run tw.attrition_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values
+        update_dict (dict or None): user parameter values; None is equivalent to {}
 
     Returns:
         (ParamsDict) dictionary of attrition_params
     '''
     new_dict = _attrition_params_default.copy()
-    new_dict.update(update_dict)
+    if update_dict is not None:
+        new_dict.update(update_dict)
     return new_dict
 
 def _scramble(lst):
     '''
-    Reorder a list from [a, b, c, d, e] to [a, e, b, d, c]. This is used for attrition with multiprocessing, to ensure memory usage stays relatively constant, by mixing together large and small draws.
+    Reorder a list from [a, b, c, d, e] to [a, e, b, d, c]. This is used for attrition with multiprocessing, to ensure memory usage stays relatively constant, by mixing together large and small draws. Scrambled lists can be unscrambled with _unscramble().
     
     Arguments:
         lst (list): list to scramble
@@ -101,16 +102,27 @@ class Attrition:
     Class of Attrition, which generates attrition plots using bipartite labor data.
 
     Arguments:
-        attrition_params (ParamsDict): dictionary of parameters for attrition. Run tw.attrition_params().describe_all() for descriptions of all valid parameters.
-        fe_params (ParamsDict): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters.
-        cre_params (ParamsDict): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters.
-        cluster_params (ParamsDict): dictionary of parameters for clustering in CRE estimation. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters.
-        clean_params (ParamsDict): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters.
+        attrition_params (ParamsDict or None): dictionary of parameters for attrition. Run tw.attrition_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.attrition_params().
+        fe_params (ParamsDict or None): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().
+        cre_params (ParamsDict or None): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.cre_params().
+        cluster_params (ParamsDict or None): dictionary of parameters for clustering in CRE estimation. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.cluster_params().
+        clean_params (ParamsDict or None): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.clean_params().
     '''
 
-    def __init__(self, attrition_params=attrition_params(), fe_params=tw.fe_params(), cre_params=tw.cre_params(), cluster_params=cluster_params(), clean_params=clean_params()):
-        ##### Save attributes
-        ## Basic attributes
+    def __init__(self, attrition_params=None, fe_params=None, cre_params=None, cluster_params=None, clean_params=None):
+        if attrition_params is None:
+            attrition_params = tw.attrition_params()
+        if fe_params is None:
+            fe_params = tw.fe_params()
+        if cre_params is None:
+            cre_params = tw.cre_params()
+        if cluster_params is None:
+            cluster_params = bpd.cluster_params()
+        if clean_params is None:
+            clean_params = bpd.clean_params()
+
+        ##### Save attributes #####
+        ## Basic attributes ##
         # Type and subsets
         self.attrition_type = attrition_params['type_and_subsets'][0]
         self.subsets = attrition_params['type_and_subsets'][1]
@@ -131,26 +143,26 @@ class Attrition:
         # Prevent plotting until results exist
         self.attrition_res = False
 
-        #### Parameter dictionaries
-        ### Save parameter dictionaries
+        #### Parameter dictionaries ####
+        ### Save parameter dictionaries ###
         self.attrition_params = attrition_params.copy()
         self.fe_params = fe_params.copy()
         self.cre_params = cre_params.copy()
         self.cluster_params = cluster_params.copy()
         self.clean_params = clean_params.copy()
 
-        ### Update parameter dictionaries
-        ## Clean
+        ### Update parameter dictionaries ###
+        # Clean
         self.clean_params['is_sorted'] = True
         self.clean_params['force'] = False
         self.clean_params['copy'] = False
 
-        ## Cluster
+        # Cluster
         self.cluster_params['clean_params'] = self.clean_params.copy()
         self.cluster_params['is_sorted'] = True
         self.cluster_params['copy'] = False
 
-        ## Non-HE and HE parameter dictionaries
+        ## Non-HE and HE parameter dictionaries ##
         # FE
         self.fe_params_non_he = self.fe_params.copy()
         self.fe_params_non_he['he'] = False
@@ -161,7 +173,7 @@ class Attrition:
         self.clean_params_non_he = self.clean_params.copy()
         self.clean_params_non_he['connectedness'] = 'connected'
         self.clean_params_he = self.clean_params.copy()
-        self.clean_params_he['connectedness'] = 'leave_one_observation_out'
+        self.clean_params_he['connectedness'] = 'leave_out_observation'
 
         # Cluster
         self.cluster_params_non_he = self.cluster_params.copy()
@@ -185,25 +197,36 @@ class Attrition:
 
     # Cannot include two underscores because isn't compatible with starmap for multiprocessing
     # Source: https://stackoverflow.com/questions/27054963/python-attribute-error-object-has-no-attribute
-    def _attrition_interior(self, wids_to_drop, fe_params=tw.fe_params(), cre_params=tw.cre_params(), cluster_params=cluster_params(), clean_params=clean_params(), rng=np.random.default_rng(None)):
+    def _attrition_interior(self, wids_to_drop, fe_params=None, cre_params=None, cluster_params=None, clean_params=None, rng=None):
         '''
         Estimate all parameters of interest. This is the interior function to attrition_single.
 
         Arguments:
             wids_to_drop (set or BipartiteBase): if set, worker ids to drop from self.subset_2; if BipartiteBase, is subset
-            fe_params (ParamsDict): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters.
-            cre_params (ParamsDict): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters.
-            cluster_params (ParamsDict): dictionary of parameters for clustering in CRE estimation. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters.
-            clean_params (ParamsDict): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters.
-            rng (np.random.Generator): NumPy random number generator. This overrides the random number generators for FE and CRE.
+            fe_params (ParamsDict or None): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().
+            cre_params (ParamsDict or None): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.cre_params().
+            cluster_params (ParamsDict or None): dictionary of parameters for clustering in CRE estimation. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.cluster_params().
+            clean_params (ParamsDict or None): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.clean_params().
+            rng (np.random.Generator or None): NumPy random number generator. This overrides the random number generators for FE and CRE. None is equivalent to np.random.default_rng(None).
 
         Returns:
             (dict): {'fe': FE results, 'cre': CRE results}
         '''
+        if fe_params is None:
+            fe_params = tw.fe_params()
+        if cre_params is None:
+            cre_params = tw.cre_params()
+        if cluster_params is None:
+            cluster_params = bpd.cluster_params()
+        if clean_params is None:
+            clean_params = bpd.clean_params()
+        if rng is None:
+            rng = np.random.default_rng(None)
+
         # logger_init(bdf) # This stops a weird logging bug that stops multiprocessing from working
         if isinstance(wids_to_drop, set):
             # Drop ids and clean data (NOTE: this does not require a copy)
-            bdf = self.subset_2.drop_ids('i', wids_to_drop, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, copy=False)._reset_attributes(columns_contig=True, connected=False, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False).clean_data(clean_params)
+            bdf = self.subset_2.drop_ids('i', wids_to_drop, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, copy=False)._reset_attributes(columns_contig=True, connected=False, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False).clean(clean_params)
         else:
             bdf = wids_to_drop
         ## Estimate FE model
@@ -213,23 +236,28 @@ class Attrition:
         # Cluster
         bdf = bdf.cluster(cluster_params)
         # Estimate
-        cre_estimator = tw.CREEstimator(bdf.get_es(move_to_worker=False, is_sorted=True, copy=False).get_cs(copy=False), cre_params)
+        cre_estimator = tw.CREEstimator(bdf.to_eventstudy(move_to_worker=False, is_sorted=True, copy=False).get_cs(copy=False), cre_params)
         cre_estimator.fit(rng)
 
         return {'fe': fe_estimator.res, 'cre': cre_estimator.res}
 
-    def _attrition_increasing(self, bdf, clean_params=clean_params(), rng=np.random.default_rng()):
+    def _attrition_increasing(self, bdf, clean_params=None, rng=None):
         '''
         First, keep only firms that have at minimum `threshold` many movers. Then take a random subset of subsets[0] percent of remaining movers. Constructively rebuild the data to reach each subsequent value of subsets. Return the worker ids to drop to attain these subsets as an iterator.
 
         Arguments:
             bdf (BipartiteBase): bipartite dataframe
-            clean_params (ParamsDict): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters.
-            rng (np.random.Generator): NumPy random number generator
+            clean_params (ParamsDict or None): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.clean_params().
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
             (yields (set or BipartiteBase)): if set, worker ids to drop from self.subset_2; if BipartiteBase, is subset
         '''
+        if clean_params is None:
+            clean_params = bpd.clean_params()
+        if rng is None:
+            rng = np.random.default_rng(None)
+
         # Get subsets
         subsets = self.subsets
 
@@ -248,13 +276,13 @@ class Attrition:
             wid_drops_1 = set(rng.choice(wids_init, size=n_wid_drops_1, replace=False))
             try:
                 # NOTE: this requires the copy if there are returners
-                subset_1 = bdf.drop_ids('i', wid_drops_1, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, reset_index=True, copy=True)._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False).clean_data(clean_params)
+                subset_1 = bdf.drop_ids('i', wid_drops_1, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, reset_index=True, copy=True)._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False).clean(clean_params)
                 n_firms = subset_1.n_firms()
                 if n_firms >= self.attrition_params['subsample_min_firms']:
                     # If sufficiently many firms, stop the loop
                     break
                 else:
-                    raise ValueError('Insufficiently many firms remain in attrition draw: minimum threshold is {} firms, but only {} remain.'.format(self.attrition_params['subsample_min_firms'], n_firms))
+                    raise ValueError(f"Insufficiently many firms remain in attrition draw: minimum threshold is {self.attrition_params['subsample_min_firms']} firms, but only {n_firms} remain.")
             except ValueError as v:
                 if i == (self.attrition_params['n_subsample_draws'] - 1):
                     # Don't fail unless it's the last loop
@@ -266,7 +294,7 @@ class Attrition:
 
         # Get list of all valid firms
         valid_firms = []
-        for j_subcol in to_list(bdf.reference_dict['j']):
+        for j_subcol in to_list(bdf.col_reference_dict['j']):
             original_j = 'original_' + j_subcol
             if original_j not in subset_1_orig_ids.columns:
                 # If no changes to this column
@@ -295,22 +323,25 @@ class Attrition:
             if n_wid_draws_i > 0:
                 wids_to_drop = set(rng.choice(list(wids_to_drop), size=n_wid_draws_i, replace=False))
             else:
-                warnings.warn('Attrition plot does not change at iteration {}'.format(i))
+                warnings.warn(f'Attrition plot does not change at iteration {i}')
 
             yield wids_to_drop
 
-    def _attrition_decreasing(self, bdf, clean_params=clean_params(), rng=np.random.default_rng()):
+    def _attrition_decreasing(self, bdf, clean_params=None, rng=None):
         '''
         First, keep only firms that have at minimum `threshold` many movers. Then take a random subset of subsets[0] percent of remaining movers. Deconstruct the data to reach each subsequent value of subsets. Return the worker ids to drop to attain these subsets as an iterator.
 
         Arguments:
             bdf (BipartiteBase): bipartite dataframe
-            clean_params (ParamsDict): used for _attrition_increasing(), does nothing for _attrition_decreasing()
-            rng (np.random.Generator): NumPy random number generator
+            clean_params (ParamsDict or None): used for _attrition_increasing(), does nothing for _attrition_decreasing()
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
             (yields sets): worker ids to drop from self.subset_2
         '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
         # bdf = bdf.copy()
         # bdf._reset_id_reference_dict() # Clear id_reference_dict since it is not necessary
 
@@ -334,25 +365,28 @@ class Attrition:
                 wids_movers = wids_movers.difference(wid_draws_i)
                 wids_to_drop = wids_to_drop.union(wid_draws_i)
             else:
-                warnings.warn('Attrition plot does not change at iteration {}'.format(i))
+                warnings.warn(f'Attrition plot does not change at iteration {i}')
 
             yield wids_to_drop
 
             # subset_i = bdf.keep_ids('i', wids_movers + wids_stayers, copy=True)._reset_id_reference_dict()._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False)
 
-    def _attrition_single(self, bdf, ncore=1, rng=np.random.default_rng()):
+    def _attrition_single(self, bdf, ncore=1, rng=None):
         '''
         Run attrition estimations of TwoWay to estimate parameters given fraction of movers remaining. This is the interior function to attrition.
 
         Arguments:
             bdf (BipartiteBase): bipartite dataframe
             ncore (int): number of cores to use
-            rng (NumPy RandomState): NumPy RandomState object
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
             res_all (dict of dicts of lists): in the first dictionary we choose 'non_he' or 'he'; in the second dictionary we choose 'fe' or 'cre'; and finally, we are given a list of results for each attrition percentage.
         '''
-        ## Create lists to save results
+        if rng is None:
+            rng = np.random.default_rng(None)
+
+        ## Create lists to save results ##
         # For non-HE
         res_non_he = {'fe': [], 'cre': []}
         # For HE
@@ -410,7 +444,7 @@ class Attrition:
 
         return res_all
 
-    def attrition(self, bdf, N=10, ncore=1, rng=np.random.default_rng(None)):
+    def attrition(self, bdf, N=10, ncore=1, rng=None):
         '''
         Run Monte Carlo on attrition estimations of TwoWay to estimate variance of parameter estimates given fraction of movers remaining. Note that this overwrites the stored dataframe, meaning if you want to run attrition with different threshold number of movers, you will have to create multiple Attrition objects, or alternatively, run this method with an increasing threshold for each iteration.
 
@@ -418,16 +452,19 @@ class Attrition:
             bdf (BipartiteBase): bipartite dataframe (NOTE: we need to avoid saving bdf as a class attribute, otherwise multiprocessing will create a separate copy of it for each core used)
             N (int): number of simulations
             ncore (int): number of cores to use
-            rng (np.random.Generator): NumPy random number generator. This overrides the random number generators for FE and CRE.
+            rng (np.random.Generator or None): NumPy random number generator. This overrides the random number generators for FE and CRE. None is equivalent to np.random.default_rng(None).
 
         Returns:
             res_all (dict of dicts of lists of lists): in the first dictionary we choose 'non_he' or 'he'; in the second dictionary we choose 'fe' or 'cre'; then, we are given a list of results for each Monte Carlo simulation; and finally, for a particular Monte Carlo simulation, we are given a list of results for each attrition percentage.
         '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
         # Data
         if self.attrition_params['copy']:
             bdf = bdf.copy()
 
-        ## Create lists to save results
+        ## Create lists to save results ##
         # For non-HE
         res_non_he = {'fe': [], 'cre': []}
         # For HE
@@ -480,12 +517,12 @@ class Attrition:
             warnings.warn('Must generate attrition data before results can be plotted. This can be done by running .attrition()')
 
         else:
-            ## Get N, M
+            ## Get N, M ##
             # Number of estimations
             N = len(self.attrition_res['non_he']['fe'])
             # Number of attritions per estimation
             M = len(self.attrition_res['non_he']['fe'][0])
-            ## Extract results
+            ## Extract results ##
             # Non-HE
             non_he_var_psi_pct = np.zeros(shape=[N, M, 3])
             non_he_cov_psi_alpha_pct = np.zeros(shape=[N, M, 3])
@@ -587,64 +624,69 @@ class Attrition:
                             he_movers_per_firm_line = x_axis[i] + frac * (x_axis[i + 1] - x_axis[i])
                             break
 
-            ## Plot figures
+            ### Plot figures ###
+            # Source: https://stackoverflow.com/a/68209152/17333120
+            fig = plt.figure(constrained_layout=True, dpi=150)
+            subfigs = fig.subfigures(nrows=2, ncols=1)
+            ## Firm effects ##
+            subfigs[0].suptitle('Firm effects', x=0.545)
+            axs = subfigs[0].subplots(nrows=1, ncols=2)
             # Firm effects (non-HE)
-            plt.plot(x_axis, non_he_var_psi_pct[:, :, 0].mean(axis=0), label='FE')
-            plt.plot(x_axis, non_he_var_psi_pct[:, :, 1].mean(axis=0), label='HO')
-            plt.plot(x_axis, non_he_var_psi_pct[:, :, 2].mean(axis=0), label='CRE')
+            axs[0].plot(x_axis, non_he_var_psi_pct[:, :, 0].mean(axis=0), color='C0', label='FE')
+            axs[0].plot(x_axis, non_he_var_psi_pct[:, :, 1].mean(axis=0), color='C1', label='HO')
+            axs[0].plot(x_axis, non_he_var_psi_pct[:, :, 2].mean(axis=0), color='C3', label='CRE')
             if line_at_movers_per_firm:
-                plt.axvline(non_he_movers_per_firm_line, color='k', linestyle='--')
-            plt.title('Firm effects (connected set)')
-            plt.xlabel('Share of Movers Kept (%)')
-            plt.ylabel('Firm Effects: Share of Variance (%)')
-            plt.legend()
-            plt.grid()
-            plt.tight_layout()
-            plt.show()
+                axs[0].axvline(non_he_movers_per_firm_line, color='k', linestyle='--')
+            axs[0].set_title('Connected set')
+            axs[0].set_xlabel('Share of Movers Kept (%)')
+            axs[0].set_ylabel('Share of Variance (%)')
+            axs[0].grid()
+
             # Firm effects (HE)
-            plt.plot(x_axis, he_var_psi_pct[:, :, 0].mean(axis=0), label='FE')
-            plt.plot(x_axis, he_var_psi_pct[:, :, 1].mean(axis=0), label='HO')
-            plt.plot(x_axis, he_var_psi_pct[:, :, 2].mean(axis=0), label='CRE')
-            plt.plot(x_axis, he_var_psi_pct[:, :, 3].mean(axis=0), label='HE')
+            axs[1].plot(x_axis, he_var_psi_pct[:, :, 0].mean(axis=0), color='C0', label='FE')
+            axs[1].plot(x_axis, he_var_psi_pct[:, :, 1].mean(axis=0), color='C1', label='HO')
+            axs[1].plot(x_axis, he_var_psi_pct[:, :, 3].mean(axis=0), color='C2', label='HE')
+            axs[1].plot(x_axis, he_var_psi_pct[:, :, 2].mean(axis=0), color='C3', label='CRE')
             if line_at_movers_per_firm:
-                plt.axvline(he_movers_per_firm_line, color='k', linestyle='--')
-            plt.title('Firm effects (leave-one-out set)')
-            plt.xlabel('Share of Movers Kept (%)')
-            plt.ylabel('Firm Effects: Share of Variance (%)')
-            plt.legend()
-            plt.grid()
-            plt.tight_layout()
-            plt.show()
+                axs[1].axvline(he_movers_per_firm_line, color='k', linestyle='--')
+            axs[1].set_title('Leave-one-out set')
+            axs[1].set_xlabel('Share of Movers Kept (%)')
+            axs[1].set_ylabel(' ')
+            axs[1].grid()
 
+            ## Sorting ##
+            subfigs[1].suptitle('Sorting', x=0.545)
+            axs = subfigs[1].subplots(nrows=1, ncols=2)
             # Sorting (non-HE)
-            plt.plot(x_axis, non_he_cov_psi_alpha_pct[:, :, 0].mean(axis=0), label='FE')
-            plt.plot(x_axis, non_he_cov_psi_alpha_pct[:, :, 1].mean(axis=0), label='HO')
-            plt.plot(x_axis, non_he_cov_psi_alpha_pct[:, :, 2].mean(axis=0), label='CRE')
+            axs[0].plot(x_axis, non_he_cov_psi_alpha_pct[:, :, 0].mean(axis=0), color='C0', label='FE')
+            axs[0].plot(x_axis, non_he_cov_psi_alpha_pct[:, :, 1].mean(axis=0), color='C1', label='HO')
+            axs[0].plot(x_axis, non_he_cov_psi_alpha_pct[:, :, 2].mean(axis=0), color='C3', label='CRE')
             if line_at_movers_per_firm:
-                plt.axvline(non_he_movers_per_firm_line, color='k', linestyle='--')
-            plt.title('Sorting (connected set)')
-            plt.xlabel('Share of Movers Kept (%)')
-            plt.ylabel('Sorting: Share of Variance (%)')
-            plt.legend()
-            plt.grid()
-            plt.tight_layout()
-            plt.show()
+                axs[0].axvline(non_he_movers_per_firm_line, color='k', linestyle='--')
+            axs[0].set_title('Connected set')
+            axs[0].set_xlabel('Share of Movers Kept (%)')
+            axs[0].set_ylabel('Share of Variance (%)')
+            axs[0].grid()
+
             # Sorting (HE)
-            plt.plot(x_axis, he_cov_psi_alpha_pct[:, :, 0].mean(axis=0), label='FE')
-            plt.plot(x_axis, he_cov_psi_alpha_pct[:, :, 1].mean(axis=0), label='HO')
-            plt.plot(x_axis, he_cov_psi_alpha_pct[:, :, 2].mean(axis=0), label='CRE')
-            plt.plot(x_axis, he_cov_psi_alpha_pct[:, :, 3].mean(axis=0), label='HE')
+            axs[1].plot(x_axis, he_cov_psi_alpha_pct[:, :, 0].mean(axis=0), color='C0', label='FE')
+            axs[1].plot(x_axis, he_cov_psi_alpha_pct[:, :, 1].mean(axis=0), color='C1', label='HO')
+            axs[1].plot(x_axis, he_cov_psi_alpha_pct[:, :, 3].mean(axis=0), color='C2', label='HE')
+            axs[1].plot(x_axis, he_cov_psi_alpha_pct[:, :, 2].mean(axis=0), color='C3', label='CRE')
             if line_at_movers_per_firm:
-                plt.axvline(he_movers_per_firm_line, color='k', linestyle='--')
-            plt.title('Sorting (leave-one-out set)')
-            plt.xlabel('Share of Movers Kept (%)')
-            plt.ylabel('Sorting: Share of Variance (%)')
-            plt.legend()
-            plt.grid()
-            plt.tight_layout()
+                axs[1].axvline(he_movers_per_firm_line, color='k', linestyle='--')
+            axs[1].set_title('Leave-one-out set')
+            axs[1].set_xlabel('Share of Movers Kept (%)')
+            axs[1].set_ylabel(' ')
+            axs[1].grid()
+
+            # Shared legend (source: https://stackoverflow.com/a/46921590/17333120)
+            handles, labels = axs[1].get_legend_handles_labels()
+            subfigs[1].legend(handles, labels, loc=(1.02, 0.78))
             plt.show()
 
-            # Plot boxplots
+            ### Plot boxplots ###
+            ## Firm effects ##
             # Firm effects (non-HE set)
             fig, ax = plt.subplots(nrows=1, ncols=3, sharey=True)
             subtitles = ['FE', 'FE-HO', 'CRE']
@@ -660,10 +702,12 @@ class Attrition:
             fig.tight_layout()
             # NOTE: must use plt.show(), fig.show() raises a warning in Jupyter Notebook (source: https://stackoverflow.com/a/52827912/17333120)
             plt.show()
+
             # Firm effects (HE set)
             fig, ax = plt.subplots(nrows=1, ncols=4, sharey=True)
             subtitles = ['FE', 'FE-HO', 'CRE', 'FE-HE']
-            order = [0, 1, 3, 2] # Because data is FE, FE-HO, CRE, FE-HE
+            # Change order because data is FE, FE-HO, CRE, FE-HE but want FE, FE-HO, FE-HE, CRE
+            order = [0, 1, 3, 2]
 
             for i, row in enumerate(ax):
                 # for col in row:
@@ -676,6 +720,7 @@ class Attrition:
             fig.tight_layout()
             plt.show()
 
+            ## Sorting ##
             # Sorting (non-HE set)
             fig, ax = plt.subplots(nrows=1, ncols=3, sharey=True)
             subtitles = ['FE', 'FE-HO', 'CRE']
@@ -690,10 +735,12 @@ class Attrition:
             fig.supylabel('Sorting: Share of Variance (%)')
             fig.tight_layout()
             plt.show()
+
             # Sorting (HE set)
             fig, ax = plt.subplots(nrows=1, ncols=4, sharey=True)
             subtitles = ['FE', 'FE-HO', 'CRE', 'FE-HE']
-            order = [0, 1, 3, 2] # Because data is FE, FE-HO, CRE, FE-HE
+            # Change order because data is FE, FE-HO, CRE, FE-HE but want FE, FE-HO, FE-HE, CRE
+            order = [0, 1, 3, 2]
 
             for i, row in enumerate(ax):
                 # for col in row:

@@ -1,5 +1,5 @@
 '''
-Defines class FEEstimator, which uses multigrid and partialing out to solve two way fixed effect models. This includes AKM, the Andrews et al. homoskedastic correction, and the Kline et al. heteroskedastic correction.
+Defines class FEEstimator, which uses multigrid and partialing out to estimate two way fixed effect models. This includes AKM, the Andrews et al. homoskedastic correction, and the Kline et al. heteroskedastic correction.
 '''
 import warnings
 from pathlib import Path
@@ -101,9 +101,9 @@ _fe_params_default = ParamsDict({
     #     '''
     #         (default=False) Computes the smallest eigen values, this is the filepath where these results are saved.
     #     ''', None),
-    'out': ('res_fe.json', 'type', str,
+    'outputfile': (None, 'type_none', str,
         '''
-            (default='res_fe.json') Outputfile where results are saved.
+            (default=None) Outputfile where results will be saved in json format. If None, results will not be saved.
         ''', None)
 })
 
@@ -112,7 +112,7 @@ def fe_params(update_dict=None):
     Dictionary of default fe_params. Run tw.fe_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
-        update_dict (dict): user parameter values; None is equivalent to {}
+        update_dict (dict or None): user parameter values; None is equivalent to {}
 
     Returns:
         (ParamsDict) dictionary of fe_params
@@ -199,7 +199,7 @@ class FEEstimator:
     Uses multigrid and partialing out to solve two way fixed effect models. This includes AKM, the Andrews et al. homoskedastic correction, and the Kline et al. heteroskedastic correction.
     '''
 
-    def __init__(self, data, fe_params=fe_params()):
+    def __init__(self, data, params=None):
         '''
         Arguments:
             data (BipartitePandas DataFrame): (collapsed) long format labor data. Data contains the following columns:
@@ -219,30 +219,33 @@ class FEEstimator:
                 w (weight)
 
                 m (0 if stayer, 1 if mover)
-            fe_params (ParamsDict): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters.
+            fe_params (ParamsDict or None)): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().
         '''
         # Start logger
         logger_init(self)
         # self.logger.info('initializing FEEstimator object')
 
+        if params is None:
+            params = fe_params()
+
         self.adata = data
 
-        self.params = fe_params
+        self.params = params
         # Results dictionary
         self.res = {}
         # Summary results dictionary
         self.summary = {}
 
-        ## Save some commonly used parameters as attributes
+        ## Save some commonly used parameters as attributes ##
         # Number of cores to use
-        self.ncore = self.params['ncore']
+        self.ncore = params['ncore']
         # Number of draws to compute leverage for heteroskedastic correction
-        self.lev_batchsize = self.params['lev_batchsize']
+        self.lev_batchsize = params['lev_batchsize']
         # Number of draws to use in trace approximations
-        self.ndraw_trace = self.params['ndraw_trace']
-        self.compute_he = self.params['he']
+        self.ndraw_trace = params['ndraw_trace']
+        self.compute_he = params['he']
 
-        ## Store some parameters in results dictionary
+        ## Store some parameters in results dictionary ##
         self.res['cores'] = self.ncore
         self.res['ndp'] = self.lev_batchsize
         self.res['ndt'] = self.ndraw_trace
@@ -294,13 +297,16 @@ class FEEstimator:
         with open(filename, 'wb') as outfile:
             pickle.dump(self, outfile)
 
-    def fit(self, rng=np.random.default_rng(None)):
+    def fit(self, rng=None):
         '''
         Run FE solver.
 
         Arguments:
-            rng (np.random.Generator): NumPy random number generator
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
         self.fit_1()
         self.construct_Q()
         self.fit_2(rng)
@@ -309,26 +315,32 @@ class FEEstimator:
         '''
         Run FE solver, part 1. Before fit_2(), modify adata to allow creation of Q matrix.
         '''
+        self.logger.info('----- STARTING FE ESTIMATION -----')
         self.start_time = time.time()
 
-        # Begin cleaning and analysis
-        self._prep_vars() # Prepare data
-        self._prep_JWM() # Use cleaned adata to generate some attributes
-        self._compute_early_stats() # Use cleaned data to compute some statistics
+        ## Begin cleaning and analysis #
+        # Prepare data
+        self._prep_vars()
+        # Use cleaned data to generate some attributes
+        self._prep_JWM()
+        # Use cleaned data to compute some statistics
+        self._compute_early_stats()
 
-    def fit_2(self, rng=np.random.default_rng(None)):
+    def fit_2(self, rng=None):
         '''
         Run FE solver, part 2.
 
         Arguments:
-            rng (np.random.Generator): NumPy random number generator
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
         if self.params['statsonly']:
-            # If only returning early statistics
-            self._save_early_stats()
+            ## If returning only early statistics ##
+            self.logger.info('statsonly=True, so we skip all estimation')
 
         else:
-            ## If running analysis
+            ## If running analysis ##
+            if rng is None:
+                rng = np.random.default_rng(None)
             # Solve FE model
             self._create_fe_solver(rng)
             # Add fixed effect columns
@@ -360,13 +372,13 @@ class FEEstimator:
         # Drop irrelevant columns
         self._drop_cols()
 
-        self.logger.info('------ DONE -------')
+        self.logger.info('----- DONE WITH FE ESTIMATION -----')
 
     def _prep_vars(self):
         '''
         Generate some initial class attributes and results.
         '''
-        self.logger.info('preparing the data')
+        self.logger.info('preparing data')
         # self.adata.sort_values(['i', to_list(self.adata.reference_dict['t'])[0]], inplace=True)
 
         # Number of firms
@@ -375,13 +387,13 @@ class FEEstimator:
         self.nw = self.adata.n_workers()
         # Number of observations
         self.nn = len(self.adata)
-        self.logger.info('data firms={} workers={} observations={}'.format(self.nf, self.nw, self.nn))
+        self.logger.info(f'data firms={self.nf} workers={self.nw} observations={self.nn}')
 
         self.res['n_firms'] = self.nf
         self.res['n_workers'] = self.nw
         self.res['n_movers'] = self.adata.loc[self.adata['m'].to_numpy() > 0, :].n_workers()
         self.res['n_stayers'] = self.res['n_workers'] - self.res['n_movers']
-        self.logger.info('data movers={} stayers={}'.format(self.res['n_movers'], self.res['n_stayers']))
+        self.logger.info(f"data movers={self.res['n_movers']} stayers={self.res['n_stayers']}")
 
         # Generate 'worker_m' indicating whether a worker is a mover or a stayer
         self.adata.loc[:, 'worker_m'] = (self.adata.groupby('i')['m'].transform('max') > 0).astype(int, copy=False)
@@ -421,7 +433,7 @@ class FEEstimator:
         self.Dp_sqrt = np.sqrt(Dp)
         self.Dwinv = Dwinv
 
-        self.logger.info('Prepare linear solver')
+        self.logger.info('preparing linear solver')
 
         # Finally create M
         M = J.T @ Dp @ J - J.T @ Dp @ W @ Dwinv @ W.T @ Dp @ J
@@ -443,7 +455,7 @@ class FEEstimator:
         # self.res['movers_per_firm'] = self.adata.loc[self.adata.loc[:, 'm'] > 0, :].groupby('j')['i'].nunique().mean()
         self.res['between_firm_var'] = _weighted_var(fy, fi)
         self.res['var_y'] = _weighted_var(self.adata.loc[:, 'y'].to_numpy(), self.Dp)
-        self.logger.info('total variance: {:0.4f}'.format(self.res['var_y']))
+        self.logger.info(f"total variance: {self.res['var_y']:0.4f}")
 
         # extract woodcock moments using sdata and jdata
         # get averages by firms for stayers
@@ -456,17 +468,6 @@ class FEEstimator:
         #self.logger.info("[woodcock] var psi = {}", res['woodcock_var_psi'])
         #self.logger.info("[woodcock] var alpha = {}", res['woodcock_var_alpha'])
         #self.logger.info("[woodcock] var eps = {}", res['woodcock_var_eps'])
-
-    def _save_early_stats(self):
-        '''
-        Save the early statistics computed in compute_early_stats().
-        '''
-        with open(self.params['out'], 'w') as outfile:
-            json.dump(self.res, outfile)
-        self.logger.info('saved results to {}'.format(self.params['out']))
-        self.logger.info('--statsonly was passed as argument, so we skip all estimation.')
-        self.logger.info('------ DONE -------')
-        # sys.exit() # FIXME I don't think this is necessary (does it even work?) since this is now a class object
 
     def construct_Q(self):
         '''
@@ -534,31 +535,34 @@ class FEEstimator:
 
         return Jq, Wq
 
-    def _create_fe_solver(self, rng=np.random.default_rng(None)):
+    def _create_fe_solver(self, rng=None):
         '''
         Solve FE model.
 
         Arguments:
-            rng (np.random.Generator): NumPy random number generator
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
         self.Y = self.adata.loc[:, 'y'].to_numpy()
 
         # try to pickle the object to see its size
         # self.save('tmp.pkl') # FIXME should we delete these 2 lines?
 
-        self.logger.info('extract firm effects')
+        self.logger.info('extracting firm effects')
 
         self.psi_hat, self.alpha_hat = self.__solve(self.Y)
 
-        self.logger.info('solver time {:2.4f} seconds'.format(self.last_invert_time))
-        self.logger.info('expected total time {:2.4f} minutes'.format( (self.ndraw_trace * (1 + self.compute_he) + self.lev_batchsize * self.params['lev_nbatches'] * self.compute_he) * self.last_invert_time / 60))
+        self.logger.info(f'solver time {self.last_invert_time:2.4f} seconds')
+        self.logger.info('expected total time {:2.4f} minutes'.format((self.ndraw_trace * (1 + self.compute_he) + self.lev_batchsize * self.params['lev_nbatches'] * self.compute_he) * self.last_invert_time / 60))
 
         self.E = self.Y - self.__mult_A(self.psi_hat, self.alpha_hat)
 
         self.res['solver_time'] = self.last_invert_time
 
         fe_rsq = 1 - np.power(self.E, 2).mean() / np.power(self.Y, 2).mean()
-        self.logger.info('fixed effect R-square {:2.4f}'.format(fe_rsq))
+        self.logger.info(f'fixed effect R-square {fe_rsq:2.4f}')
 
         # Plug-in variance
         self.var_e_pi = np.var(self.E)
@@ -568,16 +572,19 @@ class FEEstimator:
             self.var_e = (self.nn * self.var_e_pi) / (np.sum(1 / self.Dp.data[0]) - trace_approximation)
         else:
             self.var_e = (self.nn * self.var_e_pi) / (self.nn - (self.nw + self.nf - 1))
-        self.logger.info('[ho] variance of residuals {:2.4f}'.format(self.var_e))
+        self.logger.info(f'[ho] variance of residuals {self.var_e:2.4f}')
 
-    def _compute_trace_approximation_ho(self, rng=np.random.default_rng(None)):
+    def _compute_trace_approximation_ho(self, rng=None):
         '''
         Compute weighted HO trace approximation for arbitrary Q.
 
         Arguments:
-            rng (np.random.Generator): NumPy random number generator
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
         self.logger.info('Starting plug-in estimation')
+
+        if rng is None:
+            rng = np.random.default_rng(None)
 
         Jq, Wq = self.__construct_Jq_Wq()
 
@@ -593,8 +600,8 @@ class FEEstimator:
             vcv = np.cov(Jq * self.psi_hat, Wq * self.alpha_hat, ddof=0)
             self.var_fe = vcv[0, 0]
             self.cov_fe = vcv[0, 1]
-        self.logger.info('var_psi={:2.4f}'.format(self.var_fe))
-        self.logger.info('cov={:2.4f} tot={:2.4f}'.format(self.cov_fe, self.tot_var))
+        self.logger.info(f'var_psi={self.var_fe:2.4f}')
+        self.logger.info(f'cov={self.cov_fe:2.4f} tot={self.tot_var:2.4f}')
 
         ##### Start full Trace without collapse operator ######
         # # Begin trace approximation
@@ -618,7 +625,7 @@ class FEEstimator:
         #     self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
         ##### End full Trace without collapse operator ######
 
-        self.logger.info('Starting weighted homoskedastic trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
+        self.logger.info(f'Starting weighted homoskedastic trace correction ndraws={self.ndraw_trace}, using {self.ncore} cores')
 
         # Begin trace approximation
         self.tr_var_ho_all = np.zeros(self.ndraw_trace)
@@ -638,7 +645,7 @@ class FEEstimator:
             R2_alpha = Wq @ alpha1
             self.tr_cov_ho_all[r] = np.cov(R1, R2_alpha)[0][1]
 
-            self.logger.debug('homoskedastic [traces] step {}/{} done.'.format(r, self.ndraw_trace))
+            self.logger.debug(f'homoskedastic [traces] step {r}/{self.ndraw_trace} done.')
 
     # def __compute_trace_approximation_fe(self, rng=np.random.default_rng(None)):
     #     '''
@@ -749,14 +756,17 @@ class FEEstimator:
     #         self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
     #         self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
 
-    def _compute_trace_approximation_he(self, rng=np.random.default_rng(None)):
+    def _compute_trace_approximation_he(self, rng=None):
         '''
         Compute heteroskedastic trace approximation.
 
         Arguments:
-            rng (np.random.Generator): NumPy random number generator
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
-        self.logger.info('Starting heteroskedastic trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
+        self.logger.info(f'Starting heteroskedastic trace correction ndraws={self.ndraw_trace}, using {self.ncore} cores')
+        if rng is None:
+            rng = np.random.default_rng(None)
+
         self.tr_var_he_all = np.zeros(self.ndraw_trace)
         self.tr_cov_he_all = np.zeros(self.ndraw_trace)
 
@@ -778,9 +788,9 @@ class FEEstimator:
             self.tr_var_he_all[r] = np.cov(R2_psi, R3_psi)[0][1]
             self.tr_cov_he_all[r] = np.cov(R2_alpha, R3_psi)[0][1]
 
-            self.logger.debug('heteroskedastic [traces] step {}/{} done.'.format(r, self.ndraw_trace))
+            self.logger.debug(f'heteroskedastic [traces] step {r}/{self.ndraw_trace} done.')
 
-    def _compute_trace_approximation_sigma_2(self, rng=np.random.default_rng(None)):
+    def _compute_trace_approximation_sigma_2(self, rng=None):
         '''
         Compute weighted sigma^2 trace approximation.
 
@@ -789,9 +799,12 @@ class FEEstimator:
         Commented out, complex case: solving Tr[A(A'DA)^{-1}A'DD'A(A'DA)^{-1}A'] = Tr[D'A(A'DA)^{-1}A'A(A'DA)^{-1}A'D] by multiplying the right half by Z, then transposing that to get the left half.
 
         Arguments:
-            rng (np.random.Generator): NumPy random number generator
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
-        self.logger.info('Starting weighted sigma^2 trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
+        self.logger.info(f'Starting weighted sigma^2 trace correction ndraws={self.ndraw_trace}, using {self.ncore} cores')
+
+        if rng is None:
+            rng = np.random.default_rng(None)
 
         # Begin trace approximation
         self.tr_sigma_ho_all = np.zeros(self.ndraw_trace)
@@ -812,7 +825,7 @@ class FEEstimator:
 
             # self.tr_sigma_ho_all[r] = np.sum(R_y ** 2)
 
-            self.logger.debug('sigma^2 [traces] step {}/{} done.'.format(r, self.ndraw_trace))
+            self.logger.debug(f'sigma^2 [traces] step {r}/{self.ndraw_trace} done.')
 
     def _collect_res(self):
         '''
@@ -826,24 +839,24 @@ class FEEstimator:
         ## FE results ##
         # Plug-in variance
         self.res['var_fe'] = self.var_fe
-        self.logger.info('[ho] VAR fe={:2.4f}'.format(self.var_fe))
+        self.logger.info(f'[ho] VAR fe={self.var_fe:2.4f}')
         # Plug-in covariance
-        self.logger.info('[ho] COV fe={:2.4f}'.format(self.cov_fe))
+        self.logger.info(f'[ho] COV fe={self.cov_fe:2.4f}')
         self.res['cov_fe'] = self.cov_fe
 
         ## Homoskedastic results ##
         # Trace approximation: variance
         self.res['tr_var_ho'] = np.mean(self.tr_var_ho_all)
-        self.logger.info('[ho] VAR tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_var_ho'], np.std(self.tr_var_ho_all)))
+        self.logger.info(f"[ho] VAR tr={self.res['tr_var_ho']:2.4f} (sd={np.std(self.tr_var_ho_all):2.4e})")
         # Trace approximation: covariance
         self.res['tr_cov_ho'] = np.mean(self.tr_cov_ho_all)
-        self.logger.info('[ho] COV tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_cov_ho'], np.std(self.tr_cov_ho_all)))
+        self.logger.info(f"[ho] COV tr={self.res['tr_cov_ho']:2.4f} (sd={np.std(self.tr_cov_ho_all):2.4e})")
         # Bias-corrected variance
         self.res['var_ho'] = self.var_fe - self.var_e * self.res['tr_var_ho']
-        self.logger.info('[ho] VAR bc={:2.4f}'.format(self.res['var_ho']))
+        self.logger.info(f"[ho] VAR bc={self.res['var_ho']:2.4f}")
         # Bias-corrected covariance
         self.res['cov_ho'] = self.cov_fe - self.var_e * self.res['tr_cov_ho']
-        self.logger.info('[ho] COV bc={:2.4f}'.format(self.res['cov_ho']))
+        self.logger.info(f"[ho] COV bc={self.res['cov_ho']:2.4f}")
 
         for res in ['var_y', 'var_fe', 'cov_fe', 'var_ho', 'cov_ho']:
             self.summary[res] = self.res[res]
@@ -861,13 +874,13 @@ class FEEstimator:
             self.res['tr_cov_ho_sd'] = np.std(self.tr_cov_ho_all)
             self.res['tr_var_he_sd'] = np.std(self.tr_var_he_all)
             self.res['tr_cov_he_sd'] = np.std(self.tr_cov_he_all)
-            self.logger.info('[he] VAR tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_var_he'], np.std(self.tr_var_he_all)))
-            self.logger.info('[he] COV tr={:2.4f} (sd={:2.4e})'.format(self.res['tr_cov_he'], np.std(self.tr_cov_he_all)))
+            self.logger.info(f"[he] VAR tr={self.res['tr_var_he']:2.4f} (sd={np.std(self.tr_var_he_all):2.4e})")
+            self.logger.info(f"[he] COV tr={self.res['tr_cov_he']:2.4f} (sd={np.std(self.tr_cov_he_all):2.4e})")
             # ----- FINAL ------
             self.res['var_he'] = self.var_fe - self.res['tr_var_he']
-            self.logger.info('[he] VAR fe={:2.4f} bc={:2.4f}'.format(self.var_fe, self.res['var_he']))
+            self.logger.info(f"[he] VAR fe={self.var_fe:2.4f} bc={self.res['var_he']:2.4f}")
             self.res['cov_he'] = self.cov_fe - self.res['tr_cov_he']
-            self.logger.info('[he] COV fe={:2.4f} bc={:2.4f}'.format(self.cov_fe, self.res['cov_he']))
+            self.logger.info(f"[he] COV fe={self.cov_fe:2.4f} bc={self.res['cov_he']:2.4f}")
 
             for res in ['var_he', 'cov_he']:
                 self.summary[res] = self.res[res]
@@ -876,14 +889,18 @@ class FEEstimator:
         '''
         Save results as json.
         '''
-        # Convert results into strings to prevent JSON errors
-        for key, val in self.res.items():
-            self.res[key] = str(val)
+        outputfile = self.params['outputfile']
+        if outputfile is not None:
+            # Convert results into strings to prevent JSON errors
+            for key, val in self.res.items():
+                self.res[key] = str(val)
 
-        with open(self.params['out'], 'w') as outfile:
-            json.dump(self.res, outfile)
+            with open(outputfile, 'w') as outfile:
+                json.dump(self.res, outfile)
 
-        self.logger.info('saved results to {}'.format(self.params['out']))
+            self.logger.info(f'saved results to {outputfile}')
+        else:
+            self.logger.info('outputfile=None, so results not saved')
 
     def _get_fe_estimates(self):
         '''
@@ -1061,13 +1078,16 @@ class FEEstimator:
 
         return A + B + C + D
 
-    def _compute_leverages_Pii(self, rng=np.random.default_rng(None)):
+    def _compute_leverages_Pii(self, rng=None):
         '''
         Compute leverages for heteroskedastic correction.
 
         Arguments:
-            rng (np.random.Generator): NumPy random number generator
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
         Pii = np.zeros(self.nn)
         # Indices to compute Pii analytically
         analytical_indices = []
@@ -1082,7 +1102,7 @@ class FEEstimator:
                 self.logger.info('[he] starting heteroskedastic correction, loading precomputed files')
 
                 files = glob.glob('{}*'.format(self.params['levfile']))
-                self.logger.info('[he] found {} files to get leverages from'.format(len(files)))
+                self.logger.info(f'[he] found {len(files)} files to get leverages from')
                 self.res['lev_file_count'] = len(files)
                 assert len(files) > 0, "Didn't find any leverage files!"
 
@@ -1091,14 +1111,14 @@ class FEEstimator:
                     Pii += pp / len(files)
 
             else:
-                self.logger.info('[he] starting heteroskedastic correction lev_batchsize={}, lev_nbatches={}, using {} cores'.format(self.params['lev_batchsize'], self.params['lev_nbatches'], self.ncore))
+                self.logger.info(f"[he] starting heteroskedastic correction lev_batchsize={self.params['lev_batchsize']}, lev_nbatches={self.params['lev_nbatches']}, using {self.ncore} cores")
                 for batch_i in range(self.params['lev_nbatches']):
                     if self.ncore > 1:
                         # Multiprocessing
                         ndraw_seeds = self.lev_batchsize // self.params['lev_batchsize_multiprocessing']
                         if np.round(ndraw_seeds * self.params['lev_batchsize_multiprocessing']) != self.lev_batchsize:
                             # 'lev_batchsize_multiprocessing' must evenly divide 'lev_batchsize'
-                            raise ValueError("'lev_batchsize_multiprocessing' (currently {}) should evenly divide 'lev_batchsize' (currently {}).".format(self.params['lev_batchsize_multiprocessing'], self.lev_batchsize))
+                            raise ValueError(f"'lev_batchsize_multiprocessing' (currently {self.params['lev_batchsize_multiprocessing']}) should evenly divide 'lev_batchsize' (currently {self.lev_batchsize}).")
                         # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
                         seeds = rng.bit_generator._seed_seq.spawn(ndraw_seeds)
                         set_start_method('spawn')
@@ -1119,11 +1139,11 @@ class FEEstimator:
 
                     # If few enough bad draws, compute them analytically
                     if n_bad_draws < self.params['lev_threshold_obs']:
-                        leverage_warning = 'Threshold for max Pii is {}, with {} draw(s) per batch and a maximum of {} batch(es) being drawn. There is/are {} observation(s) with Pii above this threshold. These will be recomputed analytically. It took {} batch(es) to get below the threshold of {} bad observations.'.format(self.params['lev_threshold_pii'], self.lev_batchsize, self.params['lev_nbatches'], n_bad_draws, batch_i + 1, self.params['lev_threshold_obs'])
+                        leverage_warning = f"Threshold for max Pii is {self.params['lev_threshold_pii']}, with {self.lev_batchsize} draw(s) per batch and a maximum of {self.params['lev_nbatches']} batch(es) being drawn. There is/are {n_bad_draws} observation(s) with Pii above this threshold. These will be recomputed analytically. It took {batch_i + 1} batch(es) to get below the threshold of {self.params['lev_threshold_obs']} bad observations."
                         warnings.warn(leverage_warning)
                         break
                     elif batch_i == self.params['lev_nbatches'] - 1:
-                        leverage_warning = 'Threshold for max Pii is {}, with {} draw(s) per batch and a maximum of {} batch(es) being drawn. After exhausting the maximum number of batches, there is/are still {} draw(s) with Pii above this threshold. These will be recomputed analytically.'.format(self.params['lev_threshold_pii'], self.lev_batchsize, self.params['lev_nbatches'], n_bad_draws)
+                        leverage_warning = f"Threshold for max Pii is {self.params['lev_threshold_pii']}, with {self.lev_batchsize} draw(s) per batch and a maximum of {self.params['lev_nbatches']} batch(es) being drawn. After exhausting the maximum number of batches, there is/are still {n_bad_draws} draw(s) with Pii above this threshold. These will be recomputed analytically."
                         warnings.warn(leverage_warning)
 
             # Compute Pii analytically for observations with Pii approximation above threshold value
@@ -1146,14 +1166,14 @@ class FEEstimator:
         self.res['max_lev'] = Pii[worker_m].max()
 
         if self.res['max_lev'] >= 1:
-            leverage_warning = "Max P_ii is {} which is >= 1. This means your data is not leave-one-observation-out connected. The HE estimator requires leave-one-observation-out connected data to work properly. When cleaning your data, please set clean_params['connectedness'] = 'leave_one_observation_out' to correct this.".format(self.res['max_lev'])
+            leverage_warning = f"Max P_ii is {self.res['max_lev']} which is >= 1. This means your data is not leave-one-observation-out connected. The HE estimator requires leave-one-observation-out connected data to work properly. When cleaning your data, please set clean_params['connectedness'] = 'leave_out_observation' to correct this."
             self.logger.info(leverage_warning)
             raise ValueError(leverage_warning)
             # self.adata['Pii'] = Pii
             # self.adata.to_feather('pii_data.ftr')
             # raise NotImplementedError
 
-        self.logger.info('[he] Leverage range {:2.4f} to {:2.4f}'.format(self.res['min_lev'], self.res['max_lev']))
+        self.logger.info(f"[he] Leverage range {self.res['min_lev']:2.4f} to {self.res['max_lev']:2.4f}")
         # print('Observation with max leverage:', self.adata[self.adata['Pii'] == self.res['max_lev']])
 
         ## Give stayers the variance estimate at the firm level ##
@@ -1169,19 +1189,22 @@ class FEEstimator:
         self.adata.drop('Sii', axis=1, inplace=True)
 
         self.res['eps_var_he'] = self.Sii.mean()
-        self.logger.info('[he] variance of residuals in heteroskedastic case: {:2.4f}'.format(self.res['eps_var_he']))
+        self.logger.info(f"[he] variance of residuals in heteroskedastic case: {self.res['eps_var_he']:2.4f}")
 
-    def _leverage_approx(self, ndraw_pii, rng=np.random.default_rng(None)):
+    def _leverage_approx(self, ndraw_pii, rng=None):
         '''
         Draw Pii estimates for use in JL approximation of leverage.
 
         Arguments:
             ndraw_pii (int): number of Pii draws
-            rng (np.random.Generator): NumPy random number generator
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
             Pii (NumPy Array): Pii array
         '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
         Pii = np.zeros(self.nn)
 
         # Compute the different draws
