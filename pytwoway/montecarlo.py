@@ -257,7 +257,7 @@ class MonteCarlo:
             he_psi_alpha_diff = sorted(he_psi_alpha_cov - true_psi_alpha_cov)
 
             # Plot histograms
-            fig, axs = plt.subplots(nrows=1, ncols=2, sharex=False, sharey=False)
+            fig, axs = plt.subplots(nrows=1, ncols=2, sharex=False, sharey=True, dpi=150)
             # First, var(psi)
             # Source for fixing bin size:
             # https://stackoverflow.com/a/50864765
@@ -300,7 +300,10 @@ class MonteCarlo:
             # axs[0].legend()
             axs[0].set_title(r'var($\psi$)')
             axs[0].set_xlabel(r'$\Delta$truth')
-            axs[0].set_ylabel('# occurrences')
+            if density:
+                axs[0].set_ylabel('Density')
+            else:
+                axs[0].set_ylabel('Frequency')
 
             # Second, cov(psi, alpha)
             min_err = np.inf
@@ -345,6 +348,8 @@ class MonteCarlo:
 
             # Shared legend (source: https://stackoverflow.com/a/46921590/17333120)
             handles, labels = axs[1].get_legend_handles_labels()
-            fig.legend(handles, labels, loc='upper center')
+            fig.legend(handles, labels, loc=(0.75, 0.375))
             fig.tight_layout()
+            # Make space for legend (source: https://stackoverflow.com/a/43439132/17333120)
+            fig.subplots_adjust(right=0.75)
             plt.show()
