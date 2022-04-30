@@ -1,7 +1,6 @@
 '''
 We implement the non-linear estimator from Bonhomme Lamadon & Manresa
 '''
-
 import numpy as np
 import pandas as pd
 from scipy.special import logsumexp

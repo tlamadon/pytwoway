@@ -7,11 +7,12 @@ import pyamg
 import numpy as np
 import pandas as pd
 from bipartitepandas.util import ParamsDict, logger_init
+from pytwoway import Q
 from scipy.sparse import csc_matrix, coo_matrix, diags, linalg, hstack, eye
 import time
 # import pyreadr
 import os
-from multiprocessing import Pool, TimeoutError, Value, set_start_method
+from multiprocessing import Pool, set_start_method
 from timeit import default_timer as timer
 import pickle
 import time
@@ -53,9 +54,13 @@ _fe_params_default = ParamsDict({
         '''
             (default=False) If True, estimate only fixed effects and not variances.
         ''', None),
-    'Q': ('cov(alpha, psi)', 'set', ['cov(alpha, psi)', 'cov(psi_t, psi_{t+1})'],
+    'Q_var': (None, 'type_none', (Q.VarPsi, Q.VarAlpha),
         '''
-            (default='cov(alpha, psi)') Which Q matrix to consider. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'.
+            (default=None) Which Q matrix to use when estimating variance term; None is equivalent to tw.Q.VarPsi().
+        ''', None),
+    'Q_cov': (None, 'type_none', (Q.CovPsiAlpha, Q.CovPsiPrevPsiNext),
+        '''
+            (default=None) Which Q matrix to use when estimating covariance term; None is equivalent to tw.Q.CovPsiAlpha().
         ''', None),
     'ndraw_trace': (5, 'type_constrained', (int, _gteq1),
         '''
@@ -243,7 +248,11 @@ class FEEstimator:
         self.lev_batchsize = params['lev_batchsize']
         # Number of draws to use in trace approximations
         self.ndraw_trace = params['ndraw_trace']
+        # Whether to compute heteroskedastic correction
         self.compute_he = params['he']
+        # Whether data is weighted
+        self.weighted = (params['weighted'] and ('w' in data.columns))
+
 
         ## Store some parameters in results dictionary ##
         self.res['cores'] = self.ncore
@@ -299,64 +308,50 @@ class FEEstimator:
 
     def fit(self, rng=None):
         '''
-        Run FE solver.
+        Estimate FE model.
 
         Arguments:
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
-        '''
-        if rng is None:
-            rng = np.random.default_rng(None)
-
-        self.fit_1()
-        self.construct_Q()
-        self.fit_2(rng)
-
-    def fit_1(self):
-        '''
-        Run FE solver, part 1. Before fit_2(), modify adata to allow creation of Q matrix.
         '''
         self.logger.info('----- STARTING FE ESTIMATION -----')
         self.start_time = time.time()
 
         ## Begin cleaning and analysis #
-        # Prepare data
+        # Store commonly use variables
         self._prep_vars()
-        # Use cleaned data to generate some attributes
-        self._prep_JWM()
-        # Use cleaned data to compute some statistics
+        # Generate commonly used matrices
+        self._prep_matrices()
+        # Compute basic statistics
         self._compute_early_stats()
 
-    def fit_2(self, rng=None):
-        '''
-        Run FE solver, part 2.
-
-        Arguments:
-            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
-        '''
         if self.params['statsonly']:
-            ## If returning only early statistics ##
-            self.logger.info('statsonly=True, so we skip all estimation')
+            ## Estimate basic statistics ##
+            self.logger.info('statsonly=True, so we skip the full estimation')
 
         else:
-            ## If running analysis ##
+            ## Estimate full model ##
             if rng is None:
                 rng = np.random.default_rng(None)
-            # Solve FE model
-            self._create_fe_solver(rng)
+            # Estimate fixed effects using OLS
+            self._estimate_ols(rng)
             # Add fixed effect columns
-            self._get_fe_estimates()
+            self._store_ols_estimates()
+            # Q matrix
+            Q_params = self._construct_Q()
+            # Estimate plug-in (biased) FE model
+            self._estimate_fe(Q_params)
 
             if not self.params['feonly']:
-                ## If running full model
-                # Compute trace approximation
-                self._compute_trace_approximation_ho(rng)
+                ## HO/HE corrections ##
+                # Estimate HO correction
+                self._estimate_trace_approximation_ho(Q_params, rng)
 
                 if self.compute_he:
-                    ## If computing heteroskedastic correction
-                    # Solve heteroskedastic model
+                    ## HE correction ##
+                    # Estimate Pii/Sii for HE correction
                     self._compute_leverages_Pii(rng)
-                    # Compute trace approximation
-                    self._compute_trace_approximation_he(rng)
+                    # Estimate HE correction
+                    self._estimate_trace_approximation_he(Q_params, rng)
 
                 # Collect all results
                 self._collect_res()
@@ -379,7 +374,6 @@ class FEEstimator:
         Generate some initial class attributes and results.
         '''
         self.logger.info('preparing data')
-        # self.adata.sort_values(['i', to_list(self.adata.reference_dict['t'])[0]], inplace=True)
 
         # Number of firms
         self.nf = self.adata.n_firms()
@@ -396,7 +390,7 @@ class FEEstimator:
         self.logger.info(f"data movers={self.res['n_movers']} stayers={self.res['n_stayers']}")
 
         # Generate 'worker_m' indicating whether a worker is a mover or a stayer
-        self.adata.loc[:, 'worker_m'] = (self.adata.groupby('i')['m'].transform('max') > 0).astype(int, copy=False)
+        self.adata.loc[:, 'worker_m'] = self.adata.get_worker_m(is_sorted=True).astype(int, copy=False)
 
         # # Prepare 'cs' column (0 if observation is first for a worker, 1 if intermediate, 2 if last for a worker)
         # worker_first_obs = (self.adata['i'].to_numpy() != np.roll(self.adata['i'].to_numpy(), 1))
@@ -408,36 +402,43 @@ class FEEstimator:
         #res['year_max'] = int(sdata['year'].max())
         #res['year_min'] = int(sdata['year'].min())
 
-    def _prep_JWM(self):
+    def _prep_matrices(self):
         '''
-        Generate J, W, and M matrices.
+        Generate J, W, Dp, Dwinv, and M matrices. Convert Y to NumPy vector.
         '''
-        ### Matrices for the cross-section
-        ## Firms
-        J = csc_matrix((np.ones(self.nn), (self.adata.index.to_numpy(), self.adata['j'].to_numpy())), shape=(self.nn, self.nf))
+        ## J (firms) ##
+        J = csc_matrix((np.ones(self.nn), (self.adata.index.to_numpy(), self.adata.loc[:, 'j'].to_numpy())), shape=(self.nn, self.nf))
+
         # Normalize one firm to 0
         J = J[:, range(self.nf - 1)]
-        self.J = J
-        ## Workers
-        W = csc_matrix((np.ones(self.nn), (self.adata.index.to_numpy(), self.adata['i'].to_numpy())), shape=(self.nn, self.nw))
-        self.W = W
-        if self.params['weighted'] and ('w' in self.adata.columns):
+
+        ## W (workers) ##
+        W = csc_matrix((np.ones(self.nn), (self.adata.index.to_numpy(), self.adata.loc[:, 'i'].to_numpy())), shape=(self.nn, self.nw))
+
+        ## Dp (weight) ##
+        if self.weighted:
             # Diagonal weight matrix
-            Dp = diags(self.adata['w'].to_numpy())
-            # Dwinv = diags(1.0 / ((W.T @ Dp @ W).diagonal())) # linalg.inv(csc_matrix(W.T @ Dp @ W))
+            Dp = diags(self.adata.loc[:, 'w'].to_numpy())
         else:
             # Diagonal weight matrix - all weight one
-            Dp = diags(np.ones(len(self.adata)))
-        Dwinv = diags(1.0 / ((W.T @ Dp @ W).diagonal()))
+            Dp = diags(np.ones(self.nn).astype(int, copy=False))
+
+        ## Dwinv ##
+        Dwinv = diags(1 / ((W.T @ Dp @ W).diagonal()))
+
+        ## M ##
+        M = J.T @ Dp @ J - J.T @ Dp @ W @ Dwinv @ W.T @ Dp @ J
+
+        ## Store matrices ##
+        self.Y = self.adata.loc[:, 'y'].to_numpy()
+        self.J = J
+        self.W = W
         self.Dp = Dp
         self.Dp_sqrt = np.sqrt(Dp)
         self.Dwinv = Dwinv
+        self.M = M
 
         self.logger.info('preparing linear solver')
-
-        # Finally create M
-        M = J.T @ Dp @ J - J.T @ Dp @ W @ Dwinv @ W.T @ Dp @ J
-        self.M = M
         self.ml = pyamg.ruge_stuben_solver(M)
 
         # Save time variable
@@ -447,15 +448,23 @@ class FEEstimator:
         '''
         Compute some early statistics.
         '''
-        fdata = self.adata.groupby('j').agg({'worker_m': 'sum', 'y': 'mean', 'i': 'count'})
-        fm, fy, fi = fdata.loc[:, 'worker_m'].to_numpy(), fdata.loc[:, 'y'].to_numpy(), fdata.loc[:, 'i'].to_numpy()
+        if self.weighted:
+            self.adata.loc[:, 'weighted_m'] = self.Dp * self.adata.loc[:, 'worker_m'].to_numpy()
+            self.adata.loc[:, 'weighted_y'] = self.Dp * self.Y
+            fdata = self.adata.groupby('j')[['weighted_m', 'weighted_y', 'w']].sum()
+            fm, fy, fi = fdata.loc[:, 'weighted_m'].to_numpy(), fdata.loc[:, 'weighted_y'].to_numpy(), fdata.loc[:, 'w'].to_numpy()
+            fy /= fi
+            self.adata.drop(['weighted_m', 'weighted_y'], axis=1, inplace=True)
+        else:
+            fdata = self.adata.groupby('j').agg({'worker_m': 'sum', 'y': 'mean', 'i': 'count'})
+            fm, fy, fi = fdata.loc[:, 'worker_m'].to_numpy(), fdata.loc[:, 'y'].to_numpy(), fdata.loc[:, 'i'].to_numpy()
         ls = np.linspace(0, 1, 11)
         self.res['mover_quantiles'] = _weighted_quantile(fm, ls, fi).tolist()
         self.res['size_quantiles'] = _weighted_quantile(fi, ls, fi).tolist()
         # self.res['movers_per_firm'] = self.adata.loc[self.adata.loc[:, 'm'] > 0, :].groupby('j')['i'].nunique().mean()
         self.res['between_firm_var'] = _weighted_var(fy, fi)
-        self.res['var_y'] = _weighted_var(self.adata.loc[:, 'y'].to_numpy(), self.Dp)
-        self.logger.info(f"total variance: {self.res['var_y']:0.4f}")
+        self.res['var_y'] = _weighted_var(self.Y, self.Dp)
+        self.logger.info(f"total variance: {self.res['var_y']:2.4f}")
 
         # extract woodcock moments using sdata and jdata
         # get averages by firms for stayers
@@ -469,75 +478,9 @@ class FEEstimator:
         #self.logger.info("[woodcock] var alpha = {}", res['woodcock_var_alpha'])
         #self.logger.info("[woodcock] var eps = {}", res['woodcock_var_eps'])
 
-    def construct_Q(self):
+    def _estimate_ols(self, rng=None):
         '''
-        Generate columns in adata necessary to construct Q.
-        '''
-        if self.params['Q'] == 'cov(alpha, psi)':
-            # Which rows to select
-            # self.adata['Jq'] = 1
-            # self.adata['Wq'] = 1
-            # Rows for csc_matrix
-            self.adata.loc[:, 'Jq_row'] = np.arange(self.nn) # self.adata['Jq'].cumsum() - 1
-            self.adata.loc[:, 'Wq_row'] = np.arange(self.nn) # self.adata['Wq'].cumsum() - 1
-            # Columns for csc_matrix
-            self.adata.loc[:, 'Jq_col'] = self.adata.loc[:, 'j']
-            self.adata.loc[:, 'Wq_col'] = self.adata.loc[:, 'i']
-
-        elif self.params['Q'] in ['cov(psi_t, psi_{t+1})', 'cov(psi_i, psi_j)']:
-            warnings.warn('These Q options are not yet implemented.')
-
-        # elif self.params['Q'] == 'cov(psi_t, psi_{t+1})':
-        #     self.adata['Jq'] = (self.adata['worker_m'] > 0) & ((self.adata['cs'] == 0) | (self.adata['cs'] == 1))
-        #     self.adata['Jq_row'] = self.adata['Jq'].cumsum() - 1
-        #     self.adata['Jq_col'] = self.adata['j']
-        #     self.adata['Wq'] = (self.adata['worker_m'] > 0) & ((self.adata['cs'] == 1) | (self.adata['cs'] == 2))
-        #     self.adata['Wq_row'] = self.adata['Wq'].cumsum() - 1
-        #     self.adata['Wq_col'] = self.adata['j']
-
-        # elif self.params['Q'] == 'cov(psi_i, psi_j)': # Code doesn't work
-        #     self.adata['Jq'] = (self.adata['worker_m'] > 0) & (self.adata['cs'] == 1)
-        #     self.adata['Jq_row'] = self.adata['j1']
-        #     self.adata['Jq_col'] = self.adata['j1']
-        #     self.adata['Wq'] = (self.adata['worker_m'] > 0) & (self.adata['cs'] == 0)
-        #     # Recall j1, j2 swapped for m==1 and cs==0
-        #     self.adata['Wq_row'] = self.adata['j2']
-        #     self.adata['Wq_col'] = self.adata['j1']
-
-    def __construct_Jq_Wq(self):
-        '''
-        Construct Jq and Wq matrices.
-
-        Returns:
-            Jq (Pandas DataFrame): left matrix for computing Q
-            Wq (Pandas DataFrame): right matrix for computing Q
-        '''
-        # FIXME this method is irrelevant at the moment
-        return self.J, self.W
-
-        # Construct Jq, Wq matrices
-        Jq = self.adata[self.adata['Jq'] == 1].reset_index(drop=True)
-        self.Yq = Jq['y']
-        nJ = len(Jq)
-        nJ_row = Jq['Jq_row'].max() + 1 # FIXME len(Jq['Jq_row'].unique())
-        nJ_col = Jq['Jq_col'].max() + 1 # FIXME len(Jq['Jq_col'].unique())
-        Jq = csc_matrix((np.ones(nJ), (Jq['Jq_row'], Jq['Jq_col'])), shape=(nJ_row, nJ_col))
-        if nJ_col == self.nf: # If looking at firms, normalize one to 0
-            Jq = Jq[:, range(self.nf - 1)]
-
-        Wq = self.adata[self.adata['Wq'] == 1].reset_index(drop=True)
-        nW = len(Wq)
-        nW_row = Wq['Wq_row'].max() + 1 # FIXME len(Wq['Wq_row'].unique())
-        nW_col = Wq['Wq_col'].max() + 1 # FIXME len(Wq['Wq_col'].unique())
-        Wq = csc_matrix((np.ones(nW), (Wq['Wq_row'], Wq['Wq_col'])), shape=(nW_row, nW_col)) # FIXME Should we use nJ because require Jq, Wq to have the same size?
-        # if nW_col == self.nf: # If looking at firms, normalize one to 0
-        #     Wq = Wq[:, range(self.nf - 1)]
-
-        return Jq, Wq
-
-    def _create_fe_solver(self, rng=None):
-        '''
-        Solve FE model.
+        Estimate fixed effects using OLS.
 
         Arguments:
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
@@ -545,27 +488,24 @@ class FEEstimator:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        self.Y = self.adata.loc[:, 'y'].to_numpy()
-
-        # try to pickle the object to see its size
-        # self.save('tmp.pkl') # FIXME should we delete these 2 lines?
-
-        self.logger.info('extracting firm effects')
+        ## Estimate psi and alpha ##
+        self.logger.info('estimating firm and worker effects')
 
         self.psi_hat, self.alpha_hat = self.__solve(self.Y)
 
+        self.res['solver_time'] = self.last_invert_time
         self.logger.info(f'solver time {self.last_invert_time:2.4f} seconds')
-        self.logger.info('expected total time {:2.4f} minutes'.format((self.ndraw_trace * (1 + self.compute_he) + self.lev_batchsize * self.params['lev_nbatches'] * self.compute_he) * self.last_invert_time / 60))
+        expected_time = (self.ndraw_trace * (1 + self.compute_he) + self.lev_batchsize * self.params['lev_nbatches'] * self.compute_he) * self.last_invert_time / 60
+        self.logger.info(f'expected total time {expected_time:2.4f} minutes')
 
+        ## Estimate residuals ##
         self.E = self.Y - self.__mult_A(self.psi_hat, self.alpha_hat)
 
-        self.res['solver_time'] = self.last_invert_time
-
-        fe_rsq = 1 - np.power(self.E, 2).mean() / np.power(self.Y, 2).mean()
+        fe_rsq = 1 - (self.Dp * (self.E ** 2)).sum() / (self.Dp * (self.Y ** 2)).sum()
         self.logger.info(f'fixed effect R-square {fe_rsq:2.4f}')
 
-        # Plug-in variance
-        self.var_e_pi = np.var(self.E)
+        ## Estimate variance of residuals ##
+        self.var_e_pi = np.var(self.E, ddof=0)
         if self.params['weighted']:
             self._compute_trace_approximation_sigma_2(rng)
             trace_approximation = np.mean(self.tr_sigma_ho_all)
@@ -574,234 +514,191 @@ class FEEstimator:
             self.var_e = (self.nn * self.var_e_pi) / (self.nn - (self.nw + self.nf - 1))
         self.logger.info(f'[ho] variance of residuals {self.var_e:2.4f}')
 
-    def _compute_trace_approximation_ho(self, rng=None):
+    def _store_ols_estimates(self):
         '''
-        Compute weighted HO trace approximation for arbitrary Q.
+        Add the estimated psi_hat and alpha_hat for each observation to the dataframe.
+        '''
+        j_vals = np.arange(self.nf)
+        i_vals = np.arange(self.nw)
+
+        # Add 0 for normalized firm
+        psi_hat_dict = dict(zip(j_vals, np.concatenate([self.psi_hat, np.array([0])])))
+        alpha_hat_dict = dict(zip(i_vals, self.alpha_hat))
+
+        # Attach columns
+        self.adata.loc[:, 'psi_hat'] = self.adata.loc[:, 'j'].map(psi_hat_dict)
+        self.adata.loc[:, 'alpha_hat'] = self.adata.loc[:, 'i'].map(alpha_hat_dict)
+
+    def _construct_Q(self):
+        '''
+        Construct Q matrix and generate related parameters.
+
+        Returns:
+            (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
+        '''
+        Q_var = self.params['Q_var']
+        Q_cov = self.params['Q_cov']
+        if Q_var is None:
+            Q_var = Q.VarPsi()
+        if Q_cov is None:
+            Q_cov = Q.CovPsiAlpha()
+        Q_params = self.adata, self.nf, self.nw, self.J, self.W, self.Dp
+        return (Q_var.get_Q(*Q_params), Q_cov.get_Ql(*Q_params), Q_cov.get_Qr(*Q_params))
+
+    def _estimate_fe(self, Q_params):
+        '''
+        Estimate plug-in (biased) FE model.
 
         Arguments:
+            Q_params (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
+        '''
+        self.logger.info('starting plug-in estimation')
+
+        Q_var, Ql_cov, Qr_cov = Q_params
+        Q_var_matrix, Q_var_psialpha, Q_var_weights = Q_var
+        Ql_cov_matrix, Ql_cov_psialpha, Q_cov_weights = Ql_cov
+        Qr_cov_matrix, Qr_cov_psialpha = Qr_cov
+
+        psialpha_dict = {
+            'psi': self.psi_hat,
+            'alpha': self.alpha_hat
+        }
+
+        self.var_fe = _weighted_var(Q_var_matrix @ psialpha_dict[Q_var_psialpha], Q_var_weights)
+        self.cov_fe = _weighted_cov(Ql_cov_matrix @ psialpha_dict[Ql_cov_psialpha], Qr_cov_matrix @ psialpha_dict[Qr_cov_psialpha], Q_cov_weights)
+
+        self.logger.info('[fe]')
+        self.logger.info(f'var_psi={self.var_fe:2.4f}')
+        self.logger.info(f"cov={self.cov_fe:2.4f} tot={self.res['var_y']:2.4f}")
+    
+    def _estimate_trace_approximation_ho(self, Q_params, rng=None):
+        '''
+        Estimate trace approximation of HO-corrected model.
+
+        Arguments:
+            Q_params (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
-        self.logger.info('Starting plug-in estimation')
-
         if rng is None:
             rng = np.random.default_rng(None)
 
-        Jq, Wq = self.__construct_Jq_Wq()
+        self.logger.info(f'starting [HO] [traces] ndraws={self.ndraw_trace}, using {self.ncore} cores')
 
-        # Compute plug-in (biased) estimators
-        self.tot_var = np.var(self.Y)
-        if 'w' in self.adata.columns:
-            self.logger.info('[weighted fe]')
-            self.var_fe = _weighted_var(Jq * self.psi_hat, self.Dp)
-            self.cov_fe = _weighted_cov(Jq * self.psi_hat, Wq * self.alpha_hat, self.Dp)
-        else:
-            self.logger.info('[fe]')
-            # Set ddof=0 is necessary, otherwise takes 1 / (N - 1) by default instead of 1 / N
-            vcv = np.cov(Jq * self.psi_hat, Wq * self.alpha_hat, ddof=0)
-            self.var_fe = vcv[0, 0]
-            self.cov_fe = vcv[0, 1]
-        self.logger.info(f'var_psi={self.var_fe:2.4f}')
-        self.logger.info(f'cov={self.cov_fe:2.4f} tot={self.tot_var:2.4f}')
+        Q_var, Ql_cov, Qr_cov = Q_params
+        Q_var_matrix, Q_var_psialpha, Q_var_weights = Q_var
+        Ql_cov_matrix, Ql_cov_psialpha, Q_cov_weights = Ql_cov
+        Qr_cov_matrix, Qr_cov_psialpha = Qr_cov
 
-        ##### Start full Trace without collapse operator ######
-        # # Begin trace approximation
-        # self.tr_var_ho_all = np.zeros(self.ndraw_trace)
-        # self.tr_cov_ho_all = np.zeros(self.ndraw_trace)
-
-        # for r in trange(self.ndraw_trace):
-        #     # Generate -1 or 1 - in this case length nn
-        #     Z = 2 * rng.binomial(1, 0.5, self.nn) - 1
-
-        #     # Compute either side of the Trace
-        #     R_psi, R_alpha = self.__solve(Z)
-
-        #     # Applying the Qcov and Qpsi implied by Jq and Wq
-        #     Rq_psi = Jq @ R_psi
-        #     Rq_alpha = Wq @ R_alpha
-
-        #     self.tr_var_ho_all[r] = np.cov(Rq_psi, Rq_psi)[0][1]
-        #     self.tr_cov_ho_all[r] = np.cov(Rq_psi, Rq_alpha)[0][1]
-
-        #     self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
-        ##### End full Trace without collapse operator ######
-
-        self.logger.info(f'Starting weighted homoskedastic trace correction ndraws={self.ndraw_trace}, using {self.ncore} cores')
-
-        # Begin trace approximation
         self.tr_var_ho_all = np.zeros(self.ndraw_trace)
         self.tr_cov_ho_all = np.zeros(self.ndraw_trace)
 
         for r in trange(self.ndraw_trace):
+            ## Computing Tr[Q @ (A'D_pA)^{-1}] ##
             # Generate -1 or 1
             Zpsi = 2 * rng.binomial(1, 0.5, self.nf - 1) - 1
             Zalpha = 2 * rng.binomial(1, 0.5, self.nw) - 1
+            Z_dict = {
+                'psi': Zpsi,
+                'alpha': Zalpha
+            }
 
-            R1 = Jq @ Zpsi
+            # Compute (A'D_pA)^{-1} @ Z
             psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
-            # Trace correction - var(psi)
-            R2_psi = Jq @ psi1
-            self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
-            # Trace correction - cov(psi, alpha)
-            R2_alpha = Wq @ alpha1
-            self.tr_cov_ho_all[r] = np.cov(R1, R2_alpha)[0][1]
+            AAinv_dict = {
+                'psi': psi1,
+                'alpha': alpha1
+            }
+            del Zpsi, Zalpha, psi1, alpha1
 
-            self.logger.debug(f'homoskedastic [traces] step {r}/{self.ndraw_trace} done.')
+            ## Trace correction - variance ##
+            # Left term of Q matrix
+            L_var = Z_dict[Q_var_psialpha] @ Q_var_matrix.T
+            # Right term of Q matrix
+            R_var = Q_var_matrix @ AAinv_dict[Q_var_psialpha]
+            self.tr_var_ho_all[r] = np.cov(L_var, R_var, ddof=0)[0][1]
+            del L_var, R_var
+            ## Trace correction - covariance ##
+            # Left term of Q matrix
+            L_cov = Z_dict[Ql_cov_psialpha] @ Ql_cov_matrix.T
+            # Right term of Q matrix
+            R_cov = Qr_cov_matrix @ AAinv_dict[Qr_cov_psialpha]
+            self.tr_cov_ho_all[r] = np.cov(L_cov, R_cov, ddof=0)[0][1]
+            del L_cov, R_cov, Z_dict, AAinv_dict
 
-    # def __compute_trace_approximation_fe(self, rng=np.random.default_rng(None)):
-    #     '''
-    #     Compute FE trace approximation for arbitrary Q.
+            self.logger.debug(f'[HO] [traces] step {r + 1}/{self.ndraw_trace} done')
 
-    #     Arguments:
-    #         rng (np.random.Generator): NumPy random number generator
-    #     '''
-    #     self.logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
-
-    #     Jq, Wq = self.__construct_Jq_Wq()
-
-    #     # Compute some stats
-    #     # FIXME Need to figure out when this section can be run
-    #     self.tot_var = np.var(self.Y)
-    #     self.logger.info('[fe]')
-    #     try:
-    #         # print('psi', self.psi_hat)
-    #         self.var_fe = np.var(Jq * self.psi_hat)
-    #         self.logger.info('var_psi={:2.4f}'.format(self.var_fe))
-    #     except ValueError: # If dimension mismatch
-    #         pass
-    #     try:
-    #         self.cov_fe = np.cov(Jq * self.psi_hat, Wq * self.alpha_hat)[0][1]
-    #         self.logger.info('cov={:2.4f} tot={:2.4f}'.format(self.cov_fe, self.tot_var))
-    #     except ValueError: # If dimension mismatch
-    #         pass
-    #     # FIXME Section ends here
-
-    #     # Begin trace approximation
-    #     self.tr_var_ho_all = np.zeros(self.ndraw_trace)
-    #     self.tr_cov_ho_all = np.zeros(self.ndraw_trace)
-
-    #     for r in trange(self.ndraw_trace):
-    #         # Generate -1 or 1
-    #         Zpsi = 2 * rng.binomial(1, 0.5, self.nf - 1) - 1
-    #         Zalpha = 2 * rng.binomial(1, 0.5, self.nw) - 1
-
-    #         R1 = Jq * Zpsi
-    #         psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
-    #         try:
-    #             R2_psi = Jq * psi1
-    #             # Trace correction
-    #             self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
-    #         except ValueError: # If dimension mismatch
-    #             try:
-    #                 del self.tr_var_ho_all
-    #             except AttributeError: # Once deleted
-    #                 pass
-    #         try:
-    #             R2_alpha = Wq * alpha1
-    #             # Trace correction
-    #             self.tr_cov_ho_all[r] = np.cov(R1, R2_alpha)[0][1]
-    #         except ValueError: # If dimension mismatch
-    #             try:
-    #                 del self.tr_cov_ho_all
-    #             except AttributeError: # Once deleted
-    #                 pass
-
-    #         self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
-
-    # def compute_trace_approximation_fe(self, rng=np.random.default_rng(None)):
-    #     '''
-    #     Purpose:
-    #         Compute FE trace approximation.
-
-    #     Arguments:
-    #         rng (np.random.Generator): NumPy random number generator
-    #     '''
-    #     self.logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
-    #     self.tr_var_ho_all = np.zeros(self.ndraw_trace)
-    #     self.tr_cov_ho_all = np.zeros(self.ndraw_trace)
-
-    #     for r in trange(self.ndraw_trace):
-    #         # Generate -1 or 1
-    #         Zpsi = 2 * rng.binomial(1, 0.5, self.nf - 1) - 1
-    #         Zalpha = 2 * rng.binomial(1, 0.5, self.nw) - 1
-
-    #         R1 = self.Jq * Zpsi
-    #         psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
-    #         R2_psi = self.Jq * psi1
-    #         R2_alpha = self.Wq * alpha1
-
-    #         # Trace corrections
-    #         self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
-    #         self.tr_cov_ho_all[r] = np.cov(R1, R2_alpha)[0][1]
-
-    #         self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
-
-    # def compute_trace_approximation_j1j2(self):
-    #     '''
-    #     Purpose:
-    #         covariance between psi before and after the move among movers
-    #     '''
-    #     self.logger.info('Starting FE trace correction ndraws={}, using {} cores'.format(self.ndraw_trace, self.ncore))
-    #     self.tr_var_ho_all = np.zeros(self.ndraw_trace)
-
-    #     for r in trange(self.ndraw_trace):
-    #         # Generate -1 or 1
-    #         Zpsi = 2 * rng.binomial(1, 0.5, self.nf - 1) - 1
-    #         Zalpha = 2 * rng.binomial(1, 0.5, self.nw) - 1
-
-    #         R1 = self.J1 * Zpsi
-    #         psi1, _ = self.__mult_AAinv(Zpsi, Zalpha)
-    #         R2_psi = self.J2 * psi1
-
-    #         # Trace corrections
-    #         self.tr_var_ho_all[r] = np.cov(R1, R2_psi)[0][1]
-    #         self.logger.debug('FE [traces] step {}/{} done.'.format(r, self.ndraw_trace))
-
-    def _compute_trace_approximation_he(self, rng=None):
+    def _estimate_trace_approximation_he(self, Q_params, rng=None):
         '''
-        Compute heteroskedastic trace approximation.
+        Estimate trace approximation of HE-corrected model.
 
         Arguments:
+            Q_params (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
-        self.logger.info(f'Starting heteroskedastic trace correction ndraws={self.ndraw_trace}, using {self.ncore} cores')
         if rng is None:
             rng = np.random.default_rng(None)
+
+        self.logger.info(f'starting [HE] [traces] ndraws={self.ndraw_trace}, using {self.ncore} cores')
+
+        Q_var, Ql_cov, Qr_cov = Q_params
+        Q_var_matrix, Q_var_psialpha, Q_var_weights = Q_var
+        Ql_cov_matrix, Ql_cov_psialpha, Q_cov_weights = Ql_cov
+        Qr_cov_matrix, Qr_cov_psialpha = Qr_cov
 
         self.tr_var_he_all = np.zeros(self.ndraw_trace)
         self.tr_cov_he_all = np.zeros(self.ndraw_trace)
 
-        Jq, Wq = self.__construct_Jq_Wq()
-
         for r in trange(self.ndraw_trace):
+            ## Computing Tr[Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1}] ##
             # Generate -1 or 1
             Zpsi = 2 * rng.binomial(1, 0.5, self.nf - 1) - 1
             Zalpha = 2 * rng.binomial(1, 0.5, self.nw) - 1
+            Z_dict = {
+                'psi': Zpsi,
+                'alpha': Zalpha
+            }
 
-            psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
-            R2_psi = Jq * psi1
-            R2_alpha = Wq * alpha1
+            # Compute (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1} @ Z
+            psi1, alpha1 = self.__mult_AAinv( # (A'D_pA)^{-1} @
+                *self.__mult_Atranspose( # (D_pA)' @
+                    self.Sii * self.__mult_A( # Omega @ (D_pA) @
+                        *self.__mult_AAinv( # (A'D_pA)^{-1} @ Z
+                            Zpsi, Zalpha, weighted=True
+                        ), weighted=True
+                    ), weighted=True
+                ), weighted=True
+            )
+            AAinv_dict = {
+                'psi': psi1,
+                'alpha': alpha1
+            }
+            del Zpsi, Zalpha, psi1, alpha1
 
-            psi2, alpha2 = self.__mult_AAinv(*self.__mult_Atranspose(self.Sii * self.__mult_A(Zpsi, Zalpha, weighted=True)))
-            R3_psi = Jq * psi2
+            ## Trace correction - variance ##
+            # Left term of Q matrix
+            L_var = Z_dict[Q_var_psialpha] @ Q_var_matrix.T
+            # Right term of Q matrix
+            R_var = Q_var_matrix @ AAinv_dict[Q_var_psialpha]
+            self.tr_var_he_all[r] = np.cov(L_var, R_var, ddof=0)[0][1]
+            del L_var, R_var
+            ## Trace correction - covariance ##
+            # Left term of Q matrix
+            L_cov = Z_dict[Ql_cov_psialpha] @ Ql_cov_matrix.T
+            # Right term of Q matrix
+            R_cov = Qr_cov_matrix @ AAinv_dict[Qr_cov_psialpha]
+            self.tr_cov_he_all[r] = np.cov(L_cov, R_cov, ddof=0)[0][1]
+            del L_cov, R_cov, Z_dict, AAinv_dict
 
-            # Trace corrections
-            self.tr_var_he_all[r] = np.cov(R2_psi, R3_psi)[0][1]
-            self.tr_cov_he_all[r] = np.cov(R2_alpha, R3_psi)[0][1]
-
-            self.logger.debug(f'heteroskedastic [traces] step {r}/{self.ndraw_trace} done.')
+            self.logger.debug(f'[HE] [traces] step {r + 1}/{self.ndraw_trace} done')
 
     def _compute_trace_approximation_sigma_2(self, rng=None):
         '''
-        Compute weighted sigma^2 trace approximation.
-
-        Solving Tr[A'A(A'DA)^{-1}] = Tr[A(A'DA)^{-1}A']. This is for the case where E[epsilon epsilon'|A] = sigma^2 * D^{-1}.
-        
-        Commented out, complex case: solving Tr[A(A'DA)^{-1}A'DD'A(A'DA)^{-1}A'] = Tr[D'A(A'DA)^{-1}A'A(A'DA)^{-1}A'D] by multiplying the right half by Z, then transposing that to get the left half.
+        Estimate trace approximation of sigma^2.
 
         Arguments:
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
-        self.logger.info(f'Starting weighted sigma^2 trace correction ndraws={self.ndraw_trace}, using {self.ncore} cores')
+        self.logger.info(f'starting [sigma^2] [traces] ndraws={self.ndraw_trace}, using {self.ncore} cores')
 
         if rng is None:
             rng = np.random.default_rng(None)
@@ -810,31 +707,25 @@ class FEEstimator:
         self.tr_sigma_ho_all = np.zeros(self.ndraw_trace)
 
         for r in trange(self.ndraw_trace):
-            # Generate -1 or 1 - in this case length nn
+            ## Computing Tr[A @ (A'D_pA)^{-1} @ A'] ##
+            # Generate -1 or 1
             Z = 2 * rng.binomial(1, 0.5, self.nn) - 1
 
-            # Compute Trace
-            R_psi, R_alpha = self.__solve(Z, Dp2=False)
-            R_y = self.__mult_A(R_psi, R_alpha)
+            # Compute Z.T @ A @ (A'D_pA)^{-1} @ A' @ Z
+            self.tr_sigma_ho_all[r] = Z.T @ self.__mult_A( # Z.T @ A @
+                *self.__solve(Z, Dp1=True, Dp2=False), weighted=False # (A'D_pA)^{-1} @ A' @ Z
+            )
 
-            self.tr_sigma_ho_all[r] = Z.T @ R_y
-
-            # Trace when not using collapse operator:
-            # # Compute either side of the Trace
-            # R_y = self.__proj(Z)
-
-            # self.tr_sigma_ho_all[r] = np.sum(R_y ** 2)
-
-            self.logger.debug(f'sigma^2 [traces] step {r}/{self.ndraw_trace} done.')
+            self.logger.debug(f'[sigma^2] [traces] step {r}/{self.ndraw_trace} done.')
 
     def _collect_res(self):
         '''
         Collect all results.
         '''
-        self.res['tot_var'] = self.tot_var
         self.res['eps_var_ho'] = self.var_e
         self.res['eps_var_fe'] = np.var(self.E)
-        # self.res['var_y'] = _weighted_var(self.Yq, self.Dp)
+        # Already computed, this just reorders the dictionary
+        self.res['var_y'] = self.res['var_y']
 
         ## FE results ##
         # Plug-in variance
@@ -847,10 +738,12 @@ class FEEstimator:
         ## Homoskedastic results ##
         # Trace approximation: variance
         self.res['tr_var_ho'] = np.mean(self.tr_var_ho_all)
-        self.logger.info(f"[ho] VAR tr={self.res['tr_var_ho']:2.4f} (sd={np.std(self.tr_var_ho_all):2.4e})")
+        self.res['tr_var_ho_sd'] = np.std(self.tr_var_ho_all)
+        self.logger.info(f"[ho] VAR tr={self.res['tr_var_ho']:2.4f} (sd={self.res['tr_var_ho_sd']:2.4e})")
         # Trace approximation: covariance
         self.res['tr_cov_ho'] = np.mean(self.tr_cov_ho_all)
-        self.logger.info(f"[ho] COV tr={self.res['tr_cov_ho']:2.4f} (sd={np.std(self.tr_cov_ho_all):2.4e})")
+        self.res['tr_cov_ho_sd'] = np.std(self.tr_cov_ho_all)
+        self.logger.info(f"[ho] COV tr={self.res['tr_cov_ho']:2.4f} (sd={self.res['tr_cov_ho_sd']:2.4e})")
         # Bias-corrected variance
         self.res['var_ho'] = self.var_fe - self.var_e * self.res['tr_var_ho']
         self.logger.info(f"[ho] VAR bc={self.res['var_ho']:2.4f}")
@@ -863,22 +756,23 @@ class FEEstimator:
 
         ## Heteroskedastic results ##
         if self.compute_he:
-            ## Already computed, this just reorders the dictionary
+            ## Already computed, this just reorders the dictionary ##
             self.res['eps_var_he'] = self.res['eps_var_he']
             self.res['min_lev'] = self.res['min_lev']
             self.res['max_lev'] = self.res['max_lev']
-            ## New results
+            ## New results ##
+            # Trace approximation: variance
             self.res['tr_var_he'] = np.mean(self.tr_var_he_all)
-            self.res['tr_cov_he'] = np.mean(self.tr_cov_he_all)
-            self.res['tr_var_ho_sd'] = np.std(self.tr_var_ho_all)
-            self.res['tr_cov_ho_sd'] = np.std(self.tr_cov_ho_all)
             self.res['tr_var_he_sd'] = np.std(self.tr_var_he_all)
+            self.logger.info(f"[he] VAR tr={self.res['tr_var_he']:2.4f} (sd={self.res['tr_var_he_sd']:2.4e})")
+            # Trace approximation: covariance
+            self.res['tr_cov_he'] = np.mean(self.tr_cov_he_all)
             self.res['tr_cov_he_sd'] = np.std(self.tr_cov_he_all)
-            self.logger.info(f"[he] VAR tr={self.res['tr_var_he']:2.4f} (sd={np.std(self.tr_var_he_all):2.4e})")
-            self.logger.info(f"[he] COV tr={self.res['tr_cov_he']:2.4f} (sd={np.std(self.tr_cov_he_all):2.4e})")
-            # ----- FINAL ------
+            self.logger.info(f"[he] COV tr={self.res['tr_cov_he']:2.4f} (sd={self.res['tr_cov_he_sd']:2.4e})")
+            # Bias-corrected variance
             self.res['var_he'] = self.var_fe - self.res['tr_var_he']
             self.logger.info(f"[he] VAR fe={self.var_fe:2.4f} bc={self.res['var_he']:2.4f}")
+            # Bias-corrected covariance
             self.res['cov_he'] = self.cov_fe - self.res['tr_cov_he']
             self.logger.info(f"[he] COV fe={self.cov_fe:2.4f} bc={self.res['cov_he']:2.4f}")
 
@@ -902,21 +796,6 @@ class FEEstimator:
         else:
             self.logger.info('outputfile=None, so results not saved')
 
-    def _get_fe_estimates(self):
-        '''
-        Add the estimated psi_hats and alpha_hats to the dataframe.
-        '''
-        j_vals = np.arange(self.nf)
-        i_vals = np.arange(self.nw)
-
-        # Add 0 for normalized firm
-        psi_hat_dict = dict(zip(j_vals, np.concatenate([self.psi_hat, np.array([0])])))
-        alpha_hat_dict = dict(zip(i_vals, self.alpha_hat))
-
-        # Attach columns
-        self.adata.loc[:, 'psi_hat'] = self.adata.loc[:, 'j'].map(psi_hat_dict)
-        self.adata.loc[:, 'alpha_hat'] = self.adata.loc[:, 'i'].map(alpha_hat_dict)
-
     def __solve(self, Y, Dp1=True, Dp2=True):
         '''
         Compute (A' * Dp1 * A)^{-1} * A' * Dp2 * Y, the least squares estimate of Y = A * [psi_hat' alpha_hat']', where A = [J W] (J is firm indicators and W is worker indicators) and Dp gives weights.
@@ -930,9 +809,9 @@ class FEEstimator:
             (tuple of CSC Matrices): (estimated firm fixed effects, estimated worker fixed effects)
         '''
         # This gives A' * Dp2 * Y
-        J_transpose_Y, W_transpose_Y = self.__mult_Atranspose(Y, Dp2)
+        J_transpose_Y, W_transpose_Y = self.__mult_Atranspose(Y, weighted=Dp2)
         # This gives (A' * Dp1 * A)^{-1} * A' * Dp2 * Y
-        psi_hat, alpha_hat = self.__mult_AAinv(J_transpose_Y, W_transpose_Y, Dp1)
+        psi_hat, alpha_hat = self.__mult_AAinv(J_transpose_Y, W_transpose_Y, weighted=Dp1)
 
         return psi_hat, alpha_hat
 
@@ -1221,8 +1100,7 @@ class FEEstimator:
 
     def _drop_cols(self):
         '''
-        Drop irrelevant columns (['worker_m', 'Jq', 'Wq', 'Jq_row', 'Wq_row', 'Jq_col', 'Wq_col']).
+        Drop irrelevant column 'worker_m'.
         '''
-        for col in ['worker_m', 'Jq', 'Wq', 'Jq_row', 'Wq_row', 'Jq_col', 'Wq_col']:
-            if col in self.adata.columns:
-                self.adata.drop(col, axis=1, inplace=True)
+        if 'worker_m' in self.adata.columns:
+            self.adata.drop('worker_m', axis=1, inplace=True)

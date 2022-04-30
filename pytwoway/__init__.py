@@ -1,5 +1,6 @@
 
 from .util import jitter_scatter # melt, jitter_scatter
+from .Q import Q
 from .constraints import constraints
 from .fe import fe_params, FEEstimator
 from .cre import cre_params, CREEstimator

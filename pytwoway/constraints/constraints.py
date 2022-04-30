@@ -9,7 +9,6 @@ All classes are for solving a quadratic programming model of the following form:
 Note that parameters are ordered with precedence of (time, worker type, firm type). As an example, if nt=2, nl=2, and nk=3, then the parameters will be ordered as follows:
     (0, 0, 0), (0, 0, 1), (0, 0, 2), (0, 1, 0), (0, 1, 1), (0, 1, 2), (1, 0, 0), (1, 0, 1), (1, 0, 2), (1, 1, 0), (1, 1, 1), (1, 1, 2)
 '''
-
 import numpy as np
 from qpsolvers import solve_qp
 from bipartitepandas.util import to_list
