@@ -161,11 +161,11 @@ class CREEstimator:
         Arguments:
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
-        self.logger.info('----- STARTING CRE ESTIMATION -----')
-        self.start_time = time.time()
-
         if rng is None:
             rng = np.random.default_rng(None)
+
+        self.logger.info('----- STARTING CRE ESTIMATION -----')
+        self.start_time = time.time()
 
         # Begin cleaning and analysis
         self.__prep_vars() # Prepare data

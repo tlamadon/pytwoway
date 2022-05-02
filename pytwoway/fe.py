@@ -54,6 +54,14 @@ _fe_params_default = ParamsDict({
         '''
             (default=False) If True, estimate only fixed effects and not variances.
         ''', None),
+    'attach_fe_estimates': (False, 'type', bool,
+        '''
+            (default=False) If True, attach the estimated psi_hat and alpha_hat as columns to the input dataframe.
+        ''', None),
+    'he': (False, 'type', bool,
+        '''
+            (default=False) If True, estimate heteroskedastic correction.
+        ''', None),
     'Q_var': (None, 'type_none', (Q.VarPsi, Q.VarAlpha),
         '''
             (default=None) Which Q matrix to use when estimating variance term; None is equivalent to tw.Q.VarPsi().
@@ -62,21 +70,33 @@ _fe_params_default = ParamsDict({
         '''
             (default=None) Which Q matrix to use when estimating covariance term; None is equivalent to tw.Q.CovPsiAlpha().
         ''', None),
-    'ndraw_trace': (5, 'type_constrained', (int, _gteq1),
+    'ndraw_trace_sigma_2': (5, 'type_constrained', (int, _gteq1),
         '''
-            (default=5) Number of draws to use in trace approximations.
+            (default=5) Number of draws to use when estimating trace approximation for sigma^2.
         ''', '>= 1'),
-    # 'trace_analytical': (False, 'type', bool, # FIXME not used
-    #     '''
-    #         (default=False) If True, estimate trace analytically.
-    #     ''', None)
-    'he': (False, 'type', bool,
+    'ndraw_trace_ho': (5, 'type_constrained', (int, _gteq1),
         '''
-            (default=False) If True, estimate heteroskedastic correction.
+            (default=5) Number of draws to use when estimating trace approximation for homoskedastic correction.
+        ''', '>= 1'),
+    'ndraw_trace_he': (5, 'type_constrained', (int, _gteq1),
+        '''
+            (default=5) Number of draws to use when estimating trace approximation for heteroskedastic correction.
+        ''', '>= 1'),
+    'exact_trace_sigma_2': (False, 'type', bool,
+        '''
+            (default=False) If True, estimate trace analytically for sigma^2; if False, use a trace approximation.
         ''', None),
-    'he_analytical': (False, 'type', bool,
+    'exact_trace_ho': (False, 'type', bool,
         '''
-            (default=False) If True, estimate heteroskedastic correction using analytical formula; if False, use JL approxmation.
+            (default=False) If True, estimate trace analytically for homoskedastic correction; if False, use a trace approximation.
+        ''', None),
+    'exact_trace_he': (False, 'type', bool,
+        '''
+            (default=False) If True, estimate trace analytically for heteroskedastic correction; if False, use a trace approximation.
+        ''', None),
+    'exact_lev_he': (False, 'type', bool,
+        '''
+            (default=False) If True, estimate leverages analytically for heteroskedastic correction; if False, use the JL approximation.
         ''', None),
     'lev_batchsize': (50, 'type_constrained', (int, _gteq1),
         '''
@@ -104,7 +124,7 @@ _fe_params_default = ParamsDict({
         ''', None),
     # 'con': (False, 'type', bool, # FIXME not used
     #     '''
-    #         (default=False) Computes the smallest eigen values, this is the filepath where these results are saved.
+    #         (default=False) Computes the smallest eigenvalues, this is the filepath where these results are saved.
     #     ''', None),
     'outputfile': (None, 'type_none', str,
         '''
@@ -165,37 +185,41 @@ def _weighted_quantile(values, quantiles, sample_weight=None, values_sorted=Fals
 
     return np.interp(quantiles, weighted_quantiles, values)
 
-def _weighted_var(v, w):
+def _weighted_var(v, w, dof=0):
     '''
     Compute weighted variance.
 
     Arguments:
         v (NumPy Array): vector to weight
         w (NumPy Array): weights
+        dof (int): degrees of freedom
 
     Returns:
         v0 (NumPy Array): weighted variance
     '''
     m0 = np.sum(w * v) / np.sum(w)
-    v0 = np.sum(w * (v - m0) ** 2) / np.sum(w)
+    v0 = np.sum(w * (v - m0) ** 2) / (np.sum(w) - dof)
 
     return v0
 
-def _weighted_cov(v1, v2, w):
+def _weighted_cov(v1, v2, w1, w2, dof=0):
     '''
     Compute weighted covariance.
 
     Arguments:
         v1 (NumPy Array): vector to weight
         v2 (NumPy Array): vector to weight
-        w (NumPy Array): weights
+        w1 (NumPy Array): weights for v1
+        w2 (NumPy Array): weights for v2
+        dof (int): degrees of freedom
 
     Returns:
         v0 (NumPy Array): weighted variance
     '''
-    m1 = np.sum(w * v1) / np.sum(w)
-    m2 = np.sum(w * v2) / np.sum(w)
-    v0 = np.sum(w * (v1 - m1) * (v2 - m2)) / np.sum(w)
+    m1 = np.sum(w1 * v1) / np.sum(w1)
+    m2 = np.sum(w2 * v2) / np.sum(w2)
+    w3 = np.sqrt(w1 * w2)
+    v0 = np.sum(w3 * (v1 - m1) * (v2 - m2)) / (np.sum(w3) - dof)
 
     return v0
 
@@ -246,18 +270,23 @@ class FEEstimator:
         self.ncore = params['ncore']
         # Number of draws to compute leverage for heteroskedastic correction
         self.lev_batchsize = params['lev_batchsize']
-        # Number of draws to use in trace approximations
-        self.ndraw_trace = params['ndraw_trace']
+        # Number of draws to use in sigma^2 trace approximation
+        self.ndraw_trace_sigma_2 = params['ndraw_trace_sigma_2']
+        # Number of draws to use in homoskedastic trace approximation
+        self.ndraw_trace_ho = params['ndraw_trace_ho']
+        # Number of draws to use in heteroskedastic trace approximation
+        self.ndraw_trace_he = params['ndraw_trace_he']
         # Whether to compute heteroskedastic correction
         self.compute_he = params['he']
         # Whether data is weighted
         self.weighted = (params['weighted'] and ('w' in data.columns))
 
-
         ## Store some parameters in results dictionary ##
         self.res['cores'] = self.ncore
         self.res['ndp'] = self.lev_batchsize
-        self.res['ndt'] = self.ndraw_trace
+        self.res['ndraw_trace_sigma_2'] = self.ndraw_trace_sigma_2
+        self.res['ndraw_trace_ho'] = self.ndraw_trace_ho
+        self.res['ndraw_trace_he'] = self.ndraw_trace_he
 
         # self.logger.info('FEEstimator object initialized')
 
@@ -278,7 +307,7 @@ class FEEstimator:
         # Need to recreate the simple model and the search representation
         # Make d the attribute dictionary
         self.__dict__ = d
-        self.ml = pyamg.ruge_stuben_solver(self.M)
+        self.ml = pyamg.ruge_stuben_solver(self.Minv)
 
     @staticmethod
     def __load(filename):
@@ -313,8 +342,11 @@ class FEEstimator:
         Arguments:
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
         self.logger.info('----- STARTING FE ESTIMATION -----')
-        self.start_time = time.time()
+        start_time = time.time()
 
         ## Begin cleaning and analysis #
         # Store commonly use variables
@@ -325,47 +357,82 @@ class FEEstimator:
         self._compute_early_stats()
 
         if self.params['statsonly']:
-            ## Estimate basic statistics ##
+            ## Compute basic statistics ##
             self.logger.info('statsonly=True, so we skip the full estimation')
 
         else:
             ## Estimate full model ##
-            if rng is None:
-                rng = np.random.default_rng(None)
             # Estimate fixed effects using OLS
-            self._estimate_ols(rng)
-            # Add fixed effect columns
-            self._store_ols_estimates()
-            # Q matrix
-            Q_params = self._construct_Q()
-            # Estimate plug-in (biased) FE model
-            self._estimate_fe(Q_params)
+            self._estimate_ols()
+            if self.params['attach_fe_estimates']:
+                # Attach fixed effect columns
+                self._attach_fe_estimates()
 
             if not self.params['feonly']:
+                ## Full estimation ##
+                # Estimate trace for sigma^2 (variance of residuals)
+                if self.params['exact_trace_sigma_2']:
+                    # Analytical trace
+                    self._construct_AAinv_components_full()
+                    self._estimate_exact_trace_sigma_2()
+                else:
+                    # Approximate trace
+                    self._estimate_approximate_trace_sigma_2(rng)
+                # Estimate sigma^2 (variance of residuals)
+                self._estimate_sigma_2()
+                # Construct Q matrix
+                Q_params = self._construct_Q()
+                # Estimate plug-in (biased) FE model
+                self._estimate_fe(Q_params)
+
                 ## HO/HE corrections ##
-                # Estimate HO correction
-                self._estimate_trace_approximation_ho(Q_params, rng)
+                # Estimate trace for HO correction
+                if self.params['exact_trace_ho']:
+                    # Analytical trace
+                    if not self.params['exact_trace_sigma_2']:
+                        self._construct_AAinv_components_full()
+                    self._estimate_exact_trace_ho(Q_params)
+                else:
+                    # Approximate trace
+                    self._estimate_approximate_trace_ho(Q_params, rng)
 
                 if self.compute_he:
                     ## HE correction ##
-                    # Estimate Pii/Sii for HE correction
-                    self._compute_leverages_Pii(rng)
-                    # Estimate HE correction
-                    self._estimate_trace_approximation_he(Q_params, rng)
+                    if (self.params['exact_lev_he'] or self.params['exact_trace_he']) and not (self.params['exact_trace_sigma_2'] or self.params['exact_trace_ho']):
+                        self._construct_AAinv_components_full()
+                    # Estimate leverages for HE correction
+                    if len(self.params['levfile']) > 0:
+                        # Precomputed leverages
+                        Pii = self._extract_precomputed_leverages()
+                    elif self.params['exact_lev_he']:
+                        # Analytical leverages
+                        Pii = self._estimate_exact_leverages()
+                    else:
+                        # Approximate leverages
+                        Pii = self._estimate_approximate_leverages(rng)
+                    # Estimate Sii (sigma^2) for HE correction
+                    self._estimate_Sii_he(Pii)
+                    del Pii
+                    # Estimate trace for HE correction
+                    if self.params['exact_trace_he']:
+                        # Analytical trace
+                        self._estimate_exact_trace_he(Q_params)
+                    else:
+                        # Approximate trace
+                        self._estimate_approximate_trace_he(Q_params, rng)
 
                 # Collect all results
                 self._collect_res()
 
-        end_time = time.time()
+        # Drop 'worker_m' column
+        self.adata.drop('worker_m', axis=1, inplace=True)
 
-        self.res['total_time'] = end_time - self.start_time
-        del self.start_time
+        # Total estimation time
+        end_time = time.time()
+        self.res['total_time'] = end_time - start_time
 
         # Save results to json
         self._save_res()
-
-        # Drop irrelevant columns
-        self._drop_cols()
 
         self.logger.info('----- DONE WITH FE ESTIMATION -----')
 
@@ -426,8 +493,8 @@ class FEEstimator:
         ## Dwinv ##
         Dwinv = diags(1 / ((W.T @ Dp @ W).diagonal()))
 
-        ## M ##
-        M = J.T @ Dp @ J - J.T @ Dp @ W @ Dwinv @ W.T @ Dp @ J
+        ## Minv ##
+        Minv = J.T @ Dp @ J - J.T @ Dp @ W @ Dwinv @ W.T @ Dp @ J
 
         ## Store matrices ##
         self.Y = self.adata.loc[:, 'y'].to_numpy()
@@ -436,10 +503,10 @@ class FEEstimator:
         self.Dp = Dp
         self.Dp_sqrt = np.sqrt(Dp)
         self.Dwinv = Dwinv
-        self.M = M
+        self.Minv = Minv
 
         self.logger.info('preparing linear solver')
-        self.ml = pyamg.ruge_stuben_solver(M)
+        self.ml = pyamg.ruge_stuben_solver(Minv)
 
         # Save time variable
         self.last_invert_time = 0
@@ -478,45 +545,26 @@ class FEEstimator:
         #self.logger.info("[woodcock] var alpha = {}", res['woodcock_var_alpha'])
         #self.logger.info("[woodcock] var eps = {}", res['woodcock_var_eps'])
 
-    def _estimate_ols(self, rng=None):
+    def _estimate_ols(self):
         '''
         Estimate fixed effects using OLS.
-
-        Arguments:
-            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
-        if rng is None:
-            rng = np.random.default_rng(None)
-
         ## Estimate psi and alpha ##
         self.logger.info('estimating firm and worker effects')
 
-        self.psi_hat, self.alpha_hat = self.__solve(self.Y)
+        self.psi_hat, self.alpha_hat = self._solve(self.Y)
 
         self.res['solver_time'] = self.last_invert_time
         self.logger.info(f'solver time {self.last_invert_time:2.4f} seconds')
-        expected_time = (self.ndraw_trace * (1 + self.compute_he) + self.lev_batchsize * self.params['lev_nbatches'] * self.compute_he) * self.last_invert_time / 60
+        n_draws_sigma_2 = self.ndraw_trace_sigma_2
+        n_draws_ho = (not self.params['feonly']) * self.ndraw_trace_ho
+        n_draws_he = (not self.params['feonly']) * self.compute_he * (self.ndraw_trace_he + self.params['lev_nbatches'] * self.lev_batchsize)
+        expected_time = (self.last_invert_time / 60) * (n_draws_sigma_2 + n_draws_ho + n_draws_he)
         self.logger.info(f'expected total time {expected_time:2.4f} minutes')
 
-        ## Estimate residuals ##
-        self.E = self.Y - self.__mult_A(self.psi_hat, self.alpha_hat)
-
-        fe_rsq = 1 - (self.Dp * (self.E ** 2)).sum() / (self.Dp * (self.Y ** 2)).sum()
-        self.logger.info(f'fixed effect R-square {fe_rsq:2.4f}')
-
-        ## Estimate variance of residuals ##
-        self.var_e_pi = np.var(self.E, ddof=0)
-        if self.params['weighted']:
-            self._compute_trace_approximation_sigma_2(rng)
-            trace_approximation = np.mean(self.tr_sigma_ho_all)
-            self.var_e = (self.nn * self.var_e_pi) / (np.sum(1 / self.Dp.data[0]) - trace_approximation)
-        else:
-            self.var_e = (self.nn * self.var_e_pi) / (self.nn - (self.nw + self.nf - 1))
-        self.logger.info(f'[ho] variance of residuals {self.var_e:2.4f}')
-
-    def _store_ols_estimates(self):
+    def _attach_fe_estimates(self):
         '''
-        Add the estimated psi_hat and alpha_hat for each observation to the dataframe.
+        Attach the estimated psi_hat and alpha_hat as columns to the input dataframe.
         '''
         j_vals = np.arange(self.nf)
         i_vals = np.arange(self.nw)
@@ -529,21 +577,68 @@ class FEEstimator:
         self.adata.loc[:, 'psi_hat'] = self.adata.loc[:, 'j'].map(psi_hat_dict)
         self.adata.loc[:, 'alpha_hat'] = self.adata.loc[:, 'i'].map(alpha_hat_dict)
 
-    def _construct_Q(self):
+    def _estimate_exact_trace_sigma_2(self):
         '''
-        Construct Q matrix and generate related parameters.
+        Estimate analytical trace of sigma^2.
+        '''
+        self.logger.info(f'[sigma^2] [analytical trace]')
 
-        Returns:
-            (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
+        # Unpack attributes
+        J, W = self.J, self.W
+        A, B, C, D = self.AA_inv_A, self.AA_inv_B, self.AA_inv_C, self.AA_inv_D
+
+        ## Compute Tr[A @ (A'D_pA)^{-1} @ A'] ##
+        self.tr_sigma_ho_all = np.trace((J @ A + W @ C) @ J.T + (J @ B + W @ D) @ W.T)
+
+        self.logger.debug(f'[sigma^2] [analytical traces] done')
+
+    def _estimate_approximate_trace_sigma_2(self, rng=None):
         '''
-        Q_var = self.params['Q_var']
-        Q_cov = self.params['Q_cov']
-        if Q_var is None:
-            Q_var = Q.VarPsi()
-        if Q_cov is None:
-            Q_cov = Q.CovPsiAlpha()
-        Q_params = self.adata, self.nf, self.nw, self.J, self.W, self.Dp
-        return (Q_var.get_Q(*Q_params), Q_cov.get_Ql(*Q_params), Q_cov.get_Qr(*Q_params))
+        Estimate trace approximation of sigma^2.
+
+        Arguments:
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+        '''
+        self.logger.info(f'[sigma^2] [approximate trace] ndraws={self.ndraw_trace_sigma_2}')
+
+        if rng is None:
+            rng = np.random.default_rng(None)
+
+        # Begin trace approximation
+        self.tr_sigma_ho_all = np.zeros(self.ndraw_trace_sigma_2)
+
+        for r in trange(self.ndraw_trace_sigma_2):
+            ## Compute Tr[A @ (A'D_pA)^{-1} @ A'] ##
+            # Generate -1 or 1
+            Z = 2 * rng.binomial(1, 0.5, self.nn) - 1
+
+            # Compute Z.T @ A @ (A'D_pA)^{-1} @ A' @ Z
+            self.tr_sigma_ho_all[r] = Z.T @ self._mult_A( # Z.T @ A @
+                *self._solve(Z, Dp1=True, Dp2=False), weighted=False # (A'D_pA)^{-1} @ A' @ Z
+            )
+
+            self.logger.debug(f'[sigma^2] [approximate trace] step {r}/{self.ndraw_trace_sigma_2} done')
+
+    def _estimate_sigma_2(self):
+        '''
+        Estimate residuals and sigma^2 (variance of residuals).
+        '''
+        ## Estimate residuals ##
+        self.E = self.Y - self._mult_A(self.psi_hat, self.alpha_hat)
+
+        fe_rsq = 1 - (self.Dp * (self.E ** 2)).sum() / (self.Dp * (self.Y ** 2)).sum()
+        self.logger.info(f'fixed effect R-square {fe_rsq:2.4f}')
+
+        ## Estimate variance of residuals ##
+        # Plug-in
+        self.sigma_2_pi = np.var(self.E, ddof=0)
+        # Bias-corrected
+        if self.weighted:
+            trace_approximation = np.mean(self.tr_sigma_ho_all)
+            self.sigma_2_ho = (self.nn * self.sigma_2_pi) / (np.sum(1 / self.Dp.data[0]) - trace_approximation)
+        else:
+            self.sigma_2_ho = (self.nn * self.sigma_2_pi) / (self.nn - (self.nw + self.nf - 1))
+        self.logger.info(f'[ho] variance of residuals {self.sigma_2_ho:2.4f}')
 
     def _estimate_fe(self, Q_params):
         '''
@@ -555,23 +650,73 @@ class FEEstimator:
         self.logger.info('starting plug-in estimation')
 
         Q_var, Ql_cov, Qr_cov = Q_params
-        Q_var_matrix, Q_var_psialpha, Q_var_weights = Q_var
-        Ql_cov_matrix, Ql_cov_psialpha, Q_cov_weights = Ql_cov
-        Qr_cov_matrix, Qr_cov_psialpha = Qr_cov
+        Q_var_matrix, Q_var_psialpha, Q_var_weights, Q_var_dof = Q_var
+        Ql_cov_matrix, Ql_cov_psialpha, Ql_cov_weights, Q_cov_dof = Ql_cov
+        Qr_cov_matrix, Qr_cov_psialpha, Qr_cov_weights = Qr_cov
 
         psialpha_dict = {
             'psi': self.psi_hat,
             'alpha': self.alpha_hat
         }
 
-        self.var_fe = _weighted_var(Q_var_matrix @ psialpha_dict[Q_var_psialpha], Q_var_weights)
-        self.cov_fe = _weighted_cov(Ql_cov_matrix @ psialpha_dict[Ql_cov_psialpha], Qr_cov_matrix @ psialpha_dict[Qr_cov_psialpha], Q_cov_weights)
+        self.var_fe = _weighted_var(Q_var_matrix @ psialpha_dict[Q_var_psialpha], Q_var_weights, dof=Q_var_dof)
+        self.cov_fe = _weighted_cov(Ql_cov_matrix @ psialpha_dict[Ql_cov_psialpha], Qr_cov_matrix @ psialpha_dict[Qr_cov_psialpha], Ql_cov_weights, Qr_cov_weights, dof=Q_cov_dof)
 
         self.logger.info('[fe]')
         self.logger.info(f'var_psi={self.var_fe:2.4f}')
         self.logger.info(f"cov={self.cov_fe:2.4f} tot={self.res['var_y']:2.4f}")
-    
-    def _estimate_trace_approximation_ho(self, Q_params, rng=None):
+
+    def _estimate_exact_trace_ho(self, Q_params):
+        '''
+        Estimate analytical trace of HO-corrected model.
+
+        Arguments:
+            Q_params (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
+        '''
+        self.logger.info(f'[HO] [analytical trace]')
+
+        Q_var, Ql_cov, Qr_cov = Q_params
+        Q_var_matrix, Q_var_psialpha, Q_var_weights, Q_var_dof = Q_var
+        Ql_cov_matrix, Ql_cov_psialpha, Ql_cov_weights, Q_cov_dof = Ql_cov
+        Qr_cov_matrix, Qr_cov_psialpha, Qr_cov_weights = Qr_cov
+        Q_var_weights_sq = np.sqrt(Q_var_weights)
+        Ql_cov_weights_sq = np.sqrt(Ql_cov_weights)
+        Qr_cov_weights_sq = np.sqrt(Qr_cov_weights)
+        Q_cov_weights = Ql_cov_weights_sq * Qr_cov_weights_sq
+
+        ## Compute Tr[Q @ (A'D_pA)^{-1}] ##
+        right_dict = {
+            'psi': (self.AA_inv_A, self.AA_inv_B),
+            'alpha': (self.AA_inv_C, self.AA_inv_D)
+        }
+        left_dict = {
+            'psi': 0,
+            'alpha': 1
+        }
+
+        ## Trace - variance ##
+        # Q = Ql.T @ Ql_weight.T @ U @ Qr_weight @ Qr
+        n = np.sum(Q_var_weights)
+        # Construct U (demeaning matrix)
+        U_dim = Q_var_matrix.shape[0]
+        U = eye(U_dim) - (1 / n) * np.tile(Q_var_weights.diagonal(), (U_dim, 1)).T
+        # Compute Q @ (A'D_pA)^{-1} using block matrix components
+        Q_var = (1 / n) * Q_var_matrix.T @ Q_var_weights_sq.T @ U @ Q_var_weights_sq @ Q_var_matrix
+        # Compute trace by considering correct quadrant
+        self.tr_var_ho_all = np.trace(Q_var @ right_dict[Q_var_psialpha][left_dict[Q_var_psialpha]])
+
+        ## Trace - covariance ##
+        # Q = Ql.T @ Ql_weight.T @ U @ Qr_weight @ Qr
+        n = np.sum(Q_cov_weights)
+        # Construct U (demeaning matrix)
+        U_dim = Ql_cov_matrix.shape[0]
+        U = eye(U_dim) - (1 / n) * np.tile(Q_cov_weights.diagonal(), (U_dim, 1)).T
+        # Compute Q @ (A'D_pA)^{-1} using block matrix components
+        Q_cov = (1 / n) * Ql_cov_matrix.T @ Ql_cov_weights_sq.T @ U @ Qr_cov_weights_sq @ Qr_cov_matrix
+        # Compute trace by considering correct quadrant
+        self.tr_cov_ho_all = np.trace(Q_cov @ right_dict[Qr_cov_psialpha][left_dict[Ql_cov_psialpha]])
+
+    def _estimate_approximate_trace_ho(self, Q_params, rng=None):
         '''
         Estimate trace approximation of HO-corrected model.
 
@@ -582,18 +727,18 @@ class FEEstimator:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        self.logger.info(f'starting [HO] [traces] ndraws={self.ndraw_trace}, using {self.ncore} cores')
+        self.logger.info(f'[HO] [approximate trace] ndraws={self.ndraw_trace_ho}')
 
         Q_var, Ql_cov, Qr_cov = Q_params
-        Q_var_matrix, Q_var_psialpha, Q_var_weights = Q_var
-        Ql_cov_matrix, Ql_cov_psialpha, Q_cov_weights = Ql_cov
-        Qr_cov_matrix, Qr_cov_psialpha = Qr_cov
+        Q_var_matrix, Q_var_psialpha, Q_var_weights, Q_var_dof = Q_var
+        Ql_cov_matrix, Ql_cov_psialpha, Ql_cov_weights, Q_cov_dof = Ql_cov
+        Qr_cov_matrix, Qr_cov_psialpha, Qr_cov_weights = Qr_cov
 
-        self.tr_var_ho_all = np.zeros(self.ndraw_trace)
-        self.tr_cov_ho_all = np.zeros(self.ndraw_trace)
+        self.tr_var_ho_all = np.zeros(self.ndraw_trace_ho)
+        self.tr_cov_ho_all = np.zeros(self.ndraw_trace_ho)
 
-        for r in trange(self.ndraw_trace):
-            ## Computing Tr[Q @ (A'D_pA)^{-1}] ##
+        for r in trange(self.ndraw_trace_ho):
+            ## Compute Tr[Q @ (A'D_pA)^{-1}] ##
             # Generate -1 or 1
             Zpsi = 2 * rng.binomial(1, 0.5, self.nf - 1) - 1
             Zalpha = 2 * rng.binomial(1, 0.5, self.nw) - 1
@@ -603,7 +748,7 @@ class FEEstimator:
             }
 
             # Compute (A'D_pA)^{-1} @ Z
-            psi1, alpha1 = self.__mult_AAinv(Zpsi, Zalpha)
+            psi1, alpha1 = self._mult_AAinv(Zpsi, Zalpha)
             AAinv_dict = {
                 'psi': psi1,
                 'alpha': alpha1
@@ -615,19 +760,101 @@ class FEEstimator:
             L_var = Z_dict[Q_var_psialpha] @ Q_var_matrix.T
             # Right term of Q matrix
             R_var = Q_var_matrix @ AAinv_dict[Q_var_psialpha]
-            self.tr_var_ho_all[r] = np.cov(L_var, R_var, ddof=0)[0][1]
+            self.tr_var_ho_all[r] = _weighted_cov(L_var, R_var, Q_var_weights, Q_var_weights)
             del L_var, R_var
             ## Trace correction - covariance ##
             # Left term of Q matrix
             L_cov = Z_dict[Ql_cov_psialpha] @ Ql_cov_matrix.T
             # Right term of Q matrix
             R_cov = Qr_cov_matrix @ AAinv_dict[Qr_cov_psialpha]
-            self.tr_cov_ho_all[r] = np.cov(L_cov, R_cov, ddof=0)[0][1]
+            self.tr_cov_ho_all[r] = _weighted_cov(L_cov, R_cov, Ql_cov_weights, Qr_cov_weights)
             del L_cov, R_cov, Z_dict, AAinv_dict
 
-            self.logger.debug(f'[HO] [traces] step {r + 1}/{self.ndraw_trace} done')
+            self.logger.debug(f'[HO] [approximate trace] step {r + 1}/{self.ndraw_trace_ho} done')
 
-    def _estimate_trace_approximation_he(self, Q_params, rng=None):
+    def _estimate_exact_trace_he(self, Q_params):
+        '''
+        Estimate analytical trace of HE-corrected model.
+
+        Arguments:
+            Q_params (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
+        '''
+        self.logger.info(f'[HE] [analytical trace]')
+
+        Q_var, Ql_cov, Qr_cov = Q_params
+        Q_var_matrix, Q_var_psialpha, Q_var_weights, Q_var_dof = Q_var
+        Ql_cov_matrix, Ql_cov_psialpha, Ql_cov_weights, Q_cov_dof = Ql_cov
+        Qr_cov_matrix, Qr_cov_psialpha, Qr_cov_weights = Qr_cov
+        Q_var_weights_sq = np.sqrt(Q_var_weights)
+        Ql_cov_weights_sq = np.sqrt(Ql_cov_weights)
+        Qr_cov_weights_sq = np.sqrt(Qr_cov_weights)
+        Q_cov_weights = Ql_cov_weights_sq * Qr_cov_weights_sq
+
+        # Unpack attributes
+        J, W = self.J, self.W
+        Dp = self.Dp
+        A, B, C, D = self.AA_inv_A, self.AA_inv_B, self.AA_inv_C, self.AA_inv_D
+        Sii = diags(self.Sii)
+
+        ## Compute Tr[Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1}] ##
+        ## Left ##
+        # [A & B \\ C & D] @ [J' \\ W'] @ D_p
+        # = [A & B \\ C & D] @ [J' @ D_p \\ W' @ D_p]
+        # = [A @ J' @ D_p + B @ W' @ D_p \\ C @ J' @ D_p + D @ W' @ D_p]
+        ## Right ##
+        # D_p @ [J & W] @ [A & B \\ C & D]
+        # = [D_p @ J & D_p @ W] @ [A & B \\ C & D]
+        # = [D_p @ J @ A + D_p @ W @ C & D_p @ J @ B + D_p @ W @ D]
+        ## Total ##
+        # [A @ J' @ D_p + B @ W' @ D_p \\ C @ J' @ D_p + D @ W' @ D_p] @ Omega @ [D_p @ J @ A + D_p @ W @ C & D_p @ J @ B + D_p @ W @ D]
+        # = [(A @ J' + B @ W') @ D_p @ Omega \\ (C @ J' + D @ W') @ D_p @ Omega] @ [D_p @ (J @ A + W @ C) & D_p @ (J @ B + W @ D)]
+        # = [(A @ J' + B @ W') @ D_p @ Omega @ D_p @ (J @ A + W @ C) & (A @ J' + B @ W') @ D_p @ Omega @ D_p @ (J @ B + W @ D) \\ (C @ J' + D @ W') @ D_p @ Omega @ D_p @ (J @ A + W @ C) & (C @ J' + D @ W') @ D_p @ Omega @ D_p @ (J @ B + W @ D)]
+
+        ## Trace - variance ##
+        # Q = Ql.T @ Ql_weight.T @ U @ Qr_weight @ Qr
+        n = np.sum(Q_var_weights)
+        # Construct U (demeaning matrix)
+        U_dim = Q_var_matrix.shape[0]
+        U = eye(U_dim) - (1 / n) * np.tile(Q_var_weights.diagonal(), (U_dim, 1)).T
+        # Compute Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1} using block matrix components
+        if Q_var_psialpha == 'psi':
+            AA_inv = Dp @ (J @ A + W @ C)
+            AA_inv = AA_inv.T @ Sii @ AA_inv
+        elif Q_var_psialpha == 'alpha':
+            AA_inv = Dp @ (J @ B + W @ D)
+            AA_inv = AA_inv.T @ Sii @ AA_inv
+        Q_var = (1 / n) * Q_var_matrix.T @ Q_var_weights_sq.T @ U @ Q_var_weights_sq @ Q_var_matrix
+        # Compute trace by considering correct quadrant
+        self.tr_var_he_all = np.trace(Q_var @ AA_inv)
+
+        ## Trace - covariance ##
+        # Q = Ql.T @ Ql_weight.T @ U @ Qr_weight @ Qr
+        n = np.sum(Q_cov_weights)
+        # Construct U (demeaning matrix)
+        U_dim = Ql_cov_matrix.shape[0]
+        U = eye(U_dim) - (1 / n) * np.tile(Q_cov_weights.diagonal(), (U_dim, 1)).T
+        # Compute Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1} using block matrix components
+        if Qr_cov_psialpha == 'psi':
+            if Ql_cov_psialpha == 'psi':
+                if Q_var_psialpha != 'psi':
+                    # No need to recompute if var is the same
+                    AA_inv = Dp @ (J @ A + W @ C)
+                    AA_inv = AA_inv.T @ Sii @ AA_inv
+            elif Ql_cov_psialpha == 'alpha':
+                AA_inv = (A @ J.T + B @ W.T) @ Dp @ Sii @ Dp @ (J @ B + W @ D)
+        elif Qr_cov_psialpha == 'alpha':
+            if Ql_cov_psialpha == 'psi':
+                AA_inv = (C @ J.T + D @ W.T) @ Dp @ Sii @ Dp @ (J @ A + W @ C)
+            elif Ql_cov_psialpha == 'alpha':
+                if Q_var_psialpha != 'alpha':
+                    # No need to recompute if var is the same
+                    AA_inv = Dp @ (J @ B + W @ D)
+                    AA_inv = AA_inv.T @ Sii @ AA_inv
+        Q_cov = (1 / n) * Ql_cov_matrix.T @ Ql_cov_weights_sq.T @ U @ Qr_cov_weights_sq @ Qr_cov_matrix
+        # Compute trace by considering correct quadrant
+        self.tr_cov_he_all = np.trace(Q_cov @ AA_inv)
+
+    def _estimate_approximate_trace_he(self, Q_params, rng=None):
         '''
         Estimate trace approximation of HE-corrected model.
 
@@ -638,18 +865,18 @@ class FEEstimator:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        self.logger.info(f'starting [HE] [traces] ndraws={self.ndraw_trace}, using {self.ncore} cores')
+        self.logger.info(f'[HE] [approximate trace] ndraws={self.ndraw_trace_he}')
 
         Q_var, Ql_cov, Qr_cov = Q_params
-        Q_var_matrix, Q_var_psialpha, Q_var_weights = Q_var
-        Ql_cov_matrix, Ql_cov_psialpha, Q_cov_weights = Ql_cov
-        Qr_cov_matrix, Qr_cov_psialpha = Qr_cov
+        Q_var_matrix, Q_var_psialpha, Q_var_weights, Q_var_dof = Q_var
+        Ql_cov_matrix, Ql_cov_psialpha, Ql_cov_weights, Q_cov_dof = Ql_cov
+        Qr_cov_matrix, Qr_cov_psialpha, Qr_cov_weights = Qr_cov
 
-        self.tr_var_he_all = np.zeros(self.ndraw_trace)
-        self.tr_cov_he_all = np.zeros(self.ndraw_trace)
+        self.tr_var_he_all = np.zeros(self.ndraw_trace_he)
+        self.tr_cov_he_all = np.zeros(self.ndraw_trace_he)
 
-        for r in trange(self.ndraw_trace):
-            ## Computing Tr[Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1}] ##
+        for r in trange(self.ndraw_trace_he):
+            ## Compute Tr[Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1}] ##
             # Generate -1 or 1
             Zpsi = 2 * rng.binomial(1, 0.5, self.nf - 1) - 1
             Zalpha = 2 * rng.binomial(1, 0.5, self.nw) - 1
@@ -659,10 +886,10 @@ class FEEstimator:
             }
 
             # Compute (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1} @ Z
-            psi1, alpha1 = self.__mult_AAinv( # (A'D_pA)^{-1} @
-                *self.__mult_Atranspose( # (D_pA)' @
-                    self.Sii * self.__mult_A( # Omega @ (D_pA) @
-                        *self.__mult_AAinv( # (A'D_pA)^{-1} @ Z
+            psi1, alpha1 = self._mult_AAinv( # (A'D_pA)^{-1} @
+                *self._mult_Atranspose( # (D_pA)' @
+                    self.Sii * self._mult_A( # Omega @ (D_pA) @
+                        *self._mult_AAinv( # (A'D_pA)^{-1} @ Z
                             Zpsi, Zalpha, weighted=True
                         ), weighted=True
                     ), weighted=True
@@ -679,50 +906,23 @@ class FEEstimator:
             L_var = Z_dict[Q_var_psialpha] @ Q_var_matrix.T
             # Right term of Q matrix
             R_var = Q_var_matrix @ AAinv_dict[Q_var_psialpha]
-            self.tr_var_he_all[r] = np.cov(L_var, R_var, ddof=0)[0][1]
+            self.tr_var_he_all[r] = _weighted_cov(L_var, R_var, Q_var_weights, Q_var_weights)
             del L_var, R_var
             ## Trace correction - covariance ##
             # Left term of Q matrix
             L_cov = Z_dict[Ql_cov_psialpha] @ Ql_cov_matrix.T
             # Right term of Q matrix
             R_cov = Qr_cov_matrix @ AAinv_dict[Qr_cov_psialpha]
-            self.tr_cov_he_all[r] = np.cov(L_cov, R_cov, ddof=0)[0][1]
+            self.tr_cov_he_all[r] = _weighted_cov(L_cov, R_cov, Ql_cov_weights, Qr_cov_weights)
             del L_cov, R_cov, Z_dict, AAinv_dict
 
-            self.logger.debug(f'[HE] [traces] step {r + 1}/{self.ndraw_trace} done')
-
-    def _compute_trace_approximation_sigma_2(self, rng=None):
-        '''
-        Estimate trace approximation of sigma^2.
-
-        Arguments:
-            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
-        '''
-        self.logger.info(f'starting [sigma^2] [traces] ndraws={self.ndraw_trace}, using {self.ncore} cores')
-
-        if rng is None:
-            rng = np.random.default_rng(None)
-
-        # Begin trace approximation
-        self.tr_sigma_ho_all = np.zeros(self.ndraw_trace)
-
-        for r in trange(self.ndraw_trace):
-            ## Computing Tr[A @ (A'D_pA)^{-1} @ A'] ##
-            # Generate -1 or 1
-            Z = 2 * rng.binomial(1, 0.5, self.nn) - 1
-
-            # Compute Z.T @ A @ (A'D_pA)^{-1} @ A' @ Z
-            self.tr_sigma_ho_all[r] = Z.T @ self.__mult_A( # Z.T @ A @
-                *self.__solve(Z, Dp1=True, Dp2=False), weighted=False # (A'D_pA)^{-1} @ A' @ Z
-            )
-
-            self.logger.debug(f'[sigma^2] [traces] step {r}/{self.ndraw_trace} done.')
+            self.logger.debug(f'[HE] [approximate trace] step {r + 1}/{self.ndraw_trace_he} done')
 
     def _collect_res(self):
         '''
         Collect all results.
         '''
-        self.res['eps_var_ho'] = self.var_e
+        self.res['eps_var_ho'] = self.sigma_2_ho
         self.res['eps_var_fe'] = np.var(self.E)
         # Already computed, this just reorders the dictionary
         self.res['var_y'] = self.res['var_y']
@@ -745,10 +945,10 @@ class FEEstimator:
         self.res['tr_cov_ho_sd'] = np.std(self.tr_cov_ho_all)
         self.logger.info(f"[ho] COV tr={self.res['tr_cov_ho']:2.4f} (sd={self.res['tr_cov_ho_sd']:2.4e})")
         # Bias-corrected variance
-        self.res['var_ho'] = self.var_fe - self.var_e * self.res['tr_var_ho']
+        self.res['var_ho'] = self.var_fe - self.sigma_2_ho * self.res['tr_var_ho']
         self.logger.info(f"[ho] VAR bc={self.res['var_ho']:2.4f}")
         # Bias-corrected covariance
-        self.res['cov_ho'] = self.cov_fe - self.var_e * self.res['tr_cov_ho']
+        self.res['cov_ho'] = self.cov_fe - self.sigma_2_ho * self.res['tr_cov_ho']
         self.logger.info(f"[ho] COV bc={self.res['cov_ho']:2.4f}")
 
         for res in ['var_y', 'var_fe', 'cov_fe', 'var_ho', 'cov_ho']:
@@ -796,7 +996,57 @@ class FEEstimator:
         else:
             self.logger.info('outputfile=None, so results not saved')
 
-    def __solve(self, Y, Dp1=True, Dp2=True):
+    def _construct_Q(self):
+        '''
+        Construct Q matrix and generate related parameters.
+
+        Returns:
+            (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
+        '''
+        Q_var = self.params['Q_var']
+        Q_cov = self.params['Q_cov']
+        if Q_var is None:
+            Q_var = Q.VarPsi()
+        if Q_cov is None:
+            Q_cov = Q.CovPsiAlpha()
+        Q_params = self.adata, self.nf, self.nw, self.J, self.W, self.Dp
+        return (Q_var.get_Q(*Q_params), Q_cov.get_Ql(*Q_params), Q_cov.get_Qr(*Q_params))
+
+    def _construct_AAinv_components_full(self):
+        '''
+        Construct (A' * Dp * A)^{-1} block matrix components by explicitly computing M.
+        '''
+        # Define variables
+        J = self.J
+        W = self.W
+        M = np.linalg.inv(self.Minv.todense())
+        Dp = self.Dp
+        Dwinv = self.Dwinv
+
+        # Construct blocks
+        self.AA_inv_A = M
+        self.AA_inv_B = - M @ J.T @ Dp @ W @ Dwinv
+        self.AA_inv_C = - Dwinv @ W.T @ Dp @ J @ M
+        self.AA_inv_D = Dwinv + self.AA_inv_C @ self.Minv @ self.AA_inv_B
+
+    def _construct_AAinv_components_partial(self):
+        '''
+        Construct (A' * Dp * A)^{-1} block matrix components without explicitly computing M. Use this for computing a small number of individual Pii analytically.
+        '''
+        # Define variables
+        J = self.J
+        W = self.W
+
+        Dp = self.Dp
+        Dwinv = self.Dwinv
+
+        # Construct blocks
+        self.AA_inv_A = None
+        self.AA_inv_B = J.T @ Dp @ W @ Dwinv
+        self.AA_inv_C = - Dwinv @ W.T @ Dp @ J
+        self.AA_inv_D = None
+
+    def _solve(self, Y, Dp1=True, Dp2=True):
         '''
         Compute (A' * Dp1 * A)^{-1} * A' * Dp2 * Y, the least squares estimate of Y = A * [psi_hat' alpha_hat']', where A = [J W] (J is firm indicators and W is worker indicators) and Dp gives weights.
 
@@ -809,13 +1059,13 @@ class FEEstimator:
             (tuple of CSC Matrices): (estimated firm fixed effects, estimated worker fixed effects)
         '''
         # This gives A' * Dp2 * Y
-        J_transpose_Y, W_transpose_Y = self.__mult_Atranspose(Y, weighted=Dp2)
+        J_transpose_Y, W_transpose_Y = self._mult_Atranspose(Y, weighted=Dp2)
         # This gives (A' * Dp1 * A)^{-1} * A' * Dp2 * Y
-        psi_hat, alpha_hat = self.__mult_AAinv(J_transpose_Y, W_transpose_Y, weighted=Dp1)
+        psi_hat, alpha_hat = self._mult_AAinv(J_transpose_Y, W_transpose_Y, weighted=Dp1)
 
         return psi_hat, alpha_hat
 
-    def __mult_A(self, psi, alpha, weighted=False):
+    def _mult_A(self, psi, alpha, weighted=False):
         '''
         Computes Dp * A * [psi' alpha']', where A = [J W] (J is firm indicators and W is worker indicators) and Dp gives weights (used, for example, to compute estimated outcomes and sample errors).
 
@@ -833,7 +1083,7 @@ class FEEstimator:
             return self.Dp @ (self.J @ psi + self.W @ alpha)
         return self.J @ psi + self.W @ alpha
 
-    def __mult_Atranspose(self, v, weighted=True):
+    def _mult_Atranspose(self, v, weighted=True):
         '''
         Computes A' * Dp * v, where A = [J W] (J is firm indicators and W is worker indicators) and Dp gives weights.
 
@@ -851,7 +1101,7 @@ class FEEstimator:
 
         return self.J.T @ v, self.W.T @ v
 
-    def __mult_AAinv(self, psi, alpha, weighted=True):
+    def _mult_AAinv(self, psi, alpha, weighted=True):
         '''
         Computes (A' * Dp * A)^{-1} * [psi' alpha']', where A = [J W] (J is firm indicators and W is worker indicators) and Dp gives weights.
 
@@ -877,57 +1127,23 @@ class FEEstimator:
 
         return psi_out, alpha_out
 
-    def __proj(self, Y, Dp0=False, Dp1=True, Dp2=True):
+    def _proj(self, Y, Dp0=False, Dp1=True, Dp2=True):
         '''
         Compute Dp0 * A * (A' * Dp1 * A)^{-1} * A' * Dp2 * Y, where A = [J W] (J is firm indicators and W is worker indicators) and Dp gives weights (essentially projects Y onto A space).
         Solve Y, then project onto X space of data stored in the object. Essentially solves A(A'A)^{-1}A'Y
 
         Arguments:
             Y (NumPy Array): wage data
-            Dp0 (bool or str): if True, include weights in __mult_A(); if 'sqrt', use square root of weights
-            Dp1 (bool): if True, include first weight in __solve()
-            Dp2 (bool or str): if True, include second weight in __solve(); if 'sqrt', use square root of weights
+            Dp0 (bool or str): if True, include weights in _mult_A(); if 'sqrt', use square root of weights
+            Dp1 (bool): if True, include first weight in _solve()
+            Dp2 (bool or str): if True, include second weight in _solve(); if 'sqrt', use square root of weights
 
         Returns:
             (CSC Matrix): result of Dp0 * A * (A' * Dp1 * A)^{-1} * A' * Dp2 * Y (essentially the projection of Y onto A space)
         '''
-        return self.__mult_A(*self.__solve(Y, Dp1, Dp2), Dp0)
+        return self._mult_A(*self._solve(Y, Dp1, Dp2), Dp0)
 
-    def __construct_M_inv(self):
-        '''
-        Construct (A' * Dp * A)^{-1} block matrix components where M^{-1} is computed explicitly.
-        '''
-        # Define variables
-        J = self.J
-        W = self.W
-        Minv = np.linalg.inv(self.M.todense())
-        Dp = self.Dp
-        Dwinv = self.Dwinv
-
-        # Construct blocks
-        self.AA_inv_A = Minv
-        self.AA_inv_B = - Minv @ J.T @ Dp @ W @ Dwinv
-        self.AA_inv_C = - Dwinv @ W.T @ Dp @ J @ Minv
-        self.AA_inv_D = Dwinv + self.AA_inv_C @ self.M @ self.AA_inv_B # Dwinv @ (eye(nw) + W.T @ Dp @ J @ M @ J.T @ Dp @ W @ Dwinv)
-
-    def __construct_AAinv_components(self):
-        '''
-        Construct (A' * Dp * A)^{-1} block matrix components. Use this for computing a small number of individual Pii.
-        '''
-        # Define variables
-        J = self.J
-        W = self.W
-
-        Dp = self.Dp
-        Dwinv = self.Dwinv
-
-        # Construct blocks
-        self.AA_inv_A = None
-        self.AA_inv_B = J.T @ Dp @ W @ Dwinv
-        self.AA_inv_C = - Dwinv @ W.T @ Dp @ J
-        self.AA_inv_D = None
-
-    def __compute_Pii(self, DpJ_i, DpW_i):
+    def _compute_Pii(self, DpJ_i, DpW_i):
         '''
         Compute Pii for a single observation for heteroskedastic correction.
 
@@ -938,6 +1154,7 @@ class FEEstimator:
         Returns:
             (float): estimate for Pii
         '''
+        # if self.params['exact_trace_sigma_2'] or self.params['exact_trace_ho'] or self.params['exact_trace_he'] or self.params['exact_lev_he']:
         if self.AA_inv_A is not None:
             # M^{-1} has been explicitly computed
             A = DpJ_i @ self.AA_inv_A @ DpJ_i
@@ -957,78 +1174,129 @@ class FEEstimator:
 
         return A + B + C + D
 
-    def _compute_leverages_Pii(self, rng=None):
+    def _extract_precomputed_leverages(self):
         '''
-        Compute leverages for heteroskedastic correction.
+        Extract precomputed leverages (Pii) for heteroskedastic correction.
+
+        Returns:
+            Pii (NumPy Array): estimated leverages
+        '''
+        Pii = np.zeros(self.nn)
+        worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
+
+        self.logger.info('[he] starting heteroskedastic correction, loading precomputed files')
+
+        files = glob.glob('{}*'.format(self.params['levfile']))
+        self.logger.info(f'[he] found {len(files)} files to get leverages from')
+        self.res['lev_file_count'] = len(files)
+        assert len(files) > 0, "Didn't find any leverage files!"
+
+        for f in files:
+            pp = np.load(f)
+            Pii += pp / len(files)
+
+        self.res['min_lev'] = Pii[worker_m].min()
+        self.res['max_lev'] = Pii[worker_m].max()
+
+        if self.res['max_lev'] >= 1:
+            leverage_warning = f"Max P_ii is {self.res['max_lev']} which is >= 1. This means your data is not leave-one-observation-out connected. The HE estimator requires leave-one-observation-out connected data to work properly. When cleaning your data, please set clean_params['connectedness'] = 'leave_out_observation' to correct this."
+            self.logger.info(leverage_warning)
+            raise ValueError(leverage_warning)
+
+        self.logger.info(f"[he] leverage range {self.res['min_lev']:2.4f} to {self.res['max_lev']:2.4f}")
+
+        return Pii
+    
+    def _estimate_exact_leverages(self):
+        '''
+        Estimate analytical leverages (Pii) for heteroskedastic correction.
+
+        Returns:
+            Pii (NumPy Array): estimated leverages
+        '''
+        Pii = np.zeros(self.nn)
+        worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
+
+        self.logger.info('[he] [analytical Pii]')
+
+        # Construct weighted J and W
+        DpJ = np.asarray((self.Dp_sqrt @ self.J).todense())
+        DpW = np.asarray((self.Dp_sqrt @ self.W).todense())
+
+        for i in self.adata.loc[worker_m, :].index:
+            DpJ_i = DpJ[i, :]
+            DpW_i = DpW[i, :]
+            # Compute analytical Pii
+            Pii[i] = self._compute_Pii(DpJ_i, DpW_i)
+
+        self.res['min_lev'] = Pii[worker_m].min()
+        self.res['max_lev'] = Pii[worker_m].max()
+
+        if self.res['max_lev'] >= 1:
+            leverage_warning = f"Max P_ii is {self.res['max_lev']} which is >= 1. This means your data is not leave-one-observation-out connected. The HE estimator requires leave-one-observation-out connected data to work properly. When cleaning your data, please set clean_params['connectedness'] = 'leave_out_observation' to correct this."
+            self.logger.info(leverage_warning)
+            raise ValueError(leverage_warning)
+
+        self.logger.info(f"[he] leverage range {self.res['min_lev']:2.4f} to {self.res['max_lev']:2.4f}")
+
+        return Pii
+    
+    def _estimate_approximate_leverages(self, rng=None):
+        '''
+        Estimate approximate leverages (Pii) for heteroskedastic correction.
 
         Arguments:
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+
+        Returns:
+            Pii (NumPy Array): estimated leverages
         '''
         if rng is None:
             rng = np.random.default_rng(None)
 
         Pii = np.zeros(self.nn)
-        # Indices to compute Pii analytically
-        analytical_indices = []
         worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
 
-        if self.params['he_analytical']:
-            analytical_indices = self.adata.loc[worker_m, :].index
-            self.__construct_M_inv()
+        self.logger.info(f"[he] [approximate Pii] lev_batchsize={self.params['lev_batchsize']}, lev_nbatches={self.params['lev_nbatches']}, using {self.ncore} cores")
 
-        else:
-            if len(self.params['levfile']) > 1:
-                self.logger.info('[he] starting heteroskedastic correction, loading precomputed files')
+        for batch_i in range(self.params['lev_nbatches']):
+            if self.ncore > 1:
+                # Multiprocessing
+                ndraw_seeds = self.lev_batchsize // self.params['lev_batchsize_multiprocessing']
+                if np.round(ndraw_seeds * self.params['lev_batchsize_multiprocessing']) != self.lev_batchsize:
+                    # 'lev_batchsize_multiprocessing' must evenly divide 'lev_batchsize'
+                    raise ValueError(f"'lev_batchsize_multiprocessing' (currently {self.params['lev_batchsize_multiprocessing']}) should evenly divide 'lev_batchsize' (currently {self.lev_batchsize}).")
+                # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
+                seeds = rng.bit_generator._seed_seq.spawn(ndraw_seeds)
+                set_start_method('spawn')
+                with Pool(processes=self.ncore) as pool:
+                    Pii_all = pool.starmap(self._leverage_approx, [(self.params['lev_batchsize_multiprocessing'], np.random.default_rng(seed)) for seed in seeds])
 
-                files = glob.glob('{}*'.format(self.params['levfile']))
-                self.logger.info(f'[he] found {len(files)} files to get leverages from')
-                self.res['lev_file_count'] = len(files)
-                assert len(files) > 0, "Didn't find any leverage files!"
-
-                for f in files:
-                    pp = np.load(f)
-                    Pii += pp / len(files)
-
+                # Take mean over draws
+                Pii_i = sum(Pii_all) / len(Pii_all)
             else:
-                self.logger.info(f"[he] starting heteroskedastic correction lev_batchsize={self.params['lev_batchsize']}, lev_nbatches={self.params['lev_nbatches']}, using {self.ncore} cores")
-                for batch_i in range(self.params['lev_nbatches']):
-                    if self.ncore > 1:
-                        # Multiprocessing
-                        ndraw_seeds = self.lev_batchsize // self.params['lev_batchsize_multiprocessing']
-                        if np.round(ndraw_seeds * self.params['lev_batchsize_multiprocessing']) != self.lev_batchsize:
-                            # 'lev_batchsize_multiprocessing' must evenly divide 'lev_batchsize'
-                            raise ValueError(f"'lev_batchsize_multiprocessing' (currently {self.params['lev_batchsize_multiprocessing']}) should evenly divide 'lev_batchsize' (currently {self.lev_batchsize}).")
-                        # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
-                        seeds = rng.bit_generator._seed_seq.spawn(ndraw_seeds)
-                        set_start_method('spawn')
-                        with Pool(processes=self.ncore) as pool:
-                            Pii_all = pool.starmap(self._leverage_approx, [(self.params['lev_batchsize_multiprocessing'], np.random.default_rng(seed)) for seed in seeds])
+                # Single core
+                Pii_i = self._leverage_approx(self.lev_batchsize, rng)
 
-                        # Take mean over draws
-                        Pii_i = sum(Pii_all) / len(Pii_all)
-                    else:
-                        # Single core
-                        Pii_i = self._leverage_approx(self.lev_batchsize, rng)
+            # Take weighted average over all Pii draws
+            Pii = (batch_i * Pii + Pii_i) / (batch_i + 1)
 
-                    # Take weighted average over all Pii draws
-                    Pii = (batch_i * Pii + Pii_i) / (batch_i + 1)
+            # Compute number of bad draws
+            n_bad_draws = sum(worker_m & (Pii >= self.params['lev_threshold_pii']))
 
-                    # Compute number of bad draws
-                    n_bad_draws = sum(worker_m & (Pii >= self.params['lev_threshold_pii']))
+            # If few enough bad draws, compute them analytically
+            if n_bad_draws < self.params['lev_threshold_obs']:
+                leverage_warning = f"Threshold for max Pii is {self.params['lev_threshold_pii']}, with {self.lev_batchsize} draw(s) per batch and a maximum of {self.params['lev_nbatches']} batch(es) being drawn. There is/are {n_bad_draws} observation(s) with Pii above this threshold. These will be recomputed analytically. It took {batch_i + 1} batch(es) to get below the threshold of {self.params['lev_threshold_obs']} bad observations."
+                warnings.warn(leverage_warning)
+                break
+            elif batch_i == self.params['lev_nbatches'] - 1:
+                leverage_warning = f"Threshold for max Pii is {self.params['lev_threshold_pii']}, with {self.lev_batchsize} draw(s) per batch and a maximum of {self.params['lev_nbatches']} batch(es) being drawn. After exhausting the maximum number of batches, there is/are still {n_bad_draws} draw(s) with Pii above this threshold. These will be recomputed analytically."
+                warnings.warn(leverage_warning)
 
-                    # If few enough bad draws, compute them analytically
-                    if n_bad_draws < self.params['lev_threshold_obs']:
-                        leverage_warning = f"Threshold for max Pii is {self.params['lev_threshold_pii']}, with {self.lev_batchsize} draw(s) per batch and a maximum of {self.params['lev_nbatches']} batch(es) being drawn. There is/are {n_bad_draws} observation(s) with Pii above this threshold. These will be recomputed analytically. It took {batch_i + 1} batch(es) to get below the threshold of {self.params['lev_threshold_obs']} bad observations."
-                        warnings.warn(leverage_warning)
-                        break
-                    elif batch_i == self.params['lev_nbatches'] - 1:
-                        leverage_warning = f"Threshold for max Pii is {self.params['lev_threshold_pii']}, with {self.lev_batchsize} draw(s) per batch and a maximum of {self.params['lev_nbatches']} batch(es) being drawn. After exhausting the maximum number of batches, there is/are still {n_bad_draws} draw(s) with Pii above this threshold. These will be recomputed analytically."
-                        warnings.warn(leverage_warning)
-
-            # Compute Pii analytically for observations with Pii approximation above threshold value
-            analytical_indices = self.adata.loc[worker_m & (Pii >= self.params['lev_threshold_pii']), :].index
-            if len(analytical_indices) > 0:
-                self.__construct_AAinv_components()
+        # Compute Pii analytically for observations with Pii approximation above threshold value
+        analytical_indices = self.adata.loc[worker_m & (Pii >= self.params['lev_threshold_pii']), :].index
+        if (len(analytical_indices) > 0) and not (self.params['exact_trace_sigma_2'] or self.params['exact_trace_ho'] or self.params['exact_trace_he']):
+            self._construct_AAinv_components_partial()
 
         # Compute analytical Pii
         if len(analytical_indices) > 0:
@@ -1039,7 +1307,8 @@ class FEEstimator:
             for i in analytical_indices:
                 DpJ_i = DpJ[i, :]
                 DpW_i = DpW[i, :]
-                Pii[i] = self.__compute_Pii(DpJ_i, DpW_i)
+                # Compute analytical Pii
+                Pii[i] = self._compute_Pii(DpJ_i, DpW_i)
 
         self.res['min_lev'] = Pii[worker_m].min()
         self.res['max_lev'] = Pii[worker_m].max()
@@ -1048,15 +1317,22 @@ class FEEstimator:
             leverage_warning = f"Max P_ii is {self.res['max_lev']} which is >= 1. This means your data is not leave-one-observation-out connected. The HE estimator requires leave-one-observation-out connected data to work properly. When cleaning your data, please set clean_params['connectedness'] = 'leave_out_observation' to correct this."
             self.logger.info(leverage_warning)
             raise ValueError(leverage_warning)
-            # self.adata['Pii'] = Pii
-            # self.adata.to_feather('pii_data.ftr')
-            # raise NotImplementedError
 
-        self.logger.info(f"[he] Leverage range {self.res['min_lev']:2.4f} to {self.res['max_lev']:2.4f}")
-        # print('Observation with max leverage:', self.adata[self.adata['Pii'] == self.res['max_lev']])
+        self.logger.info(f"[he] leverage range {self.res['min_lev']:2.4f} to {self.res['max_lev']:2.4f}")
+
+        return Pii
+
+    def _estimate_Sii_he(self, Pii):
+        '''
+        Estimate Sii (sigma^2) for heteroskedastic correction.
+
+        Arguments:
+            Pii (NumPy Array): estimated leverages
+        '''
+        worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
 
         ## Give stayers the variance estimate at the firm level ##
-        # Temporarily set Pii = 0 for stayers to avoid divide-by-zero warning
+        # Set Pii = 0 for stayers to avoid divide-by-zero warning
         Pii[~worker_m] = 0
         # Compute Sii for movers
         self.adata.loc[:, 'Sii'] = self.Y * self.E / (1 - Pii)
@@ -1089,7 +1365,7 @@ class FEEstimator:
         # Compute the different draws
         for _ in range(ndraw_pii):
             R2 = 2 * rng.binomial(1, 0.5, self.nn) - 1
-            Pii += np.power(self.__proj(R2, Dp0='sqrt', Dp2='sqrt'), 2.0)
+            Pii += np.power(self._proj(R2, Dp0='sqrt', Dp2='sqrt'), 2.0)
 
         # Take mean over draws
         Pii /= ndraw_pii
@@ -1097,10 +1373,3 @@ class FEEstimator:
         self.logger.info('done with batch')
 
         return Pii
-
-    def _drop_cols(self):
-        '''
-        Drop irrelevant column 'worker_m'.
-        '''
-        if 'worker_m' in self.adata.columns:
-            self.adata.drop('worker_m', axis=1, inplace=True)

@@ -41,7 +41,7 @@ class MonteCarlo:
         if clean_params is None:
             clean_params = bpd.clean_params()
 
-        ## Save attributes
+        ## Save attributes ##
         # Parameter dictionaries
         self.fe_params = fe_params.copy()
         self.cre_params = cre_params.copy()
@@ -53,7 +53,8 @@ class MonteCarlo:
         self.move_to_worker = move_to_worker
         self.log = log
 
-        # Update parameter dictionaries
+        ## Update parameter dictionaries ##
+        # FE params
         self.fe_params['he'] = True
         # Clean parameters
         self.clean_params['connectedness'] = 'leave_out_observation'
@@ -99,16 +100,18 @@ class MonteCarlo:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        ## Simulate data
+        nk, nl = self.sim_network.params.get_multiple(('nk', 'nl'))
+
+        ## Simulate data ##
         sim_data = self.sim_network.simulate(rng)
-        ## Compute true sample variance of psi and covariance of psi and alpha
-        psi_var = np.var(sim_data.loc[:, 'psi'].to_numpy(), ddof=1)
-        psi_alpha_cov = np.cov(sim_data.loc[:, 'psi'].to_numpy(), sim_data.loc[:, 'alpha'].to_numpy(), ddof=1)[0, 1]
-        ## Convert into BipartitePandas dataframe
+        ## Compute true sample variance of psi and covariance of psi and alpha ##
+        psi_var = np.var(sim_data.loc[:, 'psi'].to_numpy(), ddof=0)
+        psi_alpha_cov = np.cov(sim_data.loc[:, 'psi'].to_numpy(), sim_data.loc[:, 'alpha'].to_numpy(), ddof=0)[0, 1]
+        ## Convert into BipartitePandas dataframe ##
         sim_data = bpd.BipartiteLong(sim_data.loc[:, ['i', 'j', 'y', 't']], log=self.log)
-        ## Clean data
+        ## Clean data ##
         if self.collapse or self.move_to_worker:
-            ## Collapsing or setting moves to worker ids
+            ## Collapsing or setting moves to worker ids ##
             # Initial clean without connectedness
             sim_data = sim_data.clean(self.clean_params_one)
             if self.move_to_worker:
@@ -122,12 +125,12 @@ class MonteCarlo:
         else:
             # Standard
             sim_data = sim_data.clean(self.clean_params)
-        ## Estimate FE model
+        ## Estimate FE model ##
         fe_estimator = tw.FEEstimator(sim_data, params=self.fe_params)
         fe_estimator.fit(rng)
         # Save results
         fe_res = fe_estimator.res
-        ## Estimate CRE model
+        ## Estimate CRE model ##
         # Cluster
         sim_data = sim_data.cluster(self.cluster_params)
         # Estimate
@@ -301,9 +304,9 @@ class MonteCarlo:
             axs[0].set_title(r'var($\psi$)')
             axs[0].set_xlabel(r'$\Delta$truth')
             if density:
-                axs[0].set_ylabel('Density')
+                axs[0].set_ylabel('density')
             else:
-                axs[0].set_ylabel('Frequency')
+                axs[0].set_ylabel('frequency')
 
             # Second, cov(psi, alpha)
             min_err = np.inf
