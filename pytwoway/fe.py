@@ -739,7 +739,7 @@ class FEEstimator:
         self.tr_cov_ho_all = np.zeros(self.ndraw_trace_ho)
 
         pbar = trange(self.ndraw_trace_ho, disable=self.no_pbars)
-        pbar.set_description('HO')
+        pbar.set_description('ho')
         for r in pbar:
             ## Compute Tr[Q @ (A'D_pA)^{-1}] ##
             # Generate -1 or 1
@@ -879,7 +879,7 @@ class FEEstimator:
         self.tr_cov_he_all = np.zeros(self.ndraw_trace_he)
 
         pbar = trange(self.ndraw_trace_he, disable=self.no_pbars)
-        pbar.set_description('HE')
+        pbar.set_description('he')
         for r in pbar:
             ## Compute Tr[Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1}] ##
             # Generate -1 or 1
@@ -1229,7 +1229,7 @@ class FEEstimator:
         DpW = np.asarray((self.Dp_sqrt @ self.W).todense())
 
         pbar = tqdm(self.adata.loc[worker_m, :].index, disable=self.no_pbars)
-        pbar.set_description('Leverages')
+        pbar.set_description('leverages')
         for i in pbar:
             DpJ_i = DpJ[i, :]
             DpW_i = DpW[i, :]
@@ -1268,7 +1268,7 @@ class FEEstimator:
         self.logger.info(f"[he] [approximate pii] lev_batchsize={self.params['lev_batchsize']}, lev_nbatches={self.params['lev_nbatches']}, using {self.ncore} core(s)")
 
         pbar = trange(self.params['lev_nbatches'], disable=self.no_pbars)
-        pbar.set_description('Leverages 1')
+        pbar.set_description('leverages 1')
         for batch_i in pbar:
             if self.ncore > 1:
                 # Multiprocessing
@@ -1280,7 +1280,7 @@ class FEEstimator:
                 seeds = rng.bit_generator._seed_seq.spawn(ndraw_seeds)
                 with Pool(processes=self.ncore) as pool:
                     pbar2 = tqdm([(self.params['lev_batchsize_multiprocessing'], np.random.default_rng(seed)) for seed in seeds], total=ndraw_seeds, disable=self.no_pbars)
-                    pbar2.set_description('Leverages 1.5')
+                    pbar2.set_description('leverages 1.5')
                     Pii_all = pool.starmap(self._leverage_approx, pbar2)
                     del pbar2
 
@@ -1327,7 +1327,7 @@ class FEEstimator:
             DpW = np.asarray((self.Dp_sqrt @ self.W).todense())
 
             pbar = tqdm(analytical_indices, disable=self.no_pbars)
-            pbar.set_description('Leverages 2')
+            pbar.set_description('leverages 2')
             for i in pbar:
                 DpJ_i = DpJ[i, :]
                 DpW_i = DpW[i, :]
