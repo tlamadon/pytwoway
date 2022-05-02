@@ -1,14 +1,13 @@
 '''
 Class for running Monte Carlo estimations on simulated bipartite networks
 '''
-import numpy as np
-import pandas as pd
+from tqdm import tqdm, trange
+import warnings
 from multiprocessing import Pool
+import numpy as np
 from matplotlib import pyplot as plt
 import bipartitepandas as bpd
 import pytwoway as tw
-from tqdm import tqdm, trange
-import warnings
 
 class MonteCarlo:
     '''
@@ -56,6 +55,8 @@ class MonteCarlo:
         ## Update parameter dictionaries ##
         # FE params
         self.fe_params['he'] = True
+        self.fe_params['progress_bars'] = False
+        self.fe_params['verbose'] = False
         # Clean parameters
         self.clean_params['connectedness'] = 'leave_out_observation'
         self.clean_params['is_sorted'] = True

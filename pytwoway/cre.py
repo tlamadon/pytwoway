@@ -13,16 +13,10 @@ import time
 # import os
 # from multiprocessing import Pool, TimeoutError
 # from timeit import default_timer as timer
-
 # import argparse
 import json
 # import itertools
-
-# try to use tqdm
-try:
-    from tqdm import tqdm, trange
-except ImportError:
-    trange = range
+from tqdm import tqdm, trange
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq1(a):
@@ -576,7 +570,9 @@ class CREEstimator:
 
         # Next we look at the trace term
         tr_var_pos_all = np.zeros(self.ndraw_trace)
-        for r in trange(self.ndraw_trace):
+        pbar = trange(self.ndraw_trace)
+        pbar.set_description('cre')
+        for r in pbar:
             Zpsi = 2 * rng.binomial(1, 0.5, self.nf) - 1
 
             R1 = self.Jq * Zpsi

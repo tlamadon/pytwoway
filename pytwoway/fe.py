@@ -1,29 +1,16 @@
 '''
 Defines class FEEstimator, which uses multigrid and partialing out to estimate two way fixed effect models. This includes AKM, the Andrews et al. homoskedastic correction, and the Kline et al. heteroskedastic correction.
 '''
-import warnings
-from pathlib import Path
-import pyamg
+from tqdm import tqdm, trange
+import time, pickle, json, glob # warnings
+from timeit import default_timer as timer
+from multiprocessing import Pool
 import numpy as np
 import pandas as pd
+from scipy.sparse import csc_matrix, diags, eye
+import pyamg
 from bipartitepandas.util import ParamsDict, logger_init
 from pytwoway import Q
-from scipy.sparse import csc_matrix, coo_matrix, diags, linalg, hstack, eye
-import time
-# import pyreadr
-import os
-from multiprocessing import Pool, set_start_method
-from timeit import default_timer as timer
-import pickle
-import time
-import json
-import glob, sys
-
-# Try to use tqdm
-try:
-    from tqdm import tqdm, trange
-except ImportError:
-    trange = range
 
 # def pipe_qcov(df, e1, e2): # FIXME I moved this from above, also this is used only in commented out code
 #     v1 = df.eval(e1)
@@ -129,6 +116,14 @@ _fe_params_default = ParamsDict({
     'outputfile': (None, 'type_none', str,
         '''
             (default=None) Outputfile where results will be saved in json format. If None, results will not be saved.
+        ''', None),
+    'progress_bars': (True, 'type', bool,
+        '''
+            (default=True) If True, display progress bars.
+        ''', None),
+    'verbose': (True, 'type', bool,
+        '''
+            (default=True) If True, print warnings during HE estimation.
         ''', None)
 })
 
@@ -280,6 +275,10 @@ class FEEstimator:
         self.compute_he = params['he']
         # Whether data is weighted
         self.weighted = (params['weighted'] and ('w' in data.columns))
+        # Progress bars
+        self.no_pbars = not params['progress_bars']
+        # Verbose
+        self.verbose = params['verbose']
 
         ## Store some parameters in results dictionary ##
         self.res['cores'] = self.ncore
@@ -607,7 +606,9 @@ class FEEstimator:
         # Begin trace approximation
         self.tr_sigma_ho_all = np.zeros(self.ndraw_trace_sigma_2)
 
-        for r in trange(self.ndraw_trace_sigma_2):
+        pbar = trange(self.ndraw_trace_sigma_2, disable=self.no_pbars)
+        pbar.set_description('sigma^2')
+        for r in pbar:
             ## Compute Tr[A @ (A'D_pA)^{-1} @ A'] ##
             # Generate -1 or 1
             Z = 2 * rng.binomial(1, 0.5, self.nn) - 1
@@ -673,7 +674,7 @@ class FEEstimator:
         Arguments:
             Q_params (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
         '''
-        self.logger.info(f'[HO] [analytical trace]')
+        self.logger.info(f'[ho] [analytical trace]')
 
         Q_var, Ql_cov, Qr_cov = Q_params
         Q_var_matrix, Q_var_psialpha, Q_var_weights, Q_var_dof = Q_var
@@ -727,7 +728,7 @@ class FEEstimator:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        self.logger.info(f'[HO] [approximate trace] ndraws={self.ndraw_trace_ho}')
+        self.logger.info(f'[ho] [approximate trace] ndraws={self.ndraw_trace_ho}')
 
         Q_var, Ql_cov, Qr_cov = Q_params
         Q_var_matrix, Q_var_psialpha, Q_var_weights, Q_var_dof = Q_var
@@ -737,7 +738,9 @@ class FEEstimator:
         self.tr_var_ho_all = np.zeros(self.ndraw_trace_ho)
         self.tr_cov_ho_all = np.zeros(self.ndraw_trace_ho)
 
-        for r in trange(self.ndraw_trace_ho):
+        pbar = trange(self.ndraw_trace_ho, disable=self.no_pbars)
+        pbar.set_description('HO')
+        for r in pbar:
             ## Compute Tr[Q @ (A'D_pA)^{-1}] ##
             # Generate -1 or 1
             Zpsi = 2 * rng.binomial(1, 0.5, self.nf - 1) - 1
@@ -770,7 +773,7 @@ class FEEstimator:
             self.tr_cov_ho_all[r] = _weighted_cov(L_cov, R_cov, Ql_cov_weights, Qr_cov_weights)
             del L_cov, R_cov, Z_dict, AAinv_dict
 
-            self.logger.debug(f'[HO] [approximate trace] step {r + 1}/{self.ndraw_trace_ho} done')
+            self.logger.debug(f'[ho] [approximate trace] step {r + 1}/{self.ndraw_trace_ho} done')
 
     def _estimate_exact_trace_he(self, Q_params):
         '''
@@ -779,7 +782,7 @@ class FEEstimator:
         Arguments:
             Q_params (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
         '''
-        self.logger.info(f'[HE] [analytical trace]')
+        self.logger.info(f'[he] [analytical trace]')
 
         Q_var, Ql_cov, Qr_cov = Q_params
         Q_var_matrix, Q_var_psialpha, Q_var_weights, Q_var_dof = Q_var
@@ -865,7 +868,7 @@ class FEEstimator:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        self.logger.info(f'[HE] [approximate trace] ndraws={self.ndraw_trace_he}')
+        self.logger.info(f'[he] [approximate trace] ndraws={self.ndraw_trace_he}')
 
         Q_var, Ql_cov, Qr_cov = Q_params
         Q_var_matrix, Q_var_psialpha, Q_var_weights, Q_var_dof = Q_var
@@ -875,7 +878,9 @@ class FEEstimator:
         self.tr_var_he_all = np.zeros(self.ndraw_trace_he)
         self.tr_cov_he_all = np.zeros(self.ndraw_trace_he)
 
-        for r in trange(self.ndraw_trace_he):
+        pbar = trange(self.ndraw_trace_he, disable=self.no_pbars)
+        pbar.set_description('HE')
+        for r in pbar:
             ## Compute Tr[Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1}] ##
             # Generate -1 or 1
             Zpsi = 2 * rng.binomial(1, 0.5, self.nf - 1) - 1
@@ -916,7 +921,7 @@ class FEEstimator:
             self.tr_cov_he_all[r] = _weighted_cov(L_cov, R_cov, Ql_cov_weights, Qr_cov_weights)
             del L_cov, R_cov, Z_dict, AAinv_dict
 
-            self.logger.debug(f'[HE] [approximate trace] step {r + 1}/{self.ndraw_trace_he} done')
+            self.logger.debug(f'[he] [approximate trace] step {r + 1}/{self.ndraw_trace_he} done')
 
     def _collect_res(self):
         '''
@@ -1223,11 +1228,14 @@ class FEEstimator:
         DpJ = np.asarray((self.Dp_sqrt @ self.J).todense())
         DpW = np.asarray((self.Dp_sqrt @ self.W).todense())
 
-        for i in self.adata.loc[worker_m, :].index:
+        pbar = tqdm(self.adata.loc[worker_m, :].index, disable=self.no_pbars)
+        pbar.set_description('Leverages')
+        for i in pbar:
             DpJ_i = DpJ[i, :]
             DpW_i = DpW[i, :]
             # Compute analytical Pii
             Pii[i] = self._compute_Pii(DpJ_i, DpW_i)
+        del pbar
 
         self.res['min_lev'] = Pii[worker_m].min()
         self.res['max_lev'] = Pii[worker_m].max()
@@ -1257,9 +1265,11 @@ class FEEstimator:
         Pii = np.zeros(self.nn)
         worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
 
-        self.logger.info(f"[he] [approximate Pii] lev_batchsize={self.params['lev_batchsize']}, lev_nbatches={self.params['lev_nbatches']}, using {self.ncore} cores")
+        self.logger.info(f"[he] [approximate pii] lev_batchsize={self.params['lev_batchsize']}, lev_nbatches={self.params['lev_nbatches']}, using {self.ncore} core(s)")
 
-        for batch_i in range(self.params['lev_nbatches']):
+        pbar = trange(self.params['lev_nbatches'], disable=self.no_pbars)
+        pbar.set_description('Leverages 1')
+        for batch_i in pbar:
             if self.ncore > 1:
                 # Multiprocessing
                 ndraw_seeds = self.lev_batchsize // self.params['lev_batchsize_multiprocessing']
@@ -1268,15 +1278,19 @@ class FEEstimator:
                     raise ValueError(f"'lev_batchsize_multiprocessing' (currently {self.params['lev_batchsize_multiprocessing']}) should evenly divide 'lev_batchsize' (currently {self.lev_batchsize}).")
                 # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
                 seeds = rng.bit_generator._seed_seq.spawn(ndraw_seeds)
-                set_start_method('spawn')
                 with Pool(processes=self.ncore) as pool:
-                    Pii_all = pool.starmap(self._leverage_approx, [(self.params['lev_batchsize_multiprocessing'], np.random.default_rng(seed)) for seed in seeds])
+                    pbar2 = tqdm([(self.params['lev_batchsize_multiprocessing'], np.random.default_rng(seed)) for seed in seeds], total=ndraw_seeds, disable=self.no_pbars)
+                    pbar2.set_description('Leverages 1.5')
+                    Pii_all = pool.starmap(self._leverage_approx, pbar2)
+                    del pbar2
 
                 # Take mean over draws
                 Pii_i = sum(Pii_all) / len(Pii_all)
             else:
                 # Single core
                 Pii_i = self._leverage_approx(self.lev_batchsize, rng)
+
+            self.logger.debug(f"[he] [approximate pii] step {batch_i + 1}/{self.params['lev_nbatches']} done")
 
             # Take weighted average over all Pii draws
             Pii = (batch_i * Pii + Pii_i) / (batch_i + 1)
@@ -1286,12 +1300,20 @@ class FEEstimator:
 
             # If few enough bad draws, compute them analytically
             if n_bad_draws < self.params['lev_threshold_obs']:
-                leverage_warning = f"Threshold for max Pii is {self.params['lev_threshold_pii']}, with {self.lev_batchsize} draw(s) per batch and a maximum of {self.params['lev_nbatches']} batch(es) being drawn. There is/are {n_bad_draws} observation(s) with Pii above this threshold. These will be recomputed analytically. It took {batch_i + 1} batch(es) to get below the threshold of {self.params['lev_threshold_obs']} bad observations."
-                warnings.warn(leverage_warning)
+                if n_bad_draws > 0:
+                    leverage_warning = f"Breaking loop - threshold for max Pii is {self.params['lev_threshold_pii']}, with {self.lev_batchsize} draw(s) per batch and a maximum of {self.params['lev_nbatches']} batch(es) being drawn. There is/are {n_bad_draws} observation(s) with Pii above this threshold. This/these will be recomputed analytically. It took {batch_i + 1} batch(es) to get below the threshold of {self.params['lev_threshold_obs']} bad observation(s)."
+                else:
+                    leverage_warning = f"Breaking loop - threshold for max Pii is {self.params['lev_threshold_pii']}, with {self.lev_batchsize} draw(s) per batch and a maximum of {self.params['lev_nbatches']} batch(es) being drawn. No observations have Pii above this threshold. It took {batch_i + 1} batch(es) to get below the threshold of {self.params['lev_threshold_obs']} bad observation(s)."
+                self.logger.debug(leverage_warning)
+                if self.verbose:
+                    tqdm.write(leverage_warning) # warnings.warn(leverage_warning)
                 break
             elif batch_i == self.params['lev_nbatches'] - 1:
-                leverage_warning = f"Threshold for max Pii is {self.params['lev_threshold_pii']}, with {self.lev_batchsize} draw(s) per batch and a maximum of {self.params['lev_nbatches']} batch(es) being drawn. After exhausting the maximum number of batches, there is/are still {n_bad_draws} draw(s) with Pii above this threshold. These will be recomputed analytically."
-                warnings.warn(leverage_warning)
+                leverage_warning = f"Threshold for max Pii is {self.params['lev_threshold_pii']}, with {self.lev_batchsize} draw(s) per batch and a maximum of {self.params['lev_nbatches']} batch(es) being drawn. After exhausting the maximum number of batches, there is/are still {n_bad_draws} draw(s) with Pii above this threshold. This/these will be recomputed analytically."
+                self.logger.debug(leverage_warning)
+                if self.verbose:
+                    tqdm.write(leverage_warning) # warnings.warn(leverage_warning)
+        del pbar
 
         # Compute Pii analytically for observations with Pii approximation above threshold value
         analytical_indices = self.adata.loc[worker_m & (Pii >= self.params['lev_threshold_pii']), :].index
@@ -1304,11 +1326,14 @@ class FEEstimator:
             DpJ = np.asarray((self.Dp_sqrt @ self.J).todense())
             DpW = np.asarray((self.Dp_sqrt @ self.W).todense())
 
-            for i in analytical_indices:
+            pbar = tqdm(analytical_indices, disable=self.no_pbars)
+            pbar.set_description('Leverages 2')
+            for i in pbar:
                 DpJ_i = DpJ[i, :]
                 DpW_i = DpW[i, :]
                 # Compute analytical Pii
                 Pii[i] = self._compute_Pii(DpJ_i, DpW_i)
+            del pbar
 
         self.res['min_lev'] = Pii[worker_m].min()
         self.res['max_lev'] = Pii[worker_m].max()
@@ -1365,11 +1390,11 @@ class FEEstimator:
         # Compute the different draws
         for _ in range(ndraw_pii):
             R2 = 2 * rng.binomial(1, 0.5, self.nn) - 1
-            Pii += np.power(self._proj(R2, Dp0='sqrt', Dp2='sqrt'), 2.0)
+            Pii += (self._proj(R2, Dp0='sqrt', Dp2='sqrt') ** 2)
 
         # Take mean over draws
         Pii /= ndraw_pii
 
-        self.logger.info('done with batch')
+        self.logger.info('[he] [approximate pii] done with pii batch')
 
         return Pii

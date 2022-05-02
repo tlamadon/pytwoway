@@ -304,6 +304,7 @@ class Attrition:
 
         # Take all data for list of firms in smallest subset (NOTE: this requires the copy if there are returners)
         self.subset_2 = bdf.keep_ids('j', valid_firms, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, reset_index=True, copy=True)
+        del bdf
         # Clear id_reference_dict since it is no longer necessary
         self.subset_2._reset_id_reference_dict()
 
@@ -354,6 +355,7 @@ class Attrition:
 
         # # Drop m since it can change for leave-one-out components
         # bdf.drop('m')
+        del bdf
 
         relative_drop_fraction = 1 - self.subsets / (np.concatenate([[1], self.subsets]))[:-1]
         wids_to_drop = set()
@@ -406,6 +408,8 @@ class Attrition:
 
             # Get attrition worker ids
             attrition_ids = self.attrition_fn(bdf=bdf, clean_params=clean_params, rng=rng)
+            if non_he_he == 'he':
+                del bdf
 
             if self.attrition_type == 'increasing':
                 # Once the initial connectedness has been computed, larger subsets are connected by construction
@@ -430,9 +434,9 @@ class Attrition:
                     V = _unscramble(list(pool.starmap(self._attrition_interior, _scramble(list(_attrition_interior_params())))))
 
                 # Extract results
-                for res in enumerate(V):
-                    res_all[non_he_he]['fe'].append(res[1]['fe'])
-                    res_all[non_he_he]['cre'].append(res[1]['cre'])
+                for res in V:
+                    res_all[non_he_he]['fe'].append(res['fe'])
+                    res_all[non_he_he]['cre'].append(res['cre'])
             else:
                 # Single core
                 for attrition_subparams in _attrition_interior_params():
@@ -487,11 +491,11 @@ class Attrition:
                 # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
                 # Multiprocessing tqdm source: https://stackoverflow.com/a/45276885/17333120
                 V = list(tqdm(pool.starmap(self._attrition_single, [(bdf, ncore, np.random.default_rng(seed)) for seed in rng.bit_generator._seed_seq.spawn(N)]), total=N))
-            for res in enumerate(V):
-                res_non_he['fe'].append(res[1]['non_he']['fe'])
-                res_non_he['cre'].append(res[1]['non_he']['cre'])
-                res_he['fe'].append(res[1]['he']['fe'])
-                res_he['cre'].append(res[1]['he']['cre'])
+            for res in V:
+                res_non_he['fe'].append(res['non_he']['fe'])
+                res_non_he['cre'].append(res['non_he']['cre'])
+                res_he['fe'].append(res['he']['fe'])
+                res_he['cre'].append(res['he']['cre'])
         else:
             # Estimate without multi-processing
             for seed in tqdm(rng.bit_generator._seed_seq.spawn(N)):
