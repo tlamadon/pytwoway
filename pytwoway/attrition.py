@@ -1,67 +1,240 @@
 '''
-Class for Attrition plots
+Class for attrition estimation and plotting.
 '''
-from multiprocessing import Pool, Value
+from tqdm import tqdm, trange
+import warnings
+import itertools
+from multiprocessing import Pool
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 import bipartitepandas as bpd
-from bipartitepandas.util import ParamsDict, to_list, logger_init
+# from bipartitepandas.util import to_list, logger_init
 import pytwoway as tw
-from tqdm import tqdm
-import warnings
 
-# NOTE: multiprocessing isn't compatible with lambda functions
-def _tands(a):
-    return ((a[0] == 'increasing') and (np.min(np.diff(np.array(a[0]))) < 0)) or ((a[0] == 'decreasing') and (np.min(np.diff(np.array(a[0]))) > 0))
-def _gteq0(a):
-    return a >= 0
-def _gteq1(a):
-    return a >= 1
-
-# Define default parameter dictionary
-_attrition_params_default = ParamsDict({
-    'type_and_subsets': (('increasing', np.linspace(0.1, 0.5, 5)), 'type_constrained', (tuple, _tands),
-        '''
-            (default=('increasing', np.linspace(0.1, 0.5, 5))) How to attrition data (either 'increasing' or 'decreasing'), and subsets to consider (both are required because switching type requires swapping the order of the subsets).
-        ''', "type 'increasing' with subsets that are weakly increasing, or type 'decreasing' with subsets that are weakly decreasing"),
-    'min_moves_threshold': (15, 'type_constrained', (int, _gteq0),
-        '''
-            (default=15) Minimum number of moves required to keep a firm.
-        ''', '>= 0'),
-    'n_subsample_draws': (5, 'type_constrained', (int, _gteq1),
-        '''
-            (default=5) Maximum number of attempts to draw a valid subsample for attrition increasing (this is necessary because the random draw may ultimately drop too many observations).
-        ''', '>= 1'),
-    'subsample_min_firms': (20, 'type_constrained', (int, _gteq1),
-        '''
-            (default=20) Minimum number of firms necessary for a subsample to be considered valid. This should be at least the number of clusters used when computing the CRE estimator.
-        ''', '>= 1'),
-    'copy': (False, 'type', bool,
-        '''
-            (default=False) If False, avoid copy.
-        ''', None)
-})
-
-def attrition_params(update_dict=None):
+class AttritionIncreasing():
     '''
-    Dictionary of default attrition_params. Run tw.attrition_params().describe_all() for descriptions of all valid parameters.
+    Generate increasing subsets of a dataset to estimate the effects of attrition. Do this by first drawing a given fraction of all movers. Fix the set of firms connected by these movers. Then, constructively rebuild the data by adding back successively increasing fractions of the previously dropped movers that belong to the fixed set of firms.
 
     Arguments:
-        update_dict (dict or None): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of attrition_params
+        subset_fractions (NumPy Array or None): fractions of movers to consider for each subset. Must be (weakly) monotonically increasing. None is equivalent to np.linspace(0.1, 0.5, 5).
+        n_subsample_draws (int): maximum number of attempts to draw a valid initial subsample (this is necessary because the random draw may ultimately drop too many observations)
+        subsample_min_firms (int): minimum number of firms necessary for an initial subsample to be considered valid. This should be at least the number of clusters used when estimating the CRE model.
     '''
-    new_dict = _attrition_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
+
+    def __init__(self, subset_fractions=None, n_subsample_draws=5, subsample_min_firms=20):
+        if subset_fractions is None:
+            subset_fractions = np.linspace(0.1, 0.5, 5)
+
+        if not (np.min(np.diff(subset_fractions)) >= 0):
+            raise ValueError('Subset fractions must be weakly increasing for AttritionIncreasing().')
+
+        self.subset_fractions = subset_fractions
+        self.n_subsample_draws = n_subsample_draws
+        self.subsample_min_firms = subsample_min_firms
+
+    def gen_subsets(self, bdf, clean_params=None, rng=None):
+        '''
+        Generate attrition subsets.
+
+        Arguments:
+            bdf (BipartiteDataFrame): bipartite dataframe
+            clean_params (ParamsDict or None): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.clean_params().
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+
+        Returns:
+            (list of tuples): each entry gives a tuple of (bdf_subset, wids_to_drop), where bdf_subset gives a subset of bdf, and wids_to_drop gives a set of worker ids to drop prior to cleaning the BipartiteDataFrame; if wids_to_drop is None, no worker ids need to be dropped
+        '''
+        if clean_params is None:
+            clean_params = bpd.clean_params()
+        if rng is None:
+            rng = np.random.default_rng(None)
+
+        if bdf.n_firms() < self.subsample_min_firms:
+            # Make sure there are enough firms in the original dataframe
+            raise ValueError("Estimating attrition increasing, and dataframe has fewer firms than the minimum threshold required after dropping firms with too few moves. Considering lowering `min_moves_threshold` for tw.Attrition() or lowering `subsample_min_firms` for tw.AttritionIncreasing().")
+
+        # List to return
+        return_lst = []
+
+        # Update clean_params
+        clean_params['is_sorted'] = True
+        clean_params['copy'] = False
+
+        # Get subset fractions
+        fracs = self.subset_fractions
+
+        # Must reset id_reference_dict
+        bdf = bdf._reset_id_reference_dict(include=True)
+
+        # Get worker ids in base subset
+        wids_init = bdf.loc[bdf.loc[:, 'm'].to_numpy() > 0, :].unique_ids('i')
+
+        for i in range(self.n_subsample_draws):
+            # Sometimes we draw so few firms that it's likely to end up with no observations left, so redraw until success
+            ## Draw first subset ##
+            # Number of wids to drop
+            n_wid_drops_1 = int(np.floor((1 - fracs[0]) * len(wids_init)))
+            # Draw wids to drop
+            wid_drops_1 = set(rng.choice(wids_init, size=n_wid_drops_1, replace=False))
+            try:
+                # NOTE: this requires the copy if there are returners
+                subset_1 = bdf.drop_ids('i', wid_drops_1, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, reset_index=True, copy=True)._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False).clean(clean_params)
+                n_firms = subset_1.n_firms()
+                if n_firms >= self.subsample_min_firms:
+                    # If sufficiently many firms, break out of the loop
+                    break
+                else:
+                    raise ValueError(f"Insufficiently many firms remain in attrition draw: minimum threshold is {self.subsample_min_firms} firms, but only {n_firms} remain.")
+            except ValueError as v:
+                if i == (self.n_subsample_draws - 1):
+                    # Don't fail unless it's the last loop
+                    raise ValueError(v)
+
+        return_lst.append((subset_1, None))
+        subset_1_orig_ids = subset_1.original_ids(copy=False)
+        del subset_1
+
+        ### Extract firms and workers in initial subset ###
+        ## Fixed subset of firms ##
+        valid_firms = []
+        for j_subcol in bpd.util.to_list(bdf.col_reference_dict['j']):
+            original_j = 'original_' + j_subcol
+            if original_j not in subset_1_orig_ids.columns:
+                # If no changes to this column
+                original_j = j_subcol
+            valid_firms += list(subset_1_orig_ids.loc[:, original_j].unique())
+        valid_firms = set(valid_firms)
+
+        ## Drawn workers ##
+        original_i = 'original_i'
+        if original_i not in subset_1_orig_ids.columns:
+            # If no changes to i column
+            original_i = 'i'
+        drawn_wids = set(subset_1_orig_ids.loc[subset_1_orig_ids.loc[:, 'm'].to_numpy() > 0, original_i].unique())
+        del subset_1_orig_ids
+
+        ## Draw new subsets ##
+        # Take all data for list of firms in smallest subset (NOTE: this requires the copy if there are returners)
+        subset_2 = bdf.keep_ids('j', valid_firms, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, reset_index=True, copy=True)
+        del bdf
+        # Clear id_reference_dict since it is no longer necessary
+        subset_2._reset_id_reference_dict()
+
+        # Determine which wids (for movers) can still be drawn
+        all_valid_wids = set(subset_2.loc[subset_2.loc[:, 'm'].to_numpy() > 0, :].unique_ids('i'))
+        wids_to_drop = all_valid_wids.difference(drawn_wids)
+
+        for i, frac in enumerate(fracs[1:]):
+            # Each step, drop fewer wids
+            n_wid_draws_i = min(int(np.round((1 - frac) * len(all_valid_wids), 1)), len(wids_to_drop))
+            if n_wid_draws_i > 0:
+                wids_to_drop = set(rng.choice(list(wids_to_drop), size=n_wid_draws_i, replace=False))
+            else:
+                warnings.warn(f'Attrition plot does not change at iteration {i}')
+
+            if len(wids_to_drop) > 0:
+                return_lst.append((subset_2, wids_to_drop))
+            else:
+                return_lst.append((subset_2, None))
+
+        return return_lst
+
+    def update_clean_params(self, clean_params):
+        '''
+        Update clean_params so 'connectedness' = None (once the initial connectedness has been computed, larger subsets are connected by construction).
+
+        Arguments:
+            clean_params (ParamsDict): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters.
+
+        Returns:
+            (ParamsDict) updated clean_params
+        '''
+        clean_params = clean_params.copy()
+        clean_params['connectedness'] = None
+
+        return clean_params
+
+
+class AttritionDecreasing():
+    '''
+    Generate decreasing subsets of a dataset to estimate the effects of attrition. Do this by first drawing successively decreasing fractions of movers from the original dataset.
+
+    Arguments:
+        subset_fractions (NumPy Array or None): fractions of movers to consider for each subset. Must be (weakly) monotonically decreasing. None is equivalent to np.linspace(0.5, 0.1, 5).
+    '''
+
+    def __init__(self, subset_fractions=None):
+        if subset_fractions is None:
+            subset_fractions = np.linspace(0.5, 0.1, 5)
+
+        if not (np.max(np.diff(subset_fractions)) <= 0):
+            raise ValueError('Subset fractions must be weakly decreasing for AttritionDecreasing().')
+
+        self.subset_fractions = subset_fractions
+
+    def _gen_subsets(self, bdf, clean_params=None, rng=None):
+        '''
+        Generate attrition subsets.
+
+        Arguments:
+            bdf (BipartiteBase): bipartite dataframe
+            clean_params (ParamsDict or None): used for AttritionIncreasing(), does nothing for AttritionDecreasing()
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+
+        Returns:
+            (list of tuples): each entry gives a tuple of (bdf_subset, wids_to_drop), where bdf_subset gives a subset of bdf, and wids_to_drop gives a set of worker ids to drop prior to cleaning the BipartiteDataFrame; if wids_to_drop is None, no worker ids need to be dropped
+        '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
+        # List to return
+        return_lst = []
+
+        # Worker ids in base subset
+        wids_movers = set(bdf.loc[bdf.loc[:, 'm'].to_numpy() > 0, :].unique_ids('i'))
+        # wids_stayers = list(bdf.loc[bdf.loc[:, 'm'].to_numpy() == 0, :].unique_ids('i'))
+
+        # # Drop m since it can change for leave-one-out components
+        # bdf.drop('m')
+
+        relative_drop_fraction = 1 - self.subset_fractions / (np.concatenate([[1], self.subset_fractions]))[:-1]
+        wids_to_drop = set()
+
+        for i, drop_frac in enumerate(relative_drop_fraction):
+            n_wid_draws_i = min(int(np.round(drop_frac * len(wids_movers), 1)), len(wids_movers))
+            if n_wid_draws_i > 0:
+                wid_draws_i = set(rng.choice(list(wids_movers), size=n_wid_draws_i, replace=False))
+                wids_movers = wids_movers.difference(wid_draws_i)
+                wids_to_drop = wids_to_drop.union(wid_draws_i)
+            else:
+                warnings.warn(f'Attrition plot does not change at iteration {i}')
+
+            if len(wids_to_drop) > 0:
+                return_lst.append((bdf, wids_to_drop))
+            else:
+                return_lst.append((bdf, None))
+
+            # subset_i = bdf.keep_ids('i', wids_movers + wids_stayers, copy=True)._reset_id_reference_dict()._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False)
+
+        return return_lst
+
+    def update_clean_params(self, clean_params):
+        '''
+        Used for AttritionIncreasing(), does nothing for AttritionDecreasing().
+
+        Arguments:
+            clean_params (ParamsDict): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters.
+
+        Returns:
+            (ParamsDict) clean_params
+        '''
+        return clean_params
 
 def _scramble(lst):
     '''
     Reorder a list from [a, b, c, d, e] to [a, e, b, d, c]. This is used for attrition with multiprocessing, to ensure memory usage stays relatively constant, by mixing together large and small draws. Scrambled lists can be unscrambled with _unscramble().
-    
+
     Arguments:
         lst (list): list to scramble
 
@@ -80,7 +253,7 @@ def _scramble(lst):
 def _unscramble(lst):
     '''
     Reorder a list from [a, e, b, d, c] to [a, b, c, d, e]. This undoes the scrambling done by _scramble().
-    
+
     Arguments:
         lst (list): list to unscramble
 
@@ -102,16 +275,17 @@ class Attrition:
     Class of Attrition, which generates attrition plots using bipartite labor data.
 
     Arguments:
-        attrition_params (ParamsDict or None): dictionary of parameters for attrition. Run tw.attrition_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.attrition_params().
+        min_moves_threshold (int): minimum number of moves required to keep a firm
+        attrition_how (AttritionIncreasing() or AttritionDecreasing()): instance of AttritionIncreasing() or AttritionDecreasing(), used to specify if attrition should constructively build up using a fixed set of firms, or randomly drop increasing fractions of movers from the original dataset; None is equivalent to tw.AttritionIncreasing()
         fe_params (ParamsDict or None): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().
         cre_params (ParamsDict or None): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.cre_params().
         cluster_params (ParamsDict or None): dictionary of parameters for clustering in CRE estimation. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.cluster_params().
         clean_params (ParamsDict or None): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.clean_params().
     '''
 
-    def __init__(self, attrition_params=None, fe_params=None, cre_params=None, cluster_params=None, clean_params=None):
-        if attrition_params is None:
-            attrition_params = tw.attrition_params()
+    def __init__(self, min_moves_threshold=15, attrition_how=None, fe_params=None, cre_params=None, cluster_params=None, clean_params=None):
+        if attrition_how is None:
+            attrition_how = AttritionIncreasing()
         if fe_params is None:
             fe_params = tw.fe_params()
         if cre_params is None:
@@ -121,31 +295,16 @@ class Attrition:
         if clean_params is None:
             clean_params = bpd.clean_params()
 
-        ##### Save attributes #####
-        ## Basic attributes ##
-        # Type and subsets
-        self.attrition_type = attrition_params['type_and_subsets'][0]
-        self.subsets = attrition_params['type_and_subsets'][1]
-
-        # Attrition function (increasing or decreasing)
-        attrition_fn_dict = {
-            'increasing': self._attrition_increasing,
-            'decreasing': self._attrition_decreasing
-        }
-        self.attrition_fn = attrition_fn_dict[self.attrition_type]
-
-        # # Make sure subsets are weakly increasing/decreasing # FIXME this check occurs inside the parameter dictionary
-        # if (self.attrition_type == 'increasing') and (np.min(np.diff(np.array(self.subsets))) < 0):
-        #     raise NotImplementedError('Subsets must be weakly increasing for increasing subsets.')
-        # elif (self.attrition_type == 'decreasing') and (np.min(np.diff(np.array(self.subsets))) > 0):
-        #     raise NotImplementedError('Subsets must be weakly decreasing for decreasing subsets.')
-
+        ## Save attributes ##
+        # Minimum number of moves required to keep a firm
+        self.min_moves_threshold = min_moves_threshold
+        # AttritionIncreasing() or AttritionDecreasing()
+        self.attrition_how = attrition_how
         # Prevent plotting until results exist
         self.attrition_res = False
 
         #### Parameter dictionaries ####
         ### Save parameter dictionaries ###
-        self.attrition_params = attrition_params.copy()
         self.fe_params = fe_params.copy()
         self.cre_params = cre_params.copy()
         self.cluster_params = cluster_params.copy()
@@ -197,12 +356,13 @@ class Attrition:
 
     # Cannot include two underscores because isn't compatible with starmap for multiprocessing
     # Source: https://stackoverflow.com/questions/27054963/python-attribute-error-object-has-no-attribute
-    def _attrition_interior(self, wids_to_drop, fe_params=None, cre_params=None, cluster_params=None, clean_params=None, rng=None):
+    def _attrition_interior(self, bdf, wids_to_drop, fe_params=None, cre_params=None, cluster_params=None, clean_params=None, rng=None):
         '''
         Estimate all parameters of interest. This is the interior function to attrition_single.
 
         Arguments:
-            wids_to_drop (set or BipartiteBase): if set, worker ids to drop from self.subset_2; if BipartiteBase, is subset
+            bdf (BipartiteDataFrame): bipartite dataframe
+            wids_to_drop (set or None): worker ids to drop; if None, no worker ids to drop
             fe_params (ParamsDict or None): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().
             cre_params (ParamsDict or None): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.cre_params().
             cluster_params (ParamsDict or None): dictionary of parameters for clustering in CRE estimation. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.cluster_params().
@@ -224,161 +384,30 @@ class Attrition:
             rng = np.random.default_rng(None)
 
         # logger_init(bdf) # This stops a weird logging bug that stops multiprocessing from working
-        if isinstance(wids_to_drop, set):
+        if wids_to_drop is not None:
             # Drop ids and clean data (NOTE: this does not require a copy)
-            bdf = self.subset_2.drop_ids('i', wids_to_drop, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, copy=False)._reset_attributes(columns_contig=True, connected=False, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False).clean(clean_params)
-        else:
-            bdf = wids_to_drop
-        ## Estimate FE model
+            bdf = bdf.drop_ids('i', wids_to_drop, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, copy=False)._reset_attributes(columns_contig=True, connected=False, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False).clean(clean_params)
+        ## Estimate FE model ##
         fe_estimator = tw.FEEstimator(bdf, fe_params)
         fe_estimator.fit(rng)
-        ## Estimate CRE model
+        fe_res = fe_estimator.res
+        del fe_estimator
+        ## Estimate CRE model ##
         # Cluster
         bdf = bdf.cluster(cluster_params)
         # Estimate
         cre_estimator = tw.CREEstimator(bdf.to_eventstudy(move_to_worker=False, is_sorted=True, copy=False).get_cs(copy=False), cre_params)
+        del bdf
         cre_estimator.fit(rng)
 
-        return {'fe': fe_estimator.res, 'cre': cre_estimator.res}
-
-    def _attrition_increasing(self, bdf, clean_params=None, rng=None):
-        '''
-        First, keep only firms that have at minimum `threshold` many movers. Then take a random subset of subsets[0] percent of remaining movers. Constructively rebuild the data to reach each subsequent value of subsets. Return the worker ids to drop to attain these subsets as an iterator.
-
-        Arguments:
-            bdf (BipartiteBase): bipartite dataframe
-            clean_params (ParamsDict or None): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.clean_params().
-            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
-
-        Returns:
-            (yields (set or BipartiteBase)): if set, worker ids to drop from self.subset_2; if BipartiteBase, is subset
-        '''
-        if clean_params is None:
-            clean_params = bpd.clean_params()
-        if rng is None:
-            rng = np.random.default_rng(None)
-
-        # Get subsets
-        subsets = self.subsets
-
-        # Must reset id_reference_dict
-        bdf = bdf._reset_id_reference_dict(include=True)
-
-        # Get worker ids in base subset
-        wids_init = bdf.loc[bdf.loc[:, 'm'].to_numpy() > 0, :].unique_ids('i')
-
-        for i in range(self.attrition_params['n_subsample_draws']):
-            # Sometimes we draw so few firms that it's likely to end up with no observations left, so redraw until success
-            ## Draw first subset
-            # Number of wids to drop
-            n_wid_drops_1 = int(np.floor((1 - subsets[0]) * len(wids_init)))
-            # Draw wids to drop
-            wid_drops_1 = set(rng.choice(wids_init, size=n_wid_drops_1, replace=False))
-            try:
-                # NOTE: this requires the copy if there are returners
-                subset_1 = bdf.drop_ids('i', wid_drops_1, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, reset_index=True, copy=True)._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False).clean(clean_params)
-                n_firms = subset_1.n_firms()
-                if n_firms >= self.attrition_params['subsample_min_firms']:
-                    # If sufficiently many firms, stop the loop
-                    break
-                else:
-                    raise ValueError(f"Insufficiently many firms remain in attrition draw: minimum threshold is {self.attrition_params['subsample_min_firms']} firms, but only {n_firms} remain.")
-            except ValueError as v:
-                if i == (self.attrition_params['n_subsample_draws'] - 1):
-                    # Don't fail unless it's the last loop
-                    raise ValueError(v)
-
-        yield subset_1
-        subset_1_orig_ids = subset_1.original_ids(copy=False)
-        del subset_1
-
-        # Get list of all valid firms
-        valid_firms = []
-        for j_subcol in to_list(bdf.col_reference_dict['j']):
-            original_j = 'original_' + j_subcol
-            if original_j not in subset_1_orig_ids.columns:
-                # If no changes to this column
-                original_j = j_subcol
-            valid_firms += list(subset_1_orig_ids[original_j].unique())
-        valid_firms = set(valid_firms)
-
-        # Take all data for list of firms in smallest subset (NOTE: this requires the copy if there are returners)
-        self.subset_2 = bdf.keep_ids('j', valid_firms, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, reset_index=True, copy=True)
-        del bdf
-        # Clear id_reference_dict since it is no longer necessary
-        self.subset_2._reset_id_reference_dict()
-
-        # Determine which wids (for movers) can still be drawn
-        all_valid_wids = set(self.subset_2.loc[self.subset_2.loc[:, 'm'].to_numpy() > 0, :].unique_ids('i'))
-
-        original_i = 'original_i'
-        if original_i not in subset_1_orig_ids.columns:
-            # If no changes to i column
-            original_i = 'i'
-        wids_to_drop = all_valid_wids.difference(set(subset_1_orig_ids.loc[subset_1_orig_ids.loc[:, 'm'].to_numpy() > 0, original_i].unique()))
-        del subset_1_orig_ids
-
-        for i, subset_pct in enumerate(subsets[1:]):
-            # Each step, drop fewer wids
-            n_wid_draws_i = min(int(np.round((1 - subset_pct) * len(all_valid_wids), 1)), len(wids_to_drop))
-            if n_wid_draws_i > 0:
-                wids_to_drop = set(rng.choice(list(wids_to_drop), size=n_wid_draws_i, replace=False))
-            else:
-                warnings.warn(f'Attrition plot does not change at iteration {i}')
-
-            yield wids_to_drop
-
-    def _attrition_decreasing(self, bdf, clean_params=None, rng=None):
-        '''
-        First, keep only firms that have at minimum `threshold` many movers. Then take a random subset of subsets[0] percent of remaining movers. Deconstruct the data to reach each subsequent value of subsets. Return the worker ids to drop to attain these subsets as an iterator.
-
-        Arguments:
-            bdf (BipartiteBase): bipartite dataframe
-            clean_params (ParamsDict or None): used for _attrition_increasing(), does nothing for _attrition_decreasing()
-            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
-
-        Returns:
-            (yields sets): worker ids to drop from self.subset_2
-        '''
-        if rng is None:
-            rng = np.random.default_rng(None)
-
-        # bdf = bdf.copy()
-        # bdf._reset_id_reference_dict() # Clear id_reference_dict since it is not necessary
-
-        # For consistency with _attrition_increasing()
-        self.subset_2 = bdf
-
-        # Worker ids in base subset
-        wids_movers = set(bdf.loc[bdf.loc[:, 'm'].to_numpy() > 0, :].unique_ids('i'))
-        # wids_stayers = list(bdf.loc[bdf.loc[:, 'm'].to_numpy() == 0, :].unique_ids('i'))
-
-        # # Drop m since it can change for leave-one-out components
-        # bdf.drop('m')
-        del bdf
-
-        relative_drop_fraction = 1 - self.subsets / (np.concatenate([[1], self.subsets]))[:-1]
-        wids_to_drop = set()
-
-        for i, drop_frac in enumerate(relative_drop_fraction):
-            n_wid_draws_i = min(int(np.round(drop_frac * len(wids_movers), 1)), len(wids_movers))
-            if n_wid_draws_i > 0:
-                wid_draws_i = set(rng.choice(list(wids_movers), size=n_wid_draws_i, replace=False))
-                wids_movers = wids_movers.difference(wid_draws_i)
-                wids_to_drop = wids_to_drop.union(wid_draws_i)
-            else:
-                warnings.warn(f'Attrition plot does not change at iteration {i}')
-
-            yield wids_to_drop
-
-            # subset_i = bdf.keep_ids('i', wids_movers + wids_stayers, copy=True)._reset_id_reference_dict()._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False)
+        return {'fe': fe_res, 'cre': cre_estimator.res}
 
     def _attrition_single(self, bdf, ncore=1, rng=None):
         '''
-        Run attrition estimations of TwoWay to estimate parameters given fraction of movers remaining. This is the interior function to attrition.
+        Run attrition estimations to estimate parameters given fraction of movers remaining. This is the interior function to attrition.
 
         Arguments:
-            bdf (BipartiteBase): bipartite dataframe
+            bdf (BipartiteDataFrame): bipartite dataframe
             ncore (int): number of cores to use
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
@@ -406,49 +435,48 @@ class Attrition:
             cluster_params = non_he_he_params['cluster']
             clean_params = non_he_he_params['clean']
 
-            # Get attrition worker ids
-            attrition_ids = self.attrition_fn(bdf=bdf, clean_params=clean_params, rng=rng)
+            # Generate attrition subsets and worker ids to drop
+            subsets = self.attrition_how.gen_subsets(bdf=bdf, clean_params=clean_params, rng=rng)
             if non_he_he == 'he':
                 del bdf
 
-            if self.attrition_type == 'increasing':
-                # Once the initial connectedness has been computed, larger subsets are connected by construction
-                clean_params = clean_params.copy()
-                clean_params['connectedness'] = None
+            # Update clean_params
+            clean_params = self.attrition_how.update_clean_params(clean_params)
 
-            def _attrition_interior_params():
-                '''
-                Yield attrition parameters for each subset.
-                '''
-                # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
-                N = len(self.subsets)
-                seeds = rng.bit_generator._seed_seq.spawn(N)
-                for i, wids_to_drop in enumerate(attrition_ids):
-                    rng_i = np.random.default_rng(seeds[i])
-                    # Yield parameters
-                    yield (wids_to_drop, fe_params, self.cre_params, cluster_params, clean_params, rng_i)
+            ## Construct list of parameters to estimate each subset ##
+            attrition_params = []
+            # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
+            N = len(subsets)
+            seeds = rng.bit_generator._seed_seq.spawn(N)
+            for i, subset in enumerate(subsets):
+                subset_i, wids_to_drop_i = subset
+                rng_i = np.random.default_rng(seeds[i])
+                attrition_params.append((subset_i, wids_to_drop_i, fe_params, self.cre_params, cluster_params, clean_params, rng_i))
+            del subsets
 
+            ## Estimate on subset ##
             if ncore > 1:
                 # Multiprocessing
                 with Pool(processes=ncore) as pool:
-                    V = _unscramble(list(pool.starmap(self._attrition_interior, _scramble(list(_attrition_interior_params())))))
-
-                # Extract results
-                for res in V:
-                    res_all[non_he_he]['fe'].append(res['fe'])
-                    res_all[non_he_he]['cre'].append(res['cre'])
+                    pbar = tqdm(_scramble(attrition_params), total=N)
+                    pbar.set_description(f'attrition, {non_he_he}')
+                    V = _unscramble(pool.starmap(self._attrition_interior, pbar))
             else:
                 # Single core
-                for attrition_subparams in _attrition_interior_params():
-                    res = self._attrition_interior(*attrition_subparams)
-                    res_all[non_he_he]['fe'].append(res['fe'])
-                    res_all[non_he_he]['cre'].append(res['cre'])
+                pbar = tqdm(attrition_params, total=N)
+                pbar.set_description(f'attrition, {non_he_he}')
+                V = itertools.starmap(self._attrition_interior, pbar)
 
-            del attrition_ids, self.subset_2
+            ## Extract results ##
+            for res in V:
+                res_all[non_he_he]['fe'].append(res['fe'])
+                res_all[non_he_he]['cre'].append(res['cre'])
+
+            del attrition_params, pbar
 
         return res_all
 
-    def attrition(self, bdf, N=10, ncore=1, rng=None):
+    def attrition(self, bdf, N=10, ncore=1, copy=False, rng=None):
         '''
         Run Monte Carlo on attrition estimations of TwoWay to estimate variance of parameter estimates given fraction of movers remaining. Note that this overwrites the stored dataframe, meaning if you want to run attrition with different threshold number of movers, you will have to create multiple Attrition objects, or alternatively, run this method with an increasing threshold for each iteration.
 
@@ -456,6 +484,7 @@ class Attrition:
             bdf (BipartiteBase): bipartite dataframe (NOTE: we need to avoid saving bdf as a class attribute, otherwise multiprocessing will create a separate copy of it for each core used)
             N (int): number of simulations
             ncore (int): number of cores to use
+            copy (bool): if False, avoid copy
             rng (np.random.Generator or None): NumPy random number generator. This overrides the random number generators for FE and CRE. None is equivalent to np.random.default_rng(None).
 
         Returns:
@@ -464,8 +493,8 @@ class Attrition:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        # Data
-        if self.attrition_params['copy']:
+        if copy:
+            # Copy
             bdf = bdf.copy()
 
         ## Create lists to save results ##
@@ -478,12 +507,10 @@ class Attrition:
         self.movers_per_firm = bdf.loc[bdf.loc[:, 'm'] > 0, :].n_workers() / bdf.n_firms() # bdf.loc[bdf.loc[:, 'm'] > 0, :].groupby('j')['i'].nunique().mean()
 
         # Take subset of firms that meet threshold of sufficiently many moves
-        bdf = bdf.min_moves_frame(threshold=self.attrition_params['min_moves_threshold'], drop_returns_to_stays=self.clean_params['drop_returns_to_stays'], is_sorted=True, reset_index=True, copy=False)
+        bdf = bdf.min_moves_frame(threshold=self.min_moves_threshold, drop_returns_to_stays=self.clean_params['drop_returns_to_stays'], is_sorted=True, reset_index=True, copy=False)
 
         if len(bdf) == 0:
-            raise ValueError("Length of dataframe is 0 after dropping firms with too few moves, consider lowering 'min_moves_threshold' in attrition_params.")
-        if (self.attrition_type == 'increasing') and (bdf.n_firms() < self.attrition_params['subsample_min_firms']):
-            raise ValueError("Estimating attrition increasing, and dataframe has fewer firms than the minimum threshold required after dropping firms with too few moves. Considering lowering 'min_moves_threshold' or lowering 'subsample_min_firms' in attrition_params.")
+            raise ValueError("Length of dataframe is 0 after dropping firms with too few moves, consider lowering `min_moves_threshold` for tw.Attrition().")
 
         if False: # ncore > 1:
             # Estimate with multi-processing
@@ -498,9 +525,10 @@ class Attrition:
                 res_he['cre'].append(res['he']['cre'])
         else:
             # Estimate without multi-processing
-            for seed in tqdm(rng.bit_generator._seed_seq.spawn(N)):
-                rng_i = np.random.default_rng(seed)
-                res = self._attrition_single(bdf=bdf, ncore=ncore, rng=rng_i)
+            pbar = trange(N)
+            pbar.set_description('attrition main')
+            for _ in pbar:
+                res = self._attrition_single(bdf=bdf, ncore=ncore, rng=rng)
                 res_non_he['fe'].append(res['non_he']['fe'])
                 res_non_he['cre'].append(res['non_he']['cre'])
                 res_he['fe'].append(res['he']['fe'])
@@ -563,7 +591,7 @@ class Attrition:
                     he_cov_psi_alpha_pct[i, j, 3] = 2 * float(he_res_fe_dict['cov_he']) / float(he_res_fe_dict['var_y'])
 
             # x-axis
-            x_axis = np.round(100 * self.subsets, xticks_round)
+            x_axis = np.round(100 * self.attrition_how.subset_fractions, xticks_round)
             if np.all(x_axis == x_axis.astype(int)):
                 # This is necessary for the boxplots, since they don't automatically convert to integers
                 x_axis = x_axis.astype(int, copy=False)
@@ -573,7 +601,8 @@ class Attrition:
             he_cov_psi_alpha_pct = 100 * he_cov_psi_alpha_pct
 
             # Flip along 1st axis so that both increasing and decreasing have the same order
-            if self.attrition_type == 'decreasing':
+            if np.max(np.diff(self.attrition_how.subset_fractions)) <= 0:
+                # If decreasing
                 x_axis = np.flip(x_axis)
                 non_he_var_psi_pct = np.flip(non_he_var_psi_pct, axis=1)
                 non_he_cov_psi_alpha_pct = np.flip(non_he_cov_psi_alpha_pct, axis=1)
@@ -600,7 +629,8 @@ class Attrition:
                 he_movers_per_firm *= 1.5
 
                 # Reverse order so that both increasing and decreasing have the same order
-                if self.attrition_type == 'decreasing':
+                if np.max(np.diff(self.attrition_how.subset_fractions)) <= 0:
+                    # If decreasing
                     non_he_movers_per_firm = np.flip(non_he_movers_per_firm, axis=0)
                     he_movers_per_firm = np.flip(he_movers_per_firm, axis=0)
 
@@ -615,7 +645,7 @@ class Attrition:
                             frac = (self.movers_per_firm - non_he_movers_per_firm[i]) / (non_he_movers_per_firm_i - non_he_movers_per_firm[i])
                             non_he_movers_per_firm_line = x_axis[i] + frac * (x_axis[i + 1] - x_axis[i])
                             break
-                        
+
                 if self.movers_per_firm >= np.max(he_movers_per_firm):
                     he_movers_per_firm_line = np.max(x_axis)
                 elif self.movers_per_firm <= np.min(he_movers_per_firm):

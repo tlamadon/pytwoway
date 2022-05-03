@@ -1,19 +1,18 @@
 '''
-We implement the non-linear estimator from Bonhomme Lamadon & Manresa
+We implement the non-linear estimator from Bonhomme Lamadon & Manresa.
 '''
+from tqdm import tqdm, trange
+import warnings
+import itertools
+from multiprocessing import Pool
 import numpy as np
 import pandas as pd
 from scipy.special import logsumexp
 from scipy.sparse import csc_matrix, diags
-from scipy.stats import norm
 from matplotlib import pyplot as plt
-from multiprocessing import Pool
-import itertools
-import warnings
 from pytwoway import jitter_scatter
 from pytwoway import constraints as cons
-from bipartitepandas.util import ParamsDict, to_list, _is_subtype
-from tqdm import tqdm, trange
+from bipartitepandas.util import ParamsDict, to_list # , _is_subtype
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq2(a):
