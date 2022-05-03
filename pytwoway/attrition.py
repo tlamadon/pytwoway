@@ -469,7 +469,7 @@ class Attrition:
             for i, subset in enumerate(subsets):
                 fids_to_drop_i, wids_to_drop_i = subset
                 rng_i = np.random.default_rng(seeds[i])
-                attrition_params.append((bdf, fids_to_drop_i, wids_to_drop_i, fe_params, self.cre_params, cluster_params, clean_params, rng_i))
+                attrition_params.append((fids_to_drop_i, wids_to_drop_i, fe_params, self.cre_params, cluster_params, clean_params, rng_i))
             del subsets
             if non_he_he == 'he':
                 del bdf
@@ -478,14 +478,16 @@ class Attrition:
             if ncore > 1:
                 # Multiprocessing
                 with Pool(processes=ncore) as pool:
-                    pbar = tqdm(_scramble(attrition_params), total=N)
+                    pbar = tqdm(_scramble((bdf, *attrition_params)), total=N)
                     pbar.set_description(f'attrition, {non_he_he}')
                     V = _unscramble(pool.starmap(self._attrition_interior, pbar))
             else:
                 # Single core
                 pbar = tqdm(attrition_params, total=N)
                 pbar.set_description(f'attrition, {non_he_he}')
-                V = itertools.starmap(self._attrition_interior, pbar)
+                V = []
+                for attrition_subparams in pbar:
+                    V.append(self._attrition_interior(bdf, *attrition_subparams))
 
             del attrition_params, pbar
 
