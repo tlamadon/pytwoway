@@ -471,8 +471,6 @@ class Attrition:
                 rng_i = np.random.default_rng(seeds[i])
                 attrition_params.append((fids_to_drop_i, wids_to_drop_i, fe_params, self.cre_params, cluster_params, clean_params, rng_i))
             del subsets
-            if non_he_he == 'he':
-                del bdf
 
             ## Estimate on subset ##
             if ncore > 1:
@@ -488,6 +486,8 @@ class Attrition:
                 V = []
                 for attrition_subparams in pbar:
                     V.append(self._attrition_interior(bdf, *attrition_subparams))
+            if non_he_he == 'he':
+                del bdf
 
             del attrition_params, pbar
 
