@@ -43,7 +43,7 @@ class AttritionIncreasing():
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            (list of tuples): each entry gives a tuple of (bdf_subset, wids_to_drop), where bdf_subset gives a subset of bdf, and wids_to_drop gives a set of worker ids to drop prior to cleaning the BipartiteDataFrame; if wids_to_drop is None, no worker ids need to be dropped
+            (list of tuples): each entry gives a tuple of (fids_to_drop, wids_to_drop), where fids_to_drop (wids_to_drop) gives a set of firm (worker) ids to drop prior to cleaning the BipartiteDataFrame; if fids_to_drop (wids_to_drop) is None, no firm (worker) ids need to be dropped
         '''
         if clean_params is None:
             clean_params = bpd.clean_params()
@@ -67,6 +67,8 @@ class AttritionIncreasing():
         # Must reset id_reference_dict
         bdf = bdf._reset_id_reference_dict(include=True)
 
+        # Get firm ids in base subset
+        fids_init = set(bdf.loc[bdf.loc[:, 'm'].to_numpy() > 0, :].unique_ids('j'))
         # Get worker ids in base subset
         wids_init = bdf.loc[bdf.loc[:, 'm'].to_numpy() > 0, :].unique_ids('i')
 
@@ -91,7 +93,6 @@ class AttritionIncreasing():
                     # Don't fail unless it's the last loop
                     raise ValueError(v)
 
-        return_lst.append((subset_1, None))
         subset_1_orig_ids = subset_1.original_ids(copy=False)
         del subset_1
 
@@ -105,6 +106,16 @@ class AttritionIncreasing():
                 original_j = j_subcol
             valid_firms += list(subset_1_orig_ids.loc[:, original_j].unique())
         valid_firms = set(valid_firms)
+        fids_to_drop = fids_init.difference(valid_firms)
+        ret_fid = {
+            True: fids_to_drop,
+            False: None
+        }
+        ret_wid = {
+            True: wid_drops_1,
+            False: None
+        }
+        return_lst.append((ret_fid[len(fids_to_drop) > 0], ret_wid[len(wid_drops_1) > 0]))
 
         ## Drawn workers ##
         original_i = 'original_i'
@@ -133,10 +144,15 @@ class AttritionIncreasing():
             else:
                 warnings.warn(f'Attrition plot does not change at iteration {i}')
 
-            if len(wids_to_drop) > 0:
-                return_lst.append((subset_2, wids_to_drop))
-            else:
-                return_lst.append((subset_2, None))
+            ret_fid = {
+                True: fids_to_drop,
+                False: None
+            }
+            ret_wid = {
+                True: wids_to_drop,
+                False: None
+            }
+            return_lst.append((ret_fid[len(fids_to_drop) > 0], ret_wid[len(wids_to_drop) > 0]))
 
         return return_lst
 
@@ -173,7 +189,7 @@ class AttritionDecreasing():
 
         self.subset_fractions = subset_fractions
 
-    def _gen_subsets(self, bdf, clean_params=None, rng=None):
+    def gen_subsets(self, bdf, clean_params=None, rng=None):
         '''
         Generate attrition subsets.
 
@@ -183,7 +199,7 @@ class AttritionDecreasing():
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            (list of tuples): each entry gives a tuple of (bdf_subset, wids_to_drop), where bdf_subset gives a subset of bdf, and wids_to_drop gives a set of worker ids to drop prior to cleaning the BipartiteDataFrame; if wids_to_drop is None, no worker ids need to be dropped
+            (list of tuples): each entry gives a tuple of (fids_to_drop, wids_to_drop), where fids_to_drop (wids_to_drop) gives a set of firm (worker) ids to drop prior to cleaning the BipartiteDataFrame; if fids_to_drop (wids_to_drop) is None, no firm (worker) ids need to be dropped
         '''
         if rng is None:
             rng = np.random.default_rng(None)
@@ -211,9 +227,9 @@ class AttritionDecreasing():
                 warnings.warn(f'Attrition plot does not change at iteration {i}')
 
             if len(wids_to_drop) > 0:
-                return_lst.append((bdf, wids_to_drop))
+                return_lst.append((None, wids_to_drop))
             else:
-                return_lst.append((bdf, None))
+                return_lst.append((None, None))
 
             # subset_i = bdf.keep_ids('i', wids_movers + wids_stayers, copy=True)._reset_id_reference_dict()._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False)
 
@@ -356,12 +372,13 @@ class Attrition:
 
     # Cannot include two underscores because isn't compatible with starmap for multiprocessing
     # Source: https://stackoverflow.com/questions/27054963/python-attribute-error-object-has-no-attribute
-    def _attrition_interior(self, bdf, wids_to_drop, fe_params=None, cre_params=None, cluster_params=None, clean_params=None, rng=None):
+    def _attrition_interior(self, bdf, fids_to_drop, wids_to_drop, fe_params=None, cre_params=None, cluster_params=None, clean_params=None, rng=None):
         '''
         Estimate all parameters of interest. This is the interior function to attrition_single.
 
         Arguments:
             bdf (BipartiteDataFrame): bipartite dataframe
+            fids_to_drop (set or None): firm ids to drop; if None, no firm ids to drop
             wids_to_drop (set or None): worker ids to drop; if None, no worker ids to drop
             fe_params (ParamsDict or None): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().
             cre_params (ParamsDict or None): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.cre_params().
@@ -384,9 +401,12 @@ class Attrition:
             rng = np.random.default_rng(None)
 
         # logger_init(bdf) # This stops a weird logging bug that stops multiprocessing from working
+        ## Drop ids and clean data  ## (NOTE: this does not require a copy)
+        if fids_to_drop is not None:
+            bdf = bdf.drop_ids('j', fids_to_drop, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, copy=False)
         if wids_to_drop is not None:
-            # Drop ids and clean data (NOTE: this does not require a copy)
-            bdf = bdf.drop_ids('i', wids_to_drop, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, copy=False)._reset_attributes(columns_contig=True, connected=False, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False).clean(clean_params)
+            bdf = bdf.drop_ids('i', wids_to_drop, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, copy=False)
+        bdf = bdf._reset_attributes(columns_contig=True, connected=False, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False).clean(clean_params)
         ## Estimate FE model ##
         fe_estimator = tw.FEEstimator(bdf, fe_params)
         fe_estimator.fit(rng)
@@ -437,22 +457,22 @@ class Attrition:
 
             # Generate attrition subsets and worker ids to drop
             subsets = self.attrition_how.gen_subsets(bdf=bdf, clean_params=clean_params, rng=rng)
-            if non_he_he == 'he':
-                del bdf
 
             # Update clean_params
             clean_params = self.attrition_how.update_clean_params(clean_params)
 
-            ## Construct list of parameters to estimate each subset ##
+            ## Construct list of parameters to estimate for each subset ##
             attrition_params = []
             # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
             N = len(subsets)
             seeds = rng.bit_generator._seed_seq.spawn(N)
             for i, subset in enumerate(subsets):
-                subset_i, wids_to_drop_i = subset
+                fids_to_drop_i, wids_to_drop_i = subset
                 rng_i = np.random.default_rng(seeds[i])
-                attrition_params.append((subset_i, wids_to_drop_i, fe_params, self.cre_params, cluster_params, clean_params, rng_i))
+                attrition_params.append((bdf, fids_to_drop_i, wids_to_drop_i, fe_params, self.cre_params, cluster_params, clean_params, rng_i))
             del subsets
+            if non_he_he == 'he':
+                del bdf
 
             ## Estimate on subset ##
             if ncore > 1:
@@ -467,12 +487,12 @@ class Attrition:
                 pbar.set_description(f'attrition, {non_he_he}')
                 V = itertools.starmap(self._attrition_interior, pbar)
 
+            del attrition_params, pbar
+
             ## Extract results ##
             for res in V:
                 res_all[non_he_he]['fe'].append(res['fe'])
                 res_all[non_he_he]['cre'].append(res['cre'])
-
-            del attrition_params, pbar
 
         return res_all
 
