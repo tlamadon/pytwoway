@@ -5,7 +5,7 @@ Python API
 Overview
 ---------
 
-The main PyTwoWay API is split into eight classes, seven of which are for estimating models, and one of which is for simulating BLM data. It also has three modules: one for constructing the variance-covariance matrix for AKM and its bias corrections; one for generating constraints for BLM; and one for estimating attrition using increasing (building up from a fixed set of firms) or decreasing (with varying sets of firms) fractions of movers. PyTwoWay is canonically imported using
+The main PyTwoWay API is split into eight classes, seven of which are for estimating models, and one of which is for simulating BLM data. It also has three modules: one for constructing the variance-covariance matrix for AKM and its bias corrections; one for generating constraints for BLM; and one for generating attrition plots using increasing (building up from a fixed set of firms) or decreasing (with varying sets of firms) fractions of movers. PyTwoWay is canonically imported using
 
   .. code-block:: python
 
