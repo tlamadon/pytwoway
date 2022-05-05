@@ -1,4 +1,4 @@
-.. include:: readme.rst 
+.. include:: readme.rst
 
 .. toctree::
   :caption: User documentation
@@ -13,9 +13,9 @@
 
   FE <notebooks/fe_example>
   CRE <notebooks/cre_example>
+  BLM <notebooks/blm_example>
   Attrition <notebooks/attrition_example>
   Monte Carlo <notebooks/monte_carlo_example>
-  BLM <notebooks/blm_example>
 
 .. toctree::
   :caption: Under the hood
@@ -23,12 +23,12 @@
 
   internal
   FEEstimator <class-feestimator>
-  CREEstimator <class-creestimator>  
-  Attrition <class-attrition>
-  MonteCarlo <class-montecarlo>
+  CREEstimator <class-creestimator>
   BLMModel <class-blmmodel>
   BLMEstimator <class-blmestimator>
   BLMBootstrap <class-blmbootstrap>
+  Attrition <class-attrition>
+  MonteCarlo <class-montecarlo>
   Q <module-Q>
   Constraints <module-constraints>
   Attrition Utilities <module-attrition_utils>

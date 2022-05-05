@@ -58,25 +58,6 @@ Classes and Methods
    ~pytwoway.CREEstimator
    ~pytwoway.CREEstimator.fit
 
-``pytwoway.Attrition``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autosummary::
-
-   ~pytwoway.Attrition
-   ~pytwoway.Attrition.attrition
-   ~pytwoway.Attrition.boxplots
-   ~pytwoway.Attrition.plots
-
-``pytwoway.MonteCarlo``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. autosummary::
-
-   ~pytwoway.MonteCarlo
-   ~pytwoway.MonteCarlo.hist
-   ~pytwoway.MonteCarlo.monte_carlo
-
 ``pytwoway.BLMModel``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
    
@@ -111,6 +92,25 @@ Classes and Methods
    ~pytwoway.BLMBootstrap.plot_liks_connectedness
    ~pytwoway.BLMBootstrap.plot_log_earnings
    ~pytwoway.BLMBootstrap.plot_type_proportions
+
+``pytwoway.Attrition``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+
+   ~pytwoway.Attrition
+   ~pytwoway.Attrition.attrition
+   ~pytwoway.Attrition.boxplots
+   ~pytwoway.Attrition.plots
+
+``pytwoway.MonteCarlo``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+
+   ~pytwoway.MonteCarlo
+   ~pytwoway.MonteCarlo.hist
+   ~pytwoway.MonteCarlo.monte_carlo
 
 ``pytwoway.SimBLM``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
