@@ -27,10 +27,10 @@ No. w27368. National Bureau of Economic Research, 2020.
 
 The package provides implementations for a series of estimators for models with two sided heterogeneity:
 
-1. two way fixed effect estimator as proposed by `Abowd, Kramarz, and Margolis <https://doi.org/10.1111/1468-0262.00020>_`
-2. homoskedastic bias correction as in `Andrews, et al. <https://doi.org/10.1111/j.1467-985X.2007.00533.x>_`
-3. heteroskedastic correction as in `Kline, Saggio, and Sølvsten <https://doi.org/10.3982/ECTA16410>_`
-4. a group fixed estimator as in `Bonhomme, Lamadon, and Manresa <https://doi.org/10.3982/ECTA15722>_`
+1. two way fixed effect estimator as proposed by `Abowd, Kramarz, and Margolis <https://doi.org/10.1111/1468-0262.00020>`_
+2. homoskedastic bias correction as in `Andrews, et al. <https://doi.org/10.1111/j.1467-985X.2007.00533.x>`_
+3. heteroskedastic correction as in `Kline, Saggio, and Sølvsten <https://doi.org/10.3982/ECTA16410>`_
+4. a group fixed estimator as in `Bonhomme, Lamadon, and Manresa <https://doi.org/10.3982/ECTA15722>`_
 5. a group correlated random effect as presented in the main paper
 
 .. |binder_fe| image:: https://mybinder.org/badge_logo.svg 
