@@ -5,9 +5,7 @@
   :maxdepth: 2
 
   Home <self>
-  .. From Terminal <doc-cli>
   From Python <doc-python>
-  .. From Stata <doc-stata>
 
 .. toctree::
   :caption: Notebook examples
