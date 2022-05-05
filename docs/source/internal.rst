@@ -30,8 +30,8 @@ Classes
 
 * ``pytwoway.SimBLM``: Class for simulating BLM data
 
-Mdules
-~~~~~~
+Modules
+~~~~~~~
 
 * ``pytwoway.Q``: Module for constructing the variance-covariance matrix for AKM and its bias corrections
 
@@ -60,9 +60,9 @@ Classes and Methods
 
 ``pytwoway.BLMModel``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-   
+
 .. autosummary::
-   
+
    ~pytwoway.BLMModel
    ~pytwoway.BLMModel.compute_connectedness_measure
    ~pytwoway.BLMModel.fit_movers
@@ -73,9 +73,9 @@ Classes and Methods
 
 ``pytwoway.BLMEstimator``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-   
+
 .. autosummary::
-   
+
    ~pytwoway.BLMEstimator
    ~pytwoway.BLMEstimator.fit
    ~pytwoway.BLMEstimator.plot_liks_connectedness
@@ -84,9 +84,9 @@ Classes and Methods
 
 ``pytwoway.BLMBootstrap``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-   
+
 .. autosummary::
-   
+
    ~pytwoway.BLMBootstrap
    ~pytwoway.BLMBootstrap.fit
    ~pytwoway.BLMBootstrap.plot_liks_connectedness
@@ -114,9 +114,9 @@ Classes and Methods
 
 ``pytwoway.SimBLM``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
-   
+
 .. autosummary::
-   
+
    ~pytwoway.SimBLM
    ~pytwoway.SimBLM.simulate
 
