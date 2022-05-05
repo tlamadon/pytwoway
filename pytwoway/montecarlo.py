@@ -1,7 +1,7 @@
 '''
 Class for running Monte Carlo estimations on simulated bipartite networks
 '''
-from tqdm import tqdm, trange
+from tqdm.auto import tqdm, trange
 import warnings
 from multiprocessing import Pool
 import numpy as np
@@ -108,7 +108,7 @@ class MonteCarlo:
         ## Compute true sample variance of psi and covariance of psi and alpha ##
         psi_var = np.var(sim_data.loc[:, 'psi'].to_numpy(), ddof=0)
         psi_alpha_cov = np.cov(sim_data.loc[:, 'psi'].to_numpy(), sim_data.loc[:, 'alpha'].to_numpy(), ddof=0)[0, 1]
-        ## Convert into BipartitePandas dataframe ##
+        ## Convert into BipartiteDataFrame ##
         sim_data = bpd.BipartiteLong(sim_data.loc[:, ['i', 'j', 'y', 't']], log=self.log)
         ## Clean data ##
         if self.collapse or self.move_to_worker:

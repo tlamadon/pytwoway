@@ -1,7 +1,7 @@
 '''
 We implement the non-linear estimator from Bonhomme Lamadon & Manresa.
 '''
-from tqdm import tqdm, trange
+from tqdm.auto import tqdm, trange
 import warnings
 import itertools
 from multiprocessing import Pool
@@ -122,19 +122,19 @@ _blm_params_default = ParamsDict({
         ''', None),
     'cons_a': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=None) Constraint object or list of constraint objects with class method .get_constraints() that defines constraints on A1 and A2. None is equivalent to [].
+            (default=None) Constraint object or list of constraint objects that define constraints on A1 and A2. None is equivalent to [].
         ''', None),
     'cons_s': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=None) Constraint object or list of constraint objects with class method .get_constraints() that defines constraints on S1 and S2. None is equivalent to [].
+            (default=None) Constraint object or list of constraint objects that define constraints on S1 and S2. None is equivalent to [].
         ''', None),
     'cons_a_all': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=None) Constraint object or list of constraint objects with class method .get_constraints() that defines constraints on A1/A2/A1_cat/A2_cat/A1_cts/A2_cts. None is equivalent to [].
+            (default=None) Constraint object or list of constraint objects that define constraints on A1/A2/A1_cat/A2_cat/A1_cts/A2_cts. None is equivalent to [].
         ''', None),
     'cons_s_all': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=None) Constraint object or list of constraint objects with class method .get_constraints() that defines constraints on S1/S2/S1_cat/S2_cat/S1_cts/S2_cts. None is equivalent to [].
+            (default=None) Constraint object or list of constraint objects that define constraints on S1/S2/S1_cat/S2_cat/S1_cts/S2_cts. None is equivalent to [].
         ''', None),
     's_lower_bound': (1e-10, 'type_constrained', ((float, int), _gt0),
         '''
@@ -217,11 +217,11 @@ _categorical_control_params_default = ParamsDict({
         ''', None),
     'cons_a': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=None) Constraint object or list of constraint objects with class method .get_constraints() that defines constraints on A1 and A2. None is equivalent to [].
+            (default=None) Constraint object or list of constraint objects that define constraints on A1 and A2. None is equivalent to [].
         ''', None),
     'cons_s': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=None) Constraint object or list of constraint objects with class method .get_constraints() that defines constraints on S1 and S2. None is equivalent to [].
+            (default=None) Constraint object or list of constraint objects that define constraints on S1 and S2. None is equivalent to [].
         ''', None)
 })
 
@@ -279,11 +279,11 @@ _continuous_control_params_default = ParamsDict({
         ''', None),
     'cons_a': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=None) Constraint object or list of constraint objects with class method .get_constraints() that defines constraints on A1 and A2. None is equivalent to [].
+            (default=None) Constraint object or list of constraint objects that define constraints on A1 and A2. None is equivalent to [].
         ''', None),
     'cons_s': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=None) Constraint object or list of constraint objects with class method .get_constraints() that defines constraints on S1 and S2. None is equivalent to [].
+            (default=None) Constraint object or list of constraint objects that define constraints on S1 and S2. None is equivalent to [].
         ''', None)
 })
 
@@ -1761,15 +1761,16 @@ class BLMEstimator:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        # Run sim_model()
+        ## Estimate model ##
+        # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
+        seeds = rng.bit_generator._seed_seq.spawn(n_init)
         if ncore > 1:
-            ## Multiprocessing
-            # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
-            seeds = rng.bit_generator._seed_seq.spawn(n_init)
+            # Multiprocessing
             with Pool(processes=ncore) as pool:
                 sim_model_lst = pool.starmap(self._sim_model, tqdm([(jdata, normalize, np.random.default_rng(seed)) for seed in seeds], total=n_init))
         else:
-            sim_model_lst = itertools.starmap(self._sim_model, tqdm([(jdata, normalize, rng) for _ in range(n_init)], total=n_init))
+            # No multiprocessing
+            sim_model_lst = itertools.starmap(self._sim_model, tqdm([(jdata, normalize, np.random.default_rng(seed)) for seed in seeds], total=n_init))
 
         # Sort by likelihoods FIXME better handling if connectedness is None
         sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst if model.connectedness is not None], reverse=True, key=lambda a: a[0])

@@ -1,7 +1,7 @@
 '''
 Defines class FEEstimator, which uses multigrid and partialing out to estimate two way fixed effect models. This includes AKM, the Andrews et al. homoskedastic correction, and the Kline et al. heteroskedastic correction.
 '''
-from tqdm import tqdm, trange
+from tqdm.auto import tqdm, trange
 import time, pickle, json, glob # warnings
 from timeit import default_timer as timer
 from multiprocessing import Pool
@@ -226,7 +226,7 @@ class FEEstimator:
     def __init__(self, data, params=None):
         '''
         Arguments:
-            data (BipartitePandas DataFrame): (collapsed) long format labor data. Data contains the following columns:
+            data (BipartiteDataFrame): (collapsed) long format labor data. Data contains the following columns:
 
                 i (worker id)
 
@@ -660,8 +660,8 @@ class FEEstimator:
             'alpha': self.alpha_hat
         }
 
-        self.var_fe = _weighted_var(Q_var_matrix @ psialpha_dict[Q_var_psialpha], Q_var_weights, dof=Q_var_dof)
-        self.cov_fe = _weighted_cov(Ql_cov_matrix @ psialpha_dict[Ql_cov_psialpha], Qr_cov_matrix @ psialpha_dict[Qr_cov_psialpha], Ql_cov_weights, Qr_cov_weights, dof=Q_cov_dof)
+        self.var_fe = _weighted_var(Q_var_matrix @ psialpha_dict[Q_var_psialpha], Q_var_weights, dof=0)
+        self.cov_fe = _weighted_cov(Ql_cov_matrix @ psialpha_dict[Ql_cov_psialpha], Qr_cov_matrix @ psialpha_dict[Qr_cov_psialpha], Ql_cov_weights, Qr_cov_weights, dof=0)
 
         self.logger.info('[fe]')
         self.logger.info(f'var_psi={self.var_fe:2.4f}')
@@ -1015,7 +1015,7 @@ class FEEstimator:
         if Q_cov is None:
             Q_cov = Q.CovPsiAlpha()
         Q_params = self.adata, self.nf, self.nw, self.J, self.W, self.Dp
-        return (Q_var.get_Q(*Q_params), Q_cov.get_Ql(*Q_params), Q_cov.get_Qr(*Q_params))
+        return (Q_var._get_Q(*Q_params), Q_cov._get_Ql(*Q_params), Q_cov._get_Qr(*Q_params))
 
     def _construct_AAinv_components_full(self):
         '''

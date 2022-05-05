@@ -15,12 +15,12 @@ class VarPsi():
     def __init__(self):
         pass
 
-    def get_Q(self, adata, nf, nw, J, W, Dp):
+    def _get_Q(self, adata, nf, nw, J, W, Dp):
         '''
         Construct Q matrix to use when estimating var(psi).
 
         Arguments:
-            adata (BipartitePandas DataFrame): data
+            adata (BipartiteDataFrame): data
             nf (int): number of firm types
             nw (int): number of worker types
             J (CSC Sparse Matrix): firm ids matrix representation
@@ -40,12 +40,12 @@ class VarAlpha():
     def __init__(self):
         pass
 
-    def get_Q(self, adata, nf, nw, J, W, Dp):
+    def _get_Q(self, adata, nf, nw, J, W, Dp):
         '''
         Construct Q matrix to use when estimating var(alpha).
 
         Arguments:
-            adata (BipartitePandas DataFrame): data
+            adata (BipartiteDataFrame): data
             nf (int): number of firm types
             nw (int): number of worker types
             J (CSC Sparse Matrix): firm ids matrix representation
@@ -65,12 +65,12 @@ class CovPsiAlpha():
     def __init__(self):
         pass
 
-    def get_Ql(self, adata, nf, nw, J, W, Dp):
+    def _get_Ql(self, adata, nf, nw, J, W, Dp):
         '''
         Construct Ql matrix (Q-left) to use when estimating cov(psi, alpha).
 
         Arguments:
-            adata (BipartitePandas DataFrame): data
+            adata (BipartiteDataFrame): data
             nf (int): number of firm types
             nw (int): number of worker types
             J (CSC Sparse Matrix): firm ids matrix representation
@@ -82,12 +82,12 @@ class CovPsiAlpha():
         '''
         return (J, 'psi', Dp, (nf - 1) + nw)
 
-    def get_Qr(self, adata, nf, nw, J, W, Dp):
+    def _get_Qr(self, adata, nf, nw, J, W, Dp):
         '''
         Construct Qr matrix (Q-right) to use when estimating cov(psi, alpha).
 
         Arguments:
-            adata (BipartitePandas DataFrame): data
+            adata (BipartiteDataFrame): data
             nf (int): number of firm types
             nw (int): number of worker types
             J (CSC Sparse Matrix): firm ids matrix representation
@@ -107,12 +107,12 @@ class CovPsiPrevPsiNext():
     def __init__(self):
         pass
 
-    def get_Ql(self, adata, nf, nw, J, W, Dp):
+    def _get_Ql(self, adata, nf, nw, J, W, Dp):
         '''
         Construct Ql matrix (Q-left) to use when estimating cov(psi_t, psi_{t+1}).
 
         Arguments:
-            adata (BipartitePandas DataFrame): data
+            adata (BipartiteDataFrame): data
             nf (int): number of firm types
             nw (int): number of worker types
             J (CSC Sparse Matrix): firm ids matrix representation
@@ -139,12 +139,12 @@ class CovPsiPrevPsiNext():
 
         return (Ql, 'psi', Dp, nf - 1)
 
-    def get_Qr(self, adata, nf, nw, J, W, Dp):
+    def _get_Qr(self, adata, nf, nw, J, W, Dp):
         '''
         Construct Qr matrix (Q-right) to use when estimating cov(psi_t, psi_{t+1}).
 
         Arguments:
-            adata (BipartitePandas DataFrame): data
+            adata (BipartiteDataFrame): data
             nf (int): number of firm types
             nw (int): number of worker types
             J (CSC Sparse Matrix): firm ids matrix representation

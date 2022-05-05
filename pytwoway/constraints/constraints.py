@@ -44,10 +44,10 @@ class QPConstrained:
         Add a built-in constraint.
 
         Arguments:
-            constraints (object or list of objects): constraint objects with class method .get_constraints() that defines constraints to add
+            constraints (object or list of objects): constraint objects with class method ._get_constraints() that defines constraints to add
         '''
         for constraint in to_list(constraints):
-            self._add_constraint(**constraint.get_constraints(nl=self.nl, nk=self.nk))
+            self._add_constraint(**constraint._get_constraints(nl=self.nl, nk=self.nk))
 
     def _add_constraint(self, G=None, h=None, A=None, b=None):
         '''
@@ -195,7 +195,7 @@ class Linear():
         self.nnt = nnt
         self.nt = nt
 
-    def get_constraints(self, nl, nk):
+    def _get_constraints(self, nl, nk):
         '''
         Generate constraint arrays.
 
@@ -238,7 +238,7 @@ class Monotonic():
         self.increasing = increasing
         self.nt = nt
 
-    def get_constraints(self, nl, nk):
+    def _get_constraints(self, nl, nk):
         '''
         Generate constraint arrays.
 
@@ -279,7 +279,7 @@ class NoWorkerTypeInteraction():
     def __init__(self, nt=2):
         self.nt = nt
 
-    def get_constraints(self, nl, nk):
+    def _get_constraints(self, nl, nk):
         '''
         Generate constraint arrays.
 
@@ -321,7 +321,7 @@ class Stationary():
             raise NotImplementedError(f'nwt must equal -1 or be positive, but input specifies nwt={nwt}.')
         self.nt = nt
 
-    def get_constraints(self, nl, nk):
+    def _get_constraints(self, nl, nk):
         '''
         Generate constraint arrays.
 
@@ -362,7 +362,7 @@ class StationaryFirmTypeVariation():
     def __init__(self, nt=2):
         self.nt = nt
 
-    def get_constraints(self, nl, nk):
+    def _get_constraints(self, nl, nk):
         '''
         Generate constraint arrays.
 
@@ -405,7 +405,7 @@ class BoundedBelow():
         self.lb = lb
         self.nt = nt
 
-    def get_constraints(self, nl, nk):
+    def _get_constraints(self, nl, nk):
         '''
         Generate constraint arrays.
 
@@ -435,7 +435,7 @@ class BoundedAbove():
         self.ub = ub
         self.nt = nt
 
-    def get_constraints(self, nl, nk):
+    def _get_constraints(self, nl, nk):
         '''
         Generate constraint arrays.
 

@@ -3,7 +3,8 @@ Class for simulating bipartite BLM networks.
 '''
 import numpy as np
 from pandas import DataFrame
-from bipartitepandas.util import ParamsDict, _is_subtype
+from bipartitepandas import BipartiteDataFrame
+from bipartitepandas.util import ParamsDict, _sort_cols
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq2(a):
@@ -723,7 +724,8 @@ class SimBLM:
             rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            (dict or tuple of dicts): sim_data gives {'jdata': movers data, 'sdata': stayers data}, while sim_params gives {'A1': A1, 'A2': A2, 'S1': S1, 'S2': S2, 'pk1': pk1, 'pk0': pk0, 'A1_cat': A1_cat, 'A2_cat': A2_cat, 'S1_cat': S1_cat, 'S2_cat': S2_cat, 'A1_cts': A1_cts, 'A2_cts': A2_cts, 'S1_cts': S1_cts, 'S2_cts': S2_cts}; if return_parameters=True, returns (sim_data, sim_params); if return_parameters=False, returns sim_data
+            (dict or tuple of dicts): sim_data gives {'jdata': movers BipartiteDataFrame, 'sdata': stayers BipartiteDataFrame}, while sim_params gives {'A1': A1, 'A2': A2, 'S1': S1, 'S2': S2, 'pk1': pk1, 'pk0': pk0, 'A1_cat': A1_cat, 'A2_cat': A2_cat, 'S1_cat': S1_cat, 'S2_cat': S2_cat, 'A1_cts': A1_cts, 'A2_cts': A2_cts, 'S1_cts': S1_cts, 'S2_cts': S2_cts}; if return_parameters=True, returns (sim_data, sim_params); if return_parameters=False, returns sim_data
+
         '''
         if rng is None:
             rng = np.random.default_rng(None)
@@ -761,7 +763,27 @@ class SimBLM:
             jdata.loc[same_firm_rows, 'j2'] = np.hstack(groupby_g2.apply(lambda df: rng.choice(j_per_g_dict[df.iloc[0]['g2']], size=len(df))))[same_firm_rows]
             same_firm_mask = (jdata.loc[:, 'j1'].to_numpy() == jdata.loc[:, 'j2'].to_numpy())
 
-        sim_data = {'jdata': jdata, 'sdata': sdata} # {'jdata': jdata[['y1', 'y2', 'j1', 'j2', 'g1', 'g2', 'l']], 'sdata': sdata[['y1', 'y2', 'j1', 'j2', 'g1', 'g2', 'l']]}
+        # Add m column
+        jdata.loc[:, 'm'] = 1
+        sdata.loc[:, 'm'] = 0
+
+        # Add i column
+        nm = len(jdata)
+        ns = len(sdata)
+        jdata.loc[:, 'i'] = np.arange(nm, dtype=int)
+        sdata.loc[:, 'i'] = nm + np.arange(ns, dtype=int)
+
+        # Sort columns
+        sorted_cols = _sort_cols(jdata.columns)
+        jdata = jdata.reindex(sorted_cols, axis=1, copy=False)
+        sdata = sdata.reindex(sorted_cols, axis=1, copy=False)
+
+        # Convert into BipartiteDataFrame
+        jdata = BipartiteDataFrame(jdata)
+        sdata = BipartiteDataFrame(sdata)
+
+        # Combine into dictionary
+        sim_data = {'jdata': jdata, 'sdata': sdata}
 
         if return_parameters:
             return sim_data, sim_params

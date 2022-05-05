@@ -16,7 +16,7 @@ import time
 # import argparse
 import json
 # import itertools
-from tqdm import tqdm, trange
+from tqdm.auto import tqdm, trange
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq1(a):
@@ -65,7 +65,7 @@ def cre_params(update_dict=None):
         new_dict.update(update_dict)
     return new_dict
 
-def pipe_qcov(df, e1, e2):
+def _pipe_qcov(df, e1, e2):
     v1 = df.eval(e1)
     v2 = df.eval(e2)
     return(np.cov(v1, v2)[0][1])
@@ -74,7 +74,7 @@ def pipe_qcov(df, e1, e2):
 #     rows = itertools.product(*data_dict.values())
 #     return pd.DataFrame.from_records(rows, columns=data_dict.keys())
 
-def pd_to_np(df, colr, colc, colv, nr, nc):
+def _pd_to_np(df, colr, colc, colv, nr, nc):
     row_index = df[colr].to_numpy()
     col_index = df[colc].to_numpy()
     values = df[colv].to_numpy()
@@ -87,7 +87,7 @@ def pd_to_np(df, colr, colc, colv, nr, nc):
                 A[i, j] = values[I][0]
 
     return(A)
-    # pd_to_np(df, 'i', 'j', 'v', 3, 3)
+    # _pd_to_np(df, 'i', 'j', 'v', 3, 3)
 
 class CREEstimator:
     '''
@@ -305,9 +305,9 @@ class CREEstimator:
         if self.wo_btw:
             EEm = EEm * 0.0
         jdata = pd.merge(jdata, EEm, on=('g1', 'g2'))
-        pb['EEm'] = pd_to_np(EEm.reset_index(), 'g1', 'g2', 'mx', self.nc, self.nc)
+        pb['EEm'] = _pd_to_np(EEm.reset_index(), 'g1', 'g2', 'mx', self.nc, self.nc)
         #pb['EEm'] = np.array(EEm.values).reshape(self.nc, self.nc)
-        #print(pd_to_np(EEm.reset_index(), 'g1', 'g2', 'mx', self.nc, self.nc) - np.array(EEm.values).reshape(self.nc, self.nc))
+        #print(_pd_to_np(EEm.reset_index(), 'g1', 'g2', 'mx', self.nc, self.nc) - np.array(EEm.values).reshape(self.nc, self.nc))
 
         sdata['psi1_tmp'] = pb['Afill'][sdata['g1']]
         Em = sdata.assign(mx = lambda df: df['y1'] - df['psi1_tmp']).groupby(['g1'])['mx'].agg('mean')
@@ -375,7 +375,7 @@ class CREEstimator:
         dm.eval('y2m2j_lo = (nm2j * y2m2j - nm2c * y2m2c) / (nm2j - nm2c)', inplace=True)
 
         # Compute the moments involving stayers
-        res['y1s_y1s'] = ds.query('nsj > 1').pipe(pipe_qcov, 'y1n', 'y1s_lo')
+        res['y1s_y1s'] = ds.query('nsj > 1').pipe(_pipe_qcov, 'y1n', 'y1s_lo')
         res['y1s_y1s_count'] = ds.query('nsj > 1').shape[0]
         res['y1s_var'] = ds['y1n'].var()
         res['y1s_var_count'] = ds.shape[0]
@@ -385,33 +385,33 @@ class CREEstimator:
         res['y2m_var_count'] = dm.shape[0]
 
         # Compute the moments involving movers leaving the firm
-        res['y1s_y1m1'] = ds.query('nm1j > 0').pipe(pipe_qcov, 'y1n', 'y1m1j')
+        res['y1s_y1m1'] = ds.query('nm1j > 0').pipe(_pipe_qcov, 'y1n', 'y1m1j')
         res['y1s_y1m1_count'] = ds.query('nm1j > 0').shape[0]
-        res['y1s_y2m1'] = ds.query('nm1j > 0').pipe(pipe_qcov, 'y1n', 'y2m1j')
+        res['y1s_y2m1'] = ds.query('nm1j > 0').pipe(_pipe_qcov, 'y1n', 'y2m1j')
         res['y1s_y2m1_count'] = ds.query('nm1j > 0').shape[0]
-        res['y1m1_y1m1'] = dm.query('nm1j > nm1c').pipe(pipe_qcov, 'y1n', 'y1m1j_lo')
+        res['y1m1_y1m1'] = dm.query('nm1j > nm1c').pipe(_pipe_qcov, 'y1n', 'y1m1j_lo')
         res['y1m1_y1m1_count'] = dm.query('nm1j > nm1c').shape[0]
-        res['y2m1_y1m1'] = dm.query('nm1j > nm1c').pipe(pipe_qcov, 'y2n', 'y1m1j_lo')
+        res['y2m1_y1m1'] = dm.query('nm1j > nm1c').pipe(_pipe_qcov, 'y2n', 'y1m1j_lo')
         res['y2m1_y1m1_count'] = dm.query('nm1j > nm1c').shape[0]
-        res['y2m1_y2m1'] = dm.query('nm1j > nm1c').pipe(pipe_qcov, 'y2n', 'y2m1j_lo')
+        res['y2m1_y2m1'] = dm.query('nm1j > nm1c').pipe(_pipe_qcov, 'y2n', 'y2m1j_lo')
         res['y2m1_y2m1_count'] = dm.query('nm1j > nm1c').shape[0]
 
         # Compute the moments involving movers arriving at the firm
-        res['y1s_y1m2'] = ds.query('nm2j > 0').pipe(pipe_qcov, 'y1n', 'y1m2j')
+        res['y1s_y1m2'] = ds.query('nm2j > 0').pipe(_pipe_qcov, 'y1n', 'y1m2j')
         res['y1s_y1m2_count'] = ds.query('nm2j > 0').shape[0]
-        res['y1s_y2m2'] = ds.query('nm2j > 0').pipe(pipe_qcov, 'y1n', 'y2m2j')
+        res['y1s_y2m2'] = ds.query('nm2j > 0').pipe(_pipe_qcov, 'y1n', 'y2m2j')
         res['y1s_y2m2_count'] = ds.query('nm2j > 0').shape[0]
-        res['y1m2_y1m2'] = dm.query('nm2j > nm2c').pipe(pipe_qcov, 'y1n', 'y1m2j_lo')
+        res['y1m2_y1m2'] = dm.query('nm2j > nm2c').pipe(_pipe_qcov, 'y1n', 'y1m2j_lo')
         res['y1m2_y1m2_count'] = dm.query('nm2j > nm2c').shape[0]
-        res['y2m2_y1m2'] = dm.query('nm2j > nm2c').pipe(pipe_qcov, 'y2n', 'y1m2j_lo')
+        res['y2m2_y1m2'] = dm.query('nm2j > nm2c').pipe(_pipe_qcov, 'y2n', 'y1m2j_lo')
         res['y2m2_y1m2_count'] = dm.query('nm2j > nm2c').shape[0]
-        res['y2m2_y2m2'] = dm.query('nm2j > nm2c').pipe(pipe_qcov, 'y2n', 'y2m2j_lo')
+        res['y2m2_y2m2'] = dm.query('nm2j > nm2c').pipe(_pipe_qcov, 'y2n', 'y2m2j_lo')
         res['y2m2_y2m2_count'] = dm.query('nm2j > nm2c').shape[0]
 
         # Total variance of wages in differences for movers
         res['dym_dym'] = dm.query('g1 != g2').eval('y2n-y1n').var()
         res['dym_dym_count'] = dm.query('g1 != g2').shape[0]
-        res['y1m_y2m'] = dm.query('g1 != g2').pipe(pipe_qcov, 'y1n', 'y2n')
+        res['y1m_y2m'] = dm.query('g1 != g2').pipe(_pipe_qcov, 'y1n', 'y2n')
         res['y1m_y2m_count'] = dm.query('g1 != g2').shape[0]
 
         self.moments_within = res

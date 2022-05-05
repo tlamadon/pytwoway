@@ -1,5 +1,5 @@
 BLMEstimator class
-======================
+==================
 
 .. autoclass:: pytwoway.blm.BLMEstimator
    :members:

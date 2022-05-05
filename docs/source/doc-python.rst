@@ -5,97 +5,91 @@ To install via pip, from the command line run::
 
    pip install pytwoway
 
+To install via Conda, from the command line run::
+
+   conda install -c tlamadon pytwoway
+
 Sample data: :download:`download <twoway_sample_data.csv>`
 
 To run in Python:
 
-- If you want to run estimators on your own data:
+- If you want to estimate AKM and its bias corrections:
 
 .. code-block:: python
 
+   import pandas as pd
+   import bipartitepandas as bpd
    import pytwoway as tw
-   # Create TwoWay object
-   tw_net = tw.TwoWay(data)
+   # Load data into Pandas DataFrame
+   df = pd.read_csv(filepath)
+   # Convert into BipartitePandas DataFrame
+   bdf = bpd.BipartiteDataFrame(i=df['i'], j=df['j'], y=df['y'], t=df['t'])
    # Clean data
-   tw_net.prep_data()
-   # Fit the FE estimators
-   tw_net.fit_fe()
-   # Save the FE results
-   fe_res = tw_net.summary_fe()
-   # Cluster to prepare for CRE
-   tw_net.cluster()
-   # Fit the CRE estimator
-   tw_net.fit_cre()
-   # Save the CRE results
-   cre_res = tw_net.summary_cre()
+   bdf = bdf.clean()
+   # Collapse data at the worker-firm spell level
+   bdf = bdf.collapse()
+   # Initialize FE estimator
+   fe_estimator = tw.FEEstimator(bdf)
+   # Fit FE estimator
+   fe_estimator.fit()
+   # Investigate results
+   print(fe_estimator.summary)
 
-.. note::
-   Your data must include the following columns:
-    - ``i``: worker identifier
-    - ``j``: firm identifier
-    - ``y``: compensation
-    - ``t``: time
-   .. list-table:: Example data
-      :widths: 25 25 25 25
-      :header-rows: 1
-      :align: center
-
-      * - i
-        - j
-        - y
-        - t
-
-      * - 1
-        - 1
-        - 1000
-        - 2019
-      * - 1
-        - 2
-        - 1500
-        - 2020
-      * - 2
-        - 3
-        - 500
-        - 2019
-      * - 2
-        - 3
-        - 550
-        - 2020
-
-- If you want to run estimators on simulated data:
+- If you want to estimate CRE:
 
 .. code-block:: python
 
+   import pandas as pd
+   import bipartitepandas as bpd
    import pytwoway as tw
-   from bipartitepandas import SimBipartite
-   # Create SimTwoWay object
-   sbp_net = SimBipartite()
-   # Generate data
-   sim_data = sbp_net.sim_network()
-   # Below is identical to first example, except we are now using the simulated data
-   # Create TwoWay object
-   tw_net = tw.TwoWay(sim_data)
+   # Load data into Pandas DataFrame
+   df = pd.read_csv(filepath)
+   # Convert into BipartitePandas DataFrame
+   bdf = bpd.BipartiteDataFrame(i=df['i'], j=df['j'], y=df['y'], t=df['t'])
    # Clean data
-   tw_net.prep_data()
-   # Fit the FE estimators:
-   tw_net.fit_fe()
-   # Save the FE results
-   fe_res = tw_net.summary_fe()
-   # Cluster to prepare for CRE
-   tw_net.cluster()
-   # Fit the CRE estimator
-   tw_net.fit_cre()
-   # Save the CRE results
-   cre_res = tw_net.summary_cre()
+   bdf = bdf.clean()
+   # Collapse data at the worker-firm spell level
+   bdf = bdf.collapse()
+   # Cluster
+   bdf = bdf.cluster()
+   # Convert to cross-section format
+   bdf = bdf.to_eventstudy().get_cs()
+   # Initialize CRE estimator
+   cre_estimator = tw.CREEstimator(bdf)
+   # Fit CRE estimator
+   cre_estimator.fit()
+   # Investigate results
+   print(cre_estimator.summary)
 
-- If you want to run a Monte Carlo estimation on simulated data:
+- If you want to estimate BLM:
 
 .. code-block:: python
 
+   import pandas as pd
+   import bipartitepandas as bpd
    import pytwoway as tw
-   # Create TwoWayMonteCarlo object
-   twmc_net = tw.TwoWayMonteCarlo()
-   # Run Monte Carlo
-   twmc_net.twfe_monte_carlo()
+   # Load data into Pandas DataFrame
+   df = pd.read_csv(filepath)
+   # Convert into BipartitePandas DataFrame
+   bdf = bpd.BipartiteDataFrame(i=df['i'], j=df['j'], y=df['y'], t=df['t'])
+   # Clean data
+   bdf = bdf.clean()
+   # Collapse data at the worker-firm spell level
+   bdf = bdf.collapse()
+   # Cluster
+   bdf = bdf.cluster()
+   # Convert to event study format
+   bdf = bdf.to_eventstudy()
+   # Separate movers and stayers
+   movers = bdf.get_worker_m()
+   jdata = sim_data_observed.loc[movers, :]
+   sdata = sim_data_observed.loc[~movers, :]
+   # Initialize BLM estimator
+   blm_estimator = tw.BLMEstimator(bdf)
+   # Fit BLM estimator
+   blm_estimator.fit(jdata, sdata)
    # Plot results
-   twmc_net.plot_monte_carlo()
+   blm_estimator.plot_log_earnings()
+   blm_estimator.plot_type_proportions()
+
+Check out the notebooks for more detailed examples!
