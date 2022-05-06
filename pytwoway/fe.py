@@ -402,15 +402,15 @@ class FEEstimator:
                     # Estimate leverages for HE correction
                     if len(self.params['levfile']) > 0:
                         # Precomputed leverages
-                        Pii = self._extract_precomputed_leverages()
+                        Pii, p = self._extract_precomputed_leverages()
                     elif self.params['exact_lev_he']:
                         # Analytical leverages
-                        Pii = self._estimate_exact_leverages()
+                        Pii, p = self._estimate_exact_leverages()
                     else:
                         # Approximate leverages
-                        Pii = self._estimate_approximate_leverages(rng)
+                        Pii, p = self._estimate_approximate_leverages(rng)
                     # Estimate Sii (sigma^2) for HE correction
-                    self._estimate_Sii_he(Pii)
+                    self._estimate_Sii_he(Pii, p)
                     del Pii
                     # Estimate trace for HE correction
                     if self.params['exact_trace_he']:
@@ -1184,7 +1184,7 @@ class FEEstimator:
         Extract precomputed leverages (Pii) for heteroskedastic correction.
 
         Returns:
-            Pii (NumPy Array): estimated leverages
+            (tuple of (NumPy Array, int)): (Pii --> estimated leverages, p --> number of draws used in leverage approximation)
         '''
         Pii = np.zeros(self.nn)
         worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
@@ -1210,14 +1210,14 @@ class FEEstimator:
 
         self.logger.info(f"[he] leverage range {self.res['min_lev']:2.4f} to {self.res['max_lev']:2.4f}")
 
-        return Pii
+        return (Pii, len(files))
     
     def _estimate_exact_leverages(self):
         '''
         Estimate analytical leverages (Pii) for heteroskedastic correction.
 
         Returns:
-            Pii (NumPy Array): estimated leverages
+            (tuple of (NumPy Array, None)): (Pii --> estimated leverages, p --> number of draws used in leverage approximation (None in this case))
         '''
         Pii = np.zeros(self.nn)
         worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
@@ -1247,7 +1247,7 @@ class FEEstimator:
 
         self.logger.info(f"[he] leverage range {self.res['min_lev']:2.4f} to {self.res['max_lev']:2.4f}")
 
-        return Pii
+        return (Pii, None)
     
     def _estimate_approximate_leverages(self, rng=None):
         '''
@@ -1257,12 +1257,13 @@ class FEEstimator:
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            Pii (NumPy Array): estimated leverages
+            (tuple of (NumPy Array, int)): (Pii --> estimated leverages, p --> number of draws used in leverage approximation)
         '''
         if rng is None:
             rng = np.random.default_rng(None)
 
         Pii = np.zeros(self.nn)
+        p = 0
         worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
 
         self.logger.info(f"[he] [approximate pii] lev_batchsize={self.params['lev_batchsize']}, lev_nbatches={self.params['lev_nbatches']}, using {self.ncore} core(s)")
@@ -1291,6 +1292,9 @@ class FEEstimator:
                 Pii_i = self._leverage_approx(self.lev_batchsize, rng)
 
             self.logger.debug(f"[he] [approximate pii] step {batch_i + 1}/{self.params['lev_nbatches']} done")
+
+            # lev_batchsize more draws
+            p += self.lev_batchsize
 
             # Take weighted average over all Pii draws
             Pii = (batch_i * Pii + Pii_i) / (batch_i + 1)
@@ -1345,14 +1349,15 @@ class FEEstimator:
 
         self.logger.info(f"[he] leverage range {self.res['min_lev']:2.4f} to {self.res['max_lev']:2.4f}")
 
-        return Pii
+        return (Pii, p)
 
-    def _estimate_Sii_he(self, Pii):
+    def _estimate_Sii_he(self, Pii, p):
         '''
         Estimate Sii (sigma^2) for heteroskedastic correction.
 
         Arguments:
             Pii (NumPy Array): estimated leverages
+            p (int): number of draws used in leverage approximation
         '''
         worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
 
@@ -1361,6 +1366,9 @@ class FEEstimator:
         Pii[~worker_m] = 0
         # Compute Sii for movers
         self.adata.loc[:, 'Sii'] = self.Y * self.E / (1 - Pii)
+        if not self.params['exact_lev_he']:
+            # Non-linearity bias correction
+            self.adata.loc[:, 'Sii'] *= (1 - (1 / p) * (3 * (Pii ** 3) + (Pii ** 2)) / (1 - Pii))
         # Link firms to average Sii of movers
         S_j = self.adata.loc[worker_m, :].groupby('j')['Sii'].mean().to_dict()
         Sii_j = self.adata.loc[:, 'j'].map(S_j)
