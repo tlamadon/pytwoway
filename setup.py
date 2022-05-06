@@ -5,7 +5,7 @@ with open('README.rst', 'r', encoding='utf-8') as fh:
 
 setuptools.setup(
     name='pytwoway',
-    version='0.2.2',
+    version='0.2.3',
     author='Thibaut Lamadon',
     author_email='thibaut.lamadon@gmail.com',
     description='Estimate two way fixed effect labor models',
@@ -18,12 +18,12 @@ setuptools.setup(
         'pandas',
         'bipartitepandas',
         'scipy',
+        'statsmodels',
         'pyamg',
         'qpsolvers',
         'ConfigArgParse',
         'matplotlib',
-        'tqdm',
-        'statsmodels'
+        'tqdm'
       ],
     entry_points = {
         'console_scripts': ['pytw=pytwoway.command_line:main'],

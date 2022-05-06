@@ -37,7 +37,7 @@ def test_fe_ols():
     fe_solver = tw.FEEstimator(bdf, fe_params)
     fe_solver.fit()
 
-    assert np.all(np.isclose(bdf.loc[:, 'psi_hat'].to_numpy() + bdf.loc[:, 'alpha_hat'].to_numpy(), bdf.loc[:, 'y']))
+    assert np.all(np.isclose(bdf.loc[:, 'psi_hat'].to_numpy() + bdf.loc[:, 'alpha_hat'].to_numpy(), bdf.loc[:, 'y'].to_numpy()))
 
 def test_fe_estimator_full_novar():
     # Test that FE estimates parameters correctly (sigma^2, var(psi), and cov(psi, alpha)) for plug-in, HO, and HE with var(eps) = 0.
@@ -51,7 +51,7 @@ def test_fe_estimator_full_novar():
     fe_solver.fit(np.random.default_rng(1234))
 
     # True parameters
-    true_sigma_2 = 0
+    true_sigma_2 = np.var(a.loc[:, 'y'] - a.loc[:, 'psi'].to_numpy() - a.loc[:, 'alpha'].to_numpy(), ddof=0)
     true_var_psi = np.var(a.loc[:, 'psi'].to_numpy(), ddof=0)
     true_cov_psi_alpha = np.cov(a.loc[:, 'psi'].to_numpy(), a.loc[:, 'alpha'].to_numpy(), ddof=0)[0, 1]
 
@@ -83,7 +83,7 @@ def test_fe_estimator_full_novar():
     assert np.isclose(true_cov_psi_alpha, est_he_cov_psi_alpha)
 
     # y
-    assert np.all(np.isclose(b.loc[:, 'psi_hat'].to_numpy() + b.loc[:, 'alpha_hat'].to_numpy(), b.loc[:, 'y']))
+    assert np.all(np.isclose(b.loc[:, 'psi_hat'].to_numpy() + b.loc[:, 'alpha_hat'].to_numpy(), b.loc[:, 'y'].to_numpy()))
 
 def test_fe_estimator_full_var_uncollapsed():
     # Test that FE estimates parameters correctly (sigma^2, var(psi), and cov(psi, alpha)) for plug-in, HO, and HE with var(eps) = 1 for uncollapsed data.
@@ -97,7 +97,7 @@ def test_fe_estimator_full_var_uncollapsed():
     fe_solver.fit(np.random.default_rng(1234))
 
     # True parameters
-    true_sigma_2 = 1
+    true_sigma_2 = np.var(a.loc[:, 'y'] - a.loc[:, 'psi'].to_numpy() - a.loc[:, 'alpha'].to_numpy(), ddof=0)
     true_var_psi = np.var(a.loc[:, 'psi'].to_numpy(), ddof=0)
     true_cov_psi_alpha = np.cov(a.loc[:, 'psi'].to_numpy(), a.loc[:, 'alpha'].to_numpy(), ddof=0)[0, 1]
 
@@ -117,8 +117,8 @@ def test_fe_estimator_full_var_uncollapsed():
 
     # sigma^2
     # assert np.abs((est_pi_sigma_2 - true_sigma_2) / true_sigma_2) < 1e-2
-    assert np.abs((est_ho_sigma_2 - true_sigma_2) / true_sigma_2) < 0.05
-    assert np.abs((est_he_sigma_2 - true_sigma_2) / true_sigma_2) < 0.05
+    assert np.abs((est_ho_sigma_2 - true_sigma_2) / true_sigma_2) < 1e-2
+    assert np.abs((est_he_sigma_2 - true_sigma_2) / true_sigma_2) < 1e-2
     # var(psi)
     # assert np.abs((est_pi_var_psi - true_var_psi) / true_var_psi) < 1e-2
     assert np.abs((est_ho_var_psi - true_var_psi) / true_var_psi) < 0.025
@@ -129,7 +129,7 @@ def test_fe_estimator_full_var_uncollapsed():
     assert np.abs((est_he_cov_psi_alpha - true_cov_psi_alpha) / true_cov_psi_alpha) < 1e-2
 
     # y
-    assert np.sum(np.isclose(b.loc[:, 'psi_hat'].to_numpy() + b.loc[:, 'alpha_hat'].to_numpy(), b.loc[:, 'y'], atol=1)) / len(b) > 0.75
+    assert np.sum(np.isclose(b.loc[:, 'psi_hat'].to_numpy() + b.loc[:, 'alpha_hat'].to_numpy(), b.loc[:, 'y'].to_numpy(), atol=1)) / len(b) > 0.75
 
 def test_fe_estimator_full_var_collapsed():
     # Test that FE estimates parameters correctly (sigma^2, var(psi), and cov(psi, alpha)) for plug-in, HO, and HE with var(eps) = 1 for collapsed data.
@@ -143,7 +143,7 @@ def test_fe_estimator_full_var_collapsed():
     fe_solver.fit(np.random.default_rng(1234))
 
     # True parameters
-    true_sigma_2 = 1
+    true_sigma_2 = np.var(a.loc[:, 'y'] - a.loc[:, 'psi'].to_numpy() - a.loc[:, 'alpha'].to_numpy(), ddof=0)
     true_var_psi = np.var(a.loc[:, 'psi'].to_numpy(), ddof=0)
     true_cov_psi_alpha = np.cov(a.loc[:, 'psi'].to_numpy(), a.loc[:, 'alpha'].to_numpy(), ddof=0)[0, 1]
 
@@ -164,8 +164,7 @@ def test_fe_estimator_full_var_collapsed():
     # sigma^2
     # assert np.abs((est_pi_sigma_2 - true_sigma_2) / true_sigma_2) < 1e-2
     assert np.abs((est_ho_sigma_2 - true_sigma_2) / true_sigma_2) < 0.02
-    # FIXME FIGURE OUT WHY HE ESTIMATES SIGMA^2 SO POORLY FOR COLLAPSED DATA
-    assert np.abs((est_he_sigma_2 - true_sigma_2) / true_sigma_2) < 0.45
+    assert np.abs((est_he_sigma_2 - true_sigma_2) / true_sigma_2) < 0.04
     # var(psi)
     # assert np.abs((est_pi_var_psi - true_var_psi) / true_var_psi) < 1e-2
     assert np.abs((est_ho_var_psi - true_var_psi) / true_var_psi) < 0.15
@@ -176,7 +175,7 @@ def test_fe_estimator_full_var_collapsed():
     assert np.abs((est_he_cov_psi_alpha - true_cov_psi_alpha) / true_cov_psi_alpha) < 0.05
 
     # y
-    assert np.sum(np.isclose(b.loc[:, 'psi_hat'].to_numpy() + b.loc[:, 'alpha_hat'].to_numpy(), b.loc[:, 'y'], atol=1)) / len(b) > 0.8
+    assert np.sum(np.isclose(b.loc[:, 'psi_hat'].to_numpy() + b.loc[:, 'alpha_hat'].to_numpy(), b.loc[:, 'y'].to_numpy(), atol=1)) / len(b) > 0.8
 
 def test_fe_estimator_full_approx_analytical():
     # Test that FE estimates parameters correctly (sigma^2, var(psi), and cov(psi, alpha)) for plug-in, HO, and HE for analytical vs. approximate estimators.
@@ -187,7 +186,7 @@ def test_fe_estimator_full_approx_analytical():
     fe_params_a = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True})
     fe_solver_a = tw.FEEstimator(a, fe_params_a)
     fe_solver_a.fit(np.random.default_rng(1237))
-    fe_params_b = tw.fe_params({'he': True, 'exact_trace_sigma_2': False, 'exact_trace_ho': False, 'exact_trace_he': False, 'exact_lev_he': False})
+    fe_params_b = tw.fe_params({'he': True, 'exact_trace_sigma_2': False, 'exact_trace_ho': False, 'exact_trace_he': False, 'exact_lev_he': False, 'lev_threshold_obs': 1, 'lev_threshold_pii': 0.8})
     fe_solver_b = tw.FEEstimator(a, fe_params_b)
     fe_solver_b.fit(np.random.default_rng(1238))
 
@@ -221,15 +220,15 @@ def test_fe_estimator_full_approx_analytical():
     # sigma^2
     # assert np.abs((est_pi_sigma_2_b - est_pi_sigma_2_a) / est_pi_sigma_2_a) == 0
     assert np.abs((est_ho_sigma_2_b - est_ho_sigma_2_a) / est_ho_sigma_2_a) < 1e-3
-    assert np.abs((est_he_sigma_2_b - est_he_sigma_2_a) / est_he_sigma_2_a) < 1e-2
+    assert np.abs((est_he_sigma_2_b - est_he_sigma_2_a) / est_he_sigma_2_a) < 0.025
     # var(psi)
     # assert np.abs((est_pi_var_psi_b - est_pi_var_psi_a) / est_pi_var_psi_a) == 0
     assert np.abs((est_ho_var_psi_b - est_ho_var_psi_a) / est_ho_var_psi_a) < 1e-3
-    assert np.abs((est_he_var_psi_b - est_he_var_psi_a) / est_he_var_psi_a) < 1e-2
+    assert np.abs((est_he_var_psi_b - est_he_var_psi_a) / est_he_var_psi_a) < 0.015
     # cov(psi, alpha)
     # assert np.abs((est_pi_cov_psi_alpha_b - est_pi_cov_psi_alpha_a) / est_pi_cov_psi_alpha_a) == 0
     assert np.abs((est_ho_cov_psi_alpha_b - est_ho_cov_psi_alpha_a) / est_ho_cov_psi_alpha_a) < 1e-3
-    assert np.abs((est_he_cov_psi_alpha_b - est_he_cov_psi_alpha_a) / est_he_cov_psi_alpha_a) < 1e-3
+    assert np.abs((est_he_cov_psi_alpha_b - est_he_cov_psi_alpha_a) / est_he_cov_psi_alpha_a) < 1e-2
 
 def test_fe_estimator_full_Q():
     # Test that FE estimates custom Q correctly for plug-in, HO, and HE estimators.

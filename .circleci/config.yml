@@ -27,6 +27,12 @@ jobs:
           name: Install Dependencies
           command: |
             poetry install
+
+      # Install pytest
+      - run:
+          name: Install PyTest
+          command: |
+            pip install pytest
       
       # Save's the specified path as a cache. This is the path Poetry uses to install the dependencies
       # So if you don't install anything new, this folder won't change and the cache will be effective

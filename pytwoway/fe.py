@@ -1357,7 +1357,7 @@ class FEEstimator:
         '''
         worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
         if self.weighted:
-            w = self.adata.loc[:, 'w'].to_numpy()
+            w = self.Dp.data[0]
 
         ## Compute Sii for movers ##
         Sii_m = self.Y[worker_m] * self.E[worker_m] / (1 - Pii[worker_m])
@@ -1385,9 +1385,12 @@ class FEEstimator:
         self.adata.loc[:, 'Sii'] = Sii
         if self.weighted:
             # Weighted average
-            self.adata.loc[:, 'weighted_Sii'] = w * Sii
+            # How it works: imagine two observations in a firm, i=0 has w=1 and i=1 has w=5. Then Sii_0 is correct, but Sii_1 represents 1/5 of the variance of a single observation. We multiply Sii_1 by 5 to make it representative of a single observation, but then also need to weight it properly as 5 observations.
+            self.adata.loc[:, 'weighted_Sii'] = (w ** 2) * Sii
             groupby_j = self.adata.loc[~worker_m, ['j', 'weighted_Sii', 'w']].groupby('j')
             Sii[~worker_m] = groupby_j['weighted_Sii'].transform('sum') / groupby_j['w'].transform('sum')
+            # Divide by weight to re-adjust variance to account for more observations
+            Sii[~worker_m] /= w[~worker_m]
             # No longer need weighted_Sii column
             self.adata.drop('weighted_Sii', axis=1, inplace=True)
         else:
@@ -1399,7 +1402,8 @@ class FEEstimator:
         # Compute sigma^2 HE
         if self.weighted:
             # Weighted average
-            self.res['eps_var_he'] = np.average(Sii, weights=w)
+            # Multiply by w, because each observation's variance is divided by w and we need to undo that
+            self.res['eps_var_he'] = np.average(w * Sii, weights=w)
         else:
             # Unweighted average
             self.res['eps_var_he'] = np.mean(Sii)
