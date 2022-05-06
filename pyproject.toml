@@ -1,7 +1,7 @@
 [tool]
 [tool.poetry]
 name = "pytwoway"
-version = "0.1.26"
+version = "0.2.3"
 description = "Estimate two way fixed effect labor models"
 classifiers = ["Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License", "Operating System :: OS Independent"]
 homepage = "https://github.com/tlamadon/pytwoway"
@@ -10,15 +10,14 @@ readme = "README.rst"
 
 [tool.poetry.dependencies]
 python = ">=3.7"
-bipartitepandas = "*"
-configargparse = "*"
-matplotlib = "*"
 numpy = "*"
 pandas = ">=1.0"
+bipartitepandas = "*"
+scipy = "*"
+statsmodels = "*"
 pyamg = "*"
 qpsolvers = "=1.5"
-scipy = "*"
+ConfigArgParse = "*"
+matplotlib = "*"
 tqdm = "*"
-statsmodels = "*"
-scikit-learn = "*"
-networkx = "*"
+pytest = "*"
