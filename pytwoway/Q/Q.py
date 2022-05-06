@@ -1,5 +1,5 @@
 '''
-Classes for generating Q matrices for FE bias corrections. Note: use classes rather than nested functions because nested functions cannot be pickled (source: https://stackoverflow.com/a/12022055/17333120).
+Classes for constructing the variance-covariance matrix for AKM and its bias corrections. Note: use classes rather than nested functions because nested functions cannot be pickled (source: https://stackoverflow.com/a/12022055/17333120).
 
 TODO: cov(psi_i, psi_j), var(gamma)
 '''

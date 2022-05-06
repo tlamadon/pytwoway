@@ -61,6 +61,7 @@ class MonteCarlo:
         self.clean_params['connectedness'] = 'leave_out_observation'
         self.clean_params['is_sorted'] = True
         self.clean_params['force'] = True
+        self.clean_params['verbose'] = False
         self.clean_params['copy'] = False
         if collapse:
             self.clean_params_one = self.clean_params.copy()

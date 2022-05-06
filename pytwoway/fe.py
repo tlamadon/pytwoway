@@ -1,5 +1,5 @@
 '''
-Defines class FEEstimator, which uses multigrid and partialing out to estimate two way fixed effect models. This includes AKM, the Andrews et al. homoskedastic correction, and the Kline et al. heteroskedastic correction.
+Defines class FEEstimator, which uses multigrid and partialing out to estimate weighted two way fixed effect models. This includes AKM, the Andrews et al. homoskedastic correction, and the Kline et al. heteroskedastic correction.
 '''
 from tqdm.auto import tqdm, trange
 import time, pickle, json, glob # warnings
@@ -190,7 +190,7 @@ def _weighted_var(v, w, dof=0):
         dof (int): degrees of freedom
 
     Returns:
-        v0 (NumPy Array): weighted variance
+        (NumPy Array): weighted variance
     '''
     m0 = np.sum(w * v) / np.sum(w)
     v0 = np.sum(w * (v - m0) ** 2) / (np.sum(w) - dof)
@@ -209,7 +209,7 @@ def _weighted_cov(v1, v2, w1, w2, dof=0):
         dof (int): degrees of freedom
 
     Returns:
-        v0 (NumPy Array): weighted variance
+        (NumPy Array): weighted covariance
     '''
     m1 = np.sum(w1 * v1) / np.sum(w1)
     m2 = np.sum(w2 * v2) / np.sum(w2)
@@ -226,23 +226,7 @@ class FEEstimator:
     def __init__(self, data, params=None):
         '''
         Arguments:
-            data (BipartiteDataFrame): (collapsed) long format labor data. Data contains the following columns:
-
-                i (worker id)
-
-                j (firm id)
-
-                y (compensation)
-
-                t (period) if long
-
-                t1 (first period of observation) if collapsed long
-
-                t2 (last period of observation) if collapsed long
-
-                w (weight)
-
-                m (0 if stayer, 1 if mover)
+            data (BipartiteDataFrame): long or collapsed long format labor data
             fe_params (ParamsDict or None)): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().
         '''
         # Start logger
@@ -317,7 +301,7 @@ class FEEstimator:
             filename (string): file to load
 
         Returns:
-            fes: loaded file
+            (file): loaded file
         '''
         fes = None
         with open(filename, 'rb') as infile:
@@ -410,18 +394,22 @@ class FEEstimator:
                         # Approximate leverages
                         Pii, p = self._estimate_approximate_leverages(rng)
                     # Estimate Sii (sigma^2) for HE correction
-                    self._estimate_Sii_he(Pii, p)
+                    Sii = self._estimate_Sii_he(Pii, p)
                     del Pii
                     # Estimate trace for HE correction
                     if self.params['exact_trace_he']:
                         # Analytical trace
-                        self._estimate_exact_trace_he(Q_params)
+                        self._estimate_exact_trace_he(Q_params, Sii)
                     else:
                         # Approximate trace
-                        self._estimate_approximate_trace_he(Q_params, rng)
+                        self._estimate_approximate_trace_he(Q_params, Sii, rng)
+                    del Sii
 
                 # Collect all results
                 self._collect_res()
+
+        # Clear attributes
+        del self.Y, self.J, self.W, self.Dp, self.Dp_sqrt, self.Dwinv, self.Minv, self.ml,
 
         # Drop 'worker_m' column
         self.adata.drop('worker_m', axis=1, inplace=True)
@@ -632,7 +620,7 @@ class FEEstimator:
 
         ## Estimate variance of residuals ##
         # Plug-in
-        self.sigma_2_pi = np.var(self.E, ddof=0)
+        self.sigma_2_pi = np.var(self.E, ddof=0) # _weighted_var(self.E, self.Dp)
         # Bias-corrected
         if self.weighted:
             trace_approximation = np.mean(self.tr_sigma_ho_all)
@@ -775,12 +763,13 @@ class FEEstimator:
 
             self.logger.debug(f'[ho] [approximate trace] step {r + 1}/{self.ndraw_trace_ho} done')
 
-    def _estimate_exact_trace_he(self, Q_params):
+    def _estimate_exact_trace_he(self, Q_params, Sii):
         '''
         Estimate analytical trace of HE-corrected model.
 
         Arguments:
             Q_params (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
+            Sii (NumPy Array): Sii (sigma^2) for heteroskedastic correction
         '''
         self.logger.info(f'[he] [analytical trace]')
 
@@ -797,7 +786,7 @@ class FEEstimator:
         J, W = self.J, self.W
         Dp = self.Dp
         A, B, C, D = self.AA_inv_A, self.AA_inv_B, self.AA_inv_C, self.AA_inv_D
-        Sii = diags(self.Sii)
+        Sii = diags(Sii)
 
         ## Compute Tr[Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1}] ##
         ## Left ##
@@ -857,12 +846,13 @@ class FEEstimator:
         # Compute trace by considering correct quadrant
         self.tr_cov_he_all = np.trace(Q_cov @ AA_inv)
 
-    def _estimate_approximate_trace_he(self, Q_params, rng=None):
+    def _estimate_approximate_trace_he(self, Q_params, Sii, rng=None):
         '''
         Estimate trace approximation of HE-corrected model.
 
         Arguments:
             Q_params (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
+            Sii (NumPy Array): Sii (sigma^2) for heteroskedastic correction
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
         if rng is None:
@@ -893,7 +883,7 @@ class FEEstimator:
             # Compute (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1} @ Z
             psi1, alpha1 = self._mult_AAinv( # (A'D_pA)^{-1} @
                 *self._mult_Atranspose( # (D_pA)' @
-                    self.Sii * self._mult_A( # Omega @ (D_pA) @
+                    Sii * self._mult_A( # Omega @ (D_pA) @
                         *self._mult_AAinv( # (A'D_pA)^{-1} @ Z
                             Zpsi, Zalpha, weighted=True
                         ), weighted=True
@@ -927,12 +917,12 @@ class FEEstimator:
         '''
         Collect all results.
         '''
-        self.res['eps_var_ho'] = self.sigma_2_ho
-        self.res['eps_var_fe'] = np.var(self.E)
         # Already computed, this just reorders the dictionary
         self.res['var_y'] = self.res['var_y']
 
         ## FE results ##
+        # Plug-in sigma^2
+        self.res['eps_var_fe'] = self.sigma_2_pi
         # Plug-in variance
         self.res['var_fe'] = self.var_fe
         self.logger.info(f'[ho] VAR fe={self.var_fe:2.4f}')
@@ -941,6 +931,8 @@ class FEEstimator:
         self.res['cov_fe'] = self.cov_fe
 
         ## Homoskedastic results ##
+        # Bias-corrected sigma^2
+        self.res['eps_var_ho'] = self.sigma_2_ho
         # Trace approximation: variance
         self.res['tr_var_ho'] = np.mean(self.tr_var_ho_all)
         self.res['tr_var_ho_sd'] = np.std(self.tr_var_ho_all)
@@ -962,6 +954,7 @@ class FEEstimator:
         ## Heteroskedastic results ##
         if self.compute_he:
             ## Already computed, this just reorders the dictionary ##
+            # Bias-corrected sigma^2
             self.res['eps_var_he'] = self.res['eps_var_he']
             self.res['min_lev'] = self.res['min_lev']
             self.res['max_lev'] = self.res['max_lev']
@@ -1211,7 +1204,7 @@ class FEEstimator:
         self.logger.info(f"[he] leverage range {self.res['min_lev']:2.4f} to {self.res['max_lev']:2.4f}")
 
         return (Pii, len(files))
-    
+
     def _estimate_exact_leverages(self):
         '''
         Estimate analytical leverages (Pii) for heteroskedastic correction.
@@ -1248,7 +1241,7 @@ class FEEstimator:
         self.logger.info(f"[he] leverage range {self.res['min_lev']:2.4f} to {self.res['max_lev']:2.4f}")
 
         return (Pii, None)
-    
+
     def _estimate_approximate_leverages(self, rng=None):
         '''
         Estimate approximate leverages (Pii) for heteroskedastic correction.
@@ -1358,26 +1351,61 @@ class FEEstimator:
         Arguments:
             Pii (NumPy Array): estimated leverages
             p (int): number of draws used in leverage approximation
+
+        Returns:
+            (NumPy Array): Sii (sigma^2) for heteroskedastic correction
         '''
         worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
+        if self.weighted:
+            w = self.adata.loc[:, 'w'].to_numpy()
 
-        ## Give stayers the variance estimate at the firm level ##
-        # Set Pii = 0 for stayers to avoid divide-by-zero warning
-        Pii[~worker_m] = 0
-        # Compute Sii for movers
-        self.adata.loc[:, 'Sii'] = self.Y * self.E / (1 - Pii)
+        ## Compute Sii for movers ##
+        Sii_m = self.Y[worker_m] * self.E[worker_m] / (1 - Pii[worker_m])
         if not self.params['exact_lev_he']:
             # Non-linearity bias correction
-            self.adata.loc[:, 'Sii'] *= (1 - (1 / p) * (3 * (Pii ** 3) + (Pii ** 2)) / (1 - Pii))
-        # Link firms to average Sii of movers
-        S_j = self.adata.loc[worker_m, :].groupby('j')['Sii'].mean().to_dict()
-        Sii_j = self.adata.loc[:, 'j'].map(S_j)
-        self.Sii = np.where(worker_m, self.adata.loc[:, 'Sii'], Sii_j)
+            Sii_m *= (1 - (1 / p) * (3 * (Pii[worker_m] ** 3) + (Pii[worker_m] ** 2)) / (1 - Pii[worker_m]))
+
+        ## Compute Sii for stayers ##
+        # Source: https://github.com/rsaggio87/LeaveOutTwoWay/blob/master/codes/sigma_for_stayers.m
+        if self.weighted:
+            # Weighted
+            Pii_s = 1 / self.adata.loc[~worker_m, ['i', 'w']].groupby('i', sort=False)['w'].transform('sum').to_numpy()
+            Sii_s = (self.Y[~worker_m] - np.sum(w[~worker_m] * self.Y[~worker_m]) / np.sum(w[~worker_m])) * (self.E[~worker_m] / (1 - Pii_s))
+        else:
+            # Unweighted
+            Pii_s = 1 / self.adata.loc[~worker_m, ['i', 'j']].groupby('i', sort=False)['j'].transform('size').to_numpy()
+            Sii_s = (self.Y[~worker_m] - np.mean(self.Y[~worker_m])) * (self.E[~worker_m] / (1 - Pii_s))
+
+        ## Combine Sii for all workers ##
+        Sii = np.zeros(self.nn)
+        Sii[worker_m] = Sii_m
+        Sii[~worker_m] = Sii_s
+
+        ## Take mean Sii_s at the firm level ##
+        self.adata.loc[:, 'Sii'] = Sii
+        if self.weighted:
+            # Weighted average
+            self.adata.loc[:, 'weighted_Sii'] = w * Sii
+            groupby_j = self.adata.loc[~worker_m, ['j', 'weighted_Sii', 'w']].groupby('j')
+            Sii[~worker_m] = groupby_j['weighted_Sii'].transform('sum') / groupby_j['w'].transform('sum')
+            # No longer need weighted_Sii column
+            self.adata.drop('weighted_Sii', axis=1, inplace=True)
+        else:
+            # Unweighted average
+            Sii[~worker_m] = self.adata.loc[~worker_m, ['j', 'Sii']].groupby('j')['Sii'].transform('mean')
         # No longer need Sii column
         self.adata.drop('Sii', axis=1, inplace=True)
 
-        self.res['eps_var_he'] = self.Sii.mean()
+        # Compute sigma^2 HE
+        if self.weighted:
+            # Weighted average
+            self.res['eps_var_he'] = np.average(Sii, weights=w)
+        else:
+            # Unweighted average
+            self.res['eps_var_he'] = np.mean(Sii)
         self.logger.info(f"[he] variance of residuals in heteroskedastic case: {self.res['eps_var_he']:2.4f}")
+
+        return Sii
 
     def _leverage_approx(self, ndraw_pii, rng=None):
         '''
@@ -1388,7 +1416,7 @@ class FEEstimator:
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            Pii (NumPy Array): Pii array
+            (NumPy Array): Pii array
         '''
         if rng is None:
             rng = np.random.default_rng(None)
