@@ -505,8 +505,6 @@ def test_blm_monotonic_1():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM model
     blm_fit = tw.BLMModel(blm_params, rng=rng)
     # Fit BLM model
@@ -660,7 +658,7 @@ def test_blm_qi():
     # Simulate data
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(sim_data['jdata'])), **sim_data['jdata'])
+    jdata = sim_data['jdata']
     # Initialize BLM estimator
     blm_fit = tw.BLMModel(blm_params, rng=rng)
     # Update BLM class attributes to equal truth
@@ -696,8 +694,6 @@ def test_blm_start_at_truth_no_controls():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMModel(blm_params, rng=rng)
     # Update BLM class attributes to equal truth
@@ -737,8 +733,6 @@ def test_blm_full_estimation_no_controls():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
@@ -790,8 +784,6 @@ def test_blm_start_at_truth_cat_tv_wi():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMModel(blm_params, rng=rng)
     # Update BLM class attributes to equal truth
@@ -873,8 +865,6 @@ def test_blm_full_estimation_cat_tv_wi():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
@@ -951,8 +941,6 @@ def test_blm_start_at_truth_cat_tnv_wi():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMModel(blm_params, rng=rng)
     # Update BLM class attributes to equal truth
@@ -1036,8 +1024,6 @@ def test_blm_full_estimation_cat_tnv_wi():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
@@ -1112,8 +1098,6 @@ def test_blm_start_at_truth_cat_tv():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMModel(blm_params, rng=rng)
     # Update BLM class attributes to equal truth
@@ -1196,8 +1180,6 @@ def test_blm_full_estimation_cat_tv():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
@@ -1270,8 +1252,6 @@ def test_blm_start_at_truth_cat_tnv():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMModel(blm_params, rng=rng)
     # Update BLM class attributes to equal truth
@@ -1355,8 +1335,6 @@ def test_blm_full_estimation_cat_tnv():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
@@ -1428,8 +1406,6 @@ def test_blm_start_at_truth_cts_tv_wi():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMModel(blm_params, rng=rng)
     # Update BLM class attributes to equal truth
@@ -1491,8 +1467,6 @@ def test_blm_full_estimation_cts_tv_wi():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
@@ -1545,8 +1519,6 @@ def test_blm_start_at_truth_cts_tnv_wi():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMModel(blm_params, rng=rng)
     # Update BLM class attributes to equal truth
@@ -1608,8 +1580,6 @@ def test_blm_full_estimation_cts_tnv_wi():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
@@ -1662,8 +1632,6 @@ def test_blm_start_at_truth_cts_tv():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMModel(blm_params, rng=rng)
     # Update BLM class attributes to equal truth
@@ -1725,8 +1693,6 @@ def test_blm_full_estimation_cts_tv():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
@@ -1779,8 +1745,6 @@ def test_blm_start_at_truth_cts_tnv():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMModel(blm_params, rng=rng)
     # Update BLM class attributes to equal truth
@@ -1843,8 +1807,6 @@ def test_blm_full_estimation_cts_tnv():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
@@ -1900,8 +1862,6 @@ def test_blm_control_constraints_linear():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMModel(blm_params, rng=rng)
     # Update BLM class attributes to equal truth
@@ -1961,8 +1921,6 @@ def test_blm_control_constraints_monotonic():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMModel(blm_params, rng=rng)
     # Update BLM class attributes to equal truth
@@ -2024,8 +1982,6 @@ def test_blm_control_constraints_stationary_firm_type_variation():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMModel(blm_params, rng=rng)
     # Update BLM class attributes to equal truth
@@ -2084,8 +2040,6 @@ def test_blm_control_constraints_lb_ub():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMModel(blm_params, rng=rng)
     # Update BLM class attributes to equal truth
@@ -2172,8 +2126,6 @@ def test_blm_control_normalization():
     blm_true = tw.SimBLM(blm_sim_params)
     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
     jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    jdata = bpd.BipartiteDataFrame(i=np.arange(len(jdata)), **jdata)
-    sdata = bpd.BipartiteDataFrame(i=len(jdata) + np.arange(len(sdata)), **sdata)
     # Initialize BLM estimator
     blm_fit = tw.BLMModel(blm_params, rng=rng)
     # Update BLM class attributes to equal truth
