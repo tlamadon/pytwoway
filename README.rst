@@ -34,11 +34,11 @@ The package provides implementations for a series of estimators for models with 
 5. group correlated random effect as presented in the main paper
 
 .. |binder_fe| image:: https://mybinder.org/badge_logo.svg 
-    :target: https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fnotebooks%2Ffe_example.ipynb
+    :target: https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fsource%2Fnotebooks%2Ffe_example.ipynb
 .. |binder_cre| image:: https://mybinder.org/badge_logo.svg 
-    :target: https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fnotebooks%2Fcre_example.ipynb
+    :target: https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fsource%2Fnotebooks%2Fcre_example.ipynb
 .. |binder_blm| image:: https://mybinder.org/badge_logo.svg 
-    :target: https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fnotebooks%2Fblm_example.ipynb
+    :target: https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fsource%2Fnotebooks%2Fblm_example.ipynb
 
 If you want to give it a try, you can start an example notebook for the FE estimator here: |binder_fe| for the CRE estimator here: |binder_cre| and for the BLM estimator here: |binder_blm|. These start fully interactive notebooks with simple examples that simulate data and run the estimators.
 
