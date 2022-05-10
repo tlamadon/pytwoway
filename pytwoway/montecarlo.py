@@ -19,12 +19,12 @@ class MonteCarlo:
         cre_params (ParamsDict or None): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.cre_params().
         cluster_params (ParamsDict or None): dictionary of parameters for clustering in CRE estimation. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.cluster_params().
         clean_params (ParamsDict or None): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.clean_params().
-        collapse (bool): if True, run estimators on data collapsed at the worker-firm spell level
+        collapse (str or None): if None, run estimators on full dataset; if 'spell', run estimators on data collapsed at the worker-firm spell level; if 'spell', run estimators on data collapsed at the worker-firm match level
         move_to_worker (bool): if True, each move is treated as a new worker
         log (bool): if True, will create log file(s)
     '''
 
-    def __init__(self, sim_params=None, fe_params=None, cre_params=None, cluster_params=None, clean_params=None, collapse=True, move_to_worker=False, log=False):
+    def __init__(self, sim_params=None, fe_params=None, cre_params=None, cluster_params=None, clean_params=None, collapse=None, move_to_worker=False, log=False):
         # Start logger
         # logger_init(self)
         # self.logger.info('initializing MonteCarlo object')
@@ -54,20 +54,25 @@ class MonteCarlo:
 
         ## Update parameter dictionaries ##
         # FE params
+        self.fe_params['ho'] = True
         self.fe_params['he'] = True
         self.fe_params['progress_bars'] = False
         self.fe_params['verbose'] = False
         # Clean parameters
-        self.clean_params['connectedness'] = 'leave_out_observation'
+        self.clean_params['collapse_at_connectedness_measure'] = True
+        self.clean_params['drop_single_stayers'] = True
         self.clean_params['is_sorted'] = True
         self.clean_params['force'] = True
         self.clean_params['verbose'] = False
         self.clean_params['copy'] = False
-        if collapse:
-            self.clean_params_one = self.clean_params.copy()
-            self.clean_params_one['connectedness'] = None
-            self.clean_params_two = self.clean_params.copy()
-            self.clean_params_two['force'] = False
+        if collapse is None:
+            self.clean_params['connectedness'] = 'leave_out_observation'
+        elif collapse == 'spell':
+            self.clean_params['connectedness'] = 'leave_out_spell'
+        elif collapse == 'match':
+            self.clean_params['connectedness'] = 'leave_out_match'
+        else:
+            raise ValueError(f"`collapse` must one of None, 'spell', or 'match', but input specifies invalid input {collapse!r}.")
         # Cluster parameters
         self.cluster_params['clean_params'] = self.clean_params.copy()
         self.cluster_params['is_sorted'] = True
@@ -111,22 +116,11 @@ class MonteCarlo:
         psi_alpha_cov = np.cov(sim_data.loc[:, 'psi'].to_numpy(), sim_data.loc[:, 'alpha'].to_numpy(), ddof=0)[0, 1]
         ## Convert into BipartiteDataFrame ##
         sim_data = bpd.BipartiteLong(sim_data.loc[:, ['i', 'j', 'y', 't']], log=self.log)
+        if self.move_to_worker:
+            ## Set moves to worker ids ##
+            sim_data = sim_data.to_eventstudy(move_to_worker=True, is_sorted=True, copy=False).to_long(is_sorted=True, copy=False)
         ## Clean data ##
-        if self.collapse or self.move_to_worker:
-            ## Collapsing or setting moves to worker ids ##
-            # Initial clean without connectedness
-            sim_data = sim_data.clean(self.clean_params_one)
-            if self.move_to_worker:
-                # Move-to-Worker
-                sim_data = sim_data.to_eventstudy(move_to_worker=True, is_sorted=True, copy=False).to_long(is_sorted=True, copy=False)
-            if self.collapse:
-                # Collapse
-                sim_data = sim_data.collapse(is_sorted=True, copy=False)
-            # Final clean with connectedness
-            sim_data = sim_data.clean(self.clean_params_two)
-        else:
-            # Standard
-            sim_data = sim_data.clean(self.clean_params)
+        sim_data = sim_data.clean(self.clean_params)
         ## Estimate FE model ##
         fe_estimator = tw.FEEstimator(sim_data, params=self.fe_params)
         fe_estimator.fit(rng)
@@ -134,7 +128,7 @@ class MonteCarlo:
         fe_res = fe_estimator.res
         ## Estimate CRE model ##
         # Cluster
-        sim_data = sim_data.cluster(self.cluster_params)
+        sim_data = sim_data.cluster(self.cluster_params, rng=rng)
         # Estimate
         cre_estimator = tw.CREEstimator(sim_data.to_eventstudy(move_to_worker=False, is_sorted=True, copy=False).get_cs(copy=False), params=self.cre_params)
         cre_estimator.fit(rng)

@@ -53,6 +53,10 @@ class AttritionIncreasing():
         # Update clean_params
         clean_params['is_sorted'] = True
         clean_params['copy'] = False
+        drop_single_stayers = clean_params['drop_single_stayers']
+        if drop_single_stayers:
+            # We don't want to drop single stayers during cleaning, because if we do then we can't keep track of the stayers that need to be dropped
+            clean_params['drop_single_stayers'] = False
 
         # Get subset fractions
         fracs = self.subset_fractions
@@ -61,7 +65,8 @@ class AttritionIncreasing():
         bdf = bdf._reset_id_reference_dict(include=True)
 
         # Get firm ids in base subset
-        fids_init = set(bdf.loc[bdf.loc[:, 'm'].to_numpy() > 0, :].unique_ids('j'))
+        # NOTE: must consider movers and stayers, because some firms might have only stayers
+        fids_init = set(bdf.unique_ids('j'))
         # Get worker ids in base subset
         wids_init = bdf.loc[bdf.loc[:, 'm'].to_numpy() > 0, :].unique_ids('i')
 
@@ -87,6 +92,24 @@ class AttritionIncreasing():
                     raise ValueError(v)
 
         subset_1_orig_ids = subset_1.original_ids(copy=False)
+
+        if drop_single_stayers:
+            ## Drop stayers who have <= 1 observation weight ##
+            # NOTE: we make sure to use original worker ids
+            worker_m = subset_1.get_worker_m(is_sorted=True)
+            original_i = 'original_i'
+            if original_i not in subset_1_orig_ids.columns:
+                # If no changes to this column
+                original_i = 'i'
+            if subset_1._col_included('w'):
+                stayers_weight = subset_1_orig_ids.loc[~worker_m, [original_i, 'w']].groupby(original_i, sort=False)['w'].transform('sum').to_numpy()
+            else:
+                stayers_weight = subset_1_orig_ids.loc[~worker_m, [original_i, 'j']].groupby(original_i, sort=False)['j'].transform('size').to_numpy()
+            stayers_to_drop = set(subset_1_orig_ids.loc[~worker_m, original_i].to_numpy()[stayers_weight <= 1])
+
+            # Update wid_drops_1
+            wid_drops_1 = wid_drops_1.union(stayers_to_drop)
+
         del subset_1
 
         ### Extract firms and workers in initial subset ###
@@ -100,6 +123,7 @@ class AttritionIncreasing():
             valid_firms += list(subset_1_orig_ids.loc[:, original_j].unique())
         valid_firms = set(valid_firms)
         fids_to_drop = fids_init.difference(valid_firms)
+
         ret_fid = {
             True: fids_to_drop,
             False: None
@@ -125,6 +149,17 @@ class AttritionIncreasing():
         # Clear id_reference_dict since it is no longer necessary
         subset_2._reset_id_reference_dict()
 
+        if drop_single_stayers:
+            ## Drop stayers who have <= 1 observation weight ##
+            # NOTE: must recompute this
+            worker_m = subset_2.get_worker_m(is_sorted=True)
+
+            if subset_2._col_included('w'):
+                stayers_weight = subset_2.loc[~worker_m, ['i', 'w']].groupby('i', sort=False)['w'].transform('sum').to_numpy()
+            else:
+                stayers_weight = subset_2.loc[~worker_m, ['i', 'j']].groupby('i', sort=False)['j'].transform('size').to_numpy()
+            stayers_to_drop = set(subset_2.loc[~worker_m, 'i'].to_numpy()[stayers_weight <= 1])
+
         # Determine which wids (for movers) can still be drawn
         all_valid_wids = set(subset_2.loc[subset_2.loc[:, 'm'].to_numpy() > 0, :].unique_ids('i'))
         wids_to_drop = all_valid_wids.difference(drawn_wids)
@@ -137,15 +172,21 @@ class AttritionIncreasing():
             else:
                 warnings.warn(f'Attrition plot does not change at iteration {i}')
 
-            ret_fid = {
-                True: fids_to_drop,
-                False: None
-            }
+            if drop_single_stayers:
+                ## Drop stayers who have <= 1 observation weight ##
+                wids_to_drop_full = wids_to_drop.union(stayers_to_drop)
+            else:
+                wids_to_drop_full = wids_to_drop
+
             ret_wid = {
-                True: wids_to_drop,
+                True: wids_to_drop_full,
                 False: None
             }
-            return_lst.append((ret_fid[len(fids_to_drop) > 0], ret_wid[len(wids_to_drop) > 0]))
+            return_lst.append((ret_fid[len(fids_to_drop) > 0], ret_wid[len(wids_to_drop_full) > 0]))
+
+        if drop_single_stayers:
+            # Restore clean parameters
+            clean_params['drop_single_stayers'] = True
 
         return return_lst
 

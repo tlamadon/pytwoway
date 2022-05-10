@@ -231,7 +231,7 @@ def test_fe_estimator_full_approx_analytical():
     assert np.abs((est_he_cov_psi_alpha_b - est_he_cov_psi_alpha_a) / est_he_cov_psi_alpha_a) < 1e-2
 
 def test_fe_estimator_full_Q():
-    # Test that FE estimates custom Q correctly for plug-in, HO, and HE estimators.
+    # Test that FE estimates custom Q correctly for plug-in, HO, and HE estimators for Q.VarAlpha() and Q.CovPsiPrevPsiNext().
     sim_params = bpd.sim_params({'n_workers': 1000, 'w_sig': 0})
     a = bpd.SimBipartite(sim_params).simulate(np.random.default_rng(1236))
     a = bpd.BipartiteDataFrame(a, log=False).clean()
@@ -281,8 +281,41 @@ def test_fe_estimator_full_Q():
     assert np.abs((est_ho_cov_psi_prev_psi_next - true_cov_psi_prev_psi_next) / true_cov_psi_prev_psi_next) < 1e-10
     assert np.abs((est_he_cov_psi_prev_psi_next - true_cov_psi_prev_psi_next) / true_cov_psi_prev_psi_next) < 1e-10
     # Make sure cov(psi_t, psi_{t+1}) isn't just similar to var(psi) or cov(psi, alpha)
-    assert np.abs((true_cov_psi_alpha - true_var_psi) / true_cov_psi_prev_psi_next) > 0.9
+    assert np.abs((true_var_psi - true_cov_psi_prev_psi_next) / true_cov_psi_prev_psi_next) > 0.8
     assert np.abs((true_cov_psi_alpha - true_cov_psi_prev_psi_next) / true_cov_psi_prev_psi_next) > 0.05
+
+# def test_fe_estimator_full_Q_2():
+#     # Test that FE estimates custom Q correctly for plug-in, HO, and HE estimators for Q.VarGamma().
+#     sim_params = bpd.sim_params({'n_workers': 1000, 'w_sig': 0})
+#     a = bpd.SimBipartite(sim_params).simulate(np.random.default_rng(1236))
+#     a = bpd.BipartiteDataFrame(a, log=False).clean()
+#     b = a.collapse()
+
+#     fe_params = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': False, 'exact_trace_he': False, 'exact_lev_he': True, 'attach_fe_estimates': True, 'Q_var': tw.Q.VarGamma(), 'Q_cov': tw.Q.CovPsiAlpha()})
+#     fe_solver = tw.FEEstimator(b, fe_params)
+#     fe_solver.fit(np.random.default_rng(1234))
+
+#     # True parameters
+#     # psi, alpha
+#     true_var_gamma = np.var(a.loc[:, ['psi', 'alpha']].to_numpy(), ddof=0)
+#     true_var_psi = np.var(a.loc[:, 'psi'].to_numpy(), ddof=0)
+#     true_var_alpha = np.var(a.loc[:, 'alpha'].to_numpy(), ddof=0)
+
+#     # Estimated parameters
+#     ## Plug-in ##
+#     est_pi_var_gamma = fe_solver.var_fe
+#     ## HO ##
+#     est_ho_var_gamma = fe_solver.res['var_ho']
+#     ## HE ##
+#     est_he_var_gamma = fe_solver.res['var_he']
+
+#     # var(gamma)
+#     assert np.abs((est_pi_var_gamma - true_var_gamma) / true_var_gamma) < 1e-2
+#     assert np.abs((est_ho_var_gamma - true_var_gamma) / true_var_gamma) < 1e-2
+#     assert np.abs((est_he_var_gamma - true_var_gamma) / true_var_gamma) < 1e-2
+#     # Make sure var(gamma) isn't just similar to var(psi) or var(alpha)
+#     assert np.abs((true_var_psi - true_var_gamma) / true_var_gamma) > 0.9
+#     assert np.abs((true_var_alpha - true_var_gamma) / true_var_gamma) > 0.05
 
 def test_fe_Pii():
     # Test that HE Pii are equivalent when computed using M^{-1} explicitly or computing each observation one at a time using multi-grid solver

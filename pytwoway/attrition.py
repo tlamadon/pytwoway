@@ -113,6 +113,7 @@ class Attrition:
         self.clean_params_non_he['connectedness'] = 'connected'
         self.clean_params_he = self.clean_params.copy()
         self.clean_params_he['connectedness'] = 'leave_out_observation'
+        self.clean_params_he['drop_single_stayers'] = True
 
         # Cluster
         self.cluster_params_non_he = self.cluster_params.copy()
@@ -170,21 +171,26 @@ class Attrition:
             bdf = bdf.drop_ids('j', fids_to_drop, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, copy=False)
         if wids_to_drop is not None:
             bdf = bdf.drop_ids('i', wids_to_drop, drop_returns_to_stays=clean_params['drop_returns_to_stays'], is_sorted=True, copy=False)
-        bdf = bdf._reset_attributes(columns_contig=True, connected=False, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False).clean(clean_params)
-        ## Estimate FE model ##
-        fe_estimator = tw.FEEstimator(bdf, fe_params)
-        fe_estimator.fit(rng)
-        fe_res = fe_estimator.res
-        del fe_estimator
+        bdf = bdf._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False).clean(clean_params)
         ## Estimate CRE model ##
         # Cluster
         bdf = bdf.cluster(cluster_params)
         # Estimate
         cre_estimator = tw.CREEstimator(bdf.to_eventstudy(move_to_worker=False, is_sorted=True, copy=False).get_cs(copy=False), cre_params)
-        del bdf
         cre_estimator.fit(rng)
+        cre_res = cre_estimator.res
+        del cre_estimator
 
-        return {'fe': fe_res, 'cre': cre_estimator.res}
+        # Delete time and cluster column(s)
+        bdf = bdf.drop(['t', 'g'], axis=1, inplace=True, allow_optional=True)
+
+        ## Estimate FE model ##
+        fe_estimator = tw.FEEstimator(bdf, fe_params)
+        fe_estimator.fit(rng)
+        fe_res = fe_estimator.res
+        del bdf, fe_estimator
+
+        return {'fe': fe_res, 'cre': cre_res}
 
     def _attrition_single(self, bdf, ncore=1, rng=None):
         '''
