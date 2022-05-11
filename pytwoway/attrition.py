@@ -174,7 +174,7 @@ class Attrition:
         bdf = bdf._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False).clean(clean_params)
         ## Estimate CRE model ##
         # Cluster
-        bdf = bdf.cluster(cluster_params)
+        bdf = bdf.cluster(cluster_params, rng=rng)
         # Estimate
         cre_estimator = tw.CREEstimator(bdf.to_eventstudy(move_to_worker=False, is_sorted=True, copy=False).get_cs(copy=False), cre_params)
         cre_estimator.fit(rng)
@@ -418,9 +418,9 @@ class Attrition:
             # Take average
             non_he_movers_per_firm /= N
             he_movers_per_firm /= N
-            # Increase by 300%, because we are approximating FIXME this is too much
-            non_he_movers_per_firm *= 1.5
-            he_movers_per_firm *= 1.5
+            # Increase by 5%, because we are approximating
+            non_he_movers_per_firm *= 1.05
+            he_movers_per_firm *= 1.05
 
             # Reverse order so that both increasing and decreasing have the same order
             if np.max(np.diff(self.attrition_how.subset_fractions)) <= 0:
