@@ -1,12 +1,15 @@
 '''
-Classes for generating quadratic programming constraints for BLM. Note: use classes rather than nested functions because nested functions cannot be pickled (source: https://stackoverflow.com/a/12022055/17333120).
+Classes for generating quadratic programming constraints for BLM.
 
 All classes are for solving a quadratic programming model of the following form:
         min_x(1/2 x.T @ P @ x + q.T @ x)
         s.t.    Gx <= h
                 Ax = b
+'''
+'''
+NOTE: use classes rather than nested functions because nested functions cannot be pickled (source: https://stackoverflow.com/a/12022055/17333120).
 
-Note that parameters are ordered with precedence of (time, worker type, firm type). As an example, if nt=2, nl=2, and nk=3, then the parameters will be ordered as follows:
+NOTE: parameters are ordered with precedence of (time, worker type, firm type). As an example, if nt=2, nl=2, and nk=3, then the parameters will be ordered as follows:
     (0, 0, 0), (0, 0, 1), (0, 0, 2), (0, 1, 0), (0, 1, 1), (0, 1, 2), (1, 0, 0), (1, 0, 1), (1, 0, 2), (1, 1, 0), (1, 1, 1), (1, 1, 2)
 '''
 import numpy as np

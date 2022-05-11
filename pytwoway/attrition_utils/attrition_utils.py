@@ -1,5 +1,8 @@
 '''
-Classes for estimating attrition using increasing (building up from a fixed set of firms) or decreasing (with varying sets of firms) fractions of movers. Note: use classes rather than nested functions because nested functions cannot be pickled (source: https://stackoverflow.com/a/12022055/17333120).
+Classes for estimating attrition using increasing (building up from a fixed set of firms) or decreasing (with varying sets of firms) fractions of movers.
+'''
+'''
+NOTE: use classes rather than nested functions because nested functions cannot be pickled (source: https://stackoverflow.com/a/12022055/17333120).
 '''
 import warnings
 import numpy as np
@@ -151,7 +154,7 @@ class AttritionIncreasing():
 
         if drop_single_stayers:
             ## Drop stayers who have <= 1 observation weight ##
-            # NOTE: must recompute this
+            # NOTE: must recompute this, because some of the movers dropped at the start might have turned into stayers given the reduced set of firms in the connected set
             worker_m = subset_2.get_worker_m(is_sorted=True)
 
             if subset_2._col_included('w'):
