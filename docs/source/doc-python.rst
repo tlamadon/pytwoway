@@ -24,12 +24,12 @@ To run in Python:
    df = pd.read_csv(filepath)
    # Convert into BipartitePandas DataFrame
    bdf = bpd.BipartiteDataFrame(i=df['i'], j=df['j'], y=df['y'], t=df['t'])
-   # Clean data
-   bdf = bdf.clean()
-   # Collapse data at the worker-firm spell level
-   bdf = bdf.collapse()
+   # Clean data and collapse it at the worker-firm spell level
+   clean_params = bpd.clean_params({'connectedness': 'leave_out_spell', 'collapse_at_connectedness_measure': True, 'drop_single_stayers': True})
+   bdf = bdf.clean(clean_params)
    # Initialize FE estimator
-   fe_estimator = tw.FEEstimator(bdf)
+   fe_params = tw.fe_params({'he': True})
+   fe_estimator = tw.FEEstimator(bdf, fe_params)
    # Fit FE estimator
    fe_estimator.fit()
    # Investigate results
@@ -47,7 +47,8 @@ To run in Python:
    # Convert into BipartitePandas DataFrame
    bdf = bpd.BipartiteDataFrame(i=df['i'], j=df['j'], y=df['y'], t=df['t'])
    # Clean data
-   bdf = bdf.clean()
+   clean_params = bpd.clean_params({'connectedness': 'connected'})
+   bdf = bdf.clean(clean_params)
    # Collapse data at the worker-firm spell level
    bdf = bdf.collapse()
    # Cluster
