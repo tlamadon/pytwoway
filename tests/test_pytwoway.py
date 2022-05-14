@@ -1,6 +1,11 @@
 '''
 Tests for pytwoway
 '''
+'''
+TODO:
+    -Check that for FE, uncollapsed and collapsed estimators give identical results
+    -Update tests that stopped working
+'''
 import pytest
 import numpy as np
 import pandas as pd

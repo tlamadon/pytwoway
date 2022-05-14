@@ -95,26 +95,14 @@ _fe_params_default = ParamsDict({
         '''
             (default=False) If True, estimate leverages analytically for heteroskedastic correction; if False, use the JL approximation.
         ''', None),
-    'lev_batchsize': (50, 'type_constrained', (int, _gteq1),
+    'ndraw_lev_he': (50, 'type_constrained', (int, _gteq1),
         '''
-            (default=50) Number of draws to use for each batch in approximation of leverages for heteroskedastic correction.
+            (default=50) Number of draws to use when estimating leverage approximation for heteroskedastic correction.
         ''', '>= 1'),
-    'lev_batchsize_multiprocessing': (10, 'type_constrained', (int, _gteq1),
+    'lev_batchsize_he': (10, 'type_constrained', (int, _gteq1),
         '''
-            (default=10) Batch size to send in parallel. Should evenly divide 'lev_batchsize'.
+            (default=10) Batch size to send in parallel. Should evenly divide 'ndraw_lev_he'.
         ''', '>= 1'),
-    'lev_nbatches': (5, 'type_constrained', (int, _gteq1),
-        '''
-            (default=5) Maximum number of batches to run in approximation of leverages for heteroskedastic correction.
-        ''', '>= 1'),
-    'lev_threshold_obs': (100, 'type_constrained', (int, _gteq1),
-        '''
-            (default=100) Minimum number of observations with Pii >= threshold where batches will keep running in approximation of leverages for heteroskedastic correction. Once this threshold is met, remaining Pii above threshold will be recomputed analytically.
-        ''', '>= 1'),
-    'lev_threshold_pii': (0.98, 'type_constrained', (float, _0to1),
-        '''
-            (default=0.98) Threshold Pii value for computing threshold number of Pii observations in approximation of leverages for heteroskedastic correction.
-        ''', 'in [0, 1]'),
     'levfile': ('', 'type', str,
         '''
             (default='') File to load precomputed leverages for heteroskedastic correction.
@@ -254,34 +242,37 @@ class FEEstimator:
         # Summary results dictionary
         self.summary = {}
 
-        ## Save some commonly used parameters as attributes ##
-        # Number of cores to use
-        self.ncore = params['ncore']
-        # Number of draws to compute leverage for heteroskedastic correction
-        self.lev_batchsize = params['lev_batchsize']
-        # Number of draws to use in sigma^2 trace approximation
-        self.ndraw_trace_sigma_2 = params['ndraw_trace_sigma_2']
-        # Number of draws to use in homoskedastic trace approximation
-        self.ndraw_trace_ho = params['ndraw_trace_ho']
-        # Number of draws to use in heteroskedastic trace approximation
-        self.ndraw_trace_he = params['ndraw_trace_he']
-        # Whether to compute homoskedastic correction
-        self.compute_ho = params['ho']
-        # Whether to compute heteroskedastic correction
-        self.compute_he = params['he']
+        ### Save some commonly used parameters as attributes ###
+        ## All ##
         # Whether data is weighted
         self.weighted = (params['weighted'] and ('w' in data.columns))
         # Progress bars
         self.no_pbars = not params['progress_bars']
         # Verbose
         self.verbose = params['verbose']
+        # Number of cores to use
+        self.ncore = params['ncore']
+        ## HO/HE ##
+        # Whether to compute homoskedastic correction
+        self.compute_ho = params['ho']
+        # Whether to compute heteroskedastic correction
+        self.compute_he = params['he']
+        # Number of draws to use in sigma^2 trace approximation
+        self.ndraw_trace_sigma_2 = params['ndraw_trace_sigma_2']
+        # Number of draws to use in homoskedastic trace approximation
+        self.ndraw_trace_ho = params['ndraw_trace_ho']
+        # Number of draws to use in heteroskedastic trace approximation
+        self.ndraw_trace_he = params['ndraw_trace_he']
+        # Number of draws to compute leverage for heteroskedastic correction
+        self.ndraw_lev_he = params['ndraw_lev_he']
+
 
         ## Store some parameters in results dictionary ##
         self.res['cores'] = self.ncore
-        self.res['ndp'] = self.lev_batchsize
         self.res['ndraw_trace_sigma_2'] = self.ndraw_trace_sigma_2
         self.res['ndraw_trace_ho'] = self.ndraw_trace_ho
         self.res['ndraw_trace_he'] = self.ndraw_trace_he
+        self.res['ndraw_lev_he'] = self.ndraw_lev_he
 
         # self.logger.info('FEEstimator object initialized')
 
@@ -408,15 +399,15 @@ class FEEstimator:
                     # Estimate leverages for HE correction
                     if len(self.params['levfile']) > 0:
                         # Precomputed leverages
-                        Pii, p = self._extract_precomputed_leverages()
+                        Pii, jla_factor = self._extract_precomputed_leverages()
                     elif self.params['exact_lev_he']:
                         # Analytical leverages
-                        Pii, p = self._estimate_exact_leverages()
+                        Pii, jla_factor = self._estimate_exact_leverages()
                     else:
                         # Approximate leverages
-                        Pii, p = self._estimate_approximate_leverages(rng)
+                        Pii, jla_factor = self._estimate_approximate_leverages(rng)
                     # Estimate Sii (variance of residuals) for HE correction
-                    Sii = self._estimate_Sii_he(Pii, p)
+                    Sii = self._estimate_Sii_he(Pii, jla_factor)
                     del Pii
                     # Estimate trace for HE correction
                     if self.params['exact_trace_he']:
@@ -573,7 +564,7 @@ class FEEstimator:
         if not self.params['feonly']:
             n_draws_sigma_2 = self.compute_ho * self.ndraw_trace_sigma_2
             n_draws_ho = self.compute_ho * self.ndraw_trace_ho
-            n_draws_he = self.compute_he * (self.ndraw_trace_he + self.params['lev_nbatches'] * self.lev_batchsize)
+            n_draws_he = self.compute_he * (self.ndraw_trace_he + self.ndraw_lev_he / self.ncore)
             expected_time = (self.last_invert_time / 60) * (n_draws_sigma_2 + n_draws_ho + n_draws_he)
 
             self.logger.info(f'expected total time: {expected_time:2.4f} minutes')
@@ -1217,7 +1208,7 @@ class FEEstimator:
         Extract precomputed leverages (Pii) for heteroskedastic correction.
 
         Returns:
-            (tuple of (NumPy Array, int)): (Pii --> estimated leverages, p --> number of draws used in leverage approximation)
+            (tuple of NumPy Arrays): (Pii --> estimated leverages, jla_factor --> JLA non-linearity bias correction (this method always sets jla_factor=None))
         '''
         Pii = np.zeros(self.nn)
         worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
@@ -1243,14 +1234,14 @@ class FEEstimator:
 
         self.logger.info(f"[he] leverage range {self.res['min_lev']:2.4f} to {self.res['max_lev']:2.4f}")
 
-        return (Pii, len(files))
+        return (Pii, None)
 
     def _estimate_exact_leverages(self):
         '''
         Estimate analytical leverages (Pii) for heteroskedastic correction.
 
         Returns:
-            (tuple of (NumPy Array, None)): (Pii --> estimated leverages, p --> number of draws used in leverage approximation (None in this case))
+            (tuple of NumPy Arrays): (Pii --> estimated leverages, jla_factor --> JLA non-linearity bias correction (this method always sets jla_factor=None))
         '''
         Pii = np.zeros(self.nn)
         worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
@@ -1258,14 +1249,14 @@ class FEEstimator:
         self.logger.info('[he] [analytical Pii]')
 
         # Construct weighted J and W
-        DpJ = np.asarray((self.Dp_sqrt @ self.J).todense())
-        DpW = np.asarray((self.Dp_sqrt @ self.W).todense())
+        DpJ = self.Dp_sqrt @ self.J
+        DpW = self.Dp_sqrt @ self.W
 
         pbar = tqdm(self.adata.loc[worker_m, :].index, disable=self.no_pbars)
         pbar.set_description('leverages')
         for i in pbar:
-            DpJ_i = DpJ[i, :]
-            DpW_i = DpW[i, :]
+            DpJ_i = np.asarray(DpJ[i, :].todense())[0, :]
+            DpW_i = np.asarray(DpW[i, :].todense())[0, :]
             # Compute analytical Pii
             Pii[i] = self._compute_Pii(DpJ_i, DpW_i)
         del pbar
@@ -1284,13 +1275,13 @@ class FEEstimator:
 
     def _estimate_approximate_leverages(self, rng=None):
         '''
-        Estimate approximate leverages (Pii) for heteroskedastic correction.
+        Estimate approximate leverages (Pii) for heteroskedastic correction (source: https://github.com/rsaggio87/LeaveOutTwoWay/blob/master/doc/improved_JLA.pdf).
 
         Arguments:
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            (tuple of (NumPy Array, int)): (Pii --> estimated leverages, p --> number of draws used in leverage approximation)
+            (tuple of NumPy Arrays): (Pii --> estimated leverages, jla_factor --> JLA non-linearity bias correction)
         '''
         if rng is None:
             rng = np.random.default_rng(None)
@@ -1299,77 +1290,37 @@ class FEEstimator:
         p = 0
         worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
 
-        self.logger.info(f"[he] [approximate pii] lev_batchsize={self.params['lev_batchsize']}, lev_nbatches={self.params['lev_nbatches']}, using {self.ncore} core(s)")
+        self.logger.info(f"[he] [approximate pii] ndraw_lev_he={self.ndraw_lev_he}, lev_batchsize_he={self.params['lev_batchsize_he']}, using {self.ncore} core(s)")
 
-        pbar = trange(self.params['lev_nbatches'], disable=self.no_pbars)
-        pbar.set_description('leverages 1')
-        for batch_i in pbar:
-            if self.ncore > 1:
-                # Multiprocessing
-                ndraw_seeds = self.lev_batchsize // self.params['lev_batchsize_multiprocessing']
-                if np.round(ndraw_seeds * self.params['lev_batchsize_multiprocessing']) != self.lev_batchsize:
-                    # 'lev_batchsize_multiprocessing' must evenly divide 'lev_batchsize'
-                    raise ValueError(f"'lev_batchsize_multiprocessing' (currently {self.params['lev_batchsize_multiprocessing']}) should evenly divide 'lev_batchsize' (currently {self.lev_batchsize}).")
-                # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
-                seeds = rng.bit_generator._seed_seq.spawn(ndraw_seeds)
-                with Pool(processes=self.ncore) as pool:
-                    pbar2 = tqdm([(self.params['lev_batchsize_multiprocessing'], np.random.default_rng(seed)) for seed in seeds], total=ndraw_seeds, disable=self.no_pbars)
-                    pbar2.set_description('leverages 1.5')
-                    Pii_all = pool.starmap(self._leverage_approx, pbar2)
-                    del pbar2
+        if self.ncore > 1:
+            # Multiprocessing
+            ndraw_seeds = self.ndraw_lev_he // self.params['lev_batchsize_he']
+            if np.round(ndraw_seeds * self.params['lev_batchsize_he']) != self.ndraw_lev_he:
+                # 'lev_batchsize_he' must evenly divide 'ndraw_lev_he'
+                raise ValueError(f"'lev_batchsize_he' (currently {self.params['lev_batchsize_he']}) should evenly divide 'ndraw_lev_he' (currently {self.ndraw_lev_he}).")
+            # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
+            seeds = rng.bit_generator._seed_seq.spawn(ndraw_seeds)
+            with Pool(processes=self.ncore) as pool:
+                pbar2 = tqdm([(self.params['lev_batchsize_he'], np.random.default_rng(seed)) for seed in seeds], total=ndraw_seeds, disable=self.no_pbars)
+                pbar2.set_description('leverages batch')
+                Pii_all, Pii_sq_all, Mii_all, Mii_sq_all, Pii_Mii_all = pool.starmap(self._leverage_approx, pbar2)
+                del pbar2
 
-                # Take mean over draws
-                Pii_i = sum(Pii_all) / len(Pii_all)
-            else:
-                # Single core
-                Pii_i = self._leverage_approx(self.lev_batchsize, rng)
+            # Take mean over draws
+            Pii = sum(Pii_all) / ndraw_seeds
+            Pii_sq = sum(Pii_sq_all) / ndraw_seeds
+            Mii = sum(Mii_all) / ndraw_seeds
+            Mii_sq = sum(Mii_sq_all) / ndraw_seeds
+            Pii_Mii = sum(Pii_Mii_all) / ndraw_seeds
+        else:
+            # Single core
+            Pii, Pii_sq, Mii, Mii_sq, Pii_Mii = self._leverage_approx(self.ndraw_lev_he, rng)
 
-            self.logger.debug(f"[he] [approximate pii] step {batch_i + 1}/{self.params['lev_nbatches']} done")
-
-            # lev_batchsize more draws
-            p += self.lev_batchsize
-
-            # Take weighted average over all Pii draws
-            Pii = (batch_i * Pii + Pii_i) / (batch_i + 1)
-
-            # Compute number of bad draws
-            n_bad_draws = sum(worker_m & (Pii >= self.params['lev_threshold_pii']))
-
-            # If few enough bad draws, compute them analytically
-            if n_bad_draws < self.params['lev_threshold_obs']:
-                if n_bad_draws > 0:
-                    leverage_warning = f"Breaking loop - threshold for max Pii is {self.params['lev_threshold_pii']}, with {self.lev_batchsize} draw(s) per batch and a maximum of {self.params['lev_nbatches']} batch(es) being drawn. There is/are {n_bad_draws} observation(s) with Pii above this threshold. This/these will be recomputed analytically. It took {batch_i + 1} batch(es) to get below the threshold of {self.params['lev_threshold_obs']} bad observation(s)."
-                else:
-                    leverage_warning = f"Breaking loop - threshold for max Pii is {self.params['lev_threshold_pii']}, with {self.lev_batchsize} draw(s) per batch and a maximum of {self.params['lev_nbatches']} batch(es) being drawn. No observations have Pii above this threshold. It took {batch_i + 1} batch(es) to get below the threshold of {self.params['lev_threshold_obs']} bad observation(s)."
-                self.logger.debug(leverage_warning)
-                if self.verbose:
-                    tqdm.write(leverage_warning) # warnings.warn(leverage_warning)
-                break
-            elif batch_i == self.params['lev_nbatches'] - 1:
-                leverage_warning = f"Threshold for max Pii is {self.params['lev_threshold_pii']}, with {self.lev_batchsize} draw(s) per batch and a maximum of {self.params['lev_nbatches']} batch(es) being drawn. After exhausting the maximum number of batches, there is/are still {n_bad_draws} draw(s) with Pii above this threshold. This/these will be recomputed analytically."
-                self.logger.debug(leverage_warning)
-                if self.verbose:
-                    tqdm.write(leverage_warning) # warnings.warn(leverage_warning)
-        del pbar
-
-        # Compute Pii analytically for observations with Pii approximation above threshold value
-        analytical_indices = self.adata.loc[worker_m & (Pii >= self.params['lev_threshold_pii']), :].index
-        if len(analytical_indices) > 0:
-            if not (self.params['exact_trace_sigma_2'] or self.params['exact_trace_ho'] or self.params['exact_trace_he']):
-                self._construct_AAinv_components_partial()
-
-            # Construct weighted J and W
-            DpJ = self.Dp_sqrt @ self.J
-            DpW = self.Dp_sqrt @ self.W
-
-            pbar = tqdm(analytical_indices, disable=self.no_pbars)
-            pbar.set_description('leverages 2')
-            for i in pbar:
-                DpJ_i = np.asarray(DpJ[i, :].todense())[0, :]
-                DpW_i = np.asarray(DpW[i, :].todense())[0, :]
-                # Compute analytical Pii
-                Pii[i] = self._compute_Pii(DpJ_i, DpW_i)
-            del pbar
+        # Normalize Pii
+        if self.weighted:
+            Pii[worker_m] = Pii[worker_m] / (Pii[worker_m] + Mii[worker_m])
+        else:
+            Pii = Pii / (Pii + Mii)
 
         self.res['min_lev'] = Pii[worker_m].min()
         self.res['max_lev'] = Pii[worker_m].max()
@@ -1381,15 +1332,32 @@ class FEEstimator:
 
         self.logger.info(f"[he] leverage range {self.res['min_lev']:2.4f} to {self.res['max_lev']:2.4f}")
 
-        return (Pii, p)
+        ## JLA non-linearity bias correction ##
+        if self.weighted:
+            # Compute for movers
+            Pii_m = Pii[worker_m]
+            Mii_m = 1 - Pii_m
+            Vi = (Mii_m ** 2) * Pii_sq[worker_m] + (Pii_m ** 2) * Mii_sq[worker_m] - 2 * Pii_m * Mii_m * Pii_Mii[worker_m]
+            Bi = Mii_m * Pii_sq[worker_m] - Pii_m * Mii_sq[worker_m] + 2 * (Mii_m - Pii_m) * Pii_Mii[worker_m]
+            # Compute bias correction factor
+            jla_factor = (1 - (1 / self.ndraw_lev_he) * ((Vi / Mii_m + Bi) / Mii_m))
+        else:
+            # Compute for movers and stayers
+            Mii = 1 - Pii
+            Vi = (Mii ** 2) * Pii_sq + (Pii ** 2) * Mii_sq - 2 * Pii * Mii * Pii_Mii
+            Bi = Mii * Pii_sq - Pii * Mii_sq + 2 * (Mii - Pii) * Pii_Mii
+            # Compute bias correction factor
+            jla_factor = (1 - (1 / self.ndraw_lev_he) * ((Vi / Mii + Bi) / Mii))
 
-    def _estimate_Sii_he(self, Pii, p):
+        return (Pii, jla_factor)
+
+    def _estimate_Sii_he(self, Pii, jla_factor=None):
         '''
-        Estimate Sii (sigma^2) for heteroskedastic correction.
+        Estimate Sii (sigma^2) for heteroskedastic correction, and the non-linearity bias correction if using approximate Pii (source: https://github.com/rsaggio87/LeaveOutTwoWay/blob/master/doc/improved_JLA.pdf).
 
         Arguments:
             Pii (NumPy Array): estimated leverages
-            p (int): number of draws used in leverage approximation
+            jla_factor (NumPy Array or None): JLA non-linearity bias correction; None provides no correction
 
         Returns:
             (NumPy Array): Sii (sigma^2) for heteroskedastic correction
@@ -1409,9 +1377,9 @@ class FEEstimator:
             ## Compute Sii for movers ##
             Pii_m = Pii[worker_m]
             Sii_m = (self.Y[worker_m] - Y_bar) * (self.E[worker_m] / (1 - Pii_m))
-            if not self.params['exact_lev_he']:
-                # Non-linearity bias correction
-                Sii_m *= (1 - (1 / p) * (3 * (Pii_m ** 3) + (Pii_m ** 2)) / (1 - Pii_m))
+            if (not self.params['exact_lev_he']) and (jla_factor is not None):
+                # Multiply by bias correction factor
+                Sii_m *= jla_factor
 
             ## Compute Sii for stayers ##
             # Source: https://github.com/rsaggio87/LeaveOutTwoWay/blob/master/codes/sigma_for_stayers.m
@@ -1426,9 +1394,9 @@ class FEEstimator:
         else:
             ### Unweighted ###
             Sii = (self.Y - Y_bar) * self.E / (1 - Pii)
-            if not self.params['exact_lev_he']:
-                # Non-linearity bias correction
-                Sii *= (1 - (1 / p) * (3 * (Pii ** 3) + (Pii ** 2)) / (1 - Pii))
+            if (not self.params['exact_lev_he']) and (jla_factor is not None):
+                # Multiply by bias correction factor
+                Sii *= jla_factor
 
         # ## Take mean Sii_s at the firm level ##
         # self.adata.loc[:, 'Sii'] = Sii
@@ -1462,28 +1430,47 @@ class FEEstimator:
 
     def _leverage_approx(self, ndraw_pii, rng=None):
         '''
-        Draw Pii estimates for use in JL approximation of leverage.
+        Draw Pii estimates for use in JL approximation of leverage (source: https://github.com/rsaggio87/LeaveOutTwoWay/blob/master/doc/improved_JLA.pdf).
 
         Arguments:
             ndraw_pii (int): number of Pii draws
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            (NumPy Array): Pii array
+            (tuple of NumPy Arrays): (Pii --> estimated leverages, Pii_sq --> estimated square of leverages, Mii --> estimated (1 - leverages), Mii_sq --> estimated square of (1 - leverages), Pii_Mii --> estimated product of leverages and (1 - leverages))
         '''
         if rng is None:
             rng = np.random.default_rng(None)
 
         Pii = np.zeros(self.nn)
+        Pii_sq = np.zeros(self.nn)
+        Mii = np.zeros(self.nn)
+        Mii_sq = np.zeros(self.nn)
+        Pii_Mii = np.zeros(self.nn)
 
         # Compute the different draws
-        for _ in range(ndraw_pii):
+        pbar = trange(ndraw_pii, disable=self.no_pbars)
+        pbar.set_description('leverages 1')
+        for _ in pbar:
             R2 = 2 * rng.binomial(1, 0.5, self.nn) - 1
-            Pii += (self._proj(R2, Dp0='sqrt', Dp2='sqrt') ** 2)
+            q = self._proj(R2, Dp0='sqrt', Dp2='sqrt')
+            # Compute Pii and Mii for this i
+            Pi_i = (q ** 2)
+            Mi_i = (R2 - q) ** 2
+            # Update Pii, Pii_sq, Mii, Mii_sq, and Pii_Mii
+            Pii += Pi_i
+            Pii_sq += (Pi_i ** 2)
+            Mii += Mi_i
+            Mii_sq += (Mi_i ** 2)
+            Pii_Mii += Pi_i * Mi_i
 
         # Take mean over draws
         Pii /= ndraw_pii
+        Pii_sq /= ndraw_pii
+        Mii /= ndraw_pii
+        Mii_sq /= ndraw_pii
+        Pii_Mii /= ndraw_pii
 
         self.logger.info('[he] [approximate pii] done with pii batch')
 
-        return Pii
+        return (Pii, Pii_sq, Mii, Mii_sq, Pii_Mii)
