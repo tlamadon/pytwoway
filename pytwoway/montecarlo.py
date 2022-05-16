@@ -66,7 +66,10 @@ class MonteCarlo:
         self.clean_params['verbose'] = False
         self.clean_params['copy'] = False
         if collapse is None:
-            self.clean_params['connectedness'] = 'leave_out_observation'
+            # FIXME at the moment, CRE requires collapsed data
+            warnings.warn("CRE currently requires data that is collapsed at the spell or match level; to avoid an error, collapsed=None changed to collapsed='leave_out_spell'.")
+            self.clean_params['connectedness'] = 'leave_out_spell'
+            # self.clean_params['connectedness'] = 'leave_out_observation'
         elif collapse == 'spell':
             self.clean_params['connectedness'] = 'leave_out_spell'
         elif collapse == 'match':

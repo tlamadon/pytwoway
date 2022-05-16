@@ -269,7 +269,6 @@ class FEEstimator:
 
         ## Store some parameters in results dictionary ##
         self.res['cores'] = self.ncore
-        self.res['ndraw_trace_sigma_2'] = self.ndraw_trace_sigma_2
         self.res['ndraw_trace_ho'] = self.ndraw_trace_ho
         self.res['ndraw_trace_he'] = self.ndraw_trace_he
         self.res['ndraw_lev_he'] = self.ndraw_lev_he
@@ -368,16 +367,17 @@ class FEEstimator:
                 ## HO/HE corrections ##
                 if self.compute_ho:
                     ## HO correction ##
-                    # Estimate trace for sigma^2 (variance of residuals) for HO correction
-                    if self.params['exact_trace_sigma_2']:
-                        # Analytical trace
-                        if not aainv:
-                            self._construct_AAinv_components_full()
-                            aainv = True
-                        self._estimate_exact_trace_sigma_2()
-                    else:
-                        # Approximate trace
-                        self._estimate_approximate_trace_sigma_2(rng)
+                    if self.weighted:
+                        # Estimate trace for sigma^2 (variance of residuals) for HO correction
+                        if self.params['exact_trace_sigma_2']:
+                            # Analytical trace
+                            if not aainv:
+                                self._construct_AAinv_components_full()
+                                aainv = True
+                            self._estimate_exact_trace_sigma_2()
+                        else:
+                            # Approximate trace
+                            self._estimate_approximate_trace_sigma_2(rng)
                     # Estimate sigma^2 (variance of residuals) for HO correction
                     self._estimate_sigma_2_ho()
                     # Estimate trace for HO correction
@@ -422,14 +422,11 @@ class FEEstimator:
                 self._collect_res()
 
         # Clear attributes
-        del self.Y, self.J, self.W, self.Dp, self.Dp_sqrt, self.Dwinv, self.Minv, self.ml
+        del self.worker_m, self.Y, self.J, self.W, self.Dp, self.Dp_sqrt, self.Dwinv, self.Minv, self.ml
         try:
             del self.AA_inv_A, self.AA_inv_B, self.AA_inv_C, self.AA_inv_D
         except AttributeError:
             pass
-
-        # Drop 'worker_m' column
-        self.adata.drop('worker_m', axis=1, inplace=True)
 
         # Total estimation time
         end_time = time.time()
@@ -460,8 +457,8 @@ class FEEstimator:
         self.res['n_stayers'] = self.res['n_workers'] - self.res['n_movers']
         self.logger.info(f"data movers={self.res['n_movers']} stayers={self.res['n_stayers']}")
 
-        # Generate 'worker_m' indicating whether a worker is a mover or a stayer
-        self.adata.loc[:, 'worker_m'] = self.adata.get_worker_m(is_sorted=True).astype(int, copy=False)
+        # Generate worker_m, indicating whether a worker is a mover or a stayer
+        self.worker_m = self.adata.get_worker_m(is_sorted=True)
 
         # # Prepare 'cs' column (0 if observation is first for a worker, 1 if intermediate, 2 if last for a worker)
         # worker_first_obs = (self.adata['i'].to_numpy() != np.roll(self.adata['i'].to_numpy(), 1))
@@ -520,15 +517,17 @@ class FEEstimator:
         Compute some early statistics.
         '''
         if self.weighted:
-            self.adata.loc[:, 'weighted_m'] = self.Dp * self.adata.loc[:, 'worker_m'].to_numpy()
+            self.adata.loc[:, 'weighted_m'] = self.Dp * self.worker_m
             self.adata.loc[:, 'weighted_y'] = self.Dp * self.Y
             fdata = self.adata.groupby('j')[['weighted_m', 'weighted_y', 'w']].sum()
             fm, fy, fi = fdata.loc[:, 'weighted_m'].to_numpy(), fdata.loc[:, 'weighted_y'].to_numpy(), fdata.loc[:, 'w'].to_numpy()
             fy /= fi
             self.adata.drop(['weighted_m', 'weighted_y'], axis=1, inplace=True)
         else:
+            self.adata.loc[:, 'worker_m'] = self.worker_m
             fdata = self.adata.groupby('j').agg({'worker_m': 'sum', 'y': 'mean', 'i': 'count'})
             fm, fy, fi = fdata.loc[:, 'worker_m'].to_numpy(), fdata.loc[:, 'y'].to_numpy(), fdata.loc[:, 'i'].to_numpy()
+            self.adata.drop('worker_m', axis=1, inplace=True)
         ls = np.linspace(0, 1, 11)
         self.res['mover_quantiles'] = _weighted_quantile(fm, ls, fi).tolist()
         self.res['size_quantiles'] = _weighted_quantile(fi, ls, fi).tolist()
@@ -562,10 +561,9 @@ class FEEstimator:
         self.logger.info(f'solver time: {self.last_invert_time:2.4f} seconds')
 
         if not self.params['feonly']:
-            n_draws_sigma_2 = self.compute_ho * self.ndraw_trace_sigma_2
             n_draws_ho = self.compute_ho * self.ndraw_trace_ho
             n_draws_he = self.compute_he * (self.ndraw_trace_he + self.ndraw_lev_he / self.ncore)
-            expected_time = (self.last_invert_time / 60) * (n_draws_sigma_2 + n_draws_ho + n_draws_he)
+            expected_time = (self.last_invert_time / 60) * (n_draws_ho + n_draws_he)
 
             self.logger.info(f'expected total time: {expected_time:2.4f} minutes')
 
@@ -586,6 +584,49 @@ class FEEstimator:
         # Attach columns
         self.adata.loc[:, 'psi_hat'] = self.adata.loc[:, 'j'].map(psi_hat_dict)
         self.adata.loc[:, 'alpha_hat'] = self.adata.loc[:, 'i'].map(alpha_hat_dict)
+
+    def _estimate_sigma_2_fe(self):
+        '''
+        Estimate residuals and sigma^2 (variance of residuals) for plug-in (biased) FE model.
+        '''
+        Dp = self.Dp
+
+        ## Estimate residuals ##
+        self.E = self.Y - self._mult_A(self.psi_hat, self.alpha_hat)
+
+        ## Estimate R^2 ##
+        fe_rsq = 1 - (Dp * (self.E ** 2)).sum() / (Dp * (self.Y ** 2)).sum()
+        self.logger.info(f'fixed effect R-square {fe_rsq:2.4f}')
+
+        ## Estimate variance of residuals (DON'T DEMEAN) ##
+        # NOTE: multiply by Dp, because each observation's variance is divided by Dp and we need to undo that
+        self.sigma_2_pi = np.average(Dp * self.E ** 2, weights=Dp.data[0])
+
+        self.logger.info(f'[fe] variance of residuals {self.sigma_2_pi:2.4f}')
+
+    def _estimate_fe(self, Q_params):
+        '''
+        Estimate plug-in (biased) FE model.
+
+        Arguments:
+            Q_params (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
+        '''
+        self.logger.info('starting plug-in estimation')
+
+        Q_var, Ql_cov, Qr_cov = Q_params
+        Q_var_matrix, Q_var_psialpha, Q_var_weights, Q_var_dof = Q_var
+        Ql_cov_matrix, Ql_cov_psialpha, Ql_cov_weights, Q_cov_dof = Ql_cov
+        Qr_cov_matrix, Qr_cov_psialpha, Qr_cov_weights = Qr_cov
+
+        psi = self.psi_hat
+        alpha = self.alpha_hat
+
+        self.var_fe = _weighted_var(self.Q_var._Q_mult(Q_var_matrix, psi, alpha), Q_var_weights, dof=0)
+        self.cov_fe = _weighted_cov(self.Q_cov._Ql_mult(Ql_cov_matrix, psi, alpha), self.Q_cov._Qr_mult(Qr_cov_matrix, psi, alpha), Ql_cov_weights, Qr_cov_weights, dof=0)
+
+        self.logger.info('[fe]')
+        self.logger.info(f'var_psi={self.var_fe:2.4f}')
+        self.logger.info(f"cov={self.cov_fe:2.4f} tot={self.res['var_y']:2.4f}")
 
     def _estimate_exact_trace_sigma_2(self):
         '''
@@ -631,58 +672,18 @@ class FEEstimator:
 
             self.logger.debug(f'[sigma^2] [approximate trace] step {r}/{self.ndraw_trace_sigma_2} done')
 
-    def _estimate_sigma_2_fe(self):
-        '''
-        Estimate residuals and sigma^2 (variance of residuals) for plug-in (biased) FE model.
-        '''
-        ## Estimate residuals ##
-        self.E = self.Y - self._mult_A(self.psi_hat, self.alpha_hat)
-
-        ## Estimate R^2 ##
-        fe_rsq = 1 - (self.Dp * (self.E ** 2)).sum() / (self.Dp * (self.Y ** 2)).sum()
-        self.logger.info(f'fixed effect R-square {fe_rsq:2.4f}')
-
-        ## Estimate variance of residuals ##
-        self.sigma_2_pi = _weighted_var(self.E, self.Dp)
-
-        self.logger.info(f'[fe] variance of residuals {self.sigma_2_pi:2.4f}')
-
-    def _estimate_fe(self, Q_params):
-        '''
-        Estimate plug-in (biased) FE model.
-
-        Arguments:
-            Q_params (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
-        '''
-        self.logger.info('starting plug-in estimation')
-
-        Q_var, Ql_cov, Qr_cov = Q_params
-        Q_var_matrix, Q_var_psialpha, Q_var_weights, Q_var_dof = Q_var
-        Ql_cov_matrix, Ql_cov_psialpha, Ql_cov_weights, Q_cov_dof = Ql_cov
-        Qr_cov_matrix, Qr_cov_psialpha, Qr_cov_weights = Qr_cov
-
-        psi = self.psi_hat
-        alpha = self.alpha_hat
-
-        self.var_fe = _weighted_var(self.Q_var._Q_mult(Q_var_matrix, psi, alpha), Q_var_weights, dof=0)
-        self.cov_fe = _weighted_cov(self.Q_cov._Ql_mult(Ql_cov_matrix, psi, alpha), self.Q_cov._Qr_mult(Qr_cov_matrix, psi, alpha), Ql_cov_weights, Qr_cov_weights, dof=0)
-
-        self.logger.info('[fe]')
-        self.logger.info(f'var_psi={self.var_fe:2.4f}')
-        self.logger.info(f"cov={self.cov_fe:2.4f} tot={self.res['var_y']:2.4f}")
-
     def _estimate_sigma_2_ho(self):
         '''
         Estimate sigma^2 (variance of residuals) for HO-corrected model.
         '''
-        # Must use unweighted sigma^2 for numerator (weighting will make the estimator biased)
-        sigma_2_unweighted = np.var(self.E, ddof=0)
 
         if self.weighted:
+            # Must use unweighted sigma^2 for numerator (weighting will make the estimator biased)
+            sigma_2_unweighted = np.mean(self.E ** 2)
             trace_approximation = np.mean(self.tr_sigma_ho_all)
             self.sigma_2_ho = (self.nn * sigma_2_unweighted) / (np.sum(1 / self.Dp.data[0]) - trace_approximation)
         else:
-            self.sigma_2_ho = (self.nn * sigma_2_unweighted) / (self.nn - (self.nw + self.nf - 1))
+            self.sigma_2_ho = (self.nn * self.sigma_2_pi) / (self.nn - (self.nw + self.nf - 1))
 
         self.logger.info(f'[ho] variance of residuals {self.sigma_2_ho:2.4f}')
 
@@ -699,10 +700,10 @@ class FEEstimator:
         Q_var_matrix, Q_var_psialpha, Q_var_weights, Q_var_dof = Q_var
         Ql_cov_matrix, Ql_cov_psialpha, Ql_cov_weights, Q_cov_dof = Ql_cov
         Qr_cov_matrix, Qr_cov_psialpha, Qr_cov_weights = Qr_cov
-        Q_var_weights_sq = np.sqrt(Q_var_weights)
-        Ql_cov_weights_sq = np.sqrt(Ql_cov_weights)
-        Qr_cov_weights_sq = np.sqrt(Qr_cov_weights)
-        Q_cov_weights = Ql_cov_weights_sq * Qr_cov_weights_sq
+        Q_var_weights_sqrt = np.sqrt(Q_var_weights)
+        Ql_cov_weights_sqrt = np.sqrt(Ql_cov_weights)
+        Qr_cov_weights_sqrt = np.sqrt(Qr_cov_weights)
+        Q_cov_weights = Ql_cov_weights_sqrt * Qr_cov_weights_sqrt
 
         if Q_var_psialpha not in ['psi', 'alpha']:
             raise NotImplementedError(f'Exact HO correction is compatible with only Q matrices that interact solely with psi or alpha components, but the selected Q-variance interacts with {Q_var_psialpha!r}.')
@@ -720,24 +721,29 @@ class FEEstimator:
         }
 
         ## Trace - variance ##
-        # Q = Ql.T @ Ql_weight.T @ U @ Qr_weight @ Qr
+        # Q = Ql.T @ U.T @ Ql_weight.T @ Qr_weight @ U @ Qr
         n = np.sum(Q_var_weights)
         # Construct U (demeaning matrix)
         U_dim = Q_var_matrix.shape[0]
-        U = eye(U_dim) - (1 / n) * np.tile(Q_var_weights.diagonal(), (U_dim, 1)).T
+        U = eye(U_dim) - (1 / n) * np.tile(Q_var_weights.diagonal(), (U_dim, 1))
         # Compute Q @ (A'D_pA)^{-1} using block matrix components
-        Q_var = (1 / n) * Q_var_matrix.T @ Q_var_weights_sq.T @ U @ Q_var_weights_sq @ Q_var_matrix
+        Q_var = Q_var_weights_sqrt @ U @ Q_var_matrix
+        Q_var = (1 / n) * Q_var.T @ Q_var
         # Compute trace by considering correct quadrant
         self.tr_var_ho_all = np.trace(Q_var @ right_dict[Q_var_psialpha][left_dict[Q_var_psialpha]])
 
         ## Trace - covariance ##
-        # Q = Ql.T @ Ql_weight.T @ U @ Qr_weight @ Qr
+        # Q = Ql.T @ Ul.T @ Ql_weight.T @ Qr_weight @ Ur @ Qr
         n = np.sum(Q_cov_weights)
+        nl = np.sum(Ql_cov_weights)
+        nr = np.sum(Qr_cov_weights)
         # Construct U (demeaning matrix)
-        U_dim = Ql_cov_matrix.shape[0]
-        U = eye(U_dim) - (1 / n) * np.tile(Q_cov_weights.diagonal(), (U_dim, 1)).T
+        Ul_dim = Ql_cov_matrix.shape[0]
+        Ur_dim = Qr_cov_matrix.shape[0]
+        Ul = eye(Ul_dim) - (1 / nl) * np.tile(Ql_cov_weights.diagonal(), (Ul_dim, 1))
+        Ur = eye(Ur_dim) - (1 / nr) * np.tile(Qr_cov_weights.diagonal(), (Ur_dim, 1))
         # Compute Q @ (A'D_pA)^{-1} using block matrix components
-        Q_cov = (1 / n) * Ql_cov_matrix.T @ Ql_cov_weights_sq.T @ U @ Qr_cov_weights_sq @ Qr_cov_matrix
+        Q_cov = (1 / n) * Ql_cov_matrix.T @ Ul.T @ Ql_cov_weights_sqrt.T @ Qr_cov_weights_sqrt @ Ur @ Qr_cov_matrix
         # Compute trace by considering correct quadrant
         self.tr_cov_ho_all = np.trace(Q_cov @ right_dict[Qr_cov_psialpha][left_dict[Ql_cov_psialpha]])
 
@@ -805,10 +811,10 @@ class FEEstimator:
         Q_var_matrix, Q_var_psialpha, Q_var_weights, Q_var_dof = Q_var
         Ql_cov_matrix, Ql_cov_psialpha, Ql_cov_weights, Q_cov_dof = Ql_cov
         Qr_cov_matrix, Qr_cov_psialpha, Qr_cov_weights = Qr_cov
-        Q_var_weights_sq = np.sqrt(Q_var_weights)
-        Ql_cov_weights_sq = np.sqrt(Ql_cov_weights)
-        Qr_cov_weights_sq = np.sqrt(Qr_cov_weights)
-        Q_cov_weights = Ql_cov_weights_sq * Qr_cov_weights_sq
+        Q_var_weights_sqrt = np.sqrt(Q_var_weights)
+        Ql_cov_weights_sqrt = np.sqrt(Ql_cov_weights)
+        Qr_cov_weights_sqrt = np.sqrt(Qr_cov_weights)
+        Q_cov_weights = Ql_cov_weights_sqrt * Qr_cov_weights_sqrt
 
         if Q_var_psialpha not in ['psi', 'alpha']:
             raise NotImplementedError(f'Exact HE correction is compatible with only Q matrices that interact solely with psi or alpha components, but the selected Q-variance interacts with {Q_var_psialpha!r}.')
@@ -817,7 +823,7 @@ class FEEstimator:
 
         # Unpack attributes
         J, W = self.J, self.W
-        Dp = self.Dp
+        Dp_sqrt = self.Dp_sqrt
         A, B, C, D = self.AA_inv_A, self.AA_inv_B, self.AA_inv_C, self.AA_inv_D
         Sii = diags(Sii)
 
@@ -836,46 +842,56 @@ class FEEstimator:
         # = [(A @ J' + B @ W') @ D_p @ Omega @ D_p @ (J @ A + W @ C) & (A @ J' + B @ W') @ D_p @ Omega @ D_p @ (J @ B + W @ D) \\ (C @ J' + D @ W') @ D_p @ Omega @ D_p @ (J @ A + W @ C) & (C @ J' + D @ W') @ D_p @ Omega @ D_p @ (J @ B + W @ D)]
 
         ## Trace - variance ##
-        # Q = Ql.T @ Ql_weight.T @ U @ Qr_weight @ Qr
+        # Q = Ql.T @ U.T @ Ql_weight.T @ Qr_weight @ U @ Qr
         n = np.sum(Q_var_weights)
         # Construct U (demeaning matrix)
         U_dim = Q_var_matrix.shape[0]
-        U = eye(U_dim) - (1 / n) * np.tile(Q_var_weights.diagonal(), (U_dim, 1)).T
-        # Compute Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1} using block matrix components
+        U = eye(U_dim) - (1 / n) * np.tile(Q_var_weights.diagonal(), (U_dim, 1))
+        ## Compute Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1} using block matrix components ##
+        # Construct Q
+        Q_var = Q_var_weights_sqrt @ U @ Q_var_matrix
+        Q_var = (1 / n) * Q_var.T @ Q_var
+        # Construct AA_inv
         if Q_var_psialpha == 'psi':
-            AA_inv = Dp @ (J @ A + W @ C)
+            AA_inv = Dp_sqrt @ (J @ A + W @ C)
             AA_inv = AA_inv.T @ Sii @ AA_inv
         elif Q_var_psialpha == 'alpha':
-            AA_inv = Dp @ (J @ B + W @ D)
+            AA_inv = Dp_sqrt @ (J @ B + W @ D)
             AA_inv = AA_inv.T @ Sii @ AA_inv
-        Q_var = (1 / n) * Q_var_matrix.T @ Q_var_weights_sq.T @ U @ Q_var_weights_sq @ Q_var_matrix
+        
         # Compute trace by considering correct quadrant
         self.tr_var_he_all = np.trace(Q_var @ AA_inv)
 
         ## Trace - covariance ##
-        # Q = Ql.T @ Ql_weight.T @ U @ Qr_weight @ Qr
+        # Q = Ql.T @ Ul.T @ Ql_weight.T @ Qr_weight @ Ur @ Qr
         n = np.sum(Q_cov_weights)
+        nl = np.sum(Ql_cov_weights)
+        nr = np.sum(Qr_cov_weights)
         # Construct U (demeaning matrix)
-        U_dim = Ql_cov_matrix.shape[0]
-        U = eye(U_dim) - (1 / n) * np.tile(Q_cov_weights.diagonal(), (U_dim, 1)).T
-        # Compute Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1} using block matrix components
+        Ul_dim = Ql_cov_matrix.shape[0]
+        Ur_dim = Qr_cov_matrix.shape[0]
+        Ul = eye(Ul_dim) - (1 / nl) * np.tile(Ql_cov_weights.diagonal(), (Ul_dim, 1))
+        Ur = eye(Ur_dim) - (1 / nr) * np.tile(Qr_cov_weights.diagonal(), (Ur_dim, 1))
+        ## Compute Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1} using block matrix components ##
+        # Construct Q
+        Q_cov = (1 / n) * Ql_cov_matrix.T @ Ul.T @ Ql_cov_weights_sqrt.T @ Qr_cov_weights_sqrt @ Ur @ Qr_cov_matrix
+        # Construct AA_inv
         if Qr_cov_psialpha == 'psi':
             if Ql_cov_psialpha == 'psi':
                 if Q_var_psialpha != 'psi':
                     # No need to recompute if var is the same
-                    AA_inv = Dp @ (J @ A + W @ C)
+                    AA_inv = Dp_sqrt @ (J @ A + W @ C)
                     AA_inv = AA_inv.T @ Sii @ AA_inv
             elif Ql_cov_psialpha == 'alpha':
-                AA_inv = (A @ J.T + B @ W.T) @ Dp @ Sii @ Dp @ (J @ B + W @ D)
+                AA_inv = (A @ J.T + B @ W.T) @ Dp_sqrt @ Sii @ Dp_sqrt @ (J @ B + W @ D)
         elif Qr_cov_psialpha == 'alpha':
             if Ql_cov_psialpha == 'psi':
-                AA_inv = (C @ J.T + D @ W.T) @ Dp @ Sii @ Dp @ (J @ A + W @ C)
+                AA_inv = (C @ J.T + D @ W.T) @ Dp_sqrt @ Sii @ Dp_sqrt @ (J @ A + W @ C)
             elif Ql_cov_psialpha == 'alpha':
                 if Q_var_psialpha != 'alpha':
                     # No need to recompute if var is the same
-                    AA_inv = Dp @ (J @ B + W @ D)
+                    AA_inv = Dp_sqrt @ (J @ B + W @ D)
                     AA_inv = AA_inv.T @ Sii @ AA_inv
-        Q_cov = (1 / n) * Ql_cov_matrix.T @ Ql_cov_weights_sq.T @ U @ Qr_cov_weights_sq @ Qr_cov_matrix
         # Compute trace by considering correct quadrant
         self.tr_cov_he_all = np.trace(Q_cov @ AA_inv)
 
@@ -1175,15 +1191,13 @@ class FEEstimator:
     def _compute_Pii(self, DpJ_i, DpW_i):
         '''
         Compute Pii for a single observation for heteroskedastic correction.
-
         Arguments:
             DpJ_i (NumPy Array): weighted J matrix
             DpW_i (NumPy Array): weighted W matrix
-
         Returns:
             (float): estimate for Pii
         '''
-        # if self.params['exact_trace_sigma_2'] or self.params['exact_trace_ho'] or self.params['exact_trace_he'] or self.params['exact_lev_he']:
+        # if (self.params['exact_trace_sigma_2'] and self.weighted) or self.params['exact_trace_ho'] or self.params['exact_trace_he'] or self.params['exact_lev_he']:
         if self.AA_inv_A is not None:
             # M^{-1} has been explicitly computed
             A = DpJ_i @ self.AA_inv_A @ DpJ_i
@@ -1211,7 +1225,6 @@ class FEEstimator:
             (tuple of NumPy Arrays): (Pii --> estimated leverages, jla_factor --> JLA non-linearity bias correction (this method always sets jla_factor=None))
         '''
         Pii = np.zeros(self.nn)
-        worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
 
         self.logger.info('[he] starting heteroskedastic correction, loading precomputed files')
 
@@ -1224,8 +1237,12 @@ class FEEstimator:
             pp = np.load(f)
             Pii += pp / len(files)
 
-        self.res['min_lev'] = Pii[worker_m].min()
-        self.res['max_lev'] = Pii[worker_m].max()
+        if self.weighted:
+            self.res['min_lev'] = Pii[self.worker_m].min()
+            self.res['max_lev'] = Pii[self.worker_m].max()
+        else:
+            self.res['min_lev'] = Pii.min()
+            self.res['max_lev'] = Pii.max()
 
         if self.res['max_lev'] >= 1:
             leverage_warning = f"Max P_ii is {self.res['max_lev']} which is >= 1. This means your data is not leave-one-observation-out connected. The HE estimator requires leave-one-observation-out connected data to work properly. When cleaning your data, please set clean_params['connectedness'] = 'leave_out_observation' to correct this."
@@ -1243,26 +1260,33 @@ class FEEstimator:
         Returns:
             (tuple of NumPy Arrays): (Pii --> estimated leverages, jla_factor --> JLA non-linearity bias correction (this method always sets jla_factor=None))
         '''
-        Pii = np.zeros(self.nn)
-        worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
-
         self.logger.info('[he] [analytical Pii]')
+
+        Pii = np.zeros(self.nn)
 
         # Construct weighted J and W
         DpJ = self.Dp_sqrt @ self.J
         DpW = self.Dp_sqrt @ self.W
 
-        pbar = tqdm(self.adata.loc[worker_m, :].index, disable=self.no_pbars)
+        if self.weighted:
+            pbar = tqdm(self.adata.loc[self.worker_m, :].index, disable=self.no_pbars)
+        else:
+            pbar = tqdm(self.adata.index, disable=self.no_pbars)
         pbar.set_description('leverages')
         for i in pbar:
             DpJ_i = np.asarray(DpJ[i, :].todense())[0, :]
             DpW_i = np.asarray(DpW[i, :].todense())[0, :]
+
             # Compute analytical Pii
             Pii[i] = self._compute_Pii(DpJ_i, DpW_i)
         del pbar
 
-        self.res['min_lev'] = Pii[worker_m].min()
-        self.res['max_lev'] = Pii[worker_m].max()
+        if self.weighted:
+            self.res['min_lev'] = Pii[self.worker_m].min()
+            self.res['max_lev'] = Pii[self.worker_m].max()
+        else:
+            self.res['min_lev'] = Pii.min()
+            self.res['max_lev'] = Pii.max()
 
         if self.res['max_lev'] >= 1:
             leverage_warning = f"Max P_ii is {self.res['max_lev']} which is >= 1. This means your data is not leave-one-observation-out connected. The HE estimator requires leave-one-observation-out connected data to work properly. When cleaning your data, please set clean_params['connectedness'] = 'leave_out_observation' to correct this."
@@ -1287,8 +1311,7 @@ class FEEstimator:
             rng = np.random.default_rng(None)
 
         Pii = np.zeros(self.nn)
-        p = 0
-        worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
+        worker_m = self.worker_m
 
         self.logger.info(f"[he] [approximate pii] ndraw_lev_he={self.ndraw_lev_he}, lev_batchsize_he={self.params['lev_batchsize_he']}, using {self.ncore} core(s)")
 
@@ -1319,11 +1342,12 @@ class FEEstimator:
         # Normalize Pii
         if self.weighted:
             Pii[worker_m] = Pii[worker_m] / (Pii[worker_m] + Mii[worker_m])
+            self.res['min_lev'] = Pii[worker_m].min()
+            self.res['max_lev'] = Pii[worker_m].max()
         else:
             Pii = Pii / (Pii + Mii)
-
-        self.res['min_lev'] = Pii[worker_m].min()
-        self.res['max_lev'] = Pii[worker_m].max()
+            self.res['min_lev'] = Pii.min()
+            self.res['max_lev'] = Pii.max()
 
         if self.res['max_lev'] >= 1:
             leverage_warning = f"Max P_ii is {self.res['max_lev']} which is >= 1. This means your data is not leave-one-observation-out connected. The HE estimator requires leave-one-observation-out connected data to work properly. When cleaning your data, please set clean_params['connectedness'] = 'leave_out_observation' to correct this."
@@ -1362,15 +1386,10 @@ class FEEstimator:
         Returns:
             (NumPy Array): Sii (sigma^2) for heteroskedastic correction
         '''
-        worker_m = (self.adata.loc[:, 'worker_m'].to_numpy() > 0)
-        if self.weighted:
-            w = self.Dp.data[0]
+        worker_m = self.worker_m
 
         # Mean wage
-        if self.weighted:
-            Y_bar = np.average(self.Y, weights=w)
-        else:
-            Y_bar = np.mean(self.Y)
+        Y_bar = np.average(self.Y, weights=self.Dp.data[0])
 
         if self.weighted:
             ### Weighted ###
@@ -1384,6 +1403,8 @@ class FEEstimator:
             ## Compute Sii for stayers ##
             # Source: https://github.com/rsaggio87/LeaveOutTwoWay/blob/master/codes/sigma_for_stayers.m
             Pii_s = 1 / self.adata.loc[~worker_m, ['i', 'w']].groupby('i', sort=False)['w'].transform('sum').to_numpy()
+            if np.any(Pii_s == 1):
+                raise ValueError("At least one stayer has observation-weight 1, which prevents computing Pii and Sii for those stayers. Please set 'drop_single_stayers'=True during data cleaning to avoid this error.")
             Sii_s = (self.Y[~worker_m] - Y_bar) * (self.E[~worker_m] / (1 - Pii_s))
 
             ## Combine Sii for all workers ##
@@ -1393,6 +1414,8 @@ class FEEstimator:
             del Pii_m, Sii_m, Pii_s, Sii_s
         else:
             ### Unweighted ###
+            if np.any(self.adata.loc[~worker_m, ['i', 'j']].groupby('i', sort=False)['j'].transform('size').to_numpy() == 1):
+                raise ValueError("At least one stayer has only one observation, which prevents computing Pii and Sii for those stayers. Please set 'drop_single_stayers'=True during data cleaning to avoid this error.")
             Sii = (self.Y - Y_bar) * self.E / (1 - Pii)
             if (not self.params['exact_lev_he']) and (jla_factor is not None):
                 # Multiply by bias correction factor
@@ -1416,15 +1439,10 @@ class FEEstimator:
         # # No longer need Sii column
         # self.adata.drop('Sii', axis=1, inplace=True)
 
-        # Compute sigma^2 HE
-        if self.weighted:
-            # Weighted average
-            # Multiply by w, because each observation's variance is divided by w and we need to undo that
-            self.res['eps_var_he'] = np.average(w * Sii, weights=w)
-        else:
-            # Unweighted average
-            self.res['eps_var_he'] = np.mean(Sii)
-        self.logger.info(f"[he] variance of residuals in heteroskedastic case: {self.res['eps_var_he']:2.4f}")
+        # Compute sigma^2 HE (multiply by Dp, because each observation's variance is divided by Dp and we need to undo that)
+        self.res['eps_var_he'] = np.average(self.Dp * Sii, weights=self.Dp.data[0])
+
+        self.logger.info(f"[he] variance of residuals {self.res['eps_var_he']:2.4f}")
 
         return Sii
 
@@ -1450,9 +1468,10 @@ class FEEstimator:
 
         # Compute the different draws
         pbar = trange(ndraw_pii, disable=self.no_pbars)
-        pbar.set_description('leverages 1')
+        pbar.set_description('leverages')
         for _ in pbar:
             R2 = 2 * rng.binomial(1, 0.5, self.nn) - 1
+            # NOTE: set Dp0='sqrt' and Dp2='sqrt'
             q = self._proj(R2, Dp0='sqrt', Dp2='sqrt')
             # Compute Pii and Mii for this i
             Pi_i = (q ** 2)

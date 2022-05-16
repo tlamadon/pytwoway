@@ -36,7 +36,7 @@ def test_fe_ols():
 
     df = pd.concat([pd.DataFrame(worker, index=[i]) for i, worker in enumerate(worker_data)])
 
-    bdf = bpd.BipartiteDataFrame(df, log=False).clean().collapse()
+    bdf = bpd.BipartiteDataFrame(df, log=False).clean(bpd.clean_params({'verbose': False})).collapse()
 
     fe_params = tw.fe_params({'feonly': True, 'attach_fe_estimates': True})
     fe_solver = tw.FEEstimator(bdf, fe_params)
@@ -48,7 +48,7 @@ def test_fe_estimator_full_novar():
     # Test that FE estimates parameters correctly (sigma^2, var(psi), and cov(psi, alpha)) for plug-in, HO, and HE with var(eps) = 0.
     sim_params = bpd.sim_params({'n_workers': 1000, 'w_sig': 0})
     a = bpd.SimBipartite(sim_params).simulate(np.random.default_rng(1234))
-    a = bpd.BipartiteDataFrame(a, log=False).clean()
+    a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False}))
     b = a.collapse()
 
     fe_params = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True, 'attach_fe_estimates': True})
@@ -94,7 +94,7 @@ def test_fe_estimator_full_var_uncollapsed():
     # Test that FE estimates parameters correctly (sigma^2, var(psi), and cov(psi, alpha)) for plug-in, HO, and HE with var(eps) = 1 for uncollapsed data.
     sim_params = bpd.sim_params({'n_workers': 1000, 'w_sig': 1})
     a = bpd.SimBipartite(sim_params).simulate(np.random.default_rng(1235))
-    a = bpd.BipartiteDataFrame(a, log=False).clean()
+    a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False}))
     b = a # .collapse()
 
     fe_params = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True, 'attach_fe_estimates': True})
@@ -140,7 +140,7 @@ def test_fe_estimator_full_var_collapsed():
     # Test that FE estimates parameters correctly (sigma^2, var(psi), and cov(psi, alpha)) for plug-in, HO, and HE with var(eps) = 1 for collapsed data.
     sim_params = bpd.sim_params({'n_workers': 1000, 'w_sig': 1})
     a = bpd.SimBipartite(sim_params).simulate(np.random.default_rng(1236))
-    a = bpd.BipartiteDataFrame(a, log=False).clean()
+    a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False}))
     b = a.collapse()
 
     fe_params = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True, 'attach_fe_estimates': True})
@@ -169,7 +169,7 @@ def test_fe_estimator_full_var_collapsed():
     # sigma^2
     # assert np.abs((est_pi_sigma_2 - true_sigma_2) / true_sigma_2) < 1e-2
     assert np.abs((est_ho_sigma_2 - true_sigma_2) / true_sigma_2) < 0.02
-    assert np.abs((est_he_sigma_2 - true_sigma_2) / true_sigma_2) < 0.04
+    assert np.abs((est_he_sigma_2 - true_sigma_2) / true_sigma_2) < 0.035
     # var(psi)
     # assert np.abs((est_pi_var_psi - true_var_psi) / true_var_psi) < 1e-2
     assert np.abs((est_ho_var_psi - true_var_psi) / true_var_psi) < 0.15
@@ -182,16 +182,16 @@ def test_fe_estimator_full_var_collapsed():
     # y
     assert np.sum(np.isclose(b.loc[:, 'psi_hat'].to_numpy() + b.loc[:, 'alpha_hat'].to_numpy(), b.loc[:, 'y'].to_numpy(), atol=1)) / len(b) > 0.8
 
-def test_fe_estimator_full_approx_analytical():
-    # Test that FE estimates parameters correctly (sigma^2, var(psi), and cov(psi, alpha)) for plug-in, HO, and HE for analytical vs. approximate estimators.
+def test_fe_estimator_full_approx_analytical_non_collapsed():
+    # Test that FE estimates parameters correctly (sigma^2, var(psi), and cov(psi, alpha)) for plug-in, HO, and HE for analytical vs. approximate estimators, with non-collapsed data.
     sim_params = bpd.sim_params({'n_workers': 1000, 'w_sig': 1})
     a = bpd.SimBipartite(sim_params).simulate(np.random.default_rng(1236))
-    a = bpd.BipartiteDataFrame(a, log=False).clean().collapse()
+    a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False}))
 
     fe_params_a = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True})
     fe_solver_a = tw.FEEstimator(a, fe_params_a)
     fe_solver_a.fit(np.random.default_rng(1237))
-    fe_params_b = tw.fe_params({'he': True, 'exact_trace_sigma_2': False, 'exact_trace_ho': False, 'exact_trace_he': False, 'exact_lev_he': False, 'lev_threshold_obs': 1, 'lev_threshold_pii': 0.8})
+    fe_params_b = tw.fe_params({'he': True, 'exact_trace_sigma_2': False, 'exact_trace_ho': False, 'exact_trace_he': False, 'exact_lev_he': False})
     fe_solver_b = tw.FEEstimator(a, fe_params_b)
     fe_solver_b.fit(np.random.default_rng(1238))
 
@@ -223,23 +223,76 @@ def test_fe_estimator_full_approx_analytical():
     est_he_cov_psi_alpha_b = fe_solver_b.res['cov_he']
 
     # sigma^2
-    # assert np.abs((est_pi_sigma_2_b - est_pi_sigma_2_a) / est_pi_sigma_2_a) == 0
+    assert np.abs((est_pi_sigma_2_b - est_pi_sigma_2_a) / est_pi_sigma_2_a) == 0
+    assert np.abs((est_ho_sigma_2_b - est_ho_sigma_2_a) / est_ho_sigma_2_a) == 0
+    assert np.abs((est_he_sigma_2_b - est_he_sigma_2_a) / est_he_sigma_2_a) < 1e-2
+    # var(psi)
+    assert np.abs((est_pi_var_psi_b - est_pi_var_psi_a) / est_pi_var_psi_a) == 0
+    assert np.abs((est_ho_var_psi_b - est_ho_var_psi_a) / est_ho_var_psi_a) < 1e-2
+    assert np.abs((est_he_var_psi_b - est_he_var_psi_a) / est_he_var_psi_a) < 1e-2
+    # cov(psi, alpha)
+    assert np.abs((est_pi_cov_psi_alpha_b - est_pi_cov_psi_alpha_a) / est_pi_cov_psi_alpha_a) == 0
+    assert np.abs((est_ho_cov_psi_alpha_b - est_ho_cov_psi_alpha_a) / est_ho_cov_psi_alpha_a) < 1e-2
+    assert np.abs((est_he_cov_psi_alpha_b - est_he_cov_psi_alpha_a) / est_he_cov_psi_alpha_a) < 0.015
+
+def test_fe_estimator_full_approx_analytical_collapsed():
+    # Test that FE estimates parameters correctly (sigma^2, var(psi), and cov(psi, alpha)) for plug-in, HO, and HE for analytical vs. approximate estimators, with collapsed data.
+    sim_params = bpd.sim_params({'n_workers': 1000, 'w_sig': 1})
+    a = bpd.SimBipartite(sim_params).simulate(np.random.default_rng(1236))
+    a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False})).collapse()
+
+    fe_params_a = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True})
+    fe_solver_a = tw.FEEstimator(a, fe_params_a)
+    fe_solver_a.fit(np.random.default_rng(1237))
+    fe_params_b = tw.fe_params({'he': True, 'exact_trace_sigma_2': False, 'exact_trace_ho': False, 'exact_trace_he': False, 'exact_lev_he': False})
+    fe_solver_b = tw.FEEstimator(a, fe_params_b)
+    fe_solver_b.fit(np.random.default_rng(1238))
+
+    ### Analytical ###
+    ## Plug-in ##
+    est_pi_sigma_2_a = fe_solver_a.sigma_2_pi
+    est_pi_var_psi_a = fe_solver_a.var_fe
+    est_pi_cov_psi_alpha_a = fe_solver_a.cov_fe
+    ## HO ##
+    est_ho_sigma_2_a = fe_solver_a.res['eps_var_ho']
+    est_ho_var_psi_a = fe_solver_a.res['var_ho']
+    est_ho_cov_psi_alpha_a = fe_solver_a.res['cov_ho']
+    ## HE ##
+    est_he_sigma_2_a = fe_solver_a.res['eps_var_he']
+    est_he_var_psi_a = fe_solver_a.res['var_he']
+    est_he_cov_psi_alpha_a = fe_solver_a.res['cov_he']
+    ### Approximate ###
+    ## Plug-in ##
+    est_pi_sigma_2_b = fe_solver_b.sigma_2_pi
+    est_pi_var_psi_b = fe_solver_b.var_fe
+    est_pi_cov_psi_alpha_b = fe_solver_b.cov_fe
+    ## HO ##
+    est_ho_sigma_2_b = fe_solver_b.res['eps_var_ho']
+    est_ho_var_psi_b = fe_solver_b.res['var_ho']
+    est_ho_cov_psi_alpha_b = fe_solver_b.res['cov_ho']
+    ## HE ##
+    est_he_sigma_2_b = fe_solver_b.res['eps_var_he']
+    est_he_var_psi_b = fe_solver_b.res['var_he']
+    est_he_cov_psi_alpha_b = fe_solver_b.res['cov_he']
+
+    # sigma^2
+    assert np.abs((est_pi_sigma_2_b - est_pi_sigma_2_a) / est_pi_sigma_2_a) == 0
     assert np.abs((est_ho_sigma_2_b - est_ho_sigma_2_a) / est_ho_sigma_2_a) < 1e-3
     assert np.abs((est_he_sigma_2_b - est_he_sigma_2_a) / est_he_sigma_2_a) < 0.025
     # var(psi)
-    # assert np.abs((est_pi_var_psi_b - est_pi_var_psi_a) / est_pi_var_psi_a) == 0
+    assert np.abs((est_pi_var_psi_b - est_pi_var_psi_a) / est_pi_var_psi_a) == 0
     assert np.abs((est_ho_var_psi_b - est_ho_var_psi_a) / est_ho_var_psi_a) < 1e-3
-    assert np.abs((est_he_var_psi_b - est_he_var_psi_a) / est_he_var_psi_a) < 0.015
+    assert np.abs((est_he_var_psi_b - est_he_var_psi_a) / est_he_var_psi_a) < 1e-2
     # cov(psi, alpha)
-    # assert np.abs((est_pi_cov_psi_alpha_b - est_pi_cov_psi_alpha_a) / est_pi_cov_psi_alpha_a) == 0
-    assert np.abs((est_ho_cov_psi_alpha_b - est_ho_cov_psi_alpha_a) / est_ho_cov_psi_alpha_a) < 1e-3
+    assert np.abs((est_pi_cov_psi_alpha_b - est_pi_cov_psi_alpha_a) / est_pi_cov_psi_alpha_a) == 0
+    assert np.abs((est_ho_cov_psi_alpha_b - est_ho_cov_psi_alpha_a) / est_ho_cov_psi_alpha_a) < 1e-2
     assert np.abs((est_he_cov_psi_alpha_b - est_he_cov_psi_alpha_a) / est_he_cov_psi_alpha_a) < 1e-2
 
 def test_fe_estimator_full_Q():
     # Test that FE estimates custom Q correctly for plug-in, HO, and HE estimators for Q.VarAlpha() and Q.CovPsiPrevPsiNext().
     sim_params = bpd.sim_params({'n_workers': 1000, 'w_sig': 0})
     a = bpd.SimBipartite(sim_params).simulate(np.random.default_rng(1236))
-    a = bpd.BipartiteDataFrame(a, log=False).clean()
+    a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False}))
     b = a.collapse()
 
     fe_params = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True, 'attach_fe_estimates': True, 'Q_var': tw.Q.VarAlpha(), 'Q_cov': tw.Q.CovPsiPrevPsiNext()})
@@ -326,11 +379,11 @@ def test_fe_Pii():
     # Test that HE Pii are equivalent when computed using M^{-1} explicitly or computing each observation one at a time using multi-grid solver
     sim_params = bpd.sim_params({'n_workers': 1000, 'w_sig': 1})
     a = bpd.SimBipartite(sim_params).simulate(np.random.default_rng(1239))
-    a = bpd.BipartiteDataFrame(a, log=False).clean().collapse()
+    a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False})).collapse()
 
-    fe_params_a = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True})
+    fe_params_a = tw.fe_params({'ho': False, 'he': True, 'exact_trace_he': True, 'exact_lev_he': True})
     fe_solver_a = tw.FEEstimator(a, fe_params_a)
-    fe_params_b = tw.fe_params({'he': True, 'exact_trace_sigma_2': False, 'exact_trace_ho': False, 'exact_trace_he': False, 'exact_lev_he': False})
+    fe_params_b = tw.fe_params({'ho': False, 'he': True, 'exact_trace_he': False, 'exact_lev_he': False})
     fe_solver_b = tw.FEEstimator(a, fe_params_b)
 
     # Run estimators
@@ -347,6 +400,63 @@ def test_fe_Pii():
 
     # Don't take percent because some values equal 0
     assert np.sum(np.abs(Pii_b - Pii_a)) < 1e-4
+
+def test_fe_weights():
+    # Test that FE estimates are identical for weighted and unweighted (estimate parameters sigma^2, var(psi), and cov(psi, alpha)) for plug-in, HO and HE.
+    sim_params = bpd.sim_params({'n_workers': 1000, 'w_sig': 1})
+    a = bpd.SimBipartite(sim_params).simulate(np.random.default_rng(1240))
+    a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False}))
+    b = a.collapse()
+
+    fe_params = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True, 'attach_fe_estimates': True})
+    fe_solver_a = tw.FEEstimator(a, fe_params)
+    fe_solver_a.fit(np.random.default_rng(1241))
+    fe_solver_b = tw.FEEstimator(b, fe_params)
+    fe_solver_b.fit(np.random.default_rng(1242))
+
+    # Estimated parameters
+    ### Unweighted ###
+    ## Plug-in ##
+    est_pi_sigma_2_a = fe_solver_a.sigma_2_pi
+    est_pi_var_psi_a = fe_solver_a.var_fe
+    est_pi_cov_psi_alpha_a = fe_solver_a.cov_fe
+    ## HO ##
+    est_ho_sigma_2_a = fe_solver_a.res['eps_var_ho']
+    est_ho_var_psi_a = fe_solver_a.res['var_ho']
+    est_ho_cov_psi_alpha_a = fe_solver_a.res['cov_ho']
+    ## HE ##
+    est_he_sigma_2_a = fe_solver_a.res['eps_var_he']
+    est_he_var_psi_a = fe_solver_a.res['var_he']
+    est_he_cov_psi_alpha_a = fe_solver_a.res['cov_he']
+    ### Weighted ###
+    ## Plug-in ##
+    est_pi_sigma_2_b = fe_solver_b.sigma_2_pi
+    est_pi_var_psi_b = fe_solver_b.var_fe
+    est_pi_cov_psi_alpha_b = fe_solver_b.cov_fe
+    ## HO ##
+    est_ho_sigma_2_b = fe_solver_b.res['eps_var_ho']
+    est_ho_var_psi_b = fe_solver_b.res['var_ho']
+    est_ho_cov_psi_alpha_b = fe_solver_b.res['cov_ho']
+    ## HE ##
+    est_he_sigma_2_b = fe_solver_b.res['eps_var_he']
+    est_he_var_psi_b = fe_solver_b.res['var_he']
+    est_he_cov_psi_alpha_b = fe_solver_b.res['cov_he']
+
+    # psi_hat, alpha_hat
+    assert np.all(np.isclose(fe_solver_a.psi_hat, fe_solver_b.psi_hat))
+    assert np.all(np.isclose(fe_solver_a.alpha_hat, fe_solver_b.alpha_hat))
+    # Plug-in
+    # assert np.abs((est_pi_sigma_2_b - est_pi_sigma_2_a) / est_pi_sigma_2_a) < 0.4
+    assert np.isclose(est_pi_var_psi_a, est_pi_var_psi_b)
+    assert np.isclose(est_pi_cov_psi_alpha_a, est_pi_cov_psi_alpha_b)
+    # HO
+    assert np.abs((est_ho_sigma_2_b - est_ho_sigma_2_a) / est_ho_sigma_2_a) < 0.025
+    assert np.abs((est_ho_var_psi_b - est_ho_var_psi_a) / est_ho_var_psi_a) < 1e-3
+    assert np.abs((est_ho_cov_psi_alpha_b - est_ho_cov_psi_alpha_a) / est_ho_cov_psi_alpha_a) < 1e-3
+    # HE
+    assert np.abs((est_he_sigma_2_b - est_he_sigma_2_a) / est_he_sigma_2_a) < 0.25
+    assert np.abs((est_he_var_psi_b - est_he_var_psi_a) / est_he_var_psi_a) < 1e-2
+    assert np.abs((est_he_cov_psi_alpha_b - est_he_cov_psi_alpha_a) / est_he_cov_psi_alpha_a) < 1e-2
 
 #######################
 ##### Monte Carlo #####
@@ -370,23 +480,23 @@ def test_monte_carlo():
     he_psi_alpha_cov = twmc_net.res['he_psi_alpha_cov']
 
     # Compute mean percent differences from truth
-    cre_psi_diff = np.mean(abs((cre_psi_var - true_psi_var) / true_psi_var))
-    cre_psi_alpha_diff = np.mean(abs((cre_psi_alpha_cov - true_psi_alpha_cov) / true_psi_alpha_cov))
-    fe_psi_diff = np.mean(abs((fe_psi_var - true_psi_var) / true_psi_var))
-    fe_psi_alpha_diff = np.mean(abs((fe_psi_alpha_cov - true_psi_alpha_cov) / true_psi_alpha_cov))
-    ho_psi_diff = np.mean(abs((ho_psi_var - true_psi_var) / true_psi_var))
-    ho_psi_alpha_diff = np.mean(abs((ho_psi_alpha_cov - true_psi_alpha_cov) / true_psi_alpha_cov))
-    he_psi_diff = np.mean(abs((he_psi_var - true_psi_var) / true_psi_var))
-    he_psi_alpha_diff = np.mean(abs((he_psi_alpha_cov - true_psi_alpha_cov) / true_psi_alpha_cov))
+    cre_psi_diff = abs(np.mean((cre_psi_var - true_psi_var) / true_psi_var))
+    cre_psi_alpha_diff = abs(np.mean((cre_psi_alpha_cov - true_psi_alpha_cov) / true_psi_alpha_cov))
+    fe_psi_diff = abs(np.mean((fe_psi_var - true_psi_var) / true_psi_var))
+    fe_psi_alpha_diff = abs(np.mean((fe_psi_alpha_cov - true_psi_alpha_cov) / true_psi_alpha_cov))
+    ho_psi_diff = abs(np.mean((ho_psi_var - true_psi_var) / true_psi_var))
+    ho_psi_alpha_diff = abs(np.mean((ho_psi_alpha_cov - true_psi_alpha_cov) / true_psi_alpha_cov))
+    he_psi_diff = abs(np.mean((he_psi_var - true_psi_var) / true_psi_var))
+    he_psi_alpha_diff = abs(np.mean((he_psi_alpha_cov - true_psi_alpha_cov) / true_psi_alpha_cov))
 
-    assert cre_psi_diff < 0.04
-    assert cre_psi_alpha_diff < 0.015
+    assert cre_psi_diff < 0.03
+    assert cre_psi_alpha_diff < 1e-2
     assert fe_psi_diff < 0.02
     assert fe_psi_alpha_diff < 0.015
-    assert ho_psi_diff < 0.02
-    assert ho_psi_alpha_diff < 1e-2
-    assert he_psi_diff < 0.02
-    assert he_psi_alpha_diff < 1e-2
+    assert ho_psi_diff < 1e-2
+    assert ho_psi_alpha_diff < 1e-3
+    assert he_psi_diff < 1e-2
+    assert he_psi_alpha_diff < 1e-3
 
 #####################
 ##### Attrition #####
