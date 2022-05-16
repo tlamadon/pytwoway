@@ -3,10 +3,14 @@
 .vscode/
 docs/build/
 pytwoway/__pycache__/
+pytwoway/attrition_utils/__pycache__/
+pytwoway/constraints/__pycache__/
+pytwoway/Q/__pycache__/
 tests/__pycache__/
 .pytest_cache/
 .eggs
 tests/__pycache__/
+tests/.ipynb_checkpoints/
 dist/
 pytwoway.egg-info/
 build/
@@ -49,4 +53,3 @@ docs/
 .Trashes
 ehthumbs.db
 Thumbs.db
-tests/notebooks/.ipynb_checkpoints/testing_blm-checkpoint.ipynb
