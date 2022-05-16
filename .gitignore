@@ -9,7 +9,7 @@ pytwoway/Q/__pycache__/
 tests/__pycache__/
 .pytest_cache/
 .eggs
-tests/__pycache__/
+docs/source/notebooks/.ipynb_checkpoints/
 tests/.ipynb_checkpoints/
 dist/
 pytwoway.egg-info/
