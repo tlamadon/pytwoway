@@ -2,6 +2,7 @@
 We implement the non-linear estimator from Bonhomme Lamadon & Manresa.
 '''
 from tqdm.auto import tqdm, trange
+import copy
 import warnings
 import itertools
 from multiprocessing import Pool
@@ -144,6 +145,10 @@ _blm_params_default = ParamsDict({
         '''
             (default=1 + 1e-7) Account for probabilities being too small by adding (d_prior - 1) to pk1.
         ''', '>= 1'),
+    'd_mean_worker_effect': (1e-7, 'type', (float, int),
+        '''
+            (default=1e-7) When using categorical constraints, force the mean worker type effect over all firm types to increase by at least this amount as worker type increases. Can be set to negative values.
+        ''', None),
     # fit_stayers() parameters ##
     'n_iters_stayers': (1000, 'type_constrained', (int, _gteq1),
         '''
@@ -465,21 +470,216 @@ class BLMModel:
         # if self.stationary:
         #     self.A2 = self.A1
 
-    # def reset_params(self):
-    #     nl = self.nl
-    #     nk = self.nk
-    #     # Model for Y1 | Y2, l, k for movers and stayers
-    #     self.A1 = np.tile(sorted(rng.normal(size=nl)), (nk, 1))
-    #     self.S1 = np.ones(shape=(nk, nl))
-    #     # Model for Y4 | Y3, l, k for movers and stayers
-    #     self.A2 = self.A1.copy()
-    #     self.S2 = np.ones(shape=(nk, nl))
-    #     # Model for p(K | l, l') for movers
-    #     self.pk1 = np.ones(shape=(nk * nk, nl)) / nl
-    #     # Model for p(K | l, l') for stayers
-    #     self.pk0 = np.ones(shape=(nk, nl)) / nl
+    def _gen_constraints(self, min_firm_type):
+        '''
+        Generate constraints for estimating A and S in fit_movers().
 
-    def _sum_by_non_nl(self, ni, C1, C2, compute_A=True, compute_S=True):
+        Arguments:
+            min_firm_type (int): lowest firm type
+
+        Returns:
+            (tuple of constraints): (cons_a --> constraints for base A1 and A2, cons_s --> constraints for base S1 and S2, cons_a_dict --> constraints for A1 and A2 for control variables, cons_s_dict --> controls for S1 and S2 for control variables)
+        '''
+        # Unpack parameters
+        params = self.params
+        nl, nk = self.nl, self.nk
+        cat_cols, cts_cols = self.cat_cols, self.cts_cols
+        controls_dict = self.controls_dict
+
+        ## General ##
+        cons_a = cons.QPConstrained(nl, nk)
+        cons_s = cons.QPConstrained(nl, nk)
+        cons_s.add_constraints(cons.BoundedBelow(lb=params['s_lower_bound']))
+
+        if params['cons_a'] is not None:
+            cons_a.add_constraints(params['cons_a'])
+        if params['cons_a_all'] is not None:
+            cons_a.add_constraints(params['cons_a_all'])
+        if params['cons_s'] is not None:
+            cons_s.add_constraints(params['cons_s'])
+        if params['cons_s_all'] is not None:
+            cons_s.add_constraints(params['cons_s_all'])
+
+        ## Control variables ##
+        cons_a_dict = {}
+        cons_s_dict = {}
+        for col in cat_cols:
+            col_dict = controls_dict[col]
+            cons_a_dict[col] = cons.QPConstrained(nl, col_dict['n'])
+            cons_s_dict[col] = cons.QPConstrained(nl, col_dict['n'])
+        for col in cts_cols:
+            col_dict = controls_dict[col]
+            cons_a_dict[col] = cons.QPConstrained(nl, 1)
+            cons_s_dict[col] = cons.QPConstrained(nl, 1)
+        for col in cat_cols + cts_cols:
+            cons_s_dict[col].add_constraints(cons.BoundedBelow(lb=params['s_lower_bound']))
+
+            if not controls_dict[col]['worker_type_interaction']:
+                cons_a_dict[col].add_constraints(cons.NoWorkerTypeInteraction())
+                cons_s_dict[col].add_constraints(cons.NoWorkerTypeInteraction())
+
+            if controls_dict[col]['cons_a'] is not None:
+                cons_a_dict[col].add_constraints(controls_dict[col]['cons_a'])
+            if params['cons_a_all'] is not None:
+                cons_a_dict[col].add_constraints(params['cons_a_all'])
+            if controls_dict[col]['cons_s'] is not None:
+                cons_s_dict[col].add_constraints(controls_dict[col]['cons_s'])
+            if params['cons_s_all'] is not None:
+                cons_s_dict[col].add_constraints(params['cons_s_all'])
+
+        ## Normalization ##
+        if len(cat_cols) > 0:
+            # Check that there is at least one constraint on a categorical column
+            any_cat_constraints = (params['cons_a_all'] is not None)
+            # Check if any columns interact with worker type and/or are stationary (tv stands for time-varying, which is equivalent to non-stationary; and wi stands for worker-interaction)
+            any_tv_nwi = False
+            any_tnv_nwi = False
+            any_tv_wi = False
+            any_tnv_wi = False
+            for col in cat_cols:
+                # Check if column is stationary
+                is_stationary = False
+                if controls_dict[col]['cons_a'] is not None:
+                    any_cat_constraints = True
+                    for subcons_a in to_list(controls_dict[col]['cons_a']):
+                        if isinstance(subcons_a, cons.Stationary):
+                            is_stationary = True
+                            break
+
+                if controls_dict[col]['worker_type_interaction']:
+                    # If the column interacts with worker types
+                    if is_stationary:
+                        any_tnv_wi = True
+                    else:
+                        any_tv_wi = True
+                        break
+                else:
+                    if is_stationary:
+                        any_tnv_nwi = True
+                    else:
+                        any_tv_nwi = True
+
+            if any_cat_constraints:
+                # Add constraints only if at least one categorical control uses constraints (otherwise, the normalization can just be done at the end)
+                self.normalize_constraints = True
+                cons_a.add_constraints(cons.MonotonicMean(md=self.params['d_mean_worker_effect'], nnt=[0]))
+                if any_tv_wi:
+                    cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=[0, 1]))
+                else:
+                    if any_tnv_wi:
+                        cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=[0]))
+                        if any_tv_nwi:
+                            cons_a.add_constraints(cons.NormalizeSingle(min_firm_type=min_firm_type, nnt=[1]))
+                    else:
+                        if any_tv_nwi:
+                            cons_a.add_constraints(cons.NormalizeSingle(min_firm_type=min_firm_type, nnt=[0, 1]))
+                        elif any_tnv_nwi:
+                            cons_a.add_constraints(cons.NormalizeSingle(min_firm_type=min_firm_type, nnt=[0]))
+            else:
+                self.normalize_constraints = False
+
+        return (cons_a, cons_s, cons_a_dict, cons_s_dict)
+
+    def _normalize(self, A1, A2, A1_cat, A2_cat, min_firm_type):
+        '''
+        Normalize means given categorical controls.
+
+        Arguments:
+            A1 (NumPy Array): mean of fixed effects in the first period
+            A2 (NumPy Array): mean of fixed effects in the second period
+            A1_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the first period for categorical control variables
+            A2_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the second period for categorical control variables
+            min_firm_type (int): lowest firm type
+
+        Returns:
+            (tuple): tuple of normalized parameters (A1, A2, A1_cat, A2_cat)
+        '''
+        # Unpack parameters
+        params = self.params
+        nl, nk = self.nl, self.nk
+        cat_cols, cat_dict = self.cat_cols, self.cat_dict
+        A1, A2, A1_cat, A2_cat = A1.copy(), A2.copy(), A1_cat.copy(), A2_cat.copy()
+
+        if len(cat_cols) > 0:
+            # Check if any columns interact with worker type and/or are stationary (tv stands for time-varying, which is equivalent to non-stationary; and wi stands for worker-interaction)
+            any_tv_nwi = False
+            any_tnv_nwi = False
+            any_tv_wi = False
+            any_tnv_wi = False
+            for col in cat_cols:
+                # Check if column is stationary
+                is_stationary = False
+                if cat_dict[col]['cons_a'] is not None:
+                    for subcons_a in to_list(cat_dict[col]['cons_a']):
+                        if isinstance(subcons_a, cons.Stationary):
+                            is_stationary = True
+                            break
+
+                if cat_dict[col]['worker_type_interaction']:
+                    # If the column interacts with worker types
+                    if is_stationary:
+                        any_tnv_wi = True
+                        tnv_wi_col = col
+                    else:
+                        any_tv_wi = True
+                        tv_wi_col = col
+                        break
+                else:
+                    if is_stationary:
+                        any_tnv_nwi = True
+                        tnv_nwi_col = col
+                    else:
+                        any_tv_nwi = True
+                        tv_nwi_col = col
+
+            ## Normalize parameters ##
+            if any_tv_wi:
+                for l in range(nl):
+                    # First period
+                    adj_val_1 = A1[l, min_firm_type]
+                    A1[l, :] -= adj_val_1
+                    A1_cat[tv_wi_col][l, :] += adj_val_1
+                    # Second period
+                    adj_val_2 = A2[l, min_firm_type]
+                    A2[l, :] -= adj_val_2
+                    A2_cat[tv_wi_col][l, :] += adj_val_2
+            else:
+                if any_tnv_wi:
+                    for l in range(nl):
+                        # First period
+                        adj_val_1 = A1[l, min_firm_type]
+                        A1[l, :] -= adj_val_1
+                        A1_cat[tnv_wi_col][l, :] += adj_val_1
+                        # Second period
+                        A2[l, :] -= adj_val_1
+                        A2_cat[tnv_wi_col][l, :] += adj_val_1
+                    if any_tv_nwi:
+                        # Second period
+                        adj_val_2 = A2[0, min_firm_type]
+                        A2 -= adj_val_2
+                        A2_cat[tv_nwi_col] += adj_val_2
+                else:
+                    if any_tv_nwi:
+                        # First period
+                        adj_val_1 = A1[0, min_firm_type]
+                        A1 -= adj_val_1
+                        A1_cat[tv_nwi_col] += adj_val_1
+                        # Second period
+                        adj_val_2 = A2[0, min_firm_type]
+                        A2 -= adj_val_2
+                        A2_cat[tv_nwi_col] += adj_val_2
+                    elif any_tnv_nwi:
+                        # First period
+                        adj_val_1 = A1[0, min_firm_type]
+                        A1 -= adj_val_1
+                        A1_cat[tnv_nwi_col] += adj_val_1
+                        # Second period
+                        A2 -= adj_val_1
+                        A2_cat[tnv_nwi_col] += adj_val_1
+
+        return (A1, A2, A1_cat, A2_cat)
+
+    def _sum_by_non_nl(self, ni, C1, C2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, compute_A=True, compute_S=True):
         '''
         Compute A1_sum/A2_sum/S1_sum_sq/S2_sum_sq for non-worker-interaction terms.
 
@@ -487,6 +687,14 @@ class BLMModel:
             ni (int): number of observations
             C1 (dict of NumPy Arrays): dictionary linking column names to control variable data for the first period
             C2 (dict of NumPy Arrays): dictionary linking column names to control variable data for the second period
+            A1_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the first period for categorical control variables
+            A2_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the second period for categorical control variables
+            S1_cat (dict of NumPy Arrays): dictionary linking column names to the standard deviation of fixed effects in the first period for categorical control variables
+            S2_cat (dict of NumPy Arrays): dictionary linking column names to the standard deviation of fixed effects in the second period for categorical control variables
+            A1_cts (dict of NumPy Arrays): dictionary linking column names to the mean of coefficients in the first period for continuous control variables
+            A2_cts (dict of NumPy Arrays): dictionary linking column names to the mean of coefficients in the second period for continuous control variables
+            S1_cts (dict of NumPy Arrays): dictionary linking column names to the standard deviation of coefficients in the first period for continuous control variables
+            S2_cts (dict of NumPy Arrays): dictionary linking column names to the standard deviation of coefficients in the second period for continuous control variables
             compute_A (bool): if True, compute and return A terms
             compute_S (bool): if True, compute and return S terms
 
@@ -502,8 +710,6 @@ class BLMModel:
                 return [0] * 4
             return [0] * 2
 
-        A1_cat, A2_cat, S1_cat, S2_cat = self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat
-        A1_cts, A2_cts, S1_cts, S2_cts = self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts
         cat_cols, cts_cols = self.cat_cols, self.cts_cols
         controls_dict = self.controls_dict
 
@@ -540,7 +746,7 @@ class BLMModel:
         if compute_S:
             return (S1_sum_sq, S2_sum_sq)
 
-    def _sum_by_nl_l(self, ni, l, C1, C2, compute_A=True, compute_S=True):
+    def _sum_by_nl_l(self, ni, l, C1, C2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, compute_A=True, compute_S=True):
         '''
         Compute A1_sum/A2_sum/S1_sum_sq/S2_sum_sq to account for worker-interaction terms for a particular worker type.
 
@@ -549,6 +755,14 @@ class BLMModel:
             l (int): worker type (must be in range(0, nl))
             C1 (dict of NumPy Arrays): dictionary linking column names to control variable data for the first period
             C2 (dict of NumPy Arrays): dictionary linking column names to control variable data for the second period
+            A1_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the first period for categorical control variables
+            A2_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the second period for categorical control variables
+            S1_cat (dict of NumPy Arrays): dictionary linking column names to the standard deviation of fixed effects in the first period for categorical control variables
+            S2_cat (dict of NumPy Arrays): dictionary linking column names to the standard deviation of fixed effects in the second period for categorical control variables
+            A1_cts (dict of NumPy Arrays): dictionary linking column names to the mean of coefficients in the first period for continuous control variables
+            A2_cts (dict of NumPy Arrays): dictionary linking column names to the mean of coefficients in the second period for continuous control variables
+            S1_cts (dict of NumPy Arrays): dictionary linking column names to the standard deviation of coefficients in the first period for continuous control variables
+            S2_cts (dict of NumPy Arrays): dictionary linking column names to the standard deviation of coefficients in the second period for continuous control variables
             compute_A (bool): if True, compute and return A terms
             compute_S (bool): if True, compute and return S terms
 
@@ -564,8 +778,6 @@ class BLMModel:
                 return [0] * 4
             return [0] * 2
 
-        A1_cat, A2_cat, S1_cat, S2_cat = self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat
-        A1_cts, A2_cts, S1_cts, S2_cts = self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts
         cat_cols, cts_cols = self.cat_cols, self.cts_cols
         controls_dict = self.controls_dict
 
@@ -632,13 +844,12 @@ class BLMModel:
             self.connectedness = EV
         self.connectedness = np.abs(EV).min()
 
-    def fit_movers(self, jdata, normalize=True, compute_NNm=True):
+    def fit_movers(self, jdata, compute_NNm=True):
         '''
         EM algorithm for movers.
 
         Arguments:
             jdata (BipartitePandas DataFrame): movers
-            normalize (bool): if True and using categorical controls, normalize the lowest firm-worker pair to have effect 0
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # Unpack parameters
@@ -718,65 +929,29 @@ class BLMModel:
         # Fix error from bad initial guesses causing probabilities to be too low
         d_prior = params['d_prior_movers']
 
-        ### Constraints ###
-        ## General ##
-        cons_a = cons.QPConstrained(nl, nk)
-        cons_s = cons.QPConstrained(nl, nk)
-        cons_s.add_constraints(cons.BoundedBelow(lb=params['s_lower_bound']))
+        ## Sort ##
+        A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
 
-        if params['cons_a'] is not None:
-            cons_a.add_constraints(params['cons_a'])
-        if params['cons_a_all'] is not None:
-            cons_a.add_constraints(params['cons_a_all'])
-        if params['cons_s'] is not None:
-            cons_s.add_constraints(params['cons_s'])
-        if params['cons_s_all'] is not None:
-            cons_s.add_constraints(params['cons_s_all'])
-
-        ## Control variables ##
-        cons_a_dict = {}
-        cons_s_dict = {}
-        for col in cat_cols:
-            col_dict = controls_dict[col]
-            cons_a_dict[col] = cons.QPConstrained(nl, col_dict['n'])
-            cons_s_dict[col] = cons.QPConstrained(nl, col_dict['n'])
-        for col in cts_cols:
-            col_dict = controls_dict[col]
-            cons_a_dict[col] = cons.QPConstrained(nl, 1)
-            cons_s_dict[col] = cons.QPConstrained(nl, 1)
-        for col in cat_cols + cts_cols:
-            cons_s_dict[col].add_constraints(cons.BoundedBelow(lb=params['s_lower_bound']))
-
-            if not controls_dict[col]['worker_type_interaction']:
-                cons_a_dict[col].add_constraints(cons.NoWorkerTypeInteraction())
-                cons_s_dict[col].add_constraints(cons.NoWorkerTypeInteraction())
-
-            if controls_dict[col]['cons_a'] is not None:
-                cons_a_dict[col].add_constraints(controls_dict[col]['cons_a'])
-            if params['cons_a_all'] is not None:
-                cons_a_dict[col].add_constraints(params['cons_a_all'])
-            if controls_dict[col]['cons_s'] is not None:
-                cons_s_dict[col].add_constraints(controls_dict[col]['cons_s'])
-            if params['cons_s_all'] is not None:
-                cons_s_dict[col].add_constraints(params['cons_s_all'])
+        ## Constraints ##
+        # Find minimum firm type
+        min_firm_type = np.mean(A1, axis=0).argsort()[0]
+        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type)
 
         for iter in range(params['n_iters_movers']):
-
             # ---------- E-Step ----------
             # We compute the posterior probabilities for each row
-            # We iterate over the worker types, should not be be
-            # too costly since the vector is quite large within each iteration
+            # We iterate over the worker types, should not be be too costly since the vector is quite large within each iteration
             if any_controls > 0:
                 ## Account for control variables ##
                 if iter == 0:
-                    A1_sum, A2_sum, S1_sum_sq, S2_sum_sq = self._sum_by_non_nl(ni=ni, C1=C1, C2=C2)
+                    A1_sum, A2_sum, S1_sum_sq, S2_sum_sq = self._sum_by_non_nl(ni=ni, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts)
                 else:
-                    S1_sum_sq, S2_sum_sq = self._sum_by_non_nl(ni=ni, C1=C1, C2=C2, compute_A=False)
+                    S1_sum_sq, S2_sum_sq = self._sum_by_non_nl(ni=ni, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_A=False)
 
                 KK = G1 + nk * G2
                 for l in range(nl):
                     # Update A1_sum/A2_sum/S1_sum_sq/S2_sum_sq to account for worker-interaction terms
-                    A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2)
+                    A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts)
                     lp1 = lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
                     lp2 = lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
                     lp[:, l] = np.log(pk1[KK, l]) + lp1 + lp2
@@ -809,9 +984,7 @@ class BLMModel:
             prev_lik = lik1
 
             # ---------- M-step ----------
-            # For now we run a simple ols, however later we
-            # want to add constraints!
-            # see https://scaron.info/blog/quadratic-programming-in-python.html
+            # Constrained OLS (source: https://scaron.info/blog/quadratic-programming-in-python.html)
 
             # The regression has 2 * nl * nk parameters and nl * ni rows
             # We do not necessarily want to construct the duplicated data by nl
@@ -859,7 +1032,7 @@ class BLMModel:
                 XwXd[ts + l_index: ts + r_index] = (GG2_weighted @ GG2).diagonal()
                 if params['update_a']:
                     # Update A1_sum and A2_sum to account for worker-interaction terms
-                    A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
+                    A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
                     ## Compute XwY terms ##
                     XwY[l_index: r_index] = GG1_weighted @ (Y1_adj - A1_sum_l)
                     XwY[ts + l_index: ts + r_index] = GG2_weighted @ (Y2_adj - A2_sum_l)
@@ -874,18 +1047,31 @@ class BLMModel:
             # print(S1)
             # print('S2 before:')
             # print(S2)
-            # print('A1_cat_wi before:')
-            # print(A1_cat_wi)
-            # print('A2_cat_wi before:')
-            # print(A2_cat_wi)
-            # print('S1_cat_wi before:')
-            # print(S1_cat_wi)
-            # print('S2_cat_wi before:')
-            # print(S2_cat_wi)
+            # print('A1_cat before:')
+            # print(A1_cat)
+            # print('A2_cat before:')
+            # print(A2_cat)
+            # print('S1_cat before:')
+            # print(S1_cat)
+            # print('S2_cat before:')
+            # print(S2_cat)
+            # print('A1_cts before:')
+            # print(A1_cts)
+            # print('A2_cts before:')
+            # print(A2_cts)
+            # print('S1_cts before:')
+            # print(S1_cts)
+            # print('S2_cts before:')
+            # print(S2_cts)
 
             # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
             XwX = np.diag(XwXd)
             if params['update_a']:
+                if iter > 0:
+                    ## Constraints ##
+                    # Find minimum firm type
+                    min_firm_type = np.mean(A1, axis=0).argsort()[0]
+                    cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type)
                 try:
                     cons_a.solve(XwX, -XwY)
                     res_a1, res_a2 = cons_a.res[: len(cons_a.res) // 2], cons_a.res[len(cons_a.res) // 2:]
@@ -924,7 +1110,7 @@ class BLMModel:
                     XwX_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = (CC2_weighted @ CC2[col]).diagonal()
                     if params['update_a']:
                         # Update A1_sum and A2_sum to account for worker-interaction terms
-                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
+                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
                         if cat_dict[col]['worker_type_interaction']:
                             A1_sum_l -= A1_cat[col][l, C1[col]]
                             A2_sum_l -= A2_cat[col][l, C2[col]]
@@ -959,6 +1145,7 @@ class BLMModel:
                 if not cat_dict[col]['worker_type_interaction']:
                     Y1_adj -= A1_cat[col][C1[col]]
                     Y2_adj -= A2_cat[col][C2[col]]
+
             ## Continuous ##
             for col in cts_cols:
                 if not cts_dict[col]['worker_type_interaction']:
@@ -980,7 +1167,7 @@ class BLMModel:
                     XwX_cts[col][nl + l] = (CC2_weighted @ C2[col])
                     if params['update_a']:
                         # Update A1_sum and A2_sum to account for worker-interaction terms
-                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
+                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
                         if cts_dict[col]['worker_type_interaction']:
                             A1_sum_l -= A1_cts[col][l] * C1[col]
                             A2_sum_l -= A2_cts[col][l] * C2[col]
@@ -1021,6 +1208,31 @@ class BLMModel:
                 A1_sum = Y1 - Y1_adj
                 A2_sum = Y2 - Y2_adj
 
+            # if params['update_a']:
+            #     ## Sort and Normalize ##
+            #     ## Sort ##
+            #     # Check whether worker types should be sorted
+            #     worker_type_order = np.mean(A1, axis=1).argsort()[0]
+            #     sort_worker_types = np.any(worker_type_order != np.arange(nl))
+            #     if sort_worker_types:
+            #         ### Sort parameters ###
+            #         A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
+            #         ### Sort XwX ###
+            #         XwX = np.diag(np.reshape(XwXd, (2, nl, nk))[:, worker_type_order, :].flatten())
+            #         ## Categorical ##
+            #         for col in cat_cols:
+            #             if cat_dict[col]['worker_type_interaction']:
+            #                 col_n = cat_dict[col]['n']
+            #                 XwX_cat[col] = np.diag(np.reshape(np.diag(XwX_cat[col]), (2, nl, col_n))[:, worker_type_order, :].flatten())
+            #         ## Continuous ##
+            #         for col in cts_cols:
+            #             if cts_dict[col]['worker_type_interaction']:
+            #                 XwX_cts[col] = np.diag(np.reshape(np.diag(XwX_cts[col]), (2, nl))[:, worker_type_order].flatten())
+            #     ## Normalize ##
+            #     # Find minimum firm type
+            #     min_firm_type = np.mean(A1, axis=0).argsort()[0]
+            #     A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat, min_firm_type)
+
             if params['update_s']:
                 # Next we extract the variances
                 if iter == 0:
@@ -1036,7 +1248,7 @@ class BLMModel:
                 ## Update S ##
                 for l in range(nl):
                     # Update A1_sum and A2_sum to account for worker-interaction terms
-                    A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, compute_S=False)
+                    A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
                     eps1_l_sq = (Y1_adj - A1_sum_l - A1[l, G1]) ** 2
                     eps2_l_sq = (Y2_adj - A2_sum_l - A2[l, G2]) ** 2
                     del A1_sum_l, A2_sum_l
@@ -1087,6 +1299,7 @@ class BLMModel:
                         print(f'Passing S1/S2: {e}')
                     # stop
                     pass
+
                 ## Categorical ##
                 for col in cat_cols:
                     try:
@@ -1109,6 +1322,7 @@ class BLMModel:
                             print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
                         # stop
                         pass
+
                 ## Continuous ##
                 for col in cts_cols:
                     try:
@@ -1131,6 +1345,17 @@ class BLMModel:
                         # stop
                         pass
 
+            if params['update_pk1']:
+                pk1 = GG12.T @ ((W1 + W2) * qi.T).T
+                # Add dirichlet prior
+                pk1 += d_prior - 1
+                # Normalize rows to sum to 1
+                pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
+
+            # if params['update_a'] and (len(cat_cols) > 0):
+            #     ## Sort parameters if normalizing (which happens when using categorical controls) ##
+            #     A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
+
             # print('A1 after:')
             # print(A1)
             # print('A2 after:')
@@ -1139,59 +1364,39 @@ class BLMModel:
             # print(S1)
             # print('S2 after:')
             # print(S2)
-            # print('A1_cat_wi after:')
-            # print(A1_cat_wi)
-            # print('A2_cat_wi after:')
-            # print(A2_cat_wi)
-            # print('S1_cat_wi after:')
-            # print(S1_cat_wi)
-            # print('S2_cat_wi after:')
-            # print(S2_cat_wi)
+            # print('A1_cat after:')
+            # print(A1_cat)
+            # print('A2_cat after:')
+            # print(A2_cat)
+            # print('S1_cat after:')
+            # print(S1_cat)
+            # print('S2_cat after:')
+            # print(S2_cat)
+            # print('A1_cts after:')
+            # print(A1_cts)
+            # print('A2_cts after:')
+            # print(A2_cts)
+            # print('S1_cts after:')
+            # print(S1_cts)
+            # print('S2_cts after:')
+            # print(S2_cts)
 
-            if params['update_pk1']:
-                pk1 = GG12.T @ ((W1 + W2) * qi.T).T
-                # Add dirichlet prior
-                pk1 += d_prior - 1
-                # Normalize rows to sum to 1
-                pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
+        if len(cat_cols) > 0:
+            ## Normalize ##
+            # NOTE: normalize here because constraints don't normalize unless categorical controls are using constraints, and even when used, constraints don't always normalize to exactly 0
+            # Find minimum firm type
+            min_firm_type = np.mean(A1, axis=0).argsort()[0]
+            A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat, min_firm_type)
 
+        ## Sort parameters ##
+        A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
+
+        # Store parameters
         self.A1, self.A2, self.S1, self.S2 = A1, A2, S1, S2
         self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat = A1_cat, A2_cat, S1_cat, S2_cat
         self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts = A1_cts, A2_cts, S1_cts, S2_cts
         self.pk1, self.lik1 = pk1, lik1
         self.liks1 = liks1 # np.concatenate([self.liks1, liks1])
-
-        # Sort parameters
-        self._sort_matrices()
-
-        if normalize and (len(cat_cols) > 0):
-            # Normalize lowest firm-worker pair to have effect 0 if there are categorical controls
-            min_firm_type = np.mean(self.A1 + self.A2, axis=0).argsort()[0]
-            cat_wi = False
-            if self.any_worker_type_interactions:
-                # Check if any categorical worker-type interactions
-                for col in cat_cols:
-                    if controls_dict[col]['worker_type_interaction']:
-                        cat_wi = True
-                        cat_col = col
-                        break
-            if cat_wi:
-                # If any categorical worker-type interactions
-                for l in range(nl):
-                    adj_val = (self.A1[l, min_firm_type] + self.A2[l, min_firm_type]) / 2
-                    self.A1[l, :] -= adj_val
-                    self.A2[l, :] -= adj_val
-                    self.A1_cat[cat_col][l, :] += adj_val
-                    self.A2_cat[cat_col][l, :] += adj_val
-                # Re-sort parameters (adjustments might re-order worker types)
-                self._sort_matrices()
-            else:
-                # If no categorical worker-type interactions
-                adj_val = (self.A1[0, min_firm_type] + self.A2[0, min_firm_type]) / 2
-                self.A1 -= adj_val
-                self.A2 -= adj_val
-                self.A1_cat[cat_cols[0]] += adj_val
-                self.A2_cat[cat_cols[0]] += adj_val
 
         # Update NNm
         if compute_NNm:
@@ -1275,21 +1480,21 @@ class BLMModel:
 
         if any_controls:
             ## Account for control variables ##
-            A1_sum, A2_sum, S1_sum_sq, S2_sum_sq = self._sum_by_non_nl(ni=ni, C1=C1, C2=C2)
+            A1_sum, A2_sum, S1_sum_sq, S2_sum_sq = self._sum_by_non_nl(ni=ni, C1=C1, C2=C2, A1_cat=self.A1_cat, A2_cat=self.A2_cat, S1_cat=self.S1_cat, S2_cat=self.S2_cat, A1_cts=self.A1_cts, A2_cts=self.A2_cts, S1_cts=self.S1_cts, S2_cts=self.S2_cts)
 
             for l in range(nl):
                 # Update A1_sum/S1_sum_sq to account for worker-interaction terms
-                A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2)
+                A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=self.A1_cat, A2_cat=self.A2_cat, S1_cat=self.S1_cat, S2_cat=self.S2_cat, A1_cts=self.A1_cts, A2_cts=self.A2_cts, S1_cts=self.S1_cts, S2_cts=self.S2_cts)
                 lp1 = lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
-                lp2 = lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
-                lp_stable[:, l] = lp1 + lp2
+                # lp2 = lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
+                lp_stable[:, l] = lp1 # + lp2
         else:
             for l in range(nl):
                 lp1 = lognormpdf(Y1, A1[l, G1], S1[l, G1])
-                lp2 = lognormpdf(Y2, A2[l, G2], S2[l, G2])
-                lp_stable[:, l] = lp1 + lp2
-        lp_stable = (lp_stable.T + np.log(W1) + np.log(W2)).T
-        del lp1, lp2
+                # lp2 = lognormpdf(Y2, A2[l, G2], S2[l, G2])
+                lp_stable[:, l] = lp1 # + lp2
+        lp_stable = (lp_stable.T + np.log(W1)).T # + np.log(W2)).T
+        del lp1 #, lp2
 
         for iter in range(params['n_iters_stayers']):
 
@@ -1314,7 +1519,7 @@ class BLMModel:
             prev_lik = lik0
 
             # ---------- M-step ----------
-            pk0 = GG1.T @ ((W1 + W2) * qi.T).T
+            pk0 = GG1.T @ (W1 * qi.T).T # ((W1 + W2) * qi.T).T
             # Add dirichlet prior
             pk0 += d_prior - 1
             # Normalize rows to sum to 1
@@ -1329,13 +1534,12 @@ class BLMModel:
             NNs.sort_index(inplace=True)
             self.NNs = NNs.to_numpy()
 
-    def fit_movers_cstr_uncstr(self, jdata, normalize=True, compute_NNm=True):
+    def fit_movers_cstr_uncstr(self, jdata, compute_NNm=True):
         '''
         Run fit_movers(), first constrained, then using results as starting values, run unconstrained.
 
         Arguments:
             jdata (BipartitePandas DataFrame): movers
-            normalize (bool): if True and using categorical controls, normalize the lowest firm-worker pair to have effect 0
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         ## First, simulate parameters but keep A fixed ##
@@ -1350,7 +1554,7 @@ class BLMModel:
         self.params['update_pk1'] = True
         if self.params['verbose'] in [1, 2]:
             print('Fitting movers with A fixed')
-        self.fit_movers(jdata, normalize=False, compute_NNm=False)
+        self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 2 #####
         # Now update A
         self.params['update_a'] = True
@@ -1359,13 +1563,13 @@ class BLMModel:
             self.params['cons_a_all'] = cons.Linear()
             if self.params['verbose'] in [1, 2]:
                 print('Fitting movers with linear constraint on A')
-            self.fit_movers(jdata, normalize=False, compute_NNm=False)
+            self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 3 #####
         # Remove constraints
         self.params['cons_a_all'] = None
         if self.params['verbose'] in [1, 2]:
             print('Fitting unconstrained movers')
-        self.fit_movers(jdata, normalize=normalize, compute_NNm=compute_NNm)
+        self.fit_movers(jdata, compute_NNm=compute_NNm)
         ##### Compute connectedness #####
         if not pd.isna(self.pk1).any():
             self.compute_connectedness_measure()
@@ -1437,131 +1641,107 @@ class BLMModel:
         # Restore original parameters
         self.params = user_params
 
-    def _sort_matrices(self, firm_effects=False, reverse=False):
+    def _sort_parameters(self, A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0, firm_types=False, reverse=False):
         '''
-        Sort arrays by cluster means.
+        Sort parameters by worker type order (and optionally firm type order).
 
         Arguments:
-            firm_effects (bool): if True, also sort by average firm effect
+            A1 (NumPy Array): mean of fixed effects in the first period
+            A2 (NumPy Array): mean of fixed effects in the second period
+            S1 (NumPy Array): standard deviation of fixed effects in the first period
+            S2 (NumPy Array): standard deviation of fixed effects in the second period
+            A1_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the first period for categorical control variables
+            A2_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the second period for categorical control variables
+            S1_cat (dict of NumPy Arrays): dictionary linking column names to the standard deviation of fixed effects in the first period for categorical control variables
+            S2_cat (dict of NumPy Arrays): dictionary linking column names to the standard deviation of fixed effects in the second period for categorical control variables
+            A1_cts (dict of NumPy Arrays): dictionary linking column names to the mean of coefficients in the first period for continuous control variables
+            A2_cts (dict of NumPy Arrays): dictionary linking column names to the mean of coefficients in the second period for continuous control variables
+            S1_cts (dict of NumPy Arrays): dictionary linking column names to the standard deviation of coefficients in the first period for continuous control variables
+            S2_cts (dict of NumPy Arrays): dictionary linking column names to the standard deviation of coefficients in the second period for continuous control variables
+            pk1 (NumPy Array): probability of being at each combination of firm types for movers
+            pk0 (NumPy Array): probability of being at each firm type for stayers
+            firm_types (bool): if True, also sort by firm type order
             reverse (bool): if True, sort in reverse order
+
+        Returns (tuple of NumPy Arrays and dicts of NumPy Arrays): sorted parameters (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0)
         '''
-        nk = self.nk
+        # Copy parameters
+        A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0 = copy.deepcopy((A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0))
+        # Unpack attributes
+        nl, nk = self.nl, self.nk
         controls_dict = self.controls_dict
-        ## Compute sum of all effects ##
-        A_sum = self.A1 + self.A2
-        for control_dict in (self.A1_cat, self.A2_cat):
-            for control_col, control_array in control_dict.items():
-                if controls_dict[control_col]['worker_type_interaction']:
-                    A_sum = (A_sum.T + np.mean(control_array, axis=1)).T
-        ## Sort worker effects ##
-        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
+        # ## Compute sum of all effects ##
+        # A_sum = self.A1 + self.A2
+        # for control_dict in (self.A1_cat, self.A2_cat):
+        #     for control_col, control_array in control_dict.items():
+        #         if controls_dict[control_col]['worker_type_interaction']:
+        #             A_sum = (A_sum.T + np.mean(control_array, axis=1)).T
+        ## Sort worker types ##
+        worker_type_order = np.mean(A1, axis=1).argsort()
         if reverse:
-            worker_effect_order = list(reversed(worker_effect_order))
-        self.A1 = self.A1[worker_effect_order, :]
-        self.A2 = self.A2[worker_effect_order, :]
-        self.S1 = self.S1[worker_effect_order, :]
-        self.S2 = self.S2[worker_effect_order, :]
-        self.pk1 = self.pk1[:, worker_effect_order]
-        self.pk0 = self.pk0[:, worker_effect_order]
-        # Sort control variables #
-        for control_dict in (self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat):
-            for control_col, control_array in control_dict.items():
-                if controls_dict[control_col]['worker_type_interaction']:
-                    control_dict[control_col] = control_array[worker_effect_order, :]
-        for control_dict in (self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts):
-            for control_col, control_array in control_dict.items():
-                if controls_dict[control_col]['worker_type_interaction']:
-                    control_dict[control_col] = control_array[worker_effect_order]
+            worker_type_order = list(reversed(worker_type_order))
+        if np.any(worker_type_order != np.arange(nl)):
+            # Sort if out of order
+            A1 = A1[worker_type_order, :]
+            A2 = A2[worker_type_order, :]
+            S1 = S1[worker_type_order, :]
+            S2 = S2[worker_type_order, :]
+            pk1 = pk1[:, worker_type_order]
+            pk0 = pk0[:, worker_type_order]
+            # Sort control variables #
+            for control_dict in (A1_cat, A2_cat, S1_cat, S2_cat):
+                for control_col, control_array in control_dict.items():
+                    if controls_dict[control_col]['worker_type_interaction']:
+                        control_dict[control_col] = control_array[worker_type_order, :]
+            for control_dict in (A1_cts, A2_cts, S1_cts, S2_cts):
+                for control_col, control_array in control_dict.items():
+                    if controls_dict[control_col]['worker_type_interaction']:
+                        control_dict[control_col] = control_array[worker_type_order]
 
-        if firm_effects:
-            ## Sort firm effects ##
-            firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
+        if firm_types:
+            ## Sort firm types ##
+            firm_type_order = np.mean(A1, axis=0).argsort()
             if reverse:
-                firm_effect_order = list(reversed(firm_effect_order))
-            self.A1 = self.A1[:, firm_effect_order]
-            self.A2 = self.A2[:, firm_effect_order]
-            self.S1 = self.S1[:, firm_effect_order]
-            self.S2 = self.S2[:, firm_effect_order]
-            self.pk0 = self.pk0[firm_effect_order, :]
-            # Reorder part 1: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 1, 0, 3, 2 (i.e. reorder within groups)
-            pk1_order_1 = np.tile(firm_effect_order, nk) + nk * np.repeat(range(nk), nk)
-            self.pk1 = self.pk1[pk1_order_1, :]
-            # Reorder part 2: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 2, 3, 0, 1 (i.e. reorder between groups)
-            pk1_order_2 = nk * np.repeat(firm_effect_order, nk) + np.tile(range(nk), nk)
-            self.pk1 = self.pk1[pk1_order_2, :]
+                firm_type_order = list(reversed(firm_type_order))
+            if np.any(firm_type_order != np.arange(nk)):
+                # Sort if out of order
+                A1 = A1[:, firm_type_order]
+                A2 = A2[:, firm_type_order]
+                S1 = S1[:, firm_type_order]
+                S2 = S2[:, firm_type_order]
+                pk0 = pk0[firm_type_order, :]
+                adj_pk1 = np.reshape(pk1, (nk, nk, nl))
+                adj_pk1 = adj_pk1[firm_type_order, :, :]
+                adj_pk1 = adj_pk1[:, firm_type_order, :]
+                pk1 = np.reshape(adj_pk1, (nk * nk, nl))
 
-    def plot_A1(self, grid=True, dpi=None):
-        '''
-        Plot A1 (log-earnings in first period) by worker-firm type pairs.
+        return (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0)
 
-        Arguments:
-            grid (bool): if True, plot grid
-            dpi (float or None): dpi for plot
-        '''
-        # Sort effects to be increasing in worker and firm type
-        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
-        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
-        A1 = self.A1[worker_effect_order, :]
-        A1 = A1[:, firm_effect_order]
-
-        # Plot
-        if dpi is not None:
-            plt.figure(dpi=dpi)
-        x_axis = np.arange(1, self.nk + 1)
-        for l in range(self.nl):
-            plt.plot(x_axis, A1[l, :])
-        plt.legend()
-        plt.xlabel('firm class k')
-        plt.ylabel('log-earnings in first period')
-        plt.xticks(x_axis)
-        if grid:
-            plt.grid()
-        plt.show()
-
-    def plot_A2(self, grid=True, dpi=None):
-        '''
-        Plot A2 (log-earnings in second period) by worker-firm type pairs.
-
-        Arguments:
-            grid (bool): if True, plot grid
-            dpi (float or None): dpi for plot
-        '''
-        # Sort effects to be increasing in worker and firm type
-        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
-        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
-        A2 = self.A2[worker_effect_order, :]
-        A2 = A2[:, firm_effect_order]
-
-        # Plot
-        if dpi is not None:
-            plt.figure(dpi=dpi)
-        x_axis = np.arange(1, self.nk + 1)
-        for l in range(self.nl):
-            plt.plot(x_axis, A2[l, :])
-        plt.legend()
-        plt.xlabel('firm class k')
-        plt.ylabel('log-earnings in second period')
-        plt.xticks(x_axis)
-        if grid:
-            plt.grid()
-        plt.show()
-
-    def plot_log_earnings(self, grid=True, dpi=None):
+    def plot_log_earnings(self, period='first', grid=True, dpi=None):
         '''
         Plot log-earnings by worker-firm type pairs.
 
         Arguments:
+            period (str): 'first' plots log-earnings in the first period; 'second' plots log-earnings in the second period; 'all' plots the average over log-earnings in the first and second periods
             grid (bool): if True, plot grid
             dpi (float or None): dpi for plot
         '''
         nl, nk = self.nl, self.nk
 
-        # Compute average log-earnings # FIXME should the mean account for the log?
-        A_mean = (self.A1 + self.A2) / 2 # np.log((np.exp(self.A1) + np.exp(self.A2)) / 2)
+        # Compute average log-earnings
+        if period == 'first':
+            A_mean = self.A1
+        elif period == 'second':
+            A_mean = self.A2
+        elif period == 'all':
+            # FIXME should the mean account for the log?
+            A_mean = (self.A1 + self.A2) / 2 # np.log((np.exp(self.A1) + np.exp(self.A2)) / 2)
+        else:
+            raise ValueError(f"`period` must be one of 'first', 'second' or 'all', but input specifies {period!r}.")
 
-        # Sort effects to be increasing in worker and firm type
-        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
-        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
+        # Sort effects to be increasing in worker and firm type (use A1 to determine order)
+        worker_effect_order = np.mean(self.A1, axis=1).argsort()
+        firm_effect_order = np.mean(self.A1, axis=0).argsort()
         A_mean = A_mean[worker_effect_order, :]
         A_mean = A_mean[:, firm_effect_order]
 
@@ -1578,121 +1758,52 @@ class BLMModel:
             plt.grid()
         plt.show()
 
-    def plot_pk1_1(self, dpi=None):
-        '''
-        Plot pk1 (proportions of worker types at each firm class for movers) in the first period.
-
-        Arguments:
-            dpi (float or None): dpi for plot
-        '''
-        nl, nk = self.nl, self.nk
-
-        # Generate type proportions
-        reshaped_pk1 = np.reshape(self.pk1, (nk, nk, nl))
-        pk1_mean = np.mean(reshaped_pk1, axis=1)
-
-        # Sort effects to be increasing in worker and firm type
-        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
-        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
-        sorted_pk1_mean = pk1_mean.T[worker_effect_order, :]
-        sorted_pk1_mean = sorted_pk1_mean[:, firm_effect_order]
-        pk1_cumsum = np.cumsum(sorted_pk1_mean, axis=0)
-
-        # Plot
-        fig, ax = plt.subplots(dpi=dpi)
-        x_axis = np.arange(1, nk + 1).astype(str)
-        ax.bar(x_axis, pk1_mean.T[0, :])
-        for l in range(1, nl):
-            ax.bar(x_axis, sorted_pk1_mean[l, :], bottom=pk1_cumsum[l - 1, :])
-        ax.set_xlabel('firm class k')
-        ax.set_ylabel('type proportions')
-        ax.set_title('Proportions of worker types')
-        plt.show()
-
-    def plot_pk1_2(self, dpi=None):
-        '''
-        Plot pk1 (proportions of worker types at each firm class for movers) in the second period.
-
-        Arguments:
-            dpi (float or None): dpi for plot
-        '''
-        nl, nk = self.nl, self.nk
-
-        # Generate type proportions
-        reshaped_pk1 = np.reshape(self.pk1, (nk, nk, nl))
-        pk1_mean = np.mean(reshaped_pk1, axis=0)
-
-        # Sort effects to be increasing in worker and firm type
-        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
-        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
-        sorted_pk1_mean = pk1_mean.T[worker_effect_order, :]
-        sorted_pk1_mean = sorted_pk1_mean[:, firm_effect_order]
-        pk1_cumsum = np.cumsum(sorted_pk1_mean, axis=0)
-
-        # Plot
-        fig, ax = plt.subplots(dpi=dpi)
-        x_axis = np.arange(1, nk + 1).astype(str)
-        ax.bar(x_axis, pk1_mean.T[0, :])
-        for l in range(1, nl):
-            ax.bar(x_axis, sorted_pk1_mean[l, :], bottom=pk1_cumsum[l - 1, :])
-        ax.set_xlabel('firm class k')
-        ax.set_ylabel('type proportions')
-        ax.set_title('Proportions of worker types')
-        plt.show()
-
-    def plot_pk0(self, dpi=None):
-        '''
-        Plot pk0 (proportions of worker types at each firm class for stayers).
-
-        Arguments:
-            dpi (float or None): dpi for plot
-        '''
-        nl, nk = self.nl, self.nk
-
-        # Sort effects to be increasing in worker and firm type
-        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
-        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
-        sorted_pk0 = self.pk0.T[worker_effect_order, :]
-        sorted_pk0 = sorted_pk0[:, firm_effect_order]
-
-        # Generate type proportions
-        pk0_cumsum = np.cumsum(sorted_pk0, axis=0)
-
-        # Plot
-        fig, ax = plt.subplots(dpi=dpi)
-        x_axis = np.arange(1, nk + 1).astype(str)
-        ax.bar(x_axis, sorted_pk0[0, :])
-        for l in range(1, nl):
-            ax.bar(x_axis, sorted_pk0[l, :], bottom=pk0_cumsum[l - 1, :])
-        ax.set_xlabel('firm class k')
-        ax.set_ylabel('type proportions')
-        ax.set_title('Proportions of worker types')
-        plt.show()
-
-    def plot_type_proportions(self, dpi=None):
+    def plot_type_proportions(self, period='first', subset='all', dpi=None):
         '''
         Plot proportions of worker types at each firm class.
 
         Arguments:
+            period (str): 'first' plots type proportions in the first period; 'second' plots type proportions in the second period; 'all' plots the average over type proportions in the first and second periods
+            subset (str): 'all' plots a weighted average over movers and stayers; 'movers' plots movers; 'stayers' plots stayers
             dpi (float or None): dpi for plot
         '''
         nl, nk = self.nl, self.nk
 
-        ## Generate type proportions ##
-        # First, pk1 #
-        reshaped_pk1 = np.reshape(self.pk1, (nk, nk, nl))
-        pk1_period1 = np.mean(reshaped_pk1, axis=1)
-        pk1_period2 = np.mean(reshaped_pk1, axis=0)
-        pk1_mean = (pk1_period1 + pk1_period2) / 2
-        # Second, take mean over pk1 and pk0 #
-        nm = np.sum(self.NNm)
-        ns = np.sum(self.NNs)
-        # Multiply nm by 2 because each mover has observations in the first and second periods
-        pk_mean = (2 * nm * pk1_mean + ns * self.pk0) / (2 * nm + ns)
+        ## Extract subset(s) ##
+        if subset == 'movers':
+            reshaped_pk1 = np.reshape(self.pk1, (nk, nk, nl))
+            pk_period1 = np.mean(reshaped_pk1, axis=1)
+            pk_period2 = np.mean(reshaped_pk1, axis=0)
+        elif subset == 'stayers':
+            pk_period1 = self.pk0
+            pk_period2 = self.pk0
+        elif subset == 'all':
+            # First, pk1 #
+            reshaped_pk1 = np.reshape(self.pk1, (nk, nk, nl))
+            pk1_period1 = np.mean(reshaped_pk1, axis=1)
+            pk1_period2 = np.mean(reshaped_pk1, axis=0)
+            # Second, take weighted average over pk1 and pk0 #
+            nm = np.sum(self.NNm)
+            ns = np.sum(self.NNs)
+            # Multiply nm by 2 because each mover has observations in the first and second periods
+            pk_period1 = (2 * nm * pk1_period1 + ns * self.pk0) / (2 * nm + ns)
+            pk_period2 = (2 * nm * pk1_period2 + ns * self.pk0) / (2 * nm + ns)
+        else:
+            raise ValueError(f"`subset` must be one of 'all', 'movers' or 'stayers', but input specifies {subset!r}.")
 
-        # Sort effects to be increasing in worker and firm type
-        worker_effect_order = np.mean(self.A1 + self.A2, axis=1).argsort()
-        firm_effect_order = np.mean(self.A1 + self.A2, axis=0).argsort()
+        ## Consider correct period(s) ##
+        if period == 'first':
+            pk_mean = pk_period1
+        elif period == 'second':
+            pk_mean = pk_period2
+        elif period == 'all':
+            pk_mean = (pk_period1 + pk_period2) / 2
+        else:
+            raise ValueError(f"`period` must be one of 'first', 'second' or 'all', but input specifies {period!r}.")
+
+        ## Sort effects to be increasing in worker and firm type (use A1 to determine order) ##
+        worker_effect_order = np.mean(self.A1, axis=1).argsort()
+        firm_effect_order = np.mean(self.A1, axis=0).argsort()
         sorted_pk_mean = pk_mean.T[worker_effect_order, :]
         sorted_pk_mean = sorted_pk_mean[:, firm_effect_order]
         pk_cumsum = np.cumsum(sorted_pk_mean, axis=0)
@@ -1729,23 +1840,22 @@ class BLMEstimator:
         self.connectedness_high = None
         self.connectedness_low = None
 
-    def _sim_model(self, jdata, normalize=True, rng=None):
+    def _sim_model(self, jdata, rng=None):
         '''
         Generate model and run fit_movers_cstr_uncstr() given parameters.
 
         Arguments:
             jdata (BipartitePandas DataFrame): movers
-            normalize (bool): if True and using categorical controls, normalize the lowest firm-worker pair to have effect 0
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
         if rng is None:
             rng = np.random.default_rng(None)
 
         model = BLMModel(self.params.copy(), rng)
-        model.fit_movers_cstr_uncstr(jdata, normalize=normalize)
+        model.fit_movers_cstr_uncstr(jdata)
         return model
 
-    def fit(self, jdata, sdata, n_init=20, n_best=5, normalize=True, ncore=1, rng=None):
+    def fit(self, jdata, sdata, n_init=20, n_best=5, ncore=1, rng=None):
         '''
         EM model for movers and stayers.
 
@@ -1754,7 +1864,6 @@ class BLMEstimator:
             sdata (BipartitePandas DataFrame): stayers
             n_init (int): number of starting values
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness
-            normalize (bool): if True and using categorical controls, normalize the lowest firm-worker pair to have effect 0
             ncore (int): number of cores for multiprocessing
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
@@ -1767,10 +1876,10 @@ class BLMEstimator:
         if ncore > 1:
             # Multiprocessing
             with Pool(processes=ncore) as pool:
-                sim_model_lst = pool.starmap(self._sim_model, tqdm([(jdata, normalize, np.random.default_rng(seed)) for seed in seeds], total=n_init))
+                sim_model_lst = pool.starmap(self._sim_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
         else:
             # No multiprocessing
-            sim_model_lst = itertools.starmap(self._sim_model, tqdm([(jdata, normalize, np.random.default_rng(seed)) for seed in seeds], total=n_init))
+            sim_model_lst = itertools.starmap(self._sim_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
 
         # Sort by likelihoods FIXME better handling if connectedness is None
         sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst if model.connectedness is not None], reverse=True, key=lambda a: a[0])
@@ -1809,90 +1918,31 @@ class BLMEstimator:
             print('Running stayers')
         self.model.fit_stayers(sdata)
 
-    def plot_A1(self, grid=True, dpi=None):
-        '''
-        Plot A1 (log-earnings in first period) by worker-firm type pairs.
-
-        Arguments:
-            grid (bool): if True, plot grid
-            dpi (float or None): dpi for plot
-        '''
-        if self.model is not None:
-            self.model.plot_A1(grid=grid, dpi=dpi)
-        else:
-            warnings.warn('Estimation has not yet been run.')
-
-    def plot_A2(self, grid=True, dpi=None):
-        '''
-        Plot A2 (log-earnings in second period) by worker-firm type pairs.
-
-        Arguments:
-            grid (bool): if True, plot grid
-            dpi (float or None): dpi for plot
-        '''
-        if self.model is not None:
-            self.model.plot_A2(grid=grid, dpi=dpi)
-        else:
-            warnings.warn('Estimation has not yet been run.')
-
-    def plot_log_earnings(self, grid=True, dpi=None):
+    def plot_log_earnings(self, period='first', grid=True, dpi=None):
         '''
         Plot log-earnings by worker-firm type pairs.
 
         Arguments:
+            period (str): 'first' plots log-earnings in the first period; 'second' plots log-earnings in the second period; 'all' plots the average over log-earnings in the first and second periods
             grid (bool): if True, plot grid
             dpi (float or None): dpi for plot
         '''
         if self.model is not None:
-            self.model.plot_log_earnings(grid=grid, dpi=dpi)
+            self.model.plot_log_earnings(period=period, grid=grid, dpi=dpi)
         else:
             warnings.warn('Estimation has not yet been run.')
 
-    def plot_pk1_1(self, dpi=None):
-        '''
-        Plot pk1 (proportions of worker types at each firm class for movers) in the first period.
-
-        Arguments:
-            dpi (float or None): dpi for plot
-        '''
-        if self.model is not None:
-            self.model.plot_pk1_1(dpi=dpi)
-        else:
-            warnings.warn('Estimation has not yet been run.')
-
-    def plot_pk1_2(self, dpi=None):
-        '''
-        Plot pk1 (proportions of worker types at each firm class for movers) in the second period.
-
-        Arguments:
-            dpi (float or None): dpi for plot
-        '''
-        if self.model is not None:
-            self.model.plot_pk1_2(dpi=dpi)
-        else:
-            warnings.warn('Estimation has not yet been run.')
-
-    def plot_pk0(self, dpi=None):
-        '''
-        Plot pk0 (proportions of worker types at each firm class for stayers).
-
-        Arguments:
-            dpi (float or None): dpi for plot
-        '''
-        if self.model is not None:
-            self.model.plot_pk0(dpi=dpi)
-        else:
-            warnings.warn('Estimation has not yet been run.')
-
-    def plot_type_proportions(self, dpi=None):
+    def plot_type_proportions(self, period='first', subset='all', dpi=None):
         '''
         Plot proportions of worker types at each firm class.
 
         Arguments:
+            period (str): 'first' plots type proportions in the first period; 'second' plots type proportions in the second period; 'all' plots the average over type proportions in the first and second periods
+            subset (str): 'all' plots a weighted average over movers and stayers; 'movers' plots movers; 'stayers' plots stayers
             dpi (float or None): dpi for plot
         '''
         if self.model is not None:
-            self.model.plot_type_proportions(dpi)
+            self.model.plot_type_proportions(period=period, subset=subset, dpi=dpi)
         else:
             warnings.warn('Estimation has not yet been run.')
 
@@ -1940,7 +1990,7 @@ class BLMBootstrap:
         # No initial models
         self.models = None
 
-    def fit(self, jdata, sdata, n_samples=5, frac_movers=0.1, frac_stayers=0.1, n_init_estimator=20, n_best=5, normalize=True, ncore=1, rng=None):
+    def fit(self, jdata, sdata, n_samples=5, frac_movers=0.1, frac_stayers=0.1, n_init_estimator=20, n_best=5, ncore=1, rng=None):
         '''
         EM model for movers and stayers.
 
@@ -1952,7 +2002,6 @@ class BLMBootstrap:
             frac_stayers (float): fraction of stayers to draw (with replacement) for each bootstrap sample
             n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
-            normalize (bool): if True and using categorical controls, normalize the lowest firm-worker pair to have effect 0
             ncore (int): number of cores for multiprocessing
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
@@ -1971,72 +2020,9 @@ class BLMBootstrap:
             jdata_i = jdata.sample(frac=frac_movers, replace=True, weights=wj, random_state=rng)
             sdata_i = sdata.sample(frac=frac_stayers, replace=True, weights=ws, random_state=rng)
             blm_fit_i = BLMEstimator(self.params)
-            # Set normalize=False, because want to make sure the same firm type is always normalized - normalize manually later
-            blm_fit_i.fit(jdata=jdata_i, sdata=sdata_i, n_init=n_init_estimator, n_best=n_best, normalize=False, ncore=ncore, rng=rng)
+            blm_fit_i.fit(jdata=jdata_i, sdata=sdata_i, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
             models.append(blm_fit_i.model)
             del jdata_i, sdata_i, blm_fit_i
-
-        cat_cols = models[0].cat_cols
-        if normalize and (len(cat_cols) > 0):
-            # Normalize lowest firm-worker pair to have effect 0 if there are categorical controls
-            nl, nk = self.params.get_multiple(('nl', 'nk'))
-
-            ## Start by normalizing firm type 0 ##
-            min_firm_type_1 = 0
-
-            cat_wi = False
-            if models[0].any_worker_type_interactions:
-                # Check if any categorical worker-type interactions
-                for col in cat_cols:
-                    if models[0].controls_dict[col]['worker_type_interaction']:
-                        cat_wi = True
-                        cat_col = col
-                        break
-            if cat_wi:
-                # If any categorical worker-type interactions
-                for model in models:
-                    for l in range(nl):
-                        adj_val = (model.A1[l, min_firm_type_1] + model.A2[l, min_firm_type_1]) / 2
-                        model.A1[l, :] -= adj_val
-                        model.A2[l, :] -= adj_val
-                        model.A1_cat[cat_col][l, :] += adj_val
-                        model.A2_cat[cat_col][l, :] += adj_val
-                    # Re-sort parameters (adjustments might re-order worker types)
-                    model._sort_matrices()
-            else:
-                # If no categorical worker-type interactions
-                for model in models:
-                    adj_val = (model.A1[0, min_firm_type_1] + model.A2[0, min_firm_type_1]) / 2
-                    model.A1 -= adj_val
-                    model.A2 -= adj_val
-                    model.A1_cat[cat_cols[0]] += adj_val
-                    model.A2_cat[cat_cols[0]] += adj_val
-
-            ## Check if normalizing changed the lowest firm-worker pair ##
-            A_means = np.zeros((n_samples, nl, nk))
-            for i, model in enumerate(models):
-                A_means[i, :, :] = (model.A1 + model.A2) / 2 # np.log((np.exp(model.A1) + np.exp(model.A2)) / 2)
-            A_means_mean = np.mean(A_means, axis=0)
-
-            min_firm_type_2 = np.mean(A_means_mean, axis=0).argsort()[0]
-            if min_firm_type_2 != min_firm_type_1:
-                if cat_wi:
-                    # If any categorical worker-type interactions
-                    for model in models:
-                        for l in range(nl):
-                            adj_val = (model.A1[l, min_firm_type_2] + model.A2[l, min_firm_type_2]) / 2
-                            model.A1[l, :] -= adj_val
-                            model.A2[l, :] -= adj_val
-                            model.A1_cat[cat_col][l, :] += adj_val
-                            model.A2_cat[cat_col][l, :] += adj_val
-                else:
-                    # If no categorical worker-type interactions
-                    for model in models:
-                        adj_val = (model.A1[0, min_firm_type_2] + model.A2[0, min_firm_type_2]) / 2
-                        model.A1 -= adj_val
-                        model.A2 -= adj_val
-                        model.A1_cat[cat_cols[0]] += adj_val
-                        model.A2_cat[cat_cols[0]] += adj_val
 
         self.models = models
 

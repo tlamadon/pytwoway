@@ -341,16 +341,16 @@ class SimBLM:
                 A1[l] = np.sort(A1[l], axis=0)
                 A2[l] = np.sort(A2[l], axis=0)
 
-        A_sum = A1 + A2
+        # A_sum = A1 + A2
 
         ## Sort worker effects ##
-        worker_effect_order = np.mean(A_sum, axis=1).argsort()
+        worker_effect_order = np.mean(A1, axis=1).argsort()
         A1 = A1[worker_effect_order, :]
         A2 = A2[worker_effect_order, :]
 
         if not strictly_monotone_a:
             ## Sort firm effects ##
-            firm_effect_order = np.mean(A_sum, axis=0).argsort()
+            firm_effect_order = np.mean(A1, axis=0).argsort()
             A1 = A1[:, firm_effect_order]
             A2 = A2[:, firm_effect_order]
 

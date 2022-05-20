@@ -209,7 +209,7 @@ class Linear():
         Returns:
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        nt, nnt = self.nt, self.nnt
+        nnt, nt = self.nnt, self.nt
         A = np.zeros(shape=(nnt * (nl - 2) * nk, nt * nl * nk))
         for period in range(nnt):
             row_shift = period * (nl - 2) * nk
@@ -252,7 +252,7 @@ class Monotonic():
         Returns:
             (dict of NumPy Arrays): {'G': G, 'h': h, 'A': None, 'b': None}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        nt, md, increasing = self.nt, self.md, self.increasing
+        md, increasing, nt = self.md, self.increasing, self.nt
         G = np.zeros(shape=(nt * (nl - 1) * nk, nt * nl * nk))
         for period in range(nt):
             row_shift = period * (nl - 1) * nk
@@ -263,6 +263,56 @@ class Monotonic():
                     G[row_shift + l, col_shift + nk * (l + 1)] = -1
                 row_shift += (nl - 1)
                 col_shift += 1
+
+        h = - md * np.ones(shape=G.shape[0])
+
+        if not increasing:
+            G *= -1
+
+        return {'G': G, 'h': h, 'A': None, 'b': None}
+
+class MonotonicMean():
+    '''
+    Generate BLM constraints so that the mean of worker types effects over all firm types must increase (or decrease) monotonically.
+
+    Arguments:
+        md (float): minimum difference between consecutive types
+        increasing (bool): if True, monotonic increasing; if False, monotonic decreasing
+        nnt (list of ints or None): time periods to constrain; None is equivalent to range(nt)
+        nt (int): number of time periods
+    '''
+
+    def __init__(self, md=0, increasing=True, nnt=None, nt=2):
+        self.md = md
+        self.increasing = increasing
+        if nnt is None:
+            self.nnt = range(nt)
+        else:
+            self.nnt = nnt
+        self.nt = nt
+
+    def _get_constraints(self, nl, nk):
+        '''
+        Generate constraint arrays.
+
+        Arguments:
+            nl (int): number of worker types
+            nk (int): number of firm types
+
+        Returns:
+            (dict of NumPy Arrays): {'G': G, 'h': h, 'A': None, 'b': None}, where G, h, A, and b are defined in the quadratic programming model
+        '''
+        md, increasing, nnt, nt = self.md, self.increasing, self.nnt, self.nt
+        G = np.zeros(shape=(len(nnt) * (nl - 1), nt * nl * nk))
+        for i, period in enumerate(nnt):
+            row_shift = i * (nl - 1)
+            col_shift = period * nl * nk
+            for k in range(nk):
+                # Iterate over firm types
+                for l in range(nl - 1):
+                    # For a fixed firm type, consider consecutive worker types
+                    G[row_shift + l, period * nl * nk + k + l * nk] = 1 / nk
+                    G[row_shift + l, period * nl * nk + k + (l + 1) * nk] = - (1 / nk)
 
         h = - md * np.ones(shape=G.shape[0])
 
@@ -304,6 +354,83 @@ class NoWorkerTypeInteraction():
                     A[row_shift + l, col_shift + nk * (l + 1)] = -1
                 row_shift += (nl - 1)
                 col_shift += 1
+
+        b = - np.zeros(shape=A.shape[0])
+
+        return {'G': None, 'h': None, 'A': A, 'b': b}
+
+class NormalizeSingle():
+    '''
+    Generate BLM constraints so that the lowest worker-firm type pair has effect 0.
+
+    Arguments:
+        min_firm_type (int): lowest firm type
+        nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
+        nt (int): number of time periods
+    '''
+
+    def __init__(self, min_firm_type, nnt=None, nt=2):
+        self.min_firm_type = min_firm_type
+        if nnt is None:
+            self.nnt = range(nt)
+        else:
+            self.nnt = to_list(nnt)
+        self.nt = nt
+
+    def _get_constraints(self, nl, nk):
+        '''
+        Generate constraint arrays.
+
+        Arguments:
+            nl (int): number of worker types
+            nk (int): number of firm types
+
+        Returns:
+            (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
+        '''
+        nnt, nt = self.nnt, self.nt
+        A = np.zeros(shape=(len(nnt), nt * nl * nk))
+        for i, period in enumerate(nnt):
+            A[i, period * nl * nk + self.min_firm_type] = 1
+
+        b = - np.zeros(shape=A.shape[0])
+
+        return {'G': None, 'h': None, 'A': A, 'b': b}
+
+class NormalizeAll():
+    '''
+    Generate BLM constraints so that all worker-firm type pairs that include the lowest firm type have effect 0.
+
+    Arguments:
+        min_firm_type (int): lowest firm type
+        nnt (list of ints or None): time periods to constrain; None is equivalent to range(nt)
+        nt (int): number of time periods
+    '''
+
+    def __init__(self, min_firm_type, nnt=None, nt=2):
+        self.min_firm_type = min_firm_type
+        if nnt is None:
+            self.nnt = range(nt)
+        else:
+            self.nnt = nnt
+        self.nt = nt
+
+    def _get_constraints(self, nl, nk):
+        '''
+        Generate constraint arrays.
+
+        Arguments:
+            nl (int): number of worker types
+            nk (int): number of firm types
+
+        Returns:
+            (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
+        '''
+        nnt, nt = self.nnt, self.nt
+        A = np.zeros(shape=(len(nnt) * nl, nt * nl * nk))
+        for i, period in enumerate(nnt):
+            for l in range(nl):
+                A[i * nl + l, period * nl * nk + l * nk + self.min_firm_type] = 1
 
         b = - np.zeros(shape=A.shape[0])
 
