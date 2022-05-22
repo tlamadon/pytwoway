@@ -511,9 +511,9 @@ class SimBLM:
 
         Y1 = np.zeros(shape=nmi)
         Y2 = np.zeros(shape=nmi)
-        G1 = np.zeros(shape=nmi).astype(int, copy=False)
-        G2 = np.zeros(shape=nmi).astype(int, copy=False)
-        L = np.zeros(shape=nmi).astype(int, copy=False)
+        G1 = np.zeros(shape=nmi, dtype=int)
+        G2 = np.zeros(shape=nmi, dtype=int)
+        L = np.zeros(shape=nmi, dtype=int)
 
         # Worker types
         worker_types = np.arange(nl)
@@ -634,8 +634,8 @@ class SimBLM:
 
         Y1 = np.zeros(shape=nsi)
         Y2 = np.zeros(shape=nsi)
-        G = np.zeros(shape=nsi).astype(int, copy=False)
-        L = np.zeros(shape=nsi).astype(int, copy=False)
+        G = np.zeros(shape=nsi, dtype=int)
+        L = np.zeros(shape=nsi, dtype=int)
 
         # Worker types
         worker_types = np.arange(nl)

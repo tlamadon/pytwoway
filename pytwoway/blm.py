@@ -13,6 +13,7 @@ from scipy.sparse import csc_matrix, diags
 from matplotlib import pyplot as plt
 from pytwoway import jitter_scatter
 from pytwoway import constraints as cons
+import bipartitepandas as bpd
 from bipartitepandas.util import ParamsDict, to_list # , _is_subtype
 
 # NOTE: multiprocessing isn't compatible with lambda functions
@@ -307,8 +308,161 @@ def continuous_control_params(update_dict=None):
         new_dict.update(update_dict)
     return new_dict
 
-def lognormpdf(x, mu, sd):
+def _lognormpdf(x, mu, sd):
     return - 0.5 * np.log(2 * np.pi) - np.log(sd) - (x - mu) ** 2 / (2 * sd ** 2)
+
+def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, rng=None):
+    '''
+    Using data and estimated BLM parameters, simulate worker types and wages.
+
+    Arguments:
+        jdata (BipartitePandas DataFrame): data for movers
+        sdata (BipartitePandas DataFrame): data for stayers
+        gj (NumPy Array): mover firm types both periods
+        gs (NumPy Array): stayer firm types for the first period
+        blm_model (BLMModel): BLM model with estimated parameters
+        rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+
+    Returns:
+        (tuple of NumPy Arrays): (yj --> tuple of wages for movers, where first element in first period wages and second element is second period wages; ys --> wages for stayers)
+    '''
+    if rng is None:
+        rng = np.random.default_rng(None)
+
+    nl, nk, nmi, nsi = blm_model.nl, blm_model.nk, len(jdata), len(sdata)
+    A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0 = blm_model.A1, blm_model.A2, blm_model.S1, blm_model.S2, blm_model.A1_cat, blm_model.A2_cat, blm_model.S1_cat, blm_model.S2_cat, blm_model.A1_cts, blm_model.A2_cts, blm_model.S1_cts, blm_model.S2_cts, blm_model.pk1, blm_model.pk0
+    controls_dict, cat_cols, cts_cols = blm_model.controls_dict, blm_model.cat_cols, blm_model.cts_cols
+
+    # Correct datatype for gj and gs
+    gj = gj.astype(int, copy=False)
+    gs = gs.astype(int, copy=False)
+
+    # Worker types
+    worker_types = np.arange(nl)
+
+    ## Movers ##
+    Lm = np.zeros(shape=len(jdata), dtype=int)
+    for k1 in range(nk):
+        for k2 in range(nk):
+            ## Iterate over all firm type combinations a worker can transition between ##
+            # Find movers who work at this combination of firm types
+            rows_kk = np.where((gj[:, 0] == k1) & (gj[:, 1] == k2))[0]
+            ni = len(rows_kk)
+            jj = k1 + nk * k2
+
+            # Draw worker types
+            Lm[rows_kk] = rng.choice(worker_types, size=ni, replace=True, p=pk1[jj, :])
+
+    A1_sum = A1[Lm, gj[:, 0]]
+    A2_sum = A2[Lm, gj[:, 1]]
+    S1_sum = S1[Lm, gj[:, 0]]
+    S2_sum = S2[Lm, gj[:, 1]]
+
+    if len(controls_dict) > 0:
+        #### Simulate control variable wages ####
+        S1_sum_sq = S1_sum ** 2
+        S2_sum_sq = S2_sum ** 2
+        for i, col in enumerate(cat_cols + cts_cols):
+            # Get subcolumns associated with col
+            subcols = to_list(jdata.col_reference_dict[col])
+            n_subcols = len(subcols)
+            if n_subcols == 1:
+                # If column is constant over time
+                subcol_1 = subcols[0]
+                subcol_2 = subcols[0]
+            elif n_subcols == 2:
+                # If column can change over time
+                subcol_1 = subcols[0]
+                subcol_2 = subcols[1]
+            else:
+                raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
+            if i < len(cat_cols):
+                ### Categorical ###
+                if controls_dict[col]['worker_type_interaction']:
+                    ## Worker-interaction ##
+                    A1_sum += A1_cat[col][Lm, jdata.loc[:, subcol_1]]
+                    A2_sum += A2_cat[col][Lm, jdata.loc[:, subcol_2]]
+                    S1_sum_sq += S1_cat[col][Lm, jdata.loc[:, subcol_1]] ** 2
+                    S2_sum_sq += S2_cat[col][Lm, jdata.loc[:, subcol_2]] ** 2
+                else:
+                    ## Non-worker-interaction ##
+                    A1_sum += A1_cat[col][jdata.loc[:, subcol_1]]
+                    A2_sum += A2_cat[col][jdata.loc[:, subcol_2]]
+                    S1_sum_sq += S1_cat[col][jdata.loc[:, subcol_1]] ** 2
+                    S2_sum_sq += S2_cat[col][jdata.loc[:, subcol_2]] ** 2
+            else:
+                ### Continuous ###
+                if controls_dict[col]['worker_type_interaction']:
+                    ## Worker-interaction ##
+                    A1_sum += A1_cts[col][Lm] * jdata.loc[:, subcol_1]
+                    A2_sum += A2_cts[col][Lm] * jdata.loc[:, subcol_2]
+                    S1_sum_sq += S1_cts[col][Lm] ** 2
+                    S2_sum_sq += S2_cts[col][Lm] ** 2
+                else:
+                    ## Non-worker-interaction ##
+                    A1_sum += A1_cts[col] * jdata.loc[:, subcol_1]
+                    A2_sum += A2_cts[col] * jdata.loc[:, subcol_2]
+                    S1_sum_sq += S1_cts[col] ** 2
+                    S2_sum_sq += S2_cts[col] ** 2
+
+        Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq), size=nmi)
+        Y2 = rng.normal(loc=A2_sum, scale=np.sqrt(S2_sum_sq), size=nmi)
+        del S1_sum_sq, S2_sum_sq
+    else:
+        #### No control variables ####
+        Y1 = rng.normal(loc=A1_sum, scale=S1_sum, size=nmi)
+        Y2 = rng.normal(loc=A2_sum, scale=S2_sum, size=nmi)
+    yj = (Y1, Y2)
+    del A1_sum, A2_sum, S1_sum, S2_sum, Y1, Y2
+
+    ## Stayers ##
+    Ls = np.zeros(shape=len(sdata), dtype=int)
+    for k in range(nk):
+        ## Iterate over all firm types a worker can work at ##
+        # Find movers who work at this firm type
+        rows_k = np.where(gs == k)[0]
+        ni = len(rows_k)
+
+        # Draw worker types
+        Ls[rows_k] = rng.choice(worker_types, size=ni, replace=True, p=pk0[k, :])
+
+    A1_sum = A1[Ls, gs]
+    S1_sum = S1[Ls, gs]
+
+    if len(controls_dict) > 0:
+        #### Simulate control variable wages ####
+        S1_sum_sq = S1_sum ** 2
+        for i, col in enumerate(cat_cols + cts_cols):
+            # Get subcolumns associated with col
+            subcol_1 = to_list(sdata.col_reference_dict[col])[0]
+            if i < len(cat_cols):
+                ### Categorical ###
+                if controls_dict[col]['worker_type_interaction']:
+                    ## Worker-interaction ##
+                    A1_sum += A1_cat[col][Ls, sdata.loc[:, subcol_1]]
+                    S1_sum_sq += S1_cat[col][Ls, sdata.loc[:, subcol_1]] ** 2
+                else:
+                    ## Non-worker-interaction ##
+                    A1_sum += A1_cat[col][sdata.loc[:, subcol_1]]
+                    S1_sum_sq += S1_cat[col][sdata.loc[:, subcol_1]] ** 2
+            else:
+                ### Continuous ###
+                if controls_dict[col]['worker_type_interaction']:
+                    ## Worker-interaction ##
+                    A1_sum += A1_cts[col][Ls] * sdata.loc[:, subcol_1]
+                    S1_sum_sq += S1_cts[col][Ls] ** 2
+                else:
+                    ## Non-worker-interaction ##
+                    A1_sum += A1_cts[col] * sdata.loc[:, subcol_1]
+                    S1_sum_sq += S1_cts[col] ** 2
+
+        Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq), size=nsi)
+    else:
+        #### No control variables ####
+        Y1 = rng.normal(loc=A1_sum, scale=S1_sum, size=nsi)
+    ys = Y1
+
+    return (yj, ys)
 
 class BLMModel:
     '''
@@ -849,7 +1003,7 @@ class BLMModel:
         EM algorithm for movers.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): movers
+            jdata (BipartitePandas DataFrame): data for movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # Unpack parameters
@@ -878,34 +1032,28 @@ class BLMModel:
         # Control variables
         C1 = {}
         C2 = {}
-        for col in cat_cols:
+        for i, col in enumerate(cat_cols + cts_cols):
             # Get subcolumns associated with col
             subcols = to_list(jdata.col_reference_dict[col])
             n_subcols = len(subcols)
             if n_subcols == 1:
                 # If column is constant over time
-                C1[col] = jdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
-                C2[col] = jdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
+                subcol_1 = subcols[0]
+                subcol_2 = subcols[0]
             elif n_subcols == 2:
                 # If column can change over time
-                C1[col] = jdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
-                C2[col] = jdata.loc[:, subcols[1]].to_numpy().astype(int, copy=False)
+                subcol_1 = subcols[0]
+                subcol_2 = subcols[1]
             else:
                 raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
-        for col in cts_cols:
-            # Get subcolumns associated with col
-            subcols = to_list(jdata.col_reference_dict[col])
-            n_subcols = len(subcols)
-            if n_subcols == 1:
-                # If column is constant over time
-                C1[col] = jdata.loc[:, subcols[0]].to_numpy()
-                C2[col] = jdata.loc[:, subcols[0]].to_numpy()
-            elif n_subcols == 2:
-                # If column can change over time
-                C1[col] = jdata.loc[:, subcols[0]].to_numpy()
-                C2[col] = jdata.loc[:, subcols[1]].to_numpy()
+            if i < len(cat_cols):
+                # Categorical
+                C1[col] = jdata.loc[:, subcol_1].to_numpy().astype(int, copy=False)
+                C2[col] = jdata.loc[:, subcol_2].to_numpy().astype(int, copy=False)
             else:
-                raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
+                # Continuous
+                C1[col] = jdata.loc[:, subcol_1].to_numpy()
+                C2[col] = jdata.loc[:, subcol_2].to_numpy()
         ## Sparse matrix representations ##
         GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
         GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
@@ -952,14 +1100,14 @@ class BLMModel:
                 for l in range(nl):
                     # Update A1_sum/A2_sum/S1_sum_sq/S2_sum_sq to account for worker-interaction terms
                     A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts)
-                    lp1 = lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
-                    lp2 = lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
+                    lp1 = _lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
+                    lp2 = _lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
                     lp[:, l] = np.log(pk1[KK, l]) + lp1 + lp2
             else:
                 KK = G1 + nk * G2
                 for l in range(nl):
-                    lp1 = lognormpdf(Y1, A1[l, G1], S1[l, G1])
-                    lp2 = lognormpdf(Y2, A2[l, G2], S2[l, G2])
+                    lp1 = _lognormpdf(Y1, A1[l, G1], S1[l, G1])
+                    lp2 = _lognormpdf(Y2, A2[l, G2], S2[l, G2])
                     lp[:, l] = np.log(pk1[KK, l]) + lp1 + lp2
             lp = (lp.T + np.log(W1) + np.log(W2)).T
             del lp1, lp2
@@ -1407,7 +1555,7 @@ class BLMModel:
         EM algorithm for stayers.
 
         Arguments:
-            sdata (BipartitePandas DataFrame): stayers
+            sdata (BipartitePandas DataFrame): data for stayers
             compute_NNs (bool): if True, compute vector giving the number of stayers at each firm type (e.g. entry (1) gives the number of stayers at firm type 1)
         '''
         # Unpack parameters
@@ -1436,34 +1584,28 @@ class BLMModel:
             ## Control variables ##
             C1 = {}
             C2 = {}
-            for col in cat_cols:
+            for i, col in enumerate(cat_cols + cts_cols):
                 # Get subcolumns associated with col
                 subcols = to_list(sdata.col_reference_dict[col])
                 n_subcols = len(subcols)
                 if n_subcols == 1:
                     # If column is constant over time
-                    C1[col] = sdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
-                    C2[col] = sdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
+                    subcol_1 = subcols[0]
+                    subcol_2 = subcols[0]
                 elif n_subcols == 2:
                     # If column can change over time
-                    C1[col] = sdata.loc[:, subcols[0]].to_numpy().astype(int, copy=False)
-                    C2[col] = sdata.loc[:, subcols[1]].to_numpy().astype(int, copy=False)
+                    subcol_1 = subcols[0]
+                    subcol_2 = subcols[1]
                 else:
                     raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
-            for col in cts_cols:
-                # Get subcolumns associated with col
-                subcols = to_list(sdata.col_reference_dict[col])
-                n_subcols = len(subcols)
-                if n_subcols == 1:
-                    # If column is constant over time
-                    C1[col] = sdata.loc[:, subcols[0]].to_numpy()
-                    C2[col] = sdata.loc[:, subcols[0]].to_numpy()
-                elif n_subcols == 2:
-                    # If column can change over time
-                    C1[col] = sdata.loc[:, subcols[0]].to_numpy()
-                    C2[col] = sdata.loc[:, subcols[1]].to_numpy()
+                if i < len(cat_cols):
+                    # Categorical
+                    C1[col] = sdata.loc[:, subcol_1].to_numpy().astype(int, copy=False)
+                    C2[col] = sdata.loc[:, subcol_2].to_numpy().astype(int, copy=False)
                 else:
-                    raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
+                    # Continuous
+                    C1[col] = sdata.loc[:, subcol_1].to_numpy()
+                    C2[col] = sdata.loc[:, subcol_2].to_numpy()
 
         # Matrix of prior probabilities
         pk0 = self.pk0
@@ -1485,13 +1627,13 @@ class BLMModel:
             for l in range(nl):
                 # Update A1_sum/S1_sum_sq to account for worker-interaction terms
                 A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=self.A1_cat, A2_cat=self.A2_cat, S1_cat=self.S1_cat, S2_cat=self.S2_cat, A1_cts=self.A1_cts, A2_cts=self.A2_cts, S1_cts=self.S1_cts, S2_cts=self.S2_cts)
-                lp1 = lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
-                # lp2 = lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
+                lp1 = _lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
+                # lp2 = _lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
                 lp_stable[:, l] = lp1 # + lp2
         else:
             for l in range(nl):
-                lp1 = lognormpdf(Y1, A1[l, G1], S1[l, G1])
-                # lp2 = lognormpdf(Y2, A2[l, G2], S2[l, G2])
+                lp1 = _lognormpdf(Y1, A1[l, G1], S1[l, G1])
+                # lp2 = _lognormpdf(Y2, A2[l, G2], S2[l, G2])
                 lp_stable[:, l] = lp1 # + lp2
         lp_stable = (lp_stable.T + np.log(W1)).T # + np.log(W2)).T
         del lp1 #, lp2
@@ -1539,7 +1681,7 @@ class BLMModel:
         Run fit_movers(), first constrained, then using results as starting values, run unconstrained.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): movers
+            jdata (BipartitePandas DataFrame): data for movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         ## First, simulate parameters but keep A fixed ##
@@ -1583,7 +1725,7 @@ class BLMModel:
         Run fit_movers() and update A while keeping S and pk1 fixed.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): movers
+            jdata (BipartitePandas DataFrame): data for movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # Save original parameters
@@ -1604,7 +1746,7 @@ class BLMModel:
         Run fit_movers() and update S while keeping A and pk1 fixed.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): movers
+            jdata (BipartitePandas DataFrame): data for movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # Save original parameters
@@ -1625,7 +1767,7 @@ class BLMModel:
         Run fit_movers() and update pk1 while keeping A and S fixed.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): movers
+            jdata (BipartitePandas DataFrame): data for movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # Save original parameters
@@ -1845,7 +1987,7 @@ class BLMEstimator:
         Generate model and run fit_movers_cstr_uncstr() given parameters.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): movers
+            jdata (BipartitePandas DataFrame): data for movers
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
         if rng is None:
@@ -1860,8 +2002,8 @@ class BLMEstimator:
         EM model for movers and stayers.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): movers
-            sdata (BipartitePandas DataFrame): stayers
+            jdata (BipartitePandas DataFrame): data for movers
+            sdata (BipartitePandas DataFrame): data for stayers
             n_init (int): number of starting values
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness
             ncore (int): number of cores for multiprocessing
@@ -1990,47 +2132,109 @@ class BLMBootstrap:
         # No initial models
         self.models = None
 
-    def fit(self, jdata, sdata, n_samples=5, frac_movers=0.1, frac_stayers=0.1, n_init_estimator=20, n_best=5, ncore=1, rng=None):
+    def fit(self, jdata, sdata, n_samples=5, frac_movers=0.1, frac_stayers=0.1, n_init_estimator=20, n_best=5, method='parametric', cluster_params=None, ncore=1, verbose=True, rng=None):
         '''
         EM model for movers and stayers.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): movers
-            sdata (BipartitePandas DataFrame): stayers
+            jdata (BipartitePandas DataFrame): data for movers
+            sdata (BipartitePandas DataFrame): data for stayers
             n_samples (int): number of bootstrap samples to estimate
-            frac_movers (float): fraction of movers to draw (with replacement) for each bootstrap sample
-            frac_stayers (float): fraction of stayers to draw (with replacement) for each bootstrap sample
+            frac_movers (float): fraction of movers to draw (with replacement) for each bootstrap sample; used only with standard bootstrap
+            frac_stayers (float): fraction of stayers to draw (with replacement) for each bootstrap sample; used only with standard bootstrap
             n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
+            method (str): if 'parametric', estimate BLM model on full data, simulate worker types and wages using estimated parameters, estimate BLM model on each set of simulated data, and construct bootstrapped errors; if 'standard', estimate standard bootstrap by sampling from original data, estimating BLM model on each sample, and constructing bootstrapped errors
+            cluster_params (ParamsDict or None): dictionary of parameters for clustering firms. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.cluster_params().
             ncore (int): number of cores for multiprocessing
+            verbose (bool): if True, print progress during data cleaning for each sample
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
         if rng is None:
             rng = np.random.default_rng(None)
+        if cluster_params is None:
+            cluster_params = bpd.cluster_params()
 
-        wj = None
-        if self.params['weighted'] and jdata._col_included('w'):
-            wj = jdata['w1'].to_numpy() + jdata['w2'].to_numpy()
-        ws = None
-        if self.params['weighted'] and sdata._col_included('w'):
-            ws = sdata['w1'].to_numpy() + sdata['w2'].to_numpy()
+        # Update clustering parameters
+        cluster_params = cluster_params.copy()
+        cluster_params['is_sorted'] = True
+        cluster_params['copy'] = False
 
-        models = []
-        for _ in trange(n_samples):
-            jdata_i = jdata.sample(frac=frac_movers, replace=True, weights=wj, random_state=rng)
-            sdata_i = sdata.sample(frac=frac_stayers, replace=True, weights=ws, random_state=rng)
-            blm_fit_i = BLMEstimator(self.params)
-            blm_fit_i.fit(jdata=jdata_i, sdata=sdata_i, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
-            models.append(blm_fit_i.model)
-            del jdata_i, sdata_i, blm_fit_i
+        if method == 'parametric':
+            # Copy original wages and firm types
+            yj = jdata.loc[:, ['y1', 'y2']].to_numpy().copy()
+            ys = sdata.loc[:, ['y1', 'y2']].to_numpy().copy()
+            gj = jdata.loc[:, ['g1', 'g2']].to_numpy().copy()
+            gs = sdata.loc[:, 'g1'].to_numpy().copy()
+
+            # Run initial BLM estimator
+            blm_fit_init = BLMEstimator(self.params)
+            blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
+
+            # Run parametric bootstrap
+            models = []
+            for _ in trange(n_samples):
+                # Simulate worker types then draw wages
+                yj_i, ys_i = _simulate_types_wages(jdata, sdata, gj, gs, blm_fit_init.model, rng=rng)
+                jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
+                sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
+                # Cluster
+                bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=True)).clean(bpd.clean_params({'is_sorted': True, 'copy': False, 'verbose': verbose})).to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng)
+                clusters_dict = bdf.loc[:, ['j', 'g']].groupby('j', sort=False)['g'].first().to_dict()
+                del bdf
+                # Update clusters in jdata and sdata
+                jdata.loc[:, 'g1'] = jdata.loc[:, 'j1'].map(clusters_dict)
+                jdata.loc[:, 'g2'] = jdata.loc[:, 'j2'].map(clusters_dict)
+                sdata.loc[:, 'g1'] = sdata.loc[:, 'j1'].map(clusters_dict)
+                sdata.loc[:, 'g2'] = sdata.loc[:, 'g1']
+                # Run BLM estimator
+                blm_fit_i = BLMEstimator(self.params)
+                blm_fit_i.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
+                models.append(blm_fit_i.model)
+                del blm_fit_i
+
+            # Re-assign original wages and firm types
+            jdata.loc[:, ['y1', 'y2']] = yj
+            sdata.loc[:, ['y1', 'y2']] = ys
+            jdata.loc[:, ['g1', 'g2']] = gj
+            sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
+        elif method == 'standard':
+            wj = None
+            if self.params['weighted'] and jdata._col_included('w'):
+                wj = jdata['w1'].to_numpy() + jdata['w2'].to_numpy()
+            ws = None
+            if self.params['weighted'] and sdata._col_included('w'):
+                ws = sdata['w1'].to_numpy() + sdata['w2'].to_numpy()
+
+            models = []
+            for _ in trange(n_samples):
+                jdata_i = jdata.sample(frac=frac_movers, replace=True, weights=wj, random_state=rng)
+                sdata_i = sdata.sample(frac=frac_stayers, replace=True, weights=ws, random_state=rng)
+                # Cluster
+                bdf = bpd.BipartiteDataFrame(pd.concat([jdata_i, sdata_i], axis=0, copy=True)).clean(bpd.clean_params({'is_sorted': True, 'copy': False, 'verbose': verbose})).to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng)
+                clusters_dict = bdf.loc[:, ['j', 'g']].groupby('j', sort=False)['g'].first().to_dict()
+                del bdf
+                # Update clusters in jdata_i and sdata_i
+                jdata_i.loc[:, 'g1'] = jdata_i.loc[:, 'j1'].map(clusters_dict)
+                jdata_i.loc[:, 'g2'] = jdata_i.loc[:, 'j2'].map(clusters_dict)
+                sdata_i.loc[:, 'g1'] = sdata_i.loc[:, 'j1'].map(clusters_dict)
+                sdata_i.loc[:, 'g2'] = sdata_i.loc[:, 'g1']
+                # Run BLM estimator
+                blm_fit_i = BLMEstimator(self.params)
+                blm_fit_i.fit(jdata=jdata_i, sdata=sdata_i, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
+                models.append(blm_fit_i.model)
+                del jdata_i, sdata_i, blm_fit_i
+        else:
+            raise ValueError(f"`method` must be one of 'parametric' or 'standard', but input specifies {method!r}.")
 
         self.models = models
 
-    def plot_log_earnings(self, grid=True, dpi=None):
+    def plot_log_earnings(self, period='first', grid=True, dpi=None):
         '''
         Plot log-earnings by worker-firm type pairs.
 
         Arguments:
+            period (str): 'first' plots log-earnings in the first period; 'second' plots log-earnings in the second period; 'all' plots the average over log-earnings in the first and second periods
             grid (bool): if True, plot grid
             dpi (float or None): dpi for plot
         '''
@@ -2039,27 +2243,34 @@ class BLMBootstrap:
         else:
             nl, nk = self.params.get_multiple(('nl', 'nk'))
 
-            # Compute average log-earnings # FIXME should the mean account for the log?
-            A_means = np.zeros((len(self.models), nl, nk))
+            # Compute average log-earnings
+            A_all = np.zeros((len(self.models), nl, nk))
             for i, model in enumerate(self.models):
-                A_means[i, :, :] = (model.A1 + model.A2) / 2 # np.log((np.exp(model.A1) + np.exp(model.A2)) / 2)
-            A_means_mean = np.mean(A_means, axis=0)
+                # Sort by firm effects
+                A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0 = model._sort_parameters(model.A1, model.A2, model.S1, model.S2, model.A1_cat, model.A2_cat, model.S1_cat, model.S2_cat, model.A1_cts, model.A2_cts, model.S1_cts, model.S2_cts, model.pk1, model.pk0, firm_types=True)
+                # Extract average log-earnings for each model
+                if period == 'first':
+                    A_all[i, :, :] = A1
+                elif period == 'second':
+                    A_all[i, :, :] = A2
+                elif period == 'all':
+                    # FIXME should the mean account for the log?
+                    A_all[i, :, :] = (A1 + A2) / 2 # np.log((np.exp(A1) + np.exp(A2)) / 2)
+                else:
+                    raise ValueError(f"`period` must be one of 'first', 'second' or 'all', but input specifies {period!r}.")
 
-            A_lb = np.percentile(A_means, 2.5, axis=0)
-            A_ub = np.percentile(A_means, 97.5, axis=0)
-            A_ci = np.stack([A_means_mean - A_lb, A_ub - A_means_mean], axis=0)
-
-            # Sort by firm effects
-            firm_effect_order = np.mean(A_means_mean, axis=0).argsort()
-            A_means_mean = A_means_mean[:, firm_effect_order]
-            A_ci = A_ci[:, :, firm_effect_order]
+            # Take mean over all models, and compute 2.5 and 97.5 percentiles
+            A_mean = np.mean(A_all, axis=0)
+            A_lb = np.percentile(A_all, 2.5, axis=0)
+            A_ub = np.percentile(A_all, 97.5, axis=0)
+            A_ci = np.stack([A_mean - A_lb, A_ub - A_mean], axis=0)
 
             # Plot
             if dpi is not None:
                 plt.figure(dpi=dpi)
             x_axis = np.arange(1, nk + 1)
             for l in range(nl):
-                plt.errorbar(x_axis, A_means_mean[l, :], yerr=A_ci[:, l, :], capsize=3)
+                plt.errorbar(x_axis, A_mean[l, :], yerr=A_ci[:, l, :], capsize=3)
             plt.xlabel('firm class k')
             plt.ylabel('log-earnings')
             plt.xticks(x_axis)
@@ -2067,11 +2278,13 @@ class BLMBootstrap:
                 plt.grid()
             plt.show()
 
-    def plot_type_proportions(self, dpi=None):
+    def plot_type_proportions(self, period='first', subset='all', dpi=None):
         '''
         Plot proportions of worker types at each firm class.
 
         Arguments:
+            period (str): 'first' plots type proportions in the first period; 'second' plots type proportions in the second period; 'all' plots the average over type proportions in the first and second periods
+            subset (str): 'all' plots a weighted average over movers and stayers; 'movers' plots movers; 'stayers' plots stayers
             dpi (float or None): dpi for plot
         '''
         if self.models is None:
@@ -2079,32 +2292,47 @@ class BLMBootstrap:
         else:
             nl, nk = self.params.get_multiple(('nl', 'nk'))
 
-            # Compute average log-earnings - this is needed to compute the proper firm effect order # FIXME should the mean account for the log?
-            A_means = np.zeros((len(self.models), nl, nk))
-            for i, model in enumerate(self.models):
-                A_means[i, :, :] = (model.A1 + model.A2) / 2 # np.log((np.exp(model.A1) + np.exp(model.A2)) / 2)
-            A_means_mean = np.mean(A_means, axis=0)
-
+            # Compute average type proportions
             pk_mean = np.zeros((nk, nl))
             for model in self.models:
-                ## Generate type proportions ##
-                # First, pk1 #
-                reshaped_pk1 = np.reshape(model.pk1, (nk, nk, nl))
-                pk1_period1 = np.mean(reshaped_pk1, axis=1)
-                pk1_period2 = np.mean(reshaped_pk1, axis=0)
-                pk1_mean = (pk1_period1 + pk1_period2) / 2
-                # Second, take mean over pk1 and pk0 #
-                nm = np.sum(model.NNm)
-                ns = np.sum(model.NNs)
-                # Multiply nm by 2 because each mover has observations in the first and second periods
-                pk_mean += (2 * nm * pk1_mean + ns * model.pk0) / (2 * nm + ns)
+                # Sort by firm effects
+                A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0 = model._sort_parameters(model.A1, model.A2, model.S1, model.S2, model.A1_cat, model.A2_cat, model.S1_cat, model.S2_cat, model.A1_cts, model.A2_cts, model.S1_cts, model.S2_cts, model.pk1, model.pk0, firm_types=True)
+
+                ## Extract subset(s) ##
+                if subset == 'movers':
+                    reshaped_pk1 = np.reshape(pk1, (nk, nk, nl))
+                    pk_period1 = np.mean(reshaped_pk1, axis=1)
+                    pk_period2 = np.mean(reshaped_pk1, axis=0)
+                elif subset == 'stayers':
+                    pk_period1 = pk0
+                    pk_period2 = pk0
+                elif subset == 'all':
+                    # First, pk1 #
+                    reshaped_pk1 = np.reshape(pk1, (nk, nk, nl))
+                    pk1_period1 = np.mean(reshaped_pk1, axis=1)
+                    pk1_period2 = np.mean(reshaped_pk1, axis=0)
+                    # Second, take weighted average over pk1 and pk0 #
+                    nm = np.sum(model.NNm)
+                    ns = np.sum(model.NNs)
+                    # Multiply nm by 2 because each mover has observations in the first and second periods
+                    pk_period1 = (2 * nm * pk1_period1 + ns * pk0) / (2 * nm + ns)
+                    pk_period2 = (2 * nm * pk1_period2 + ns * pk0) / (2 * nm + ns)
+                else:
+                    raise ValueError(f"`subset` must be one of 'all', 'movers' or 'stayers', but input specifies {subset!r}.")
+
+                ## Consider correct period(s) ##
+                if period == 'first':
+                    pk_mean += pk_period1
+                elif period == 'second':
+                    pk_mean += pk_period2
+                elif period == 'all':
+                    pk_mean += (pk_period1 + pk_period2) / 2
+                else:
+                    raise ValueError(f"`period` must be one of 'first', 'second' or 'all', but input specifies {period!r}.")
+
+            # Take mean over all models, and compute cumulative sum for plotting
             pk_mean /= len(self.models)
             pk_cumsum = np.cumsum(pk_mean, axis=1)
-
-            # Sort by firm effects
-            firm_effect_order = np.mean(A_means_mean, axis=0).argsort()
-            pk_mean = pk_mean[firm_effect_order, :]
-            pk_cumsum = pk_cumsum[firm_effect_order, :]
 
             ## Plot ##
             fig, ax = plt.subplots(dpi=dpi)
