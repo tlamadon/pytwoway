@@ -1,5 +1,5 @@
 '''
-We implement the non-linear estimator from Bonhomme Lamadon & Manresa.
+Implement the non-linear estimator from Bonhomme, Lamadon, & Manresa.
 '''
 from tqdm.auto import tqdm, trange
 import copy
@@ -222,11 +222,11 @@ _categorical_control_params_default = ParamsDict({
         '''
             (default=False) If True, effect can differ by worker type.
         ''', None),
-    'cons_a': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
+    'cons_a': (None, 'list_of_type_none', (cons.Linear, cons.LinearAdditive, cons.Monotonic, cons.MonotonicMean, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
             (default=None) Constraint object or list of constraint objects that define constraints on A1 and A2. None is equivalent to [].
         ''', None),
-    'cons_s': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
+    'cons_s': (None, 'list_of_type_none', (cons.Linear, cons.LinearAdditive, cons.Monotonic, cons.MonotonicMean, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
             (default=None) Constraint object or list of constraint objects that define constraints on S1 and S2. None is equivalent to [].
         ''', None)
@@ -724,12 +724,12 @@ class BLMModel:
                     if any_tnv_wi:
                         cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=[0]))
                         if any_tv_nwi:
-                            cons_a.add_constraints(cons.NormalizeSingle(min_firm_type=min_firm_type, nnt=[1]))
+                            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=[1]))
                     else:
                         if any_tv_nwi:
-                            cons_a.add_constraints(cons.NormalizeSingle(min_firm_type=min_firm_type, nnt=[0, 1]))
+                            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=[0, 1]))
                         elif any_tnv_nwi:
-                            cons_a.add_constraints(cons.NormalizeSingle(min_firm_type=min_firm_type, nnt=[0]))
+                            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=[0]))
             else:
                 self.normalize_constraints = False
 

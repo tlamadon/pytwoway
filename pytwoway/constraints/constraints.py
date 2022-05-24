@@ -226,6 +226,58 @@ class Linear():
 
         return {'G': None, 'h': None, 'A': A, 'b': b}
 
+class LinearAdditive():
+    '''
+    Generate BLM constraints so that for a fixed firm type, worker types effects must change linear-additively.
+
+    Arguments:
+        nnt (int): number of time periods to constrain. This should be set to 1 if LinearAdditive() is being used in conjunction with Stationary().
+        nt (int): number of time periods
+    '''
+
+    def __init__(self, nnt=2, nt=2):
+        self.nnt = nnt
+        self.nt = nt
+
+    def _get_constraints(self, nl, nk):
+        '''
+        Generate constraint arrays.
+
+        Arguments:
+            nl (int): number of worker types
+            nk (int): number of firm types
+
+        Returns:
+            (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
+        '''
+        nnt, nt = self.nnt, self.nt
+        A = np.zeros(shape=(nnt * ((nl - 2) * nk + (nk - 1)), nt * nl * nk))
+        ## Linear ##
+        for period in range(nnt):
+            row_shift = period * (nl - 2) * nk
+            col_shift = period * nl * nk
+            for k in range(nk):
+                for l in range(nl - 2):
+                    A[row_shift + l, col_shift + nk * l] = 1
+                    A[row_shift + l, col_shift + nk * (l + 1)] = -2
+                    A[row_shift + l, col_shift + nk * (l + 2)] = 1
+                row_shift += (nl - 2)
+                col_shift += 1
+
+        ## Additive ##
+        for period in range(nnt):
+            row_shift = nnt * (nl - 2) * nk + period * (nk - 1)
+            col_shift = period * nl * nk
+            for k in range(nk - 1):
+                A[row_shift + k, col_shift + k] = 1
+                A[row_shift + k, col_shift + nk + k] = -1
+                A[row_shift + k, col_shift + k + 1] = -1
+                A[row_shift + k, col_shift + nk + k + 1] = 1
+
+        b = - np.zeros(shape=A.shape[0])
+
+        return {'G': None, 'h': None, 'A': A, 'b': b}
+
 class Monotonic():
     '''
     Generate BLM constraints so that for a fixed firm type, worker types effects must increase (or decrease) monotonically.
@@ -359,7 +411,7 @@ class NoWorkerTypeInteraction():
 
         return {'G': None, 'h': None, 'A': A, 'b': b}
 
-class NormalizeSingle():
+class NormalizeLowest():
     '''
     Generate BLM constraints so that the lowest worker-firm type pair has effect 0.
 
