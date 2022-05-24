@@ -11,6 +11,7 @@ import pandas as pd
 from scipy.special import logsumexp
 from scipy.sparse import csc_matrix, diags
 from matplotlib import pyplot as plt
+import pytwoway as tw
 from pytwoway import jitter_scatter
 from pytwoway import constraints as cons
 import bipartitepandas as bpd
@@ -1356,31 +1357,6 @@ class BLMModel:
                 A1_sum = Y1 - Y1_adj
                 A2_sum = Y2 - Y2_adj
 
-            # if params['update_a']:
-            #     ## Sort and Normalize ##
-            #     ## Sort ##
-            #     # Check whether worker types should be sorted
-            #     worker_type_order = np.mean(A1, axis=1).argsort()[0]
-            #     sort_worker_types = np.any(worker_type_order != np.arange(nl))
-            #     if sort_worker_types:
-            #         ### Sort parameters ###
-            #         A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
-            #         ### Sort XwX ###
-            #         XwX = np.diag(np.reshape(XwXd, (2, nl, nk))[:, worker_type_order, :].flatten())
-            #         ## Categorical ##
-            #         for col in cat_cols:
-            #             if cat_dict[col]['worker_type_interaction']:
-            #                 col_n = cat_dict[col]['n']
-            #                 XwX_cat[col] = np.diag(np.reshape(np.diag(XwX_cat[col]), (2, nl, col_n))[:, worker_type_order, :].flatten())
-            #         ## Continuous ##
-            #         for col in cts_cols:
-            #             if cts_dict[col]['worker_type_interaction']:
-            #                 XwX_cts[col] = np.diag(np.reshape(np.diag(XwX_cts[col]), (2, nl))[:, worker_type_order].flatten())
-            #     ## Normalize ##
-            #     # Find minimum firm type
-            #     min_firm_type = np.mean(A1, axis=0).argsort()[0]
-            #     A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat, min_firm_type)
-
             if params['update_s']:
                 # Next we extract the variances
                 if iter == 0:
@@ -1532,12 +1508,16 @@ class BLMModel:
         if len(cat_cols) > 0:
             ## Normalize ##
             # NOTE: normalize here because constraints don't normalize unless categorical controls are using constraints, and even when used, constraints don't always normalize to exactly 0
-            # Find minimum firm type
             min_firm_type = np.mean(A1, axis=0).argsort()[0]
             A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat, min_firm_type)
 
         ## Sort parameters ##
         A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
+
+        if len(cat_cols) > 0:
+            ## Normalize again ##
+            min_firm_type = np.mean(A1, axis=0).argsort()[0]
+            A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat, min_firm_type)
 
         # Store parameters
         self.A1, self.A2, self.S1, self.S2 = A1, A2, S1, S2
@@ -2132,18 +2112,19 @@ class BLMBootstrap:
         # No initial models
         self.models = None
 
-    def fit(self, jdata, sdata, n_samples=5, frac_movers=0.1, frac_stayers=0.1, n_init_estimator=20, n_best=5, method='parametric', cluster_params=None, ncore=1, verbose=True, rng=None):
+    def fit(self, jdata, sdata, n_samples=5, n_init_estimator=20, n_best=5, blm_model=None, frac_movers=0.1, frac_stayers=0.1, method='parametric', cluster_params=None, ncore=1, verbose=True, rng=None):
         '''
-        EM model for movers and stayers.
+        Estimate bootstrap.
 
         Arguments:
             jdata (BipartitePandas DataFrame): data for movers
             sdata (BipartitePandas DataFrame): data for stayers
             n_samples (int): number of bootstrap samples to estimate
-            frac_movers (float): fraction of movers to draw (with replacement) for each bootstrap sample; used only with standard bootstrap
-            frac_stayers (float): fraction of stayers to draw (with replacement) for each bootstrap sample; used only with standard bootstrap
             n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
+            blm_model (BLMModel or None): BLM model estimated using true data; if None, estimate model inside the method. For use with parametric bootstrap.
+            frac_movers (float): fraction of movers to draw (with replacement) for each bootstrap sample. For use with standard bootstrap.
+            frac_stayers (float): fraction of stayers to draw (with replacement) for each bootstrap sample. For use with standard bootstrap.
             method (str): if 'parametric', estimate BLM model on full data, simulate worker types and wages using estimated parameters, estimate BLM model on each set of simulated data, and construct bootstrapped errors; if 'standard', estimate standard bootstrap by sampling from original data, estimating BLM model on each sample, and constructing bootstrapped errors
             cluster_params (ParamsDict or None): dictionary of parameters for clustering firms. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.cluster_params().
             ncore (int): number of cores for multiprocessing
@@ -2167,19 +2148,21 @@ class BLMBootstrap:
             gj = jdata.loc[:, ['g1', 'g2']].to_numpy().copy()
             gs = sdata.loc[:, 'g1'].to_numpy().copy()
 
-            # Run initial BLM estimator
-            blm_fit_init = BLMEstimator(self.params)
-            blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
+            if blm_model is None:
+                # Run initial BLM estimator
+                blm_fit_init = BLMEstimator(self.params)
+                blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
+                blm_model = blm_fit_init.model
 
             # Run parametric bootstrap
             models = []
             for _ in trange(n_samples):
                 # Simulate worker types then draw wages
-                yj_i, ys_i = _simulate_types_wages(jdata, sdata, gj, gs, blm_fit_init.model, rng=rng)
+                yj_i, ys_i = _simulate_types_wages(jdata, sdata, gj, gs, blm_model, rng=rng)
                 jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
                 sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
                 # Cluster
-                bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=True)).clean(bpd.clean_params({'is_sorted': True, 'copy': False, 'verbose': verbose})).to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng)
+                bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False)).to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng)
                 clusters_dict = bdf.loc[:, ['j', 'g']].groupby('j', sort=False)['g'].first().to_dict()
                 del bdf
                 # Update clusters in jdata and sdata
@@ -2344,3 +2327,112 @@ class BLMBootstrap:
             ax.set_ylabel('type proportions')
             ax.set_title('Proportions of worker types')
             plt.show()
+
+class BLMVarianceDecomposition:
+    '''
+    Class for estimating BLM variance decomposition using bootstrapping.
+
+    Arguments:
+        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
+    '''
+
+    def __init__(self, params):
+        self.params = params
+        # No initial estimated parameters
+        self.est_params = None
+
+    def fit(self, jdata, sdata, n_samples=5, n_init_estimator=20, n_best=5, blm_model=None, method='standard', ncore=1, rng=None):
+        '''
+        Estimate variance decomposition.
+
+        Arguments:
+            jdata (BipartitePandas DataFrame): data for movers
+            sdata (BipartitePandas DataFrame): data for stayers
+            n_samples (int): number of bootstrap samples to estimate
+            n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
+            n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
+            blm_model (BLMModel or None): BLM model estimated using true data; if None, estimate model inside the method. For use with parametric bootstrap.
+            method (str): if 'standard', estimate BLM model on full data, simulate worker types and wages using estimated parameters, then estimate variance decomposition using OLS; if 'reallocation', estimate BLM model on full data, reallocate firm types to remove sorting, simulate worker types and wages using estimated parameters, then estimate variance decomposition using OLS
+            ncore (int): number of cores for multiprocessing
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+        '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
+        # FE parameters
+        fe_params = tw.fe_params({
+            'feonly': True,
+            'attach_fe_estimates': True
+        })
+
+        if method == 'standard':
+            # Copy original wages and firm types
+            yj = jdata.loc[:, ['y1', 'y2']].to_numpy().copy()
+            ys = sdata.loc[:, ['y1', 'y2']].to_numpy().copy()
+            gj = jdata.loc[:, ['g1', 'g2']].to_numpy().copy()
+            gs = sdata.loc[:, 'g1'].to_numpy().copy()
+
+            if blm_model is None:
+                # Run initial BLM estimator
+                blm_fit_init = BLMEstimator(self.params)
+                blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
+                blm_model = blm_fit_init.model
+
+            # Run bootstrap
+            est_params = {
+                col: np.zeros(n_samples) for col in ['var_y', 'var_psi', 'var_alpha', 'cov_psi_alpha', 'var_eps']
+            }
+            for i in trange(n_samples):
+                # Simulate worker types then draw wages
+                yj_i, ys_i = _simulate_types_wages(jdata, sdata, gj, gs, blm_model, rng=rng)
+                jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
+                sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
+                # Convert to BipartitePandas DataFrame
+                bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False)).to_long(is_sorted=True, copy=False)
+                w = bdf.loc[:, 'w'].to_numpy()
+                # Estimate OLS
+                fe_estimator = tw.FEEstimator(bdf, fe_params)
+                fe_estimator.fit()
+                est_params['var_y'][i] = fe_estimator.res['var_y']
+                est_params['var_psi'][i] = tw.fe._weighted_var(bdf.loc[:, 'psi_hat'].to_numpy(), w)
+                est_params['var_alpha'][i] = tw.fe._weighted_var(bdf.loc[:, 'alpha_hat'].to_numpy(), w)
+                est_params['cov_psi_alpha'][i] = tw.fe._weighted_cov(bdf.loc[:, 'psi_hat'].to_numpy(), bdf.loc[:, 'alpha_hat'].to_numpy(), w, w)
+                est_params['var_eps'][i] = tw.fe._weighted_var(bdf.loc[:, 'y'].to_numpy() - bdf.loc[:, 'psi_hat'].to_numpy() - bdf.loc[:, 'alpha_hat'].to_numpy(), w)
+
+            # Re-assign original wages and firm types
+            jdata.loc[:, ['y1', 'y2']] = yj
+            sdata.loc[:, ['y1', 'y2']] = ys
+            jdata.loc[:, ['g1', 'g2']] = gj
+            sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
+        elif method == 'reallocation':
+            pass
+        else:
+            raise ValueError(f"`method` must be one of 'standard' or 'reallocation', but input specifies {method!r}.")
+
+        self.est_params = est_params
+
+    def table(self):
+        '''
+        Print LaTeX table of results.
+        '''
+        if self.est_params is None:
+            warnings.warn('Estimation has not yet been run.')
+        else:
+            var_y = self.est_params['var_y']
+            var_psi = self.est_params['var_psi']
+            var_alpha = self.est_params['var_alpha']
+            cov_psi_alpha = self.est_params['cov_psi_alpha']
+            var_eps = self.est_params['var_eps']
+
+            ret_str = r'''
+            &\multicolumn{{5}}{{c}}{{Variance Decomposition (\(\\times\) 100)}} \\
+            \hline\addlinespace
+            \(\frac{\text{Var}(\alpha)}{\text{Var}(y)}\) & \(\frac{\text{Var}(\varpsi)}{\text{Var}(y)}\) & \(\frac{2\text{Cov}(\alpha, \varpsi)}{\text{Var}(y)}\) & \(\frac{\text{Var}(\epsilon)}{\text{Var}(y)}\) & Corr(\(\alpha, \varpsi\)) \\
+            \hline\addlinespace
+            '''
+            ret_str += f'''
+            {100 * np.mean(var_alpha / var_y):2.2f} & {100 * np.mean(var_psi / var_y):2.2f} & {100 * np.mean(2 * np.cov(var_alpha, var_psi, ddof=0)[0, 1] / var_y):2.2f} & {100 * np.mean(var_eps / var_y):2.2f} & {100 * np.mean(cov_psi_alpha / np.sqrt(var_psi * var_alpha)):2.2f} \\\\
+            ({100 * np.std(var_alpha / var_y):2.2f}) & ({100 * np.std(var_psi / var_y):2.2f}) & ({100 * np.std(2 * np.cov(var_alpha, var_psi, ddof=0)[0, 1] / var_y):2.2f}) & ({100 * np.std(var_eps / var_y):2.2f}) & ({100 * np.std(cov_psi_alpha / np.sqrt(var_psi * var_alpha)):2.2f}) \\\\
+            '''
+
+            print(ret_str)

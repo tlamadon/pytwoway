@@ -225,7 +225,7 @@ class FEEstimator:
         '''
         Arguments:
             data (BipartiteDataFrame): long or collapsed long format labor data
-            fe_params (ParamsDict or None)): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().
+            params (ParamsDict or None): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().
         '''
         # Start logger
         logger_init(self)
