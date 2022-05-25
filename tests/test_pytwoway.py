@@ -512,7 +512,7 @@ def test_monte_carlo():
 
 #     for i in range(2):
 #         # Non-collapsed
-#         bdf = bpd.BipartiteLong(bpd.SimBipartite({'seed': 1234}).sim_network(), include_id_reference_dict=True).clean_data().get_es()
+#         bdf = bpd.BipartiteLong(bpd.SimBipartite({'seed': 1234}).sim_network(), track_id_changes=True).clean_data().get_es()
 
 #         orig_n_movers = len(bdf.loc[bdf['m'] == 1, 'i'].unique())
 #         n_movers = []
@@ -525,7 +525,7 @@ def test_monte_carlo():
 #         assert np.max(n_movers_vs_subsets) < 2e-4
 
 #         # Collapsed
-#         bdf = bpd.BipartiteLong(bpd.SimBipartite({'seed': 1234}).sim_network(), include_id_reference_dict=True).clean_data().get_collapsed_long().get_es()
+#         bdf = bpd.BipartiteLong(bpd.SimBipartite({'seed': 1234}).sim_network(), track_id_changes=True).clean_data().get_collapsed_long().get_es()
 
 #         orig_n_movers = len(bdf.loc[bdf['m'] == 1, 'i'].unique())
 #         n_movers = []
