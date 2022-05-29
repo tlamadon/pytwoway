@@ -170,7 +170,7 @@ def test_fe_estimator_full_var_collapsed():
     # sigma^2
     # assert np.abs((est_pi_sigma_2 - true_sigma_2) / true_sigma_2) < 1e-2
     assert np.abs((est_ho_sigma_2 - true_sigma_2) / true_sigma_2) < 0.02
-    assert np.abs((est_he_sigma_2 - true_sigma_2) / true_sigma_2) < 0.035
+    assert np.abs((est_he_sigma_2 - true_sigma_2) / true_sigma_2) < 0.055
     # var(psi)
     # assert np.abs((est_pi_var_psi - true_var_psi) / true_var_psi) < 1e-2
     assert np.abs((est_ho_var_psi - true_var_psi) / true_var_psi) < 0.15

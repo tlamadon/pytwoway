@@ -67,6 +67,10 @@ _fe_params_default = ParamsDict({
         '''
             (default=None) Which Q matrix to use when estimating covariance term; None is equivalent to tw.Q.CovPsiAlpha().
         ''', None),
+    'Sii_stayers': ('firm_mean', 'set', ['firm_mean', 'upper_bound'],
+        '''
+            (default='firm_mean') How to compute variance of worker effects for stayers for heteroskedastic correction. 'firm_mean' gives stayers the average variance estimate for movers at their firm. 'upper_bound' gives the upper bound variance estimate for stayers for worker effects by assuming the variance matrix is diagonal (please see page 17 of https://github.com/rsaggio87/LeaveOutTwoWay/blob/master/doc/VIGNETTE.pdf for more details).
+        ''', None),
     'ndraw_trace_sigma_2': (5, 'type_constrained', (int, _gteq1),
         '''
             (default=5) Number of draws to use when estimating trace approximation for sigma^2.
@@ -1237,7 +1241,7 @@ class FEEstimator:
             pp = np.load(f)
             Pii += pp / len(files)
 
-        if self.weighted:
+        if self.weighted or (self.params['Sii_stayers'] == 'firm_mean'):
             self.res['min_lev'] = Pii[self.worker_m].min()
             self.res['max_lev'] = Pii[self.worker_m].max()
         else:
@@ -1281,7 +1285,7 @@ class FEEstimator:
             Pii[i] = self._compute_Pii(DpJ_i, DpW_i)
         del pbar
 
-        if self.weighted:
+        if self.weighted or (self.params['Sii_stayers'] == 'firm_mean'):
             self.res['min_lev'] = Pii[self.worker_m].min()
             self.res['max_lev'] = Pii[self.worker_m].max()
         else:
@@ -1357,7 +1361,7 @@ class FEEstimator:
         self.logger.info(f"[he] leverage range {self.res['min_lev']:2.4f} to {self.res['max_lev']:2.4f}")
 
         ## JLA non-linearity bias correction ##
-        if self.weighted:
+        if self.weighted or (self.params['Sii_stayers'] == 'firm_mean'):
             # Compute for movers
             Pii_m = Pii[worker_m]
             Mii_m = 1 - Pii_m
@@ -1387,60 +1391,90 @@ class FEEstimator:
             (NumPy Array): Sii (sigma^2) for heteroskedastic correction
         '''
         worker_m = self.worker_m
+        w = self.Dp.data[0]
 
         # Mean wage
-        Y_bar = np.average(self.Y, weights=self.Dp.data[0])
+        Y_bar = np.average(self.Y, weights=w)
 
-        if self.weighted:
-            ### Weighted ###
+        if self.params['Sii_stayers'] == 'firm_mean':
+            ### Give stayers the average variance estimate at the firm level ###
             ## Compute Sii for movers ##
             Pii_m = Pii[worker_m]
             Sii_m = (self.Y[worker_m] - Y_bar) * (self.E[worker_m] / (1 - Pii_m))
             if (not self.params['exact_lev_he']) and (jla_factor is not None):
                 # Multiply by bias correction factor
                 Sii_m *= jla_factor
+            del Pii_m
 
             ## Compute Sii for stayers ##
-            # Source: https://github.com/rsaggio87/LeaveOutTwoWay/blob/master/codes/sigma_for_stayers.m
-            Pii_s = 1 / self.adata.loc[~worker_m, ['i', 'w']].groupby('i', sort=False)['w'].transform('sum').to_numpy()
-            if np.any(Pii_s == 1):
-                raise ValueError("At least one stayer has observation-weight 1, which prevents computing Pii and Sii for those stayers. Please set 'drop_single_stayers'=True during data cleaning to avoid this error.")
-            Sii_s = (self.Y[~worker_m] - Y_bar) * (self.E[~worker_m] / (1 - Pii_s))
+            if self.weighted:
+                ### Weighted ###
+                # Add Sii for movers to dataframe (multiply by weight)
+                self.adata.loc[worker_m, 'weighted_Sii'] = (w[worker_m] ** 2) * Sii_m
+                # Link firms to average Sii of movers
+                groupby_j = self.adata.loc[worker_m, ['j', 'w', 'weighted_Sii']].groupby('j', sort=True)
+                Sii_j = (groupby_j['weighted_Sii'].sum() / groupby_j['w'].sum()).to_dict()
+                # Compute Sii for stayers (divide by weight)
+                Sii_s = self.adata.loc[~worker_m, 'j'].map(Sii_j).to_numpy() / w[~worker_m]
+                # No longer need Sii column or groupby_j
+                self.adata.drop('weighted_Sii', axis=1, inplace=True)
+                del groupby_j
+            else:
+                ### Unweighted ###
+                # Add Sii for movers to dataframe
+                self.adata.loc[worker_m, 'Sii'] = Sii_m
+                # Link firms to average Sii of movers
+                Sii_j = self.adata.loc[worker_m, ['j', 'Sii']].groupby('j', sort=True)['Sii'].mean().to_dict()
+                # Compute Sii for stayers
+                Sii_s = self.adata.loc[~worker_m, 'j'].map(Sii_j).to_numpy()
+                # No longer need Sii column
+                self.adata.drop('Sii', axis=1, inplace=True)
+            # No longer need Sii_j
+            del Sii_j
 
             ## Combine Sii for all workers ##
             Sii = np.zeros(self.nn)
             Sii[worker_m] = Sii_m
             Sii[~worker_m] = Sii_s
-            del Pii_m, Sii_m, Pii_s, Sii_s
-        else:
-            ### Unweighted ###
-            if np.any(self.adata.loc[~worker_m, ['i', 'j']].groupby('i', sort=False)['j'].transform('size').to_numpy() == 1):
-                raise ValueError("At least one stayer has only one observation, which prevents computing Pii and Sii for those stayers. Please set 'drop_single_stayers'=True during data cleaning to avoid this error.")
-            Sii = (self.Y - Y_bar) * self.E / (1 - Pii)
-            if (not self.params['exact_lev_he']) and (jla_factor is not None):
-                # Multiply by bias correction factor
-                Sii *= jla_factor
+            del Sii_m, Sii_s
 
-        # ## Take mean Sii_s at the firm level ##
-        # self.adata.loc[:, 'Sii'] = Sii
-        # if self.weighted:
-        #     # Weighted average
-        #     # How it works: imagine two observations in a firm, i=0 has w=1 and i=1 has w=5. Then Sii_0 is correct, but Sii_1 represents 1/5 of the variance of a single observation. We multiply Sii_1 by 5 to make it representative of a single observation, but then also need to weight it properly as 5 observations.
-        #     self.adata.loc[:, 'weighted_Sii'] = (w ** 2) * Sii
-        #     groupby_j = self.adata.loc[~worker_m, ['j', 'weighted_Sii', 'w']].groupby('j')
-        #     Sii[~worker_m] = groupby_j['weighted_Sii'].transform('sum') / groupby_j['w'].transform('sum')
-        #     # Divide by weight to re-adjust variance to account for more observations
-        #     Sii[~worker_m] /= w[~worker_m]
-        #     # No longer need weighted_Sii column
-        #     self.adata.drop('weighted_Sii', axis=1, inplace=True)
-        # else:
-        #     # Unweighted average
-        #     Sii[~worker_m] = self.adata.loc[~worker_m, ['j', 'Sii']].groupby('j')['Sii'].transform('mean')
-        # # No longer need Sii column
-        # self.adata.drop('Sii', axis=1, inplace=True)
+        elif self.params['Sii_stayers'] == 'upper_bound':
+            ### Give stayers the upper bound variance estimate for worker effects ###
+            # Source: https://github.com/rsaggio87/LeaveOutTwoWay/blob/master/codes/sigma_for_stayers.m
+            if self.weighted:
+                ### Weighted ###
+                ## Compute Sii for movers ##
+                Pii_m = Pii[worker_m]
+                Sii_m = (self.Y[worker_m] - Y_bar) * (self.E[worker_m] / (1 - Pii_m))
+                if (not self.params['exact_lev_he']) and (jla_factor is not None):
+                    # Multiply by bias correction factor
+                    Sii_m *= jla_factor
+                del Pii_m
+
+                ## Compute Sii for stayers ##
+                Pii_s = 1 / self.adata.loc[~worker_m, ['i', 'w']].groupby('i', sort=False)['w'].transform('sum').to_numpy()
+                if np.any(Pii_s == 1):
+                    raise ValueError("At least one stayer has observation-weight 1, which prevents computing Pii and Sii for those stayers. Please set 'drop_single_stayers'=True during data cleaning to avoid this error.")
+                # NOTE: divide by weight
+                Sii_s = (self.Y[~worker_m] - Y_bar) * (self.E[~worker_m] / (1 - Pii_s)) / w[~worker_m]
+                del Pii_s
+
+                ## Combine Sii for all workers ##
+                Sii = np.zeros(self.nn)
+                Sii[worker_m] = Sii_m
+                Sii[~worker_m] = Sii_s
+                del Sii_m, Sii_s
+            else:
+                ### Unweighted ###
+                if np.any(self.adata.loc[~worker_m, ['i', 'j']].groupby('i', sort=False)['j'].transform('size').to_numpy() == 1):
+                    raise ValueError("At least one stayer has only one observation, which prevents computing Pii and Sii for those stayers. Please set 'drop_single_stayers'=True during data cleaning to avoid this error.")
+                Sii = (self.Y - Y_bar) * self.E / (1 - Pii)
+                if (not self.params['exact_lev_he']) and (jla_factor is not None):
+                    # Multiply by bias correction factor
+                    Sii *= jla_factor
 
         # Compute sigma^2 HE (multiply by Dp, because each observation's variance is divided by Dp and we need to undo that)
-        self.res['eps_var_he'] = np.average(self.Dp * Sii, weights=self.Dp.data[0])
+        self.res['eps_var_he'] = np.average(w * Sii, weights=w)
 
         self.logger.info(f"[he] variance of residuals {self.res['eps_var_he']:2.4f}")
 
