@@ -48,6 +48,14 @@ _blm_params_default = ParamsDict({
         '''
             (default=None) Dictionary linking column names to instances of tw.continuous_control_params(). Each instance specifies a new continuous control variable and how its starting values should be generated. Run tw.continuous_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
+    'primary_period': ('first', 'set', ['first', 'second', 'all'],
+        '''
+            (default='first') Period to normalize and sort over. 'first' uses first period parameters; 'second' uses second period parameters; 'all' uses the average over first and second period parameters.
+        ''', None),
+    'verbose': (0, 'set', [0, 1, 2],
+        '''
+            (default=0) If 0, print no output; if 1, print additional output; if 2, print maximum output.
+        ''', None),
     ## Starting values ##
     'a1_mu': (1, 'type', (float, int),
         '''
@@ -89,10 +97,6 @@ _blm_params_default = ParamsDict({
         '''
             (default=None) Dirichlet prior for pk0 (probability of being at each firm type for stayers). Must have length nl. None is equivalent to np.ones(nl).
         ''', 'min > 0'),
-    'verbose': (0, 'set', [0, 1, 2],
-        '''
-            (default=0) If 0, print no output; if 1, print additional output; if 2, print maximum output.
-        ''', None),
     ## fit_movers() and fit_stayers() parameters ##
     'weighted': (True, 'type', bool,
         '''
@@ -150,6 +154,26 @@ _blm_params_default = ParamsDict({
     'd_mean_worker_effect': (1e-7, 'type', (float, int),
         '''
             (default=1e-7) When using categorical constraints, force the mean worker type effect over all firm types to increase by at least this amount as worker type increases. Can be set to negative values.
+        ''', None),
+    'd_mean_firm_effect': (0, 'type', (float, int),
+        '''
+            (default=0) When setting 'force_min_firm_type'=True, force the mean firm type effect over all worker types for the lowest firm type to be at least this much smaller than for all other firm types. Can be set to negative values.
+        ''', None),
+    'start_cycle_check_threshold': (200, 'type_constrained', (int, _gteq0),
+        '''
+            (default=200) When using categorical constraints, the estimator can get stuck cycling through minimum firm types, preventing convergence. This parameter sets the first iteration to start checking if the estimator is stuck in a cycle.
+        ''', '>= 0'),
+    'cycle_check_n_obs': (10, 'type_constrained', (int, _gteq2),
+        '''
+            (default=10) When using categorical constraints, the estimator can get stuck cycling through minimum firm types, preventing convergence. This parameter sets the number of consecutive minimum firm types that should be stored at a time to check for cycling.
+        ''', '>= 2'),
+    'force_min_firm_type': (False, 'type', bool,
+        '''
+            (default=False) When using categorical constraints, the estimator can get stuck cycling through minimum firm types, preventing convergence. If the estimator is cycling, restart estimation and set this to True to have the estimator iterate over each firm type, constraining it to be the minimum firm type, then store results from the minimum firm type with the highest likelihood.
+        ''', None),
+    'force_min_firm_type_constraint': (True, 'type', bool,
+        '''
+            (default=True) If 'force_min_firm_type'=True, add constraint to force minimum firm type to have the lowest average effect out of all firm types (the estimator may work better with this set to False, but the returned parameters may be inconsistent with the given constraints).
         ''', None),
     # fit_stayers() parameters ##
     'n_iters_stayers': (1000, 'type_constrained', (int, _gteq1),
@@ -615,15 +639,39 @@ class BLMModel:
         #     if controls_dict[col]['stationary_S']:
         #         self.S2_cts[col] = self.S1_cts[col]
 
-        for l in range(nl):
-            self.A1[l] = np.sort(self.A1[l], axis=0)
-            self.A2[l] = np.sort(self.A2[l], axis=0)
+        # for l in range(nl):
+        #     self.A1[l] = np.sort(self.A1[l], axis=0)
+        #     self.A2[l] = np.sort(self.A2[l], axis=0)
 
         # if self.fixb:
         #     self.A2 = np.mean(self.A2, axis=1) + self.A1 - np.mean(self.A1, axis=1)
 
         # if self.stationary:
         #     self.A2 = self.A1
+
+    def _min_firm_type(self, A1, A2):
+        '''
+        Find the lowest firm type.
+
+        Arguments:
+            A1 (NumPy Array): mean of fixed effects in the first period
+            A2 (NumPy Array): mean of fixed effects in the second period
+
+        Returns:
+            (int): lowest firm type
+        '''
+        params = self.params
+
+        # Compute parameters from primary period
+        if params['primary_period'] == 'first':
+            A_mean = A1
+        elif params['primary_period'] == 'second':
+            A_mean = A2
+        elif params['primary_period'] == 'all':
+            A_mean = (A1 + A2) / 2
+
+        # Return lowest firm type
+        return np.mean(A_mean, axis=0).argsort()[0]
 
     def _gen_constraints(self, min_firm_type):
         '''
@@ -717,25 +765,133 @@ class BLMModel:
             if any_cat_constraints:
                 # Add constraints only if at least one categorical control uses constraints (otherwise, the normalization can just be done at the end)
                 self.normalize_constraints = True
-                cons_a.add_constraints(cons.MonotonicMean(md=self.params['d_mean_worker_effect'], nnt=[0]))
+                ## Determine primary and second periods ##
+                primary_period_dict = {
+                    'first': 0,
+                    'second': 1,
+                    'all': range(2)
+                }
+                secondary_period_dict = {
+                    'first': 1,
+                    'second': 0,
+                    'all': 0
+                }
+                pp = primary_period_dict[params['primary_period']]
+                sp = secondary_period_dict[params['primary_period']]
+                ### Add constraints ###
+                ## Monotonic worker types ##
+                cons_a.add_constraints(cons.MonotonicMean(md=params['d_mean_worker_effect'], cross_period_mean=True, nnt=pp))
+                ## Lowest firm type ##
+                if params['force_min_firm_type'] and params['force_min_firm_type_constraint']:
+                    cons_a.add_constraints(cons.MinFirmType(min_firm_type=min_firm_type, md=params['d_mean_firm_effect'], is_min=True, cross_period_mean=True, nnt=pp))
+                ## Normalize ##
                 if any_tv_wi:
-                    cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=[0, 1]))
+                    # Normalize everything
+                    cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=range(2)))
                 else:
                     if any_tnv_wi:
-                        cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=[0]))
+                        # Normalize primary period
+                        cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp))
                         if any_tv_nwi:
-                            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=[1]))
+                            # Normalize lowest type pair from secondary period
+                            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=sp))
                     else:
                         if any_tv_nwi:
-                            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=[0, 1]))
+                            # Normalize lowest type pair in both periods
+                            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(2)))
                         elif any_tnv_nwi:
-                            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=[0]))
+                            # Normalize lowest type pair in primary period
+                            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp))
             else:
                 self.normalize_constraints = False
 
         return (cons_a, cons_s, cons_a_dict, cons_s_dict)
 
-    def _normalize(self, A1, A2, A1_cat, A2_cat, min_firm_type):
+    def _sort_parameters(self, A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0, firm_types=False, reverse=False):
+        '''
+        Sort parameters by worker type order (and optionally firm type order).
+
+        Arguments:
+            A1 (NumPy Array): mean of fixed effects in the first period
+            A2 (NumPy Array): mean of fixed effects in the second period
+            S1 (NumPy Array): standard deviation of fixed effects in the first period
+            S2 (NumPy Array): standard deviation of fixed effects in the second period
+            A1_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the first period for categorical control variables
+            A2_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the second period for categorical control variables
+            S1_cat (dict of NumPy Arrays): dictionary linking column names to the standard deviation of fixed effects in the first period for categorical control variables
+            S2_cat (dict of NumPy Arrays): dictionary linking column names to the standard deviation of fixed effects in the second period for categorical control variables
+            A1_cts (dict of NumPy Arrays): dictionary linking column names to the mean of coefficients in the first period for continuous control variables
+            A2_cts (dict of NumPy Arrays): dictionary linking column names to the mean of coefficients in the second period for continuous control variables
+            S1_cts (dict of NumPy Arrays): dictionary linking column names to the standard deviation of coefficients in the first period for continuous control variables
+            S2_cts (dict of NumPy Arrays): dictionary linking column names to the standard deviation of coefficients in the second period for continuous control variables
+            pk1 (NumPy Array): probability of being at each combination of firm types for movers
+            pk0 (NumPy Array): probability of being at each firm type for stayers
+            firm_types (bool): if True, also sort by firm type order
+            reverse (bool): if True, sort in reverse order
+
+        Returns (tuple of NumPy Arrays and dicts of NumPy Arrays): sorted parameters (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0)
+        '''
+        # Copy parameters
+        A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0 = copy.deepcopy((A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0))
+        # Unpack attributes
+        params = self.params
+        nl, nk = self.nl, self.nk
+        controls_dict = self.controls_dict
+        ## Primary period ##
+        if params['primary_period'] == 'first':
+            A_mean = A1
+        elif params['primary_period'] == 'second':
+            A_mean = A2
+        elif params['primary_period'] == 'all':
+            A_mean = (A1 + A2) / 2
+        # ## Compute sum of all effects ##
+        # A_sum = self.A1 + self.A2
+        # for control_dict in (self.A1_cat, self.A2_cat):
+        #     for control_col, control_array in control_dict.items():
+        #         if controls_dict[control_col]['worker_type_interaction']:
+        #             A_sum = (A_sum.T + np.mean(control_array, axis=1)).T
+        ## Sort worker types ##
+        worker_type_order = np.mean(A_mean, axis=1).argsort()
+        if reverse:
+            worker_type_order = list(reversed(worker_type_order))
+        if np.any(worker_type_order != np.arange(nl)):
+            # Sort if out of order
+            A1 = A1[worker_type_order, :]
+            A2 = A2[worker_type_order, :]
+            S1 = S1[worker_type_order, :]
+            S2 = S2[worker_type_order, :]
+            pk1 = pk1[:, worker_type_order]
+            pk0 = pk0[:, worker_type_order]
+            # Sort control variables #
+            for control_dict in (A1_cat, A2_cat, S1_cat, S2_cat):
+                for control_col, control_array in control_dict.items():
+                    if controls_dict[control_col]['worker_type_interaction']:
+                        control_dict[control_col] = control_array[worker_type_order, :]
+            for control_dict in (A1_cts, A2_cts, S1_cts, S2_cts):
+                for control_col, control_array in control_dict.items():
+                    if controls_dict[control_col]['worker_type_interaction']:
+                        control_dict[control_col] = control_array[worker_type_order]
+
+        if firm_types:
+            ## Sort firm types ##
+            firm_type_order = np.mean(A_mean, axis=0).argsort()
+            if reverse:
+                firm_type_order = list(reversed(firm_type_order))
+            if np.any(firm_type_order != np.arange(nk)):
+                # Sort if out of order
+                A1 = A1[:, firm_type_order]
+                A2 = A2[:, firm_type_order]
+                S1 = S1[:, firm_type_order]
+                S2 = S2[:, firm_type_order]
+                pk0 = pk0[firm_type_order, :]
+                adj_pk1 = np.reshape(pk1, (nk, nk, nl))
+                adj_pk1 = adj_pk1[firm_type_order, :, :]
+                adj_pk1 = adj_pk1[:, firm_type_order, :]
+                pk1 = np.reshape(adj_pk1, (nk * nk, nl))
+
+        return (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0)
+
+    def _normalize(self, A1, A2, A1_cat, A2_cat):
         '''
         Normalize means given categorical controls.
 
@@ -744,7 +900,6 @@ class BLMModel:
             A2 (NumPy Array): mean of fixed effects in the second period
             A1_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the first period for categorical control variables
             A2_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the second period for categorical control variables
-            min_firm_type (int): lowest firm type
 
         Returns:
             (tuple): tuple of normalized parameters (A1, A2, A1_cat, A2_cat)
@@ -756,6 +911,8 @@ class BLMModel:
         A1, A2, A1_cat, A2_cat = A1.copy(), A2.copy(), A1_cat.copy(), A2_cat.copy()
 
         if len(cat_cols) > 0:
+            # Compute minimum firm type
+            min_firm_type = self._min_firm_type(A1, A2)
             # Check if any columns interact with worker type and/or are stationary (tv stands for time-varying, which is equivalent to non-stationary; and wi stands for worker-interaction)
             any_tv_nwi = False
             any_tnv_nwi = False
@@ -799,22 +956,44 @@ class BLMModel:
                     A2[l, :] -= adj_val_2
                     A2_cat[tv_wi_col][l, :] += adj_val_2
             else:
+                primary_period_dict = {
+                    'first': 0,
+                    'second': 1,
+                    'all': range(2)
+                }
+                secondary_period_dict = {
+                    'first': 1,
+                    'second': 0,
+                    'all': range(2)
+                }
+                params_dict = {
+                    0: [A1, A1_cat],
+                    1: [A2, A2_cat]
+                }
+                Ap = [params_dict[pp] for pp in to_list(primary_period_dict[params['primary_period']])]
+                As = [params_dict[sp] for sp in to_list(secondary_period_dict[params['primary_period']])]
                 if any_tnv_wi:
+                    ## Normalize primary period ##
                     for l in range(nl):
-                        # First period
-                        adj_val_1 = A1[l, min_firm_type]
+                        # Compute normalization
+                        adj_val_1 = Ap[0][0][l, min_firm_type]
+                        for Ap_sub in Ap[1:]:
+                            adj_val_1 += Ap_sub[0][l, min_firm_type]
+                        adj_val_1 /= len(Ap)
+                        # Normalize
                         A1[l, :] -= adj_val_1
                         A1_cat[tnv_wi_col][l, :] += adj_val_1
-                        # Second period
                         A2[l, :] -= adj_val_1
                         A2_cat[tnv_wi_col][l, :] += adj_val_1
                     if any_tv_nwi:
-                        # Second period
-                        adj_val_2 = A2[0, min_firm_type]
-                        A2 -= adj_val_2
-                        A2_cat[tv_nwi_col] += adj_val_2
+                        ## Normalize lowest type pair from secondary period ##
+                        for As_sub in As:
+                            adj_val_2 = As_sub[0][0, min_firm_type]
+                            As_sub[0] -= adj_val_2
+                            As_sub[1][tv_nwi_col] += adj_val_2
                 else:
                     if any_tv_nwi:
+                        ## Normalize lowest type pair in both periods ##
                         # First period
                         adj_val_1 = A1[0, min_firm_type]
                         A1 -= adj_val_1
@@ -824,11 +1003,15 @@ class BLMModel:
                         A2 -= adj_val_2
                         A2_cat[tv_nwi_col] += adj_val_2
                     elif any_tnv_nwi:
-                        # First period
-                        adj_val_1 = A1[0, min_firm_type]
+                        ## Normalize lowest type pair in primary period ##
+                        # Compute normalization
+                        adj_val_1 = Ap[0][0][0, min_firm_type]
+                        for Ap_sub in Ap[1:]:
+                            adj_val_1 += Ap_sub[0][0, min_firm_type]
+                        adj_val_1 /= len(Ap)
+                        # Normalize
                         A1 -= adj_val_1
                         A1_cat[tnv_nwi_col] += adj_val_1
-                        # Second period
                         A2 -= adj_val_1
                         A2_cat[tnv_nwi_col] += adj_val_1
 
@@ -969,36 +1152,6 @@ class BLMModel:
         if compute_S:
             return (S1_sum_sq_l, S2_sum_sq_l)
 
-    def compute_connectedness_measure(self, all=False):
-        '''
-        Computes graph connectedness measure among the movers within each type and updates self.connectedness to be the smallest value.
-
-        Arguments:
-            all (bool): if True, set self.connectedness to be the vector of connectedness for all worker types instead of the minimum
-        '''
-        nl, nk = self.nl, self.nk
-        EV = np.zeros(shape=nl)
-        pk1 = np.reshape(self.pk1, (nk, nk, nl))
-        pr = (self.NNm.T * pk1.T).T
-
-        for kk in range(nl):
-            # Compute adjacency matrix
-            A = pr[:, :, kk]
-            A /= A.sum()
-            A = (A + A.T) / 2
-            D = np.diag(np.sum(A, axis=1) ** (-0.5))
-            L = np.eye(nk) - D @ A @ D
-            try:
-                evals, evecs = np.linalg.eig(L)
-            except np.linalg.LinAlgError as e:
-                warnings.warn("Linear algebra error encountered when computing connectedness measure. This can likely be corrected by increasing the value of 'd_prior_movers' in tw.blm_params().")
-                raise np.linalg.LinAlgError(e)
-            EV[kk] = sorted(evals)[1]
-
-        if all:
-            self.connectedness = EV
-        self.connectedness = np.abs(EV).min()
-
     def fit_movers(self, jdata, compute_NNm=True):
         '''
         EM algorithm for movers.
@@ -1006,6 +1159,60 @@ class BLMModel:
         Arguments:
             jdata (BipartitePandas DataFrame): data for movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
+        '''
+        # Unpack parameters
+        params = self.params
+    
+        if params['force_min_firm_type']:
+            ## If forcing minimum firm type ##
+            if params['return_qi']:
+                raise ValueError("Cannot return qi if 'force_min_firm_type'=True.")
+            # Unpack parameters
+            nk = self.nk
+
+            # Best model
+            best_model = None
+            for k in range(nk):
+                # Copy initial guesses
+                A1, A2, S1, S2 = copy.deepcopy((self.A1, self.A2, self.S1, self.S2))
+                A1_cat, A2_cat, S1_cat, S2_cat = copy.deepcopy((self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat))
+                A1_cts, A2_cts, S1_cts, S2_cts = copy.deepcopy((self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts))
+                pk1, pk0 = copy.deepcopy((self.pk1, self.pk0))
+
+                ## Estimate with min_firm_type == k ##
+                blm_k = BLMModel(params)
+                # Set initial guesses
+                blm_k.A1, blm_k.A2, blm_k.S1, blm_k.S2 = A1, A2, S1, S2
+                blm_k.A1_cat, blm_k.A2_cat, blm_k.S1_cat, blm_k.S2_cat = A1_cat, A2_cat, S1_cat, S2_cat
+                blm_k.A1_cts, blm_k.A2_cts, blm_k.S1_cts, blm_k.S2_cts = A1_cts, A2_cts, S1_cts, S2_cts
+                blm_k.pk1, blm_k.pk0 = pk1, pk0
+                # Fit estimator
+                blm_k._fit_movers(jdata=jdata, compute_NNm=compute_NNm, min_firm_type=k)
+
+                ## Store best estimator ##
+                if (best_model is None) or (blm_k.lik1 > best_model.lik1):
+                    best_model = blm_k
+            ## Update parameters with best model ##
+            self.A1, self.A2, self.S1, self.S2 = best_model.A1, best_model.A2, best_model.S1, best_model.S2
+            self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat = best_model.A1_cat, best_model.A2_cat, best_model.S1_cat, best_model.S2_cat
+            self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts = best_model.A1_cts, best_model.A2_cts, best_model.S1_cts, best_model.S2_cts
+            self.pk1, self.pk0 = best_model.pk1, best_model.pk0
+
+        else:
+            # If not forcing minimum firm type
+            if params['return_qi']:
+                return self._fit_movers(jdata=jdata, compute_NNm=compute_NNm, min_firm_type=None)
+            else:
+                self._fit_movers(jdata=jdata, compute_NNm=compute_NNm, min_firm_type=None)
+    
+    def _fit_movers(self, jdata, compute_NNm=True, min_firm_type=None):
+        '''
+        Wrapped EM algorithm for movers.
+
+        Arguments:
+            jdata (BipartitePandas DataFrame): data for movers
+            compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
+            min_firm_type (int or None): if params['force_min_firm_type'] == True, gives the firm type to force as the lowest firm type; if params['force_min_firm_type'] == False, this parameter is not used
         '''
         # Unpack parameters
         params = self.params
@@ -1077,14 +1284,21 @@ class BLMModel:
         prev_lik = np.inf
         # Fix error from bad initial guesses causing probabilities to be too low
         d_prior = params['d_prior_movers']
+        # Track minimum firm type to check whether estimator stuck in a loop
+        min_firm_types = []
 
         ## Sort ##
         A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
 
         ## Constraints ##
-        # Find minimum firm type
-        min_firm_type = np.mean(A1, axis=0).argsort()[0]
-        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type)
+        if params['force_min_firm_type']:
+            # If forcing minimum firm type
+            prev_min_firm_type = min_firm_type
+            min_firm_type = min_firm_type
+        else:
+            # If not forcing minimum firm type
+            prev_min_firm_type = self._min_firm_type(A1, A2)
+        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(prev_min_firm_type)
 
         for iter in range(params['n_iters_movers']):
             # ---------- E-Step ----------
@@ -1115,22 +1329,35 @@ class BLMModel:
 
             # We compute log sum exp to get likelihoods and probabilities
             qi = np.exp(lp.T - logsumexp(lp, axis=1)).T
-            # # Add dirichlet prior
-            # qi += d_prior - 1
-            # # Normalize rows to sum to 1
-            # qi = (qi.T / np.sum(qi, axis=1).T).T
             if params['return_qi']:
                 return qi
             lik1 = logsumexp(lp, axis=1).mean() # FIXME should this be returned?
-            # lik_prior = (d_prior - 1) * np.sum(np.log(pk1))
-            # lik1 += lik_prior
+            # Account for Dirichlet prior
+            lik_prior = (d_prior - 1) * np.sum(np.log(pk1))
+            lik1 += lik_prior
             liks1.append(lik1)
             if params['verbose'] == 2:
                 print('loop {}, liks {}'.format(iter, lik1))
 
-            if abs(lik1 - prev_lik) < params['threshold_movers']:
+            if not params['force_min_firm_type']:
+                # If not forcing minimum firm type, compute lowest firm type
+                min_firm_type = self._min_firm_type(A1, A2)
+
+            if (abs(lik1 - prev_lik) < params['threshold_movers']) and (min_firm_type == prev_min_firm_type):
+                # Break loop
                 break
             prev_lik = lik1
+            prev_min_firm_type = min_firm_type
+
+            if (len(cat_cols) > 0) and (iter >= params['start_cycle_check_threshold']) and (not params['force_min_firm_type']):
+                ## Check whether estimator is stuck in a cycle ##
+                min_firm_types.append(min_firm_type)
+                if len(min_firm_types) >= params['cycle_check_n_obs']:
+                    if len(min_firm_types) > params['cycle_check_n_obs']:
+                        min_firm_types = min_firm_types[1:]
+                    if np.all(np.array(min_firm_types[1:]) != np.array(min_firm_types[: -1])):
+                        # Check if estimator is changing minimum firm type every loop
+                        raise ValueError("Estimator is stuck in a cycle of minimum firm types! Please set 'force_min_firm_type'=True to have the estimator iterate over each firm type, constraining it to be the minimum firm type, then store results from the minimum firm type with the highest likelihood.")
 
             # ---------- M-step ----------
             # Constrained OLS (source: https://scaron.info/blog/quadratic-programming-in-python.html)
@@ -1218,8 +1445,6 @@ class BLMModel:
             if params['update_a']:
                 if iter > 0:
                     ## Constraints ##
-                    # Find minimum firm type
-                    min_firm_type = np.mean(A1, axis=0).argsort()[0]
                     cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type)
                 try:
                     cons_a.solve(XwX, -XwY)
@@ -1476,10 +1701,6 @@ class BLMModel:
                 # Normalize rows to sum to 1
                 pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
 
-            # if params['update_a'] and (len(cat_cols) > 0):
-            #     ## Sort parameters if normalizing (which happens when using categorical controls) ##
-            #     A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
-
             # print('A1 after:')
             # print(A1)
             # print('A2 after:')
@@ -1508,16 +1729,14 @@ class BLMModel:
         if len(cat_cols) > 0:
             ## Normalize ##
             # NOTE: normalize here because constraints don't normalize unless categorical controls are using constraints, and even when used, constraints don't always normalize to exactly 0
-            min_firm_type = np.mean(A1, axis=0).argsort()[0]
-            A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat, min_firm_type)
+            A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat)
 
         ## Sort parameters ##
         A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
 
         if len(cat_cols) > 0:
             ## Normalize again ##
-            min_firm_type = np.mean(A1, axis=0).argsort()[0]
-            A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat, min_firm_type)
+            A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat)
 
         # Store parameters
         self.A1, self.A2, self.S1, self.S2 = A1, A2, S1, S2
@@ -1632,6 +1851,9 @@ class BLMModel:
             if params['return_qi']:
                 return qi
             lik0 = logsumexp(lp, axis=1).mean() # FIXME should this be returned?
+            # Account for Dirichlet prior
+            lik_prior = (d_prior - 1) * np.sum(np.log(pk0))
+            lik0 += lik_prior
             liks0.append(lik0)
             if params['verbose'] == 2:
                 print('loop {}, liks {}'.format(iter, lik0))
@@ -1763,81 +1985,35 @@ class BLMModel:
         # Restore original parameters
         self.params = user_params
 
-    def _sort_parameters(self, A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0, firm_types=False, reverse=False):
+    def compute_connectedness_measure(self, all=False):
         '''
-        Sort parameters by worker type order (and optionally firm type order).
+        Computes graph connectedness measure among the movers within each type and updates self.connectedness to be the smallest value.
 
         Arguments:
-            A1 (NumPy Array): mean of fixed effects in the first period
-            A2 (NumPy Array): mean of fixed effects in the second period
-            S1 (NumPy Array): standard deviation of fixed effects in the first period
-            S2 (NumPy Array): standard deviation of fixed effects in the second period
-            A1_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the first period for categorical control variables
-            A2_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the second period for categorical control variables
-            S1_cat (dict of NumPy Arrays): dictionary linking column names to the standard deviation of fixed effects in the first period for categorical control variables
-            S2_cat (dict of NumPy Arrays): dictionary linking column names to the standard deviation of fixed effects in the second period for categorical control variables
-            A1_cts (dict of NumPy Arrays): dictionary linking column names to the mean of coefficients in the first period for continuous control variables
-            A2_cts (dict of NumPy Arrays): dictionary linking column names to the mean of coefficients in the second period for continuous control variables
-            S1_cts (dict of NumPy Arrays): dictionary linking column names to the standard deviation of coefficients in the first period for continuous control variables
-            S2_cts (dict of NumPy Arrays): dictionary linking column names to the standard deviation of coefficients in the second period for continuous control variables
-            pk1 (NumPy Array): probability of being at each combination of firm types for movers
-            pk0 (NumPy Array): probability of being at each firm type for stayers
-            firm_types (bool): if True, also sort by firm type order
-            reverse (bool): if True, sort in reverse order
-
-        Returns (tuple of NumPy Arrays and dicts of NumPy Arrays): sorted parameters (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0)
+            all (bool): if True, set self.connectedness to be the vector of connectedness for all worker types instead of the minimum
         '''
-        # Copy parameters
-        A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0 = copy.deepcopy((A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0))
-        # Unpack attributes
         nl, nk = self.nl, self.nk
-        controls_dict = self.controls_dict
-        # ## Compute sum of all effects ##
-        # A_sum = self.A1 + self.A2
-        # for control_dict in (self.A1_cat, self.A2_cat):
-        #     for control_col, control_array in control_dict.items():
-        #         if controls_dict[control_col]['worker_type_interaction']:
-        #             A_sum = (A_sum.T + np.mean(control_array, axis=1)).T
-        ## Sort worker types ##
-        worker_type_order = np.mean(A1, axis=1).argsort()
-        if reverse:
-            worker_type_order = list(reversed(worker_type_order))
-        if np.any(worker_type_order != np.arange(nl)):
-            # Sort if out of order
-            A1 = A1[worker_type_order, :]
-            A2 = A2[worker_type_order, :]
-            S1 = S1[worker_type_order, :]
-            S2 = S2[worker_type_order, :]
-            pk1 = pk1[:, worker_type_order]
-            pk0 = pk0[:, worker_type_order]
-            # Sort control variables #
-            for control_dict in (A1_cat, A2_cat, S1_cat, S2_cat):
-                for control_col, control_array in control_dict.items():
-                    if controls_dict[control_col]['worker_type_interaction']:
-                        control_dict[control_col] = control_array[worker_type_order, :]
-            for control_dict in (A1_cts, A2_cts, S1_cts, S2_cts):
-                for control_col, control_array in control_dict.items():
-                    if controls_dict[control_col]['worker_type_interaction']:
-                        control_dict[control_col] = control_array[worker_type_order]
+        EV = np.zeros(shape=nl)
+        pk1 = np.reshape(self.pk1, (nk, nk, nl))
+        pr = (self.NNm.T * pk1.T).T
 
-        if firm_types:
-            ## Sort firm types ##
-            firm_type_order = np.mean(A1, axis=0).argsort()
-            if reverse:
-                firm_type_order = list(reversed(firm_type_order))
-            if np.any(firm_type_order != np.arange(nk)):
-                # Sort if out of order
-                A1 = A1[:, firm_type_order]
-                A2 = A2[:, firm_type_order]
-                S1 = S1[:, firm_type_order]
-                S2 = S2[:, firm_type_order]
-                pk0 = pk0[firm_type_order, :]
-                adj_pk1 = np.reshape(pk1, (nk, nk, nl))
-                adj_pk1 = adj_pk1[firm_type_order, :, :]
-                adj_pk1 = adj_pk1[:, firm_type_order, :]
-                pk1 = np.reshape(adj_pk1, (nk * nk, nl))
+        for kk in range(nl):
+            # Compute adjacency matrix
+            A = pr[:, :, kk]
+            A /= A.sum()
+            A = (A + A.T) / 2
+            D = np.diag(np.sum(A, axis=1) ** (-0.5))
+            L = np.eye(nk) - D @ A @ D
+            try:
+                evals, evecs = np.linalg.eig(L)
+            except np.linalg.LinAlgError as e:
+                warnings.warn("Linear algebra error encountered when computing connectedness measure. This can likely be corrected by increasing the value of 'd_prior_movers' in tw.blm_params().")
+                raise np.linalg.LinAlgError(e)
+            EV[kk] = sorted(evals)[1]
 
-        return (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0)
+        if all:
+            self.connectedness = EV
+        self.connectedness = np.abs(EV).min()
 
     def plot_log_earnings(self, period='first', grid=True, dpi=None):
         '''

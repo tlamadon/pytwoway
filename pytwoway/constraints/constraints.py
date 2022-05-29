@@ -190,12 +190,15 @@ class Linear():
     Generate BLM constraints so that for a fixed firm type, worker types effects must change linearly.
 
     Arguments:
-        nnt (int): number of time periods to constrain. This should be set to 1 if Linear() is being used in conjunction with Stationary().
+        nnt (int or list of ints or None): time periods to constrain. This should be set to 0 if Linear() is being used in conjunction with Stationary(). None is equivalent to range(nt).
         nt (int): number of time periods
     '''
 
-    def __init__(self, nnt=2, nt=2):
-        self.nnt = nnt
+    def __init__(self, nnt=None, nt=2):
+        if nnt is None:
+            self.nnt = range(nt)
+        else:
+            self.nnt = to_list(nnt)
         self.nt = nt
 
     def _get_constraints(self, nl, nk):
@@ -210,9 +213,9 @@ class Linear():
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
         nnt, nt = self.nnt, self.nt
-        A = np.zeros(shape=(nnt * (nl - 2) * nk, nt * nl * nk))
-        for period in range(nnt):
-            row_shift = period * (nl - 2) * nk
+        A = np.zeros(shape=(len(nnt) * (nl - 2) * nk, nt * nl * nk))
+        for i, period in enumerate(nnt):
+            row_shift = i * (nl - 2) * nk
             col_shift = period * nl * nk
             for k in range(nk):
                 for l in range(nl - 2):
@@ -231,12 +234,15 @@ class LinearAdditive():
     Generate BLM constraints so that for a fixed firm type, worker types effects must change linear-additively.
 
     Arguments:
-        nnt (int): number of time periods to constrain. This should be set to 1 if LinearAdditive() is being used in conjunction with Stationary().
+        nnt (int or list of ints or None): time periods to constrain. This should be set to 1 if LinearAdditive() is being used in conjunction with Stationary(). None is equivalent to range(nt).
         nt (int): number of time periods
     '''
 
-    def __init__(self, nnt=2, nt=2):
-        self.nnt = nnt
+    def __init__(self, nnt=None, nt=2):
+        if nnt is None:
+            self.nnt = range(nt)
+        else:
+            self.nnt = to_list(nnt)
         self.nt = nt
 
     def _get_constraints(self, nl, nk):
@@ -251,10 +257,10 @@ class LinearAdditive():
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
         nnt, nt = self.nnt, self.nt
-        A = np.zeros(shape=(nnt * ((nl - 2) * nk + (nk - 1)), nt * nl * nk))
+        A = np.zeros(shape=(len(nnt) * ((nl - 2) * nk + (nk - 1)), nt * nl * nk))
         ## Linear ##
-        for period in range(nnt):
-            row_shift = period * (nl - 2) * nk
+        for i, period in enumerate(nnt):
+            row_shift = i * (nl - 2) * nk
             col_shift = period * nl * nk
             for k in range(nk):
                 for l in range(nl - 2):
@@ -265,8 +271,8 @@ class LinearAdditive():
                 col_shift += 1
 
         ## Additive ##
-        for period in range(nnt):
-            row_shift = nnt * (nl - 2) * nk + period * (nk - 1)
+        for i, period in enumerate(nnt):
+            row_shift = len(nnt) * (nl - 2) * nk + i * (nk - 1)
             col_shift = period * nl * nk
             for k in range(nk - 1):
                 A[row_shift + k, col_shift + k] = 1
@@ -330,17 +336,19 @@ class MonotonicMean():
     Arguments:
         md (float): minimum difference between consecutive types
         increasing (bool): if True, monotonic increasing; if False, monotonic decreasing
-        nnt (list of ints or None): time periods to constrain; None is equivalent to range(nt)
+        cross_period_mean (bool): if True, rather than checking means are monotonic for each period separately, consider the mean worker effects over all periods jointly
+        nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
         nt (int): number of time periods
     '''
 
-    def __init__(self, md=0, increasing=True, nnt=None, nt=2):
+    def __init__(self, md=0, increasing=True, cross_period_mean=False, nnt=None, nt=2):
         self.md = md
         self.increasing = increasing
+        self.cross_period_mean = cross_period_mean
         if nnt is None:
             self.nnt = range(nt)
         else:
-            self.nnt = nnt
+            self.nnt = to_list(nnt)
         self.nt = nt
 
     def _get_constraints(self, nl, nk):
@@ -354,21 +362,104 @@ class MonotonicMean():
         Returns:
             (dict of NumPy Arrays): {'G': G, 'h': h, 'A': None, 'b': None}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        md, increasing, nnt, nt = self.md, self.increasing, self.nnt, self.nt
-        G = np.zeros(shape=(len(nnt) * (nl - 1), nt * nl * nk))
+        md, increasing, cross_period_mean, nnt, nt = self.md, self.increasing, self.cross_period_mean, self.nnt, self.nt
+        if cross_period_mean:
+            G = np.zeros(shape=((nl - 1), nt * nl * nk))
+        else:
+            G = np.zeros(shape=(len(nnt) * (nl - 1), nt * nl * nk))
         for i, period in enumerate(nnt):
-            row_shift = i * (nl - 1)
+            if cross_period_mean:
+                row_shift = 0
+            else:
+                row_shift = i * (nl - 1)
             col_shift = period * nl * nk
             for k in range(nk):
                 # Iterate over firm types
                 for l in range(nl - 1):
                     # For a fixed firm type, consider consecutive worker types
-                    G[row_shift + l, period * nl * nk + k + l * nk] = 1 / nk
-                    G[row_shift + l, period * nl * nk + k + (l + 1) * nk] = - (1 / nk)
+                    if cross_period_mean:
+                        G[row_shift + l, period * nl * nk + k + l * nk] = 1 / (len(nnt) * nk)
+                        G[row_shift + l, period * nl * nk + k + (l + 1) * nk] = - (1 / (len(nnt) * nk))
+                    else:
+                        G[row_shift + l, period * nl * nk + k + l * nk] = 1 / nk
+                        G[row_shift + l, period * nl * nk + k + (l + 1) * nk] = - (1 / nk)
 
         h = - md * np.ones(shape=G.shape[0])
 
         if not increasing:
+            G *= -1
+
+        return {'G': G, 'h': h, 'A': None, 'b': None}
+
+class MinFirmType():
+    '''
+    Generate BLM constraints so that the mean of a given firm type is less than or equal to the mean of every other firm type.
+
+    Arguments:
+        min_firm_type (int): minimum firm type
+        md (float): minimum difference between the lowest firm type and other types
+        is_min (bool): if True, constraint firm type to be the lowest firm type; if False, constraint it to be the highest firm type
+        cross_period_mean (bool): if True, rather than checking means are monotonic for each period separately, consider the mean worker effects over all periods jointly
+        nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
+        nt (int): number of time periods
+    '''
+
+    def __init__(self, min_firm_type, md=0, is_min=True, cross_period_mean=False, nnt=None, nt=2):
+        self.min_firm_type = min_firm_type
+        self.md = md
+        self.is_min = is_min
+        self.cross_period_mean = cross_period_mean
+        if nnt is None:
+            self.nnt = range(nt)
+        else:
+            self.nnt = to_list(nnt)
+        self.nt = nt
+
+    def _get_constraints(self, nl, nk):
+        '''
+        Generate constraint arrays.
+
+        Arguments:
+            nl (int): number of worker types
+            nk (int): number of firm types
+
+        Returns:
+            (dict of NumPy Arrays): {'G': G, 'h': h, 'A': None, 'b': None}, where G, h, A, and b are defined in the quadratic programming model
+        '''
+        min_firm_type, md, is_min, cross_period_mean, nnt, nt = self.min_firm_type, self.md, self.is_min, self.cross_period_mean, self.nnt, self.nt
+        if cross_period_mean:
+            G = np.zeros(shape=((nk - 1), nt, nl, nk))
+        else:
+            G = np.zeros(shape=(len(nnt) * (nk - 1), nt, nl, nk))
+        for i, period in enumerate(nnt):
+            if cross_period_mean:
+                row_shift = 0
+            else:
+                row_shift = i * (nk - 1)
+            for l in range(nl):
+                ## Iterate over worker types ##
+                for j, k in enumerate(list(range(min_firm_type)) + list(range(min_firm_type + 1, nk))):
+                    ## Iterate over firm types ##
+                    # First, consider minimum firm type
+                    if cross_period_mean:
+                        G[row_shift + j, period, l, min_firm_type] = 1 / (len(nnt) * nl)
+                    else:
+                        G[row_shift + j, period, l, min_firm_type] = 1 / nl
+                    # Second, consider all other firm types
+                    if cross_period_mean:
+                        G[row_shift + j, period, l, k] = - (1 / (len(nnt) * nl))
+                    else:
+                        G[row_shift + j, period, l, k] = - (1 / nl)
+
+        ## Reshape parameters ##
+        if cross_period_mean:
+            G = np.reshape(G, ((nk - 1), nt * nl * nk))
+        else:
+            G = np.reshape(G, (len(nnt) * (nk - 1), nt * nl * nk))
+
+        h = - md * np.ones(shape=G.shape[0])
+
+        if not is_min:
             G *= -1
 
         return {'G': G, 'h': h, 'A': None, 'b': None}
@@ -417,12 +508,14 @@ class NormalizeLowest():
 
     Arguments:
         min_firm_type (int): lowest firm type
+        cross_period_normalize (bool): if True, rather than normalizing for each period separately, normalize the mean of the lowest worker-firm type pair effect over all periods jointly
         nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
         nt (int): number of time periods
     '''
 
-    def __init__(self, min_firm_type, nnt=None, nt=2):
+    def __init__(self, min_firm_type, cross_period_normalize=False, nnt=None, nt=2):
         self.min_firm_type = min_firm_type
+        self.cross_period_normalize = cross_period_normalize
         if nnt is None:
             self.nnt = range(nt)
         else:
@@ -440,10 +533,16 @@ class NormalizeLowest():
         Returns:
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        nnt, nt = self.nnt, self.nt
-        A = np.zeros(shape=(len(nnt), nt * nl * nk))
+        cross_period_normalize, nnt, nt = self.cross_period_normalize, self.nnt, self.nt
+        if cross_period_normalize:
+            A = np.zeros(shape=(1, nt * nl * nk))
+        else:
+            A = np.zeros(shape=(len(nnt), nt * nl * nk))
         for i, period in enumerate(nnt):
-            A[i, period * nl * nk + self.min_firm_type] = 1
+            if cross_period_normalize:
+                A[0, period * nl * nk + self.min_firm_type] = 1 / len(nnt)
+            else:
+                A[i, period * nl * nk + self.min_firm_type] = 1
 
         b = - np.zeros(shape=A.shape[0])
 
@@ -455,16 +554,18 @@ class NormalizeAll():
 
     Arguments:
         min_firm_type (int): lowest firm type
-        nnt (list of ints or None): time periods to constrain; None is equivalent to range(nt)
+        cross_period_normalize (bool): if True, rather than normalizing for each period separately, normalize the mean of all worker-firm type pair effects over all periods jointly
+        nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
         nt (int): number of time periods
     '''
 
-    def __init__(self, min_firm_type, nnt=None, nt=2):
+    def __init__(self, min_firm_type, cross_period_normalize=False, nnt=None, nt=2):
         self.min_firm_type = min_firm_type
+        self.cross_period_normalize = cross_period_normalize
         if nnt is None:
             self.nnt = range(nt)
         else:
-            self.nnt = nnt
+            self.nnt = to_list(nnt)
         self.nt = nt
 
     def _get_constraints(self, nl, nk):
@@ -478,11 +579,17 @@ class NormalizeAll():
         Returns:
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        nnt, nt = self.nnt, self.nt
-        A = np.zeros(shape=(len(nnt) * nl, nt * nl * nk))
+        cross_period_normalize, nnt, nt = self.cross_period_normalize, self.nnt, self.nt
+        if cross_period_normalize:
+            A = np.zeros(shape=(nl, nt * nl * nk))
+        else:
+            A = np.zeros(shape=(len(nnt) * nl, nt * nl * nk))
         for i, period in enumerate(nnt):
             for l in range(nl):
-                A[i * nl + l, period * nl * nk + l * nk + self.min_firm_type] = 1
+                if cross_period_normalize:
+                    A[l, period * nl * nk + l * nk + self.min_firm_type] = 1 / len(nnt)
+                else:
+                    A[i * nl + l, period * nl * nk + l * nk + self.min_firm_type] = 1
 
         b = - np.zeros(shape=A.shape[0])
 
