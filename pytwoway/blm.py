@@ -163,9 +163,9 @@ _blm_params_default = ParamsDict({
         '''
             (default=200) When using categorical constraints, the estimator can get stuck cycling through minimum firm types, preventing convergence. This parameter sets the first iteration to start checking if the estimator is stuck in a cycle.
         ''', '>= 0'),
-    'cycle_check_n_obs': (10, 'type_constrained', (int, _gteq2),
+    'cycle_check_n_obs': (20, 'type_constrained', (int, _gteq2),
         '''
-            (default=10) When using categorical constraints, the estimator can get stuck cycling through minimum firm types, preventing convergence. This parameter sets the number of consecutive minimum firm types that should be stored at a time to check for cycling.
+            (default=20) When using categorical constraints, the estimator can get stuck cycling through minimum firm types, preventing convergence. This parameter sets the number of consecutive minimum firm types that should be stored at a time to check for cycling.
         ''', '>= 2'),
     'force_min_firm_type': (False, 'type', bool,
         '''
@@ -502,7 +502,7 @@ class BLMModel:
             rng = np.random.default_rng(None)
 
         # Store parameters
-        self.params = params
+        self.params = params.copy()
         self.rng = rng
         nl, nk = self.params.get_multiple(('nl', 'nk'))
         # Make sure that nk is specified
@@ -757,6 +757,8 @@ class BLMModel:
                         any_tv_wi = True
                         break
                 else:
+                    # If the column doesn't interact with worker types (this requires a constraint)
+                    any_cat_constraints = True
                     if is_stationary:
                         any_tnv_nwi = True
                     else:
@@ -807,29 +809,30 @@ class BLMModel:
 
         return (cons_a, cons_s, cons_a_dict, cons_s_dict)
 
-    def _sort_parameters(self, A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0, firm_types=False, reverse=False):
+    def _sort_parameters(self, A1, A2, S1=None, S2=None, A1_cat=None, A2_cat=None, S1_cat=None, S2_cat=None, A1_cts=None, A2_cts=None, S1_cts=None, S2_cts=None, pk1=None, pk0=None, sort_firm_types=False, reverse=False):
         '''
         Sort parameters by worker type order (and optionally firm type order).
 
         Arguments:
             A1 (NumPy Array): mean of fixed effects in the first period
             A2 (NumPy Array): mean of fixed effects in the second period
-            S1 (NumPy Array): standard deviation of fixed effects in the first period
-            S2 (NumPy Array): standard deviation of fixed effects in the second period
-            A1_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the first period for categorical control variables
-            A2_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the second period for categorical control variables
-            S1_cat (dict of NumPy Arrays): dictionary linking column names to the standard deviation of fixed effects in the first period for categorical control variables
-            S2_cat (dict of NumPy Arrays): dictionary linking column names to the standard deviation of fixed effects in the second period for categorical control variables
-            A1_cts (dict of NumPy Arrays): dictionary linking column names to the mean of coefficients in the first period for continuous control variables
-            A2_cts (dict of NumPy Arrays): dictionary linking column names to the mean of coefficients in the second period for continuous control variables
-            S1_cts (dict of NumPy Arrays): dictionary linking column names to the standard deviation of coefficients in the first period for continuous control variables
-            S2_cts (dict of NumPy Arrays): dictionary linking column names to the standard deviation of coefficients in the second period for continuous control variables
-            pk1 (NumPy Array): probability of being at each combination of firm types for movers
-            pk0 (NumPy Array): probability of being at each firm type for stayers
-            firm_types (bool): if True, also sort by firm type order
+            S1 (NumPy Array or None): standard deviation of fixed effects in the first period; if None, S1 is not sorted or returned
+            S2 (NumPy Array or None): standard deviation of fixed effects in the second period; if None, S2 is not sorted or returned
+            A1_cat (dict of NumPy Arrays or None): dictionary linking column names to the mean of fixed effects in the first period for categorical control variables
+            ; if None, A1_cat is not sorted or returned
+            A2_cat (dict of NumPy Arrays or None): dictionary linking column names to the mean of fixed effects in the second period for categorical control variables; if None, A2_cat is not sorted or returned
+            S1_cat (dict of NumPy Arrays or None): dictionary linking column names to the standard deviation of fixed effects in the first period for categorical control variables; if None, S1_cat is not sorted or returned
+            S2_cat (dict of NumPy Arrays or None): dictionary linking column names to the standard deviation of fixed effects in the second period for categorical control variables; if None, S2_cat is not sorted or returned
+            A1_cts (dict of NumPy Arrays or None): dictionary linking column names to the mean of coefficients in the first period for continuous control variables; if None, A1_cts is not sorted or returned
+            A2_cts (dict of NumPy Arrays or None): dictionary linking column names to the mean of coefficients in the second period for continuous control variables; if None, A2_cts is not sorted or returned
+            S1_cts (dict of NumPy Arrays or None): dictionary linking column names to the standard deviation of coefficients in the first period for continuous control variables; if None, S1_cts is not sorted or returned
+            S2_cts (dict of NumPy Arrays or None): dictionary linking column names to the standard deviation of coefficients in the second period for continuous control variables; if None, S2_cts is not sorted or returned
+            pk1 (NumPy Array or None): probability of being at each combination of firm types for movers; if None, pk1 is not sorted or returned
+            pk0 (NumPy Array or None): probability of being at each firm type for stayers; if None, pk0 is not sorted or returned
+            sort_firm_types (bool): if True, also sort by firm type order
             reverse (bool): if True, sort in reverse order
 
-        Returns (tuple of NumPy Arrays and dicts of NumPy Arrays): sorted parameters (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0)
+        Returns (tuple of NumPy Arrays and dicts of NumPy Arrays): sorted parameters that are not None (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0)
         '''
         # Copy parameters
         A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0 = copy.deepcopy((A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0))
@@ -858,21 +861,27 @@ class BLMModel:
             # Sort if out of order
             A1 = A1[worker_type_order, :]
             A2 = A2[worker_type_order, :]
-            S1 = S1[worker_type_order, :]
-            S2 = S2[worker_type_order, :]
-            pk1 = pk1[:, worker_type_order]
-            pk0 = pk0[:, worker_type_order]
+            if S1 is not None:
+                S1 = S1[worker_type_order, :]
+            if S2 is not None:
+                S2 = S2[worker_type_order, :]
+            if pk1 is not None:
+                pk1 = pk1[:, worker_type_order]
+            if pk0 is not None:
+                pk0 = pk0[:, worker_type_order]
             # Sort control variables #
             for control_dict in (A1_cat, A2_cat, S1_cat, S2_cat):
-                for control_col, control_array in control_dict.items():
-                    if controls_dict[control_col]['worker_type_interaction']:
-                        control_dict[control_col] = control_array[worker_type_order, :]
+                if control_dict is not None:
+                    for control_col, control_array in control_dict.items():
+                        if controls_dict[control_col]['worker_type_interaction']:
+                            control_dict[control_col] = control_array[worker_type_order, :]
             for control_dict in (A1_cts, A2_cts, S1_cts, S2_cts):
-                for control_col, control_array in control_dict.items():
-                    if controls_dict[control_col]['worker_type_interaction']:
-                        control_dict[control_col] = control_array[worker_type_order]
+                if control_dict is not None:
+                    for control_col, control_array in control_dict.items():
+                        if controls_dict[control_col]['worker_type_interaction']:
+                            control_dict[control_col] = control_array[worker_type_order]
 
-        if firm_types:
+        if sort_firm_types:
             ## Sort firm types ##
             firm_type_order = np.mean(A_mean, axis=0).argsort()
             if reverse:
@@ -881,15 +890,19 @@ class BLMModel:
                 # Sort if out of order
                 A1 = A1[:, firm_type_order]
                 A2 = A2[:, firm_type_order]
-                S1 = S1[:, firm_type_order]
-                S2 = S2[:, firm_type_order]
-                pk0 = pk0[firm_type_order, :]
-                adj_pk1 = np.reshape(pk1, (nk, nk, nl))
-                adj_pk1 = adj_pk1[firm_type_order, :, :]
-                adj_pk1 = adj_pk1[:, firm_type_order, :]
-                pk1 = np.reshape(adj_pk1, (nk * nk, nl))
+                if S1 is not None:
+                    S1 = S1[:, firm_type_order]
+                if S2 is not None:
+                    S2 = S2[:, firm_type_order]
+                if pk0 is not None:
+                    pk0 = pk0[firm_type_order, :]
+                if pk1 is not None:
+                    adj_pk1 = np.reshape(pk1, (nk, nk, nl))
+                    adj_pk1 = adj_pk1[firm_type_order, :, :]
+                    adj_pk1 = adj_pk1[:, firm_type_order, :]
+                    pk1 = np.reshape(adj_pk1, (nk * nk, nl))
 
-        return (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0)
+        return (a for a in (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0) if a is not None)
 
     def _normalize(self, A1, A2, A1_cat, A2_cat):
         '''
@@ -1177,7 +1190,7 @@ class BLMModel:
                 A1, A2, S1, S2 = copy.deepcopy((self.A1, self.A2, self.S1, self.S2))
                 A1_cat, A2_cat, S1_cat, S2_cat = copy.deepcopy((self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat))
                 A1_cts, A2_cts, S1_cts, S2_cts = copy.deepcopy((self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts))
-                pk1, pk0 = copy.deepcopy((self.pk1, self.pk0))
+                pk1 = copy.deepcopy(self.pk1)
 
                 ## Estimate with min_firm_type == k ##
                 blm_k = BLMModel(params)
@@ -1185,7 +1198,7 @@ class BLMModel:
                 blm_k.A1, blm_k.A2, blm_k.S1, blm_k.S2 = A1, A2, S1, S2
                 blm_k.A1_cat, blm_k.A2_cat, blm_k.S1_cat, blm_k.S2_cat = A1_cat, A2_cat, S1_cat, S2_cat
                 blm_k.A1_cts, blm_k.A2_cts, blm_k.S1_cts, blm_k.S2_cts = A1_cts, A2_cts, S1_cts, S2_cts
-                blm_k.pk1, blm_k.pk0 = pk1, pk0
+                blm_k.pk1 = pk1
                 # Fit estimator
                 blm_k._fit_movers(jdata=jdata, compute_NNm=compute_NNm, min_firm_type=k)
 
@@ -1196,7 +1209,10 @@ class BLMModel:
             self.A1, self.A2, self.S1, self.S2 = best_model.A1, best_model.A2, best_model.S1, best_model.S2
             self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat = best_model.A1_cat, best_model.A2_cat, best_model.S1_cat, best_model.S2_cat
             self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts = best_model.A1_cts, best_model.A2_cts, best_model.S1_cts, best_model.S2_cts
-            self.pk1, self.pk0 = best_model.pk1, best_model.pk0
+            self.pk1 = best_model.pk1
+            self.liks1, self.lik1 = best_model.liks1, best_model.lik1
+            if compute_NNm:
+                self.NNm = best_model.NNm
 
         else:
             # If not forcing minimum firm type
@@ -1357,7 +1373,11 @@ class BLMModel:
                         min_firm_types = min_firm_types[1:]
                     if np.all(np.array(min_firm_types[1:]) != np.array(min_firm_types[: -1])):
                         # Check if estimator is changing minimum firm type every loop
-                        raise ValueError("Estimator is stuck in a cycle of minimum firm types! Please set 'force_min_firm_type'=True to have the estimator iterate over each firm type, constraining it to be the minimum firm type, then store results from the minimum firm type with the highest likelihood.")
+                        warnings.warn("Estimator is stuck in a cycle of minimum firm types! Please set 'force_min_firm_type'=True to have the estimator automatically iterate over each firm type, constraining it to be the minimum firm type, then store results from the minimum firm type with the highest likelihood. Since 'force_min_firm_type'=False, this iteration will start now that the estimator has become stuck in a cycle.")
+                        self.params['force_min_firm_type'] = True
+                        self.fit_movers(jdata, compute_NNm=compute_NNm)
+                        self.params['force_min_firm_type'] = False
+                        break
 
             # ---------- M-step ----------
             # Constrained OLS (source: https://scaron.info/blog/quadratic-programming-in-python.html)
@@ -2335,28 +2355,31 @@ class BLMBootstrap:
             for _ in trange(n_samples):
                 # Simulate worker types then draw wages
                 yj_i, ys_i = _simulate_types_wages(jdata, sdata, gj, gs, blm_model, rng=rng)
-                jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
-                sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
+                with bpd.util.ChainedAssignment():
+                    jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
+                    sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
                 # Cluster
                 bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False)).to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng)
                 clusters_dict = bdf.loc[:, ['j', 'g']].groupby('j', sort=False)['g'].first().to_dict()
                 del bdf
-                # Update clusters in jdata and sdata
-                jdata.loc[:, 'g1'] = jdata.loc[:, 'j1'].map(clusters_dict)
-                jdata.loc[:, 'g2'] = jdata.loc[:, 'j2'].map(clusters_dict)
-                sdata.loc[:, 'g1'] = sdata.loc[:, 'j1'].map(clusters_dict)
-                sdata.loc[:, 'g2'] = sdata.loc[:, 'g1']
+                with bpd.util.ChainedAssignment():
+                    # Update clusters in jdata and sdata
+                    jdata.loc[:, 'g1'] = jdata.loc[:, 'j1'].map(clusters_dict)
+                    jdata.loc[:, 'g2'] = jdata.loc[:, 'j2'].map(clusters_dict)
+                    sdata.loc[:, 'g1'] = sdata.loc[:, 'j1'].map(clusters_dict)
+                    sdata.loc[:, 'g2'] = sdata.loc[:, 'g1']
                 # Run BLM estimator
                 blm_fit_i = BLMEstimator(self.params)
                 blm_fit_i.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
                 models.append(blm_fit_i.model)
                 del blm_fit_i
 
-            # Re-assign original wages and firm types
-            jdata.loc[:, ['y1', 'y2']] = yj
-            sdata.loc[:, ['y1', 'y2']] = ys
-            jdata.loc[:, ['g1', 'g2']] = gj
-            sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
+            with bpd.util.ChainedAssignment():
+                # Re-assign original wages and firm types
+                jdata.loc[:, ['y1', 'y2']] = yj
+                sdata.loc[:, ['y1', 'y2']] = ys
+                jdata.loc[:, ['g1', 'g2']] = gj
+                sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
         elif method == 'standard':
             wj = None
             if self.params['weighted'] and jdata._col_included('w'):
@@ -2406,7 +2429,7 @@ class BLMBootstrap:
             A_all = np.zeros((len(self.models), nl, nk))
             for i, model in enumerate(self.models):
                 # Sort by firm effects
-                A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0 = model._sort_parameters(model.A1, model.A2, model.S1, model.S2, model.A1_cat, model.A2_cat, model.S1_cat, model.S2_cat, model.A1_cts, model.A2_cts, model.S1_cts, model.S2_cts, model.pk1, model.pk0, firm_types=True)
+                A1, A2 = model._sort_parameters(model.A1, model.A2, sort_firm_types=True)
                 # Extract average log-earnings for each model
                 if period == 'first':
                     A_all[i, :, :] = A1
@@ -2455,7 +2478,7 @@ class BLMBootstrap:
             pk_mean = np.zeros((nk, nl))
             for model in self.models:
                 # Sort by firm effects
-                A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0 = model._sort_parameters(model.A1, model.A2, model.S1, model.S2, model.A1_cat, model.A2_cat, model.S1_cat, model.S2_cat, model.A1_cts, model.A2_cts, model.S1_cts, model.S2_cts, model.pk1, model.pk0, firm_types=True)
+                A1, A2, pk1, pk0 = model._sort_parameters(model.A1, model.A2, pk1=model.pk1, pk0=model.pk0, sort_firm_types=True)
 
                 ## Extract subset(s) ##
                 if subset == 'movers':
@@ -2561,8 +2584,9 @@ class BLMVarianceDecomposition:
             for i in trange(n_samples):
                 # Simulate worker types then draw wages
                 yj_i, ys_i = _simulate_types_wages(jdata, sdata, gj, gs, blm_model, rng=rng)
-                jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
-                sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
+                with bpd.util.ChainedAssignment():
+                    jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
+                    sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
                 # Convert to BipartitePandas DataFrame
                 bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False)).to_long(is_sorted=True, copy=False)
                 w = bdf.loc[:, 'w'].to_numpy()
@@ -2575,11 +2599,12 @@ class BLMVarianceDecomposition:
                 est_params['cov_psi_alpha'][i] = tw.fe._weighted_cov(bdf.loc[:, 'psi_hat'].to_numpy(), bdf.loc[:, 'alpha_hat'].to_numpy(), w, w)
                 est_params['var_eps'][i] = tw.fe._weighted_var(bdf.loc[:, 'y'].to_numpy() - bdf.loc[:, 'psi_hat'].to_numpy() - bdf.loc[:, 'alpha_hat'].to_numpy(), w)
 
-            # Re-assign original wages and firm types
-            jdata.loc[:, ['y1', 'y2']] = yj
-            sdata.loc[:, ['y1', 'y2']] = ys
-            jdata.loc[:, ['g1', 'g2']] = gj
-            sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
+            with bpd.util.ChainedAssignment():
+                # Re-assign original wages and firm types
+                jdata.loc[:, ['y1', 'y2']] = yj
+                sdata.loc[:, ['y1', 'y2']] = ys
+                jdata.loc[:, ['g1', 'g2']] = gj
+                sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
         elif method == 'reallocation':
             pass
         else:
