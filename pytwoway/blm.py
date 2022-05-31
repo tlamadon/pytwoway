@@ -897,10 +897,16 @@ class BLMModel:
                 if pk0 is not None:
                     pk0 = pk0[firm_type_order, :]
                 if pk1 is not None:
-                    adj_pk1 = np.reshape(pk1, (nk, nk, nl))
-                    adj_pk1 = adj_pk1[firm_type_order, :, :]
-                    adj_pk1 = adj_pk1[:, firm_type_order, :]
-                    pk1 = np.reshape(adj_pk1, (nk * nk, nl))
+                    # Reorder part 1: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 1, 0, 3, 2 (i.e. reorder within groups)
+                    pk1_order_1 = np.tile(firm_type_order, nk) + nk * np.repeat(range(nk), nk)
+                    pk1 = pk1[pk1_order_1, :]
+                    # Reorder part 2: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 2, 3, 0, 1 (i.e. reorder between groups)
+                    pk1_order_2 = nk * np.repeat(firm_type_order, nk) + np.tile(range(nk), nk)
+                    pk1 = pk1[pk1_order_2, :]
+                    # adj_pk1 = np.reshape(pk1, (nk, nk, nl))
+                    # adj_pk1 = adj_pk1[firm_type_order, :, :]
+                    # adj_pk1 = adj_pk1[:, firm_type_order, :]
+                    # pk1 = np.reshape(adj_pk1, (nk * nk, nl))
 
         return (a for a in (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0) if a is not None)
 
@@ -1253,6 +1259,9 @@ class BLMModel:
         else:
             W1 = 1
             W2 = 1
+        W1_sqrt = np.sqrt(W1)
+        W2_sqrt = np.sqrt(W2)
+        W_prod = W1 * W2
         # Control variables
         C1 = {}
         C2 = {}
@@ -1421,8 +1430,8 @@ class BLMModel:
                 # (We might be better off trying this within numba or something)
                 l_index, r_index = l * nk, (l + 1) * nk
                 # Shared weighted terms
-                GG1_weighted = GG1.T @ diags(W1 * qi[:, l] / S1[l, G1])
-                GG2_weighted = GG2.T @ diags(W2 * qi[:, l] / S2[l, G2])
+                GG1_weighted = GG1.T @ diags(W1_sqrt * qi[:, l] / S1[l, G1])
+                GG2_weighted = GG2.T @ diags(W2_sqrt * qi[:, l] / S2[l, G2])
                 ## Compute XwXd terms ##
                 XwXd[l_index: r_index] = (GG1_weighted @ GG1).diagonal()
                 XwXd[ts + l_index: ts + r_index] = (GG2_weighted @ GG2).diagonal()
@@ -1496,8 +1505,8 @@ class BLMModel:
                     else:
                         S1_cat_l = S1_cat[col][C1[col]]
                         S2_cat_l = S2_cat[col][C2[col]]
-                    CC1_weighted = CC1[col].T @ diags(W1 * qi[:, l] / S1_cat_l)
-                    CC2_weighted = CC2[col].T @ diags(W2 * qi[:, l] / S2_cat_l)
+                    CC1_weighted = CC1[col].T @ diags(W1_sqrt * qi[:, l] / S1_cat_l)
+                    CC2_weighted = CC2[col].T @ diags(W2_sqrt * qi[:, l] / S2_cat_l)
                     del S1_cat_l, S2_cat_l
                     ## Compute XwX_cat terms ##
                     XwX_cat[col][l_index: r_index] = (CC1_weighted @ CC1[col]).diagonal()
@@ -1553,8 +1562,8 @@ class BLMModel:
                     else:
                         S1_cts_l = S1_cts[col]
                         S2_cts_l = S2_cts[col]
-                    CC1_weighted = C1[col].T @ diags(W1 * qi[:, l] / S1_cts_l)
-                    CC2_weighted = C2[col].T @ diags(W2 * qi[:, l] / S2_cts_l)
+                    CC1_weighted = C1[col].T @ diags(W1_sqrt * qi[:, l] / S1_cts_l)
+                    CC2_weighted = C2[col].T @ diags(W2_sqrt * qi[:, l] / S2_cts_l)
                     del S1_cts_l, S2_cts_l
                     ## Compute XwX_cts terms ##
                     XwX_cts[col][l] = (CC1_weighted @ C1[col])
@@ -1623,8 +1632,8 @@ class BLMModel:
                     del A1_sum_l, A2_sum_l
                     ## XwS terms ##
                     l_index, r_index = l * nk, (l + 1) * nk
-                    XwS[l_index: r_index] = GG1.T @ diags(W1 * qi[:, l] / S1[l, G1]) @ eps1_l_sq
-                    XwS[ts + l_index: ts + r_index] = GG2.T @ diags(W2 * qi[:, l] / S2[l, G2]) @ eps2_l_sq
+                    XwS[l_index: r_index] = GG1.T @ diags(W1_sqrt * qi[:, l] / S1[l, G1]) @ eps1_l_sq
+                    XwS[ts + l_index: ts + r_index] = GG2.T @ diags(W2_sqrt * qi[:, l] / S2[l, G2]) @ eps2_l_sq
                     ## Categorical ##
                     for col in cat_cols:
                         col_n = cat_dict[col]['n']
@@ -1636,8 +1645,8 @@ class BLMModel:
                             S1_cat_l = S1_cat[col][C1[col]]
                             S2_cat_l = S2_cat[col][C2[col]]
                         ## XwS_cat terms ##
-                        XwS_cat[col][l_index: r_index] = CC1[col].T @ diags(W1 * qi[:, l] / S1_cat_l) @ eps1_l_sq
-                        XwS_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = CC2[col].T @ diags(W2 * qi[:, l] / S2_cat_l) @ eps2_l_sq
+                        XwS_cat[col][l_index: r_index] = CC1[col].T @ diags(W1_sqrt * qi[:, l] / S1_cat_l) @ eps1_l_sq
+                        XwS_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = CC2[col].T @ diags(W2_sqrt * qi[:, l] / S2_cat_l) @ eps2_l_sq
                         del S1_cat_l, S2_cat_l
                     ## Continuous ##
                     for col in cts_cols:
@@ -1649,8 +1658,8 @@ class BLMModel:
                             S2_cts_l = S2_cts[col]
                         ## XwS_cts terms ##
                         # NOTE: take absolute value
-                        XwS_cts[col][l] = np.abs(C1[col].T @ diags(W1 * qi[:, l] / S1_cts_l) @ eps1_l_sq)
-                        XwS_cts[col][nl + l] = np.abs(C2[col].T @ diags(W2 * qi[:, l] / S2_cts_l) @ eps2_l_sq)
+                        XwS_cts[col][l] = np.abs(C1[col].T @ diags(W1_sqrt * qi[:, l] / S1_cts_l) @ eps1_l_sq)
+                        XwS_cts[col][nl + l] = np.abs(C2[col].T @ diags(W2_sqrt * qi[:, l] / S2_cts_l) @ eps2_l_sq)
                         del S1_cts_l, S2_cts_l
                     del eps1_l_sq, eps2_l_sq
 
@@ -1715,9 +1724,8 @@ class BLMModel:
                         pass
 
             if params['update_pk1']:
-                pk1 = GG12.T @ ((W1 + W2) * qi.T).T
-                # Add dirichlet prior
-                pk1 += d_prior - 1
+                # NOTE: add dirichlet prior
+                pk1 = GG12.T @ (W_prod * (qi.T + d_prior - 1)).T
                 # Normalize rows to sum to 1
                 pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
 
@@ -1788,17 +1796,17 @@ class BLMModel:
 
         # Store wage outcomes and groups
         Y1 = sdata['y1'].to_numpy()
-        Y2 = sdata['y2'].to_numpy()
+        # Y2 = sdata['y2'].to_numpy()
         G1 = sdata['g1'].to_numpy().astype(int, copy=False)
-        G2 = sdata['g2'].to_numpy().astype(int, copy=False)
+        # G2 = sdata['g2'].to_numpy().astype(int, copy=False)
         GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
         # Weights
         if params['weighted'] and sdata._col_included('w'):
             W1 = sdata.loc[:, 'w1'].to_numpy()
-            W2 = sdata.loc[:, 'w2'].to_numpy()
+            # W2 = sdata.loc[:, 'w2'].to_numpy()
         else:
             W1 = 1
-            W2 = 1
+            # W2 = 1
         if any_controls:
             ## Control variables ##
             C1 = {}

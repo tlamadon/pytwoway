@@ -281,11 +281,11 @@ class SimBLM:
         nl, nk, NNm, NNs = self.params.get_multiple(('nl', 'nk', 'NNm', 'NNs'))
 
         if NNm is None:
-            self.NNm = 10 * np.ones(shape=(nk, nk)).astype(int, copy=False)
+            self.NNm = 10 * np.ones(shape=(nk, nk), dtype=int)
         else:
             self.NNm = NNm
         if NNs is None:
-            self.NNs = 10 * np.ones(shape=nk).astype(int, copy=False)
+            self.NNs = 10 * np.ones(shape=nk, dtype=int)
         else:
             self.NNs = NNs
 
