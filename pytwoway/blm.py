@@ -52,9 +52,9 @@ _blm_params_default = ParamsDict({
         '''
             (default='first') Period to normalize and sort over. 'first' uses first period parameters; 'second' uses second period parameters; 'all' uses the average over first and second period parameters.
         ''', None),
-    'verbose': (0, 'set', [0, 1, 2],
+    'verbose': (1, 'set', [0, 1, 2],
         '''
-            (default=0) If 0, print no output; if 1, print additional output; if 2, print maximum output.
+            (default=1) If 0, print no output; if 1, print additional output; if 2, print maximum output.
         ''', None),
     ## Starting values ##
     'a1_mu': (1, 'type', (float, int),
@@ -93,10 +93,10 @@ _blm_params_default = ParamsDict({
         '''
             (default=None) Dirichlet prior for pk1 (probability of being at each combination of firm types for movers). Must have length nl. None is equivalent to np.ones(nl).
         ''', 'min > 0'),
-    'pk0_prior': (None, 'array_of_type_constrained_none', (('float', 'int'), _min_gt0),
-        '''
-            (default=None) Dirichlet prior for pk0 (probability of being at each firm type for stayers). Must have length nl. None is equivalent to np.ones(nl).
-        ''', 'min > 0'),
+    # 'pk0_prior': (None, 'array_of_type_constrained_none', (('float', 'int'), _min_gt0),
+    #     '''
+    #         (default=None) Dirichlet prior for pk0 (probability of being at each firm type for stayers). Must have length nl. None is equivalent to np.ones(nl).
+    #     ''', 'min > 0'),
     ## fit_movers() and fit_stayers() parameters ##
     'weighted': (True, 'type', bool,
         '''
@@ -628,7 +628,7 @@ class BLMModel:
         self.any_non_worker_type_interactions = any([not col_dict['worker_type_interaction'] for col_dict in controls_dict.values()])
 
         ## Generate starting values ##
-        a1_mu, a1_sig, a2_mu, a2_sig, s1_low, s1_high, s2_low, s2_high, pk1_prior, pk0_prior = self.params.get_multiple(('a1_mu', 'a1_sig', 'a2_mu', 'a2_sig', 's1_low', 's1_high', 's2_low', 's2_high', 'pk1_prior', 'pk0_prior'))
+        a1_mu, a1_sig, a2_mu, a2_sig, s1_low, s1_high, s2_low, s2_high, pk1_prior = self.params.get_multiple(('a1_mu', 'a1_sig', 'a2_mu', 'a2_sig', 's1_low', 's1_high', 's2_low', 's2_high', 'pk1_prior')) # pk0_prior
         # Model for Y1 | Y2, l, k for movers and stayers
         self.A1 = rng.normal(loc=a1_mu, scale=a1_sig, size=dims)
         self.S1 = rng.uniform(low=s1_low, high=s1_high, size=dims)
@@ -640,9 +640,10 @@ class BLMModel:
             pk1_prior = np.ones(nl)
         self.pk1 = rng.dirichlet(alpha=pk1_prior, size=nk ** 2)
         # Model for p(K | l, l') for stayers
-        if pk0_prior is None:
-            pk0_prior = np.ones(nl)
-        self.pk0 = rng.dirichlet(alpha=pk0_prior, size=nk)
+        # if pk0_prior is None:
+        #     pk0_prior = np.ones(nl)
+        # self.pk0 = rng.dirichlet(alpha=pk0_prior, size=nk)
+        self.pk0 = np.ones((nk, nl)) / nl
 
         ### Control variables ###
         ## Categorical ##
@@ -1274,7 +1275,7 @@ class BLMModel:
                 blm_k.A1_cts, blm_k.A2_cts, blm_k.S1_cts, blm_k.S2_cts = A1_cts, A2_cts, S1_cts, S2_cts
                 blm_k.pk1 = pk1
                 # Fit estimator
-                blm_k._fit_movers(jdata=jdata, compute_NNm=compute_NNm, min_firm_type=k)
+                blm_k._fit_movers(jdata=jdata, compute_NNm=False, min_firm_type=k)
 
                 ## Store best estimator ##
                 if (best_model is None) or (blm_k.lik1 > best_model.lik1):
@@ -1285,8 +1286,10 @@ class BLMModel:
             self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts = best_model.A1_cts, best_model.A2_cts, best_model.S1_cts, best_model.S2_cts
             self.pk1 = best_model.pk1
             self.liks1, self.lik1 = best_model.liks1, best_model.lik1
+
             if compute_NNm:
-                self.NNm = best_model.NNm
+                # Update NNm
+                self.NNm = jdata.groupby('g1')['g2'].value_counts().unstack(fill_value=0).to_numpy()
 
         else:
             # If not forcing minimum firm type
@@ -1377,6 +1380,8 @@ class BLMModel:
         d_prior = params['d_prior_movers']
         # Track minimum firm type to check whether estimator stuck in a loop
         min_firm_types = []
+        # Whether results should be stored
+        store_res = True
 
         ## Sort ##
         A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
@@ -1418,13 +1423,16 @@ class BLMModel:
             del lp1, lp2
 
             # We compute log sum exp to get likelihoods and probabilities
-            qi = np.exp(lp.T - logsumexp(lp, axis=1)).T
+            lse_lp = logsumexp(lp, axis=1)
+            qi = np.exp(lp.T - lse_lp).T
             if params['return_qi']:
                 return qi
-            lik1 = logsumexp(lp, axis=1).mean() # FIXME should this be returned?
-            # Account for Dirichlet prior
-            lik_prior = (d_prior - 1) * np.sum(np.log(pk1))
-            lik1 += lik_prior
+            lik1 = lse_lp.mean()
+            del lse_lp
+            if (iter > 0) and params['update_pk1']:
+                # Account for Dirichlet prior
+                lik_prior = (d_prior - 1) * np.sum(np.log(pk1))
+                lik1 += lik_prior
             liks1.append(lik1)
             if params['verbose'] == 2:
                 print('loop {}, liks {}'.format(iter, lik1))
@@ -1447,10 +1455,11 @@ class BLMModel:
                         min_firm_types = min_firm_types[1:]
                     if np.all(np.array(min_firm_types[1:]) != np.array(min_firm_types[: -1])):
                         # Check if estimator is changing minimum firm type every loop
-                        warnings.warn("Estimator is stuck in a cycle of minimum firm types! Please set 'force_min_firm_type'=True to have the estimator automatically iterate over each firm type, constraining it to be the minimum firm type, then store results from the minimum firm type with the highest likelihood. Since 'force_min_firm_type'=False, this iteration will start now that the estimator has become stuck in a cycle.")
+                        warnings.warn("Estimator is stuck in a cycle of minimum firm types! Please set 'force_min_firm_type'=True to have the estimator automatically iterate over each firm type, constraining it to be the minimum firm type, then store results from the minimum firm type with the highest likelihood. Since 'force_min_firm_type' == False, this iteration will start now that the estimator has become stuck in a cycle.")
                         self.params['force_min_firm_type'] = True
                         self.fit_movers(jdata, compute_NNm=compute_NNm)
                         self.params['force_min_firm_type'] = False
+                        store_res = False
                         break
 
             # ---------- M-step ----------
@@ -1819,28 +1828,29 @@ class BLMModel:
             # print('S2_cts after:')
             # print(S2_cts)
 
-        if len(cat_cols) > 0:
-            ## Normalize ##
-            # NOTE: normalize here because constraints don't normalize unless categorical controls are using constraints, and even when used, constraints don't always normalize to exactly 0
-            A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat)
+        if store_res:
+            if len(cat_cols) > 0:
+                ## Normalize ##
+                # NOTE: normalize here because constraints don't normalize unless categorical controls are using constraints, and even when used, constraints don't always normalize to exactly 0
+                A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat)
 
-        ## Sort parameters ##
-        A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
+            ## Sort parameters ##
+            A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
 
-        if len(cat_cols) > 0:
-            ## Normalize again ##
-            A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat)
+            if len(cat_cols) > 0:
+                ## Normalize again ##
+                A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat)
 
-        # Store parameters
-        self.A1, self.A2, self.S1, self.S2 = A1, A2, S1, S2
-        self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat = A1_cat, A2_cat, S1_cat, S2_cat
-        self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts = A1_cts, A2_cts, S1_cts, S2_cts
-        self.pk1, self.lik1 = pk1, lik1
-        self.liks1 = liks1 # np.concatenate([self.liks1, liks1])
+            # Store parameters
+            self.A1, self.A2, self.S1, self.S2 = A1, A2, S1, S2
+            self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat = A1_cat, A2_cat, S1_cat, S2_cat
+            self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts = A1_cts, A2_cts, S1_cts, S2_cts
+            self.pk1, self.lik1 = pk1, lik1
+            self.liks1 = liks1 # np.concatenate([self.liks1, liks1])
 
-        # Update NNm
-        if compute_NNm:
-            self.NNm = jdata.groupby('g1')['g2'].value_counts().unstack(fill_value=0).to_numpy()
+            # Update NNm
+            if compute_NNm:
+                self.NNm = jdata.groupby('g1')['g2'].value_counts().unstack(fill_value=0).to_numpy()
 
     def fit_stayers(self, sdata, compute_NNs=True):
         '''
@@ -1940,13 +1950,16 @@ class BLMModel:
                 lp[:, l] = lp_stable[:, l] + np.log(pk0[G1, l])
 
             # We compute log sum exp to get likelihoods and probabilities
-            qi = np.exp(lp.T - logsumexp(lp, axis=1)).T
+            lse_lp = logsumexp(lp, axis=1)
+            qi = np.exp(lp.T - lse_lp).T
             if params['return_qi']:
                 return qi
-            lik0 = logsumexp(lp, axis=1).mean() # FIXME should this be returned?
-            # Account for Dirichlet prior
-            lik_prior = (d_prior - 1) * np.sum(np.log(pk0))
-            lik0 += lik_prior
+            lik0 = lse_lp.mean()
+            del lse_lp
+            if iter > 0:
+                # Account for Dirichlet prior
+                lik_prior = (d_prior - 1) * np.sum(np.log(pk0))
+                lik0 += lik_prior
             liks0.append(lik0)
             if params['verbose'] == 2:
                 print('loop {}, liks {}'.format(iter, lik0))
@@ -1992,17 +2005,31 @@ class BLMModel:
             print('Fitting movers with A fixed')
         self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 2 #####
-        # Now update A
+        # Now update A with Linear Additive constraint
         self.params['update_a'] = True
         if self.nl > 2:
             # Set constraints
-            self.params['cons_a_all'] = cons.Linear()
+            if user_params is None:
+                self.params['cons_a_all'] = cons.LinearAdditive()
+            else:
+                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.LinearAdditive()]
             if self.params['verbose'] in [1, 2]:
-                print('Fitting movers with linear constraint on A')
+                print('Fitting movers with Linear Additive constraint on A')
             self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 3 #####
-        # Remove constraints
-        self.params['cons_a_all'] = None
+        # Now update A with Stationary Firm Type Variation constraint
+        if self.nl > 2:
+            # Set constraints
+            if user_params is None:
+                self.params['cons_a_all'] = cons.StationaryFirmTypeVariation()
+            else:
+                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation()]
+            if self.params['verbose'] in [1, 2]:
+                print('Fitting movers with Stationary Firm Type Variation constraint on A')
+            self.fit_movers(jdata, compute_NNm=False)
+        ##### Loop 4 #####
+        # Restore user constraints
+        self.params['cons_a_all'] = user_params['cons_a_all']
         if self.params['verbose'] in [1, 2]:
             print('Fitting unconstrained movers')
         self.fit_movers(jdata, compute_NNm=compute_NNm)
@@ -2223,7 +2250,7 @@ class BLMEstimator:
         self.connectedness_high = None
         self.connectedness_low = None
 
-    def _sim_model(self, jdata, rng=None):
+    def _fit_model(self, jdata, rng=None):
         '''
         Generate model and run fit_movers_cstr_uncstr() given parameters.
 
@@ -2234,7 +2261,7 @@ class BLMEstimator:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        model = BLMModel(self.params.copy(), rng)
+        model = BLMModel(self.params, rng)
         model.fit_movers_cstr_uncstr(jdata)
         return model
 
@@ -2259,10 +2286,10 @@ class BLMEstimator:
         if ncore > 1:
             # Multiprocessing
             with Pool(processes=ncore) as pool:
-                sim_model_lst = pool.starmap(self._sim_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
+                sim_model_lst = pool.starmap(self._fit_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
         else:
             # No multiprocessing
-            sim_model_lst = itertools.starmap(self._sim_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
+            sim_model_lst = itertools.starmap(self._fit_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
 
         # Sort by likelihoods FIXME better handling if connectedness is None
         sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst if model.connectedness is not None], reverse=True, key=lambda a: a[0])
