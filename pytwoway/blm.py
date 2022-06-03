@@ -15,7 +15,7 @@ import pytwoway as tw
 from pytwoway import jitter_scatter
 from pytwoway import constraints as cons
 import bipartitepandas as bpd
-from bipartitepandas.util import ParamsDict, to_list # , _is_subtype
+from bipartitepandas.util import ParamsDict, to_list, HiddenPrints # , _is_subtype
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq2(a):
@@ -52,9 +52,9 @@ _blm_params_default = ParamsDict({
         '''
             (default='first') Period to normalize and sort over. 'first' uses first period parameters; 'second' uses second period parameters; 'all' uses the average over first and second period parameters.
         ''', None),
-    'verbose': (1, 'set', [0, 1, 2],
+    'verbose': (1, 'set', [0, 1, 2, 3],
         '''
-            (default=1) If 0, print no output; if 1, print additional output; if 2, print maximum output.
+            (default=1) If 0, print no output; if 1, print each major step in estimation; if 2, print warnings during estimation; if 3, print likelihoods at each iteration.
         ''', None),
     ## Starting values ##
     'a1_mu': (1, 'type', (float, int),
@@ -100,7 +100,11 @@ _blm_params_default = ParamsDict({
     ## fit_movers() and fit_stayers() parameters ##
     'weighted': (True, 'type', bool,
         '''
-            (default=True) If True, run estimator with weights. These comes from data columns 'w1' and 'w2'.
+            (default=True) If True, run estimator with weights. These come from data columns 'w1' and 'w2'.
+        ''', None),
+    'normalize': (True, 'type', bool,
+        '''
+            (default=True) If True, normalize estimator during estimation if there are categorical controls with constraints. With particular constraints, the estimator may be identified without normalization, in which case this should be set to False.
         ''', None),
     'return_qi': (False, 'type', bool,
         '''
@@ -143,9 +147,9 @@ _blm_params_default = ParamsDict({
         '''
             (default=None) Constraint object or list of constraint objects that define constraints on S1/S2/S1_cat/S2_cat/S1_cts/S2_cts. None is equivalent to [].
         ''', None),
-    's_lower_bound': (1e-10, 'type_constrained', ((float, int), _gt0),
+    's_lower_bound': (1e-7, 'type_constrained', ((float, int), _gt0),
         '''
-            (default=1e-10) Lower bound on estimated S1/S2/S1_cat/S2_cat/S1_cts/S2_cts.
+            (default=1e-7) Lower bound on estimated S1/S2/S1_cat/S2_cat/S1_cts/S2_cts.
         ''', '> 0'),
     'd_prior_movers': (1 + 1e-7, 'type_constrained', ((float, int), _gteq1),
         '''
@@ -629,12 +633,13 @@ class BLMModel:
 
         ## Generate starting values ##
         a1_mu, a1_sig, a2_mu, a2_sig, s1_low, s1_high, s2_low, s2_high, pk1_prior = self.params.get_multiple(('a1_mu', 'a1_sig', 'a2_mu', 'a2_sig', 's1_low', 's1_high', 's2_low', 's2_high', 'pk1_prior')) # pk0_prior
+        s_lb = params['s_lower_bound']
         # Model for Y1 | Y2, l, k for movers and stayers
         self.A1 = rng.normal(loc=a1_mu, scale=a1_sig, size=dims)
-        self.S1 = rng.uniform(low=s1_low, high=s1_high, size=dims)
+        self.S1 = rng.uniform(low=max(s1_low, s_lb), high=s1_high, size=dims)
         # Model for Y4 | Y3, l, k for movers and stayers
         self.A2 = rng.normal(loc=a2_mu, scale=a2_sig, size=dims)
-        self.S2 = rng.uniform(low=s2_low, high=s2_high, size=dims)
+        self.S2 = rng.uniform(low=max(s2_low, s_lb), high=s2_high, size=dims)
         # Model for p(K | l, l') for movers
         if pk1_prior is None:
             pk1_prior = np.ones(nl)
@@ -658,14 +663,14 @@ class BLMModel:
                 rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=controls_dict[col]['n'])
             for col in cat_cols}
         self.S1_cat = {col:
-                rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=(nl, controls_dict[col]['n']))
+                rng.uniform(low=max(controls_dict[col]['s1_low'], s_lb), high=controls_dict[col]['s1_high'], size=(nl, controls_dict[col]['n']))
                 if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=controls_dict[col]['n'])
+                rng.uniform(low=max(controls_dict[col]['s1_low'], s_lb), high=controls_dict[col]['s1_high'], size=controls_dict[col]['n'])
             for col in cat_cols}
         self.S2_cat = {col:
-                rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=(nl, controls_dict[col]['n']))
+                rng.uniform(low=max(controls_dict[col]['s2_low'], s_lb), high=controls_dict[col]['s2_high'], size=(nl, controls_dict[col]['n']))
                 if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=controls_dict[col]['n'])
+                rng.uniform(low=max(controls_dict[col]['s2_low'], s_lb), high=controls_dict[col]['s2_high'], size=controls_dict[col]['n'])
             for col in cat_cols}
         # # Stationary #
         # for col in cat_cols:
@@ -685,14 +690,14 @@ class BLMModel:
                 rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=1)
             for col in cts_cols}
         self.S1_cts = {col:
-                rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=nl)
+                rng.uniform(low=max(controls_dict[col]['s1_low'], s_lb), high=controls_dict[col]['s1_high'], size=nl)
                 if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=1)
+                rng.uniform(low=max(controls_dict[col]['s1_low'], s_lb), high=controls_dict[col]['s1_high'], size=1)
             for col in cts_cols}
         self.S2_cts = {col:
-                rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=nl)
+                rng.uniform(low=max(controls_dict[col]['s2_low'], s_lb), high=controls_dict[col]['s2_high'], size=nl)
                 if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=1)
+                rng.uniform(low=max(controls_dict[col]['s2_low'], s_lb), high=controls_dict[col]['s2_high'], size=1)
             for col in cts_cols}
         # # Stationary #
         # for col in cts_cols:
@@ -827,8 +832,7 @@ class BLMModel:
                         any_tv_nwi = True
 
             if any_cat_constraints:
-                # Add constraints only if at least one categorical control uses constraints (otherwise, the normalization can just be done at the end)
-                self.normalize_constraints = True
+                # Add constraints only if at least one categorical control uses constraints
                 ## Determine primary and second periods ##
                 primary_period_dict = {
                     'first': 0,
@@ -845,29 +849,28 @@ class BLMModel:
                 ### Add constraints ###
                 ## Monotonic worker types ##
                 cons_a.add_constraints(cons.MonotonicMean(md=params['d_mean_worker_effect'], cross_period_mean=True, nnt=pp))
-                ## Lowest firm type ##
-                if params['force_min_firm_type'] and params['force_min_firm_type_constraint']:
-                    cons_a.add_constraints(cons.MinFirmType(min_firm_type=min_firm_type, md=params['d_mean_firm_effect'], is_min=True, cross_period_mean=True, nnt=pp))
-                ## Normalize ##
-                if any_tv_wi:
-                    # Normalize everything
-                    cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=range(2)))
-                else:
-                    if any_tnv_wi:
-                        # Normalize primary period
-                        cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp))
-                        if any_tv_nwi:
-                            # Normalize lowest type pair from secondary period
-                            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=sp))
+                if params['normalize']:
+                    ## Lowest firm type ##
+                    if params['force_min_firm_type'] and params['force_min_firm_type_constraint']:
+                        cons_a.add_constraints(cons.MinFirmType(min_firm_type=min_firm_type, md=params['d_mean_firm_effect'], is_min=True, cross_period_mean=True, nnt=pp))
+                    ## Normalize ##
+                    if any_tv_wi:
+                        # Normalize everything
+                        cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=range(2)))
                     else:
-                        if any_tv_nwi:
-                            # Normalize lowest type pair in both periods
-                            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(2)))
-                        elif any_tnv_nwi:
-                            # Normalize lowest type pair in primary period
-                            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp))
-            else:
-                self.normalize_constraints = False
+                        if any_tnv_wi:
+                            # Normalize primary period
+                            cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp))
+                            if any_tv_nwi:
+                                # Normalize lowest type pair from secondary period
+                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=sp))
+                        else:
+                            if any_tv_nwi:
+                                # Normalize lowest type pair in both periods
+                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(2)))
+                            elif any_tnv_nwi:
+                                # Normalize lowest type pair in primary period
+                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp))
 
         return (cons_a, cons_s, cons_a_dict, cons_s_dict)
 
@@ -1434,14 +1437,14 @@ class BLMModel:
                 lik_prior = (d_prior - 1) * np.sum(np.log(pk1))
                 lik1 += lik_prior
             liks1.append(lik1)
-            if params['verbose'] == 2:
+            if params['verbose'] == 3:
                 print('loop {}, liks {}'.format(iter, lik1))
 
             if not params['force_min_firm_type']:
                 # If not forcing minimum firm type, compute lowest firm type
                 min_firm_type = self._min_firm_type(A1, A2)
 
-            if (abs(lik1 - prev_lik) < params['threshold_movers']) and (min_firm_type == prev_min_firm_type):
+            if ((abs(lik1 - prev_lik) < params['threshold_movers']) and (min_firm_type == prev_min_firm_type)):
                 # Break loop
                 break
             prev_lik = lik1
@@ -1473,7 +1476,7 @@ class BLMModel:
             # Shift for period 2
             ts = nl * nk
             # Only store the diagonal
-            XwXd = np.zeros(shape=2 * ts)
+            XwX = np.zeros(shape=2 * ts)
             if params['update_a']:
                 XwY = np.zeros(shape=2 * ts)
 
@@ -1506,9 +1509,9 @@ class BLMModel:
                 # Shared weighted terms
                 GG1_weighted = GG1.T @ diags(W1 * qi[:, l] / S1[l, G1])
                 GG2_weighted = GG2.T @ diags(W2 * qi[:, l] / S2[l, G2])
-                ## Compute XwXd terms ##
-                XwXd[l_index: r_index] = (GG1_weighted @ GG1).diagonal()
-                XwXd[ts + l_index: ts + r_index] = (GG2_weighted @ GG2).diagonal()
+                ## Compute XwX terms ##
+                XwX[l_index: r_index] = (GG1_weighted @ GG1).diagonal()
+                XwX[ts + l_index: ts + r_index] = (GG2_weighted @ GG2).diagonal()
                 if params['update_a']:
                     # Update A1_sum and A2_sum to account for worker-interaction terms
                     A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
@@ -1543,14 +1546,14 @@ class BLMModel:
             # print('S2_cts before:')
             # print(S2_cts)
 
-            # We solve the system to get all the parameters (note: this won't work if XwX is sparse)
-            XwX = np.diag(XwXd)
+            # We solve the system to get all the parameters (use dense solver)
+            XwX = np.diag(XwX)
             if params['update_a']:
                 if iter > 0:
                     ## Constraints ##
                     cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type)
                 try:
-                    cons_a.solve(XwX, -XwY)
+                    cons_a.solve(XwX, -XwY, solver='quadprog')
                     res_a1, res_a2 = cons_a.res[: len(cons_a.res) // 2], cons_a.res[len(cons_a.res) // 2:]
                     # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
                     #     raise ValueError('Estimated A1/A2 has NaN values')
@@ -1559,7 +1562,7 @@ class BLMModel:
 
                 except ValueError as e:
                     # If constraints inconsistent, keep A1 and A2 the same
-                    if params['verbose'] in [1, 2]:
+                    if params['verbose'] in [2, 3]:
                         print(f'Passing A1/A2: {e}')
                     # stop
                     pass
@@ -1597,12 +1600,12 @@ class BLMModel:
                         del A1_sum_l, A2_sum_l
                 del CC1_weighted, CC2_weighted
 
-                # We solve the system to get all the parameters (note: this won't work if XwX_cat is sparse)
+                # We solve the system to get all the parameters (use dense solver)
                 XwX_cat[col] = np.diag(XwX_cat[col])
                 if params['update_a']:
                     try:
                         a_solver = cons_a_dict[col]
-                        a_solver.solve(XwX_cat[col], -XwY_cat[col])
+                        a_solver.solve(XwX_cat[col], -XwY_cat[col], solver='quadprog')
                         res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2], a_solver.res[len(a_solver.res) // 2:]
                         # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
                         #     raise ValueError(f'Estimated A1_cat/A2_cat has NaN values for column {col!r}')
@@ -1615,7 +1618,7 @@ class BLMModel:
 
                     except ValueError as e:
                         # If constraints inconsistent, keep A1_cat and A2_cat the same
-                        if params['verbose'] in [1, 2]:
+                        if params['verbose'] in [2, 3]:
                             print(f'Passing A1_cat/A2_cat for column {col!r}: {e}')
                         # stop
                         pass
@@ -1654,12 +1657,12 @@ class BLMModel:
                         del A1_sum_l, A2_sum_l
                 del CC1_weighted, CC2_weighted
 
-                # We solve the system to get all the parameters (note: this won't work if XwX_cts is sparse)
+                # We solve the system to get all the parameters (use dense solver)
                 XwX_cts[col] = np.diag(XwX_cts[col])
                 if params['update_a']:
                     try:
                         a_solver = cons_a_dict[col]
-                        a_solver.solve(XwX_cts[col], -XwY_cts[col])
+                        a_solver.solve(XwX_cts[col], -XwY_cts[col], solver='quadprog')
                         res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2], a_solver.res[len(a_solver.res) // 2:]
                         # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
                         #     raise ValueError(f'Estimated A1_cts/A2_cts has NaN values for column {col!r}')
@@ -1672,7 +1675,7 @@ class BLMModel:
 
                     except ValueError as e:
                         # If constraints inconsistent, keep A1_cts and A2_cts the same
-                        if params['verbose'] in [1, 2]:
+                        if params['verbose'] in [2, 3]:
                             print(f'Passing A1_cts/A2_cts for column {col!r}: {e}')
                         # stop
                         pass
@@ -1738,7 +1741,7 @@ class BLMModel:
                     del eps1_l_sq, eps2_l_sq
 
                 try:
-                    cons_s.solve(XwX, -XwS)
+                    cons_s.solve(XwX, -XwS, solver='quadprog')
                     res_s1, res_s2 = cons_s.res[: len(cons_s.res) // 2], cons_s.res[len(cons_s.res) // 2:]
                     # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
                     #     raise ValueError('Estimated S1/S2 has NaN values')
@@ -1747,7 +1750,7 @@ class BLMModel:
 
                 except ValueError as e:
                     # If constraints inconsistent, keep S1 and S2 the same
-                    if params['verbose'] in [1, 2]:
+                    if params['verbose'] in [2, 3]:
                         print(f'Passing S1/S2: {e}')
                     # stop
                     pass
@@ -1757,7 +1760,7 @@ class BLMModel:
                     try:
                         col_n = cat_dict[col]['n']
                         s_solver = cons_s_dict[col]
-                        s_solver.solve(XwX_cat[col], -XwS_cat[col])
+                        s_solver.solve(XwX_cat[col], -XwS_cat[col], solver='quadprog')
                         res_s1, res_s2 = s_solver.res[: len(s_solver.res) // 2], s_solver.res[len(s_solver.res) // 2:]
                         # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
                         #     raise ValueError(f'Estimated S1_cat/S2_cat has NaN values for column {col!r}')
@@ -1770,7 +1773,7 @@ class BLMModel:
 
                     except ValueError as e:
                         # If constraints inconsistent, keep S1_cat and S2_cat the same
-                        if params['verbose'] in [1, 2]:
+                        if params['verbose'] in [2, 3]:
                             print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
                         # stop
                         pass
@@ -1779,7 +1782,7 @@ class BLMModel:
                 for col in cts_cols:
                     try:
                         s_solver = cons_s_dict[col]
-                        s_solver.solve(XwX_cts[col], -XwS_cts[col])
+                        s_solver.solve(XwX_cts[col], -XwS_cts[col], solver='quadprog')
                         res_s1, res_s2 = s_solver.res[: len(s_solver.res) // 2], s_solver.res[len(s_solver.res) // 2:]
                         # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
                         #     raise ValueError(f'Estimated S1_cts/S2_cts has NaN values for column {col!r}')
@@ -1792,7 +1795,7 @@ class BLMModel:
 
                     except ValueError as e:
                         # If constraints inconsistent, keep S1_cts and S2_cts the same
-                        if params['verbose'] in [1, 2]:
+                        if params['verbose'] in [2, 3]:
                             print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
                         # stop
                         pass
@@ -1961,7 +1964,7 @@ class BLMModel:
                 lik_prior = (d_prior - 1) * np.sum(np.log(pk0))
                 lik0 += lik_prior
             liks0.append(lik0)
-            if params['verbose'] == 2:
+            if params['verbose'] == 3:
                 print('loop {}, liks {}'.format(iter, lik0))
 
             if abs(lik0 - prev_lik) < params['threshold_stayers']:
@@ -2001,36 +2004,36 @@ class BLMModel:
         self.params['update_a'] = False
         self.params['update_s'] = True
         self.params['update_pk1'] = True
-        if self.params['verbose'] in [1, 2]:
+        if self.params['verbose'] in [1, 2, 3]:
             print('Fitting movers with A fixed')
         self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 2 #####
         # Now update A with Linear Additive constraint
         self.params['update_a'] = True
-        if self.nl > 2:
+        if self.nl > 1:
             # Set constraints
-            if user_params is None:
+            if user_params['cons_a_all'] is None:
                 self.params['cons_a_all'] = cons.LinearAdditive()
             else:
                 self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.LinearAdditive()]
-            if self.params['verbose'] in [1, 2]:
+            if self.params['verbose'] in [1, 2, 3]:
                 print('Fitting movers with Linear Additive constraint on A')
             self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 3 #####
         # Now update A with Stationary Firm Type Variation constraint
-        if self.nl > 2:
+        if self.nl > 1:
             # Set constraints
-            if user_params is None:
+            if user_params['cons_a_all'] is None:
                 self.params['cons_a_all'] = cons.StationaryFirmTypeVariation()
             else:
                 self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation()]
-            if self.params['verbose'] in [1, 2]:
+            if self.params['verbose'] in [1, 2, 3]:
                 print('Fitting movers with Stationary Firm Type Variation constraint on A')
             self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 4 #####
         # Restore user constraints
         self.params['cons_a_all'] = user_params['cons_a_all']
-        if self.params['verbose'] in [1, 2]:
+        if self.params['verbose'] in [1, 2, 3]:
             print('Fitting unconstrained movers')
         self.fit_movers(jdata, compute_NNm=compute_NNm)
         ##### Compute connectedness #####
@@ -2056,7 +2059,7 @@ class BLMModel:
         self.params['update_s'] = False
         self.params['update_pk1'] = False
         # Estimate
-        if self.params['verbose'] in [1, 2]:
+        if self.params['verbose'] in [1, 2, 3]:
             print('Running fit_A')
         self.fit_movers(jdata, compute_NNm=compute_NNm)
         # Restore original parameters
@@ -2077,7 +2080,7 @@ class BLMModel:
         self.params['update_s'] = True
         self.params['update_pk1'] = False
         # Estimate
-        if self.params['verbose'] in [1, 2]:
+        if self.params['verbose'] in [1, 2, 3]:
             print('Running fit_S')
         self.fit_movers(jdata, compute_NNm=compute_NNm)
         # Restore original parameters
@@ -2098,7 +2101,7 @@ class BLMModel:
         self.params['update_s'] = False
         self.params['update_pk1'] = True
         # Estimate
-        if self.params['verbose'] in [1, 2]:
+        if self.params['verbose'] in [1, 2, 3]:
             print('Running fit_pk')
         self.fit_movers(jdata, compute_NNm=compute_NNm)
         # Restore original parameters
@@ -2320,12 +2323,12 @@ class BLMEstimator:
         sorted_zipped_models = sorted([(model.connectedness, model) for model in best_lik_models], reverse=True, key=lambda a: a[0])
         best_model = sorted_zipped_models[0][1]
 
-        if self.params['verbose'] in [1, 2]:
+        if self.params['verbose'] in [1, 2, 3]:
             print('liks_max:', best_model.lik1)
         self.model = best_model
         # Using best estimated parameters from fit_movers(), run fit_stayers()
-        if self.params['verbose'] in [1, 2]:
-            print('Running stayers')
+        if self.params['verbose'] in [1, 2, 3]:
+            print('Fitting stayers')
         self.model.fit_stayers(sdata)
 
     def plot_log_earnings(self, period='first', grid=True, dpi=None):

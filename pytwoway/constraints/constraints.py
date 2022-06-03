@@ -14,6 +14,7 @@ NOTE: parameters are ordered with precedence of (time, worker type, firm type). 
 '''
 import numpy as np
 from qpsolvers import solve_qp
+from scipy.sparse import csc_matrix
 from bipartitepandas.util import to_list
 
 class QPConstrained:
@@ -162,7 +163,7 @@ class QPConstrained:
 
         return cons.res is not None
 
-    def solve(self, P, q):
+    def solve(self, P, q, solver='quadprog', verbose=False):
         '''
         Solve a quadratic programming model of the following form:
             min_x(1/2 x.T @ P @ x + q.T @ x)
@@ -172,18 +173,27 @@ class QPConstrained:
         Arguments:
             P (NumPy Array): P in quadratic programming problem
             q (NumPy Array): q in quadratic programming problem
+            solver (str): solver to use
+            verbose (bool): if True, print extra output
 
         Returns:
             (NumPy Array): x that solves quadratic programming problem
         '''
-        if len(self.G) > 0 and len(self.A) > 0:
-            self.res = solve_qp(P=P, q=q, G=self.G, h=self.h, A=self.A, b=self.b)
-        elif len(self.G) > 0:
-            self.res = solve_qp(P=P, q=q, G=self.G, h=self.h)
-        elif len(self.A) > 0:
-            self.res = solve_qp(P=P, q=q, A=self.A, b=self.b)
+        if solver in ['ecos', 'gurobi', 'mosek', 'osqp', 'qpswift', 'scs']:
+            # If using sparse solver
+            if (self.G.shape[0] > 0) and not isinstance(self.G, csc_matrix):
+                self.G = csc_matrix(self.G)
+            if (self.A.shape[0] > 0) and not isinstance(self.A, csc_matrix):
+                self.A = csc_matrix(self.A)
+
+        if self.G.shape[0] > 0 and self.A.shape[0] > 0:
+            self.res = solve_qp(P=P, q=q, G=self.G, h=self.h, A=self.A, b=self.b, solver=solver, verbose=verbose)
+        elif self.G.shape[0] > 0:
+            self.res = solve_qp(P=P, q=q, G=self.G, h=self.h, solver=solver, verbose=verbose)
+        elif self.A.shape[0] > 0:
+            self.res = solve_qp(P=P, q=q, A=self.A, b=self.b, solver=solver, verbose=verbose)
         else:
-            self.res = solve_qp(P=P, q=q)
+            self.res = solve_qp(P=P, q=q, solver=solver, verbose=verbose)
 
 class Linear():
     '''

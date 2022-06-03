@@ -891,7 +891,7 @@ def test_blm_full_estimation_no_controls():
 
     assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-4
     assert np.max(np.abs((blm_fit.A2 - sim_params['A2']) / sim_params['A2'])) < 1e-3
-    assert np.max(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) < 0.02
+    assert np.max(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) < 0.025
     assert np.max(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) < 0.025
     assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.02
     assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.015
@@ -1241,6 +1241,7 @@ def test_blm_full_estimation_cat_tnv_wi():
 
 def test_blm_start_at_truth_cat_tv():
     # Test whether BLM estimator works when starting at truth for categorical, time-varying control variables.
+    # NOTE: don't normalize
     rng = np.random.default_rng(1240)
     nl = 2 # Number of worker types
     nk = 3 # Number of firm types
@@ -1271,7 +1272,8 @@ def test_blm_start_at_truth_cat_tv():
         'nl': nl, 'nk': nk,
         'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
         's1_low': 0, 's1_high': 0.05, 's2_low': 0, 's2_high': 0.05,
-        'categorical_controls': {'cat_tv_control': cat_tv_params}
+        'categorical_controls': {'cat_tv_control': cat_tv_params},
+        'normalize': False
     })
     # Simulate data
     blm_true = tw.SimBLM(blm_sim_params)
@@ -1309,21 +1311,19 @@ def test_blm_start_at_truth_cat_tv():
     S2_sum_0_fit = np.sqrt(blm_fit.S2.T ** 2 + blm_fit.S2_cat['cat_tv_control'][0] ** 2)
     S2_sum_1_fit = np.sqrt(blm_fit.S2.T ** 2 + blm_fit.S2_cat['cat_tv_control'][1] ** 2)
 
-    # NOTE: don't worry about larger values here - they are mostly driven by a single parameter estimating incorrectly
-    assert np.max(np.abs((A1_sum_0_fit - A1_sum_0_sim) / A1_sum_0_sim)) < 0.04
-    assert np.max(np.abs((A1_sum_1_fit - A1_sum_1_sim) / A1_sum_1_sim)) < 0.02
-    assert np.max(np.abs((A2_sum_0_fit - A2_sum_0_sim) / A2_sum_0_sim)) < 0.41
-    assert np.max(np.abs((A2_sum_1_fit - A2_sum_1_sim) / A2_sum_1_sim)) < 0.35
-    assert np.prod(np.abs((S1_sum_0_fit - S1_sum_0_sim) / S1_sum_0_sim)) ** (1 / S1_sum_0_sim.size) < 8.15
-    assert np.prod(np.abs((S1_sum_1_fit - S1_sum_1_sim) / S1_sum_1_sim)) ** (1 / S1_sum_1_sim.size) < 7.9
-    assert np.prod(np.abs((S2_sum_0_fit - S2_sum_0_sim) / S2_sum_0_sim)) ** (1 / S2_sum_0_sim.size) < 2.7
-    assert np.prod(np.abs((S2_sum_1_fit - S2_sum_1_sim) / S2_sum_1_sim)) ** (1 / S2_sum_1_sim.size) < 1.75
-    assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.09
-    assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.35
+    assert np.max(np.abs((A1_sum_0_fit - A1_sum_0_sim) / A1_sum_0_sim)) < 1e-3
+    assert np.max(np.abs((A1_sum_1_fit - A1_sum_1_sim) / A1_sum_1_sim)) < 1e-4
+    assert np.max(np.abs((A2_sum_0_fit - A2_sum_0_sim) / A2_sum_0_sim)) < 1e-4
+    assert np.max(np.abs((A2_sum_1_fit - A2_sum_1_sim) / A2_sum_1_sim)) < 1e-4
+    assert np.prod(np.abs((S1_sum_0_fit - S1_sum_0_sim) / S1_sum_0_sim)) ** (1 / S1_sum_0_sim.size) < 0.45
+    assert np.prod(np.abs((S1_sum_1_fit - S1_sum_1_sim) / S1_sum_1_sim)) ** (1 / S1_sum_1_sim.size) < 0.45
+    assert np.prod(np.abs((S2_sum_0_fit - S2_sum_0_sim) / S2_sum_0_sim)) ** (1 / S2_sum_0_sim.size) < 0.6
+    assert np.prod(np.abs((S2_sum_1_fit - S2_sum_1_sim) / S2_sum_1_sim)) ** (1 / S2_sum_1_sim.size) < 0.35
+    assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.025
+    assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.035
 
 def test_blm_full_estimation_cat_tv():
     # Test whether BLM estimator works for full estimation for categorical, time-varying control variables.
-    # NOTE: n_init increased to 40
     rng = np.random.default_rng(1241)
     nl = 2 # Number of worker types
     nk = 3 # Number of firm types
@@ -1363,7 +1363,7 @@ def test_blm_full_estimation_cat_tv():
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
-    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=40, n_best=5, ncore=4, rng=rng)
+    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
     blm_fit = blm_fit.model
 
     A1_sum_0_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_tv_control'][0]
@@ -1383,7 +1383,7 @@ def test_blm_full_estimation_cat_tv():
     S2_sum_0_fit = np.sqrt(blm_fit.S2.T ** 2 + blm_fit.S2_cat['cat_tv_control'][0] ** 2)
     S2_sum_1_fit = np.sqrt(blm_fit.S2.T ** 2 + blm_fit.S2_cat['cat_tv_control'][1] ** 2)
 
-    assert np.max(np.abs((A1_sum_0_fit - A1_sum_0_sim) / A1_sum_0_sim)) < 0.035
+    assert np.max(np.abs((A1_sum_0_fit - A1_sum_0_sim) / A1_sum_0_sim)) < 1e-2
     assert np.max(np.abs((A1_sum_1_fit - A1_sum_1_sim) / A1_sum_1_sim)) < 1e-3
     assert np.max(np.abs((A2_sum_0_fit - A2_sum_0_sim) / A2_sum_0_sim)) < 1e-3
     assert np.max(np.abs((A2_sum_1_fit - A2_sum_1_sim) / A2_sum_1_sim)) < 1e-3
@@ -1958,7 +1958,6 @@ def test_blm_start_at_truth_cts_tnv():
 
 def test_blm_full_estimation_cts_tnv():
     # Test whether BLM estimator works for full estimation for continuous, time non-varying control variables.
-    # NOTE: n_init increased to 40
     rng = np.random.default_rng(1251)
     nl = 2 # Number of worker types
     nk = 3 # Number of firm types
@@ -1995,7 +1994,7 @@ def test_blm_full_estimation_cts_tnv():
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
-    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=40, n_best=5, ncore=4, rng=rng)
+    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
     blm_fit = blm_fit.model
 
     assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-4
