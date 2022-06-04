@@ -2313,7 +2313,7 @@ def test_blm_control_constraints_lb_ub():
 
     assert np.min(blm_fit.S1_cat['cat_tv_control'] ** 2) >= 3e-5
     assert np.min(blm_fit.S2_cat['cat_tv_control'] ** 2) >= 3e-5
-    assert np.max(blm_fit.S1_cat['cat_tv_control'] ** 2) <= 4e-5
+    assert np.max(blm_fit.S1_cat['cat_tv_control'] ** 2) <= 4e-5 + 1e-20
     assert np.max(blm_fit.S2_cat['cat_tv_control'] ** 2) <= 4e-5
 
     # Make sure simulated parameters fall outside range

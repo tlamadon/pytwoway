@@ -8,7 +8,7 @@ import itertools
 from multiprocessing import Pool
 import numpy as np
 import pandas as pd
-from scipy.special import logsumexp
+# from scipy.special import logsumexp
 from scipy.sparse import csc_matrix, diags
 from matplotlib import pyplot as plt
 import pytwoway as tw
@@ -337,8 +337,47 @@ def continuous_control_params(update_dict=None):
         new_dict.update(update_dict)
     return new_dict
 
+def _logsumexp(a, axis=None):
+    '''
+    Compute the log of the sum of exponentials of input elements. A simplified version of https://github.com/scipy/scipy/blob/v1.8.1/scipy/special/_logsumexp.py#L7-L127.
+
+    Arguments:
+        a (NumPy Array): array to compute logsumexp on
+        axis (int or None): axis over which logsumexp is taken; if None, compute over all axes
+
+    Returns:
+        (NumPy Array): logsumexp of a
+    '''
+    a_max = np.amax(a, axis=axis, keepdims=True)
+
+    tmp = np.exp(a - a_max)
+
+    s = np.sum(tmp, axis=axis, keepdims=False)
+    out = np.log(s)
+
+    a_max = np.squeeze(a_max, axis=axis)
+    out += a_max
+
+    return out
+
 def _lognormpdf(x, mu, sd):
     return - 0.5 * np.log(2 * np.pi) - np.log(sd) - (x - mu) ** 2 / (2 * sd ** 2)
+
+def _fast_prod_sp_diag(sp, diag):
+    '''
+    Faster product of sparse and diagonal matrices, i.e. take sp @ diag. Source: https://stackoverflow.com/a/16046783/17333120.
+
+    Arguments:
+        sp (CSC Matrix): sparse matrix
+        diag (NumPy Array): diagonal entries
+
+    Returns:
+        (CSC Matrix): product of sparse and diagonal matrices
+    '''
+    data = sp.data.copy() * np.take(diag, sp.indices)
+    ret = csc_matrix((data, sp.indices, sp.indptr), shape=sp.shape)
+
+    return ret
 
 def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, reallocate_jointly=True, reallocate_period='first', rng=None):
     '''
@@ -1365,8 +1404,11 @@ class BLMModel:
         CC1 = {col: csc_matrix((np.ones(ni), (range(ni), C1[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
         CC2 = {col: csc_matrix((np.ones(ni), (range(ni), C2[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
 
+        # Joint firm indicator
+        KK = G1 + nk * G2
+
         # Transition probability matrix
-        GG12 = csc_matrix((np.ones(ni), (range(ni), G1 + nk * G2)), shape=(ni, nk ** 2))
+        GG12 = csc_matrix((np.ones(ni), (range(ni), KK)), shape=(ni, nk ** 2))
 
         # Matrix of prior probabilities
         pk1 = self.pk1
@@ -1410,7 +1452,6 @@ class BLMModel:
                 else:
                     S1_sum_sq, S2_sum_sq = self._sum_by_non_nl(ni=ni, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_A=False)
 
-                KK = G1 + nk * G2
                 for l in range(nl):
                     # Update A1_sum/A2_sum/S1_sum_sq/S2_sum_sq to account for worker-interaction terms
                     A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts)
@@ -1418,7 +1459,6 @@ class BLMModel:
                     lp2 = _lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
                     lp[:, l] = np.log(pk1[KK, l]) + W1 * lp1 + W2 * lp2
             else:
-                KK = G1 + nk * G2
                 for l in range(nl):
                     lp1 = _lognormpdf(Y1, A1[l, G1], S1[l, G1])
                     lp2 = _lognormpdf(Y2, A2[l, G2], S2[l, G2])
@@ -1426,7 +1466,7 @@ class BLMModel:
             del lp1, lp2
 
             # We compute log sum exp to get likelihoods and probabilities
-            lse_lp = logsumexp(lp, axis=1)
+            lse_lp = _logsumexp(lp, axis=1)
             qi = np.exp(lp.T - lse_lp).T
             if params['return_qi']:
                 return qi
@@ -1503,23 +1543,26 @@ class BLMModel:
                     Y2_adj = Y2
 
             ## Update A ##
+            GG1_weighted = []
+            GG2_weighted = []
             for l in range(nl):
                 # (We might be better off trying this within numba or something)
                 l_index, r_index = l * nk, (l + 1) * nk
                 # Shared weighted terms
-                GG1_weighted = GG1.T @ diags(W1 * qi[:, l] / S1[l, G1])
-                GG2_weighted = GG2.T @ diags(W2 * qi[:, l] / S2[l, G2])
+                GG1_weighted.append(_fast_prod_sp_diag(GG1, W1 * qi[:, l] / S1[l, G1]).T)
+                GG2_weighted.append(_fast_prod_sp_diag(GG2, W2 * qi[:, l] / S2[l, G2]).T)
                 ## Compute XwX terms ##
-                XwX[l_index: r_index] = (GG1_weighted @ GG1).diagonal()
-                XwX[ts + l_index: ts + r_index] = (GG2_weighted @ GG2).diagonal()
+                XwX[l_index: r_index] = (GG1_weighted[l] @ GG1).diagonal()
+                XwX[ts + l_index: ts + r_index] = (GG2_weighted[l] @ GG2).diagonal()
                 if params['update_a']:
                     # Update A1_sum and A2_sum to account for worker-interaction terms
                     A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
                     ## Compute XwY terms ##
-                    XwY[l_index: r_index] = GG1_weighted @ (Y1_adj - A1_sum_l)
-                    XwY[ts + l_index: ts + r_index] = GG2_weighted @ (Y2_adj - A2_sum_l)
+                    XwY[l_index: r_index] = GG1_weighted[l] @ (Y1_adj - A1_sum_l)
+                    XwY[ts + l_index: ts + r_index] = GG2_weighted[l] @ (Y2_adj - A2_sum_l)
                     del A1_sum_l, A2_sum_l
-            del GG1_weighted, GG2_weighted
+            if not params['update_s']:
+                del GG1_weighted, GG2_weighted
 
             # print('A1 before:')
             # print(A1)
@@ -1568,7 +1611,11 @@ class BLMModel:
                     pass
 
             ## Categorical ##
+            CC1_cat_weighted = {}
+            CC2_cat_weighted = {}
             for col in cat_cols:
+                CC1_cat_weighted[col] = []
+                CC2_cat_weighted[col] = []
                 col_n = cat_dict[col]['n']
                 if not cat_dict[col]['worker_type_interaction']:
                     Y1_adj += A1_cat[col][C1[col]]
@@ -1582,12 +1629,12 @@ class BLMModel:
                     else:
                         S1_cat_l = S1_cat[col][C1[col]]
                         S2_cat_l = S2_cat[col][C2[col]]
-                    CC1_weighted = CC1[col].T @ diags(W1 * qi[:, l] / S1_cat_l)
-                    CC2_weighted = CC2[col].T @ diags(W2 * qi[:, l] / S2_cat_l)
+                    CC1_cat_weighted[col].append(_fast_prod_sp_diag(CC1[col], W1 * qi[:, l] / S1_cat_l).T)
+                    CC2_cat_weighted[col].append(_fast_prod_sp_diag(CC2[col], W2 * qi[:, l] / S2_cat_l).T)
                     del S1_cat_l, S2_cat_l
                     ## Compute XwX_cat terms ##
-                    XwX_cat[col][l_index: r_index] = (CC1_weighted @ CC1[col]).diagonal()
-                    XwX_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = (CC2_weighted @ CC2[col]).diagonal()
+                    XwX_cat[col][l_index: r_index] = (CC1_cat_weighted[col][l] @ CC1[col]).diagonal()
+                    XwX_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = (CC2_cat_weighted[col][l] @ CC2[col]).diagonal()
                     if params['update_a']:
                         # Update A1_sum and A2_sum to account for worker-interaction terms
                         A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
@@ -1595,10 +1642,11 @@ class BLMModel:
                             A1_sum_l -= A1_cat[col][l, C1[col]]
                             A2_sum_l -= A2_cat[col][l, C2[col]]
                         ## Compute XwY_cat terms ##
-                        XwY_cat[col][l_index: r_index] = CC1_weighted @ (Y1_adj - A1_sum_l - A1[l, G1])
-                        XwY_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = CC2_weighted @ (Y2_adj - A2_sum_l - A2[l, G2])
+                        XwY_cat[col][l_index: r_index] = CC1_cat_weighted[col][l] @ (Y1_adj - A1_sum_l - A1[l, G1])
+                        XwY_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = CC2_cat_weighted[col][l] @ (Y2_adj - A2_sum_l - A2[l, G2])
                         del A1_sum_l, A2_sum_l
-                del CC1_weighted, CC2_weighted
+                if not params['update_s']:
+                    del CC1_cat_weighted[col], CC2_cat_weighted[col]
 
                 # We solve the system to get all the parameters (use dense solver)
                 XwX_cat[col] = np.diag(XwX_cat[col])
@@ -1627,7 +1675,11 @@ class BLMModel:
                     Y2_adj -= A2_cat[col][C2[col]]
 
             ## Continuous ##
+            CC1_cts_weighted = {}
+            CC2_cts_weighted = {}
             for col in cts_cols:
+                CC1_cts_weighted[col] = []
+                CC2_cts_weighted[col] = []
                 if not cts_dict[col]['worker_type_interaction']:
                     Y1_adj += A1_cts[col] * C1[col]
                     Y2_adj += A2_cts[col] * C2[col]
@@ -1639,12 +1691,12 @@ class BLMModel:
                     else:
                         S1_cts_l = S1_cts[col]
                         S2_cts_l = S2_cts[col]
-                    CC1_weighted = C1[col].T @ diags(W1 * qi[:, l] / S1_cts_l)
-                    CC2_weighted = C2[col].T @ diags(W2 * qi[:, l] / S2_cts_l)
+                    CC1_cts_weighted[col].append(C1[col].T * (W1 * qi[:, l] / S1_cts_l))
+                    CC2_cts_weighted[col].append(C2[col].T * (W2 * qi[:, l] / S2_cts_l))
                     del S1_cts_l, S2_cts_l
                     ## Compute XwX_cts terms ##
-                    XwX_cts[col][l] = (CC1_weighted @ C1[col])
-                    XwX_cts[col][nl + l] = (CC2_weighted @ C2[col])
+                    XwX_cts[col][l] = (CC1_cts_weighted[col][l] @ C1[col])
+                    XwX_cts[col][nl + l] = (CC2_cts_weighted[col][l] @ C2[col])
                     if params['update_a']:
                         # Update A1_sum and A2_sum to account for worker-interaction terms
                         A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
@@ -1652,10 +1704,11 @@ class BLMModel:
                             A1_sum_l -= A1_cts[col][l] * C1[col]
                             A2_sum_l -= A2_cts[col][l] * C2[col]
                         ## Compute XwY_cts terms ##
-                        XwY_cts[col][l] = CC1_weighted @ (Y1_adj - A1_sum_l - A1[l, G1])
-                        XwY_cts[col][nl + l] = CC2_weighted @ (Y2_adj - A2_sum_l - A2[l, G2])
+                        XwY_cts[col][l] = CC1_cts_weighted[col][l] @ (Y1_adj - A1_sum_l - A1[l, G1])
+                        XwY_cts[col][nl + l] = CC2_cts_weighted[col][l] @ (Y2_adj - A2_sum_l - A2[l, G2])
                         del A1_sum_l, A2_sum_l
-                del CC1_weighted, CC2_weighted
+                if not params['update_s']:
+                    del CC1_cts_weighted[col], CC2_cts_weighted[col]
 
                 # We solve the system to get all the parameters (use dense solver)
                 XwX_cts[col] = np.diag(XwX_cts[col])
@@ -1709,36 +1762,23 @@ class BLMModel:
                     del A1_sum_l, A2_sum_l
                     ## XwS terms ##
                     l_index, r_index = l * nk, (l + 1) * nk
-                    XwS[l_index: r_index] = GG1.T @ diags(W1 * qi[:, l] / S1[l, G1]) @ eps1_l_sq
-                    XwS[ts + l_index: ts + r_index] = GG2.T @ diags(W2 * qi[:, l] / S2[l, G2]) @ eps2_l_sq
+                    XwS[l_index: r_index] = GG1_weighted[l] @ eps1_l_sq
+                    XwS[ts + l_index: ts + r_index] = GG2_weighted[l] @ eps2_l_sq
                     ## Categorical ##
                     for col in cat_cols:
                         col_n = cat_dict[col]['n']
                         l_index, r_index = l * col_n, (l + 1) * col_n
-                        if cat_dict[col]['worker_type_interaction']:
-                            S1_cat_l = S1_cat[col][l, C1[col]]
-                            S2_cat_l = S2_cat[col][l, C2[col]]
-                        else:
-                            S1_cat_l = S1_cat[col][C1[col]]
-                            S2_cat_l = S2_cat[col][C2[col]]
                         ## XwS_cat terms ##
-                        XwS_cat[col][l_index: r_index] = CC1[col].T @ diags(W1 * qi[:, l] / S1_cat_l) @ eps1_l_sq
-                        XwS_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = CC2[col].T @ diags(W2 * qi[:, l] / S2_cat_l) @ eps2_l_sq
-                        del S1_cat_l, S2_cat_l
+                        XwS_cat[col][l_index: r_index] = CC1_cat_weighted[col][l] @ eps1_l_sq
+                        XwS_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = CC2_cat_weighted[col][l] @ eps2_l_sq
                     ## Continuous ##
                     for col in cts_cols:
-                        if cts_dict[col]['worker_type_interaction']:
-                            S1_cts_l = S1_cts[col][l]
-                            S2_cts_l = S2_cts[col][l]
-                        else:
-                            S1_cts_l = S1_cts[col]
-                            S2_cts_l = S2_cts[col]
                         ## XwS_cts terms ##
                         # NOTE: take absolute value
-                        XwS_cts[col][l] = np.abs(C1[col].T @ diags(W1 * qi[:, l] / S1_cts_l) @ eps1_l_sq)
-                        XwS_cts[col][nl + l] = np.abs(C2[col].T @ diags(W2 * qi[:, l] / S2_cts_l) @ eps2_l_sq)
-                        del S1_cts_l, S2_cts_l
+                        XwS_cts[col][l] = np.abs(CC1_cts_weighted[col][l] @ eps1_l_sq)
+                        XwS_cts[col][nl + l] = np.abs(CC2_cts_weighted[col][l] @ eps2_l_sq)
                     del eps1_l_sq, eps2_l_sq
+                del GG1_weighted, GG2_weighted, CC1_cat_weighted, CC2_cat_weighted
 
                 try:
                     cons_s.solve(XwX, -XwS, solver='quadprog')
@@ -1953,7 +1993,7 @@ class BLMModel:
                 lp[:, l] = lp_stable[:, l] + np.log(pk0[G1, l])
 
             # We compute log sum exp to get likelihoods and probabilities
-            lse_lp = logsumexp(lp, axis=1)
+            lse_lp = _logsumexp(lp, axis=1)
             qi = np.exp(lp.T - lse_lp).T
             if params['return_qi']:
                 return qi
