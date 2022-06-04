@@ -360,8 +360,22 @@ def _logsumexp(a, axis=None):
 
     return out
 
+logpi = - 0.5 * np.log(2 * np.pi)
+
 def _lognormpdf(x, mu, sd):
-    return - 0.5 * np.log(2 * np.pi) - np.log(sd) - (x - mu) ** 2 / (2 * sd ** 2)
+    # Faster to split into multiple lines
+    res = logpi - np.log(sd) 
+    res -= (x - mu) ** 2 / (2 * sd ** 2)
+    return res
+
+
+def _fast_lognormpdf(x, mu, sd, G):
+    # Faster to split into multiple lines
+    log_sd = np.log(sd)
+    sd_sq = sd ** 2
+    res = logpi - log_sd[G]
+    res -= (x - mu[G]) ** 2 / (2 * sd_sq[G])
+    return res
 
 def _fast_prod_diag_sp(diag, sp):
     '''
@@ -1445,6 +1459,7 @@ class BLMModel:
             # ---------- E-Step ----------
             # We compute the posterior probabilities for each row
             # We iterate over the worker types, should not be be too costly since the vector is quite large within each iteration
+            log_pk1 = np.log(pk1)
             if any_controls > 0:
                 ## Account for control variables ##
                 if iter == 0:
@@ -1457,13 +1472,13 @@ class BLMModel:
                     A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts)
                     lp1 = _lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
                     lp2 = _lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
-                    lp[:, l] = np.log(pk1[KK, l]) + W1 * lp1 + W2 * lp2
+                    lp[:, l] = log_pk1[KK, l] + W1 * lp1 + W2 * lp2
             else:
                 for l in range(nl):
-                    lp1 = _lognormpdf(Y1, A1[l, G1], S1[l, G1])
-                    lp2 = _lognormpdf(Y2, A2[l, G2], S2[l, G2])
-                    lp[:, l] = np.log(pk1[KK, l]) + W1 * lp1 + W2 * lp2
-            del lp1, lp2
+                    lp1 = _fast_lognormpdf(Y1, A1[l, :], S1[l, :], G1)
+                    lp2 = _fast_lognormpdf(Y2, A2[l, :], S2[l, :], G2)
+                    lp[:, l] = log_pk1[KK, l] + W1 * lp1 + W2 * lp2
+            del log_pk1, lp1, lp2
 
             # We compute log sum exp to get likelihoods and probabilities
             lse_lp = _logsumexp(lp, axis=1)
@@ -1552,8 +1567,9 @@ class BLMModel:
                 GG1_weighted.append(_fast_prod_diag_sp(W1 * qi[:, l] / S1[l, G1], GG1).T)
                 GG2_weighted.append(_fast_prod_diag_sp(W2 * qi[:, l] / S2[l, G2], GG2).T)
                 ## Compute XwX terms ##
-                XwX[l_index: r_index] = (GG1_weighted[l] @ GG1).diagonal()
-                XwX[ts + l_index: ts + r_index] = (GG2_weighted[l] @ GG2).diagonal()
+                # Rather than (GG1_weighted[l] @ GG1).diagonal() (source: https://stackoverflow.com/a/14759273/17333120)
+                XwX[l_index: r_index] = np.asarray(GG1_weighted[l].multiply(GG1.T).sum(axis=1))[:, 0]
+                XwX[ts + l_index: ts + r_index] = np.asarray(GG2_weighted[l].multiply(GG2.T).sum(axis=1))[:, 0]
                 if params['update_a']:
                     # Update A1_sum and A2_sum to account for worker-interaction terms
                     A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
@@ -1633,8 +1649,9 @@ class BLMModel:
                     CC2_cat_weighted[col].append(_fast_prod_diag_sp(W2 * qi[:, l] / S2_cat_l, CC2[col]).T)
                     del S1_cat_l, S2_cat_l
                     ## Compute XwX_cat terms ##
-                    XwX_cat[col][l_index: r_index] = (CC1_cat_weighted[col][l] @ CC1[col]).diagonal()
-                    XwX_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = (CC2_cat_weighted[col][l] @ CC2[col]).diagonal()
+                    # Rather than (CC1_cat_weighted[col][l] @ CC1[col]).diagonal() (source: https://stackoverflow.com/a/14759273/17333120)
+                    XwX_cat[col][l_index: r_index] = np.asarray(CC1_cat_weighted[col][l].multiply(CC1[col].T).sum(axis=1))[:, 0]
+                    XwX_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = np.asarray(CC2_cat_weighted[col][l].multiply(CC2[col].T).sum(axis=1))[:, 0]
                     if params['update_a']:
                         # Update A1_sum and A2_sum to account for worker-interaction terms
                         A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
