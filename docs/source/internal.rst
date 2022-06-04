@@ -5,7 +5,7 @@ Python API
 Overview
 ---------
 
-The main PyTwoWay API is split into eight classes, seven of which are for estimating models, and one of which is for simulating BLM data. It also has three modules: one for constructing the variance-covariance matrix for AKM and its bias corrections; one for generating constraints for BLM; and one for generating attrition plots using increasing (building up from a fixed set of firms) or decreasing (with varying sets of firms) fractions of movers. PyTwoWay is canonically imported using
+The main PyTwoWay API is split into nine classes, eight of which are for estimating models, and one of which is for simulating BLM data. It also has three modules: one for constructing the variance-covariance matrix for AKM and its bias corrections; one for generating constraints for BLM; and one for generating attrition plots using increasing (building up from a fixed set of firms) or decreasing (with varying sets of firms) fractions of movers. PyTwoWay is canonically imported using
 
   .. code-block:: python
 
@@ -23,6 +23,8 @@ Classes
 * ``pytwoway.BLMEstimator``: Class for estimating the BLM model with multiple sets of starting values
 
 * ``pytwoway.BLMBootstrap``: Class for estimating the BLM model with bootstrapped confidence intervals
+
+* ``pytwoway.BLMVarianceDecomposition``: Class for estimating the variance decomposition of the BLM model with bootstrapped confidence intervals
 
 * ``pytwoway.Attrition``: Class for generating attrition plots
 
@@ -92,6 +94,15 @@ Classes and Methods
    ~pytwoway.BLMBootstrap.plot_liks_connectedness
    ~pytwoway.BLMBootstrap.plot_log_earnings
    ~pytwoway.BLMBootstrap.plot_type_proportions
+
+``pytwoway.BLMVarianceDecomposition``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+
+   ~pytwoway.BLMVarianceDecomposition
+   ~pytwoway.BLMVarianceDecomposition.fit
+   ~pytwoway.BLMVarianceDecomposition.table
 
 ``pytwoway.Attrition``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

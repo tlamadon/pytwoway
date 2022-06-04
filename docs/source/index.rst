@@ -27,6 +27,7 @@
   BLMModel <class-blmmodel>
   BLMEstimator <class-blmestimator>
   BLMBootstrap <class-blmbootstrap>
+  BLMVarianceDecomposition <class-blmvariancedecomposition>
   Attrition <class-attrition>
   MonteCarlo <class-montecarlo>
   Q <module-Q>

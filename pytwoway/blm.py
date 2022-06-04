@@ -363,18 +363,18 @@ def _logsumexp(a, axis=None):
 def _lognormpdf(x, mu, sd):
     return - 0.5 * np.log(2 * np.pi) - np.log(sd) - (x - mu) ** 2 / (2 * sd ** 2)
 
-def _fast_prod_sp_diag(sp, diag):
+def _fast_prod_diag_sp(diag, sp):
     '''
-    Faster product of sparse and diagonal matrices, i.e. take sp @ diag. Source: https://stackoverflow.com/a/16046783/17333120.
+    Faster product of diagonal and sparse matrices, i.e. take diag @ sp. Source: https://stackoverflow.com/a/16046783/17333120.
 
     Arguments:
-        sp (CSC Matrix): sparse matrix
         diag (NumPy Array): diagonal entries
+        sp (CSC Matrix): sparse matrix
 
     Returns:
-        (CSC Matrix): product of sparse and diagonal matrices
+        (CSC Matrix): product of diagonal and sparse matrices
     '''
-    data = sp.data.copy() * np.take(diag, sp.indices)
+    data = np.take(diag, sp.indices) * sp.data
     ret = csc_matrix((data, sp.indices, sp.indptr), shape=sp.shape)
 
     return ret
@@ -1549,8 +1549,8 @@ class BLMModel:
                 # (We might be better off trying this within numba or something)
                 l_index, r_index = l * nk, (l + 1) * nk
                 # Shared weighted terms
-                GG1_weighted.append(_fast_prod_sp_diag(GG1, W1 * qi[:, l] / S1[l, G1]).T)
-                GG2_weighted.append(_fast_prod_sp_diag(GG2, W2 * qi[:, l] / S2[l, G2]).T)
+                GG1_weighted.append(_fast_prod_diag_sp(W1 * qi[:, l] / S1[l, G1], GG1).T)
+                GG2_weighted.append(_fast_prod_diag_sp(W2 * qi[:, l] / S2[l, G2], GG2).T)
                 ## Compute XwX terms ##
                 XwX[l_index: r_index] = (GG1_weighted[l] @ GG1).diagonal()
                 XwX[ts + l_index: ts + r_index] = (GG2_weighted[l] @ GG2).diagonal()
@@ -1629,8 +1629,8 @@ class BLMModel:
                     else:
                         S1_cat_l = S1_cat[col][C1[col]]
                         S2_cat_l = S2_cat[col][C2[col]]
-                    CC1_cat_weighted[col].append(_fast_prod_sp_diag(CC1[col], W1 * qi[:, l] / S1_cat_l).T)
-                    CC2_cat_weighted[col].append(_fast_prod_sp_diag(CC2[col], W2 * qi[:, l] / S2_cat_l).T)
+                    CC1_cat_weighted[col].append(_fast_prod_diag_sp(W1 * qi[:, l] / S1_cat_l, CC1[col]).T)
+                    CC2_cat_weighted[col].append(_fast_prod_diag_sp(W2 * qi[:, l] / S2_cat_l, CC2[col]).T)
                     del S1_cat_l, S2_cat_l
                     ## Compute XwX_cat terms ##
                     XwX_cat[col][l_index: r_index] = (CC1_cat_weighted[col][l] @ CC1[col]).diagonal()
