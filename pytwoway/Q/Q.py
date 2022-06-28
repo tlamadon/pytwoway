@@ -234,7 +234,8 @@ class CovPsiPrevPsiNext():
         Ql = Ql[:, range(nf - 1)]
 
         # Update weights
-        Dp = diags(Dp.data[0][keep_rows])
+        if not isinstance(Dp, (float, int)):
+            Dp = Dp[keep_rows]
 
         return (Ql, 'psi', Dp, nf - 1)
 
@@ -266,7 +267,8 @@ class CovPsiPrevPsiNext():
         Qr = Qr[:, range(nf - 1)]
 
         # Update weights
-        Dp = diags(Dp.data[0][keep_rows])
+        if not isinstance(Dp, (float, int)):
+            Dp = Dp[keep_rows]
 
         return (Qr, 'psi', Dp)
 

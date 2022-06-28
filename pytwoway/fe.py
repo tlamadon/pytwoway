@@ -13,10 +13,11 @@ from timeit import default_timer as timer
 from multiprocessing import Pool
 import numpy as np
 import pandas as pd
-from scipy.sparse import csc_matrix, diags, eye
+from scipy.sparse import csc_matrix
 import pyamg
 from bipartitepandas.util import ParamsDict, logger_init
 from pytwoway import Q
+from pytwoway.util import weighted_mean, weighted_var, weighted_cov, DxSP, SPxD, diag_of_sp_prod, diag_of_prod
 
 # def pipe_qcov(df, e1, e2): # FIXME I moved this from above, also this is used only in commented out code
 #     v1 = df.eval(e1)
@@ -26,8 +27,6 @@ from pytwoway import Q
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq1(a):
     return a >= 1
-def _0to1(a):
-    return 0 <= a <= 1
 
 # Define default parameter dictionary
 _fe_params_default = ParamsDict({
@@ -181,44 +180,6 @@ def _weighted_quantile(values, quantiles, sample_weight=None, values_sorted=Fals
         weighted_quantiles /= np.sum(sample_weight)
 
     return np.interp(quantiles, weighted_quantiles, values)
-
-def _weighted_var(v, w, dof=0):
-    '''
-    Compute weighted variance.
-
-    Arguments:
-        v (NumPy Array): vector to weight
-        w (NumPy Array): weights
-        dof (int): degrees of freedom
-
-    Returns:
-        (NumPy Array): weighted variance
-    '''
-    m0 = np.sum(w * v) / np.sum(w)
-    v0 = np.sum(w * (v - m0) ** 2) / (np.sum(w) - dof)
-
-    return v0
-
-def _weighted_cov(v1, v2, w1, w2, dof=0):
-    '''
-    Compute weighted covariance.
-
-    Arguments:
-        v1 (NumPy Array): vector to weight
-        v2 (NumPy Array): vector to weight
-        w1 (NumPy Array): weights for v1
-        w2 (NumPy Array): weights for v2
-        dof (int): degrees of freedom
-
-    Returns:
-        (NumPy Array): weighted covariance
-    '''
-    m1 = np.sum(w1 * v1) / np.sum(w1)
-    m2 = np.sum(w2 * v2) / np.sum(w2)
-    w3 = np.sqrt(w1 * w2)
-    v0 = np.sum(w3 * (v1 - m1) * (v2 - m2)) / (np.sum(w3) - dof)
-
-    return v0
 
 class FEEstimator:
     '''
@@ -426,7 +387,9 @@ class FEEstimator:
                 self._collect_res()
 
         # Clear attributes
-        del self.worker_m, self.Y, self.J, self.W, self.Dp, self.Dp_sqrt, self.Dwinv, self.Minv, self.ml
+        del self.worker_m, self.Y, self.J, self.DpJ, self.W, self.DpW, self.Dp, self.Dp_sqrt, self.Dwinv, self.DwinvWtDpJ, self.Minv, self.ml
+        if self.params['he'] and (not self.params['levfile']):
+            del self.sqrt_DpJ, self.sqrt_DpW
         try:
             del self.AA_inv_A, self.AA_inv_B, self.AA_inv_C, self.AA_inv_D
         except AttributeError:
@@ -487,27 +450,51 @@ class FEEstimator:
         ## W (workers) ##
         W = csc_matrix((np.ones(self.nn), (self.adata.index.to_numpy(), self.adata.loc[:, 'i'].to_numpy())), shape=(self.nn, self.nw))
 
-        ## Dp (weight) ##
         if self.weighted:
-            # Diagonal weight matrix
-            Dp = diags(self.adata.loc[:, 'w'].to_numpy())
+            ### Weighted ###
+            ## Dp (weight) ##
+            Dp = self.adata.loc[:, 'w'].to_numpy()
+            Dp_sqrt = np.sqrt(Dp)
+
+            ## Weighted J and W ##
+            DpJ = DxSP(Dp, J)
+            DpW = DxSP(Dp, W)
+            if self.params['he'] and (not self.params['levfile']):
+                sqrt_DpJ = DxSP(Dp_sqrt, J)
+                sqrt_DpW = DxSP(Dp_sqrt, W)
         else:
-            # Diagonal weight matrix - all weight one
-            Dp = diags(np.ones(self.nn).astype(int, copy=False))
+            ## Unweighted ##
+            ## Dp (weight) ##
+            Dp = 1
+            Dp_sqrt = 1
+
+            ## Weighted J and W ##
+            DpJ = J
+            DpW = W
+            if self.params['he'] and (not self.params['levfile']):
+                sqrt_DpJ = J
+                sqrt_DpW = W
 
         ## Dwinv ##
-        Dwinv = diags(1 / ((W.T @ Dp @ W).diagonal()))
+        Dwinv = 1 / diag_of_sp_prod(W.T, DpW)
+
+        ## Dwinv @ W.T @ DpJ ##
+        WtDpJ = W.T @ DpJ
+        DwinvWtDpJ = DxSP(Dwinv, WtDpJ.tocsc())
 
         ## Minv ##
-        Minv = J.T @ Dp @ J - J.T @ Dp @ W @ Dwinv @ W.T @ Dp @ J
+        Minv = J.T @ DpJ - WtDpJ.T @ DwinvWtDpJ
 
         ## Store matrices ##
         self.Y = self.adata.loc[:, 'y'].to_numpy()
-        self.J = J
-        self.W = W
-        self.Dp = Dp
-        self.Dp_sqrt = np.sqrt(Dp)
+        self.J, self.DpJ = J, DpJ
+        self.W, self.DpW = W, DpW
+        if self.params['he'] and (not self.params['levfile']):
+            self.sqrt_DpJ = sqrt_DpJ
+            self.sqrt_DpW = sqrt_DpW
+        self.Dp, self.Dp_sqrt = Dp, Dp_sqrt
         self.Dwinv = Dwinv
+        self.DwinvWtDpJ = DwinvWtDpJ
         self.Minv = Minv
 
         self.logger.info('preparing linear solver')
@@ -536,8 +523,8 @@ class FEEstimator:
         self.res['mover_quantiles'] = _weighted_quantile(fm, ls, fi).tolist()
         self.res['size_quantiles'] = _weighted_quantile(fi, ls, fi).tolist()
         # self.res['movers_per_firm'] = self.adata.loc[self.adata.loc[:, 'm'] > 0, :].groupby('j')['i'].nunique().mean()
-        self.res['between_firm_var'] = _weighted_var(fy, fi)
-        self.res['var_y'] = _weighted_var(self.Y, self.Dp)
+        self.res['between_firm_var'] = weighted_var(fy, fi)
+        self.res['var_y'] = weighted_var(self.Y, self.Dp)
         self.logger.info(f"total variance: {self.res['var_y']:2.4f}")
 
         # extract woodcock moments using sdata and jdata
@@ -559,7 +546,7 @@ class FEEstimator:
         ## Estimate psi and alpha ##
         self.logger.info('estimating firm and worker effects')
 
-        self.psi_hat, self.alpha_hat = self._solve(self.Y)
+        self.psi_hat, self.alpha_hat = self._solve(self.Y, Dp2=True)
 
         self.res['solver_time'] = self.last_invert_time
         self.logger.info(f'solver time: {self.last_invert_time:2.4f} seconds')
@@ -596,7 +583,7 @@ class FEEstimator:
         Dp = self.Dp
 
         ## Estimate residuals ##
-        self.E = self.Y - self._mult_A(self.psi_hat, self.alpha_hat)
+        self.E = self.Y - self._mult_A(self.psi_hat, self.alpha_hat, weighted=False)
 
         ## Estimate R^2 ##
         fe_rsq = 1 - (Dp * (self.E ** 2)).sum() / (Dp * (self.Y ** 2)).sum()
@@ -604,7 +591,7 @@ class FEEstimator:
 
         ## Estimate variance of residuals (DON'T DEMEAN) ##
         # NOTE: multiply by Dp, because each observation's variance is divided by Dp and we need to undo that
-        self.sigma_2_pi = np.average(Dp * self.E ** 2, weights=Dp.data[0])
+        self.sigma_2_pi = weighted_mean(Dp * (self.E ** 2), Dp)
 
         self.logger.info(f'[fe] variance of residuals {self.sigma_2_pi:2.4f}')
 
@@ -625,8 +612,8 @@ class FEEstimator:
         psi = self.psi_hat
         alpha = self.alpha_hat
 
-        self.var_fe = _weighted_var(self.Q_var._Q_mult(Q_var_matrix, psi, alpha), Q_var_weights, dof=0)
-        self.cov_fe = _weighted_cov(self.Q_cov._Ql_mult(Ql_cov_matrix, psi, alpha), self.Q_cov._Qr_mult(Qr_cov_matrix, psi, alpha), Ql_cov_weights, Qr_cov_weights, dof=0)
+        self.var_fe = weighted_var(self.Q_var._Q_mult(Q_var_matrix, psi, alpha), Q_var_weights, dof=0)
+        self.cov_fe = weighted_cov(self.Q_cov._Ql_mult(Ql_cov_matrix, psi, alpha), self.Q_cov._Qr_mult(Qr_cov_matrix, psi, alpha), Ql_cov_weights, Qr_cov_weights, dof=0)
 
         self.logger.info('[fe]')
         self.logger.info(f'var_psi={self.var_fe:2.4f}')
@@ -643,7 +630,8 @@ class FEEstimator:
         A, B, C, D = self.AA_inv_A, self.AA_inv_B, self.AA_inv_C, self.AA_inv_D
 
         ## Compute Tr[A @ (A'D_pA)^{-1} @ A'] ##
-        self.tr_sigma_ho_all = np.trace((J @ A + W @ C) @ J.T + (J @ B + W @ D) @ W.T)
+        # np.trace((J @ A + W @ C) @ J.T + (J @ B + W @ D) @ W.T)
+        self.tr_sigma_ho_all = np.sum(diag_of_sp_prod(J, (J @ A + W @ C).T) + diag_of_sp_prod(W, (J @ B + W @ D).T))
 
         self.logger.debug(f'[sigma^2] [analytical traces] done')
 
@@ -671,7 +659,7 @@ class FEEstimator:
 
             # Compute Z.T @ A @ (A'D_pA)^{-1} @ A' @ Z
             self.tr_sigma_ho_all[r] = Z.T @ self._mult_A( # Z.T @ A @
-                *self._solve(Z, Dp1=True, Dp2=False), weighted=False # (A'D_pA)^{-1} @ A' @ Z
+                *self._solve(Z, Dp2=False), weighted=False # (A'D_pA)^{-1} @ A' @ Z
             )
 
             self.logger.debug(f'[sigma^2] [approximate trace] step {r}/{self.ndraw_trace_sigma_2} done')
@@ -680,12 +668,11 @@ class FEEstimator:
         '''
         Estimate sigma^2 (variance of residuals) for HO-corrected model.
         '''
-
         if self.weighted:
             # Must use unweighted sigma^2 for numerator (weighting will make the estimator biased)
             sigma_2_unweighted = np.mean(self.E ** 2)
             trace_approximation = np.mean(self.tr_sigma_ho_all)
-            self.sigma_2_ho = (self.nn * sigma_2_unweighted) / (np.sum(1 / self.Dp.data[0]) - trace_approximation)
+            self.sigma_2_ho = (self.nn * sigma_2_unweighted) / (np.sum(1 / self.Dp) - trace_approximation)
         else:
             self.sigma_2_ho = (self.nn * self.sigma_2_pi) / (self.nn - (self.nw + self.nf - 1))
 
@@ -704,6 +691,12 @@ class FEEstimator:
         Q_var_matrix, Q_var_psialpha, Q_var_weights, Q_var_dof = Q_var
         Ql_cov_matrix, Ql_cov_psialpha, Ql_cov_weights, Q_cov_dof = Ql_cov
         Qr_cov_matrix, Qr_cov_psialpha, Qr_cov_weights = Qr_cov
+        if isinstance(Q_var_weights, (float, int)):
+            Q_var_weights = np.ones(Q_var_matrix.shape[0])
+        if isinstance(Ql_cov_weights, (float, int)):
+            Ql_cov_weights = np.ones(Ql_cov_matrix.shape[0])
+        if isinstance(Qr_cov_weights, (float, int)):
+            Qr_cov_weights = np.ones(Qr_cov_matrix.shape[0])
         Q_var_weights_sqrt = np.sqrt(Q_var_weights)
         Ql_cov_weights_sqrt = np.sqrt(Ql_cov_weights)
         Qr_cov_weights_sqrt = np.sqrt(Qr_cov_weights)
@@ -729,9 +722,9 @@ class FEEstimator:
         n = np.sum(Q_var_weights)
         # Construct U (demeaning matrix)
         U_dim = Q_var_matrix.shape[0]
-        U = eye(U_dim) - (1 / n) * np.tile(Q_var_weights.diagonal(), (U_dim, 1))
+        U = np.eye(U_dim) - (1 / n) * np.tile(Q_var_weights, (U_dim, 1))
         # Compute Q @ (A'D_pA)^{-1} using block matrix components
-        Q_var = Q_var_weights_sqrt @ U @ Q_var_matrix
+        Q_var = (Q_var_weights_sqrt * U.T).T @ Q_var_matrix
         Q_var = (1 / n) * Q_var.T @ Q_var
         # Compute trace by considering correct quadrant
         self.tr_var_ho_all = np.trace(Q_var @ right_dict[Q_var_psialpha][left_dict[Q_var_psialpha]])
@@ -744,10 +737,10 @@ class FEEstimator:
         # Construct U (demeaning matrix)
         Ul_dim = Ql_cov_matrix.shape[0]
         Ur_dim = Qr_cov_matrix.shape[0]
-        Ul = eye(Ul_dim) - (1 / nl) * np.tile(Ql_cov_weights.diagonal(), (Ul_dim, 1))
-        Ur = eye(Ur_dim) - (1 / nr) * np.tile(Qr_cov_weights.diagonal(), (Ur_dim, 1))
+        Ul = np.eye(Ul_dim) - (1 / nl) * np.tile(Ql_cov_weights, (Ul_dim, 1))
+        Ur = np.eye(Ur_dim) - (1 / nr) * np.tile(Qr_cov_weights, (Ur_dim, 1))
         # Compute Q @ (A'D_pA)^{-1} using block matrix components
-        Q_cov = (1 / n) * Ql_cov_matrix.T @ Ul.T @ Ql_cov_weights_sqrt.T @ Qr_cov_weights_sqrt @ Ur @ Qr_cov_matrix
+        Q_cov = (1 / n) * Ql_cov_matrix.T @ (Ul.T * Ql_cov_weights_sqrt.T) @ (Qr_cov_weights_sqrt * Ur.T).T @ Qr_cov_matrix
         # Compute trace by considering correct quadrant
         self.tr_cov_ho_all = np.trace(Q_cov @ right_dict[Qr_cov_psialpha][left_dict[Ql_cov_psialpha]])
 
@@ -788,7 +781,7 @@ class FEEstimator:
             L_var = self.Q_var._Q_mult(Q_var_matrix, Zpsi, Zalpha).T
             # Right term of Q matrix
             R_var = self.Q_var._Q_mult(Q_var_matrix, psi1, alpha1)
-            self.tr_var_ho_all[r] = _weighted_cov(L_var, R_var, Q_var_weights, Q_var_weights)
+            self.tr_var_ho_all[r] = weighted_cov(L_var, R_var, Q_var_weights, Q_var_weights)
             del L_var, R_var
 
             ## Trace correction - covariance ##
@@ -796,7 +789,7 @@ class FEEstimator:
             L_cov = self.Q_cov._Ql_mult(Ql_cov_matrix, Zpsi, Zalpha).T
             # Right term of Q matrix
             R_cov = self.Q_cov._Qr_mult(Qr_cov_matrix, psi1, alpha1)
-            self.tr_cov_ho_all[r] = _weighted_cov(L_cov, R_cov, Ql_cov_weights, Qr_cov_weights)
+            self.tr_cov_ho_all[r] = weighted_cov(L_cov, R_cov, Ql_cov_weights, Qr_cov_weights)
             del L_cov, R_cov
 
             self.logger.debug(f'[ho] [approximate trace] step {r + 1}/{self.ndraw_trace_ho} done')
@@ -815,6 +808,12 @@ class FEEstimator:
         Q_var_matrix, Q_var_psialpha, Q_var_weights, Q_var_dof = Q_var
         Ql_cov_matrix, Ql_cov_psialpha, Ql_cov_weights, Q_cov_dof = Ql_cov
         Qr_cov_matrix, Qr_cov_psialpha, Qr_cov_weights = Qr_cov
+        if isinstance(Q_var_weights, (float, int)):
+            Q_var_weights = np.ones(Q_var_matrix.shape[0])
+        if isinstance(Ql_cov_weights, (float, int)):
+            Ql_cov_weights = np.ones(Ql_cov_matrix.shape[0])
+        if isinstance(Qr_cov_weights, (float, int)):
+            Qr_cov_weights = np.ones(Qr_cov_matrix.shape[0])
         Q_var_weights_sqrt = np.sqrt(Q_var_weights)
         Ql_cov_weights_sqrt = np.sqrt(Ql_cov_weights)
         Qr_cov_weights_sqrt = np.sqrt(Qr_cov_weights)
@@ -827,9 +826,9 @@ class FEEstimator:
 
         # Unpack attributes
         J, W = self.J, self.W
+        Dp = self.Dp
         Dp_sqrt = self.Dp_sqrt
         A, B, C, D = self.AA_inv_A, self.AA_inv_B, self.AA_inv_C, self.AA_inv_D
-        Sii = diags(Sii)
 
         ## Compute Tr[Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1}] ##
         ## Left ##
@@ -850,18 +849,18 @@ class FEEstimator:
         n = np.sum(Q_var_weights)
         # Construct U (demeaning matrix)
         U_dim = Q_var_matrix.shape[0]
-        U = eye(U_dim) - (1 / n) * np.tile(Q_var_weights.diagonal(), (U_dim, 1))
+        U = np.eye(U_dim) - (1 / n) * np.tile(Q_var_weights, (U_dim, 1))
         ## Compute Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1} using block matrix components ##
         # Construct Q
-        Q_var = Q_var_weights_sqrt @ U @ Q_var_matrix
+        Q_var = (Q_var_weights_sqrt * U.T).T @ Q_var_matrix
         Q_var = (1 / n) * Q_var.T @ Q_var
         # Construct AA_inv
         if Q_var_psialpha == 'psi':
-            AA_inv = Dp_sqrt @ (J @ A + W @ C)
-            AA_inv = AA_inv.T @ Sii @ AA_inv
+            AA_inv = (Dp_sqrt * np.asarray(J @ A + W @ C).T).T
+            AA_inv = AA_inv.T @ (Sii * AA_inv.T).T
         elif Q_var_psialpha == 'alpha':
-            AA_inv = Dp_sqrt @ (J @ B + W @ D)
-            AA_inv = AA_inv.T @ Sii @ AA_inv
+            AA_inv = (Dp_sqrt * np.asarray(J @ B + W @ D).T).T
+            AA_inv = AA_inv.T @ (Sii * AA_inv.T).T
         
         # Compute trace by considering correct quadrant
         self.tr_var_he_all = np.trace(Q_var @ AA_inv)
@@ -874,28 +873,28 @@ class FEEstimator:
         # Construct U (demeaning matrix)
         Ul_dim = Ql_cov_matrix.shape[0]
         Ur_dim = Qr_cov_matrix.shape[0]
-        Ul = eye(Ul_dim) - (1 / nl) * np.tile(Ql_cov_weights.diagonal(), (Ul_dim, 1))
-        Ur = eye(Ur_dim) - (1 / nr) * np.tile(Qr_cov_weights.diagonal(), (Ur_dim, 1))
+        Ul = np.eye(Ul_dim) - (1 / nl) * np.tile(Ql_cov_weights, (Ul_dim, 1))
+        Ur = np.eye(Ur_dim) - (1 / nr) * np.tile(Qr_cov_weights, (Ur_dim, 1))
         ## Compute Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1} using block matrix components ##
         # Construct Q
-        Q_cov = (1 / n) * Ql_cov_matrix.T @ Ul.T @ Ql_cov_weights_sqrt.T @ Qr_cov_weights_sqrt @ Ur @ Qr_cov_matrix
+        Q_cov = (1 / n) * Ql_cov_matrix.T @ (Ul.T * Ql_cov_weights_sqrt.T) @ (Qr_cov_weights_sqrt * Ur.T).T @ Qr_cov_matrix
         # Construct AA_inv
         if Qr_cov_psialpha == 'psi':
             if Ql_cov_psialpha == 'psi':
                 if Q_var_psialpha != 'psi':
                     # No need to recompute if var is the same
-                    AA_inv = Dp_sqrt @ (J @ A + W @ C)
-                    AA_inv = AA_inv.T @ Sii @ AA_inv
+                    AA_inv = (Dp_sqrt * np.asarray(J @ A + W @ C).T).T
+                    AA_inv = AA_inv.T @ (Sii * AA_inv.T).T
             elif Ql_cov_psialpha == 'alpha':
-                AA_inv = (A @ J.T + B @ W.T) @ Dp_sqrt @ Sii @ Dp_sqrt @ (J @ B + W @ D)
+                AA_inv = (A @ J.T + B @ W.T) @ ((Dp * Sii) * np.asarray(J @ B + W @ D).T).T
         elif Qr_cov_psialpha == 'alpha':
             if Ql_cov_psialpha == 'psi':
-                AA_inv = (C @ J.T + D @ W.T) @ Dp_sqrt @ Sii @ Dp_sqrt @ (J @ A + W @ C)
+                AA_inv = (C @ J.T + D @ W.T) @ ((Dp * Sii) * np.asarray(J @ A + W @ C).T).T
             elif Ql_cov_psialpha == 'alpha':
                 if Q_var_psialpha != 'alpha':
                     # No need to recompute if var is the same
-                    AA_inv = Dp_sqrt @ (J @ B + W @ D)
-                    AA_inv = AA_inv.T @ Sii @ AA_inv
+                    AA_inv = (Dp_sqrt * np.asarray(J @ B + W @ D).T).T
+                    AA_inv = AA_inv.T @ (Sii * AA_inv.T).T
         # Compute trace by considering correct quadrant
         self.tr_cov_he_all = np.trace(Q_cov @ AA_inv)
 
@@ -934,10 +933,10 @@ class FEEstimator:
                 *self._mult_Atranspose( # (D_pA)' @
                     Sii * self._mult_A( # Omega @ (D_pA) @
                         *self._mult_AAinv( # (A'D_pA)^{-1} @ Z
-                            Zpsi, Zalpha, weighted=True
+                            Zpsi, Zalpha
                         ), weighted=True
                     ), weighted=True
-                ), weighted=True
+                )
             )
 
             ## Trace correction - variance ##
@@ -945,7 +944,7 @@ class FEEstimator:
             L_var = self.Q_var._Q_mult(Q_var_matrix, Zpsi, Zalpha).T
             # Right term of Q matrix
             R_var = self.Q_var._Q_mult(Q_var_matrix, psi1, alpha1)
-            self.tr_var_he_all[r] = _weighted_cov(L_var, R_var, Q_var_weights, Q_var_weights)
+            self.tr_var_he_all[r] = weighted_cov(L_var, R_var, Q_var_weights, Q_var_weights)
             del L_var, R_var
 
             ## Trace correction - covariance ##
@@ -953,7 +952,7 @@ class FEEstimator:
             L_cov = self.Q_cov._Ql_mult(Ql_cov_matrix, Zpsi, Zalpha).T
             # Right term of Q matrix
             R_cov = self.Q_cov._Qr_mult(Qr_cov_matrix, psi1, alpha1)
-            self.tr_cov_he_all[r] = _weighted_cov(L_cov, R_cov, Ql_cov_weights, Qr_cov_weights)
+            self.tr_cov_he_all[r] = weighted_cov(L_cov, R_cov, Ql_cov_weights, Qr_cov_weights)
             del L_cov, R_cov
 
             self.logger.debug(f'[he] [approximate trace] step {r + 1}/{self.ndraw_trace_he} done')
@@ -1067,15 +1066,14 @@ class FEEstimator:
         '''
         # Define variables
         J = self.J
-        W = self.W
+        DpW = self.DpW
         M = np.linalg.inv(self.Minv.todense())
-        Dp = self.Dp
         Dwinv = self.Dwinv
 
         # Construct blocks
         self.AA_inv_A = M
-        self.AA_inv_B = - M @ J.T @ Dp @ W @ Dwinv
-        self.AA_inv_C = - Dwinv @ W.T @ Dp @ J @ M
+        self.AA_inv_B = - M @ J.T @ SPxD(DpW, Dwinv)
+        self.AA_inv_C = self.AA_inv_B.T
         self.AA_inv_D = Dwinv + self.AA_inv_C @ self.Minv @ self.AA_inv_B
 
     def _construct_AAinv_components_partial(self):
@@ -1084,24 +1082,21 @@ class FEEstimator:
         '''
         # Define variables
         J = self.J
-        W = self.W
-
-        Dp = self.Dp
+        DpW = self.DpW
         Dwinv = self.Dwinv
 
         # Construct blocks
         self.AA_inv_A = None
-        self.AA_inv_B = J.T @ Dp @ W @ Dwinv
-        self.AA_inv_C = - Dwinv @ W.T @ Dp @ J
+        self.AA_inv_B = - J.T @ SPxD(DpW, Dwinv)
+        self.AA_inv_C = self.AA_inv_B.T
         self.AA_inv_D = None
 
-    def _solve(self, Y, Dp1=True, Dp2=True):
+    def _solve(self, Y, Dp2=True):
         '''
         Compute (A' * Dp1 * A)^{-1} * A' * Dp2 * Y, the least squares estimate of Y = A * [psi_hat' alpha_hat']', where A = [J W] (J is firm indicators and W is worker indicators) and Dp gives weights.
 
         Arguments:
             Y (NumPy Array): wage data
-            Dp1 (bool): if True, include first weight
             Dp2 (bool or str): if True, include second weight; if 'sqrt', use square root of weights
 
         Returns:
@@ -1110,7 +1105,7 @@ class FEEstimator:
         # This gives A' * Dp2 * Y
         J_transpose_Y, W_transpose_Y = self._mult_Atranspose(Y, weighted=Dp2)
         # This gives (A' * Dp1 * A)^{-1} * A' * Dp2 * Y
-        psi_hat, alpha_hat = self._mult_AAinv(J_transpose_Y, W_transpose_Y, weighted=Dp1)
+        psi_hat, alpha_hat = self._mult_AAinv(J_transpose_Y, W_transpose_Y)
 
         return psi_hat, alpha_hat
 
@@ -1126,11 +1121,17 @@ class FEEstimator:
         Returns:
             (CSC Matrix): result of Dp * A * [psi' alpha']'
         '''
-        if weighted:
-            if weighted == 'sqrt':
-                return self.Dp_sqrt @ (self.J @ psi + self.W @ alpha)
-            return self.Dp @ (self.J @ psi + self.W @ alpha)
-        return self.J @ psi + self.W @ alpha
+        if weighted == 'sqrt':
+            DpJ = self.sqrt_DpJ
+            DpW = self.sqrt_DpW
+        elif weighted:
+            DpJ = self.DpJ
+            DpW = self.DpW
+        else:
+            DpJ = self.J
+            DpW = self.W
+
+        return DpJ @ psi + DpW @ alpha
 
     def _mult_Atranspose(self, v, weighted=True):
         '''
@@ -1143,40 +1144,39 @@ class FEEstimator:
         Returns:
             (tuple of CSC Matrices): (firm part of result, worker part of result)
         '''
-        if weighted:
-            if weighted == 'sqrt':
-                return self.J.T @ self.Dp_sqrt @ v, self.W.T @ self.Dp_sqrt @ v
-            return self.J.T @ self.Dp @ v, self.W.T @ self.Dp @ v
+        if weighted == 'sqrt':
+            DpJ = self.sqrt_DpJ
+            DpW = self.sqrt_DpW
+        elif weighted:
+            DpJ = self.DpJ
+            DpW = self.DpW
+        else:
+            DpJ = self.J
+            DpW = self.W
 
-        return self.J.T @ v, self.W.T @ v
+        return DpJ.T @ v, DpW.T @ v
 
-    def _mult_AAinv(self, psi, alpha, weighted=True):
+    def _mult_AAinv(self, psi, alpha):
         '''
         Computes (A' * Dp * A)^{-1} * [psi' alpha']', where A = [J W] (J is firm indicators and W is worker indicators) and Dp gives weights.
 
         Arguments:
             psi (NumPy Array): firm part to multiply
             alpha (NumPy Array): worker part to multiply
-            weighted (bool): if True, include weights
 
         Returns:
             (tuple of NumPy Arrays): (firm part of result, worker part of result)
         '''
         start = timer()
-        if weighted:
-            psi_out = self.ml.solve(psi - self.J.T * (self.Dp * (self.W * (self.Dwinv * alpha))), tol=1e-10)
-            self.last_invert_time = timer() - start
 
-            alpha_out = - self.Dwinv * (self.W.T * (self.Dp * (self.J * psi_out))) + self.Dwinv * alpha
-        else:
-            psi_out = self.ml.solve(psi - self.J.T * (self.W * (self.Dwinv * alpha)), tol=1e-10)
-            self.last_invert_time = timer() - start
+        psi_out = self.ml.solve(psi - self.DwinvWtDpJ.T @ alpha, tol=1e-10)
+        self.last_invert_time = timer() - start
 
-            alpha_out = - self.Dwinv * (self.W.T * (self.J * psi_out)) + self.Dwinv * alpha
+        alpha_out = self.Dwinv * alpha - self.DwinvWtDpJ @ psi_out
 
         return psi_out, alpha_out
 
-    def _proj(self, Y, Dp0=False, Dp1=True, Dp2=True):
+    def _proj(self, Y, Dp0=False, Dp2=True):
         '''
         Compute Dp0 * A * (A' * Dp1 * A)^{-1} * A' * Dp2 * Y, where A = [J W] (J is firm indicators and W is worker indicators) and Dp gives weights (essentially projects Y onto A space).
         Solve Y, then project onto X space of data stored in the object. Essentially solves A(A'A)^{-1}A'Y
@@ -1184,13 +1184,12 @@ class FEEstimator:
         Arguments:
             Y (NumPy Array): wage data
             Dp0 (bool or str): if True, include weights in _mult_A(); if 'sqrt', use square root of weights
-            Dp1 (bool): if True, include first weight in _solve()
             Dp2 (bool or str): if True, include second weight in _solve(); if 'sqrt', use square root of weights
 
         Returns:
             (CSC Matrix): result of Dp0 * A * (A' * Dp1 * A)^{-1} * A' * Dp2 * Y (essentially the projection of Y onto A space)
         '''
-        return self._mult_A(*self._solve(Y, Dp1, Dp2), Dp0)
+        return self._mult_A(*self._solve(Y, Dp2), Dp0)
 
     def _compute_Pii(self, DpJ_i, DpW_i):
         '''
@@ -1215,9 +1214,9 @@ class FEEstimator:
 
             # Construct blocks
             A = DpJ_i @ M_DpJ_i
-            B = - DpJ_i @ M_B
+            B = DpJ_i @ M_B
             C = DpW_i @ self.AA_inv_C @ M_DpJ_i
-            D = DpW_i @ (self.Dwinv @ DpW_i - self.AA_inv_C @ M_B)
+            D = DpW_i @ (self.Dwinv @ DpW_i + self.AA_inv_C @ M_B)
 
         return A + B + C + D
 
@@ -1269,8 +1268,8 @@ class FEEstimator:
         Pii = np.zeros(self.nn)
 
         # Construct weighted J and W
-        DpJ = self.Dp_sqrt @ self.J
-        DpW = self.Dp_sqrt @ self.W
+        DpJ = self.sqrt_DpJ
+        DpW = self.sqrt_DpW
 
         if self.weighted:
             pbar = tqdm(self.adata.loc[self.worker_m, :].index, disable=self.no_pbars)
@@ -1391,7 +1390,10 @@ class FEEstimator:
             (NumPy Array): Sii (sigma^2) for heteroskedastic correction
         '''
         worker_m = self.worker_m
-        w = self.Dp.data[0]
+        w = self.Dp
+        if isinstance(w, (float, int)):
+            # FIXME this is a temporary workaround
+            w = np.ones(self.nn)
 
         # Mean wage
         Y_bar = np.average(self.Y, weights=w)

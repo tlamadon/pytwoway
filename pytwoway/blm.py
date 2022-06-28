@@ -11,11 +11,11 @@ import pandas as pd
 # from scipy.special import logsumexp
 from scipy.sparse import csc_matrix
 from matplotlib import pyplot as plt
-import pytwoway as tw
-from pytwoway.util import fast_prod_diag_sp, jitter_scatter
-from pytwoway import constraints as cons
 import bipartitepandas as bpd
 from bipartitepandas.util import ParamsDict, to_list, HiddenPrints # , _is_subtype
+import pytwoway as tw
+from pytwoway import constraints as cons
+from pytwoway.util import weighted_var, weighted_cov, DxSP, diag_of_sp_prod, jitter_scatter
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq2(a):
@@ -1548,11 +1548,10 @@ class BLMModel:
                 # (We might be better off trying this within numba or something)
                 l_index, r_index = l * nk, (l + 1) * nk
                 # Shared weighted terms
-                GG1_weighted.append(fast_prod_diag_sp(W1 * qi[:, l] / S1[l, G1], GG1).T)
-                GG2_weighted.append(fast_prod_diag_sp(W2 * qi[:, l] / S2[l, G2], GG2).T)
+                GG1_weighted.append(DxSP(W1 * qi[:, l] / S1[l, G1], GG1).T)
+                GG2_weighted.append(DxSP(W2 * qi[:, l] / S2[l, G2], GG2).T)
                 ## Compute XwX terms ##
-                # Rather than (GG1_weighted[l] @ GG1).diagonal() (source: https://stackoverflow.com/a/14759273/17333120)
-                XwX[l_index: r_index] = np.asarray(GG1_weighted[l].multiply(GG1.T).sum(axis=1))[:, 0]
+                XwX[l_index: r_index] = diag_of_sp_prod(GG1_weighted[l], GG1)
                 XwX[ts + l_index: ts + r_index] = np.asarray(GG2_weighted[l].multiply(GG2.T).sum(axis=1))[:, 0]
                 if params['update_a']:
                     # Update A1_sum and A2_sum to account for worker-interaction terms
@@ -1629,12 +1628,11 @@ class BLMModel:
                     else:
                         S1_cat_l = S1_cat[col][C1[col]]
                         S2_cat_l = S2_cat[col][C2[col]]
-                    CC1_cat_weighted[col].append(fast_prod_diag_sp(W1 * qi[:, l] / S1_cat_l, CC1[col]).T)
-                    CC2_cat_weighted[col].append(fast_prod_diag_sp(W2 * qi[:, l] / S2_cat_l, CC2[col]).T)
+                    CC1_cat_weighted[col].append(DxSP(W1 * qi[:, l] / S1_cat_l, CC1[col]).T)
+                    CC2_cat_weighted[col].append(DxSP(W2 * qi[:, l] / S2_cat_l, CC2[col]).T)
                     del S1_cat_l, S2_cat_l
                     ## Compute XwX_cat terms ##
-                    # Rather than (CC1_cat_weighted[col][l] @ CC1[col]).diagonal() (source: https://stackoverflow.com/a/14759273/17333120)
-                    XwX_cat[col][l_index: r_index] = np.asarray(CC1_cat_weighted[col][l].multiply(CC1[col].T).sum(axis=1))[:, 0]
+                    XwX_cat[col][l_index: r_index] = diag_of_sp_prod(CC1_cat_weighted[col][l], CC1[col])
                     XwX_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = np.asarray(CC2_cat_weighted[col][l].multiply(CC2[col].T).sum(axis=1))[:, 0]
                     if params['update_a']:
                         # Update A1_sum and A2_sum to account for worker-interaction terms
@@ -2744,10 +2742,10 @@ class BLMVarianceDecomposition:
             fe_estimator = tw.FEEstimator(bdf, fe_params)
             fe_estimator.fit()
             est_params['var_y'][i] = fe_estimator.res['var_y']
-            est_params['var_psi'][i] = tw.fe._weighted_var(bdf.loc[:, 'psi_hat'].to_numpy(), w)
-            est_params['var_alpha'][i] = tw.fe._weighted_var(bdf.loc[:, 'alpha_hat'].to_numpy(), w)
-            est_params['cov_psi_alpha'][i] = tw.fe._weighted_cov(bdf.loc[:, 'psi_hat'].to_numpy(), bdf.loc[:, 'alpha_hat'].to_numpy(), w, w)
-            est_params['var_eps'][i] = tw.fe._weighted_var(bdf.loc[:, 'y'].to_numpy() - bdf.loc[:, 'psi_hat'].to_numpy() - bdf.loc[:, 'alpha_hat'].to_numpy(), w)
+            est_params['var_psi'][i] = weighted_var(bdf.loc[:, 'psi_hat'].to_numpy(), w)
+            est_params['var_alpha'][i] = weighted_var(bdf.loc[:, 'alpha_hat'].to_numpy(), w)
+            est_params['cov_psi_alpha'][i] = weighted_cov(bdf.loc[:, 'psi_hat'].to_numpy(), bdf.loc[:, 'alpha_hat'].to_numpy(), w, w)
+            est_params['var_eps'][i] = weighted_var(bdf.loc[:, 'y'].to_numpy() - bdf.loc[:, 'psi_hat'].to_numpy() - bdf.loc[:, 'alpha_hat'].to_numpy(), w)
 
         with bpd.util.ChainedAssignment():
             # Re-assign original (ids), wages, and firm types

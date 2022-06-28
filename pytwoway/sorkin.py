@@ -8,7 +8,7 @@ from scipy.sparse import csc_matrix
 # from scipy.sparse.linalg import eigs
 import bipartitepandas as bpd
 import pytwoway as tw
-from pytwoway.util import fast_prod_diag_sp, scramble, unscramble
+from pytwoway.util import DxSP, scramble, unscramble
 from matplotlib import pyplot as plt
 
 class SorkinEstimator():
@@ -41,7 +41,7 @@ class SorkinEstimator():
 
         # Now solve fixed point/eigenvalue-eigenvector problem:
         # S0^{-1} @ M0 @ exp(V^EE) = exp(V^EE)
-        lhs = fast_prod_diag_sp(1 / S0, M0)
+        lhs = DxSP(1 / S0, M0)
         nf = M0.shape[0]
 
         ## Fixed point estimation ##

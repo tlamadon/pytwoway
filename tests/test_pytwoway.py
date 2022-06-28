@@ -13,7 +13,6 @@ import pandas as pd
 import bipartitepandas as bpd
 import pytwoway as tw
 from pytwoway import constraints as cons
-from scipy.sparse import csc_matrix
 
 ##############
 ##### FE #####
@@ -317,8 +316,8 @@ def test_fe_estimator_full_Q():
     next_rows = (i_col == i_prev)
     # Weights
     w_col = b.loc[:, 'w'].to_numpy()
-    true_cov_psi_prev_psi_next = tw.fe._weighted_cov(psi[prev_rows], psi[next_rows], w_col[prev_rows], w_col[next_rows])
-    true_cov_psi_alpha = tw.fe._weighted_cov(psi, alpha, w_col, w_col)
+    true_cov_psi_prev_psi_next = tw.util.weighted_cov(psi[prev_rows], psi[next_rows], w_col[prev_rows], w_col[next_rows])
+    true_cov_psi_alpha = tw.util.weighted_cov(psi, alpha, w_col, w_col)
 
     # Estimated parameters
     ## Plug-in ##

@@ -114,7 +114,7 @@ class InteractedBLMModel():
             S0 = np.asarray(csc_matrix((np.exp(-M0_data), (M0_row, M0_col)), shape=(nf, nf)).sum(axis=0))[0, :]
 
         ## Solve for B ##
-        lhs = tw.blm._fast_prod_diag_sp(1 / S0, M0)
+        lhs = tw.util.DxSP(1 / S0, M0)
         # NOTE: fixed point doesn't work
         # B = np.random.normal(size=nf)
         # B /= B[0]
