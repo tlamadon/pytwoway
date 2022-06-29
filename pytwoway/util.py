@@ -66,6 +66,43 @@ def weighted_cov(v1, v2, w1, w2, dof=0):
 
     return np.sum(w3 * (v1 - m1) * (v2 - m2)) / (np.sum(w3) - dof)
 
+def weighted_quantile(values, quantiles, sample_weight=None, values_sorted=False, old_style=False):
+    '''
+    Very close to numpy.percentile, but supports weights. NOTE: quantiles should be in [0, 1]!
+
+    Arguments:
+        values (NumPy Array): data
+        quantiles (NumPy Array): quantiles to compute
+        sample_weight (NumPy Array): weights
+        values_sorted (bool): if True, skips sorting of initial array
+        old_style (bool): if True, changes output to be consistent with numpy.percentile
+
+    Returns:
+        (NumPy Array): computed quantiles
+    '''
+    values = np.array(values)
+    quantiles = np.array(quantiles)
+    if sample_weight is None:
+        sample_weight = np.ones(len(values))
+    sample_weight = np.array(sample_weight)
+    if not (np.all(quantiles >= 0) and np.all(quantiles <= 1)):
+        raise ValueError('Quantiles should be in [0, 1].')
+
+    if not values_sorted:
+        sorter = np.argsort(values)
+        values = values[sorter]
+        sample_weight = sample_weight[sorter]
+
+    weighted_quantiles = np.cumsum(sample_weight) - 0.5 * sample_weight
+    if old_style:
+        # To be convenient with numpy.percentile
+        weighted_quantiles -= weighted_quantiles[0]
+        weighted_quantiles /= weighted_quantiles[-1]
+    else:
+        weighted_quantiles /= np.sum(sample_weight)
+
+    return np.interp(quantiles, weighted_quantiles, values)
+
 def DxSP(diag, sp):
     '''
     Faster product of a diagonal and a sparse matrix, i.e. take diag @ sp. Source: https://stackoverflow.com/a/16046783/17333120.
@@ -109,6 +146,40 @@ def SPxD(sp, diag):
     # If diagonal entries
     return sp.multiply(diag)
 
+def DxM(diag, m):
+    '''
+    Product of a diagonal and a matrix, i.e. take diag @ m.
+
+    Arguments:
+        diag (NumPy Array or float): diagonal entries or multiplicative factor
+        m (NumPy Array): matrix
+    '''
+    if isinstance(diag, (float, int)):
+        # If multiplicative factor
+        if diag == 1:
+            return m
+        return diag * m
+
+    # If diagonal entries
+    return (diag * m.T).T
+
+def MxD(m, diag):
+    '''
+    Product of a matrix and a diagonal, i.e. take m @ diag.
+
+    Arguments:
+        m (NumPy Array): matrix
+        diag (NumPy Array or float): diagonal entries or multiplicative factor
+    '''
+    if isinstance(diag, (float, int)):
+        # If multiplicative factor
+        if diag == 1:
+            return m
+        return diag * m
+
+    # If diagonal entries
+    return m * diag
+
 def diag_of_sp_prod(m1, m2):
     '''
     Faster computation of the diagonal of the product of two sparse matrices (i.e. compute (m1 @ m2).diagonal()). Sources: https://stackoverflow.com/a/14759273/17333120 and https://stackoverflow.com/a/69872249/17333120.
@@ -123,7 +194,7 @@ def diag_of_sp_prod(m1, m2):
 
 def diag_of_prod(m1, m2):
     '''
-    Faster computation of the diagonal of the product of two matrices (i.e. compute (m1 @ m2).diagonal()). Source: comment by hpaulj on https://stackoverflow.com/a/69872249/17333120.
+    Faster computation of the diagonal of the product of two matrices (i.e. compute (m1 @ m2).diagonal()). Sources: https://stackoverflow.com/a/14759273/17333120 and https://stackoverflow.com/a/69872249/17333120.
 
     Arguments:
         m1 (NumPy Array): left matrix
@@ -131,7 +202,7 @@ def diag_of_prod(m1, m2):
     '''
     if m1.shape[1] < m2.shape[0]:
         return diag_of_prod(m2.T, m1.T)
-    return np.squeeze(m1[: m2.shape[0], None, :] @ (m2 @ m2.T)[:, :, None])
+    return np.multiply(m1[:, : m2.shape[0]], m2.T).sum(axis=1)
 
 def scramble(lst):
     '''

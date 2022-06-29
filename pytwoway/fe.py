@@ -17,7 +17,7 @@ from scipy.sparse import csc_matrix
 import pyamg
 from bipartitepandas.util import ParamsDict, logger_init
 from pytwoway import Q
-from pytwoway.util import weighted_mean, weighted_var, weighted_cov, DxSP, SPxD, diag_of_sp_prod, diag_of_prod
+from pytwoway.util import weighted_mean, weighted_var, weighted_cov, weighted_quantile, DxSP, SPxD, DxM, MxD, diag_of_sp_prod, diag_of_prod
 
 # def pipe_qcov(df, e1, e2): # FIXME I moved this from above, also this is used only in commented out code
 #     v1 = df.eval(e1)
@@ -142,44 +142,6 @@ def fe_params(update_dict=None):
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
-
-def _weighted_quantile(values, quantiles, sample_weight=None, values_sorted=False, old_style=False):
-    '''
-    Very close to numpy.percentile, but supports weights.
-    NOTE: quantiles should be in [0, 1]!
-
-    Arguments:
-        values (NumPy Array): data
-        quantiles (array-like): quantiles to compute
-        sample_weight (array-like): weighting, must be same length as `array` (is `array` supposed to be quantiles?)
-        values_sorted (bool): if True, skips sorting of initial array
-        old_style (bool): if True, changes output to be consistent with numpy.percentile
-
-    Returns:
-        (NumPy Array): computed quantiles
-    '''
-    values = np.array(values)
-    quantiles = np.array(quantiles)
-    if sample_weight is None:
-        sample_weight = np.ones(len(values))
-    sample_weight = np.array(sample_weight)
-    assert np.all(quantiles >= 0) and np.all(quantiles <= 1), \
-        'quantiles should be in [0, 1]'
-
-    if not values_sorted:
-        sorter = np.argsort(values)
-        values = values[sorter]
-        sample_weight = sample_weight[sorter]
-
-    weighted_quantiles = np.cumsum(sample_weight) - 0.5 * sample_weight
-    if old_style:
-        # To be convenient with numpy.percentile
-        weighted_quantiles -= weighted_quantiles[0]
-        weighted_quantiles /= weighted_quantiles[-1]
-    else:
-        weighted_quantiles /= np.sum(sample_weight)
-
-    return np.interp(quantiles, weighted_quantiles, values)
 
 class FEEstimator:
     '''
@@ -387,7 +349,7 @@ class FEEstimator:
                 self._collect_res()
 
         # Clear attributes
-        del self.worker_m, self.Y, self.J, self.DpJ, self.W, self.DpW, self.Dp, self.Dp_sqrt, self.Dwinv, self.DwinvWtDpJ, self.Minv, self.ml
+        del self.worker_m, self.Y, self.J, self.DpJ, self.W, self.DpW, self.Dp, self.Dwinv, self.DwinvWtDpJ, self.Minv, self.ml
         if self.params['he'] and (not self.params['levfile']):
             del self.sqrt_DpJ, self.sqrt_DpW
         try:
@@ -454,19 +416,18 @@ class FEEstimator:
             ### Weighted ###
             ## Dp (weight) ##
             Dp = self.adata.loc[:, 'w'].to_numpy()
-            Dp_sqrt = np.sqrt(Dp)
 
             ## Weighted J and W ##
             DpJ = DxSP(Dp, J)
             DpW = DxSP(Dp, W)
             if self.params['he'] and (not self.params['levfile']):
+                Dp_sqrt = np.sqrt(Dp)
                 sqrt_DpJ = DxSP(Dp_sqrt, J)
                 sqrt_DpW = DxSP(Dp_sqrt, W)
         else:
             ## Unweighted ##
             ## Dp (weight) ##
             Dp = 1
-            Dp_sqrt = 1
 
             ## Weighted J and W ##
             DpJ = J
@@ -492,7 +453,7 @@ class FEEstimator:
         if self.params['he'] and (not self.params['levfile']):
             self.sqrt_DpJ = sqrt_DpJ
             self.sqrt_DpW = sqrt_DpW
-        self.Dp, self.Dp_sqrt = Dp, Dp_sqrt
+        self.Dp = Dp
         self.Dwinv = Dwinv
         self.DwinvWtDpJ = DwinvWtDpJ
         self.Minv = Minv
@@ -520,8 +481,8 @@ class FEEstimator:
             fm, fy, fi = fdata.loc[:, 'worker_m'].to_numpy(), fdata.loc[:, 'y'].to_numpy(), fdata.loc[:, 'i'].to_numpy()
             self.adata.drop('worker_m', axis=1, inplace=True)
         ls = np.linspace(0, 1, 11)
-        self.res['mover_quantiles'] = _weighted_quantile(fm, ls, fi).tolist()
-        self.res['size_quantiles'] = _weighted_quantile(fi, ls, fi).tolist()
+        self.res['mover_quantiles'] = weighted_quantile(fm, ls, fi).tolist()
+        self.res['size_quantiles'] = weighted_quantile(fi, ls, fi).tolist()
         # self.res['movers_per_firm'] = self.adata.loc[self.adata.loc[:, 'm'] > 0, :].groupby('j')['i'].nunique().mean()
         self.res['between_firm_var'] = weighted_var(fy, fi)
         self.res['var_y'] = weighted_var(self.Y, self.Dp)
@@ -724,10 +685,10 @@ class FEEstimator:
         U_dim = Q_var_matrix.shape[0]
         U = np.eye(U_dim) - (1 / n) * np.tile(Q_var_weights, (U_dim, 1))
         # Compute Q @ (A'D_pA)^{-1} using block matrix components
-        Q_var = (Q_var_weights_sqrt * U.T).T @ Q_var_matrix
+        Q_var = DxM(Q_var_weights_sqrt, U) @ Q_var_matrix
         Q_var = (1 / n) * Q_var.T @ Q_var
         # Compute trace by considering correct quadrant
-        self.tr_var_ho_all = np.trace(Q_var @ right_dict[Q_var_psialpha][left_dict[Q_var_psialpha]])
+        self.tr_var_ho_all = np.sum(diag_of_prod(Q_var, right_dict[Q_var_psialpha][left_dict[Q_var_psialpha]]))
 
         ## Trace - covariance ##
         # Q = Ql.T @ Ul.T @ Ql_weight.T @ Qr_weight @ Ur @ Qr
@@ -740,9 +701,9 @@ class FEEstimator:
         Ul = np.eye(Ul_dim) - (1 / nl) * np.tile(Ql_cov_weights, (Ul_dim, 1))
         Ur = np.eye(Ur_dim) - (1 / nr) * np.tile(Qr_cov_weights, (Ur_dim, 1))
         # Compute Q @ (A'D_pA)^{-1} using block matrix components
-        Q_cov = (1 / n) * Ql_cov_matrix.T @ (Ul.T * Ql_cov_weights_sqrt.T) @ (Qr_cov_weights_sqrt * Ur.T).T @ Qr_cov_matrix
+        Q_cov = (1 / n) * Ql_cov_matrix.T @ MxD(Ul.T, Ql_cov_weights_sqrt.T) @ DxM(Qr_cov_weights_sqrt, Ur) @ Qr_cov_matrix
         # Compute trace by considering correct quadrant
-        self.tr_cov_ho_all = np.trace(Q_cov @ right_dict[Qr_cov_psialpha][left_dict[Ql_cov_psialpha]])
+        self.tr_cov_ho_all = np.sum(diag_of_prod(Q_cov, right_dict[Qr_cov_psialpha][left_dict[Ql_cov_psialpha]]))
 
     def _estimate_approximate_trace_ho(self, Q_params, rng=None):
         '''
@@ -826,8 +787,8 @@ class FEEstimator:
 
         # Unpack attributes
         J, W = self.J, self.W
+        sqrt_DpJ, sqrt_DpW = self.sqrt_DpJ, self.sqrt_DpW
         Dp = self.Dp
-        Dp_sqrt = self.Dp_sqrt
         A, B, C, D = self.AA_inv_A, self.AA_inv_B, self.AA_inv_C, self.AA_inv_D
 
         ## Compute Tr[Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1}] ##
@@ -856,14 +817,14 @@ class FEEstimator:
         Q_var = (1 / n) * Q_var.T @ Q_var
         # Construct AA_inv
         if Q_var_psialpha == 'psi':
-            AA_inv = (Dp_sqrt * np.asarray(J @ A + W @ C).T).T
-            AA_inv = AA_inv.T @ (Sii * AA_inv.T).T
+            AA_inv = np.asarray(sqrt_DpJ @ A + sqrt_DpW @ C)
+            AA_inv = AA_inv.T @ DxM(Sii, AA_inv)
         elif Q_var_psialpha == 'alpha':
-            AA_inv = (Dp_sqrt * np.asarray(J @ B + W @ D).T).T
-            AA_inv = AA_inv.T @ (Sii * AA_inv.T).T
-        
+            AA_inv = np.asarray(sqrt_DpJ @ B + sqrt_DpW @ D)
+            AA_inv = AA_inv.T @ DxM(Sii, AA_inv)
+
         # Compute trace by considering correct quadrant
-        self.tr_var_he_all = np.trace(Q_var @ AA_inv)
+        self.tr_var_he_all = np.sum(diag_of_prod(Q_var, AA_inv))
 
         ## Trace - covariance ##
         # Q = Ql.T @ Ul.T @ Ql_weight.T @ Qr_weight @ Ur @ Qr
@@ -877,26 +838,26 @@ class FEEstimator:
         Ur = np.eye(Ur_dim) - (1 / nr) * np.tile(Qr_cov_weights, (Ur_dim, 1))
         ## Compute Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1} using block matrix components ##
         # Construct Q
-        Q_cov = (1 / n) * Ql_cov_matrix.T @ (Ul.T * Ql_cov_weights_sqrt.T) @ (Qr_cov_weights_sqrt * Ur.T).T @ Qr_cov_matrix
+        Q_cov = (1 / n) * Ql_cov_matrix.T @ MxD(Ul.T, Ql_cov_weights_sqrt.T) @ DxM(Qr_cov_weights_sqrt, Ur) @ Qr_cov_matrix
         # Construct AA_inv
         if Qr_cov_psialpha == 'psi':
             if Ql_cov_psialpha == 'psi':
                 if Q_var_psialpha != 'psi':
                     # No need to recompute if var is the same
-                    AA_inv = (Dp_sqrt * np.asarray(J @ A + W @ C).T).T
-                    AA_inv = AA_inv.T @ (Sii * AA_inv.T).T
+                    AA_inv = np.asarray(sqrt_DpJ @ A + sqrt_DpW @ C)
+                    AA_inv = AA_inv.T @ DxM(Sii, AA_inv)
             elif Ql_cov_psialpha == 'alpha':
-                AA_inv = (A @ J.T + B @ W.T) @ ((Dp * Sii) * np.asarray(J @ B + W @ D).T).T
+                AA_inv = (A @ J.T + B @ W.T) @ DxM(Dp * Sii, np.asarray(J @ B + W @ D))
         elif Qr_cov_psialpha == 'alpha':
             if Ql_cov_psialpha == 'psi':
-                AA_inv = (C @ J.T + D @ W.T) @ ((Dp * Sii) * np.asarray(J @ A + W @ C).T).T
+                AA_inv = (C @ J.T + D @ W.T) @ DxM(Dp * Sii, np.asarray(J @ A + W @ C))
             elif Ql_cov_psialpha == 'alpha':
                 if Q_var_psialpha != 'alpha':
                     # No need to recompute if var is the same
-                    AA_inv = (Dp_sqrt * np.asarray(J @ B + W @ D).T).T
-                    AA_inv = AA_inv.T @ (Sii * AA_inv.T).T
+                    AA_inv = np.asarray(sqrt_DpJ @ B + sqrt_DpW @ D)
+                    AA_inv = AA_inv.T @ DxM(Sii, AA_inv)
         # Compute trace by considering correct quadrant
-        self.tr_cov_he_all = np.trace(Q_cov @ AA_inv)
+        self.tr_cov_he_all = np.sum(diag_of_prod(Q_cov, AA_inv))
 
     def _estimate_approximate_trace_he(self, Q_params, Sii, rng=None):
         '''
