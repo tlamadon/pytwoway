@@ -10,6 +10,10 @@ import numpy as np
 from scipy.sparse import csc_matrix, diags, hstack
 from bipartitepandas.util import fast_shift
 
+###############################
+##### FE without controls #####
+###############################
+
 class VarPsi():
     '''
     Generate Q to estimate var(psi).
@@ -299,3 +303,132 @@ class CovPsiPrevPsiNext():
             (NumPy Array): Q_matrix @ psi
         '''
         return Q_matrix @ psi
+
+############################
+##### FE with controls #####
+############################
+
+class VarCovariate():
+    '''
+    Generate Q to estimate var(covariate).
+
+    Arguments:
+        cov_name (str): covariate name
+    '''
+
+    def __init__(self, cov_name):
+        self.cov_name = cov_name
+
+    def _get_Q(self, adata, A, Dp, cov_indices):
+        '''
+        Construct Q matrix to use when estimating var(covariate).
+
+        Arguments:
+            adata (BipartiteDataFrame): data
+            A (CSC Sparse Matrix): matrix of covariates
+            Dp (NumPy Array): weights
+            cov_indices (dict of tuples of ints): dictionary linking each covariate to the range of columns in A where it is stored
+
+        Returns:
+            (tuple): (half of Q matrix, cov_name, weights, degrees of freedom) --> (A[covariate], covariate name, Dp, n_covariate - 1)
+        '''
+        idx_start, idx_end = cov_indices[self.cov_name]
+        return (A[:, idx_start: idx_end], self.cov_name, Dp, (idx_start - idx_end) - 1)
+
+    def _Q_mult(self, Q_matrix, gamma_hat_dict):
+        '''
+        Multiply Q matrix by component of gamma vector related to covariate to use when estimating var(covariate).
+
+        Arguments:
+            Q_matrix (NumPy Array): Q matrix
+            gamma_hat_dict (dict of NumPy Arrays): dictionary linking each covariate to its component of gamma_hat
+
+        Returns:
+            (NumPy Array): Q_matrix @ gamma_hat_dict[covariate]
+        '''
+        if len(gamma_hat_dict[self.cov_name]) == 1:
+            # Continuous
+            return gamma_hat_dict[self.cov_name] * Q_matrix
+        # Categorical
+        return Q_matrix @ gamma_hat_dict[self.cov_name]
+
+class CovCovariate():
+    '''
+    Generate Q to estimate cov(covariate 1, covariate 2).
+
+    Arguments:
+        cov_name_1 (str): first covariate name
+        cov_name_2 (str): second covariate name
+    '''
+
+    def __init__(self, cov_name_1, cov_name_2):
+        if cov_name_1 == cov_name_2:
+            raise ValueError('cov_name_1 and cov_name_2 must be different.')
+        self.cov_name_1 = cov_name_1
+        self.cov_name_2 = cov_name_2
+
+    def _get_Ql(self, adata, A, Dp, cov_indices):
+        '''
+        Construct Ql matrix (Q-left) to use when estimating cov(covariate 1, covariate 2).
+
+        Arguments:
+            adata (BipartiteDataFrame): data
+            A (CSC Sparse Matrix): matrix of covariates
+            Dp (NumPy Array): weights
+            cov_indices (dict of tuples of ints): dictionary linking each covariate to the range of columns in A where it is stored
+
+        Returns:
+            (tuple): (left term of Q matrix, cov_name_1, weights, degrees of freedom) --> (A[covariate 1], covariate 1 name, Dp, n_control_variable_1 - 1)
+        '''
+        idx_start, idx_end = cov_indices[self.cov_name_1]
+        return (A[:, idx_start: idx_end], self.cov_name_1, Dp, (idx_start - idx_end) - 1)
+
+    def _get_Qr(self, adata, A, Dp, cov_indices):
+        '''
+        Construct Qr matrix (Q-right) to use when estimating cov(covariate 1, covariate 2).
+
+        Arguments:
+            adata (BipartiteDataFrame): data
+            A (CSC Sparse Matrix): matrix of covariates
+            Dp (NumPy Array): weights
+            cov_indices (dict of tuples of ints): dictionary linking each covariate to the range of columns in A where it is stored
+
+        Returns:
+            (tuple): (right term of Q matrix, cov_name_2, weights, degrees of freedom) --> (A[covariate 2], covariate 2 name, Dp, n_control_variable_2 - 1)
+        '''
+        idx_start, idx_end = cov_indices[self.cov_name_2]
+        return (A[:, idx_start: idx_end], self.cov_name_2, Dp, (idx_start - idx_end) - 1)
+
+    def _Ql_mult(self, Q_matrix, gamma_hat_dict):
+        '''
+        Multiply Ql matrix by component of gamma vector related to covariate 1 to use when estimating cov(covariate 1, covariate 2).
+
+        Arguments:
+            Q_matrix (NumPy Array): Q matrix
+            gamma_hat_dict (dict of NumPy Arrays): dictionary linking each covariate to its component of gamma_hat
+
+        Returns:
+            (NumPy Array): Q_matrix @ gamma_hat_dict[covariate 1]
+        '''
+        if len(gamma_hat_dict[self.cov_name_1]) == 1:
+            # Continuous
+            return gamma_hat_dict[self.cov_name_1] * Q_matrix
+        # Categorical
+        return Q_matrix @ gamma_hat_dict[self.cov_name_1]
+
+    def _Qr_mult(self, Q_matrix, gamma_hat_dict):
+        '''
+        Multiply Qr matrix by component of gamma vector related to covariate 2 to use when estimating cov(covariate 1, covariate 2).
+
+        Arguments:
+            Q_matrix (NumPy Array): Q matrix
+            gamma_hat_dict (dict of NumPy Arrays): dictionary linking each covariate to its component of gamma_hat
+
+        Returns:
+            (NumPy Array): Q_matrix @ gamma_hat_dict[covariate 2]
+        '''
+        if len(gamma_hat_dict[self.cov_name_2]) == 1:
+            # Continuous
+            return gamma_hat_dict[self.cov_name_2] * Q_matrix
+        # Categorical
+        return Q_matrix @ gamma_hat_dict[self.cov_name_2]
