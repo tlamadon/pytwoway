@@ -346,11 +346,12 @@ class VarCovariate():
         Returns:
             (NumPy Array): Q_matrix @ gamma_hat_dict[covariate]
         '''
-        if len(gamma_hat_dict[self.cov_name]) == 1:
+        gamma_hat = gamma_hat_dict[self.cov_name]
+        if isinstance(gamma_hat, (float, int)):
             # Continuous
-            return gamma_hat_dict[self.cov_name] * Q_matrix
-        # Categorical
-        return Q_matrix @ gamma_hat_dict[self.cov_name]
+            gamma_hat = np.array([gamma_hat])
+
+        return Q_matrix @ gamma_hat
 
 class CovCovariate():
     '''
@@ -410,11 +411,12 @@ class CovCovariate():
         Returns:
             (NumPy Array): Q_matrix @ gamma_hat_dict[covariate 1]
         '''
-        if len(gamma_hat_dict[self.cov_name_1]) == 1:
+        gamma_hat = gamma_hat_dict[self.cov_name_1]
+        if isinstance(gamma_hat, (float, int)):
             # Continuous
-            return gamma_hat_dict[self.cov_name_1] * Q_matrix
-        # Categorical
-        return Q_matrix @ gamma_hat_dict[self.cov_name_1]
+            gamma_hat = np.array([gamma_hat])
+
+        return Q_matrix @ gamma_hat
 
     def _Qr_mult(self, Q_matrix, gamma_hat_dict):
         '''
@@ -427,8 +429,9 @@ class CovCovariate():
         Returns:
             (NumPy Array): Q_matrix @ gamma_hat_dict[covariate 2]
         '''
-        if len(gamma_hat_dict[self.cov_name_2]) == 1:
+        gamma_hat = gamma_hat_dict[self.cov_name_2]
+        if isinstance(gamma_hat, (float, int)):
             # Continuous
-            return gamma_hat_dict[self.cov_name_2] * Q_matrix
-        # Categorical
-        return Q_matrix @ gamma_hat_dict[self.cov_name_2]
+            gamma_hat = np.array([gamma_hat])
+
+        return Q_matrix @ gamma_hat
