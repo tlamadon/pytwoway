@@ -994,10 +994,10 @@ class FEEstimator:
             self.logger.info(f"[he] COV tr={self.res['tr_cov_he']:2.4f} (sd={self.res['tr_cov_he_sd']:2.4e})")
             # Bias-corrected variance
             self.res['var_he'] = self.var_fe - self.res['tr_var_he']
-            self.logger.info(f"[he] VAR bc={self.var_fe:2.4f} bc={self.res['var_he']:2.4f}")
+            self.logger.info(f"[he] VAR bc={self.res['var_he']:2.4f}")
             # Bias-corrected covariance
             self.res['cov_he'] = self.cov_fe - self.res['tr_cov_he']
-            self.logger.info(f"[he] COV bc={self.cov_fe:2.4f} bc={self.res['cov_he']:2.4f}")
+            self.logger.info(f"[he] COV bc={self.res['cov_he']:2.4f}")
 
             for res in ['var_he', 'cov_he']:
                 self.summary[res] = self.res[res]

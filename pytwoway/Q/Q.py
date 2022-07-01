@@ -319,6 +319,15 @@ class VarCovariate():
     def __init__(self, cov_name):
         self.cov_name = cov_name
 
+    def name(self):
+        '''
+        Return name of variance to be estimated.
+
+        Returns:
+            (str): var_{self.cov_name}
+        '''
+        return f'var_{self.cov_name}'
+
     def _get_Q(self, adata, A, Dp, cov_indices):
         '''
         Construct Q matrix to use when estimating var(covariate).
@@ -367,6 +376,15 @@ class CovCovariate():
             raise ValueError('cov_name_1 and cov_name_2 must be different.')
         self.cov_name_1 = cov_name_1
         self.cov_name_2 = cov_name_2
+
+    def name(self):
+        '''
+        Return name of covariance to be estimated.
+
+        Returns:
+            (str): cov_{self.cov_name_1}_{self.cov_name_2}
+        '''
+        return f'cov_{self.cov_name_1}_{self.cov_name_2}'
 
     def _get_Ql(self, adata, A, Dp, cov_indices):
         '''

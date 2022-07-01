@@ -1,5 +1,5 @@
 '''
-Defines class FEControlsEstimator, which estimates weighted two way fixed effect models with control variables. This includes AKM, the Andrews et al. homoskedastic correction, and the Kline et al. heteroskedastic correction.
+Defines class FEControlEstimator, which estimates weighted two way fixed effect models with control variables. This includes AKM, the Andrews et al. homoskedastic correction, and the Kline et al. heteroskedastic correction.
 '''
 '''
 TODO:
@@ -30,12 +30,12 @@ def _gteq1(a):
     return a >= 1
 
 # Define default parameter dictionary
-_fecontrols_params_default = ParamsDict({
-    'categorical_controls': (None, 'type_none', list,
+_fecontrol_params_default = ParamsDict({
+    'categorical_controls': (None, 'list_of_type_none', object,
         '''
             (default=None) List of columns to use as categorical controls. None is equivalent to [].
         ''', None),
-    'continuous_controls': (None, 'type_none', list,
+    'continuous_controls': (None, 'list_of_type_none', object,
         '''
             (default=None) List of columns to use as continuous controls. None is equivalent to [].
         ''', None),
@@ -67,13 +67,13 @@ _fecontrols_params_default = ParamsDict({
         '''
             (default=False) If True, estimate heteroskedastic correction.
         ''', None),
-    'Q_var': (None, 'type_none', (Q.VarCovariate),
+    'Q_var': (None, 'list_of_type_none', (Q.VarCovariate),
         '''
-            (default=None) Which Q matrix to use when estimating variance term; None is equivalent to tw.Q.VarCovariate('psi').
+            (default=None) List of Q matrices to use when estimating variance term; None is equivalent to tw.Q.VarCovariate('psi').
         ''', None),
-    'Q_cov': (None, 'type_none', (Q.CovCovariate),
+    'Q_cov': (None, 'list_of_type_none', (Q.CovCovariate),
         '''
-            (default=None) Which Q matrix to use when estimating covariance term; None is equivalent to tw.Q.CovCovariate('psi', 'alpha').
+            (default=None) List of Q matrices to use when estimating covariance term; None is equivalent to tw.Q.CovCovariate('psi', 'alpha').
         ''', None),
     'Sii_stayers': ('firm_mean', 'set', ['firm_mean', 'upper_bound'],
         '''
@@ -137,37 +137,37 @@ _fecontrols_params_default = ParamsDict({
         ''', None)
 })
 
-def fecontrols_params(update_dict=None):
+def fecontrol_params(update_dict=None):
     '''
-    Dictionary of default fecontrols_params. Run tw.fecontrols_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default fecontrol_params. Run tw.fecontrol_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
         update_dict (dict or None): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of fecontrols_params
+        (ParamsDict) dictionary of fecontrol_params
     '''
-    new_dict = _fecontrols_params_default.copy()
+    new_dict = _fecontrol_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
 
-class FEControlsEstimator:
+class FEControlEstimator:
     '''
     Solve two way fixed effect models with control variables. This includes AKM, the Andrews et al. homoskedastic correction, and the Kline et al. heteroskedastic correction.
 
     Arguments:
         data (BipartiteDataFrame): long or collapsed long format labor data
-        params (ParamsDict or None): dictionary of parameters for FE estimation. Run tw.fecontrols_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fecontrols_params().
+        params (ParamsDict or None): dictionary of parameters for FE estimation. Run tw.fecontrol_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fecontrol_params().
     '''
 
     def __init__(self, data, params=None):
         # Start logger
         logger_init(self)
-        # self.logger.info('initializing FEControlsEstimator object')
+        # self.logger.info('initializing FEControlEstimator object')
 
         if params is None:
-            params = fecontrols_params()
+            params = fecontrol_params()
 
         self.adata = data
 
@@ -369,6 +369,8 @@ class FEControlsEstimator:
 
         # Clear attributes
         del self.worker_m, self.Y, self.A, self.DpA, self.Dp, self.AAinv
+        if not self.params['feonly']:
+            del self.Q_var, self.Q_cov, self.Q_covariates
         if self.params['he'] and (not self.params['levfile']):
             del self.sqrt_DpA
 
@@ -685,42 +687,71 @@ class FEControlsEstimator:
         Construct Q (variance/covariance) matrices, store Q classes and that variables used as attributes, and generate related parameters.
 
         Returns:
-            (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
+            (tuple of dicts): (dict of Q variance parameters, dict of Q covariance parameters)
         '''
+        # Unpack
         Q_var = self.params['Q_var']
         Q_cov = self.params['Q_cov']
         if Q_var is None:
             Q_var = Q.VarCovariate('psi')
         if Q_cov is None:
             Q_cov = Q.CovCovariate('psi', 'alpha')
+        Q_var = {Q_subvar.name(): Q_subvar for Q_subvar in to_list(Q_var)}
+        Q_cov = {Q_subcov.name(): Q_subcov for Q_subcov in to_list(Q_cov)}
+
+        # Store as attributes
         self.Q_var = Q_var
         self.Q_cov = Q_cov
+
+        # Generate set of covariates whose variances and covariances are being estimated
+        Q_covariates = []
+        for Q_subvar in Q_var.values():
+            Q_covariates += [Q_subvar.cov_name]
+        for Q_subcov in Q_cov.values():
+            Q_covariates += [Q_subcov.cov_name_1, Q_subcov.cov_name_2]
+        self.Q_covariates = set(Q_covariates)
+
+        # Construct Q matrices
         Q_params = self.adata, self.A, self.Dp, self.cov_indices
-        self.Q_covariates = set([self.Q_var.cov_name, self.Q_cov.cov_name_1, self.Q_cov.cov_name_2])
-        return (Q_var._get_Q(*Q_params), Q_cov._get_Ql(*Q_params), Q_cov._get_Qr(*Q_params))
+        Q_vars = {var_name: Q_subvar._get_Q(*Q_params) for var_name, Q_subvar in Q_var.items()}
+        Q_covs = {cov_name: (Q_subcov._get_Ql(*Q_params), Q_subcov._get_Qr(*Q_params)) for cov_name, Q_subcov in Q_cov.items()}
+        return (Q_vars, Q_covs)
 
     def _estimate_fe(self, Q_params):
         '''
         Estimate plug-in (biased) FE model.
 
         Arguments:
-            Q_params (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
+            Q_params (tuple of dicts): (dict of Q variance parameters, dict of Q covariance parameters)
         '''
         self.logger.info('starting plug-in estimation')
-
-        Q_var, Ql_cov, Qr_cov = Q_params
-        Q_var_matrix, Q_var_variable, Q_var_weights, Q_var_dof = Q_var
-        Ql_cov_matrix, Ql_cov_variable, Ql_cov_weights, Ql_cov_dof = Ql_cov
-        Qr_cov_matrix, Qr_cov_variable, Qr_cov_weights, Qr_cov_dof = Qr_cov
-
-        gh = self.gamma_hat_dict
-
-        self.var_fe = weighted_var(self.Q_var._Q_mult(Q_var_matrix, gh), Q_var_weights, dof=0)
-        self.cov_fe = weighted_cov(self.Q_cov._Ql_mult(Ql_cov_matrix, gh), self.Q_cov._Qr_mult(Qr_cov_matrix, gh), Ql_cov_weights, Qr_cov_weights, dof=0)
-
         self.logger.info('[fe]')
-        self.logger.info(f'var_psi={self.var_fe:2.4f}')
-        self.logger.info(f"cov={self.cov_fe:2.4f} tot={self.res['var_y']:2.4f}")
+
+        Q_vars, Q_covs = Q_params
+        gh = self.gamma_hat_dict
+        var_fe = {}
+        cov_fe = {}
+
+        ## Variances ##
+        for var_name, Q_subvar in Q_vars.items():
+            Q_var_matrix, Q_var_variable, Q_var_weights, Q_var_dof = Q_subvar
+
+            var_fe[var_name] = weighted_var(self.Q_var[var_name]._Q_mult(Q_var_matrix, gh), Q_var_weights, dof=0)
+
+            self.logger.info(f'{var_name}_fe={var_fe[var_name]:2.4f}')
+
+        ## Covariances ##
+        for cov_name, Q_subcov in Q_covs.items():
+            Ql_cov, Qr_cov = Q_subcov
+            Ql_cov_matrix, Ql_cov_variable, Ql_cov_weights, Ql_cov_dof = Ql_cov
+            Qr_cov_matrix, Qr_cov_variable, Qr_cov_weights, Qr_cov_dof = Qr_cov
+
+            cov_fe[cov_name] = weighted_cov(self.Q_cov[cov_name]._Ql_mult(Ql_cov_matrix, gh), self.Q_cov[cov_name]._Qr_mult(Qr_cov_matrix, gh), Ql_cov_weights, Qr_cov_weights, dof=0)
+
+            self.logger.info(f"{cov_name}_fe={cov_fe[cov_name]:2.4f} tot={self.res['var_y']:2.4f}")
+
+        self.var_fe = var_fe
+        self.cov_fe = cov_fe
 
     def _estimate_exact_trace_sigma_2(self):
         '''
@@ -781,7 +812,7 @@ class FEControlsEstimator:
         Estimate trace approximation of HO-corrected model.
 
         Arguments:
-            Q_params (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
+            Q_params (tuple of dicts): (dict of Q variance parameters, dict of Q covariance parameters)
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
         if rng is None:
@@ -789,13 +820,17 @@ class FEControlsEstimator:
 
         self.logger.info(f'[ho] [approximate trace] ndraws={self.ndraw_trace_ho}')
 
-        Q_var, Ql_cov, Qr_cov = Q_params
-        Q_var_matrix, Q_var_variable, Q_var_weights, Q_var_dof = Q_var
-        Ql_cov_matrix, Ql_cov_variable, Ql_cov_weights, Ql_cov_dof = Ql_cov
-        Qr_cov_matrix, Qr_cov_variable, Qr_cov_weights, Qr_cov_dof = Qr_cov
+        Q_vars, Q_covs = Q_params
 
-        self.tr_var_ho_all = np.zeros(self.ndraw_trace_ho)
-        self.tr_cov_ho_all = np.zeros(self.ndraw_trace_ho)
+        ## Prepare vectors of results ##
+        ho_tr_var_all = {}
+        ho_tr_cov_all = {}
+        # Variances #
+        for var_name in Q_vars.keys():
+            ho_tr_var_all[var_name] = np.zeros(self.ndraw_trace_ho)
+        # Covariances #
+        for cov_name in Q_covs.keys():
+            ho_tr_cov_all[cov_name] = np.zeros(self.ndraw_trace_ho)
 
         pbar = trange(self.ndraw_trace_ho, disable=self.no_pbars)
         pbar.set_description('ho')
@@ -810,23 +845,34 @@ class FEControlsEstimator:
             # Compute (A'D_pA)^{-1} @ Z
             Z_dict_2 = self._unpack_Z(self._mult_AAinv(Z), self.Q_covariates)
 
-            ## Trace correction - variance ##
-            # Left term of Q matrix
-            L_var = self.Q_var._Q_mult(Q_var_matrix, Z_dict_1).T
-            # Right term of Q matrix
-            R_var = self.Q_var._Q_mult(Q_var_matrix, Z_dict_2)
-            self.tr_var_ho_all[r] = weighted_cov(L_var, R_var, Q_var_weights, Q_var_weights)
+            ## Trace correction - variances ##
+            for var_name, Q_subvar in Q_vars.items():
+                Q_var_matrix, Q_var_variable, Q_var_weights, Q_var_dof = Q_subvar
+
+                # Left term of Q matrix
+                L_var = self.Q_var[var_name]._Q_mult(Q_var_matrix, Z_dict_1).T
+                # Right term of Q matrix
+                R_var = self.Q_var[var_name]._Q_mult(Q_var_matrix, Z_dict_2)
+                ho_tr_var_all[var_name][r] = weighted_cov(L_var, R_var, Q_var_weights, Q_var_weights)
             del L_var, R_var
 
-            ## Trace correction - covariance ##
-            # Left term of Q matrix
-            L_cov = self.Q_cov._Ql_mult(Ql_cov_matrix, Z_dict_1).T
-            # Right term of Q matrix
-            R_cov = self.Q_cov._Qr_mult(Qr_cov_matrix, Z_dict_2)
-            self.tr_cov_ho_all[r] = weighted_cov(L_cov, R_cov, Ql_cov_weights, Qr_cov_weights)
+            ## Trace correction - covariances ##
+            for cov_name, Q_subcov in Q_covs.items():
+                Ql_cov, Qr_cov = Q_subcov
+                Ql_cov_matrix, Ql_cov_variable, Ql_cov_weights, Ql_cov_dof = Ql_cov
+                Qr_cov_matrix, Qr_cov_variable, Qr_cov_weights, Qr_cov_dof = Qr_cov
+
+                # Left term of Q matrix
+                L_cov = self.Q_cov[cov_name]._Ql_mult(Ql_cov_matrix, Z_dict_1).T
+                # Right term of Q matrix
+                R_cov = self.Q_cov[cov_name]._Qr_mult(Qr_cov_matrix, Z_dict_2)
+                ho_tr_cov_all[cov_name][r] = weighted_cov(L_cov, R_cov, Ql_cov_weights, Qr_cov_weights)
             del L_cov, R_cov
 
             self.logger.debug(f'[ho] [approximate trace] step {r + 1}/{self.ndraw_trace_ho} done')
+
+        self.ho_tr_var_all = ho_tr_var_all
+        self.ho_tr_cov_all = ho_tr_cov_all
 
     def _estimate_approximate_trace_he(self, Q_params, Sii, rng=None):
         '''
@@ -842,13 +888,17 @@ class FEControlsEstimator:
 
         self.logger.info(f'[he] [approximate trace] ndraws={self.ndraw_trace_he}')
 
-        Q_var, Ql_cov, Qr_cov = Q_params
-        Q_var_matrix, Q_var_variable, Q_var_weights, Q_var_dof = Q_var
-        Ql_cov_matrix, Ql_cov_variable, Ql_cov_weights, Ql_cov_dof = Ql_cov
-        Qr_cov_matrix, Qr_cov_variable, Qr_cov_weights, Qr_cov_dof = Qr_cov
+        Q_vars, Q_covs = Q_params
 
-        self.tr_var_he_all = np.zeros(self.ndraw_trace_he)
-        self.tr_cov_he_all = np.zeros(self.ndraw_trace_he)
+        ## Prepare vectors of results ##
+        he_tr_var_all = {}
+        he_tr_cov_all = {}
+        # Variances #
+        for var_name in Q_vars.keys():
+            he_tr_var_all[var_name] = np.zeros(self.ndraw_trace_he)
+        # Covariances #
+        for cov_name in Q_covs.keys():
+            he_tr_cov_all[cov_name] = np.zeros(self.ndraw_trace_he)
 
         pbar = trange(self.ndraw_trace_he, disable=self.no_pbars)
         pbar.set_description('he')
@@ -872,23 +922,34 @@ class FEControlsEstimator:
             )
             Z_dict_2 = self._unpack_Z(Z, self.Q_covariates)
 
-            ## Trace correction - variance ##
-            # Left term of Q matrix
-            L_var = self.Q_var._Q_mult(Q_var_matrix, Z_dict_1).T
-            # Right term of Q matrix
-            R_var = self.Q_var._Q_mult(Q_var_matrix, Z_dict_2)
-            self.tr_var_he_all[r] = weighted_cov(L_var, R_var, Q_var_weights, Q_var_weights)
+            ## Trace correction - variances ##
+            for var_name, Q_subvar in Q_vars.items():
+                Q_var_matrix, Q_var_variable, Q_var_weights, Q_var_dof = Q_subvar
+
+                # Left term of Q matrix
+                L_var = self.Q_var[var_name]._Q_mult(Q_var_matrix, Z_dict_1).T
+                # Right term of Q matrix
+                R_var = self.Q_var[var_name]._Q_mult(Q_var_matrix, Z_dict_2)
+                he_tr_var_all[var_name][r] = weighted_cov(L_var, R_var, Q_var_weights, Q_var_weights)
             del L_var, R_var
 
-            ## Trace correction - covariance ##
-            # Left term of Q matrix
-            L_cov = self.Q_cov._Ql_mult(Ql_cov_matrix, Z_dict_1).T
-            # Right term of Q matrix
-            R_cov = self.Q_cov._Qr_mult(Qr_cov_matrix, Z_dict_2)
-            self.tr_cov_he_all[r] = weighted_cov(L_cov, R_cov, Ql_cov_weights, Qr_cov_weights)
+            ## Trace correction - covariances ##
+            for cov_name, Q_subcov in Q_covs.items():
+                Ql_cov, Qr_cov = Q_subcov
+                Ql_cov_matrix, Ql_cov_variable, Ql_cov_weights, Ql_cov_dof = Ql_cov
+                Qr_cov_matrix, Qr_cov_variable, Qr_cov_weights, Qr_cov_dof = Qr_cov
+
+                # Left term of Q matrix
+                L_cov = self.Q_cov[cov_name]._Ql_mult(Ql_cov_matrix, Z_dict_1).T
+                # Right term of Q matrix
+                R_cov = self.Q_cov[cov_name]._Qr_mult(Qr_cov_matrix, Z_dict_2)
+                he_tr_cov_all[cov_name][r] = weighted_cov(L_cov, R_cov, Ql_cov_weights, Qr_cov_weights)
             del L_cov, R_cov
 
             self.logger.debug(f'[he] [approximate trace] step {r + 1}/{self.ndraw_trace_he} done')
+
+        self.he_tr_var_all = he_tr_var_all
+        self.he_tr_cov_all = he_tr_cov_all
 
     def _collect_res(self):
         '''
@@ -896,67 +957,105 @@ class FEControlsEstimator:
         '''
         # Already computed, this just reorders the dictionary
         self.res['var_y'] = self.res['var_y']
+        
+        # Names of variance and covariances
+        var_names = sorted(self.var_fe.keys())
+        cov_names = sorted(self.cov_fe.keys())
 
         ## FE results ##
         # Plug-in sigma^2
-        self.res['eps_var_fe'] = self.sigma_2_pi
-        # Plug-in variance
-        self.res['var_fe'] = self.var_fe
-        self.logger.info(f'[fe] VAR fe={self.var_fe:2.4f}')
-        # Plug-in covariance
-        self.res['cov_fe'] = self.cov_fe
-        self.logger.info(f'[fe] COV fe={self.cov_fe:2.4f}')
-
-        for res in ['var_y', 'var_fe', 'cov_fe']:
-            self.summary[res] = self.res[res]
+        self.res['fe_var_eps'] = self.sigma_2_pi
+        # Plug-in variances
+        self.logger.info('[fe] VARIANCES')
+        for var_name in var_names:
+            self.res[f'fe_{var_name}'] = self.var_fe[var_name]
+            self.logger.info(f'fe_{var_name}={self.var_fe[var_name]:2.4f}')
+        # Plug-in covariances
+        self.logger.info('[fe] COVARIANCES')
+        for cov_name in cov_names:
+            self.res[f'fe_{cov_name}'] = self.cov_fe[cov_name]
+            self.logger.info(f'fe_{cov_name}={self.cov_fe[cov_name]:2.4f}')
 
         ## Homoskedastic results ##
         if self.compute_ho:
             # Bias-corrected sigma^2
-            self.res['eps_var_ho'] = self.sigma_2_ho
-            # Trace approximation: variance
-            self.res['tr_var_ho'] = np.mean(self.tr_var_ho_all)
-            self.res['tr_var_ho_sd'] = np.std(self.tr_var_ho_all)
-            self.logger.info(f"[ho] VAR tr={self.res['tr_var_ho']:2.4f} (sd={self.res['tr_var_ho_sd']:2.4e})")
-            # Trace approximation: covariance
-            self.res['tr_cov_ho'] = np.mean(self.tr_cov_ho_all)
-            self.res['tr_cov_ho_sd'] = np.std(self.tr_cov_ho_all)
-            self.logger.info(f"[ho] COV tr={self.res['tr_cov_ho']:2.4f} (sd={self.res['tr_cov_ho_sd']:2.4e})")
-            # Bias-corrected variance
-            self.res['var_ho'] = self.var_fe - self.sigma_2_ho * self.res['tr_var_ho']
-            self.logger.info(f"[ho] VAR bc={self.res['var_ho']:2.4f}")
-            # Bias-corrected covariance
-            self.res['cov_ho'] = self.cov_fe - self.sigma_2_ho * self.res['tr_cov_ho']
-            self.logger.info(f"[ho] COV bc={self.res['cov_ho']:2.4f}")
-
-            for res in ['var_ho', 'cov_ho']:
-                self.summary[res] = self.res[res]
+            self.res['ho_var_eps'] = self.sigma_2_ho
+            # Trace approximation: variances
+            self.logger.info('[ho] VARIANCE TRACES')
+            for var_name in var_names:
+                self.res[f'ho_tr_{var_name}'] = np.mean(self.ho_tr_var_all[var_name])
+                self.res[f'ho_tr_{var_name}_sd'] = np.std(self.ho_tr_var_all[var_name])
+                self.logger.info(f"ho_tr_{var_name}={self.res[f'ho_tr_{var_name}']:2.4f} (sd={self.res[f'ho_tr_{var_name}_sd']:2.4e})")
+            # Trace approximation: covariances
+            self.logger.info('[ho] COVARIANCE TRACES')
+            for cov_name in cov_names:
+                self.res[f'ho_tr_{cov_name}'] = np.mean(self.ho_tr_cov_all[cov_name])
+                self.res[f'ho_tr_{cov_name}_sd'] = np.std(self.ho_tr_cov_all[cov_name])
+                self.logger.info(f"ho_tr_{cov_name}={self.res[f'ho_tr_{cov_name}']:2.4f} (sd={self.res[f'ho_tr_{cov_name}_sd']:2.4e})")
+            # Bias-corrected variances
+            self.logger.info('[ho] VARIANCES')
+            for var_name in var_names:
+                self.res[f'ho_{var_name}'] = self.var_fe[var_name] - self.sigma_2_ho * self.res[f'ho_tr_{var_name}']
+                self.logger.info(f"ho_{var_name}={self.res[f'ho_{var_name}']:2.4f}")
+            # Bias-corrected covariances
+            self.logger.info('[ho] COVARIANCES')
+            for cov_name in cov_names:
+                self.res[f'ho_{cov_name}'] = self.cov_fe[cov_name] - self.sigma_2_ho * self.res[f'ho_tr_{cov_name}']
+                self.logger.info(f"ho_{cov_name}={self.res[f'ho_{cov_name}']:2.4f}")
 
         ## Heteroskedastic results ##
         if self.compute_he:
             ## Already computed, this just reorders the dictionary ##
             # Bias-corrected sigma^2
-            self.res['eps_var_he'] = self.res['eps_var_he']
+            self.res['he_var_eps'] = self.res['he_var_eps']
             self.res['min_lev'] = self.res['min_lev']
             self.res['max_lev'] = self.res['max_lev']
             ## New results ##
-            # Trace approximation: variance
-            self.res['tr_var_he'] = np.mean(self.tr_var_he_all)
-            self.res['tr_var_he_sd'] = np.std(self.tr_var_he_all)
-            self.logger.info(f"[he] VAR tr={self.res['tr_var_he']:2.4f} (sd={self.res['tr_var_he_sd']:2.4e})")
-            # Trace approximation: covariance
-            self.res['tr_cov_he'] = np.mean(self.tr_cov_he_all)
-            self.res['tr_cov_he_sd'] = np.std(self.tr_cov_he_all)
-            self.logger.info(f"[he] COV tr={self.res['tr_cov_he']:2.4f} (sd={self.res['tr_cov_he_sd']:2.4e})")
-            # Bias-corrected variance
-            self.res['var_he'] = self.var_fe - self.res['tr_var_he']
-            self.logger.info(f"[he] VAR bc={self.var_fe:2.4f} bc={self.res['var_he']:2.4f}")
-            # Bias-corrected covariance
-            self.res['cov_he'] = self.cov_fe - self.res['tr_cov_he']
-            self.logger.info(f"[he] COV bc={self.cov_fe:2.4f} bc={self.res['cov_he']:2.4f}")
+            # Trace approximation: variances
+            self.logger.info('[he] VARIANCE TRACES')
+            for var_name in var_names:
+                self.res[f'he_tr_{var_name}'] = np.mean(self.he_tr_var_all[var_name])
+                self.res[f'he_tr_{var_name}_sd'] = np.std(self.he_tr_var_all[var_name])
+                self.logger.info(f"he_tr_{var_name}={self.res[f'he_tr_{var_name}']:2.4f} (sd={self.res[f'he_tr_{var_name}_sd']:2.4e})")
+            # Trace approximation: covariances
+            self.logger.info('[he] COVARIANCE TRACES')
+            for cov_name in cov_names:
+                self.res[f'he_tr_{cov_name}'] = np.mean(self.he_tr_cov_all[cov_name])
+                self.res[f'he_tr_{cov_name}_sd'] = np.std(self.he_tr_cov_all[cov_name])
+                self.logger.info(f"he_tr_{cov_name}={self.res[f'he_tr_{cov_name}']:2.4f} (sd={self.res[f'he_tr_{cov_name}_sd']:2.4e})")
+            # Bias-corrected variances
+            self.logger.info('[he] VARIANCES')
+            for var_name in var_names:
+                self.res[f'he_{var_name}'] = self.var_fe[var_name] - self.res[f'he_tr_{var_name}']
+                self.logger.info(f"he_{var_name}={self.res[f'he_{var_name}']:2.4f}")
+            # Bias-corrected covariances
+            self.logger.info('[he] COVARIANCES')
+            for cov_name in cov_names:
+                self.res[f'he_{cov_name}'] = self.cov_fe[cov_name] - self.res[f'he_tr_{cov_name}']
+                self.logger.info(f"he_{cov_name}={self.res[f'he_{cov_name}']:2.4f}")
 
-            for res in ['var_he', 'cov_he']:
-                self.summary[res] = self.res[res]
+        ## Summary ##
+        self.summary['var_y'] = self.res['var_y']
+        # FE #
+        for var_name in var_names:
+            self.summary[f'fe_{var_name}'] = self.res[f'fe_{var_name}']
+        self.summary['fe_var_eps'] = self.res['fe_var_eps']
+        for cov_name in cov_names:
+            self.summary[f'fe_{cov_name}'] = self.res[f'fe_{cov_name}']
+        # HO #
+        if self.compute_ho:
+            for var_name in var_names:
+                self.summary[f'ho_{var_name}'] = self.res[f'ho_{var_name}']
+            self.summary['ho_var_eps'] = self.res['ho_var_eps']
+            for cov_name in cov_names:
+                self.summary[f'ho_{cov_name}'] = self.res[f'ho_{cov_name}']
+        # HE #
+        if self.compute_he:
+            for var_name in var_names:
+                self.summary[f'he_{var_name}'] = self.res[f'he_{var_name}']
+            self.summary['he_var_eps'] = self.res['he_var_eps']
+            for cov_name in cov_names:
+                self.summary[f'he_{cov_name}'] = self.res[f'he_{cov_name}']
 
     def _save_res(self):
         '''
@@ -1272,9 +1371,9 @@ class FEControlsEstimator:
                     Sii *= jla_factor
 
         # Compute sigma^2 HE (multiply by Dp, because each observation's variance is divided by Dp and we need to undo that)
-        self.res['eps_var_he'] = np.average(w * Sii, weights=w)
+        self.res['he_var_eps'] = np.average(w * Sii, weights=w)
 
-        self.logger.info(f"[he] variance of residuals {self.res['eps_var_he']:2.4f}")
+        self.logger.info(f"[he] variance of residuals {self.res['he_var_eps']:2.4f}")
 
         return Sii
 
