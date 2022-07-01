@@ -364,7 +364,7 @@ logpi = - 0.5 * np.log(2 * np.pi)
 
 def _lognormpdf(x, mu, sd):
     # Faster to split into multiple lines
-    res = logpi - np.log(sd) 
+    res = logpi - np.log(sd)
     res -= (x - mu) ** 2 / (2 * sd ** 2)
     return res
 
@@ -2702,10 +2702,25 @@ class BLMVarianceDecomposition:
             rng = np.random.default_rng(None)
 
         # FE parameters
-        fe_params = tw.fe_params({
-            'feonly': True,
-            'attach_fe_estimates': True
-        })
+        no_cat_controls = (self.params['categorical_controls'] is None) or (len(self.params['categorical_controls']) == 0)
+        no_cts_controls = (self.params['continuous_controls'] is None) or (len(self.params['continuous_controls']) == 0)
+        no_controls = (no_cat_controls and no_cts_controls)
+        if no_controls:
+            # If no controls
+            fe_params = tw.fe_params({
+                'feonly': True,
+                'attach_fe_estimates': True
+            })
+        else:
+            # If controls
+            fe_params = tw.fecontrol_params({
+                'feonly': True,
+                'attach_fe_estimates': True
+            })
+            if not no_cat_controls:
+                fe_params['categorical_controls'] = self.params['categorical_controls'].keys()
+            if not no_cts_controls:
+                fe_params['continuous_controls'] = self.params['continuous_controls'].keys()
 
         # Copy original (ids), wages, and firm types
         if true_worker_types:
@@ -2739,9 +2754,12 @@ class BLMVarianceDecomposition:
             bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False)).to_long(is_sorted=True, copy=False)
             w = bdf.loc[:, 'w'].to_numpy()
             # Estimate OLS
-            fe_estimator = tw.FEEstimator(bdf, fe_params)
+            if no_controls:
+                fe_estimator = tw.FEEstimator(bdf, fe_params)
+            else:
+                fe_estimator = tw.FEControlEstimator(bdf, fe_params)
             fe_estimator.fit()
-            est_params['var_y'][i] = fe_estimator.res['var_y']
+            est_params['var_y'][i] = fe_estimator.res['var(y)']
             est_params['var_psi'][i] = weighted_var(bdf.loc[:, 'psi_hat'].to_numpy(), w)
             est_params['var_alpha'][i] = weighted_var(bdf.loc[:, 'alpha_hat'].to_numpy(), w)
             est_params['cov_psi_alpha'][i] = weighted_cov(bdf.loc[:, 'psi_hat'].to_numpy(), bdf.loc[:, 'alpha_hat'].to_numpy(), w, w)

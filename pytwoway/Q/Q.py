@@ -22,22 +22,29 @@ class VarPsi():
     def __init__(self):
         pass
 
-    def _get_Q(self, adata, nf, nw, J, W, Dp):
+    def name(self):
+        '''
+        Return string representation of var(psi).
+
+        Returns:
+            (str): string representation of var(psi)
+        '''
+        return 'var(psi)'
+
+    def _get_Q(self, adata, J, W, Dp):
         '''
         Construct Q matrix to use when estimating var(psi).
 
         Arguments:
             adata (BipartiteDataFrame): data
-            nf (int): number of firm types
-            nw (int): number of worker types
             J (CSC Sparse Matrix): firm ids matrix representation
             W (CSC Sparse Matrix): worker ids matrix representation
             Dp (NumPy Array): weights
 
         Returns:
-            (tuple): (half of Q matrix, psi/alpha, weights, degrees of freedom) --> (J, 'psi', Dp, nf - 1)
+            (tuple): (half of Q matrix, weights, psi/alpha) --> (J, Dp, 'psi')
         '''
-        return (J, 'psi', Dp, nf - 1)
+        return (J, Dp, 'psi')
 
     def _Q_mult(self, Q_matrix, psi, alpha):
         '''
@@ -61,22 +68,29 @@ class VarAlpha():
     def __init__(self):
         pass
 
-    def _get_Q(self, adata, nf, nw, J, W, Dp):
+    def name(self):
+        '''
+        Return string representation of var(alpha).
+
+        Returns:
+            (str): string representation of var(alpha)
+        '''
+        return 'var(alpha)'
+
+    def _get_Q(self, adata, J, W, Dp):
         '''
         Construct Q matrix to use when estimating var(alpha).
 
         Arguments:
             adata (BipartiteDataFrame): data
-            nf (int): number of firm types
-            nw (int): number of worker types
             J (CSC Sparse Matrix): firm ids matrix representation
             W (CSC Sparse Matrix): worker ids matrix representation
             Dp (NumPy Array): weights
 
         Returns:
-            (tuple): (half of Q matrix, psi/alpha, weights, degrees of freedom) --> (W, 'alpha', Dp, nw)
+            (tuple): (half of Q matrix, weights, psi/alpha) --> (W, Dp, 'alpha')
         '''
-        return (W, 'alpha', Dp, nw)
+        return (W, Dp, 'alpha')
 
     def _Q_mult(self, Q_matrix, psi, alpha):
         '''
@@ -92,45 +106,51 @@ class VarAlpha():
         '''
         return Q_matrix @ alpha
 
-# NOTE: var(gamma) is effected by normalization, i.e. it isn't identified
-# class VarGamma():
-#     '''
-#     Generate Q to estimate var(gamma), where gamma = [psi.T alpha.T].T.
-#     '''
+class VarPsiPlusAlpha():
+    '''
+    Generate Q to estimate var(psi + alpha).
+    '''
 
-#     def __init__(self):
-#         pass
+    def __init__(self):
+        pass
 
-#     def _get_Q(self, adata, nf, nw, J, W, Dp):
-#         '''
-#         Construct Q matrix to use when estimating var(gamma).
+    def name(self):
+        '''
+        Return string representation of var(psi + alpha).
 
-#         Arguments:
-#             adata (BipartiteDataFrame): data
-#             nf (int): number of firm types
-#             nw (int): number of worker types
-#             J (CSC Sparse Matrix): firm ids matrix representation
-#             W (CSC Sparse Matrix): worker ids matrix representation
-#             Dp (NumPy Array): weights
+        Returns:
+            (str): string representation of var(psi + alpha)
+        '''
+        return 'var(psi + alpha)'
 
-#         Returns:
-#             (tuple): (half of Q matrix, psi/alpha, weights, degrees of freedom) --> (hstack((J, W)), 'gamma', Dp, nw)
-#         '''
-#         return (hstack((J, W)), 'gamma', Dp, nf + nw)
+    def _get_Q(self, adata, J, W, Dp):
+        '''
+        Construct Q matrix to use when estimating var(psi + alpha).
 
-#     def _Q_mult(self, Q_matrix, psi, alpha):
-#         '''
-#         Multiply Q matrix by vectors related to psi and alpha to use when estimating var(gamma).
+        Arguments:
+            adata (BipartiteDataFrame): data
+            J (CSC Sparse Matrix): firm ids matrix representation
+            W (CSC Sparse Matrix): worker ids matrix representation
+            Dp (NumPy Array): weights
 
-#         Arguments:
-#             Q_matrix (NumPy Array): Q matrix
-#             psi (NumPy Array): vector related to psi
-#             alpha (NumPy Array): vector related to alpha
+        Returns:
+            (tuple): (half of Q matrix, weights, psi/alpha) --> (hstack([J, W]), Dp, 'gamma')
+        '''
+        return (hstack([J, W]), Dp, 'gamma')
 
-#         Returns:
-#             (NumPy Array): Q_matrix @ np.concatenate((psi, alpha))
-#         '''
-#         return Q_matrix @ np.concatenate((psi, alpha))
+    def _Q_mult(self, Q_matrix, psi, alpha):
+        '''
+        Multiply Q matrix by vectors related to psi and alpha to use when estimating var(psi + alpha).
+
+        Arguments:
+            Q_matrix (NumPy Array): Q matrix
+            psi (NumPy Array): vector related to psi
+            alpha (NumPy Array): vector related to alpha
+
+        Returns:
+            (NumPy Array): Q_matrix @ np.concatenate((psi, alpha))
+        '''
+        return Q_matrix @ np.concatenate((psi, alpha))
 
 class CovPsiAlpha():
     '''
@@ -140,39 +160,44 @@ class CovPsiAlpha():
     def __init__(self):
         pass
 
-    def _get_Ql(self, adata, nf, nw, J, W, Dp):
+    def name(self):
+        '''
+        Return string representation of cov(psi, alpha).
+
+        Returns:
+            (str): string representation of cov(psi, alpha)
+        '''
+        return 'cov(psi, alpha)'
+
+    def _get_Ql(self, adata, J, W, Dp):
         '''
         Construct Ql matrix (Q-left) to use when estimating cov(psi, alpha).
 
         Arguments:
             adata (BipartiteDataFrame): data
-            nf (int): number of firm types
-            nw (int): number of worker types
             J (CSC Sparse Matrix): firm ids matrix representation
             W (CSC Sparse Matrix): worker ids matrix representation
             Dp (NumPy Array): weights
 
         Returns:
-            (tuple): (left term of Q matrix, psi/alpha, weights, degrees of freedom) --> (J, 'psi', Dp, (nf - 1) + nw)
+            (tuple): (left term of Q matrix, weights, psi/alpha) --> (J, Dp, 'psi')
         '''
-        return (J, 'psi', Dp, (nf - 1) + nw)
+        return (J, Dp, 'psi')
 
-    def _get_Qr(self, adata, nf, nw, J, W, Dp):
+    def _get_Qr(self, adata, J, W, Dp):
         '''
         Construct Qr matrix (Q-right) to use when estimating cov(psi, alpha).
 
         Arguments:
             adata (BipartiteDataFrame): data
-            nf (int): number of firm types
-            nw (int): number of worker types
             J (CSC Sparse Matrix): firm ids matrix representation
             W (CSC Sparse Matrix): worker ids matrix representation
             Dp (NumPy Array): weights
 
         Returns:
-            (tuple): (right term of Q matrix, psi/alpha, weights) --> (W, 'alpha', Dp)
+            (tuple): (right term of Q matrix, weights, psi/alpha) --> (W, Dp, 'alpha')
         '''
-        return (W, 'alpha', Dp)
+        return (W, Dp, 'alpha')
 
     def _Ql_mult(self, Q_matrix, psi, alpha):
         '''
@@ -210,21 +235,30 @@ class CovPsiPrevPsiNext():
     def __init__(self):
         pass
 
-    def _get_Ql(self, adata, nf, nw, J, W, Dp):
+    def name(self):
+        '''
+        Return string representation of cov(psi_t, psi_{t+1}).
+
+        Returns:
+            (str): string representation of cov(psi_t, psi_{t+1})
+        '''
+        return 'cov(psi_t, psi_{t+1})'
+
+    def _get_Ql(self, adata, J, W, Dp):
         '''
         Construct Ql matrix (Q-left) to use when estimating cov(psi_t, psi_{t+1}).
 
         Arguments:
             adata (BipartiteDataFrame): data
-            nf (int): number of firm types
-            nw (int): number of worker types
             J (CSC Sparse Matrix): firm ids matrix representation
             W (CSC Sparse Matrix): worker ids matrix representation
             Dp (NumPy Array): weights
 
         Returns:
-            (tuple): (left term of Q matrix, psi/alpha, weights, degrees of freedom) --> (Ql, 'psi', Dp, nf - 1)
+            (tuple): (left term of Q matrix, weights, psi/alpha) --> (Ql, Dp, 'psi')
         '''
+        # Get number of firms
+        nf = J.shape[1] + 1
         # Get i for this and next period
         i_col = adata.loc[:, 'i'].to_numpy()
         i_next = fast_shift(i_col, -1, fill_value=-2)
@@ -241,23 +275,23 @@ class CovPsiPrevPsiNext():
         if not isinstance(Dp, (float, int)):
             Dp = Dp[keep_rows]
 
-        return (Ql, 'psi', Dp, nf - 1)
+        return (Ql, Dp, 'psi')
 
-    def _get_Qr(self, adata, nf, nw, J, W, Dp):
+    def _get_Qr(self, adata, J, W, Dp):
         '''
         Construct Qr matrix (Q-right) to use when estimating cov(psi_t, psi_{t+1}).
 
         Arguments:
             adata (BipartiteDataFrame): data
-            nf (int): number of firm types
-            nw (int): number of worker types
             J (CSC Sparse Matrix): firm ids matrix representation
             W (CSC Sparse Matrix): worker ids matrix representation
             Dp (NumPy Array): weights
 
         Returns:
-            (tuple): (right term of Q matrix, psi/alpha, weights) --> (Qr, 'psi', Dp)
+            (tuple): (right term of Q matrix, weights, psi/alpha) --> (Qr, Dp, 'psi')
         '''
+        # Get number of firms
+        nf = J.shape[1] + 1
         # Get i for this and last period
         i_col = adata.loc[:, 'i'].to_numpy()
         i_prev = fast_shift(i_col, 1, fill_value=-2)
@@ -274,7 +308,7 @@ class CovPsiPrevPsiNext():
         if not isinstance(Dp, (float, int)):
             Dp = Dp[keep_rows]
 
-        return (Qr, 'psi', Dp)
+        return (Qr, Dp, 'psi')
 
     def _Ql_mult(self, Q_matrix, psi, alpha):
         '''
@@ -410,7 +444,7 @@ class CovCovariate():
         Return string representation of covariance to be estimated.
 
         Returns:
-            (str): string representation of variance to be estimated
+            (str): string representation of covariance to be estimated
         '''
         cov_str_1 = f'{self.cov_names_1[0]}'
         for cov_name_1 in self.cov_names_1[1:]:

@@ -684,7 +684,7 @@ class FEControlEstimator:
 
     def _construct_Q(self):
         '''
-        Construct Q (variance/covariance) matrices, store Q classes and that variables used as attributes, and generate related parameters.
+        Construct Q (variance/covariance) matrices, store Q classes and which covariates used as attributes, and generate related parameters.
 
         Returns:
             (tuple of dicts): (dict of Q variance parameters, dict of Q covariance parameters)
@@ -696,6 +696,7 @@ class FEControlEstimator:
             Q_var = Q.VarCovariate('psi')
         if Q_cov is None:
             Q_cov = Q.CovCovariate('psi', 'alpha')
+
         Q_var = {Q_subvar.name(): Q_subvar for Q_subvar in to_list(Q_var)}
         Q_cov = {Q_subcov.name(): Q_subcov for Q_subcov in to_list(Q_cov)}
 
@@ -749,7 +750,7 @@ class FEControlEstimator:
 
             cov_fe[cov_name] = weighted_cov(self.Q_cov[cov_name]._Ql_mult(Ql_cov_matrix, gh), self.Q_cov[cov_name]._Qr_mult(Qr_cov_matrix, gh), Ql_cov_weights, Qr_cov_weights, dof=0)
 
-            self.logger.info(f"{cov_name}_fe={cov_fe[cov_name]:2.4f} tot={self.res['var(y)']:2.4f}")
+            self.logger.info(f"{cov_name}_fe={cov_fe[cov_name]:2.4f}")
 
         self.var_fe = var_fe
         self.cov_fe = cov_fe
@@ -880,7 +881,7 @@ class FEControlEstimator:
         Estimate trace approximation of HE-corrected model.
 
         Arguments:
-            Q_params (tuple): (Q variance parameters, Q left covariance parameters, Q right covariance parameters)
+            Q_params (tuple of dicts): (dict of Q variance parameters, dict of Q covariance parameters)
             Sii (NumPy Array): Sii (sigma^2) for heteroskedastic correction
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
