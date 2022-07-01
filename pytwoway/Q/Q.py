@@ -8,7 +8,7 @@ TODO:
 '''
 import numpy as np
 from scipy.sparse import csc_matrix, diags, hstack
-from bipartitepandas.util import fast_shift
+from bipartitepandas.util import to_list, fast_shift
 
 ###############################
 ##### FE without controls #####
@@ -310,23 +310,31 @@ class CovPsiPrevPsiNext():
 
 class VarCovariate():
     '''
-    Generate Q to estimate var(covariate).
+    Generate Q to estimate var(covariate) or var(sum(covariates)) if multiple covariates are listed.
 
     Arguments:
-        cov_name (str): covariate name
+        cov_names (str or list of str): covariate name or list of covariate names to sum
     '''
 
-    def __init__(self, cov_name):
-        self.cov_name = cov_name
+    def __init__(self, cov_names):
+        cov_names = to_list(cov_names)
+        if len(cov_names) != len(set(cov_names)):
+            raise ValueError('Cannot include a covariate name multiple times.')
+
+        self.cov_names = cov_names
 
     def name(self):
         '''
-        Return name of variance to be estimated.
+        Return string representation of variance to be estimated.
 
         Returns:
-            (str): var_{self.cov_name}
+            (str): string representation of variance to be estimated
         '''
-        return f'var_{self.cov_name}'
+        var_str = f'{self.cov_names[0]}'
+        for cov_name in self.cov_names[1:]:
+            var_str += f' + {cov_name}'
+
+        return f'var({var_str})'
 
     def _get_Q(self, adata, A, Dp, cov_indices):
         '''
@@ -339,10 +347,16 @@ class VarCovariate():
             cov_indices (dict of tuples of ints): dictionary linking each covariate to the range of columns in A where it is stored
 
         Returns:
-            (tuple): (half of Q matrix, cov_name, weights, degrees of freedom) --> (A[covariate], covariate name, Dp, n_covariate - 1)
+            (tuple): (half of Q matrix, weights) --> (A[covariate], Dp)
         '''
-        idx_start, idx_end = cov_indices[self.cov_name]
-        return (A[:, idx_start: idx_end], self.cov_name, Dp, (idx_start - idx_end) - 1)
+        idx_start, idx_end = cov_indices[self.cov_names[0]]
+        A_sub = A[:, idx_start: idx_end]
+
+        for cov_name in self.cov_names[1:]:
+            idx_start, idx_end = cov_indices[cov_name]
+            A_sub = hstack([A_sub, A[:, idx_start: idx_end]])
+
+        return (A_sub, Dp)
 
     def _Q_mult(self, Q_matrix, gamma_hat_dict):
         '''
@@ -355,10 +369,19 @@ class VarCovariate():
         Returns:
             (NumPy Array): Q_matrix @ gamma_hat_dict[covariate]
         '''
-        gamma_hat = gamma_hat_dict[self.cov_name]
+        gamma_hat = gamma_hat_dict[self.cov_names[0]]
         if isinstance(gamma_hat, (float, int)):
-            # Continuous
+            # Continuous covariate
             gamma_hat = np.array([gamma_hat])
+
+        for cov_name in self.cov_names[1:]:
+            gamma_hat_2 = gamma_hat_dict[cov_name]
+            if isinstance(gamma_hat_2, (float, int)):
+                # Continuous covariate
+                gamma_hat_2 = np.array([gamma_hat_2])
+
+            # Concatenate gamma_hat and gamma_hat_2
+            gamma_hat = np.concatenate([gamma_hat, gamma_hat_2])
 
         return Q_matrix @ gamma_hat
 
@@ -367,24 +390,37 @@ class CovCovariate():
     Generate Q to estimate cov(covariate 1, covariate 2).
 
     Arguments:
-        cov_name_1 (str): first covariate name
-        cov_name_2 (str): second covariate name
+        cov_names_1 (str or list of str): covariate name or list of covariate names to sum for first term in covariance
+        cov_names_2 (str or list of str): covariate name or list of covariate names to sum for second term in covariance
     '''
 
-    def __init__(self, cov_name_1, cov_name_2):
-        if cov_name_1 == cov_name_2:
-            raise ValueError('cov_name_1 and cov_name_2 must be different.')
-        self.cov_name_1 = cov_name_1
-        self.cov_name_2 = cov_name_2
+    def __init__(self, cov_names_1, cov_names_2):
+        cov_names_1 = to_list(cov_names_1)
+        cov_names_2 = to_list(cov_names_2)
+        cov_names = cov_names_1 + cov_names_2
+
+        if len(cov_names) != len(set(cov_names)):
+            raise ValueError('Cannot include a covariate name multiple times.')
+
+        self.cov_names_1 = cov_names_1
+        self.cov_names_2 = cov_names_2
 
     def name(self):
         '''
-        Return name of covariance to be estimated.
+        Return string representation of covariance to be estimated.
 
         Returns:
-            (str): cov_{self.cov_name_1}_{self.cov_name_2}
+            (str): string representation of variance to be estimated
         '''
-        return f'cov_{self.cov_name_1}_{self.cov_name_2}'
+        cov_str_1 = f'{self.cov_names_1[0]}'
+        for cov_name_1 in self.cov_names_1[1:]:
+            cov_str_1 += f' + {cov_name_1}'
+
+        cov_str_2 = f'{self.cov_names_2[0]}'
+        for cov_name_2 in self.cov_names_2[1:]:
+            cov_str_2 += f' + {cov_name_2}'
+
+        return f'cov({cov_str_1}, {cov_str_2})'
 
     def _get_Ql(self, adata, A, Dp, cov_indices):
         '''
@@ -397,10 +433,16 @@ class CovCovariate():
             cov_indices (dict of tuples of ints): dictionary linking each covariate to the range of columns in A where it is stored
 
         Returns:
-            (tuple): (left term of Q matrix, cov_name_1, weights, degrees of freedom) --> (A[covariate 1], covariate 1 name, Dp, n_control_variable_1 - 1)
+            (tuple): (left term of Q matrix, weights) --> (A[covariate 1], Dp)
         '''
-        idx_start, idx_end = cov_indices[self.cov_name_1]
-        return (A[:, idx_start: idx_end], self.cov_name_1, Dp, (idx_start - idx_end) - 1)
+        idx_start, idx_end = cov_indices[self.cov_names_1[0]]
+        A_sub = A[:, idx_start: idx_end]
+
+        for cov_name in self.cov_names_1[1:]:
+            idx_start, idx_end = cov_indices[cov_name]
+            A_sub = hstack([A_sub, A[:, idx_start: idx_end]])
+
+        return (A_sub, Dp)
 
     def _get_Qr(self, adata, A, Dp, cov_indices):
         '''
@@ -413,10 +455,16 @@ class CovCovariate():
             cov_indices (dict of tuples of ints): dictionary linking each covariate to the range of columns in A where it is stored
 
         Returns:
-            (tuple): (right term of Q matrix, cov_name_2, weights, degrees of freedom) --> (A[covariate 2], covariate 2 name, Dp, n_control_variable_2 - 1)
+            (tuple): (right term of Q matrix, weights) --> (A[covariate 2], Dp)
         '''
-        idx_start, idx_end = cov_indices[self.cov_name_2]
-        return (A[:, idx_start: idx_end], self.cov_name_2, Dp, (idx_start - idx_end) - 1)
+        idx_start, idx_end = cov_indices[self.cov_names_2[0]]
+        A_sub = A[:, idx_start: idx_end]
+
+        for cov_name in self.cov_names_2[1:]:
+            idx_start, idx_end = cov_indices[cov_name]
+            A_sub = hstack([A_sub, A[:, idx_start: idx_end]])
+
+        return (A_sub, Dp)
 
     def _Ql_mult(self, Q_matrix, gamma_hat_dict):
         '''
@@ -429,10 +477,19 @@ class CovCovariate():
         Returns:
             (NumPy Array): Q_matrix @ gamma_hat_dict[covariate 1]
         '''
-        gamma_hat = gamma_hat_dict[self.cov_name_1]
+        gamma_hat = gamma_hat_dict[self.cov_names_1[0]]
         if isinstance(gamma_hat, (float, int)):
-            # Continuous
+            # Continuous covariate
             gamma_hat = np.array([gamma_hat])
+
+        for cov_name in self.cov_names_1[1:]:
+            gamma_hat_2 = gamma_hat_dict[cov_name]
+            if isinstance(gamma_hat_2, (float, int)):
+                # Continuous covariate
+                gamma_hat_2 = np.array([gamma_hat_2])
+
+            # Concatenate gamma_hat and gamma_hat_2
+            gamma_hat = np.concatenate([gamma_hat, gamma_hat_2])
 
         return Q_matrix @ gamma_hat
 
@@ -447,9 +504,18 @@ class CovCovariate():
         Returns:
             (NumPy Array): Q_matrix @ gamma_hat_dict[covariate 2]
         '''
-        gamma_hat = gamma_hat_dict[self.cov_name_2]
+        gamma_hat = gamma_hat_dict[self.cov_names_2[0]]
         if isinstance(gamma_hat, (float, int)):
-            # Continuous
+            # Continuous covariate
             gamma_hat = np.array([gamma_hat])
+
+        for cov_name in self.cov_names_2[1:]:
+            gamma_hat_2 = gamma_hat_dict[cov_name]
+            if isinstance(gamma_hat_2, (float, int)):
+                # Continuous covariate
+                gamma_hat_2 = np.array([gamma_hat_2])
+
+            # Concatenate gamma_hat and gamma_hat_2
+            gamma_hat = np.concatenate([gamma_hat, gamma_hat_2])
 
         return Q_matrix @ gamma_hat
