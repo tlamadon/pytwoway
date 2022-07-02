@@ -67,11 +67,11 @@ _fecontrol_params_default = ParamsDict({
         '''
             (default=False) If True, estimate heteroskedastic correction.
         ''', None),
-    'Q_var': (None, 'list_of_type_none', (Q.VarCovariate),
+    'Q_var': (None, 'list_of_type_none', Q.VarCovariate,
         '''
             (default=None) List of Q matrices to use when estimating variance term; None is equivalent to tw.Q.VarCovariate('psi').
         ''', None),
-    'Q_cov': (None, 'list_of_type_none', (Q.CovCovariate),
+    'Q_cov': (None, 'list_of_type_none', Q.CovCovariate,
         '''
             (default=None) List of Q matrices to use when estimating covariance term; None is equivalent to tw.Q.CovCovariate('psi', 'alpha').
         ''', None),
@@ -276,6 +276,9 @@ class FEControlEstimator:
         if rng is None:
             rng = np.random.default_rng(None)
 
+        if self.params['exact_trace_ho'] or self.params['exact_lev_he'] or self.params['exact_trace_he']:
+            raise NotImplementedError('Exact estimates for the HO trace, HE leverages, and HE trace are not yet implemented.')
+
         self.logger.info('----- STARTING FE ESTIMATION -----')
         start_time = time.time()
 
@@ -318,7 +321,7 @@ class FEControlEstimator:
                         if self.params['exact_trace_sigma_2']:
                             # Analytical trace
                             if not aainv:
-                                self._construct_AAinv_components_full()
+                                self._compute_AAinv()
                                 aainv = True
                             self._estimate_exact_trace_sigma_2()
                         else:
@@ -330,7 +333,7 @@ class FEControlEstimator:
                     if self.params['exact_trace_ho']:
                         # Analytical trace
                         if not aainv:
-                            self._construct_AAinv_components_full()
+                            self._compute_AAinv()
                             aainv = True
                         self._estimate_exact_trace_ho(Q_params)
                     else:
@@ -340,7 +343,7 @@ class FEControlEstimator:
                 if self.compute_he:
                     ## HE correction ##
                     if (self.params['exact_lev_he'] or self.params['exact_trace_he']) and not aainv:
-                        self._construct_AAinv_components_full()
+                        self._compute_AAinv()
                         aainv = True
                     # Estimate leverages for HE correction
                     if len(self.params['levfile']) > 0:
@@ -363,16 +366,18 @@ class FEControlEstimator:
                         # Approximate trace
                         self._estimate_approximate_trace_he(Q_params, Sii, rng)
                     del Sii
+                    if not self.params['levfile']:
+                        del self.sqrt_DpA
+
+                del self.Q_var, self.Q_cov, self.Q_covariates
+                if aainv:
+                    del self.AAinv
 
                 # Collect all results
                 self._collect_res()
 
         # Clear attributes
-        del self.worker_m, self.Y, self.A, self.DpA, self.Dp, self.AAinv
-        if not self.params['feonly']:
-            del self.Q_var, self.Q_cov, self.Q_covariates
-        if self.params['he'] and (not self.params['levfile']):
-            del self.sqrt_DpA
+        del self.worker_m, self.Y, self.A, self.DpA, self.Dp, self.AAinv_solver
 
         # Total estimation time
         end_time = time.time()
@@ -492,11 +497,11 @@ class FEControlEstimator:
                 sqrt_DpA = A
 
         ## (A.T @ Dp @ A)^{-1} ##
-        AAinv = pyamg.ruge_stuben_solver(A.T @ DpA)
+        AAinv_solver = pyamg.ruge_stuben_solver(A.T @ DpA)
 
         ## Store matrices ##
         self.Y = self.adata.loc[:, 'y'].to_numpy()
-        self.A, self.DpA, self.AAinv = A, DpA, AAinv
+        self.A, self.DpA, self.AAinv_solver = A, DpA, AAinv_solver
         if self.params['he'] and (not self.params['levfile']):
             self.sqrt_DpA = sqrt_DpA
         self.Dp = Dp
@@ -593,26 +598,6 @@ class FEControlEstimator:
 
         return Z
 
-    def _unpack_Z(self, Z, covariates):
-        '''
-        Unpack a vector into a dictionary linking given covariates to their component of the vector.
-
-        Arguments:
-            Z (NumPy Array): vector to unpack
-            covariates (list): covariates to unpack
-
-        Returns:
-            (dict of NumPy Arrays): dictionary linking given covariates to their component of the given vector
-        '''
-        cov_indices = self.cov_indices
-        ret_dict = {}
-
-        for covariate in covariates:
-            idx_start, idx_end = cov_indices[covariate]
-            ret_dict[covariate] = Z[idx_start: idx_end]
-
-        return ret_dict
-
     def _estimate_ols(self):
         '''
         Estimate fixed effects using OLS.
@@ -689,7 +674,7 @@ class FEControlEstimator:
         Returns:
             (tuple of dicts): (dict of Q variance parameters, dict of Q covariance parameters)
         '''
-        # Unpack
+        # Unpack attributes
         Q_var = self.params['Q_var']
         Q_cov = self.params['Q_cov']
         if Q_var is None:
@@ -730,7 +715,7 @@ class FEControlEstimator:
         self.logger.info('[fe]')
 
         Q_vars, Q_covs = Q_params
-        gh = self.gamma_hat_dict
+        gamma_hat = self.gamma_hat
         var_fe = {}
         cov_fe = {}
 
@@ -738,7 +723,7 @@ class FEControlEstimator:
         for var_name, Q_subvar in Q_vars.items():
             Q_var_matrix, Q_var_weights = Q_subvar
 
-            var_fe[var_name] = weighted_var(self.Q_var[var_name]._Q_mult(Q_var_matrix, gh), Q_var_weights, dof=0)
+            var_fe[var_name] = weighted_var(self.Q_var[var_name]._Q_mult(Q_var_matrix, gamma_hat, self.cov_indices), Q_var_weights, dof=0)
 
             self.logger.info(f'{var_name}_fe={var_fe[var_name]:2.4f}')
 
@@ -748,7 +733,7 @@ class FEControlEstimator:
             Ql_cov_matrix, Ql_cov_weights = Ql_cov
             Qr_cov_matrix, Qr_cov_weights = Qr_cov
 
-            cov_fe[cov_name] = weighted_cov(self.Q_cov[cov_name]._Ql_mult(Ql_cov_matrix, gh), self.Q_cov[cov_name]._Qr_mult(Qr_cov_matrix, gh), Ql_cov_weights, Qr_cov_weights, dof=0)
+            cov_fe[cov_name] = weighted_cov(self.Q_cov[cov_name]._Ql_mult(Ql_cov_matrix, gamma_hat, self.cov_indices), self.Q_cov[cov_name]._Qr_mult(Qr_cov_matrix, gamma_hat, self.cov_indices), Ql_cov_weights, Qr_cov_weights, dof=0)
 
             self.logger.info(f"{cov_name}_fe={cov_fe[cov_name]:2.4f}")
 
@@ -839,22 +824,19 @@ class FEControlEstimator:
         for r in pbar:
             ## Compute Tr[Q @ (A'D_pA)^{-1}] ##
             # Generate -1 or 1
-            Z_dict_1 = {
-                covariate: 2 * rng.binomial(1, 0.5, self.n_dict[covariate]) - 1 for covariate in self.Q_covariates
-            }
-            Z = self._pack_Z(Z_dict_1)
+            Z = 2 * rng.binomial(1, 0.5, self.n_cov) - 1
 
             # Compute (A'D_pA)^{-1} @ Z
-            Z_dict_2 = self._unpack_Z(self._mult_AAinv(Z), self.Q_covariates)
+            Z2 = self._mult_AAinv(Z)
 
             ## Trace correction - variances ##
             for var_name, Q_subvar in Q_vars.items():
                 Q_var_matrix, Q_var_weights = Q_subvar
 
                 # Left term of Q matrix
-                L_var = self.Q_var[var_name]._Q_mult(Q_var_matrix, Z_dict_1).T
+                L_var = self.Q_var[var_name]._Q_mult(Q_var_matrix, Z, self.cov_indices).T
                 # Right term of Q matrix
-                R_var = self.Q_var[var_name]._Q_mult(Q_var_matrix, Z_dict_2)
+                R_var = self.Q_var[var_name]._Q_mult(Q_var_matrix, Z2, self.cov_indices)
                 tr_var_ho_all[var_name][r] = weighted_cov(L_var, R_var, Q_var_weights, Q_var_weights)
             del L_var, R_var
 
@@ -865,9 +847,9 @@ class FEControlEstimator:
                 Qr_cov_matrix, Qr_cov_weights = Qr_cov
 
                 # Left term of Q matrix
-                L_cov = self.Q_cov[cov_name]._Ql_mult(Ql_cov_matrix, Z_dict_1).T
+                L_cov = self.Q_cov[cov_name]._Ql_mult(Ql_cov_matrix, Z, self.cov_indices).T
                 # Right term of Q matrix
-                R_cov = self.Q_cov[cov_name]._Qr_mult(Qr_cov_matrix, Z_dict_2)
+                R_cov = self.Q_cov[cov_name]._Qr_mult(Qr_cov_matrix, Z2, self.cov_indices)
                 tr_cov_ho_all[cov_name][r] = weighted_cov(L_cov, R_cov, Ql_cov_weights, Qr_cov_weights)
             del L_cov, R_cov
 
@@ -907,33 +889,29 @@ class FEControlEstimator:
         for r in pbar:
             ## Compute Tr[Q @ (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1}] ##
             # Generate -1 or 1
-            Z_dict_1 = {
-                covariate: 2 * rng.binomial(1, 0.5, self.n_dict[covariate]) - 1 for covariate in self.Q_covariates
-            }
-            Z = self._pack_Z(Z_dict_1)
+            Z1 = 2 * rng.binomial(1, 0.5, self.n_cov) - 1
 
-            # Compute (A'D_pA)^{-1} @ (D_pA)' @ Omega @ (D_pA) @ (A'D_pA)^{-1} @ Z
-            Z = self._mult_AAinv( # (A'D_pA)^{-1} @
+            # Compute (A'D_pA)^{-1} @ (D_pA)' @ sqrt(Omega) @ Z
+            Z2 = self._mult_AAinv( # (A'D_pA)^{-1} @
                 self._mult_Atranspose( # (D_pA)' @
                     Sii * self._mult_A( # Omega @ (D_pA) @
                         self._mult_AAinv( # (A'D_pA)^{-1} @ Z
-                            Z
+                            Z1
                         ), weighted=True
                     ), weighted=True
                 )
             )
-            Z_dict_2 = self._unpack_Z(Z, self.Q_covariates)
 
             ## Trace correction - variances ##
             for var_name, Q_subvar in Q_vars.items():
                 Q_var_matrix, Q_var_weights = Q_subvar
 
                 # Left term of Q matrix
-                L_var = self.Q_var[var_name]._Q_mult(Q_var_matrix, Z_dict_1).T
+                L_var = self.Q_var[var_name]._Q_mult(Q_var_matrix, Z1, self.cov_indices).T
                 # Right term of Q matrix
-                R_var = self.Q_var[var_name]._Q_mult(Q_var_matrix, Z_dict_2)
+                R_var = self.Q_var[var_name]._Q_mult(Q_var_matrix, Z2, self.cov_indices)
                 tr_var_he_all[var_name][r] = weighted_cov(L_var, R_var, Q_var_weights, Q_var_weights)
-            del L_var, R_var
+            del L_var
 
             ## Trace correction - covariances ##
             for cov_name, Q_subcov in Q_covs.items():
@@ -942,9 +920,9 @@ class FEControlEstimator:
                 Qr_cov_matrix, Qr_cov_weights = Qr_cov
 
                 # Left term of Q matrix
-                L_cov = self.Q_cov[cov_name]._Ql_mult(Ql_cov_matrix, Z_dict_1).T
+                L_cov = self.Q_cov[cov_name]._Ql_mult(Ql_cov_matrix, Z1, self.cov_indices)
                 # Right term of Q matrix
-                R_cov = self.Q_cov[cov_name]._Qr_mult(Qr_cov_matrix, Z_dict_2)
+                R_cov = self.Q_cov[cov_name]._Qr_mult(Qr_cov_matrix, Z2, self.cov_indices)
                 tr_cov_he_all[cov_name][r] = weighted_cov(L_cov, R_cov, Ql_cov_weights, Qr_cov_weights)
             del L_cov, R_cov
 
@@ -959,7 +937,7 @@ class FEControlEstimator:
         '''
         # Already computed, this just reorders the dictionary
         self.res['var(y)'] = self.res['var(y)']
-        
+
         # Names of variance and covariances
         var_names = sorted(self.var_fe.keys())
         cov_names = sorted(self.cov_fe.keys())
@@ -1086,6 +1064,12 @@ class FEControlEstimator:
         else:
             self.logger.info('outputfile=None, so results not saved')
 
+    def _compute_AAinv(self):
+        '''
+        Compute (A' @ Dp @ A)^{-1}.
+        '''
+        self.AAinv = np.linalg.inv((self.A.T @ self.DpA).todense())
+
     def _mult_A(self, v, weighted=False):
         '''
         Compute Dp @ A @ v, where A gives the matrix of covariates and Dp gives weights.
@@ -1139,7 +1123,7 @@ class FEControlEstimator:
             (NumPy Array): vector result of (A' @ Dp @ A)^{-1} @ v
         '''
         start = timer()
-        v_out = self.AAinv.solve(v, tol=1e-10)
+        v_out = self.AAinv_solver.solve(v, tol=1e-10)
         self.last_invert_time = timer() - start
 
         return v_out

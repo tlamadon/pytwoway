@@ -7,7 +7,7 @@ TODO:
     -cov(psi_i, psi_j)
 '''
 import numpy as np
-from scipy.sparse import csc_matrix, diags, hstack
+from scipy.sparse import csc_matrix, hstack
 from bipartitepandas.util import to_list, fast_shift
 
 ###############################
@@ -384,40 +384,44 @@ class VarCovariate():
             (tuple): (half of Q matrix, weights) --> (A[covariate], Dp)
         '''
         idx_start, idx_end = cov_indices[self.cov_names[0]]
-        A_sub = A[:, idx_start: idx_end]
+        A_indices = np.arange(idx_start, idx_end)
 
         for cov_name in self.cov_names[1:]:
             idx_start, idx_end = cov_indices[cov_name]
-            A_sub = hstack([A_sub, A[:, idx_start: idx_end]])
+            A_indices_2 = np.arange(idx_start, idx_end)
+            A_indices = np.concatenate([A_indices, A_indices_2])
 
-        return (A_sub, Dp)
+        return (A[:, A_indices], Dp)
 
-    def _Q_mult(self, Q_matrix, gamma_hat_dict):
+    def _Q_mult(self, Q_matrix, Z, cov_indices):
         '''
-        Multiply Q matrix by component of gamma vector related to covariate to use when estimating var(covariate).
+        Multiply Q matrix by component of Z related to covariate to use when estimating var(covariate).
 
         Arguments:
             Q_matrix (NumPy Array): Q matrix
-            gamma_hat_dict (dict of NumPy Arrays): dictionary linking each covariate to its component of gamma_hat
+            Z (NumPy Array): vector to multiply
+            cov_indices (dict of tuples of ints): dictionary linking each covariate to the range of columns in A where it is stored
 
         Returns:
-            (NumPy Array): Q_matrix @ gamma_hat_dict[covariate]
+            (NumPy Array): Q_matrix @ Z_covariate
         '''
-        gamma_hat = gamma_hat_dict[self.cov_names[0]]
-        if isinstance(gamma_hat, (float, int)):
+        idx_start, idx_end = cov_indices[self.cov_names[0]]
+        sub_Z = Z[idx_start: idx_end]
+        if isinstance(sub_Z, (float, int)):
             # Continuous covariate
-            gamma_hat = np.array([gamma_hat])
+            sub_Z = np.array([sub_Z])
 
         for cov_name in self.cov_names[1:]:
-            gamma_hat_2 = gamma_hat_dict[cov_name]
-            if isinstance(gamma_hat_2, (float, int)):
+            idx_start, idx_end = cov_indices[cov_name]
+            sub_Z_2 = Z[idx_start: idx_end]
+            if isinstance(sub_Z_2, (float, int)):
                 # Continuous covariate
-                gamma_hat_2 = np.array([gamma_hat_2])
+                sub_Z_2 = np.array([sub_Z_2])
 
-            # Concatenate gamma_hat and gamma_hat_2
-            gamma_hat = np.concatenate([gamma_hat, gamma_hat_2])
+            # Concatenate sub_Z and sub_Z_2
+            sub_Z = np.concatenate([sub_Z, sub_Z_2])
 
-        return Q_matrix @ gamma_hat
+        return Q_matrix @ sub_Z
 
 class CovCovariate():
     '''
@@ -431,9 +435,8 @@ class CovCovariate():
     def __init__(self, cov_names_1, cov_names_2):
         cov_names_1 = to_list(cov_names_1)
         cov_names_2 = to_list(cov_names_2)
-        cov_names = cov_names_1 + cov_names_2
 
-        if len(cov_names) != len(set(cov_names)):
+        if (len(cov_names_1) != len(set(cov_names_1))) or (len(cov_names_2) != len(set(cov_names_2))):
             raise ValueError('Cannot include a covariate name multiple times.')
 
         self.cov_names_1 = cov_names_1
@@ -470,13 +473,14 @@ class CovCovariate():
             (tuple): (left term of Q matrix, weights) --> (A[covariate 1], Dp)
         '''
         idx_start, idx_end = cov_indices[self.cov_names_1[0]]
-        A_sub = A[:, idx_start: idx_end]
+        A_indices = np.arange(idx_start, idx_end)
 
         for cov_name in self.cov_names_1[1:]:
             idx_start, idx_end = cov_indices[cov_name]
-            A_sub = hstack([A_sub, A[:, idx_start: idx_end]])
+            A_indices_2 = np.arange(idx_start, idx_end)
+            A_indices = np.concatenate([A_indices, A_indices_2])
 
-        return (A_sub, Dp)
+        return (A[:, A_indices], Dp)
 
     def _get_Qr(self, adata, A, Dp, cov_indices):
         '''
@@ -492,64 +496,71 @@ class CovCovariate():
             (tuple): (right term of Q matrix, weights) --> (A[covariate 2], Dp)
         '''
         idx_start, idx_end = cov_indices[self.cov_names_2[0]]
-        A_sub = A[:, idx_start: idx_end]
+        A_indices = np.arange(idx_start, idx_end)
 
         for cov_name in self.cov_names_2[1:]:
             idx_start, idx_end = cov_indices[cov_name]
-            A_sub = hstack([A_sub, A[:, idx_start: idx_end]])
+            A_indices_2 = np.arange(idx_start, idx_end)
+            A_indices = np.concatenate([A_indices, A_indices_2])
 
-        return (A_sub, Dp)
+        return (A[:, A_indices], Dp)
 
-    def _Ql_mult(self, Q_matrix, gamma_hat_dict):
+    def _Ql_mult(self, Q_matrix, Z, cov_indices):
         '''
-        Multiply Ql matrix by component of gamma vector related to covariate 1 to use when estimating cov(covariate 1, covariate 2).
+        Multiply Ql matrix by component of Z related to covariate 1 to use when estimating cov(covariate 1, covariate 2).
 
         Arguments:
             Q_matrix (NumPy Array): Q matrix
-            gamma_hat_dict (dict of NumPy Arrays): dictionary linking each covariate to its component of gamma_hat
+            Z (NumPy Array): vector to multiply
+            cov_indices (dict of tuples of ints): dictionary linking each covariate to the range of columns in A where it is stored
 
         Returns:
-            (NumPy Array): Q_matrix @ gamma_hat_dict[covariate 1]
+            (NumPy Array): Q_matrix @ Z_covariate_1
         '''
-        gamma_hat = gamma_hat_dict[self.cov_names_1[0]]
-        if isinstance(gamma_hat, (float, int)):
+        idx_start, idx_end = cov_indices[self.cov_names_1[0]]
+        sub_Z = Z[idx_start: idx_end]
+        if isinstance(sub_Z, (float, int)):
             # Continuous covariate
-            gamma_hat = np.array([gamma_hat])
+            sub_Z = np.array([sub_Z])
 
         for cov_name in self.cov_names_1[1:]:
-            gamma_hat_2 = gamma_hat_dict[cov_name]
-            if isinstance(gamma_hat_2, (float, int)):
+            idx_start, idx_end = cov_indices[cov_name]
+            sub_Z_2 = Z[idx_start: idx_end]
+            if isinstance(sub_Z_2, (float, int)):
                 # Continuous covariate
-                gamma_hat_2 = np.array([gamma_hat_2])
+                sub_Z_2 = np.array([sub_Z_2])
 
-            # Concatenate gamma_hat and gamma_hat_2
-            gamma_hat = np.concatenate([gamma_hat, gamma_hat_2])
+            # Concatenate sub_Z and sub_Z_2
+            sub_Z = np.concatenate([sub_Z, sub_Z_2])
 
-        return Q_matrix @ gamma_hat
+        return Q_matrix @ sub_Z
 
-    def _Qr_mult(self, Q_matrix, gamma_hat_dict):
+    def _Qr_mult(self, Q_matrix, Z, cov_indices):
         '''
-        Multiply Qr matrix by component of gamma vector related to covariate 2 to use when estimating cov(covariate 1, covariate 2).
+        Multiply Qr matrix by component of Z related to covariate 2 to use when estimating cov(covariate 1, covariate 2).
 
         Arguments:
             Q_matrix (NumPy Array): Q matrix
-            gamma_hat_dict (dict of NumPy Arrays): dictionary linking each covariate to its component of gamma_hat
+            Z (NumPy Array): vector to multiply
+            cov_indices (dict of tuples of ints): dictionary linking each covariate to the range of columns in A where it is stored
 
         Returns:
-            (NumPy Array): Q_matrix @ gamma_hat_dict[covariate 2]
+            (NumPy Array): Q_matrix @ Z_covariate_2
         '''
-        gamma_hat = gamma_hat_dict[self.cov_names_2[0]]
-        if isinstance(gamma_hat, (float, int)):
+        idx_start, idx_end = cov_indices[self.cov_names_2[0]]
+        sub_Z = Z[idx_start: idx_end]
+        if isinstance(sub_Z, (float, int)):
             # Continuous covariate
-            gamma_hat = np.array([gamma_hat])
+            sub_Z = np.array([sub_Z])
 
         for cov_name in self.cov_names_2[1:]:
-            gamma_hat_2 = gamma_hat_dict[cov_name]
-            if isinstance(gamma_hat_2, (float, int)):
+            idx_start, idx_end = cov_indices[cov_name]
+            sub_Z_2 = Z[idx_start: idx_end]
+            if isinstance(sub_Z_2, (float, int)):
                 # Continuous covariate
-                gamma_hat_2 = np.array([gamma_hat_2])
+                sub_Z_2 = np.array([sub_Z_2])
 
-            # Concatenate gamma_hat and gamma_hat_2
-            gamma_hat = np.concatenate([gamma_hat, gamma_hat_2])
+            # Concatenate sub_Z and sub_Z_2
+            sub_Z = np.concatenate([sub_Z, sub_Z_2])
 
-        return Q_matrix @ gamma_hat
+        return Q_matrix @ sub_Z

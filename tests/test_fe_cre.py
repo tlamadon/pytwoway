@@ -1,11 +1,6 @@
 '''
 Tests FE and CRE estimators.
 '''
-'''
-TODO:
-    -Check that for FE, uncollapsed and collapsed estimators give identical results
-    -Update tests that stopped working
-'''
 import pytest
 import numpy as np
 import pandas as pd
@@ -287,22 +282,24 @@ def test_fe_estimator_full_approx_analytical_collapsed():
     assert np.abs((est_he_cov_psi_alpha_b - est_he_cov_psi_alpha_a) / est_he_cov_psi_alpha_a) < 1e-2
 
 def test_fe_estimator_full_Q():
-    # Test that FE estimates custom Q correctly for plug-in, HO, and HE estimators for Q.VarAlpha() and Q.CovPsiPrevPsiNext().
+    # Test that FE estimates custom Q correctly for plug-in, HO, and HE estimators for the variances: Q.VarPsi and Q.VarAlpha(); and covariances: Q.CovPsiAlpha and Q.CovPsiPrevPsiNext().
     sim_params = bpd.sim_params({'n_workers': 1000, 'w_sig': 0})
     a = bpd.SimBipartite(sim_params).simulate(np.random.default_rng(1236))
     a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False}))
     b = a.collapse()
 
-    fe_params = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True, 'attach_fe_estimates': True, 'Q_var': tw.Q.VarAlpha(), 'Q_cov': tw.Q.CovPsiPrevPsiNext()})
+    fe_params = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True, 'attach_fe_estimates': True, 'Q_var': [tw.Q.VarPsi(), tw.Q.VarAlpha()], 'Q_cov': [tw.Q.CovPsiAlpha(), tw.Q.CovPsiPrevPsiNext()]})
     fe_solver = tw.FEEstimator(b, fe_params)
     fe_solver.fit(np.random.default_rng(1234))
 
-    # True parameters
+    ### True parameters ###
+    w_col = b.loc[:, 'w'].to_numpy()
     # psi, alpha
     psi = b.loc[:, 'psi'].to_numpy()
     alpha = b.loc[:, 'alpha'].to_numpy()
-    true_var_psi = np.var(b.loc[:, 'psi'].to_numpy(), ddof=0)
-    true_var_alpha = np.var(b.loc[:, 'alpha'].to_numpy(), ddof=0)
+    true_var_psi = tw.util.weighted_var(psi, w_col, dof=0)
+    true_var_alpha = tw.util.weighted_var(alpha, w_col, dof=0)
+    true_cov_psi_alpha = tw.util.weighted_cov(psi, alpha, w_col, w_col)
     # Get i for this, last, and next period
     i_col = b.loc[:, 'i'].to_numpy()
     i_prev = bpd.util.fast_shift(i_col, 1, fill_value=-2)
@@ -312,26 +309,38 @@ def test_fe_estimator_full_Q():
     prev_rows = (i_col == i_next)
     # Drop the first observation for each worker
     next_rows = (i_col == i_prev)
-    # Weights
-    w_col = b.loc[:, 'w'].to_numpy()
+    # Compute covariances
     true_cov_psi_prev_psi_next = tw.util.weighted_cov(psi[prev_rows], psi[next_rows], w_col[prev_rows], w_col[next_rows])
-    true_cov_psi_alpha = tw.util.weighted_cov(psi, alpha, w_col, w_col)
 
-    # Estimated parameters
+    ### Estimated parameters ###
     ## Plug-in ##
-    est_pi_var_alpha = fe_solver.var_fe['var(alpha)']
-    est_pi_cov_psi_prev_psi_next = fe_solver.cov_fe['cov(psi_t, psi_{t+1})']
+    est_pi_var_psi = fe_solver.res['var(psi)_fe']
+    est_pi_var_alpha = fe_solver.res['var(alpha)_fe']
+    est_pi_cov_psi_alpha = fe_solver.res['cov(psi, alpha)_fe']
+    est_pi_cov_psi_prev_psi_next = fe_solver.res['cov(psi_t, psi_{t+1})_fe']
     ## HO ##
+    est_ho_var_psi = fe_solver.res['var(psi)_ho']
     est_ho_var_alpha = fe_solver.res['var(alpha)_ho']
+    est_ho_cov_psi_alpha = fe_solver.res['cov(psi, alpha)_ho']
     est_ho_cov_psi_prev_psi_next = fe_solver.res['cov(psi_t, psi_{t+1})_ho']
     ## HE ##
+    est_he_var_psi = fe_solver.res['var(psi)_he']
     est_he_var_alpha = fe_solver.res['var(alpha)_he']
+    est_he_cov_psi_alpha = fe_solver.res['cov(psi, alpha)_he']
     est_he_cov_psi_prev_psi_next = fe_solver.res['cov(psi_t, psi_{t+1})_he']
 
+    # var(psi)
+    assert np.abs((est_pi_var_psi - true_var_psi) / true_var_psi) < 1e-10
+    assert np.abs((est_ho_var_psi - true_var_psi) / true_var_psi) < 1e-10
+    assert np.abs((est_he_var_psi - true_var_psi) / true_var_psi) < 1e-10
     # var(alpha)
-    assert np.abs((est_pi_var_alpha - true_var_alpha) / true_var_alpha) < 1e-2
-    assert np.abs((est_ho_var_alpha - true_var_alpha) / true_var_alpha) < 1e-2
-    assert np.abs((est_he_var_alpha - true_var_alpha) / true_var_alpha) < 1e-2
+    assert np.abs((est_pi_var_alpha - true_var_alpha) / true_var_alpha) < 1e-10
+    assert np.abs((est_ho_var_alpha - true_var_alpha) / true_var_alpha) < 1e-10
+    assert np.abs((est_he_var_alpha - true_var_alpha) / true_var_alpha) < 1e-10
+    # cov(psi, alpha)
+    assert np.abs((est_pi_cov_psi_alpha - true_cov_psi_alpha) / true_cov_psi_alpha) < 1e-10
+    assert np.abs((est_ho_cov_psi_alpha - true_cov_psi_alpha) / true_cov_psi_alpha) < 1e-10
+    assert np.abs((est_he_cov_psi_alpha - true_cov_psi_alpha) / true_cov_psi_alpha) < 1e-10
     # cov(psi_t, psi_{t+1})
     assert np.abs((est_pi_cov_psi_prev_psi_next - true_cov_psi_prev_psi_next) / true_cov_psi_prev_psi_next) < 1e-10
     assert np.abs((est_ho_cov_psi_prev_psi_next - true_cov_psi_prev_psi_next) / true_cov_psi_prev_psi_next) < 1e-10
@@ -352,10 +361,13 @@ def test_fe_estimator_full_Q_2():
     fe_solver.fit(np.random.default_rng(1234))
 
     # True parameters
+    w_col = b.loc[:, 'w'].to_numpy()
     # psi, alpha
-    true_var_psi_plus_alpha = np.var(a.loc[:, 'psi'].to_numpy() + a.loc[:, 'alpha'].to_numpy(), ddof=0)
-    true_var_psi = np.var(a.loc[:, 'psi'].to_numpy(), ddof=0)
-    true_var_alpha = np.var(a.loc[:, 'alpha'].to_numpy(), ddof=0)
+    psi = b.loc[:, 'psi'].to_numpy()
+    alpha = b.loc[:, 'alpha'].to_numpy()
+    true_var_psi = tw.util.weighted_var(psi, w_col, dof=0)
+    true_var_alpha = tw.util.weighted_var(alpha, w_col, dof=0)
+    true_var_psi_plus_alpha = tw.util.weighted_var(psi + alpha, w_col, dof=0)
 
     # Estimated parameters
     ## Plug-in ##

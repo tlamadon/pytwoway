@@ -343,20 +343,18 @@ class FEEstimator:
                         # Approximate trace
                         self._estimate_approximate_trace_he(Q_params, Sii, rng)
                     del Sii
+                    if not self.params['levfile']:
+                        del self.sqrt_DpJ, self.sqrt_DpW
+
+                del self.Q_var, self.Q_cov
+                if aainv:
+                    del self.AA_inv_A, self.AA_inv_B, self.AA_inv_C, self.AA_inv_D
 
                 # Collect all results
                 self._collect_res()
 
         # Clear attributes
         del self.worker_m, self.Y, self.J, self.DpJ, self.W, self.DpW, self.Dp, self.Dwinv, self.DwinvWtDpJ, self.Minv, self.ml
-        if not self.params['feonly']:
-            del self.Q_var, self.Q_cov
-        if self.params['he'] and (not self.params['levfile']):
-            del self.sqrt_DpJ, self.sqrt_DpW
-        try:
-            del self.AA_inv_A, self.AA_inv_B, self.AA_inv_C, self.AA_inv_D
-        except AttributeError:
-            pass
 
         # Total estimation time
         end_time = time.time()
