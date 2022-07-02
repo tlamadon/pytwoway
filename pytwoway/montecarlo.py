@@ -140,9 +140,9 @@ class MonteCarlo:
 
         return psi_var, psi_alpha_cov, \
                 cre_res['tot_var'], cre_res['tot_cov'], \
-                fe_res['var_fe'], fe_res['cov_fe'], \
-                fe_res['var_ho'], fe_res['cov_ho'], \
-                fe_res['var_he'], fe_res['cov_he']
+                fe_res['var(psi)_fe'], fe_res['cov(psi, alpha)_fe'], \
+                fe_res['var(psi)_ho'], fe_res['cov(psi, alpha)_ho'], \
+                fe_res['var(psi)_he'], fe_res['cov(psi, alpha)_he']
 
     def monte_carlo(self, N=10, ncore=1, rng=None):
         '''
