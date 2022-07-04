@@ -220,97 +220,97 @@ class InteractedBLMModel():
 
         return B1, B2
 
-import bipartitepandas as bpd
+# import bipartitepandas as bpd
 
-# Instantiate
-model = InteractedBLMModel()
+# # Instantiate
+# model = InteractedBLMModel()
 
-# Prepare parameters
-n_loops = 100
-B1_err = np.zeros(n_loops)
-B2_err = np.zeros(n_loops)
-evec_err = np.zeros(n_loops)
+# # Prepare parameters
+# n_loops = 100
+# B1_err = np.zeros(n_loops)
+# B2_err = np.zeros(n_loops)
+# evec_err = np.zeros(n_loops)
 
-for iter in range(n_loops):
-    # Simulate some data
-    n_workers = 10000
-    n_firms = 200
-    nk = 10
-    a = np.random.normal(size=nk)
-    b = np.random.normal(size=nk)
-    # Make sure b values aren't too small
-    b[abs(b) < 0.01] *= 50
-    # Normalize b
-    b = b / b[0]
-    # Link firms to firm types
-    firm_types = np.random.choice(range(nk), size=n_firms, replace=True)
-    # Simulate data
-    i = np.repeat(range(n_workers), 2)
-    j = np.random.choice(range(n_firms), size=2 * n_workers, replace=True)
-    t = np.tile(range(2), n_workers)
-    g = firm_types[j]
-    alpha_i = np.repeat(np.random.normal(size=n_workers), 2)
-    eps_i = 0.1 * np.random.normal(size=2 * n_workers)
-    # Simulate wages
-    y = a[g] + b[g] * alpha_i + eps_i
+# for iter in range(n_loops):
+#     # Simulate some data
+#     n_workers = 10000
+#     n_firms = 200
+#     nk = 10
+#     a = np.random.normal(size=nk)
+#     b = np.random.normal(size=nk)
+#     # Make sure b values aren't too small
+#     b[abs(b) < 0.01] *= 50
+#     # Normalize b
+#     b = b / b[0]
+#     # Link firms to firm types
+#     firm_types = np.random.choice(range(nk), size=n_firms, replace=True)
+#     # Simulate data
+#     i = np.repeat(range(n_workers), 2)
+#     j = np.random.choice(range(n_firms), size=2 * n_workers, replace=True)
+#     t = np.tile(range(2), n_workers)
+#     g = firm_types[j]
+#     alpha_i = np.repeat(np.random.normal(size=n_workers), 2)
+#     eps_i = 0.1 * np.random.normal(size=2 * n_workers)
+#     # Simulate wages
+#     y = a[g] + b[g] * alpha_i + eps_i
 
-    # Prepare data
-    cp = bpd.clean_params({'verbose': False})
-    bdf = bpd.BipartiteDataFrame(i=i, j=j, y=y, t=t, g=g).clean(cp).collapse()
-    jdata = bdf[bdf.get_worker_m()].clean(cp).to_eventstudy()
+#     # Prepare data
+#     cp = bpd.clean_params({'verbose': False})
+#     bdf = bpd.BipartiteDataFrame(i=i, j=j, y=y, t=t, g=g).clean(cp).collapse()
+#     jdata = bdf[bdf.get_worker_m()].clean(cp).to_eventstudy()
 
-    B1, B2 = model.fit_b_linear(jdata)
+#     B1, B2 = model.fit_b_linear(jdata)
 
-    bdf = bpd.BipartiteDataFrame(i=i, j=g, y=y, t=t).clean(cp).collapse()
-    jdata = bdf[bdf.get_worker_m()].clean(cp)
+#     bdf = bpd.BipartiteDataFrame(i=i, j=g, y=y, t=t).clean(cp).collapse()
+#     jdata = bdf[bdf.get_worker_m()].clean(cp)
 
-    evec = model.fit_b_fixed_point(jdata)
+#     evec = model.fit_b_fixed_point(jdata)
 
-    # if abs(np.mean((evec - b) / b)) > 500:
-    #     stop
+#     # if abs(np.mean((evec - b) / b)) > 500:
+#     #     stop
 
-    B1_err[iter] = np.mean((B1 - b) / b)
-    B2_err[iter] = np.mean((B2 - b) / b)
-    evec_err[iter] = np.mean((evec - b) / b)
+#     B1_err[iter] = np.mean((B1 - b) / b)
+#     B2_err[iter] = np.mean((B2 - b) / b)
+#     evec_err[iter] = np.mean((evec - b) / b)
 
-# Plot
-from matplotlib import pyplot as plt
-axis = np.arange(n_loops)
-plt.plot(axis, B1_err, label='B1')
-plt.plot(axis, B2_err, label='B2')
-plt.plot(axis, evec_err, label='Fixed point')
-plt.legend()
-plt.show()
+# # Plot
+# from matplotlib import pyplot as plt
+# axis = np.arange(n_loops)
+# plt.plot(axis, B1_err, label='B1')
+# plt.plot(axis, B2_err, label='B2')
+# plt.plot(axis, evec_err, label='Fixed point')
+# plt.legend()
+# plt.show()
 
-# Histogram
-# Eliminate outliers (so we can actually see things)
-B1_err_nooutliers = B1_err[abs(B1_err) < 20]
-B2_err_nooutliers = B2_err[abs(B2_err) < 20]
-evec_err_nooutliers = evec_err[abs(evec_err) < 20]
-bins = np.arange(-20, 20 + 0.25, 0.25)
-plt.hist(B1_err_nooutliers, alpha=0.75, bins=bins, label='B1')
-plt.hist(B2_err_nooutliers, alpha=0.75, bins=bins, label='B2')
-plt.hist(evec_err_nooutliers, alpha=0.5, bins=bins, label='Fixed point')
-plt.legend()
-plt.show()
+# # Histogram
+# # Eliminate outliers (so we can actually see things)
+# B1_err_nooutliers = B1_err[abs(B1_err) < 20]
+# B2_err_nooutliers = B2_err[abs(B2_err) < 20]
+# evec_err_nooutliers = evec_err[abs(evec_err) < 20]
+# bins = np.arange(-20, 20 + 0.25, 0.25)
+# plt.hist(B1_err_nooutliers, alpha=0.75, bins=bins, label='B1')
+# plt.hist(B2_err_nooutliers, alpha=0.75, bins=bins, label='B2')
+# plt.hist(evec_err_nooutliers, alpha=0.5, bins=bins, label='Fixed point')
+# plt.legend()
+# plt.show()
 
-# Kernel density plot
-from scipy.stats import gaussian_kde
-bins = np.arange(-20, 20 + 0.25, 0.25)
-B1_err_nooutliers = B1_err[abs(B1_err) < 100]
-B2_err_nooutliers = B2_err[abs(B2_err) < 100]
-evec_err_nooutliers = evec_err[abs(evec_err) < 100]
-density_B1 = gaussian_kde(B1_err_nooutliers)
-# density_B1.covariance_factor = lambda : .01
-# density_B1._compute_covariance()
-density_B2 = gaussian_kde(B2_err_nooutliers)
-# density_B2.covariance_factor = lambda : .01
-# density_B2._compute_covariance()
-density_evec = gaussian_kde(evec_err_nooutliers)
-# density_evec.covariance_factor = lambda : .01
-# density_evec._compute_covariance()
-plt.plot(bins, density_B1(bins), label='B1')
-plt.plot(bins, density_B2(bins), label='B2')
-plt.plot(bins, density_evec(bins), label='Fixed point')
-plt.legend()
-plt.show()
+# # Kernel density plot
+# from scipy.stats import gaussian_kde
+# bins = np.arange(-20, 20 + 0.25, 0.25)
+# B1_err_nooutliers = B1_err[abs(B1_err) < 100]
+# B2_err_nooutliers = B2_err[abs(B2_err) < 100]
+# evec_err_nooutliers = evec_err[abs(evec_err) < 100]
+# density_B1 = gaussian_kde(B1_err_nooutliers)
+# # density_B1.covariance_factor = lambda : .01
+# # density_B1._compute_covariance()
+# density_B2 = gaussian_kde(B2_err_nooutliers)
+# # density_B2.covariance_factor = lambda : .01
+# # density_B2._compute_covariance()
+# density_evec = gaussian_kde(evec_err_nooutliers)
+# # density_evec.covariance_factor = lambda : .01
+# # density_evec._compute_covariance()
+# plt.plot(bins, density_B1(bins), label='B1')
+# plt.plot(bins, density_B2(bins), label='B2')
+# plt.plot(bins, density_evec(bins), label='Fixed point')
+# plt.legend()
+# plt.show()

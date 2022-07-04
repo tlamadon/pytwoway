@@ -14,6 +14,7 @@
   FE <notebooks/fe_example>
   CRE <notebooks/cre_example>
   BLM <notebooks/blm_example>
+  Sorkin <notebooks/sorkin_example>
   Attrition <notebooks/attrition_example>
   Monte Carlo <notebooks/monte_carlo_example>
 
@@ -23,12 +24,15 @@
 
   internal
   FEEstimator <class-feestimator>
+  FEControlEstimator <class-fecontrolestimator>
   CREEstimator <class-creestimator>
+  Attrition <class-attrition>
   BLMModel <class-blmmodel>
   BLMEstimator <class-blmestimator>
   BLMBootstrap <class-blmbootstrap>
   BLMVarianceDecomposition <class-blmvariancedecomposition>
-  Attrition <class-attrition>
+  InteractedBLMModel <class-interactedblmmodel>
+  SorkinEstimator <class-sorkinestimator>
   MonteCarlo <class-montecarlo>
   Q <module-Q>
   Constraints <module-constraints>

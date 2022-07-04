@@ -13,7 +13,7 @@ from matplotlib import pyplot as plt
 
 class SorkinEstimator():
     '''
-    Class for estimating the fixed-point model from Sorkin (2018). Estimated firm values (log(exp(V_EE))) are stored in the attribute .V_EE.
+    Class for estimating the fixed-point revealed preference model from Sorkin (2018). Estimated firm values (log(exp(V_EE))) are stored in the attribute .V_EE.
     '''
 
     def __init__(self):
@@ -21,7 +21,7 @@ class SorkinEstimator():
 
     def fit(self, adata, max_iters=500, threshold=1e-5):
         '''
-        Estimate fixed-point model from Sorkin (2018).
+        Estimate fixed-point revealed preference model from Sorkin (2018).
 
         Arguments:
             adata (BipartiteDataFrame): event study or collapsed event study format labor data
