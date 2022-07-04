@@ -14,7 +14,7 @@ tests/.ipynb_checkpoints/
 dist/
 pytwoway.egg-info/
 build/
-docs/
+# docs/
 
 # Compiled source #
 ###################
