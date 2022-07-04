@@ -26,6 +26,7 @@ class AttritionIncreasing():
             raise ValueError('Subset fractions must be weakly increasing for AttritionIncreasing().')
 
         self.subset_fractions = subset_fractions
+        self.n_subsets = len(subset_fractions)
         self.n_subsample_draws = n_subsample_draws
         self.subsample_min_firms = subsample_min_firms
 
@@ -225,6 +226,7 @@ class AttritionDecreasing():
             raise ValueError('Subset fractions must be weakly decreasing for AttritionDecreasing().')
 
         self.subset_fractions = subset_fractions
+        self.n_subsets = len(subset_fractions)
 
     def _gen_subsets(self, bdf, clean_params=None, rng=None):
         '''

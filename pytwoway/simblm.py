@@ -108,6 +108,10 @@ _sim_params_default = ParamsDict({
         '''
             (default=False) If True, set S1 = S2.
         ''', None),
+    'linear_additive': (False, 'type', bool,
+        '''
+            (default=False) If True, make A1 and A2 linearly additive.
+        ''', None),
     'stationary_firm_type_variation': (False, 'type', bool,
         '''
             (default=False) If True, set constraints for A1 and A2 so that the firm type induced variation of worker-firm pair effects is the same in all periods. In particular, this sets A2 = np.mean(A2, axis=1) + A1 - np.mean(A1, axis=1).
@@ -378,10 +382,20 @@ class SimBLM:
 
         #### Draw parameters ####
         # Model for Y1 | Y2, l, k for movers and stayers
-        A1 = rng.normal(loc=a1_mu, scale=a1_sig, size=dims)
+        if self.params['linear_additive']:
+            alpha_1 = rng.normal(loc=a1_mu / 2, scale=a1_sig / np.sqrt(2), size=nl)
+            psi_1 = rng.normal(loc=a1_mu / 2, scale=a1_sig / np.sqrt(2), size=nk)
+            A1 = alpha_1[:, None] + psi_1
+        else:
+            A1 = rng.normal(loc=a1_mu, scale=a1_sig, size=dims)
         S1 = rng.uniform(low=s1_low, high=s1_high, size=dims)
         # Model for Y4 | Y3, l, k for movers and stayers
-        A2 = rng.normal(loc=a2_mu, scale=a2_sig, size=dims)
+        if self.params['linear_additive']:
+            alpha_2 = rng.normal(loc=a2_mu / 2, scale=a2_sig / np.sqrt(2), size=nl)
+            psi_2 = rng.normal(loc=a2_mu / 2, scale=a2_sig / np.sqrt(2), size=nk)
+            A2 = alpha_2[:, None] + psi_2
+        else:
+            A2 = rng.normal(loc=a2_mu, scale=a2_sig, size=dims)
         S2 = rng.uniform(low=s2_low, high=s2_high, size=dims)
         # Model for p(K | l, l') for movers
         if pk1_prior is None:
@@ -779,8 +793,8 @@ class SimBLM:
         sdata = sdata.reindex(sorted_cols, axis=1, copy=False)
 
         # Convert into BipartiteDataFrame
-        jdata = BipartiteDataFrame(jdata)
-        sdata = BipartiteDataFrame(sdata)
+        jdata = BipartiteDataFrame(jdata, custom_dtype_dict={col: 'categorical' for col in self.cat_cols + ['l']}, custom_how_collapse_dict={col: 'first' for col in self.cat_cols + ['l']}, custom_long_es_split_dict={'l': False})
+        sdata = BipartiteDataFrame(sdata, custom_dtype_dict={col: 'categorical' for col in self.cat_cols + ['l']}, custom_how_collapse_dict={col: 'first' for col in self.cat_cols + ['l']}, custom_long_es_split_dict={'l': False})
 
         # Combine into dictionary
         sim_data = {'jdata': jdata, 'sdata': sdata}

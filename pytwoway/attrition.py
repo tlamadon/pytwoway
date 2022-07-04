@@ -10,45 +10,7 @@ from matplotlib import pyplot as plt
 import bipartitepandas as bpd
 # from bipartitepandas.util import to_list, logger_init
 import pytwoway as tw
-
-def _scramble(lst):
-    '''
-    Reorder a list from [a, b, c, d, e] to [a, e, b, d, c]. This is used for attrition with multiprocessing, to ensure memory usage stays relatively constant, by mixing together large and small draws. Scrambled lists can be unscrambled with _unscramble().
-
-    Arguments:
-        lst (list): list to scramble
-
-    Returns:
-        (list): scrambled list
-    '''
-    new_lst = []
-    for i in range(len(lst)):
-        if i % 2 == 0:
-            new_lst.append(lst[i // 2])
-        else:
-            new_lst.append(lst[len(lst) - i // 2 - 1])
-
-    return new_lst
-
-def _unscramble(lst):
-    '''
-    Reorder a list from [a, e, b, d, c] to [a, b, c, d, e]. This undoes the scrambling done by _scramble().
-
-    Arguments:
-        lst (list): list to unscramble
-
-    Returns:
-        (list): unscrambled list
-    '''
-    front_lst = []
-    back_lst = []
-    for i, element in enumerate(lst):
-        if i % 2 == 0:
-            front_lst.append(element)
-        else:
-            back_lst.append(element)
-
-    return front_lst + list(reversed(back_lst))
+from pytwoway.util import scramble, unscramble
 
 class Attrition:
     '''
@@ -139,7 +101,7 @@ class Attrition:
     # Source: https://stackoverflow.com/questions/27054963/python-attribute-error-object-has-no-attribute
     def _attrition_interior(self, bdf, fids_to_drop, wids_to_drop, fe_params=None, cre_params=None, cluster_params=None, clean_params=None, rng=None):
         '''
-        Estimate all parameters of interest. This is the interior function to attrition_single.
+        Estimate all parameters of interest. This is the interior function to _attrition_single.
 
         Arguments:
             bdf (BipartiteDataFrame): bipartite dataframe
@@ -202,7 +164,7 @@ class Attrition:
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            res_all (dict of dicts of lists): in the first dictionary we choose 'non_he' or 'he'; in the second dictionary we choose 'fe' or 'cre'; and finally, we are given a list of results for each attrition percentage.
+            (dict of dicts of lists): in the first dictionary we choose 'non_he' or 'he'; in the second dictionary we choose 'fe' or 'cre'; and finally, we are given a list of results for each specified fraction of movers.
         '''
         if rng is None:
             rng = np.random.default_rng(None)
@@ -246,9 +208,9 @@ class Attrition:
             if ncore > 1:
                 # Multiprocessing
                 with Pool(processes=ncore) as pool:
-                    pbar = tqdm(_scramble([(bdf, *attrition_subparams) for attrition_subparams in attrition_params]), total=N)
+                    pbar = tqdm(scramble([(bdf, *attrition_subparams) for attrition_subparams in attrition_params]), total=N)
                     pbar.set_description(f'attrition, {non_he_he}')
-                    V = _unscramble(pool.starmap(self._attrition_interior, pbar))
+                    V = unscramble(pool.starmap(self._attrition_interior, pbar))
             else:
                 # Single core
                 pbar = tqdm(attrition_params, total=N)
@@ -270,7 +232,7 @@ class Attrition:
 
     def attrition(self, bdf, N=10, ncore=1, copy=False, rng=None):
         '''
-        Run Monte Carlo on attrition estimations of TwoWay to estimate variance of parameter estimates given fraction of movers remaining. Note that this overwrites the stored dataframe, meaning if you want to run attrition with different threshold number of movers, you will have to create multiple Attrition objects, or alternatively, run this method with an increasing threshold for each iteration.
+        Run Monte Carlo on attrition estimations of TwoWay to estimate variance of parameter estimates given fraction of movers remaining. Note that this overwrites the stored dataframe, meaning if you want to run attrition with different threshold number of movers, you will have to create multiple Attrition objects, or alternatively, run this method with an increasing threshold for each iteration. Saves results as a dict of dicts of lists of lists in the class attribute .attrition_res: in the first dictionary we choose 'non_he' or 'he'; in the second dictionary we choose 'fe' or 'cre'; then, we are given a list of results for each Monte Carlo simulation; and finally, for a particular Monte Carlo simulation, we are given a list of results for each specified fraction of movers.
 
         Arguments:
             bdf (BipartiteBase): bipartite dataframe (NOTE: we need to avoid saving bdf as a class attribute, otherwise multiprocessing will create a separate copy of it for each core used)
@@ -278,9 +240,6 @@ class Attrition:
             ncore (int): number of cores to use
             copy (bool): if False, avoid copy
             rng (np.random.Generator or None): NumPy random number generator. This overrides the random number generators for FE and CRE. None is equivalent to np.random.default_rng(None).
-
-        Returns:
-            res_all (dict of dicts of lists of lists): in the first dictionary we choose 'non_he' or 'he'; in the second dictionary we choose 'fe' or 'cre'; then, we are given a list of results for each Monte Carlo simulation; and finally, for a particular Monte Carlo simulation, we are given a list of results for each attrition percentage.
         '''
         if rng is None:
             rng = np.random.default_rng(None)

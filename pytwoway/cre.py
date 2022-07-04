@@ -92,35 +92,34 @@ def _pd_to_np(df, colr, colc, colv, nr, nc):
 class CREEstimator:
     '''
     Uses multigrid and partialing out to solve two way Fixed Effect model.
+
+    Arguments:
+        data (Pandas DataFrame): cross-section labor data. Data contains the following columns:
+
+            i (worker id)
+
+            j1 (firm id 1)
+
+            j2 (firm id 2)
+
+            y1 (compensation 1)
+
+            y2 (compensation 2)
+
+            t1 (last period of observation 1)
+
+            t2 (last period of observation 2)
+
+            w1 (weight 1)
+
+            w2 (weight 2)
+
+            m (0 if stayer, 1 if mover)
+
+            cs (0 if not in cross section, 1 if in cross section)
+        cre_params (ParamsDict or None): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.cre_params().
     '''
     def __init__(self, data, params=None):
-        '''
-        Arguments:
-            data (Pandas DataFrame): cross-section labor data. Data contains the following columns:
-
-                i (worker id)
-
-                j1 (firm id 1)
-
-                j2 (firm id 2)
-
-                y1 (compensation 1)
-
-                y2 (compensation 2)
-
-                t1 (last period of observation 1)
-
-                t2 (last period of observation 2)
-
-                w1 (weight 1)
-
-                w2 (weight 2)
-
-                m (0 if stayer, 1 if mover)
-
-                cs (0 if not in cross section, 1 if in cross section)
-            cre_params (ParamsDict or None): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.cre_params().
-        '''
         # Start logger
         logger_init(self)
         # self.logger.info('initializing CREEstimator object')

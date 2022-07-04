@@ -163,7 +163,7 @@ class QPConstrained:
 
         return cons.res is not None
 
-    def solve(self, P, q, solver='quadprog', verbose=False):
+    def solve(self, P, q, solver='quadprog', verbose=False, **kwargs):
         '''
         Solve a quadratic programming model of the following form:
             min_x(1/2 x.T @ P @ x + q.T @ x)
@@ -175,6 +175,7 @@ class QPConstrained:
             q (NumPy Array): q in quadratic programming problem
             solver (str): solver to use
             verbose (bool): if True, print extra output
+            **kwargs: parameters for solver
 
         Returns:
             (NumPy Array): x that solves quadratic programming problem
@@ -187,13 +188,13 @@ class QPConstrained:
                 self.A = csc_matrix(self.A)
 
         if self.G.shape[0] > 0 and self.A.shape[0] > 0:
-            self.res = solve_qp(P=P, q=q, G=self.G, h=self.h, A=self.A, b=self.b, solver=solver, verbose=verbose)
+            self.res = solve_qp(P=P, q=q, G=self.G, h=self.h, A=self.A, b=self.b, solver=solver, verbose=verbose, **kwargs)
         elif self.G.shape[0] > 0:
-            self.res = solve_qp(P=P, q=q, G=self.G, h=self.h, solver=solver, verbose=verbose)
+            self.res = solve_qp(P=P, q=q, G=self.G, h=self.h, solver=solver, verbose=verbose, **kwargs)
         elif self.A.shape[0] > 0:
-            self.res = solve_qp(P=P, q=q, A=self.A, b=self.b, solver=solver, verbose=verbose)
+            self.res = solve_qp(P=P, q=q, A=self.A, b=self.b, solver=solver, verbose=verbose, **kwargs)
         else:
-            self.res = solve_qp(P=P, q=q, solver=solver, verbose=verbose)
+            self.res = solve_qp(P=P, q=q, solver=solver, verbose=verbose, **kwargs)
 
 class Linear():
     '''
