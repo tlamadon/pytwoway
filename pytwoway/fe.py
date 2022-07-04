@@ -1425,16 +1425,27 @@ class FEEstimator:
             Pii, Pii_sq, Mii, Mii_sq, Pii_Mii = self._leverage_approx(self.ndraw_lev_he, rng)
 
         # Normalize Pii
-        if self.weighted:
-            Pii[worker_m] = Pii[worker_m] / (Pii[worker_m] + Mii[worker_m])
-            self.res['min_lev'] = Pii[worker_m].min()
-            self.res['max_lev'] = Pii[worker_m].max()
-        else:
+        if (not self.weighted) and (self.params['Sii_stayers'] == 'upper_bound'):
             Pii = Pii / (Pii + Mii)
             self.res['min_lev'] = Pii.min()
             self.res['max_lev'] = Pii.max()
+        else:
+            Pii[worker_m] = Pii[worker_m] / (Pii[worker_m] + Mii[worker_m])
+            self.res['min_lev'] = Pii[worker_m].min()
+            self.res['max_lev'] = Pii[worker_m].max()
 
         if self.res['max_lev'] >= 1:
+            if self.params['Sii_stayers'] == 'upper_bound':
+                if self.weighted:
+                    ### Weighted ###
+                    Pii_s = 1 / self.adata.loc[~worker_m, ['i', 'w']].groupby('i', sort=False)['w'].transform('sum').to_numpy()
+                    if np.any(Pii_s == 1):
+                        raise ValueError("At least one stayer has observation-weight 1, which prevents computing Pii and Sii for those stayers. Please set 'drop_single_stayers'=True during data cleaning to avoid this error.")
+                else:
+                    ### Unweighted ###
+                    if np.any(self.adata.loc[~worker_m, ['i', 'j']].groupby('i', sort=False)['j'].transform('size').to_numpy() == 1):
+                        raise ValueError("At least one stayer has only one observation, which prevents computing Pii and Sii for those stayers. Please set 'drop_single_stayers'=True during data cleaning to avoid this error.")
+
             leverage_warning = f"Max P_ii is {self.res['max_lev']} which is >= 1. This means your data is not leave-one-observation-out connected. The HE estimator requires leave-one-observation-out connected data to work properly. When cleaning your data, please set clean_params['connectedness'] = 'leave_out_observation' to correct this."
             self.logger.info(leverage_warning)
             raise ValueError(leverage_warning)

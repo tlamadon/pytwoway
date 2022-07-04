@@ -6,13 +6,13 @@ import pandas as pd
 from scipy.sparse import csc_matrix
 from matplotlib import pyplot as plt
 
-def weighted_mean(v, w):
+def weighted_mean(v, w=1):
     '''
     Compute weighted mean.
 
     Arguments:
         v (NumPy Array): vector to weight
-        w (NumPy Array): weights
+        w (NumPy Array or float): weights
 
     Returns:
         (NumPy Array): weighted mean
@@ -21,13 +21,13 @@ def weighted_mean(v, w):
         return np.mean(v)
     return np.sum(w * v) / np.sum(w)
 
-def weighted_var(v, w, dof=0):
+def weighted_var(v, w=1, dof=0):
     '''
     Compute weighted variance.
 
     Arguments:
         v (NumPy Array): vector to weight
-        w (NumPy Array): weights
+        w (NumPy Array or float): weights
         dof (int): degrees of freedom
 
     Returns:
@@ -41,15 +41,15 @@ def weighted_var(v, w, dof=0):
 
     return np.sum(w * (v - m0) ** 2) / (np.sum(w) - dof)
 
-def weighted_cov(v1, v2, w1, w2, dof=0):
+def weighted_cov(v1, v2, w1=1, w2=1, dof=0):
     '''
     Compute weighted covariance.
 
     Arguments:
         v1 (NumPy Array): vector to weight
         v2 (NumPy Array): vector to weight
-        w1 (NumPy Array): weights for v1
-        w2 (NumPy Array): weights for v2
+        w1 (NumPy Array or float): weights for v1
+        w2 (NumPy Array or float): weights for v2
         dof (int): degrees of freedom
 
     Returns:
