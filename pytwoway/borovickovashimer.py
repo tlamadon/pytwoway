@@ -31,14 +31,15 @@ def _compute_mean_sq(col_groupby, col_grouped, weights=None):
     for i, agg_subarray in enumerate(agg_array):
         # Compute Cartesian product (source: https://stackoverflow.com/a/56261134/17333120)
         cart_prod = agg_subarray[None, :] * agg_subarray[:, None]
-        cart_prod = np.sum(np.triu(cart_prod, 1))
+        # Faster sum source: https://stackoverflow.com/a/54629889/17333120
+        cart_prod = (np.sum(cart_prod) - np.trace(cart_prod)) / 2
 
         if weights is None:
             cart_prod_weights = len(agg_subarray) * (len(agg_subarray) - 1)
         else:
             cart_prod_weights = weights[i][None, :] * weights[i][:, None]
             # Multiply by 2 because estimator divides by (N * (N - 1)) for ((N * (N - 1)) / 2) parameters, so it is equivalent to taking the mean divided by 2
-            cart_prod_weights = 2 * np.sum(np.triu(cart_prod_weights, 1))
+            cart_prod_weights = (np.sum(cart_prod_weights) - np.trace(cart_prod_weights))
 
         res[i] = cart_prod / cart_prod_weights
 
