@@ -23,9 +23,9 @@ def _compute_mean_sq(col_groupby, col_grouped, weights=None):
             agg_array = np.split(col_grouped, np.unique(col_groupby, return_index=True)[1])[1:] # aggregate(col_groupby, col_grouped, 'array', fill_value=[])
         else:
             # Split data
-            splits = np.unique(col_groupby, return_index=True)[1]
-            agg_array = np.split(col_grouped, splits)[1:] # aggregate(col_groupby, col_grouped, 'array', fill_value=[])
-            weights = np.split(weights, splits)[1:] # aggregate(col_groupby, col_grouped, 'array', fill_value=[])
+            groups = np.unique(col_groupby, return_index=True)[1]
+            agg_array = np.split(col_grouped, groups)[1:] # aggregate(col_groupby, col_grouped, 'array', fill_value=[])
+            weights = np.split(weights, groups)[1:] # aggregate(col_groupby, col_grouped, 'array', fill_value=[])
 
     res = np.zeros(len(agg_array))
     for i, agg_subarray in enumerate(agg_array):
@@ -36,8 +36,7 @@ def _compute_mean_sq(col_groupby, col_grouped, weights=None):
         if weights is None:
             cart_prod_weights = len(agg_subarray) * (len(agg_subarray) - 1)
         else:
-            cart_prod_weights = weights[i][None, :] * weights[i][:, None]
-            cart_prod_weights = np.sum(np.triu(cart_prod_weights, 1))
+            cart_prod_weights = sum(weights[i])
             cart_prod_weights = cart_prod_weights * (cart_prod_weights - 1)
 
         res[i] = cart_prod / cart_prod_weights
