@@ -52,121 +52,222 @@ class BorovickovaShimerEstimator():
     def __init__(self):
         self.res = None
 
-    def fit(self, adata, weighted=True):
+    def fit(self, adata, alternative_estimator=False, weighted=True):
         '''
         Estimate the non-parametric sorting model from Borovickova and Shimer.
 
         Arguments:
             adata (BipartiteDataFrame): long or collapsed long format labor data
+            alternative_estimator (bool): if True, estimate alternative estimator
             weighted (bool): if True, run estimator with weights. These come from data column 'w'.
         '''
         if not adata._col_included('w'):
             # Skip weighting if no weight column included
             weighted = False
 
-        ### Worker estimates ###
-        if weighted:
-            # If weighted, convert y to weighted y and compute sqrt(weights)
-            adata.loc[:, 'unweighted_y'] = adata.loc[:, 'y']
-            adata.loc[:, 'y'] = adata.loc[:, 'w'].to_numpy() * adata.loc[:, 'unweighted_y'].to_numpy()
-            adata.loc[:, 'sqrt_w'] = np.sqrt(adata.loc[:, 'w'].to_numpy())
+        if not alternative_estimator:
+            #### Standard estimator ####
+            ### Worker estimates ###
+            if weighted:
+                # If weighted, convert y to weighted y and compute sqrt(weights)
+                adata.loc[:, 'unweighted_y'] = adata.loc[:, 'y']
+                adata.loc[:, 'y'] = adata.loc[:, 'w'].to_numpy() * adata.loc[:, 'unweighted_y'].to_numpy()
+                adata.loc[:, 'sqrt_w'] = np.sqrt(adata.loc[:, 'w'].to_numpy())
 
-        ## Worker mean ##
-        groupby_i = adata.groupby('i', sort=False)
-        if weighted:
-            weights_i = groupby_i['w'].sum().to_numpy()
-            lambda_i = groupby_i['y'].sum().to_numpy() / weights_i
+            ## Worker mean ##
+            groupby_i = adata.groupby('i', sort=False)
+            if weighted:
+                weights_sum_i = groupby_i['w'].sum().to_numpy()
+                lambda_i = groupby_i['y'].sum().to_numpy() / weights_sum_i
+            else:
+                weights_sum_i = groupby_i['y'].size().to_numpy()
+                lambda_i = groupby_i['y'].mean().to_numpy()
+
+            ## Worker mean squared ##
+            if weighted:
+                # If weighted, convert y to weighted y
+                weights = adata.loc[:, 'sqrt_w'].to_numpy()
+                weighted_y = weights * adata.loc[:, 'unweighted_y'].to_numpy()
+            else:
+                weights = None
+                weighted_y = adata.loc[:, 'y'].to_numpy()
+
+            lambda_sq_i = _compute_mean_sq(adata.loc[:, 'i'].to_numpy(), weighted_y, weights=weights)
+
+            ## y_bar ##
+            y_bar = np.sum(weights_sum_i * lambda_i) / np.sum(weights_sum_i)
+
+            ## sigma_sq_lambda ##
+            sigma_sq_lambda = np.sum(weights_sum_i * lambda_sq_i) / np.sum(weights_sum_i) - (y_bar ** 2)
+
+            ## Covariance (worker component) ##
+            y_i = groupby_i['y'].transform('sum').to_numpy()
+            if weighted:
+                weights_sum_i = groupby_i['w'].transform('sum').to_numpy()
+                c_i = (y_i - adata.loc[:, 'y'].to_numpy()) / (weights_sum_i - adata.loc[:, 'w'].to_numpy())
+            else:
+                weights_sum_i = groupby_i['y'].transform('size').to_numpy()
+                c_i = (y_i - adata.loc[:, 'y'].to_numpy()) / (weights_sum_i - 1)
+            adata.loc[:, 'c_i'] = c_i
+
+            ### Firm estimates ###
+            adata.sort_values('j', axis=0, inplace=True)
+
+            ## Firm mean ##
+            groupby_j = adata.groupby('j', sort=False)
+            if weighted:
+                weights_sum_j = groupby_j['w'].sum().to_numpy()
+                mu_j = groupby_j['y'].sum().to_numpy() / weights_sum_j
+            else:
+                weights_sum_j = groupby_j['y'].size().to_numpy()
+                mu_j = groupby_j['y'].mean()
+
+            ## Firm mean squared ##
+            if weighted:
+                # If weighted, convert y to weighted y
+                weights = adata.loc[:, 'sqrt_w'].to_numpy()
+                weighted_y = weights * adata.loc[:, 'unweighted_y'].to_numpy()
+            else:
+                weights = None
+                weighted_y = adata.loc[:, 'y'].to_numpy()
+
+            mu_sq_j = _compute_mean_sq(adata.loc[:, 'j'].to_numpy(), weighted_y, weights=weights)
+
+            ## sigma_sq_mu ##
+            sigma_sq_mu = np.sum(weights_sum_j * mu_sq_j) / np.sum(weights_sum_j) - (y_bar ** 2)
+
+            ## Covariance (firm component) ##
+            y_j = groupby_j['y'].transform('sum').to_numpy()
+            if weighted:
+                weights_sum_j = groupby_j['w'].transform('sum').to_numpy()
+                c_j = (y_j - adata.loc[:, 'y'].to_numpy()) / (weights_sum_j - adata.loc[:, 'w'].to_numpy())
+            else:
+                weights_sum_j = groupby_j['y'].transform('size').to_numpy()
+                c_j = (y_j - adata.loc[:, 'y'].to_numpy()) / (weights_sum_j - 1)
+
+            ### Covariance ###
+            c_i_j = adata.loc[:, 'c_i'].to_numpy() * c_j
+            if weighted:
+                cov = np.sum(adata.loc[:, 'w'].to_numpy() * c_i_j) / np.sum(adata.loc[:, 'w'].to_numpy()) - (y_bar ** 2)
+            else:
+                cov = np.mean(c_i_j) - (y_bar ** 2)
+
+            # Store results
+            self.res = {
+                'y_bar': y_bar,
+                'sigma_sq_lambda': sigma_sq_lambda,
+                'sigma_sq_mu': sigma_sq_mu,
+                'cov(lambda, mu)': cov,
+                'corr(lambda, mu)': cov / np.sqrt(sigma_sq_lambda * sigma_sq_mu)
+            }
+
         else:
-            lambda_i = groupby_i['y'].mean().to_numpy()
+            #### Alternative estimator ####
+            ### Worker estimates ###
+            if weighted:
+                # If weighted, convert y to weighted y and compute sqrt(weights)
+                adata.loc[:, 'unweighted_y'] = adata.loc[:, 'y']
+                adata.loc[:, 'y'] = adata.loc[:, 'w'].to_numpy() * adata.loc[:, 'unweighted_y'].to_numpy()
 
-        ## Worker mean squared ##
-        if weighted:
-            # If weighted, convert y to weighted y
-            weights = adata.loc[:, 'sqrt_w'].to_numpy()
-            weighted_y = weights * adata.loc[:, 'unweighted_y'].to_numpy()
-        else:
-            weights = None
-            weighted_y = adata.loc[:, 'y'].to_numpy()
+            ## Worker mean ##
+            groupby_i = adata.groupby('i', sort=False)
+            weighted_lambda_i = groupby_i['y'].mean().to_numpy()
+            if weighted:
+                weights_i = groupby_i['w'].mean().to_numpy()
+                weights_sum_i = groupby_i['w'].sum().to_numpy()
+            else:
+                weights_i = 1
+                weights_sum_i = groupby_i['y'].size().to_numpy()
 
-        ## w_bar ##
-        if weighted:
-            w_bar = np.sum(weights_i * lambda_i) / np.sum(weights_i)
-        else:
-            w_bar = np.mean(lambda_i)
+            ## Worker mean squared ##
+            weighted_lambda_sq_i = _compute_mean_sq(adata.loc[:, 'i'].to_numpy(), adata.loc[:, 'y'].to_numpy(), weights=None)
+            if weighted:
+                # FIXME I am not sure why this needs to be multiplied by 2
+                weights_sq_i = 2 * _compute_mean_sq(adata.loc[:, 'i'].to_numpy(), adata.loc[:, 'w'].to_numpy(), weights=None)
+            else:
+                # FIXME I am not sure why this needs to be multiplied by 2
+                weights_sq_i = 2 * (1 / 2)
 
-        ## sigma_sq_lambda ##
-        lambda_sq_i = _compute_mean_sq(adata.loc[:, 'i'].to_numpy(), weighted_y, weights=weights)
-        if weighted:
-            sigma_sq_lambda = np.sum(weights_i * lambda_sq_i) / np.sum(weights_i) - (w_bar ** 2)
-        else:
-            sigma_sq_lambda = np.mean(lambda_sq_i) - (w_bar ** 2)
+            ## sigma_sq_lambda ##
+            y_bar_i = np.sum(weights_sum_i * weighted_lambda_i) / np.sum(weights_sum_i * weights_i)
+            sigma_sq_lambda = np.sum(weights_sum_i * weighted_lambda_sq_i) / np.sum(weights_sum_i * weights_sq_i) - (y_bar_i ** 2)
 
-        ## Covariance (worker component) ##
-        y_i = groupby_i['y'].transform('sum').to_numpy()
-        if weighted:
-            weights_i = groupby_i['w'].transform('sum').to_numpy()
-            c_i = (y_i - adata.loc[:, 'y'].to_numpy()) / (weights_i - adata.loc[:, 'w'].to_numpy())
-        else:
-            weights_i = groupby_i['y'].transform('size').to_numpy()
-            c_i = (y_i - adata.loc[:, 'y'].to_numpy()) / (weights_i - 1)
+            ## Covariance (worker component) ##
+            size_i = groupby_i['y'].transform('size').to_numpy()
+            weighted_c_i = (groupby_i['y'].transform('sum').to_numpy() - adata.loc[:, 'y'].to_numpy()) / (size_i - 1)
+            if weighted:
+                weights_c_i = (groupby_i['w'].transform('sum').to_numpy() - adata.loc[:, 'w'].to_numpy()) / (size_i - 1)
+            else:
+                weights_c_i = 1
+            adata.loc[:, 'weighted_c_i'] = weighted_c_i
+            adata.loc[:, 'weights_c_i'] = weights_c_i
 
-        ### Firm estimates ###
-        adata.sort_values('j', axis=0, inplace=True)
+            ### Firm estimates ###
+            adata.sort_values('j', axis=0, inplace=True)
 
-        ## Firm mean ##
-        groupby_j = adata.groupby('j', sort=False)
-        if weighted:
-            weights_j = groupby_j['w'].sum().to_numpy()
-            mu_j = groupby_j['y'].sum().to_numpy() / weights_j
-        else:
-            mu_j = groupby_j['y'].mean()
+            ## Firm mean ##
+            groupby_j = adata.groupby('j', sort=False)
+            weighted_mu_j = groupby_j['y'].mean().to_numpy()
+            if weighted:
+                weights_j = groupby_j['w'].mean().to_numpy()
+                weights_sum_j = groupby_j['w'].sum().to_numpy()
+            else:
+                weights_j = 1
+                weights_sum_j = groupby_j['y'].size().to_numpy()
 
-        ## Firm mean squared ##
-        if weighted:
-            # If weighted, convert y to weighted y
-            weights = adata.loc[:, 'sqrt_w'].to_numpy()
-            weighted_y = weights * adata.loc[:, 'unweighted_y'].to_numpy()
-        else:
-            weights = None
-            weighted_y = adata.loc[:, 'y'].to_numpy()
+            ## Firm mean squared ##
+            weighted_mu_sq_j = _compute_mean_sq(adata.loc[:, 'j'].to_numpy(), adata.loc[:, 'y'].to_numpy(), weights=None)
+            if weighted:
+                # FIXME I am not sure why this needs to be multiplied by 2
+                weights_sq_j = 2 * _compute_mean_sq(adata.loc[:, 'j'].to_numpy(), adata.loc[:, 'w'].to_numpy(), weights=None)
+            else:
+                # FIXME I am not sure why this needs to be multiplied by 2
+                weights_sq_j = 2 * (1 / 2)
 
-        ## sigma_sq_mu ##
-        mu_sq_j = _compute_mean_sq(adata.loc[:, 'j'].to_numpy(), weighted_y, weights=weights)
-        if weighted:
-            sigma_sq_mu = np.sum(weights_j * mu_sq_j) / np.sum(weights_j) - (w_bar ** 2)
-        else:
-            sigma_sq_mu = np.mean(mu_sq_j) - (w_bar ** 2)
+            ## sigma_sq_mu ##
+            y_bar_j = np.sum(weights_sum_j * weighted_mu_j) / np.sum(weights_sum_j * weights_j)
+            sigma_sq_mu = np.sum(weights_sum_j * weighted_mu_sq_j) / np.sum(weights_sum_j * weights_sq_j) - (y_bar_j ** 2)
 
-        ## Covariance (firm component) ##
-        y_j = groupby_j['y'].transform('sum').to_numpy()
-        if weighted:
-            weights_j = groupby_j['w'].transform('sum').to_numpy()
-            c_j = (y_j - adata.loc[:, 'y'].to_numpy()) / (weights_j - adata.loc[:, 'w'].to_numpy())
-        else:
-            weights_j = groupby_j['y'].transform('size').to_numpy()
-            c_j = (y_j - adata.loc[:, 'y'].to_numpy()) / (weights_j - 1)
+            ## Covariance (firm component) ##
+            size_j = groupby_j['y'].transform('size').to_numpy()
+            weighted_c_j = (groupby_j['y'].transform('sum').to_numpy() - adata.loc[:, 'y'].to_numpy()) / (size_j - 1)
+            if weighted:
+                weights_c_j = (groupby_j['w'].transform('sum').to_numpy() - adata.loc[:, 'w'].to_numpy()) / (size_j - 1)
+            else:
+                weights_c_j = 1
 
-        ### Covariance ###
-        c_i_j = c_i * c_j
-        if weighted:
-            cov = np.sum(adata.loc[:, 'w'].to_numpy() * c_i_j) / np.sum(adata.loc[:, 'w'].to_numpy()) - (w_bar ** 2)
-        else:
-            cov = np.mean(c_i_j) - (w_bar ** 2)
+            ### Covariance ###
+            weighted_c_i_j = adata.loc[:, 'weighted_c_i'].to_numpy() * weighted_c_j
+            weights_c_i_j = adata.loc[:, 'weights_c_i'].to_numpy() * weights_c_j
+            if weighted:
+                cov = np.sum(adata.loc[:, 'w'].to_numpy() * weighted_c_i_j) / np.sum(adata.loc[:, 'w'].to_numpy() * weights_c_i_j) - (y_bar_i * y_bar_j)
+            else:
+                cov = np.mean(weighted_c_i_j) - (y_bar_i * y_bar_j)
+
+            # Store results
+            self.res = {
+                'y_bar_i': y_bar_i,
+                'y_bar_j': y_bar_j,
+                'sigma_sq_lambda': sigma_sq_lambda,
+                'sigma_sq_mu': sigma_sq_mu,
+                'cov(lambda, mu)': cov,
+                'corr(lambda, mu)': cov / np.sqrt(sigma_sq_lambda * sigma_sq_mu)
+            }
 
         ### Restore values ###
         if weighted:
             # Restore y
             adata.loc[:, 'y'] = adata.loc[:, 'unweighted_y']
-            adata.drop(['unweighted_y', 'sqrt_w'], axis=1, inplace=True)
+
+            # Drop columns
+            for col in ['unweighted_y', 'sqrt_w']:
+                if col in adata.columns:
+                    adata.drop(col, axis=1, inplace=True)
+
+        # Drop columns
+        for col in ['c_i', 'weighted_c_i', 'weights_c_i']:
+            if col in adata.columns:
+                adata.drop(col, axis=1, inplace=True)
 
         # Sort
         adata.sort_rows(copy=False)
-        
-        # Store results
-        self.res = {
-            'w_bar': w_bar,
-            'sigma_sq_lambda': sigma_sq_lambda,
-            'sigma_sq_mu': sigma_sq_mu,
-            'cov(lambda, mu)': cov,
-            'corr(lambda, mu)': cov / np.sqrt(sigma_sq_lambda * sigma_sq_mu)
-        }
