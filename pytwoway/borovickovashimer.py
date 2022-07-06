@@ -88,19 +88,18 @@ class BorovickovaShimerEstimator():
             weights = None
             weighted_y = adata.loc[:, 'y'].to_numpy()
 
-        lambda_sq_i = _compute_mean_sq(adata.loc[:, 'i'].to_numpy(), weighted_y, weights=weights)
-
         ## w_bar ##
         if weighted:
             w_bar = np.sum(weights_i * lambda_i) / np.sum(weights_i)
         else:
             w_bar = np.mean(lambda_i)
 
-        ## sigma_2_lambda ##
+        ## sigma_sq_lambda ##
+        lambda_sq_i = _compute_mean_sq(adata.loc[:, 'i'].to_numpy(), weighted_y, weights=weights)
         if weighted:
             sigma_sq_lambda = np.sum(weights_i * lambda_sq_i) / np.sum(weights_i) - (w_bar ** 2)
         else:
-            sigma_sq_lambda = np.mean(lambda_i) - (w_bar ** 2)
+            sigma_sq_lambda = np.mean(lambda_sq_i) - (w_bar ** 2)
 
         ## Covariance (worker component) ##
         y_i = groupby_i['y'].transform('sum').to_numpy()
@@ -131,13 +130,12 @@ class BorovickovaShimerEstimator():
             weights = None
             weighted_y = adata.loc[:, 'y'].to_numpy()
 
+        ## sigma_sq_mu ##
         mu_sq_j = _compute_mean_sq(adata.loc[:, 'j'].to_numpy(), weighted_y, weights=weights)
-
-        ## sigma_2_mu ##
         if weighted:
-            sigma_2_mu = np.sum(weights_j * mu_sq_j) / np.sum(weights_j) - (w_bar ** 2)
+            sigma_sq_mu = np.sum(weights_j * mu_sq_j) / np.sum(weights_j) - (w_bar ** 2)
         else:
-            sigma_2_mu = np.mean(lambda_i) - (w_bar ** 2)
+            sigma_sq_mu = np.mean(mu_sq_j) - (w_bar ** 2)
 
         ## Covariance (firm component) ##
         y_j = groupby_j['y'].transform('sum').to_numpy()
@@ -168,7 +166,7 @@ class BorovickovaShimerEstimator():
         self.res = {
             'w_bar': w_bar,
             'sigma_sq_lambda': sigma_sq_lambda,
-            'sigma_2_mu': sigma_2_mu,
+            'sigma_sq_mu': sigma_sq_mu,
             'cov(lambda, mu)': cov,
-            'corr(lambda, mu)': cov / np.sqrt(sigma_sq_lambda * sigma_2_mu)
+            'corr(lambda, mu)': cov / np.sqrt(sigma_sq_lambda * sigma_sq_mu)
         }
