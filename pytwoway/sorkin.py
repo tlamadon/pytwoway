@@ -21,7 +21,7 @@ class SorkinEstimator():
 
     def fit(self, adata, max_iters=500, threshold=1e-5):
         '''
-        Estimate fixed-point revealed preference model from Sorkin (2018).
+        Estimate the fixed-point revealed preference model from Sorkin (2018).
 
         Arguments:
             adata (BipartiteDataFrame): event study or collapsed event study format labor data
