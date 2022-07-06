@@ -36,8 +36,9 @@ def _compute_mean_sq(col_groupby, col_grouped, weights=None):
         if weights is None:
             cart_prod_weights = len(agg_subarray) * (len(agg_subarray) - 1)
         else:
-            cart_prod_weights = sum(weights[i])
-            cart_prod_weights = cart_prod_weights * (cart_prod_weights - 1)
+            cart_prod_weights = weights[i][None, :] * weights[i][:, None]
+            # Multiply by 2 because estimator divides by (N * (N - 1)) for ((N * (N - 1)) / 2) parameters, so it is equivalent to taking the mean divided by 2
+            cart_prod_weights = 2 * np.sum(np.triu(cart_prod_weights, 1))
 
         res[i] = cart_prod / cart_prod_weights
 
