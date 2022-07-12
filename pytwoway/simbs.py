@@ -43,7 +43,7 @@ _sim_bs_params_default = ParamsDict({
         ''', '>= 0'),
     'sigma_wages': (2, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=2) Standard error of wages.
+            (default=2) Standard error of wages. Must be at least sqrt((sigma_lambda ** 2 + sigma_mu ** 2 - 2 * rho * sigma_lambda * sigma_mu) / (1 - rho ** 2)).
         ''', '>= 0'),
     'rho': (0.25, 'type_constrained', ((float, int), _in_minus_1_1),
         '''
@@ -77,6 +77,14 @@ class SimBS:
     def __init__(self, sim_params=None):
         if sim_params is None:
             sim_params = sim_bs_params()
+
+        # Check that sigma_wages is large enough
+        sigma_lambda, sigma_mu, sigma_wages, rho = sim_params.get_multiple(('sigma_lambda', 'sigma_mu', 'sigma_wages', 'rho'))
+
+        thres = np.sqrt((sigma_lambda ** 2 + sigma_mu ** 2 - 2 * rho * sigma_lambda * sigma_mu) / (1 - rho ** 2))
+
+        if sigma_wages < thres:
+            raise ValueError(f"'sigma_wages' ({sigma_wages:2.2f}) must be at least sqrt(('sigma_lambda' ** 2 + 'sigma_mu' ** 2 - 2 * 'rho' * 'sigma_lambda' * 'sigma_mu') / (1 - 'rho' ** 2)) ({thres:2.2f}).")
 
         # Store parameters
         self.params = sim_params
