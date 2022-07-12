@@ -33,7 +33,7 @@ The package provides implementations for a series of estimators for models with 
 4. group fixed estimator as in `Bonhomme, Lamadon, and Manresa <https://doi.org/10.3982/ECTA15722>`_
 5. group correlated random effect as presented in the main paper
 6. fixed-point revealed preference estimator as in `Sorkin <https://doi.org/10.1093/qje/qjy001>`_
-7. non-parametric sorting estimator as in `Borovickova and Shimer <https://drive.google.com/file/d/1KW0sZ4nV9bIdVhcs-UW8yW_dzUr782v5/view>`_
+7. non-parametric sorting estimator as in `Borovičková and Shimer <https://drive.google.com/file/d/1KW0sZ4nV9bIdVhcs-UW8yW_dzUr782v5/view>`_
 
 .. |binder_fe| image:: https://mybinder.org/badge_logo.svg 
     :target: https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fsource%2Fnotebooks%2Ffe_example.ipynb
