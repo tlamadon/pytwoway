@@ -5,7 +5,7 @@ Python API
 Overview
 ---------
 
-The main PyTwoWay API is split into multiple classes for estimating models and one for simulating BLM data. It also has three modules: one for constructing the variance-covariance matrix for AKM and its bias corrections; one for generating constraints for BLM; and one for generating attrition plots using increasing (building up from a fixed set of firms) or decreasing (with varying sets of firms) fractions of movers. PyTwoWay is canonically imported using
+The main PyTwoWay API is split into multiple classes for estimating models and two for simulating data according to the BLM and Borovickova-Shimer dgps. It also has three modules: one for constructing the variance-covariance matrix for AKM and its bias corrections; one for generating constraints for BLM; and one for generating attrition plots using increasing (building up from a fixed set of firms) or decreasing (with varying sets of firms) fractions of movers. PyTwoWay is canonically imported using
 
   .. code-block:: python
 
@@ -30,13 +30,17 @@ Classes
 
 * ``pytwoway.InteractedBLMModel``: Class for estimating the interacted BLM model
 
-* ``pytwoway.SorkinEstimator``: Class for estimating the Sorkin fixed-point revealed preference model
+* ``pytwoway.SorkinEstimator``: Class for estimating the fixed-point revealed preference model from Sorkin
+
+* ``pytwoway.BSEstimator``: Class for estimating the non-parametric sorting model from Borovickova and Shimer
 
 * ``pytwoway.Attrition``: Class for generating attrition plots
 
 * ``pytwoway.MonteCarlo``: Class for running Monte Carlo estimations
 
 * ``pytwoway.SimBLM``: Class for simulating BLM data
+
+* ``pytwoway.SimBS``: Class for simulating Borovickova-Shimer data
 
 Modules
 ~~~~~~~
@@ -135,6 +139,14 @@ Classes and Methods
    ~pytwoway.SorkinEstimator
    ~pytwoway.SorkinEstimator.fit
 
+``pytwoway.BSEstimator``
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+
+   ~pytwoway.BSEstimator
+   ~pytwoway.BSEstimator.fit
+
 ``pytwoway.Attrition``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -161,6 +173,14 @@ Classes and Methods
 
    ~pytwoway.SimBLM
    ~pytwoway.SimBLM.simulate
+
+``pytwoway.SimBS``
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+
+   ~pytwoway.SimBS
+   ~pytwoway.SimBS.simulate
 
 Modules and Methods
 -------------------

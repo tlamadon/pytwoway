@@ -25,7 +25,7 @@ def test_blm_control_constraints_linear():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -89,7 +89,7 @@ def test_blm_control_constraints_linear_additive():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -153,7 +153,7 @@ def test_blm_control_constraints_monotonic():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -216,7 +216,7 @@ def test_blm_control_constraints_stationary_firm_type_variation():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -275,7 +275,7 @@ def test_blm_control_constraints_lb_ub():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': -0.5, 'a2_sig': 2.5,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -352,7 +352,7 @@ def test_blm_control_normalization():
         'a1_mu': -0.15, 'a1_sig': 0.05, 'a2_mu': 0.15, 'a2_sig': 0.05,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -467,7 +467,7 @@ def test_blm_control_normalization_primary_period_second():
         'a1_mu': -0.15, 'a1_sig': 0.05, 'a2_mu': 0.15, 'a2_sig': 0.05,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -583,7 +583,7 @@ def test_blm_control_normalization_primary_period_all():
         'a1_mu': -0.15, 'a1_sig': 0.05, 'a2_mu': 0.15, 'a2_sig': 0.05,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,

@@ -321,7 +321,7 @@ def test_fe_controls_novar():
         'worker_type_interaction': False,
         'stationary_A': True, 'stationary_S': True
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl,
         'nk': nk,
         'firm_size': 40,
@@ -456,7 +456,7 @@ def test_fe_controls_var():
         'worker_type_interaction': False,
         'stationary_A': True, 'stationary_S': True
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl,
         'nk': nk,
         'firm_size': 40,

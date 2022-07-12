@@ -93,4 +93,57 @@ To run in Python:
    blm_estimator.plot_log_earnings()
    blm_estimator.plot_type_proportions()
 
+- If you want to estimate Sorkin:
+
+.. code-block:: python
+
+   import pandas as pd
+   import bipartitepandas as bpd
+   import pytwoway as tw
+   # Load data into Pandas DataFrame
+   df = pd.read_csv(filepath)
+   # Convert into BipartitePandas DataFrame
+   bdf = bpd.BipartiteDataFrame(i=df['i'], j=df['j'], y=df['y'], t=df['t'])
+   # Clean data and collapse it at the worker-firm spell level
+   clean_params = bpd.clean_params({'connectedness': 'strongly_connected'})
+   bdf = bdf.clean(clean_params).collapse()
+   # Convert to event study format
+   bdf = bdf.to_eventstudy()
+   # Initialize Sorkin estimator
+   sorkin_estimator = tw.SorkinEstimator()
+   # Fit Sorkin estimator
+   sorkin_estimator.fit(bdf)
+   # Investigate results
+   print(sorkin_estimator.V_EE)
+
+- If you want to estimate Borovickova-Shimer:
+
+.. code-block:: python
+
+   import pandas as pd
+   import bipartitepandas as bpd
+   import pytwoway as tw
+   # Load data into Pandas DataFrame
+   df = pd.read_csv(filepath)
+   # Convert into BipartitePandas DataFrame
+   bdf = bpd.BipartiteDataFrame(i=df['i'], j=df['j'], y=df['y'], t=df['t'])
+   # Clean data and collapse it at the worker-firm spell level
+   bdf = bdf.clean().collapse()
+   ## Make sure all workers and firms have at least 2 observations ##
+   prev_len = 0
+   while prev_len != len(bdf):
+      prev_len = len(bdf)
+
+      # Drop stayers
+      bdf = bdf.loc[bdf.get_worker_m(is_sorted=True), :].clean()
+
+      # Drop firms with a single observation
+      bdf = bdf.min_obs_frame(is_sorted=True, copy=False).clean()
+   # Initialize Borovickova-Shimer estimator
+   bs_estimator = tw.BSEstimator()
+   # Fit Borovickova-Shimer estimator
+   bs_estimator.fit(bdf)
+   # Investigate results
+   print(bs_estimator.res)
+
 Check out the notebooks for more detailed examples!

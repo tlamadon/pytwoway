@@ -15,6 +15,7 @@
   CRE <notebooks/cre_example>
   BLM <notebooks/blm_example>
   Sorkin <notebooks/sorkin_example>
+  Borovickova-Shimer <notebooks/borovickovashimer_example>
   Attrition <notebooks/attrition_example>
   Monte Carlo <notebooks/monte_carlo_example>
 
@@ -33,6 +34,7 @@
   BLMVarianceDecomposition <class-blmvariancedecomposition>
   InteractedBLMModel <class-interactedblmmodel>
   SorkinEstimator <class-sorkinestimator>
+  BSEstimator <class-bsestimator>
   MonteCarlo <class-montecarlo>
   Q <module-Q>
   Constraints <module-constraints>
