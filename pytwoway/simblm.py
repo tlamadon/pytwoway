@@ -19,7 +19,7 @@ def _min_gt0(a):
     return np.min(a) > 0
 
 # Define default parameter dictionaries
-_sim_params_default = ParamsDict({
+_sim_blm_params_default = ParamsDict({
     'nl': (6, 'type_constrained', (int, _gteq1),
         '''
             (default=6) Number of worker types.
@@ -31,7 +31,7 @@ _sim_params_default = ParamsDict({
     'firm_size': (10, 'type_constrained', ((float, int), _gt0),
         '''
             (default=10) Average number of stayers per firm.
-        ''', '>= 1'),
+        ''', '> 0'),
     'categorical_controls': (None, 'dict_of_type_none', ParamsDict,
         '''
             (default=None) Dictionary linking column names to instances of tw.sim_categorical_control_params(). Each instance specifies a new categorical control variable. Run tw.sim_categorical_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
@@ -118,17 +118,17 @@ _sim_params_default = ParamsDict({
         ''', None)
 })
 
-def sim_params(update_dict=None):
+def sim_blm_params(update_dict=None):
     '''
-    Dictionary of default sim_params. Run tw.sim_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default sim_blm_params. Run tw.sim_blm_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
         update_dict (dict): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of sim_params
+        (ParamsDict) dictionary of sim_blm_params
     '''
-    new_dict = _sim_params_default.copy()
+    new_dict = _sim_blm_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
@@ -274,12 +274,12 @@ class SimBLM:
     Class of SimBLM, where SimBLM simulates a bipartite BLM network of firms and workers.
 
     Arguments:
-        sim_params (ParamsDict): dictionary of parameters for simulating data. Run tw.sim_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.sim_params().
+        sim_params (ParamsDict): dictionary of parameters for simulating data. Run tw.sim_blm_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.sim_blm_params().
     '''
 
     def __init__(self, sim_params=None):
         if sim_params is None:
-            sim_params = sim_params()
+            sim_params = sim_blm_params()
         # Store parameters
         self.params = sim_params
         nl, nk, NNm, NNs = self.params.get_multiple(('nl', 'nk', 'NNm', 'NNs'))
@@ -731,7 +731,7 @@ class SimBLM:
 
     def simulate(self, return_parameters=False, rng=None):
         '''
-        Simulates data (movers and stayers) and attached firms ids. All firms have the same expected size. Columns are as follows: y1/y2=wage; j1/j2=firm id; g1/g2=firm type; l=worker type.
+        Simulate data (movers and stayers). All firms have the same expected size. Columns are as follows: y1/y2=wage; j1/j2=firm id; g1/g2=firm type; l=worker type.
 
         Arguments:
             return_parameters (bool): if True, return tuple of (simulated data, simulated parameters); otherwise, return only simulated data

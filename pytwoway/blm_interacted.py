@@ -10,8 +10,8 @@ import pytwoway as tw
 
 # import bipartitepandas as bpd
 # rng = np.random.default_rng(1234)
-a = bpd.BipartiteDataFrame(bpd.SimBipartite(bpd.sim_params({'n_workers': 1000, 'w_sig': 0})).simulate()).clean().collapse(level='match').construct_artificial_time()
-jdata = a[a.get_worker_m()].clean()
+# a = bpd.BipartiteDataFrame(bpd.SimBipartite(bpd.sim_params({'n_workers': 1000, 'w_sig': 0})).simulate()).clean().collapse(level='match').construct_artificial_time()
+# jdata = a[a.get_worker_m()].clean()
 # jdata = jdata.cluster().to_eventstudy()
 # # jdata = jdata.cluster()
 # # jdata['j'] = jdata['g'].copy()

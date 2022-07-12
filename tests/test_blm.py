@@ -50,7 +50,7 @@ def test_blm_monotonic_1():
         'worker_type_interaction': False,
         'stationary_A': True, 'stationary_S': True
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl,
         'nk': nk,
         'firm_size': 10,
@@ -174,7 +174,7 @@ def test_blm_monotonic_1():
 #         'worker_type_interaction': False,
 #         'stationary_A': True, 'stationary_S': True
 #     })
-#     blm_sim_params = tw.sim_params({
+#     blm_sim_params = tw.sim_blm_params({
 #         'nl': nl,
 #         'nk': nk,
 #         'firm_size': 10,
@@ -264,7 +264,7 @@ def test_blm_qi():
     nl = 3
     nk = 4
     # Define parameter dictionaries
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
         's1_low': 0, 's1_high': 1, 's2_low': 0, 's2_high': 1
@@ -299,7 +299,7 @@ def test_blm_start_at_truth_no_controls():
     nl = 2 # Number of worker types
     nk = 3 # Number of firm types
     # Define parameter dictionaries
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -338,7 +338,7 @@ def test_blm_full_estimation_no_controls():
     nl = 2 # Number of worker types
     nk = 3 # Number of firm types
     # Define parameter dictionaries
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -380,7 +380,7 @@ def test_blm_start_at_truth_cat_tv_wi():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -480,7 +480,7 @@ def test_blm_full_estimation_cat_tv_wi():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -552,7 +552,7 @@ def test_blm_start_at_truth_cat_tnv_wi():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -636,7 +636,7 @@ def test_blm_full_estimation_cat_tnv_wi():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -724,7 +724,7 @@ def test_blm_start_at_truth_cat_tv():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -806,7 +806,7 @@ def test_blm_full_estimation_cat_tv():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -878,7 +878,7 @@ def test_blm_start_at_truth_cat_tnv():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -966,7 +966,7 @@ def test_blm_full_estimation_cat_tnv():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -1038,7 +1038,7 @@ def test_blm_start_at_truth_cts_tv_wi():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -1099,7 +1099,7 @@ def test_blm_full_estimation_cts_tv_wi():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -1151,7 +1151,7 @@ def test_blm_start_at_truth_cts_tnv_wi():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -1212,7 +1212,7 @@ def test_blm_full_estimation_cts_tnv_wi():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -1264,7 +1264,7 @@ def test_blm_start_at_truth_cts_tv():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -1325,7 +1325,7 @@ def test_blm_full_estimation_cts_tv():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -1377,7 +1377,7 @@ def test_blm_start_at_truth_cts_tnv():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
@@ -1438,7 +1438,7 @@ def test_blm_full_estimation_cts_tnv():
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
         's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
     })
-    blm_sim_params = tw.sim_params({
+    blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,

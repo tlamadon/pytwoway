@@ -35,19 +35,20 @@ def _compute_mean_sq(col_groupby, col_grouped, weights=None):
         cart_prod = (np.sum(cart_prod) - np.trace(cart_prod)) / 2
 
         if weights is None:
-            cart_prod_weights = len(agg_subarray) * (len(agg_subarray) - 1)
+            # Taking mean over ((N * (N - 1)) / 2) parameters
+            cart_prod_weights = (len(agg_subarray) * (len(agg_subarray) - 1)) / 2
         else:
             cart_prod_weights = weights[i][None, :] * weights[i][:, None]
-            # Multiply by 2 because estimator divides by (N * (N - 1)) for ((N * (N - 1)) / 2) parameters, so it is equivalent to taking the mean divided by 2
-            cart_prod_weights = (np.sum(cart_prod_weights) - np.trace(cart_prod_weights))
+            # Taking mean over ((N * (N - 1)) / 2) parameters
+            cart_prod_weights = (np.sum(cart_prod_weights) - np.trace(cart_prod_weights)) / 2
 
         res[i] = cart_prod / cart_prod_weights
 
     return res
 
-class BorovickovaShimerEstimator():
+class BSEstimator():
     '''
-    Class for estimating the non-parametric sorting model from Borovickova and Shimer.
+    Class for estimating the non-parametric sorting model from Borovickova and Shimer. Results are stored in class attribute .res.
     '''
 
     def __init__(self):
@@ -59,7 +60,7 @@ class BorovickovaShimerEstimator():
 
         Arguments:
             adata (BipartiteDataFrame): long or collapsed long format labor data
-            alternative_estimator (bool): if True, estimate alternative estimator
+            alternative_estimator (bool): if True, estimate using alternative estimator
             weighted (bool): if True, run estimator with weights. These come from data column 'w'.
         '''
         if not adata._col_included('w'):
