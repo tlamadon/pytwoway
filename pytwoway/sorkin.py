@@ -52,6 +52,7 @@ class SorkinEstimator():
             new_guess /= np.sum(new_guess)
             if np.max(np.abs((new_guess - prev_guess) / prev_guess)) <= threshold:
                 break
+            prev_guess = new_guess
 
         # Flatten and take log
         self.V_EE = np.log(new_guess.flatten())
