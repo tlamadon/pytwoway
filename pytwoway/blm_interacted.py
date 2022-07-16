@@ -3,21 +3,10 @@ Implement the interacted estimator from Bonhomme, Lamadon, & Manresa.
 '''
 from tqdm.auto import tqdm, trange
 import numpy as np
-from scipy.sparse import csc_matrix, hstack
+from scipy.sparse import csc_matrix, eye, hstack
 from scipy.sparse.linalg import eigs, inv
 from bipartitepandas.util import ChainedAssignment
 import pytwoway as tw
-
-# import bipartitepandas as bpd
-# rng = np.random.default_rng(1234)
-# a = bpd.BipartiteDataFrame(bpd.SimBipartite(bpd.sim_params({'n_workers': 1000, 'w_sig': 0})).simulate()).clean().collapse(level='match').construct_artificial_time()
-# jdata = a[a.get_worker_m()].clean()
-# jdata = jdata.cluster().to_eventstudy()
-# # jdata = jdata.cluster()
-# # jdata['j'] = jdata['g'].copy()
-# # jdata = bpd.BipartiteDataFrame(jdata[['i', 'j', 'y']])
-# # jdata = jdata.clean().collapse(level='match').construct_artificial_time()
-# # jdata = a[a.get_worker_m()].clean()
 
 class InteractedBLMModel():
     '''
@@ -185,177 +174,166 @@ class InteractedBLMModel():
 
         return evec
 
-    def fit_b_linear(self, jdata, norm_fid=0, rng=None):
+    def fit_b_liml_regular(self, jdata, norm_fid=0, coarse=0, tik=0):
         '''
-        Fit linear estimator for b using LIML.
+        Fit b using regular LIML.
 
         Arguments:
             jdata (BipartitePandas DataFrame): data for movers
             norm_fid (int): firm id to normalize
-            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+            coarse (float): make joint firm indicator coarser by dividing the second firm id by `coarse`
+            tik (float): add tik * I to instrument before inverting to make full rank; used when coarse != 0
 
         Returns:
             (NumPy Array): estimated b
         '''
-        if rng is None:
-            rng = np.random.default_rng(None)
+        if (coarse != 0) and (tik == 0):
+            raise ValueError('If `coarse` != 0, then must also set `tik` != 0.')
 
         # Parameters
-        nk, ni = jdata.n_clusters(), len(jdata)
+        nf, ni = jdata.n_firms(), len(jdata)
 
         # Store wage outcomes and groups
         Y1 = jdata.loc[:, 'y1'].to_numpy()
         Y2 = jdata.loc[:, 'y2'].to_numpy()
-        G1 = jdata.loc[:, 'g1'].to_numpy().astype(int, copy=False)
-        G2 = jdata.loc[:, 'g2'].to_numpy().astype(int, copy=False)
+        J1 = jdata.loc[:, 'j1'].to_numpy()
+        J2 = jdata.loc[:, 'j2'].to_numpy()
 
         ## Sparse matrix representations ##
-        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
-        GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
-        YY1 = csc_matrix((Y1, (range(ni), G1)), shape=(ni, nk))
-        YY2 = csc_matrix((Y2, (range(ni), G2)), shape=(ni, nk))
+        JJ1 = csc_matrix((np.ones(ni), (range(ni), J1)), shape=(ni, nf))
+        JJ2 = csc_matrix((np.ones(ni), (range(ni), J2)), shape=(ni, nf))
+        YY1 = csc_matrix((Y1, (range(ni), J1)), shape=(ni, nf))
+        YY2 = csc_matrix((Y2, (range(ni), J2)), shape=(ni, nf))
+
+        if coarse == 0:
+            # Joint firm indicator
+            KK = J1 + nf * J2
+
+            # Transition probability matrix (in this case, matrix of instruments (j1, j2))
+            JJ12 = csc_matrix((np.ones(ni), (range(ni), KK)), shape=(ni, nf ** 2))
+        else:
+            ## Firm 1 ##
+            # Joint firm indicator
+            J2_KK = (J2 / coarse).astype(int, copy=False)
+            KK1 = J1 + nf * J2_KK
+
+            # Transition probability matrix (in this case, matrix of instruments (j1, j2))
+            JJ12_1 = csc_matrix((np.ones(ni), (range(ni), KK1)), shape=(ni, nf * (np.max(J2_KK) + 1)))
+
+            ## Firm 2 ##
+            # Joint firm indicator
+            J1_KK = (J1 / coarse).astype(int, copy=False)
+            KK2 = J2 + nf * J1_KK
+
+            # Transition probability matrix (in this case, matrix of instruments (j1, j2))
+            JJ12_2 = csc_matrix((np.ones(ni), (range(ni), KK2)), shape=(ni, nf * (np.max(J1_KK) + 1)))
+
+            ## Combine ##
+            JJ12 = hstack([JJ12_1, JJ12_2])
+
+        # Drop zero columns of JJ12
+        JJ12_zeros = (np.asarray(JJ12.sum(axis=0))[0, :] == 0)
+        JJ12 = JJ12[:, ~(JJ12_zeros)]
+
+        ## Combine matrices ##
+        XX = hstack([YY2, -YY1, JJ1[:, 1:], -JJ2])
+
+        ## LIML ##
+        JJtXX = JJ12.T @ XX
+        Wz = JJtXX.T @ inv((JJ12.T @ JJ12 + tik * eye(JJ12.shape[1])).tocsc()) @ JJtXX
+        Wx = (XX.T @ XX).tocsc()
+        del JJtXX
+
+        # Smallest eigenvector
+        WW = inv(Wx) @ Wz
+        evals, evecs = eigs(WW)
+        evec = np.real(evecs[:, np.argmin(evals)])
+
+        ## Extract results ##
+        b_liml = evec / evec[norm_fid]
+        B2 = 1 / b_liml[: nf]
+        B1 = 1 / b_liml[nf: 2 * nf]
+        A1 = np.concatenate([[0], b_liml[2 * nf: 3 * nf - 1]]) * B1
+        A2 = b_liml[3 * nf - 1: 4 * nf - 1] * B2
+
+        return B1, B2
+
+    def fit_b_liml_single_iv(self, jdata, norm_fid=0):
+        '''
+        Fit b using LIML on model in difference, single equation IV.
+
+        Arguments:
+            jdata (BipartitePandas DataFrame): data for movers
+            norm_fid (int): firm id to normalize
+
+        Returns:
+            (NumPy Array): estimated b
+        '''
+        # Parameters
+        nf, ni = jdata.n_firms(), len(jdata)
+
+        # Store wage outcomes and groups
+        Y1 = jdata.loc[:, 'y1'].to_numpy()
+        Y2 = jdata.loc[:, 'y2'].to_numpy()
+        J1 = jdata.loc[:, 'j1'].to_numpy()
+        J2 = jdata.loc[:, 'j2'].to_numpy()
+
+        ## Sparse matrix representations ##
+        JJ1 = csc_matrix((np.ones(ni), (range(ni), J1)), shape=(ni, nf))
+        JJ2 = csc_matrix((np.ones(ni), (range(ni), J2)), shape=(ni, nf))
+        YY1 = csc_matrix((Y1, (range(ni), J1)), shape=(ni, nf))
+        YY2 = csc_matrix((Y2, (range(ni), J2)), shape=(ni, nf))
 
         # Joint firm indicator
-        KK = G1 + nk * G2
+        KK = J1 + nf * J2
 
         # Transition probability matrix (in this case, matrix of instruments (j1, j2))
-        GG12 = csc_matrix((np.ones(ni), (range(ni), KK)), shape=(ni, nk ** 2))
+        JJ12 = csc_matrix((np.ones(ni), (range(ni), KK)), shape=(ni, nf ** 2))
+
+        # Drop zero columns of JJ12
+        JJ12_zeros = (np.asarray(JJ12.sum(axis=0))[0, :] == 0)
+        JJ12 = JJ12[:, ~(JJ12_zeros)]
 
         ## Combine matrices ##
         X1 = hstack([YY1, YY2])
-        X2 = hstack([GG1, GG2])
+        X2 = hstack([JJ1, JJ2])
 
         ## Define normalization ##
         Y = -X1[:, norm_fid]
-        X1 = X1[:, list(range(norm_fid)) + list(range(norm_fid + 1, 2 * nk))]
-        X2 = X2[:, range(2 * nk - 1)]
+        X1 = X1[:, list(range(norm_fid)) + list(range(norm_fid + 1, 2 * nf))]
+        X2 = X2[:, range(2 * nf - 1)]
 
         ## Combine matrices ##
         R = hstack([Y, X1])
         XX = hstack([X1, X2])
 
         ## LIML ##
-        GGtGG = (GG12.T @ GG12).tocsc()
+        JJtJJinv = inv((JJ12.T @ JJ12).tocsc())
         RtR = R.T @ R
-        RtGG = R.T @ GG12
-        RtX2 = R.T @ X2
-        Wz = (RtR - RtGG @ inv(GGtGG) @ RtGG.T).tocsc()
-        Wx = RtR - RtX2 @ inv((X2.T @ X2).tocsc()) @ RtX2.T
-        del RtR, RtGG, RtX2
+        JJtR = JJ12.T @ R
+        X2tR = X2.T @ R
+        Wz = (RtR - JJtR.T @ JJtJJinv @ JJtR).tocsc()
+        Wx = RtR - X2tR.T @ inv((X2.T @ X2).tocsc()) @ X2tR
+        del RtR, JJtR, X2tR
 
         # Smallest eigenvalue
         WW = Wx @ inv(Wz)
         evals, evecs = eigs(WW)
         lambda_ = min(evals)
 
-        XXtGG = XX.T @ GG12
-        RR = ((1 - lambda_) * XX.T @ XX + lambda_ * XXtGG @ inv(GGtGG) @ XXtGG.T).tocsc()
-        RY = (1 - lambda_) * XX.T @ Y + lambda_ * XXtGG @ inv(GGtGG) @ GG12.T @ Y
+        JJtXX = JJ12.T @ XX
+        RR = ((1 - lambda_) * XX.T @ XX + lambda_ * JJtXX.T @ JJtJJinv @ JJtXX).tocsc()
+        RY = (1 - lambda_) * XX.T @ Y + lambda_ * JJtXX.T @ JJtJJinv @ JJ12.T @ Y
 
         ## Extract results ##
         b_liml = np.real(np.asarray((inv(RR) @ RY).todense()).flatten())
-        tau = np.ones(nk)
+        tau = np.ones(nf)
         tau[: norm_fid] = b_liml[: norm_fid]
-        tau[norm_fid + 1:] = b_liml[norm_fid: nk - 1]
+        tau[norm_fid + 1:] = b_liml[norm_fid: nf - 1]
         B1 = 1 / tau
-        B2 = - 1 / b_liml[nk - 1: 2 * nk - 1]
-        A1 = - b_liml[2 * nk - 1: 3 * nk - 1] * B1
-        A2 = np.zeros(nk)
-        A2[: nk - 1] = b_liml[3 * nk - 1: 4 * nk - 2] * B2[: nk - 1]
+        B2 = - 1 / b_liml[nf - 1: 2 * nf - 1]
+        A1 = - b_liml[2 * nf - 1: 3 * nf - 1] * B1
+        A2 = np.zeros(nf)
+        A2[: nf - 1] = b_liml[3 * nf - 1: 4 * nf - 2] * B2[: nf - 1]
 
         return B1, B2
-
-# import bipartitepandas as bpd
-
-# # Instantiate
-# model = InteractedBLMModel()
-
-# # Prepare parameters
-# n_loops = 100
-# B1_err = np.zeros(n_loops)
-# B2_err = np.zeros(n_loops)
-# evec_err = np.zeros(n_loops)
-
-# for iter in range(n_loops):
-#     # Simulate some data
-#     n_workers = 10000
-#     n_firms = 200
-#     nk = 10
-#     a = np.random.normal(size=nk)
-#     b = np.random.normal(size=nk)
-#     # Make sure b values aren't too small
-#     b[abs(b) < 0.01] *= 50
-#     # Normalize b
-#     b = b / b[0]
-#     # Link firms to firm types
-#     firm_types = np.random.choice(range(nk), size=n_firms, replace=True)
-#     # Simulate data
-#     i = np.repeat(range(n_workers), 2)
-#     j = np.random.choice(range(n_firms), size=2 * n_workers, replace=True)
-#     t = np.tile(range(2), n_workers)
-#     g = firm_types[j]
-#     alpha_i = np.repeat(np.random.normal(size=n_workers), 2)
-#     eps_i = 0.1 * np.random.normal(size=2 * n_workers)
-#     # Simulate wages
-#     y = a[g] + b[g] * alpha_i + eps_i
-
-#     # Prepare data
-#     cp = bpd.clean_params({'verbose': False})
-#     bdf = bpd.BipartiteDataFrame(i=i, j=j, y=y, t=t, g=g).clean(cp).collapse()
-#     jdata = bdf[bdf.get_worker_m()].clean(cp).to_eventstudy()
-
-#     B1, B2 = model.fit_b_linear(jdata)
-
-#     bdf = bpd.BipartiteDataFrame(i=i, j=g, y=y, t=t).clean(cp).collapse()
-#     jdata = bdf[bdf.get_worker_m()].clean(cp)
-
-#     evec = model.fit_b_fixed_point(jdata)
-
-#     # if abs(np.mean((evec - b) / b)) > 500:
-#     #     stop
-
-#     B1_err[iter] = np.mean((B1 - b) / b)
-#     B2_err[iter] = np.mean((B2 - b) / b)
-#     evec_err[iter] = np.mean((evec - b) / b)
-
-# # Plot
-# from matplotlib import pyplot as plt
-# axis = np.arange(n_loops)
-# plt.plot(axis, B1_err, label='B1')
-# plt.plot(axis, B2_err, label='B2')
-# plt.plot(axis, evec_err, label='Fixed point')
-# plt.legend()
-# plt.show()
-
-# # Histogram
-# # Eliminate outliers (so we can actually see things)
-# B1_err_nooutliers = B1_err[abs(B1_err) < 20]
-# B2_err_nooutliers = B2_err[abs(B2_err) < 20]
-# evec_err_nooutliers = evec_err[abs(evec_err) < 20]
-# bins = np.arange(-20, 20 + 0.25, 0.25)
-# plt.hist(B1_err_nooutliers, alpha=0.75, bins=bins, label='B1')
-# plt.hist(B2_err_nooutliers, alpha=0.75, bins=bins, label='B2')
-# plt.hist(evec_err_nooutliers, alpha=0.5, bins=bins, label='Fixed point')
-# plt.legend()
-# plt.show()
-
-# # Kernel density plot
-# from scipy.stats import gaussian_kde
-# bins = np.arange(-20, 20 + 0.25, 0.25)
-# B1_err_nooutliers = B1_err[abs(B1_err) < 100]
-# B2_err_nooutliers = B2_err[abs(B2_err) < 100]
-# evec_err_nooutliers = evec_err[abs(evec_err) < 100]
-# density_B1 = gaussian_kde(B1_err_nooutliers)
-# # density_B1.covariance_factor = lambda : .01
-# # density_B1._compute_covariance()
-# density_B2 = gaussian_kde(B2_err_nooutliers)
-# # density_B2.covariance_factor = lambda : .01
-# # density_B2._compute_covariance()
-# density_evec = gaussian_kde(evec_err_nooutliers)
-# # density_evec.covariance_factor = lambda : .01
-# # density_evec._compute_covariance()
-# plt.plot(bins, density_B1(bins), label='B1')
-# plt.plot(bins, density_B2(bins), label='B2')
-# plt.plot(bins, density_evec(bins), label='Fixed point')
-# plt.legend()
-# plt.show()
