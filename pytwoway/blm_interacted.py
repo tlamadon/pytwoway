@@ -19,7 +19,6 @@ import pytwoway as tw
 # # jdata = jdata.clean().collapse(level='match').construct_artificial_time()
 # # jdata = a[a.get_worker_m()].clean()
 
-
 class InteractedBLMModel():
     '''
     Class for estimating interacted-BLM.
@@ -27,12 +26,13 @@ class InteractedBLMModel():
     def __init__(self):
         pass
 
-    def fit_b_fixed_point(self, jdata, rng=None):
+    def fit_b_fixed_point(self, jdata, how_split='income', rng=None):
         '''
         Fit fixed-point estimator for b.
 
         Arguments:
             jdata (BipartitePandas DataFrame): data for movers
+            how_split (str): if 'income', split workers by their average income; if 'enter_exit', split workers by whether they enter or exit a given firm
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
@@ -41,10 +41,26 @@ class InteractedBLMModel():
         if rng is None:
             rng = np.random.default_rng(None)
 
+        # Weighted
+        weighted = jdata._col_included('w')
+
+        if how_split == 'income':
+            # Sort workers by average income
+            if weighted:
+                jdata['weighted_y'] = jdata['w'] * jdata['y']
+                jdata['mean_y'] = jdata.groupby('i')['weighted_y'].transform('sum') / jdata.groupby('i')['w'].transform('sum')
+                jdata.drop('weighted_y', axis=1, inplace=True)
+            else:
+                jdata['mean_y'] = jdata.groupby('i')['y'].transform('mean')
+            jdata.sort_values('mean_y', inplace=True)
+            jdata.drop('mean_y', axis=1, inplace=True)
+
         # Initial data construction
         nf = jdata.n_firms()
         j = jdata.loc[:, 'j'].to_numpy()
         y = jdata.loc[:, 'y'].to_numpy()
+        if weighted:
+            w = jdata.loc[:, 'w'].to_numpy()
         # Construct graph
         G, _ = jdata._construct_graph(connectedness='leave_out_observation', is_sorted=True, copy=False)
         # Construct lists to store results
@@ -62,6 +78,8 @@ class InteractedBLMModel():
             jdata_j1 = jdata.loc[i_in_j1, :]
             j_j1 = j[i_in_j1]
             y_j1 = y[i_in_j1]
+            if weighted:
+                w_j1 = w[i_in_j1]
             # For each firm, find its neighboring firms
             j1_neighbors = G.neighborhood(j1, order=2, mindist=2)
             for j2 in tqdm(j1_neighbors):
@@ -76,25 +94,48 @@ class InteractedBLMModel():
                     # Take subsets of data for workers who worked at both firms j1 and j2
                     j_j12 = j_j1[i_in_j2]
                     y_j12 = y_j1[i_in_j2]
+                    if weighted:
+                        w_j12 = w_j1[i_in_j2]
                     # Take subsets of data specifically for firms j1 and j2
                     is_j12 = (j_j12 == j1) | (j_j12 == j2)
                     j_j12 = j_j12[is_j12]
                     y_j12 = y_j12[is_j12]
+                    if weighted:
+                        w_j12 = w_j12[is_j12]
                     if len(j_j12) >= 4:
                         ## If there are at least two workers with observations at both firms ##
                         # Split data for j1 and j2
                         y_j11 = y_j12[j_j12 == j1]
                         y_j22 = y_j12[j_j12 == j2]
+                        if weighted:
+                            w_j11 = w_j12[j_j12 == j1]
+                            w_j22 = w_j12[j_j12 == j2]
                         # Split observations into entering/exiting groups
-                        j_j12_first = j_j12[np.arange(len(j_j12)) % 2 == 0]
-                        entering = (j_j12_first == j2)
-                        exiting = (j_j12_first == j1)
+                        if how_split == 'enter_exit':
+                            j_j12_first = j_j12[np.arange(len(j_j12)) % 2 == 0]
+                            entering = (j_j12_first == j2)
+                            exiting = (j_j12_first == j1)
+                        elif how_split == 'income':
+                            if len(y_j11) % 2 == 0:
+                                halfway = len(y_j11) // 2
+                            else:
+                                halfway = len(y_j11) // 2 + rng.binomial(n=1, p=0.5)
+                            entering = (np.arange(len(y_j11)) < halfway)
+                            exiting = (np.arange(len(y_j11)) >= halfway)
+                        else:
+                            raise ValueError(f"`how_split` must be one of 'enter_exit' or 'income', but input specifies {how_split!r}.")
                         if (np.sum(entering) > 0) and (np.sum(exiting) > 0):
                             # Need workers to both enter and exit
-                            entering_y1 = np.mean(y_j11[entering])
-                            entering_y2 = np.mean(y_j22[entering])
-                            exiting_y1 = np.mean(y_j11[exiting])
-                            exiting_y2 = np.mean(y_j22[exiting])
+                            if weighted:
+                                entering_y1 = np.sum(w_j11[entering] * y_j11[entering]) / np.sum(w_j11[entering])
+                                entering_y2 = np.sum(w_j22[entering] * y_j22[entering]) / np.sum(w_j22[entering])
+                                exiting_y1 = np.sum(w_j11[exiting] * y_j11[exiting]) / np.sum(w_j11[exiting])
+                                exiting_y2 = np.sum(w_j22[exiting] * y_j22[exiting]) / np.sum(w_j22[exiting])
+                            else:
+                                entering_y1 = np.mean(y_j11[entering])
+                                entering_y2 = np.mean(y_j22[entering])
+                                exiting_y1 = np.mean(y_j11[exiting])
+                                exiting_y2 = np.mean(y_j22[exiting])
                             ## Compute M0 (use symmetry) ##
                             # For M0[j1, j2] = (entering_y1 - exiting_y1)
                             M0_data.append(entering_y1 - exiting_y1)
@@ -104,6 +145,10 @@ class InteractedBLMModel():
                             M0_data.append(exiting_y2 - entering_y2)
                             M0_row.append(j2)
                             M0_col.append(j1)
+
+        if how_split == 'income':
+            # Sort jdata
+            jdata.sort_rows(copy=False)
 
         # Convert to sparse matrix
         M0 = csc_matrix((M0_data, (M0_row, M0_col)), shape=(nf, nf))
