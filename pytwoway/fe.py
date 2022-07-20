@@ -14,7 +14,7 @@ from multiprocessing import Pool
 import numpy as np
 import pandas as pd
 from scipy.sparse import csc_matrix
-import pyamg
+from pyamg import ruge_stuben_solver as rss
 from bipartitepandas.util import ParamsDict, to_list, logger_init
 from pytwoway import Q
 from pytwoway.util import weighted_mean, weighted_var, weighted_cov, weighted_quantile, DxSP, SPxD, DxM, MxD, diag_of_sp_prod, diag_of_prod
@@ -218,7 +218,7 @@ class FEEstimator:
         # Need to recreate the simple model and the search representation
         # Make d the attribute dictionary
         self.__dict__ = d
-        self.ml = pyamg.ruge_stuben_solver(self.Minv)
+        self.ml = rss(self.Minv)
 
     @staticmethod
     def __load(filename):
@@ -460,7 +460,7 @@ class FEEstimator:
         self.Minv = Minv
 
         self.logger.info('preparing linear solver')
-        self.ml = pyamg.ruge_stuben_solver(Minv)
+        self.ml = rss(Minv)
 
         # Save time variable
         self.last_invert_time = 0
