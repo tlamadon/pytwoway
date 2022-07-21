@@ -5,7 +5,6 @@ from tqdm.auto import tqdm, trange
 import numpy as np
 from scipy.sparse import csc_matrix, eye, hstack
 from scipy.sparse.linalg import eigs, inv
-from scipy.linalg import pinv
 from pyamg import ruge_stuben_solver as rss
 from bipartitepandas.util import ChainedAssignment
 import pytwoway as tw
@@ -301,7 +300,8 @@ class InteractedBLMModel():
             ## Profiling ##
             Y1J1 = hstack([-YY1, JJ1])
             Y2J2 = hstack([YY2, -JJ2[:, 1:]])
-            XX = Y2J2 - Y1J1 @ csc_matrix(pinv(Y1J1.todense())) @ Y2J2
+            # NOTE: csc_matrix(pinv(Y1J1.todense())) == inv((Y1J1.T @ Y1J1).tocsc()) @ Y1J1.T
+            XX = Y2J2 - Y1J1 @ inv((Y1J1.T @ Y1J1).tocsc()) @ (Y1J1.T @ Y2J2)
         else:
             ## Combine matrices ##
             XX = hstack([YY2 - YY1, JJ1[:, 1:], -JJ2])
@@ -371,7 +371,8 @@ class InteractedBLMModel():
 
         ## Profiling ##
         Y1J1J2 = hstack([-YY1, XX1])
-        XX2 = YY2 - Y1J1J2 @ csc_matrix(pinv(Y1J1J2.todense())) @ YY2
+        # NOTE: csc_matrix(pinv(Y1J1J2.todense())) == inv((Y1J1J2.T @ Y1J1J2).tocsc()) @ Y1J1J2.T
+        XX2 = YY2 - Y1J1J2 @ inv((Y1J1J2.T @ Y1J1J2).tocsc()) @ (Y1J1J2.T @ YY2)
 
         ## LIML ##
         JJtXX = JJ12.T @ XX2
