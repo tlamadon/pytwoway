@@ -16,13 +16,17 @@ class InteractedBLMModel():
     def __init__(self):
         pass
 
-    def fit_b_fixed_point(self, jdata, how_split='income', rng=None):
+    def fit_b_fixed_point(self, jdata, how_split='income', alternative_estimator=False, weight_firm_pairs=False, max_iters=500, threshold=1e-5, rng=None):
         '''
         Fit fixed-point estimator for b.
 
         Arguments:
             jdata (BipartitePandas DataFrame): data for movers
             how_split (str): if 'income', split workers by their average income; if 'enter_exit', split workers by whether they enter or exit a given firm
+            alternative_estimator (bool): if True, estimate using alternative estimator
+            weight_firm_pairs (bool): if True, weight each pair of firms by the number of movers between them
+            max_iters (int): maximum number of iterations for fixed-point estimation (used when alternative_estimator=False)
+            threshold (float): threshold maximum absolute percent change between iterations to break fixed-point iterations (used when alternative_estimator=False)
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
@@ -117,22 +121,35 @@ class InteractedBLMModel():
                         if (np.sum(entering) > 0) and (np.sum(exiting) > 0):
                             # Need workers to both enter and exit
                             if weighted:
-                                entering_y1 = np.sum(w_j11[entering] * y_j11[entering]) / np.sum(w_j11[entering])
-                                entering_y2 = np.sum(w_j22[entering] * y_j22[entering]) / np.sum(w_j22[entering])
-                                exiting_y1 = np.sum(w_j11[exiting] * y_j11[exiting]) / np.sum(w_j11[exiting])
-                                exiting_y2 = np.sum(w_j22[exiting] * y_j22[exiting]) / np.sum(w_j22[exiting])
+                                entering_w1 = np.sum(w_j11[entering])
+                                entering_w2 = np.sum(w_j22[entering])
+                                exiting_w1 = np.sum(w_j11[exiting])
+                                exiting_w2 = np.sum(w_j22[exiting])
+                                w1 = entering_w1 + exiting_w1
+                                w2 = entering_w2 + exiting_w2
+                                entering_y1 = np.sum(w_j11[entering] * y_j11[entering]) / entering_w1
+                                entering_y2 = np.sum(w_j22[entering] * y_j22[entering]) / entering_w2
+                                exiting_y1 = np.sum(w_j11[exiting] * y_j11[exiting]) / exiting_w1
+                                exiting_y2 = np.sum(w_j22[exiting] * y_j22[exiting]) / exiting_w2
                             else:
+                                w1 = len(y_j11)
+                                w2 = len(y_j22)
                                 entering_y1 = np.mean(y_j11[entering])
                                 entering_y2 = np.mean(y_j22[entering])
                                 exiting_y1 = np.mean(y_j11[exiting])
                                 exiting_y2 = np.mean(y_j22[exiting])
+                            if not weight_firm_pairs:
+                                w1 = 1
+                                w2 = 1
                             ## Compute M0 (use symmetry) ##
                             # For M0[j1, j2] = (entering_y1 - exiting_y1)
-                            M0_data.append(entering_y1 - exiting_y1)
+                            M0_data.append(w1 * (entering_y1 - exiting_y1))
                             M0_row.append(j1)
                             M0_col.append(j2)
                             # For M0[j2, j1] = (exiting_y2 - entering_y2)
-                            M0_data.append(exiting_y2 - entering_y2)
+                            M0_data.append(- w2 * (exiting_y2 - entering_y2))
+                            if alternative_estimator:
+                                M0_data[-1] *= -1
                             M0_row.append(j2)
                             M0_col.append(j1)
 
@@ -142,54 +159,57 @@ class InteractedBLMModel():
 
         # Convert to sparse matrix
         M0 = csc_matrix((M0_data, (M0_row, M0_col)), shape=(nf, nf))
-        S0 = - np.asarray(M0.sum(axis=0))[0, :]
-        if False: # compute_exp_b:
-            M0_data = np.array(M0_data)
-            M0 = csc_matrix((np.exp(M0_data), (M0_row, M0_col)), shape=(nf, nf))
-            S0 = np.asarray(csc_matrix((np.exp(-M0_data), (M0_row, M0_col)), shape=(nf, nf)).sum(axis=0))[0, :]
+        S0 = np.asarray(M0.sum(axis=0))[0, :]
+        if alternative_estimator:
+            S0 *= -1
 
         ## Solve for B ##
         lhs = tw.util.DxSP(1 / S0, M0)
-        # NOTE: fixed point doesn't work
-        # B = np.random.normal(size=nf)
-        # B /= B[0]
-        # for _ in range(1000):
-        #     B = lhs @ B
-        #     B /= B[0]
-        _, evec = eigs(lhs, k=1, sigma=1)
 
-        # Flatten and take real component
-        evec = np.real(evec[:, 0])
+        if alternative_estimator:
+            ## Fixed point not guaranteed ##
+            _, evec = eigs(lhs, k=1, sigma=1)
 
-        ## Check eigenvector ##
-        # NOTE: can check if eigenvector has a repeated value, but too costly to do it properly
-        evec2 = lhs @ evec
-        # Check that it's actually an eigenvector
-        if not (np.var(evec2 / evec) < 1e-10):
-            # If it's not actually an eigenvector
-            return np.ones(nf)
-            # raise ValueError('Fixed point cannot be found.')
+            # Flatten and take real component
+            evec = np.real(evec[:, 0])
 
-        # Normalize
-        evec /= evec[0]
+            # Normalize
+            evec /= evec[0]
+
+        else:
+            ## Fixed point guaranteed ##
+            prev_guess = np.ones(nf)
+            for _ in range(max_iters):
+                new_guess = lhs @ prev_guess
+                new_guess /= new_guess[0]
+                if np.max(np.abs((new_guess - prev_guess) / prev_guess)) <= threshold:
+                    break
+                prev_guess = new_guess
+            evec = new_guess
 
         return evec
 
-    def fit_b_liml_regular(self, jdata, norm_fid=0, coarse=0, tik=0):
+    def fit_b_liml_regular(self, jdata, stationary_a=False, stationary_b=False, profiling=False, coarse=0, tik=0, norm_fid=0):
         '''
         Fit b using regular LIML.
 
         Arguments:
             jdata (BipartitePandas DataFrame): data for movers
-            norm_fid (int): firm id to normalize
+            stationary_a (bool): if True, constrain a1==a2
+            stationary_b (bool): if True, constrain b1==b2
+            profiling (bool): if True, estimate profiled LIML by partialling out period 1 covariates from period 2 covariates
             coarse (float): make joint firm indicator coarser by dividing the second firm id by `coarse`
             tik (float): add tik * I to instrument before inverting to make full rank; used when coarse != 0
+            norm_fid (int): firm id to normalize
 
         Returns:
             (NumPy Array): estimated b
         '''
         if (coarse != 0) and (tik == 0):
             raise ValueError('If `coarse` != 0, then must also set `tik` != 0.')
+
+        if (stationary_a or stationary_b) and profiling:
+            raise ValueError('Can set either `stationary_a` and `stationary_b`, or `profiling`, but not both.')
 
         # Parameters
         nf, ni = jdata.n_firms(), len(jdata)
@@ -236,66 +256,6 @@ class InteractedBLMModel():
         JJ12_zeros = (np.asarray(JJ12.sum(axis=0))[0, :] == 0)
         JJ12 = JJ12[:, ~(JJ12_zeros)]
 
-        ## Combine matrices ##
-        XX = hstack([YY2, -YY1, JJ1[:, 1:], -JJ2])
-
-        ## LIML ##
-        JJtXX = JJ12.T @ XX
-        Wz = JJtXX.T @ inv((JJ12.T @ JJ12 + tik * eye(JJ12.shape[1])).tocsc()) @ JJtXX
-        Wx = (XX.T @ XX).tocsc()
-        del JJtXX
-
-        # Smallest eigenvector (eigenvalues bounded between 0 and 1)
-        WW = inv(Wx) @ Wz
-        _, evec = eigs(WW, k=1, sigma=0)
-        evec = np.real(evec[:, 0])
-
-        ## Extract results ##
-        b_liml = evec / evec[norm_fid]
-        B2 = 1 / b_liml[: nf]
-        B1 = 1 / b_liml[nf: 2 * nf]
-        A1 = np.concatenate([[0], b_liml[2 * nf: 3 * nf - 1]]) * B1
-        A2 = b_liml[3 * nf - 1: 4 * nf - 1] * B2
-
-        return B1, B2
-
-    def fit_b_liml_regular_stationary_b(self, jdata, norm_fid=0, profiling=False):
-        '''
-        Fit b using regular LIML with the constraint b1=b2.
-
-        Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
-            norm_fid (int): firm id to normalize
-            profiling (bool): if True, estimate profiled LIML
-
-        Returns:
-            (NumPy Array): estimated b
-        '''
-        # Parameters
-        nf, ni = jdata.n_firms(), len(jdata)
-
-        # Store wage outcomes and groups
-        Y1 = jdata.loc[:, 'y1'].to_numpy()
-        Y2 = jdata.loc[:, 'y2'].to_numpy()
-        J1 = jdata.loc[:, 'j1'].to_numpy()
-        J2 = jdata.loc[:, 'j2'].to_numpy()
-
-        ## Sparse matrix representations ##
-        JJ1 = csc_matrix((np.ones(ni), (range(ni), J1)), shape=(ni, nf))
-        JJ2 = csc_matrix((np.ones(ni), (range(ni), J2)), shape=(ni, nf))
-        YY1 = csc_matrix((Y1, (range(ni), J1)), shape=(ni, nf))
-        YY2 = csc_matrix((Y2, (range(ni), J2)), shape=(ni, nf))
-
-        # Joint firm indicator
-        KK = J1 + nf * J2
-
-        # Transition probability matrix (in this case, matrix of instruments (j1, j2))
-        JJ12 = csc_matrix((np.ones(ni), (range(ni), KK)), shape=(ni, nf ** 2))
-
-        # Drop zero columns of JJ12
-        JJ12_zeros = (np.asarray(JJ12.sum(axis=0))[0, :] == 0)
-        JJ12 = JJ12[:, ~(JJ12_zeros)]
-
         if profiling:
             ## Profiling ##
             Y1J1 = hstack([-YY1, JJ1])
@@ -304,29 +264,44 @@ class InteractedBLMModel():
             XX = Y2J2 - Y1J1 @ inv((Y1J1.T @ Y1J1).tocsc()) @ (Y1J1.T @ Y2J2)
         else:
             ## Combine matrices ##
-            XX = hstack([YY2 - YY1, JJ1[:, 1:], -JJ2])
+            if stationary_b:
+                XX = YY2 - YY1
+            else:
+                XX = hstack([-YY1, YY2])
+            if stationary_a:
+                XX = hstack([XX, (JJ1 - JJ2)[:, 1:]])
+            else:
+                XX = hstack([XX, JJ1[:, 1:], -JJ2])
 
         ## LIML ##
         JJtXX = JJ12.T @ XX
-        Wz = JJtXX.T @ inv((JJ12.T @ JJ12).tocsc()) @ JJtXX
+        Wz = JJtXX.T @ inv((JJ12.T @ JJ12 + tik * eye(JJ12.shape[1])).tocsc()) @ JJtXX
         Wx = (XX.T @ XX).tocsc()
         del JJtXX
 
-        # Smallest eigenvector (eigenvalues bounded between 0 and 1)
+        # Smallest eigenvector
         WW = inv(Wx) @ Wz
-        _, evec = eigs(WW, k=1, sigma=0)
-        evec = np.real(evec[:, 0])
+        evals, evecs = np.linalg.eig(WW.todense())
+        beta_hat = evecs[:, np.argmin(evals)]
+        # Flatten and take real component
+        beta_hat = np.real(np.asarray(beta_hat)[:, 0])
+        beta_hat = beta_hat / beta_hat[norm_fid]
 
         ## Extract results ##
-        b_liml = evec / evec[norm_fid]
-        B2 = 1 / b_liml[: nf]
-        B1 = B2
-        A1 = np.concatenate([[0], b_liml[nf: 2 * nf - 1]]) * B1
-        if profiling:
-            # FIXME I'm not completely sure this code is correct for profiling
+        idx = 0
+        B1 = 1 / beta_hat[idx: nf]
+        idx += nf
+        if stationary_b or profiling:
+            B2 = B1
+        else:
+            B2 = 1 / beta_hat[idx: idx + nf]
+            idx += nf
+        A1 = np.concatenate([[0], beta_hat[idx: idx + (nf - 1)]]) * B1
+        idx += (nf - 1)
+        if stationary_a or profiling:
             A2 = A1
         else:
-            A2 = b_liml[2 * nf - 1: 3 * nf - 1] * B2
+            A2 = beta_hat[idx: idx + nf] * B2
 
         return B1, B2
 
@@ -380,22 +355,24 @@ class InteractedBLMModel():
         Wx = (XX2.T @ XX2).tocsc()
         del JJtXX
 
-        # Smallest eigenvector (eigenvalues bounded between 0 and 1)
+        # Smallest eigenvector
         WW = inv(Wx) @ Wz
-        _, evec = eigs(WW, k=1, sigma=0)
-        evec = np.real(evec[:, 0])
+        evals, evecs = np.linalg.eig(WW.todense())
+        evec = evecs[:, np.argmin(evals)]
+        # Flatten and take real component
+        evec = np.real(np.asarray(evec)[:, 0])
 
         ## Compute intercepts (linear regression) ##
         YY = (YY1 - YY2) @ evec
         ints = rss(XX1.T @ XX1).solve(XX1.T @ YY, tol=1e-10)
 
         ## Extract results ##
-        b_liml = np.concatenate([evec, ints])
-        b_liml = b_liml / b_liml[norm_fid]
-        B2 = 1 / b_liml[: nf]
+        beta_hat = np.concatenate([evec, ints])
+        beta_hat = beta_hat / beta_hat[norm_fid]
+        B2 = 1 / beta_hat[: nf]
         B1 = B2
-        A1 = np.concatenate([[0], b_liml[nf: 2 * nf - 1]]) * B1
-        A2 = b_liml[2 * nf - 1: 3 * nf - 1] * B2
+        A1 = np.concatenate([[0], beta_hat[nf: 2 * nf - 1]]) * B1
+        A2 = beta_hat[2 * nf - 1: 3 * nf - 1] * B2
 
         return B1, B2
 
@@ -445,7 +422,7 @@ class InteractedBLMModel():
         Wz = XX.T @ Pz @ XX
         Wx = (XX.T @ XX).tocsc()
 
-        # Smallest eigenvalue (eigenvalues NOT bounded between 0 and 1)
+        # Smallest eigenvalue
         WW = inv(Wx) @ Wz
         evals, _ = np.linalg.eig(WW.todense())
         eval = np.min(evals)
@@ -525,9 +502,10 @@ class InteractedBLMModel():
         Wx = RtR - X2tR.T @ inv((X2.T @ X2).tocsc()) @ X2tR
         del RtR, JJtR, X2tR
 
-        # Smallest eigenvalue (eigenvalues bounded between 0 and 1)
+        # Smallest eigenvalue
         WW = Wx @ inv(Wz)
-        eval, _ = eigs(WW, k=1, sigma=0)
+        evals, _ = np.linalg.eig(WW.todense())
+        eval = np.min(evals)
 
         JJtXX = JJ12.T @ XX
         RR = ((1 - eval) * XX.T @ XX + eval * JJtXX.T @ JJtJJinv @ JJtXX).tocsc()
@@ -546,12 +524,13 @@ class InteractedBLMModel():
 
         return B1, B2
 
-    def fit_b_linear(self, jdata, norm_fid=0):
+    def fit_b_linear(self, jdata, stationary_a=False, norm_fid=0):
         '''
-        Fit b using regular LIML but with the constraint b1=b2=1 (this is like an AKM estimator).
+        Fit b using regular LIML but with the constraint b1==b2==1 (this is like an AKM estimator).
 
         Arguments:
             jdata (BipartitePandas DataFrame): data for movers
+            stationary_a (bool): if True, constrain a1==a2
             norm_fid (int): firm id to normalize
 
         Returns:
@@ -571,55 +550,22 @@ class InteractedBLMModel():
         JJ2 = csc_matrix((np.ones(ni), (range(ni), J2)), shape=(ni, nf))
 
         ## Combine matrices and vectors ##
-        XX = hstack([JJ1[:, list(range(0, norm_fid)) + list(range(norm_fid + 1, nf))], -JJ2])
+        if stationary_a:
+            XX = (JJ1 - JJ2)[:, 1:]
+        else:
+            XX = hstack([JJ1[:, 1:], -JJ2])
         YY = Y1 - Y2
 
         ## Compute intercepts (linear regression) ##
         ints = rss(XX.T @ XX).solve(XX.T @ YY, tol=1e-10)
 
         ## Extract results ##
-        B2 = np.ones(nf)
-        B1 = B2
-        A1 = np.concatenate([ints[: norm_fid], [0], ints[norm_fid: nf - 1]])
-        A2 = ints[nf - 1: 2 * nf - 1]
-
-        return B1, B2
-
-    def fit_b_linear_stationary_a(self, jdata, norm_fid=0):
-        '''
-        Fit b using regular LIML but with the constraints b1=b2=1 and a1=a2 (this is like an AKM estimator).
-
-        Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
-            norm_fid (int): firm id to normalize
-
-        Returns:
-            (NumPy Array): estimated b
-        '''
-        # Parameters
-        nf, ni = jdata.n_firms(), len(jdata)
-
-        # Store wage outcomes and groups
-        Y1 = jdata.loc[:, 'y1'].to_numpy()
-        Y2 = jdata.loc[:, 'y2'].to_numpy()
-        J1 = jdata.loc[:, 'j1'].to_numpy()
-        J2 = jdata.loc[:, 'j2'].to_numpy()
-
-        ## Sparse matrix representations ##
-        JJ1 = csc_matrix((np.ones(ni), (range(ni), J1)), shape=(ni, nf))
-        JJ2 = csc_matrix((np.ones(ni), (range(ni), J2)), shape=(ni, nf))
-
-        ## Combine matrices and vectors ##
-        XX = (JJ1 - JJ2)[:, list(range(0, norm_fid)) + list(range(norm_fid + 1, nf))]
-        YY = Y1 - Y2
-
-        ## Compute intercepts (linear regression) ##
-        ints = rss(XX.T @ XX).solve(XX.T @ YY, tol=1e-10)
-
-        ## Extract results ##
-        B2 = np.ones(nf)
-        B1 = B2
-        A1 = np.concatenate([ints[: norm_fid], [0], ints[norm_fid: nf - 1]])
-        A2 = A1
+        B1 = np.ones(nf)
+        B2 = B1
+        A1 = np.concatenate([[0], ints[: nf - 1]])
+        if stationary_a:
+            A2 = A1
+        else:
+            A2 = ints[nf - 1: 2 * nf - 1]
 
         return B1, B2
