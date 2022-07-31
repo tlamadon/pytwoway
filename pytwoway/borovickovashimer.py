@@ -61,7 +61,7 @@ class BSEstimator():
         Arguments:
             adata (BipartiteDataFrame): long or collapsed long format labor data
             alternative_estimator (bool): if True, estimate using alternative estimator
-            weighted (bool): if True, run estimator with weights. These come from data column 'w'.
+            weighted (bool): if True, run estimator with weights
         '''
         if not adata._col_included('w'):
             # Skip weighting if no weight column included

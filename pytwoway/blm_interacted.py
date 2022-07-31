@@ -8,6 +8,7 @@ from scipy.sparse.linalg import eigs, inv
 from pyamg import ruge_stuben_solver as rss
 from bipartitepandas.util import ChainedAssignment
 import pytwoway as tw
+from pytwoway.util import DxSP, SPxD, diag_of_sp_prod
 
 class InteractedBLMModel():
     '''
@@ -16,7 +17,7 @@ class InteractedBLMModel():
     def __init__(self):
         pass
 
-    def fit_b_fixed_point(self, jdata, how_split='income', alternative_estimator=False, weight_firm_pairs=False, max_iters=500, threshold=1e-5, rng=None):
+    def fit_b_fixed_point(self, jdata, how_split='income', alternative_estimator=False, weighted=True, weight_firm_pairs=False, max_iters=500, threshold=1e-5, rng=None):
         '''
         Fit fixed-point estimator for b.
 
@@ -24,9 +25,10 @@ class InteractedBLMModel():
             jdata (BipartitePandas DataFrame): data for movers
             how_split (str): if 'income', split workers by their average income; if 'enter_exit', split workers by whether they enter or exit a given firm
             alternative_estimator (bool): if True, estimate using alternative estimator
+            weighted (bool): if True, run estimator with weights
             weight_firm_pairs (bool): if True, weight each pair of firms by the number of movers between them
-            max_iters (int): maximum number of iterations for fixed-point estimation (used when alternative_estimator=False)
-            threshold (float): threshold maximum absolute percent change between iterations to break fixed-point iterations (used when alternative_estimator=False)
+            max_iters (int): maximum number of iterations for fixed-point estimation (used when alternative_estimator=True)
+            threshold (float): threshold maximum absolute percent change between iterations to break fixed-point iterations (used when alternative_estimator=True)
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
@@ -35,8 +37,9 @@ class InteractedBLMModel():
         if rng is None:
             rng = np.random.default_rng(None)
 
-        # Weighted
-        weighted = jdata._col_included('w')
+        if not jdata._col_included('w'):
+            # Skip weighting if no weight column included
+            weighted = False
 
         if how_split == 'income':
             # Sort workers by average income
@@ -147,7 +150,7 @@ class InteractedBLMModel():
                             M0_row.append(j1)
                             M0_col.append(j2)
                             # For M0[j2, j1] = (exiting_y2 - entering_y2)
-                            M0_data.append(- w2 * (exiting_y2 - entering_y2))
+                            M0_data.append(w2 * (exiting_y2 - entering_y2))
                             if alternative_estimator:
                                 M0_data[-1] *= -1
                             M0_row.append(j2)
@@ -159,7 +162,7 @@ class InteractedBLMModel():
 
         # Convert to sparse matrix
         M0 = csc_matrix((M0_data, (M0_row, M0_col)), shape=(nf, nf))
-        S0 = np.asarray(M0.sum(axis=0))[0, :]
+        S0 = - np.asarray(M0.sum(axis=0))[0, :]
         if alternative_estimator:
             S0 *= -1
 
@@ -167,16 +170,6 @@ class InteractedBLMModel():
         lhs = tw.util.DxSP(1 / S0, M0)
 
         if alternative_estimator:
-            ## Fixed point not guaranteed ##
-            _, evec = eigs(lhs, k=1, sigma=1)
-
-            # Flatten and take real component
-            evec = np.real(evec[:, 0])
-
-            # Normalize
-            evec /= evec[0]
-
-        else:
             ## Fixed point guaranteed ##
             prev_guess = np.ones(nf)
             for _ in range(max_iters):
@@ -186,10 +179,19 @@ class InteractedBLMModel():
                     break
                 prev_guess = new_guess
             evec = new_guess
+        else:
+            ## Fixed point not guaranteed ##
+            _, evec = eigs(lhs, k=1, sigma=1)
+
+            # Flatten and take real component
+            evec = np.real(evec[:, 0])
+
+            # Normalize
+            evec /= evec[0]
 
         return evec
 
-    def fit_b_liml_regular(self, jdata, stationary_a=False, stationary_b=False, profiling=False, coarse=0, tik=0, norm_fid=0):
+    def fit_b_liml_regular(self, jdata, stationary_a=False, stationary_b=False, profiling=False, instrument='firm_pairs', weighted=True, coarse=0, tik=0, norm_fid=0):
         '''
         Fit b using regular LIML.
 
@@ -198,27 +200,41 @@ class InteractedBLMModel():
             stationary_a (bool): if True, constrain a1==a2
             stationary_b (bool): if True, constrain b1==b2
             profiling (bool): if True, estimate profiled LIML by partialling out period 1 covariates from period 2 covariates
+            instrument (str): which instrument to use - either 'firm_pairs' (use interaction of firm in period 1 and firm in period 2) or 'worker_ids' (use worker ids)
+            weighted (bool): if True, run estimator with weights
             coarse (float): make joint firm indicator coarser by dividing the second firm id by `coarse`
-            tik (float): add tik * I to instrument before inverting to make full rank; used when coarse != 0
+            tik (float): add tik * I to instrument before inverting
             norm_fid (int): firm id to normalize
 
         Returns:
             (NumPy Array): estimated b
         '''
-        if (coarse != 0) and (tik == 0):
-            raise ValueError('If `coarse` != 0, then must also set `tik` != 0.')
+        if stationary_b and profiling:
+            raise ValueError('Can set either `stationary_b`=True or `profiling`=True, but not both.')
 
-        if (stationary_a or stationary_b) and profiling:
-            raise ValueError('Can set either `stationary_a` and `stationary_b`, or `profiling`, but not both.')
+        if instrument not in ['firm_pairs', 'worker_ids']:
+            raise ValueError("`instrument` must be either 'firm_pairs' or 'worker_ids'.")
+
+        if not jdata._col_included('w'):
+            # Skip weighting if no weight column included
+            weighted = False
 
         # Parameters
         nf, ni = jdata.n_firms(), len(jdata)
+        if instrument == 'worker_ids':
+            nw = jdata.n_workers()
 
         # Store wage outcomes and groups
         Y1 = jdata.loc[:, 'y1'].to_numpy()
         Y2 = jdata.loc[:, 'y2'].to_numpy()
         J1 = jdata.loc[:, 'j1'].to_numpy()
         J2 = jdata.loc[:, 'j2'].to_numpy()
+        if instrument == 'worker_ids':
+            W = jdata.loc[:, 'i'].to_numpy()
+        if weighted:
+            Dp = (jdata.loc[:, 'w1'].to_numpy() * jdata.loc[:, 'w2'].to_numpy())
+        else:
+            Dp = 1
 
         ## Sparse matrix representations ##
         JJ1 = csc_matrix((np.ones(ni), (range(ni), J1)), shape=(ni, nf))
@@ -226,42 +242,58 @@ class InteractedBLMModel():
         YY1 = csc_matrix((Y1, (range(ni), J1)), shape=(ni, nf))
         YY2 = csc_matrix((Y2, (range(ni), J2)), shape=(ni, nf))
 
+        ## Construct instrument ##
         if coarse == 0:
-            # Joint firm indicator
-            KK = J1 + nf * J2
+            if instrument == 'firm_pairs':
+                # Joint firm indicator
+                KK = J1 + nf * J2
 
-            # Transition probability matrix (in this case, matrix of instruments (j1, j2))
-            JJ12 = csc_matrix((np.ones(ni), (range(ni), KK)), shape=(ni, nf ** 2))
+                # Transition probability matrix (in this case, matrix of instruments (j1, j2))
+                ZZ = csc_matrix((np.ones(ni), (range(ni), KK)), shape=(ni, nf ** 2))
+            elif instrument == 'worker_ids':
+                ZZ = csc_matrix((np.ones(ni), (range(ni), W)), shape=(ni, nw))
         else:
-            ## Firm 1 ##
-            # Joint firm indicator
-            J2_KK = (J2 / coarse).astype(int, copy=False)
-            KK1 = J1 + nf * J2_KK
+            if instrument == 'firm_pairs':
+                ## Firm 1 ##
+                # Joint firm indicator
+                J2_KK = (J2 / coarse).astype(int, copy=False)
+                KK1 = J1 + nf * J2_KK
 
-            # Transition probability matrix (in this case, matrix of instruments (j1, j2))
-            JJ12_1 = csc_matrix((np.ones(ni), (range(ni), KK1)), shape=(ni, nf * (np.max(J2_KK) + 1)))
+                # Transition probability matrix (in this case, matrix of instruments (j1, j2))
+                JJ12_1 = csc_matrix((np.ones(ni), (range(ni), KK1)), shape=(ni, nf * (np.max(J2_KK) + 1)))
 
-            ## Firm 2 ##
-            # Joint firm indicator
-            J1_KK = (J1 / coarse).astype(int, copy=False)
-            KK2 = J2 + nf * J1_KK
+                ## Firm 2 ##
+                # Joint firm indicator
+                J1_KK = (J1 / coarse).astype(int, copy=False)
+                KK2 = J2 + nf * J1_KK
 
-            # Transition probability matrix (in this case, matrix of instruments (j1, j2))
-            JJ12_2 = csc_matrix((np.ones(ni), (range(ni), KK2)), shape=(ni, nf * (np.max(J1_KK) + 1)))
+                # Transition probability matrix (in this case, matrix of instruments (j1, j2))
+                JJ12_2 = csc_matrix((np.ones(ni), (range(ni), KK2)), shape=(ni, nf * (np.max(J1_KK) + 1)))
 
-            ## Combine ##
-            JJ12 = hstack([JJ12_1, JJ12_2])
+                ## Combine ##
+                ZZ = hstack([JJ12_1, JJ12_2])
+            elif instrument == 'worker_ids':
+                WW_KK = (WW / coarse).astype(int, copy=False)
+                ZZ = csc_matrix((np.ones(ni), (range(ni), WW_KK)), shape=(ni, np.max(WW_KK) + 1))
 
-        # Drop zero columns of JJ12
-        JJ12_zeros = (np.asarray(JJ12.sum(axis=0))[0, :] == 0)
-        JJ12 = JJ12[:, ~(JJ12_zeros)]
+        if instrument == 'firm_pairs':
+            # Drop zero columns of ZZ (firm pairs that don't occur in the data)
+            ZZ_zeros = (np.asarray(ZZ.sum(axis=0))[0, :] == 0)
+            ZZ = ZZ[:, ~(ZZ_zeros)]
 
         if profiling:
             ## Profiling ##
-            Y1J1 = hstack([-YY1, JJ1])
-            Y2J2 = hstack([YY2, -JJ2[:, 1:]])
-            # NOTE: csc_matrix(pinv(Y1J1.todense())) == inv((Y1J1.T @ Y1J1).tocsc()) @ Y1J1.T
-            XX = Y2J2 - Y1J1 @ inv((Y1J1.T @ Y1J1).tocsc()) @ (Y1J1.T @ Y2J2)
+            if stationary_a:
+                Y1J1 = hstack([-YY1, JJ1])
+                DpY1J1 = DxSP(Dp, Y1J1)
+                Y2J2 = hstack([YY2, -JJ2[:, 1:]])
+                # NOTE: csc_matrix(pinv(Y1J1.todense())) == inv((Y1J1.T @ Y1J1).tocsc()) @ Y1J1.T
+                XX = Y2J2 - Y1J1 @ inv((DpY1J1.T @ Y1J1).tocsc()) @ (DpY1J1.T @ Y2J2)
+            else:
+                Y1J1J2 = hstack([-YY1, JJ1[:, 1:], -JJ2])
+                DpY1J1J2 = DxSP(Dp, Y1J1J2)
+                # NOTE: csc_matrix(pinv(Y1J1J2.todense())) == inv((Y1J1J2.T @ Y1J1J2).tocsc()) @ Y1J1J2.T
+                XX = YY2 - Y1J1J2 @ inv((DpY1J1J2.T @ Y1J1J2).tocsc()) @ (DpY1J1J2.T @ YY2)
         else:
             ## Combine matrices ##
             if stationary_b:
@@ -274,10 +306,11 @@ class InteractedBLMModel():
                 XX = hstack([XX, JJ1[:, 1:], -JJ2])
 
         ## LIML ##
-        JJtXX = JJ12.T @ XX
-        Wz = JJtXX.T @ inv((JJ12.T @ JJ12 + tik * eye(JJ12.shape[1])).tocsc()) @ JJtXX
-        Wx = (XX.T @ XX).tocsc()
-        del JJtXX
+        DpZZ = DxSP(Dp, ZZ)
+        ZZtXX = DpZZ.T @ XX
+        Wz = SPxD(ZZtXX.T, 1 / (diag_of_sp_prod(DpZZ.T, ZZ) + tik)) @ ZZtXX
+        Wx = (DxSP(Dp, XX).T @ XX).tocsc()
+        del ZZtXX
 
         # Smallest eigenvector
         WW = inv(Wx) @ Wz
@@ -285,7 +318,17 @@ class InteractedBLMModel():
         beta_hat = evecs[:, np.argmin(evals)]
         # Flatten and take real component
         beta_hat = np.real(np.asarray(beta_hat)[:, 0])
+        # Normalize
         beta_hat = beta_hat / beta_hat[norm_fid]
+
+        if profiling and (not stationary_a):
+            ## Compute intercepts (linear regression) ##
+            XX = hstack([JJ1[:, 1:], -JJ2])
+            DpXX = DxSP(Dp, XX)
+            YY = (YY1 - YY2) @ beta_hat
+            ints = rss(DpXX.T @ XX).solve(DpXX.T @ YY, tol=1e-10)
+            # Append to beta_hat
+            beta_hat = np.concatenate([beta_hat, ints])
 
         ## Extract results ##
         idx = 0
@@ -298,81 +341,10 @@ class InteractedBLMModel():
             idx += nf
         A1 = np.concatenate([[0], beta_hat[idx: idx + (nf - 1)]]) * B1
         idx += (nf - 1)
-        if stationary_a or profiling:
-            A2 = A1
+        if stationary_a:
+            A2 = A1 * (B2 / B1)
         else:
             A2 = beta_hat[idx: idx + nf] * B2
-
-        return B1, B2
-
-    def fit_b_liml_regular_profiling(self, jdata, norm_fid=0):
-        '''
-        Fit b using regular LIML where the b terms are profiled out in period 2 first, then they are used to recover the intercepts in both periods.
-
-        Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
-            norm_fid (int): firm id to normalize
-
-        Returns:
-            (NumPy Array): estimated b
-        '''
-        # Parameters
-        nf, ni = jdata.n_firms(), len(jdata)
-
-        # Store wage outcomes and groups
-        Y1 = jdata.loc[:, 'y1'].to_numpy()
-        Y2 = jdata.loc[:, 'y2'].to_numpy()
-        J1 = jdata.loc[:, 'j1'].to_numpy()
-        J2 = jdata.loc[:, 'j2'].to_numpy()
-
-        ## Sparse matrix representations ##
-        JJ1 = csc_matrix((np.ones(ni), (range(ni), J1)), shape=(ni, nf))
-        JJ2 = csc_matrix((np.ones(ni), (range(ni), J2)), shape=(ni, nf))
-        YY1 = csc_matrix((Y1, (range(ni), J1)), shape=(ni, nf))
-        YY2 = csc_matrix((Y2, (range(ni), J2)), shape=(ni, nf))
-
-        # Joint firm indicator
-        KK = J1 + nf * J2
-
-        # Transition probability matrix (in this case, matrix of instruments (j1, j2))
-        JJ12 = csc_matrix((np.ones(ni), (range(ni), KK)), shape=(ni, nf ** 2))
-
-        # Drop zero columns of JJ12
-        JJ12_zeros = (np.asarray(JJ12.sum(axis=0))[0, :] == 0)
-        JJ12 = JJ12[:, ~(JJ12_zeros)]
-
-        ## Combine matrices ##
-        XX1 = hstack([JJ1[:, 1:], -JJ2])
-
-        ## Profiling ##
-        Y1J1J2 = hstack([-YY1, XX1])
-        # NOTE: csc_matrix(pinv(Y1J1J2.todense())) == inv((Y1J1J2.T @ Y1J1J2).tocsc()) @ Y1J1J2.T
-        XX2 = YY2 - Y1J1J2 @ inv((Y1J1J2.T @ Y1J1J2).tocsc()) @ (Y1J1J2.T @ YY2)
-
-        ## LIML ##
-        JJtXX = JJ12.T @ XX2
-        Wz = JJtXX.T @ inv((JJ12.T @ JJ12).tocsc()) @ JJtXX
-        Wx = (XX2.T @ XX2).tocsc()
-        del JJtXX
-
-        # Smallest eigenvector
-        WW = inv(Wx) @ Wz
-        evals, evecs = np.linalg.eig(WW.todense())
-        evec = evecs[:, np.argmin(evals)]
-        # Flatten and take real component
-        evec = np.real(np.asarray(evec)[:, 0])
-
-        ## Compute intercepts (linear regression) ##
-        YY = (YY1 - YY2) @ evec
-        ints = rss(XX1.T @ XX1).solve(XX1.T @ YY, tol=1e-10)
-
-        ## Extract results ##
-        beta_hat = np.concatenate([evec, ints])
-        beta_hat = beta_hat / beta_hat[norm_fid]
-        B2 = 1 / beta_hat[: nf]
-        B1 = B2
-        A1 = np.concatenate([[0], beta_hat[nf: 2 * nf - 1]]) * B1
-        A2 = beta_hat[2 * nf - 1: 3 * nf - 1] * B2
 
         return B1, B2
 
