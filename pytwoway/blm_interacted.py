@@ -5,6 +5,7 @@ from tqdm.auto import tqdm, trange
 import numpy as np
 from scipy.sparse import csc_matrix, eye, hstack
 from scipy.sparse.linalg import eigs, inv
+from qpsolvers import solve_qp
 from pyamg import ruge_stuben_solver as rss
 from bipartitepandas.util import ChainedAssignment
 import pytwoway as tw
@@ -191,7 +192,7 @@ class InteractedBLMModel():
 
         return evec
 
-    def fit_b_linear(self, jdata, stationary_a=False, stationary_b=False, profiling=False, instrument='firm_pairs', method='liml_1', weighted=True, coarse=0, tik=0, norm_fid=0):
+    def fit_b_linear(self, jdata, stationary_a=False, stationary_b=False, profiling=False, instrument='firm_pairs', method='liml_1', weighted=True, coarse=0, tik=0, C=1, norm_fid=0):
         '''
         Fit b using the linear estimator.
 
@@ -205,6 +206,7 @@ class InteractedBLMModel():
             weighted (bool): if True, run estimator with weights
             coarse (float): make joint firm indicator coarser by dividing the second firm id by `coarse`
             tik (float): add tik * I to instrument before inverting
+            C (float): HFUL factor
             norm_fid (int): firm id to normalize
 
         Returns:
@@ -362,14 +364,6 @@ class InteractedBLMModel():
             # Normalize
             beta_hat = beta_hat / beta_hat[norm_fid]
 
-            if profiling and (not stationary_a):
-                ## Compute intercepts (linear regression) ##
-                XX = hstack([JJ1[:, 1:], -JJ2])
-                DpXX = DxSP(Dp, XX)
-                YY = (YY1 - YY2) @ beta_hat
-                ints = rss(DpXX.T @ XX).solve(DpXX.T @ YY, tol=1e-10)
-                # Append to beta_hat
-                beta_hat = np.concatenate([beta_hat, ints])
         elif method in ['liml_2', 'iv']:
             ## Define normalization ##
             Y = -X1[:, norm_fid]
@@ -382,7 +376,7 @@ class InteractedBLMModel():
             DpZZ = DxSP(Dp, ZZ)
             ZZtZZinv = 1 / (diag_of_sp_prod(DpZZ.T, ZZ) + tik)
             ZZ_ZZtZZinv = SPxD(ZZ, ZZtZZinv)
-            XXtZZ = (XX.T @ ZZ_ZZtZZinv)
+            XXtZZinv = (XX.T @ ZZ_ZZtZZinv)
             del ZZtZZinv
 
             if method == 'liml_2':
@@ -406,19 +400,61 @@ class InteractedBLMModel():
                 lambda_ = np.min(evals)
 
                 # Construct new matrices
-                RR = ((1 - lambda_) * XX.T @ XX + lambda_ * XXtZZ @ (DpZZ.T @ XX)).tocsc()
-                RY = (1 - lambda_) * XX.T @ Y + lambda_ * XXtZZ @ (DpZZ.T @ Y)
+                RR = ((1 - lambda_) * XX.T @ XX + lambda_ * XXtZZinv @ (DpZZ.T @ XX)).tocsc()
+                RY = (1 - lambda_) * XX.T @ Y + lambda_ * XXtZZinv @ (DpZZ.T @ Y)
             elif method == 'iv':
                 ## IV (lambda_ == 1) ##
                 # Construct new matrices
-                RR = (XXtZZ @ (DpZZ.T @ XX)).tocsc()
-                RY = XXtZZ @ (DpZZ.T @ Y)
+                RR = (XXtZZinv @ (DpZZ.T @ XX)).tocsc()
+                RY = XXtZZinv @ (DpZZ.T @ Y)
 
-            del DpZZ, ZZ_ZZtZZinv, XXtZZ
+            del DpZZ, ZZ_ZZtZZinv, XXtZZinv
 
-            # Pseudo-OLS
-            beta_hat = np.asarray((inv(RR) @ RY).todense())[:, 0]
+            ## OLS ##
+            RY = np.asarray((RY).todense())[:, 0]
+            RR = np.asarray((RR).todense())
+            beta_hat = solve_qp(RR, -RY, solver='quadprog')
             beta_hat = np.concatenate([beta_hat[: norm_fid], [1], beta_hat[norm_fid:]])
+        elif method == 'hful':
+            ## HFUL ##
+            ## Pre-multiply matrices ##
+            DpZZ = DxSP(Dp, ZZ)
+            ZZtZZinv = 1 / (diag_of_sp_prod(DpZZ.T, ZZ) + tik)
+
+            ## HFUL Part 1 ##
+            Pz = SPxD(ZZ, ZZtZZinv) @ DpZZ.T
+            Pz.setdiag(0)
+            Wx = (XX.T @ XX).tocsc()
+            Wz = XX.T @ Pz @ XX
+
+            # Smallest eigenvalue
+            WW = inv(Wx) @ Wz
+            evals, _ = np.linalg.eig(WW.todense())
+            lambda_ = np.min(evals)
+
+            ## HFUL Part 2 ##
+            lambda2 = (lambda_ - (1 - lambda_) * (C / ni)) / (1 - (1 - lambda_) * (C / ni))
+
+            ## Solve (Wx)^{-1} @ Wz @ v = lambda_ @ v, where we normalize v[norm_fid] = 1 ##
+            WW.setdiag(WW.diagonal() - lambda2)
+            WY = -WW[:, norm_fid]
+            WX = WW[:, list(range(norm_fid)) + list(range(norm_fid + 1, WW.shape[1]))]
+
+            ## OLS ##
+            DpWX = DxSP(Dp, WX)
+            XX = np.asarray((DpWX.T @ WX).todense())
+            XY = np.asarray((DpWX.T @ WY).todense())[:, 0]
+            beta_hat = solve_qp(XX, -XY, solver='quadprog')
+            beta_hat = np.concatenate([beta_hat[: norm_fid], [1], beta_hat[norm_fid:]])
+
+        if profiling and (not stationary_a):
+            ## Compute intercepts (linear regression) ##
+            XX = hstack([JJ1[:, 1:], -JJ2])
+            DpXX = DxSP(Dp, XX)
+            YY = (YY1 - YY2) @ beta_hat
+            ints = rss(DpXX.T @ XX).solve(DpXX.T @ YY, tol=1e-10)
+            # Append to beta_hat
+            beta_hat = np.concatenate([beta_hat, ints])
 
         ## Extract results ##
         idx = 0
@@ -435,74 +471,5 @@ class InteractedBLMModel():
             A2 = A1 * (B2 / B1)
         else:
             A2 = beta_hat[idx: idx + nf] * B2
-
-        return B1, B2
-
-    def fit_b_liml_regular_HFUL(self, jdata, norm_fid=0, C=1):
-        '''
-        Fit b using regular LIML with HFUL of Hausman Newey et al. 2012 QE.
-
-        Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
-            norm_fid (int): firm id to normalize
-            C (float): HFUL factor
-
-        Returns:
-            (NumPy Array): estimated b
-        '''
-        # Parameters
-        nf, ni = jdata.n_firms(), len(jdata)
-
-        # Store wage outcomes and groups
-        Y1 = jdata.loc[:, 'y1'].to_numpy()
-        Y2 = jdata.loc[:, 'y2'].to_numpy()
-        J1 = jdata.loc[:, 'j1'].to_numpy()
-        J2 = jdata.loc[:, 'j2'].to_numpy()
-
-        ## Sparse matrix representations ##
-        JJ1 = csc_matrix((np.ones(ni), (range(ni), J1)), shape=(ni, nf))
-        JJ2 = csc_matrix((np.ones(ni), (range(ni), J2)), shape=(ni, nf))
-        YY1 = csc_matrix((Y1, (range(ni), J1)), shape=(ni, nf))
-        YY2 = csc_matrix((Y2, (range(ni), J2)), shape=(ni, nf))
-
-        # Joint firm indicator
-        KK = J1 + nf * J2
-
-        # Transition probability matrix (in this case, matrix of instruments (j1, j2))
-        JJ12 = csc_matrix((np.ones(ni), (range(ni), KK)), shape=(ni, nf ** 2))
-
-        # Drop zero columns of JJ12
-        JJ12_zeros = (np.asarray(JJ12.sum(axis=0))[0, :] == 0)
-        JJ12 = JJ12[:, ~(JJ12_zeros)]
-
-        ## Combine matrices ##
-        XX = hstack([YY2, -YY1, JJ1[:, 1:], -JJ2])
-
-        ## LIML ##
-        Pz = JJ12 @ inv((JJ12.T @ JJ12).tocsc()) @ JJ12.T
-        Pz.setdiag(0)
-        Wz = XX.T @ Pz @ XX
-        Wx = (XX.T @ XX).tocsc()
-
-        # Smallest eigenvalue
-        WW = inv(Wx) @ Wz
-        evals, _ = np.linalg.eig(WW.todense())
-        eval = np.min(evals)
-
-        ## HFUL ##
-        lambda_ = (eval - (C / ni) * (1 - eval)) / (1 - (C / ni) * (1 - eval))
-
-        ## Solve (Wx)^{-1} @ Wz @ v = lambda_ @ v, where we normalize v[0] = 1 ##
-        M = WW - lambda_ * eye(WW.shape[0])
-        MX = M[:, 1:]
-        b_liml = np.asarray((- inv(MX.T @ MX) @ MX.T @ M[:, 0]).todense())[:, 0]
-        # rss(MX.T @ MX).solve(-(MX.T @ M[:, 0]).todense())
-
-        ## Extract results ##
-        b_liml = np.concatenate([[1], b_liml])
-        B2 = 1 / b_liml[: nf]
-        B1 = 1 / b_liml[nf: 2 * nf]
-        A1 = np.concatenate([[0], b_liml[2 * nf: 3 * nf - 1]]) * B1
-        A2 = b_liml[3 * nf - 1: 4 * nf - 1] * B2
 
         return B1, B2

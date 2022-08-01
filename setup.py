@@ -21,6 +21,7 @@ setuptools.setup(
         'statsmodels',
         'pyamg',
         'qpsolvers',
+        'quadprog',
         'ConfigArgParse',
         'matplotlib',
         'tqdm'
