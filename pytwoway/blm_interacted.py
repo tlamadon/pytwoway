@@ -19,7 +19,7 @@ class InteractedBLMModel():
 
     def fit_b_fixed_point(self, jdata, how_split='income', alternative_estimator=False, weighted=True, weight_firm_pairs=False, max_iters=500, threshold=1e-5, rng=None):
         '''
-        Fit fixed-point estimator for b.
+        Fit b using the fixed-point estimator.
 
         Arguments:
             jdata (BipartitePandas DataFrame): data for movers
@@ -191,9 +191,9 @@ class InteractedBLMModel():
 
         return evec
 
-    def fit_b_liml_regular(self, jdata, stationary_a=False, stationary_b=False, profiling=False, instrument='firm_pairs', weighted=True, coarse=0, tik=0, norm_fid=0):
+    def fit_b_linear(self, jdata, stationary_a=False, stationary_b=False, profiling=False, instrument='firm_pairs', method='liml_1', weighted=True, coarse=0, tik=0, norm_fid=0):
         '''
-        Fit b using regular LIML.
+        Fit b using the linear estimator.
 
         Arguments:
             jdata (BipartitePandas DataFrame): data for movers
@@ -201,6 +201,7 @@ class InteractedBLMModel():
             stationary_b (bool): if True, constrain b1==b2
             profiling (bool): if True, estimate profiled LIML by partialling out period 1 covariates from period 2 covariates
             instrument (str): which instrument to use - either 'firm_pairs' (use interaction of firm in period 1 and firm in period 2) or 'worker_ids' (use worker ids)
+            method (str): if 'liml_1', use LIML that allows profiling; if 'liml_2', use traditional LIML that does not allow profiling; if 'iv', use IV; if 'hful' use HFUL of Newey et al. (2012); if linear, constrain b1==b2==1 (this like an AKM estimator)
             weighted (bool): if True, run estimator with weights
             coarse (float): make joint firm indicator coarser by dividing the second firm id by `coarse`
             tik (float): add tik * I to instrument before inverting
@@ -212,8 +213,17 @@ class InteractedBLMModel():
         if stationary_b and profiling:
             raise ValueError('Can set either `stationary_b`=True or `profiling`=True, but not both.')
 
+        if stationary_b and (method == 'linear'):
+            raise ValueError("Can set either `stationary_b`=True or `method`='linear', but not both.")
+
+        if profiling and (method not in ['liml_1', 'hful']):
+            raise ValueError(f"Can only set `profiling`=True if `method` is either 'liml_1' or 'hful', but input specifies {method!r}.")
+
         if instrument not in ['firm_pairs', 'worker_ids']:
-            raise ValueError("`instrument` must be either 'firm_pairs' or 'worker_ids'.")
+            raise ValueError(f"`instrument` must be either 'firm_pairs' or 'worker_ids', but input specifies {instrument!r}.")
+
+        if method not in ['liml_1', 'liml_2', 'iv', 'hful', 'linear']:
+            raise ValueError(f"`method` must be one of 'liml_1', 'liml_2', 'iv', 'hful', or 'linear', but input specifies {method!r}.")
 
         if not jdata._col_included('w'):
             # Skip weighting if no weight column included
@@ -239,8 +249,32 @@ class InteractedBLMModel():
         ## Sparse matrix representations ##
         JJ1 = csc_matrix((np.ones(ni), (range(ni), J1)), shape=(ni, nf))
         JJ2 = csc_matrix((np.ones(ni), (range(ni), J2)), shape=(ni, nf))
-        YY1 = csc_matrix((Y1, (range(ni), J1)), shape=(ni, nf))
-        YY2 = csc_matrix((Y2, (range(ni), J2)), shape=(ni, nf))
+        if method != 'linear':
+            YY1 = csc_matrix((Y1, (range(ni), J1)), shape=(ni, nf))
+            YY2 = csc_matrix((Y2, (range(ni), J2)), shape=(ni, nf))
+        else:
+            ## Linear ##
+            ## Combine matrices and vectors ##
+            if stationary_a:
+                XX = (JJ1 - JJ2)[:, 1:]
+            else:
+                XX = hstack([JJ1[:, 1:], -JJ2])
+            YY = Y1 - Y2
+            DpXX = DxSP(Dp, XX)
+
+            ## Compute intercepts (linear regression) ##
+            ints = rss(DpXX.T @ XX).solve(DpXX.T @ YY, tol=1e-10)
+
+            ## Extract results ##
+            B1 = np.ones(nf)
+            B2 = B1
+            A1 = np.concatenate([[0], ints[: nf - 1]])
+            if stationary_a:
+                A2 = A1
+            else:
+                A2 = ints[nf - 1: 2 * nf - 1]
+
+            return B1, B2
 
         ## Construct instrument ##
         if coarse == 0:
@@ -281,6 +315,7 @@ class InteractedBLMModel():
             ZZ_zeros = (np.asarray(ZZ.sum(axis=0))[0, :] == 0)
             ZZ = ZZ[:, ~(ZZ_zeros)]
 
+        ## Construct matrices ##
         if profiling:
             ## Profiling ##
             if stationary_a:
@@ -295,40 +330,95 @@ class InteractedBLMModel():
                 # NOTE: csc_matrix(pinv(Y1J1J2.todense())) == inv((Y1J1J2.T @ Y1J1J2).tocsc()) @ Y1J1J2.T
                 XX = YY2 - Y1J1J2 @ inv((DpY1J1J2.T @ Y1J1J2).tocsc()) @ (DpY1J1J2.T @ YY2)
         else:
-            ## Combine matrices ##
+            ## Standard ##
             if stationary_b:
-                XX = YY2 - YY1
+                X1 = YY2 - YY1
             else:
-                XX = hstack([-YY1, YY2])
+                X1 = hstack([-YY1, YY2])
             if stationary_a:
-                XX = hstack([XX, (JJ1 - JJ2)[:, 1:]])
+                X2 = (JJ1 - JJ2)[:, 1:]
             else:
-                XX = hstack([XX, JJ1[:, 1:], -JJ2])
+                X2 = hstack([JJ1[:, 1:], -JJ2])
+            if method not in ['liml_2', 'iv']:
+                XX = hstack([X1, X2])
 
         ## LIML ##
-        DpZZ = DxSP(Dp, ZZ)
-        ZZtXX = DpZZ.T @ XX
-        Wz = SPxD(ZZtXX.T, 1 / (diag_of_sp_prod(DpZZ.T, ZZ) + tik)) @ ZZtXX
-        Wx = (DxSP(Dp, XX).T @ XX).tocsc()
-        del ZZtXX
+        if method == 'liml_1':
+            ## Pre-multiply matrices ##
+            DpZZ = DxSP(Dp, ZZ)
+            ZZtXX = DpZZ.T @ XX
 
-        # Smallest eigenvector
-        WW = inv(Wx) @ Wz
-        evals, evecs = np.linalg.eig(WW.todense())
-        beta_hat = evecs[:, np.argmin(evals)]
-        # Flatten and take real component
-        beta_hat = np.real(np.asarray(beta_hat)[:, 0])
-        # Normalize
-        beta_hat = beta_hat / beta_hat[norm_fid]
+            ## LIML ##
+            Wx = (DxSP(Dp, XX).T @ XX).tocsc()
+            Wz = SPxD(ZZtXX.T, 1 / (diag_of_sp_prod(DpZZ.T, ZZ) + tik)) @ ZZtXX
+            del DpZZ, ZZtXX
 
-        if profiling and (not stationary_a):
-            ## Compute intercepts (linear regression) ##
-            XX = hstack([JJ1[:, 1:], -JJ2])
-            DpXX = DxSP(Dp, XX)
-            YY = (YY1 - YY2) @ beta_hat
-            ints = rss(DpXX.T @ XX).solve(DpXX.T @ YY, tol=1e-10)
-            # Append to beta_hat
-            beta_hat = np.concatenate([beta_hat, ints])
+            # Smallest eigenvector
+            WW = inv(Wx) @ Wz
+            evals, evecs = np.linalg.eig(WW.todense())
+            beta_hat = evecs[:, np.argmin(evals)]
+            # Flatten and take real component
+            beta_hat = np.real(np.asarray(beta_hat)[:, 0])
+            # Normalize
+            beta_hat = beta_hat / beta_hat[norm_fid]
+
+            if profiling and (not stationary_a):
+                ## Compute intercepts (linear regression) ##
+                XX = hstack([JJ1[:, 1:], -JJ2])
+                DpXX = DxSP(Dp, XX)
+                YY = (YY1 - YY2) @ beta_hat
+                ints = rss(DpXX.T @ XX).solve(DpXX.T @ YY, tol=1e-10)
+                # Append to beta_hat
+                beta_hat = np.concatenate([beta_hat, ints])
+        elif method in ['liml_2', 'iv']:
+            ## Define normalization ##
+            Y = -X1[:, norm_fid]
+            X1 = X1[:, list(range(norm_fid)) + list(range(norm_fid + 1, X1.shape[1]))]
+
+            ## Construct matrices ##
+            XX = hstack([X1, X2])
+
+            ## Pre-multiply matrices ##
+            DpZZ = DxSP(Dp, ZZ)
+            ZZtZZinv = 1 / (diag_of_sp_prod(DpZZ.T, ZZ) + tik)
+            ZZ_ZZtZZinv = SPxD(ZZ, ZZtZZinv)
+            XXtZZ = (XX.T @ ZZ_ZZtZZinv)
+            del ZZtZZinv
+
+            if method == 'liml_2':
+                ## LIML 2 ##
+                ## Construct matrices ##
+                R = hstack([Y, X1])
+
+                ## Pre-multiply matrices ##
+                DpXX = DxSP(Dp, XX)
+                DpX2 = DxSP(Dp, X2)
+                RtR = R.T @ R
+
+                ## LIML ##
+                Wx = RtR - (R.T @ X2) @ inv((DpX2.T @ X2).tocsc()) @ (DpX2.T @ R)
+                Wz = (RtR - (R.T @ ZZ_ZZtZZinv) @ (DpZZ.T @ R)).tocsc()
+                del DpX2, RtR
+
+                # Smallest eigenvalue
+                WW = Wx @ inv(Wz)
+                evals, _ = np.linalg.eig(WW.todense())
+                lambda_ = np.min(evals)
+
+                # Construct new matrices
+                RR = ((1 - lambda_) * XX.T @ XX + lambda_ * XXtZZ @ (DpZZ.T @ XX)).tocsc()
+                RY = (1 - lambda_) * XX.T @ Y + lambda_ * XXtZZ @ (DpZZ.T @ Y)
+            elif method == 'iv':
+                ## IV (lambda_ == 1) ##
+                # Construct new matrices
+                RR = (XXtZZ @ (DpZZ.T @ XX)).tocsc()
+                RY = XXtZZ @ (DpZZ.T @ Y)
+
+            del DpZZ, ZZ_ZZtZZinv, XXtZZ
+
+            # Pseudo-OLS
+            beta_hat = np.asarray((inv(RR) @ RY).todense())[:, 0]
+            beta_hat = np.concatenate([beta_hat[: norm_fid], [1], beta_hat[norm_fid:]])
 
         ## Extract results ##
         idx = 0
@@ -405,7 +495,8 @@ class InteractedBLMModel():
         ## Solve (Wx)^{-1} @ Wz @ v = lambda_ @ v, where we normalize v[0] = 1 ##
         M = WW - lambda_ * eye(WW.shape[0])
         MX = M[:, 1:]
-        b_liml = rss(MX.T @ MX).solve(-(MX.T @ M[:, 0]).todense())
+        b_liml = np.asarray((- inv(MX.T @ MX) @ MX.T @ M[:, 0]).todense())[:, 0]
+        # rss(MX.T @ MX).solve(-(MX.T @ M[:, 0]).todense())
 
         ## Extract results ##
         b_liml = np.concatenate([[1], b_liml])
@@ -413,131 +504,5 @@ class InteractedBLMModel():
         B1 = 1 / b_liml[nf: 2 * nf]
         A1 = np.concatenate([[0], b_liml[2 * nf: 3 * nf - 1]]) * B1
         A2 = b_liml[3 * nf - 1: 4 * nf - 1] * B2
-
-        return B1, B2
-
-    def fit_b_liml_single_iv(self, jdata, norm_fid=0):
-        '''
-        Fit b using LIML on model in difference, single equation IV.
-
-        Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
-            norm_fid (int): firm id to normalize
-
-        Returns:
-            (NumPy Array): estimated b
-        '''
-        # Parameters
-        nf, ni = jdata.n_firms(), len(jdata)
-
-        # Store wage outcomes and groups
-        Y1 = jdata.loc[:, 'y1'].to_numpy()
-        Y2 = jdata.loc[:, 'y2'].to_numpy()
-        J1 = jdata.loc[:, 'j1'].to_numpy()
-        J2 = jdata.loc[:, 'j2'].to_numpy()
-
-        ## Sparse matrix representations ##
-        JJ1 = csc_matrix((np.ones(ni), (range(ni), J1)), shape=(ni, nf))
-        JJ2 = csc_matrix((np.ones(ni), (range(ni), J2)), shape=(ni, nf))
-        YY1 = csc_matrix((Y1, (range(ni), J1)), shape=(ni, nf))
-        YY2 = csc_matrix((Y2, (range(ni), J2)), shape=(ni, nf))
-
-        # Joint firm indicator
-        KK = J1 + nf * J2
-
-        # Transition probability matrix (in this case, matrix of instruments (j1, j2))
-        JJ12 = csc_matrix((np.ones(ni), (range(ni), KK)), shape=(ni, nf ** 2))
-
-        # Drop zero columns of JJ12
-        JJ12_zeros = (np.asarray(JJ12.sum(axis=0))[0, :] == 0)
-        JJ12 = JJ12[:, ~(JJ12_zeros)]
-
-        ## Combine matrices ##
-        X1 = hstack([YY1, YY2])
-        X2 = hstack([JJ1, JJ2])
-
-        ## Define normalization ##
-        Y = -X1[:, norm_fid]
-        X1 = X1[:, list(range(norm_fid)) + list(range(norm_fid + 1, 2 * nf))]
-        X2 = X2[:, range(2 * nf - 1)]
-
-        ## Combine matrices ##
-        R = hstack([Y, X1])
-        XX = hstack([X1, X2])
-
-        ## LIML ##
-        JJtJJinv = inv((JJ12.T @ JJ12).tocsc())
-        RtR = R.T @ R
-        JJtR = JJ12.T @ R
-        X2tR = X2.T @ R
-        Wz = (RtR - JJtR.T @ JJtJJinv @ JJtR).tocsc()
-        Wx = RtR - X2tR.T @ inv((X2.T @ X2).tocsc()) @ X2tR
-        del RtR, JJtR, X2tR
-
-        # Smallest eigenvalue
-        WW = Wx @ inv(Wz)
-        evals, _ = np.linalg.eig(WW.todense())
-        eval = np.min(evals)
-
-        JJtXX = JJ12.T @ XX
-        RR = ((1 - eval) * XX.T @ XX + eval * JJtXX.T @ JJtJJinv @ JJtXX).tocsc()
-        RY = (1 - eval) * XX.T @ Y + eval * JJtXX.T @ JJtJJinv @ JJ12.T @ Y
-
-        ## Extract results ##
-        b_liml = np.real(np.asarray((inv(RR) @ RY).todense()).flatten())
-        tau = np.ones(nf)
-        tau[: norm_fid] = b_liml[: norm_fid]
-        tau[norm_fid + 1:] = b_liml[norm_fid: nf - 1]
-        B1 = 1 / tau
-        B2 = - 1 / b_liml[nf - 1: 2 * nf - 1]
-        A1 = - b_liml[2 * nf - 1: 3 * nf - 1] * B1
-        A2 = np.zeros(nf)
-        A2[: nf - 1] = b_liml[3 * nf - 1: 4 * nf - 2] * B2[: nf - 1]
-
-        return B1, B2
-
-    def fit_b_linear(self, jdata, stationary_a=False, norm_fid=0):
-        '''
-        Fit b using regular LIML but with the constraint b1==b2==1 (this is like an AKM estimator).
-
-        Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
-            stationary_a (bool): if True, constrain a1==a2
-            norm_fid (int): firm id to normalize
-
-        Returns:
-            (NumPy Array): estimated b
-        '''
-        # Parameters
-        nf, ni = jdata.n_firms(), len(jdata)
-
-        # Store wage outcomes and groups
-        Y1 = jdata.loc[:, 'y1'].to_numpy()
-        Y2 = jdata.loc[:, 'y2'].to_numpy()
-        J1 = jdata.loc[:, 'j1'].to_numpy()
-        J2 = jdata.loc[:, 'j2'].to_numpy()
-
-        ## Sparse matrix representations ##
-        JJ1 = csc_matrix((np.ones(ni), (range(ni), J1)), shape=(ni, nf))
-        JJ2 = csc_matrix((np.ones(ni), (range(ni), J2)), shape=(ni, nf))
-
-        ## Combine matrices and vectors ##
-        if stationary_a:
-            XX = (JJ1 - JJ2)[:, 1:]
-        else:
-            XX = hstack([JJ1[:, 1:], -JJ2])
-        YY = Y1 - Y2
-
-        ## Compute intercepts (linear regression) ##
-        ints = rss(XX.T @ XX).solve(XX.T @ YY, tol=1e-10)
-
-        ## Extract results ##
-        B1 = np.ones(nf)
-        B2 = B1
-        A1 = np.concatenate([[0], ints[: nf - 1]])
-        if stationary_a:
-            A2 = A1
-        else:
-            A2 = ints[nf - 1: 2 * nf - 1]
 
         return B1, B2
