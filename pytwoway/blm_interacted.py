@@ -170,8 +170,9 @@ class InteractedBLMModel():
         ## Solve for B ##
         lhs = tw.util.DxSP(1 / S0, M0)
 
-        if alternative_estimator:
+        if False: # alternative_estimator:
             ## Fixed point guaranteed ##
+            # NOTE: for some reason this sometimes converges to the wrong fixed point, so we comment it out for now
             prev_guess = np.ones(nf)
             for _ in range(max_iters):
                 new_guess = lhs @ prev_guess
@@ -182,7 +183,12 @@ class InteractedBLMModel():
             evec = new_guess
         else:
             ## Fixed point not guaranteed ##
-            _, evec = eigs(lhs, k=1, sigma=1)
+            try:
+                _, evec = eigs(lhs, k=1, sigma=1)
+            except RuntimeError:
+                # If scipy.linalg.eigs doesn't work, fall back to NumPy
+                evals, evecs = np.linalg.eig(lhs.todense())
+                evec = np.asarray(evecs[:, np.argmin(np.abs(evals - 1))])
 
             # Flatten and take real component
             evec = np.real(evec[:, 0])
@@ -373,9 +379,10 @@ class InteractedBLMModel():
             XX = hstack([X1, X2])
 
             ## Pre-multiply matrices ##
-            DpZZ = DxSP(Dp, ZZ)
-            ZZtZZinv = 1 / (diag_of_sp_prod(DpZZ.T, ZZ) + tik)
-            ZZ_ZZtZZinv = SPxD(ZZ, ZZtZZinv)
+            DpXX = DxSP(Dp, XX)
+            DpZZ = DxSP(np.sqrt(Dp), ZZ)
+            ZZtZZinv = 1 / (diag_of_sp_prod(DxSP(Dp, ZZ).T, ZZ) + tik)
+            ZZ_ZZtZZinv = SPxD(DpZZ, ZZtZZinv)
             XXtZZinv = (XX.T @ ZZ_ZZtZZinv)
             del ZZtZZinv
 
@@ -385,13 +392,13 @@ class InteractedBLMModel():
                 R = hstack([Y, X1])
 
                 ## Pre-multiply matrices ##
-                DpXX = DxSP(Dp, XX)
                 DpX2 = DxSP(Dp, X2)
-                RtR = R.T @ R
+                DpR = DxSP(Dp, R)
+                RtR = DpR.T @ R
 
                 ## LIML ##
-                Wx = RtR - (R.T @ X2) @ inv((DpX2.T @ X2).tocsc()) @ (DpX2.T @ R)
-                Wz = (RtR - (R.T @ ZZ_ZZtZZinv) @ (DpZZ.T @ R)).tocsc()
+                Wx = RtR - (R.T @ X2) @ inv((DpX2.T @ X2).tocsc()) @ (DpX2.T @ DpR)
+                Wz = (RtR - (R.T @ ZZ_ZZtZZinv) @ (DpZZ.T @ DpR)).tocsc()
                 del DpX2, RtR
 
                 # Smallest eigenvalue
@@ -411,21 +418,22 @@ class InteractedBLMModel():
             del DpZZ, ZZ_ZZtZZinv, XXtZZinv
 
             ## OLS ##
-            RY = np.asarray((RY).todense())[:, 0]
             RR = np.asarray((RR).todense())
+            RY = np.asarray((RY).todense())[:, 0]
             beta_hat = solve_qp(RR, -RY, solver='quadprog')
             beta_hat = np.concatenate([beta_hat[: norm_fid], [1], beta_hat[norm_fid:]])
         elif method == 'hful':
             ## HFUL ##
             ## Pre-multiply matrices ##
-            DpZZ = DxSP(Dp, ZZ)
-            ZZtZZinv = 1 / (diag_of_sp_prod(DpZZ.T, ZZ) + tik)
+            DpZZ = DxSP(np.sqrt(Dp), ZZ)
+            ZZtZZinv = 1 / (diag_of_sp_prod(DxSP(Dp, ZZ).T, ZZ) + tik)
 
             ## HFUL Part 1 ##
-            Pz = SPxD(ZZ, ZZtZZinv) @ DpZZ.T
+            Pz = SPxD(DpZZ, ZZtZZinv) @ DpZZ.T
             Pz.setdiag(0)
             Wx = (XX.T @ XX).tocsc()
             Wz = XX.T @ Pz @ XX
+            del DpZZ
 
             # Smallest eigenvalue
             WW = inv(Wx) @ Wz
