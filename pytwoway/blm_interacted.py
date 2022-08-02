@@ -422,27 +422,28 @@ class InteractedBLMModel():
             RY = np.asarray((RY).todense())[:, 0]
             beta_hat = solve_qp(RR, -RY, solver='quadprog')
             beta_hat = np.concatenate([beta_hat[: norm_fid], [1], beta_hat[norm_fid:]])
+
         elif method == 'hful':
             ## HFUL ##
             ## Pre-multiply matrices ##
             DpZZ = DxSP(np.sqrt(Dp), ZZ)
+            XXtDpZZ = XX.T @ DpZZ
             ZZtZZinv = 1 / (diag_of_sp_prod(DxSP(Dp, ZZ).T, ZZ) + tik)
 
-            ## HFUL Part 1 ##
-            Pz = SPxD(DpZZ, ZZtZZinv) @ DpZZ.T
-            Pz.setdiag(0)
+            ## HFUL ##
+            Pz_diag = diag_of_sp_prod(SPxD(DpZZ, ZZtZZinv).tocsc(), DpZZ.T)
             Wx = (XX.T @ XX).tocsc()
-            Wz = XX.T @ Pz @ XX
-            del DpZZ
+            Wz = SPxD(XXtDpZZ, ZZtZZinv) @ XXtDpZZ.T - SPxD(XX.T, Pz_diag) @ XX
+            del DpZZ, XXtDpZZ, ZZtZZinv, Pz_diag
 
             # Smallest eigenvalue
             WW = inv(Wx) @ Wz
             evals, _ = np.linalg.eig(WW.todense())
             lambda_ = np.min(evals)
 
-            ## HFUL Part 2 ##
             lambda2 = (lambda_ - (1 - lambda_) * (C / ni)) / (1 - (1 - lambda_) * (C / ni))
 
+            ## OLS ##
             ## Solve (Wx)^{-1} @ Wz @ v = lambda_ @ v, where we normalize v[norm_fid] = 1 ##
             WW.setdiag(WW.diagonal() - lambda2)
             WY = -WW[:, norm_fid]
