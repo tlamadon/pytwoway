@@ -148,11 +148,11 @@ class FEEstimator:
     Uses multigrid and partialing out to solve two way fixed effect models. This includes AKM, the Andrews et al. homoskedastic correction, and the Kline et al. heteroskedastic correction.
 
     Arguments:
-        data (BipartiteDataFrame): long or collapsed long format labor data
+        adata (BipartiteDataFrame): long or collapsed long format labor data
         params (ParamsDict or None): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().
     '''
 
-    def __init__(self, data, params=None):
+    def __init__(self, adata, params=None):
         # Start logger
         logger_init(self)
         # self.logger.info('initializing FEEstimator object')
@@ -160,7 +160,7 @@ class FEEstimator:
         if params is None:
             params = fe_params()
 
-        self.adata = data
+        self.adata = adata
 
         self.params = params
         # Results dictionary
@@ -171,9 +171,9 @@ class FEEstimator:
         ### Save some commonly used parameters as attributes ###
         ## All ##
         # Whether data is weighted
-        self.weighted = (params['weighted'] and ('w' in data.columns))
+        self.weighted = (params['weighted'] and ('w' in adata.columns))
         # Progress bars
-        self.no_pbars = not params['progress_bars']
+        self.no_pbars = (not params['progress_bars'])
         # Verbose
         self.verbose = params['verbose']
         # Number of cores to use
@@ -440,7 +440,7 @@ class FEEstimator:
         ## Dwinv ##
         Dwinv = 1 / diag_of_sp_prod(W.T, DpW)
 
-        ## Dwinv @ W.T @ DpJ ##
+        ## Dwinv @ W.T @ Dp @ J ##
         WtDpJ = W.T @ DpJ
         DwinvWtDpJ = DxSP(Dwinv, WtDpJ.tocsc())
 

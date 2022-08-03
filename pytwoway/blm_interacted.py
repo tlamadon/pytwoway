@@ -1,5 +1,5 @@
 '''
-Implement the interacted estimator from Bonhomme, Lamadon, & Manresa.
+Estimate the interacted model from Bonhomme, Lamadon, & Manresa.
 '''
 from tqdm.auto import tqdm, trange
 import numpy as np
@@ -7,217 +7,230 @@ from scipy.sparse import csc_matrix, eye, hstack
 from scipy.sparse.linalg import eigs, inv
 from qpsolvers import solve_qp
 from pyamg import ruge_stuben_solver as rss
-from bipartitepandas.util import ChainedAssignment
-import pytwoway as tw
+import bipartitepandas as bpd
+from bipartitepandas.util import ParamsDict, ChainedAssignment
 from pytwoway.util import DxSP, SPxD, diag_of_sp_prod
 
-class InteractedBLMModel():
+# NOTE: multiprocessing isn't compatible with lambda functions
+def _gteq0(a):
+    return a >= 0
+# def _gteq1(a):
+#     return a >= 1
+
+# Define default parameter dictionary
+_iblm_params_default = ParamsDict({
+    ## All ##
+    'estimator': ('linear', 'set', ['linear', 'fixed_point'],
+        '''
+            (default='linear') If 'linear', use linear estimator; if 'fixed_point', use fixed-point estimator.
+        ''', None),
+    'weighted': (True, 'type', bool,
+        '''
+            (default=True) If True, use weighted estimators.
+        ''', None),
+    'norm_fid': (0, 'type_constrained', (int, _gteq0),
+        '''
+            (default=0) Firm id to normalize.
+        ''', '>= 0'),
+    'progress_bars': (False, 'type', bool,
+        '''
+            (default=False) If True, display progress bars.
+        ''', None),
+    ## Linear ##
+    'method': ('liml_1', 'set', ['liml_1', 'liml_2', 'iv', 'hful', 'linear'],
+        '''
+            (default='liml_1') (For linear estimator) If 'liml_1', use LIML that allows profiling; if 'liml_2', use traditional LIML that does not allow profiling; if 'iv', use IV; if 'hful' use HFUL of Newey et al. (2012); if 'linear', constrain b1==b2==1 (this like an AKM estimator).
+        ''', None),
+    'stationary_a': (False, 'type', bool,
+        '''
+            (default=False) (For linear estimator) If True, constrain a1==a2.
+        ''', None),
+    'stationary_b': (False, 'type', bool,
+        '''
+            (default=False) (For linear estimator) If True, constrain b1==b2.
+        ''', None),
+    'profiling': (False, 'type', bool,
+        '''
+            (default=False) (For linear estimator) If True, estimate profiled LIML by partialling out period 1 covariates from period 2 covariates.
+        ''', None),
+    'instrument': ('firm_pairs', 'set', ['firm_pairs', 'worker_ids'],
+        '''
+            (default='firm_pairs') (For linear estimator) Which instrument to use - either 'firm_pairs' (use interaction of firm in period 1 and firm in period 2) or 'worker_ids' (use worker ids).
+        ''', None),
+    'coarse': (0, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0) (For linear estimator) Make instrument indicator coarser by dividing ids by `coarse` then rounding.
+        ''', '>= 0'),
+    'tik': (0, 'type', (float, int),
+        '''
+            (default=0) (For linear estimator) Add tik * I to instrument before inverting.
+        ''', None),
+    'C': (1, 'type', (float, int),
+        '''
+            (default=1) (For linear estimator) HFUL C factor.
+        ''', None),
+    ## Fixed point ##
+    'how_split': ('income', 'set', ['income', 'enter_exit'],
+        '''
+            (default='income') (For fixed-point estimator) If 'income', split workers by their average income; if 'enter_exit', split workers by whether they enter or exit a given firm.
+        ''', None),
+    'alternative_estimator': (True, 'type', bool,
+        '''
+            (default=True) (For fixed-point estimator) If True, estimate using alternative estimator.
+        ''', None),
+    'weight_firm_pairs': (False, 'type', bool,
+        '''
+            (default=False) (For fixed-point estimator) If True, weight each pair of firms by the number of movers between them.
+        ''', None) # ,
+    # 'max_iters': (500, 'type_constrained', (int, _gteq1),
+    #     '''
+    #         (default=500) (For fixed-point estimator) Maximum number of iterations for fixed-point estimation (used when `alternative_estimator`=True).
+    #     ''', '>= 1'),
+    # 'threshold': (1e-5, 'type_constrained', ((float, int), _gteq0),
+    #     '''
+    #         (default=1e-5) (For fixed-point estimator) Threshold maximum absolute percent change between iterations to break fixed-point iterations (used when `alternative_estimator`=True).
+    #     ''', '>= 0')
+})
+
+def iblm_params(update_dict=None):
+    '''
+    Dictionary of default iblm_params. Run tw.iblm_params().describe_all() for descriptions of all valid parameters.
+
+    Arguments:
+        update_dict (dict or None): user parameter values; None is equivalent to {}
+
+    Returns:
+        (ParamsDict) dictionary of iblm_params
+    '''
+    new_dict = _iblm_params_default.copy()
+    if update_dict is not None:
+        new_dict.update(update_dict)
+    return new_dict
+
+class InteractedBLMEstimator():
     '''
     Class for estimating interacted-BLM.
-    '''
-    def __init__(self):
-        pass
 
-    def fit_b_fixed_point(self, jdata, how_split='income', alternative_estimator=False, weighted=True, weight_firm_pairs=False, max_iters=500, threshold=1e-5, rng=None):
+    Arguments:
+        params (ParamsDict or None): dictionary of parameters for interacted-BLM estimation. Run tw.iblm_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.iblm_params().
+    '''
+    def __init__(self, params=None):
+        if params is None:
+            params = iblm_params()
+
+        self.params = params
+
+    def fit(self, adata, rng=None):
         '''
-        Fit b using the fixed-point estimator.
+        Estimate interacted BLM model.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
-            how_split (str): if 'income', split workers by their average income; if 'enter_exit', split workers by whether they enter or exit a given firm
-            alternative_estimator (bool): if True, estimate using alternative estimator
-            weighted (bool): if True, run estimator with weights
-            weight_firm_pairs (bool): if True, weight each pair of firms by the number of movers between them
-            max_iters (int): maximum number of iterations for fixed-point estimation (used when alternative_estimator=True)
-            threshold (float): threshold maximum absolute percent change between iterations to break fixed-point iterations (used when alternative_estimator=True)
+            adata (BipartitePandas DataFrame): long or collapsed long format labor data
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            (NumPy Array): estimated b
+            (tuple of NumPy Arrays): A, B, and alpha
         '''
         if rng is None:
             rng = np.random.default_rng(None)
 
-        if not jdata._col_included('w'):
+        ## Unpack parameters ##
+        params = self.params
+        # Estimator
+        estimator = params['estimator']
+        # Whether data is weighted
+        weighted = params['weighted']
+        if not adata._col_included('w'):
             # Skip weighting if no weight column included
             weighted = False
+        self.weighted = weighted
+        # Progress bars
+        self.no_pbars = (not params['progress_bars'])
 
-        if how_split == 'income':
-            # Sort workers by average income
-            if weighted:
-                jdata['weighted_y'] = jdata['w'] * jdata['y']
-                jdata['mean_y'] = jdata.groupby('i')['weighted_y'].transform('sum') / jdata.groupby('i')['w'].transform('sum')
-                jdata.drop('weighted_y', axis=1, inplace=True)
-            else:
-                jdata['mean_y'] = jdata.groupby('i')['y'].transform('mean')
-            jdata.sort_values('mean_y', inplace=True)
-            jdata.drop('mean_y', axis=1, inplace=True)
+        #### Estimate model ####
+        ### Keep only movers ###
+        jdata = adata.loc[adata.get_worker_m(is_sorted=True), :].clean(bpd.clean_params({'is_sorted': True, 'copy': True, 'verbose': False}))
 
-        # Initial data construction
-        nf = jdata.n_firms()
-        j = jdata.loc[:, 'j'].to_numpy()
-        y = jdata.loc[:, 'y'].to_numpy()
-        if weighted:
-            w = jdata.loc[:, 'w'].to_numpy()
-        # Construct graph
-        G, _ = jdata._construct_graph(connectedness='leave_out_observation', is_sorted=True, copy=False)
-        # Construct lists to store results
-        M0_data = []
-        M0_row = []
-        M0_col = []
+        ### Estimate ###
+        if estimator == 'linear':
+            A1, A2, B1, B2 = self._fit_b_linear(jdata.to_eventstudy())
+            A, B = A1[1:], B1
+        elif estimator == 'fixed_point':
+            B = self._fit_b_fixed_point(jdata, rng)
+        del jdata
 
-        for j1 in trange(nf):
-            ### Iterate over all firms ###
-            # Find workers who worked at firm j1
-            obs_in_j1 = (j == j1)
-            jdata.loc[:, 'obs_in_j1'] = obs_in_j1
-            i_in_j1 = jdata.groupby('i', sort=False)['obs_in_j1'].transform('max').to_numpy()
-            # Take subset of data for workers who worked at firm j1
-            jdata_j1 = jdata.loc[i_in_j1, :]
-            j_j1 = j[i_in_j1]
-            y_j1 = y[i_in_j1]
-            if weighted:
-                w_j1 = w[i_in_j1]
-            # For each firm, find its neighboring firms
-            j1_neighbors = G.neighborhood(j1, order=2, mindist=2)
-            for j2 in tqdm(j1_neighbors):
-                ### Iterate over all neighbors ###
-                if j2 > j1:
-                    ## Account for symmetry by estimating only if j2 > j1 ##
-                    # Find workers who worked at both firms j1 and j2
-                    obs_in_j2 = (j_j1 == j2)
-                    with ChainedAssignment():
-                        jdata_j1.loc[:, 'obs_in_j2'] = obs_in_j2
-                    i_in_j2 = jdata_j1.groupby('i', sort=False)['obs_in_j2'].transform('max').to_numpy()
-                    # Take subsets of data for workers who worked at both firms j1 and j2
-                    j_j12 = j_j1[i_in_j2]
-                    y_j12 = y_j1[i_in_j2]
-                    if weighted:
-                        w_j12 = w_j1[i_in_j2]
-                    # Take subsets of data specifically for firms j1 and j2
-                    is_j12 = (j_j12 == j1) | (j_j12 == j2)
-                    j_j12 = j_j12[is_j12]
-                    y_j12 = y_j12[is_j12]
-                    if weighted:
-                        w_j12 = w_j12[is_j12]
-                    if len(j_j12) >= 4:
-                        ## If there are at least two workers with observations at both firms ##
-                        # Split data for j1 and j2
-                        y_j11 = y_j12[j_j12 == j1]
-                        y_j22 = y_j12[j_j12 == j2]
-                        if weighted:
-                            w_j11 = w_j12[j_j12 == j1]
-                            w_j22 = w_j12[j_j12 == j2]
-                        # Split observations into entering/exiting groups
-                        if how_split == 'enter_exit':
-                            j_j12_first = j_j12[np.arange(len(j_j12)) % 2 == 0]
-                            entering = (j_j12_first == j2)
-                            exiting = (j_j12_first == j1)
-                        elif how_split == 'income':
-                            if len(y_j11) % 2 == 0:
-                                halfway = len(y_j11) // 2
-                            else:
-                                halfway = len(y_j11) // 2 + rng.binomial(n=1, p=0.5)
-                            entering = (np.arange(len(y_j11)) < halfway)
-                            exiting = (np.arange(len(y_j11)) >= halfway)
-                        else:
-                            raise ValueError(f"`how_split` must be one of 'enter_exit' or 'income', but input specifies {how_split!r}.")
-                        if (np.sum(entering) > 0) and (np.sum(exiting) > 0):
-                            # Need workers to both enter and exit
-                            if weighted:
-                                entering_w1 = np.sum(w_j11[entering])
-                                entering_w2 = np.sum(w_j22[entering])
-                                exiting_w1 = np.sum(w_j11[exiting])
-                                exiting_w2 = np.sum(w_j22[exiting])
-                                w1 = entering_w1 + exiting_w1
-                                w2 = entering_w2 + exiting_w2
-                                entering_y1 = np.sum(w_j11[entering] * y_j11[entering]) / entering_w1
-                                entering_y2 = np.sum(w_j22[entering] * y_j22[entering]) / entering_w2
-                                exiting_y1 = np.sum(w_j11[exiting] * y_j11[exiting]) / exiting_w1
-                                exiting_y2 = np.sum(w_j22[exiting] * y_j22[exiting]) / exiting_w2
-                            else:
-                                w1 = len(y_j11)
-                                w2 = len(y_j22)
-                                entering_y1 = np.mean(y_j11[entering])
-                                entering_y2 = np.mean(y_j22[entering])
-                                exiting_y1 = np.mean(y_j11[exiting])
-                                exiting_y2 = np.mean(y_j22[exiting])
-                            if not weight_firm_pairs:
-                                w1 = 1
-                                w2 = 1
-                            ## Compute M0 (use symmetry) ##
-                            # For M0[j1, j2] = (entering_y1 - exiting_y1)
-                            M0_data.append(w1 * (entering_y1 - exiting_y1))
-                            M0_row.append(j1)
-                            M0_col.append(j2)
-                            # For M0[j2, j1] = (exiting_y2 - entering_y2)
-                            M0_data.append(w2 * (exiting_y2 - entering_y2))
-                            if alternative_estimator:
-                                M0_data[-1] *= -1
-                            M0_row.append(j2)
-                            M0_col.append(j1)
+        ### Prepare matrices ###
+        nn = len(adata)
+        nf = adata.n_firms()
+        nw = adata.n_workers()
 
-        if how_split == 'income':
-            # Sort jdata
-            jdata.sort_rows(copy=False)
+        ## Y (income) ##
+        Y = adata.loc[:, 'y'].to_numpy()
 
-        # Convert to sparse matrix
-        M0 = csc_matrix((M0_data, (M0_row, M0_col)), shape=(nf, nf))
-        S0 = - np.asarray(M0.sum(axis=0))[0, :]
-        if alternative_estimator:
-            S0 *= -1
+        ## J (firms) ##
+        J = csc_matrix((np.ones(nn), (adata.index.to_numpy(), adata.loc[:, 'j'].to_numpy())), shape=(nn, nf))
 
-        ## Solve for B ##
-        lhs = tw.util.DxSP(1 / S0, M0)
+        # Normalize one firm to 0
+        J = J[:, range(nf - 1)]
 
-        if False: # alternative_estimator:
-            ## Fixed point guaranteed ##
-            # NOTE: for some reason this sometimes converges to the wrong fixed point, so we comment it out for now
-            prev_guess = np.ones(nf)
-            for _ in range(max_iters):
-                new_guess = lhs @ prev_guess
-                new_guess /= new_guess[0]
-                if np.max(np.abs((new_guess - prev_guess) / prev_guess)) <= threshold:
-                    break
-                prev_guess = new_guess
-            evec = new_guess
+        ## W (workers) ##
+        W = csc_matrix((B[adata.loc[:, 'j'].to_numpy()], (adata.index.to_numpy(), adata.loc[:, 'i'].to_numpy())), shape=(nn, nw))
+
+        if self.weighted:
+            ### Weighted ###
+            ## Dp (weight) ##
+            Dp = adata.loc[:, 'w'].to_numpy()
+
+            ## Weighted J and W ##
+            DpJ = DxSP(Dp, J)
+            DpW = DxSP(Dp, W)
         else:
-            ## Fixed point not guaranteed ##
-            try:
-                _, evec = eigs(lhs, k=1, sigma=1)
-            except RuntimeError:
-                # If scipy.linalg.eigs doesn't work, fall back to NumPy
-                evals, evecs = np.linalg.eig(lhs.todense())
-                evec = np.asarray(evecs[:, np.argmin(np.abs(evals - 1))])
+            ## Unweighted ##
+            ## Dp (weight) ##
+            Dp = 1
 
-            # Flatten and take real component
-            evec = np.real(evec[:, 0])
+            ## Weighted J and W ##
+            DpJ = J
+            DpW = W
 
-            # Normalize
-            evec /= evec[0]
+        ## Dwinv ##
+        Dwinv = 1 / diag_of_sp_prod(W.T, DpW)
 
-        return evec
+        ## Dwinv @ W.T @ Dp @ J ##
+        WtDpJ = W.T @ DpJ
+        DwinvWtDpJ = DxSP(Dwinv, WtDpJ.tocsc())
 
-    def fit_b_linear(self, jdata, stationary_a=False, stationary_b=False, profiling=False, instrument='firm_pairs', method='liml_1', weighted=True, coarse=0, tik=0, C=1, norm_fid=0):
+        ## M ##
+        M = rss(J.T @ DpJ - WtDpJ.T @ DwinvWtDpJ)
+
+        ## Estimate A and alpha ##
+        if estimator == 'fixed_point':
+            A = M.solve(DpJ.T @ Y - DwinvWtDpJ.T @ DpW.T @ Y, tol=1e-10)
+
+        alpha = Dwinv * (DpW.T @ Y) - DwinvWtDpJ @ A
+
+        ## Add 0 for normalized firm ##
+        if estimator == 'fixed_point':
+            A = np.append(A, 0)
+        else:
+            A = A1
+
+        return A, B, alpha        
+
+    def _fit_b_linear(self, jdata):
         '''
         Fit b using the linear estimator.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
-            stationary_a (bool): if True, constrain a1==a2
-            stationary_b (bool): if True, constrain b1==b2
-            profiling (bool): if True, estimate profiled LIML by partialling out period 1 covariates from period 2 covariates
-            instrument (str): which instrument to use - either 'firm_pairs' (use interaction of firm in period 1 and firm in period 2) or 'worker_ids' (use worker ids)
-            method (str): if 'liml_1', use LIML that allows profiling; if 'liml_2', use traditional LIML that does not allow profiling; if 'iv', use IV; if 'hful' use HFUL of Newey et al. (2012); if linear, constrain b1==b2==1 (this like an AKM estimator)
-            weighted (bool): if True, run estimator with weights
-            coarse (float): make joint firm indicator coarser by dividing the second firm id by `coarse`
-            tik (float): add tik * I to instrument before inverting
-            C (float): HFUL factor
-            norm_fid (int): firm id to normalize
+            jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
 
         Returns:
-            (NumPy Array): estimated b
+            (tuple of NumPy Arrays): estimated A1, A2, B1, and B2
         '''
+        # Unpack parameters
+        weighted = self.weighted
+        method, norm_fid, stationary_a, stationary_b, profiling, instrument, coarse, tik, C = self.params.get_multiple(('method', 'norm_fid', 'stationary_a', 'stationary_b', 'profiling', 'instrument', 'coarse', 'tik', 'C'))
+
         if stationary_b and profiling:
             raise ValueError('Can set either `stationary_b`=True or `profiling`=True, but not both.')
 
@@ -232,10 +245,6 @@ class InteractedBLMModel():
 
         if method not in ['liml_1', 'liml_2', 'iv', 'hful', 'linear']:
             raise ValueError(f"`method` must be one of 'liml_1', 'liml_2', 'iv', 'hful', or 'linear', but input specifies {method!r}.")
-
-        if not jdata._col_included('w'):
-            # Skip weighting if no weight column included
-            weighted = False
 
         # Parameters
         nf, ni = jdata.n_firms(), len(jdata)
@@ -282,7 +291,7 @@ class InteractedBLMModel():
             else:
                 A2 = ints[nf - 1: 2 * nf - 1]
 
-            return B1, B2
+            return A1, A2, B1, B2
 
         ## Construct instrument ##
         if coarse == 0:
@@ -481,4 +490,178 @@ class InteractedBLMModel():
         else:
             A2 = beta_hat[idx: idx + nf] * B2
 
-        return B1, B2
+        return A1, A2, B1, B2
+
+    def _fit_b_fixed_point(self, jdata, rng=None):
+        '''
+        Fit b using the fixed-point estimator.
+
+        Arguments:
+            jdata (BipartitePandas DataFrame): long or collapsed long format labor data for movers
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+
+        Returns:
+            (NumPy Array): estimated B
+        '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
+        # Unpack parameters
+        weighted = self.weighted
+        how_split, alternative_estimator, weight_firm_pairs = self.params.get_multiple(('how_split', 'alternative_estimator', 'weight_firm_pairs')) # max_iters, threshold
+
+        if how_split == 'income':
+            # Sort workers by average income
+            if weighted:
+                jdata['weighted_y'] = jdata['w'] * jdata['y']
+                jdata['mean_y'] = jdata.groupby('i')['weighted_y'].transform('sum') / jdata.groupby('i')['w'].transform('sum')
+                jdata.drop('weighted_y', axis=1, inplace=True)
+            else:
+                jdata['mean_y'] = jdata.groupby('i')['y'].transform('mean')
+            jdata.sort_values('mean_y', inplace=True)
+            jdata.drop('mean_y', axis=1, inplace=True)
+
+        # Initial data construction
+        nf = jdata.n_firms()
+        j = jdata.loc[:, 'j'].to_numpy()
+        y = jdata.loc[:, 'y'].to_numpy()
+        if weighted:
+            w = jdata.loc[:, 'w'].to_numpy()
+        # Construct graph
+        G, _ = jdata._construct_graph(connectedness='leave_out_observation', is_sorted=True, copy=False)
+        # Construct lists to store results
+        M0_data = []
+        M0_row = []
+        M0_col = []
+
+        for j1 in trange(nf, disable=self.no_pbars):
+            ### Iterate over all firms ###
+            # Find workers who worked at firm j1
+            obs_in_j1 = (j == j1)
+            jdata.loc[:, 'obs_in_j1'] = obs_in_j1
+            i_in_j1 = jdata.groupby('i', sort=False)['obs_in_j1'].transform('max').to_numpy()
+            # Take subset of data for workers who worked at firm j1
+            jdata_j1 = jdata.loc[i_in_j1, :]
+            j_j1 = j[i_in_j1]
+            y_j1 = y[i_in_j1]
+            if weighted:
+                w_j1 = w[i_in_j1]
+            # For each firm, find its neighboring firms
+            j1_neighbors = G.neighborhood(j1, order=2, mindist=2)
+            for j2 in tqdm(j1_neighbors, disable=self.no_pbars):
+                ### Iterate over all neighbors ###
+                if j2 > j1:
+                    ## Account for symmetry by estimating only if j2 > j1 ##
+                    # Find workers who worked at both firms j1 and j2
+                    obs_in_j2 = (j_j1 == j2)
+                    with ChainedAssignment():
+                        jdata_j1.loc[:, 'obs_in_j2'] = obs_in_j2
+                    i_in_j2 = jdata_j1.groupby('i', sort=False)['obs_in_j2'].transform('max').to_numpy()
+                    # Take subsets of data for workers who worked at both firms j1 and j2
+                    j_j12 = j_j1[i_in_j2]
+                    y_j12 = y_j1[i_in_j2]
+                    if weighted:
+                        w_j12 = w_j1[i_in_j2]
+                    # Take subsets of data specifically for firms j1 and j2
+                    is_j12 = (j_j12 == j1) | (j_j12 == j2)
+                    j_j12 = j_j12[is_j12]
+                    y_j12 = y_j12[is_j12]
+                    if weighted:
+                        w_j12 = w_j12[is_j12]
+                    if len(j_j12) >= 4:
+                        ## If there are at least two workers with observations at both firms ##
+                        # Split data for j1 and j2
+                        y_j11 = y_j12[j_j12 == j1]
+                        y_j22 = y_j12[j_j12 == j2]
+                        if weighted:
+                            w_j11 = w_j12[j_j12 == j1]
+                            w_j22 = w_j12[j_j12 == j2]
+                        # Split observations into entering/exiting groups
+                        if how_split == 'enter_exit':
+                            j_j12_first = j_j12[np.arange(len(j_j12)) % 2 == 0]
+                            entering = (j_j12_first == j2)
+                            exiting = (j_j12_first == j1)
+                        elif how_split == 'income':
+                            if len(y_j11) % 2 == 0:
+                                halfway = len(y_j11) // 2
+                            else:
+                                halfway = len(y_j11) // 2 + rng.binomial(n=1, p=0.5)
+                            entering = (np.arange(len(y_j11)) < halfway)
+                            exiting = (np.arange(len(y_j11)) >= halfway)
+                        else:
+                            raise ValueError(f"`how_split` must be one of 'enter_exit' or 'income', but input specifies {how_split!r}.")
+                        if (np.sum(entering) > 0) and (np.sum(exiting) > 0):
+                            # Need workers to both enter and exit
+                            if weighted:
+                                entering_w1 = np.sum(w_j11[entering])
+                                entering_w2 = np.sum(w_j22[entering])
+                                exiting_w1 = np.sum(w_j11[exiting])
+                                exiting_w2 = np.sum(w_j22[exiting])
+                                w1 = entering_w1 + exiting_w1
+                                w2 = entering_w2 + exiting_w2
+                                entering_y1 = np.sum(w_j11[entering] * y_j11[entering]) / entering_w1
+                                entering_y2 = np.sum(w_j22[entering] * y_j22[entering]) / entering_w2
+                                exiting_y1 = np.sum(w_j11[exiting] * y_j11[exiting]) / exiting_w1
+                                exiting_y2 = np.sum(w_j22[exiting] * y_j22[exiting]) / exiting_w2
+                            else:
+                                w1 = len(y_j11)
+                                w2 = len(y_j22)
+                                entering_y1 = np.mean(y_j11[entering])
+                                entering_y2 = np.mean(y_j22[entering])
+                                exiting_y1 = np.mean(y_j11[exiting])
+                                exiting_y2 = np.mean(y_j22[exiting])
+                            if not weight_firm_pairs:
+                                w1 = 1
+                                w2 = 1
+                            ## Compute M0 (use symmetry) ##
+                            # For M0[j1, j2] = (entering_y1 - exiting_y1)
+                            M0_data.append(w1 * (entering_y1 - exiting_y1))
+                            M0_row.append(j1)
+                            M0_col.append(j2)
+                            # For M0[j2, j1] = (exiting_y2 - entering_y2)
+                            M0_data.append(w2 * (exiting_y2 - entering_y2))
+                            if alternative_estimator:
+                                M0_data[-1] *= -1
+                            M0_row.append(j2)
+                            M0_col.append(j1)
+
+        if how_split == 'income':
+            # Sort jdata
+            jdata.sort_rows(copy=False)
+
+        # Convert to sparse matrix
+        M0 = csc_matrix((M0_data, (M0_row, M0_col)), shape=(nf, nf))
+        S0 = - np.asarray(M0.sum(axis=0))[0, :]
+        if alternative_estimator:
+            S0 *= -1
+
+        ## Solve for B ##
+        lhs = DxSP(1 / S0, M0)
+
+        if False: # alternative_estimator:
+            ## Fixed point guaranteed ##
+            # NOTE: for some reason this sometimes converges to the wrong fixed point, so we comment it out for now
+            prev_guess = np.ones(nf)
+            for _ in range(max_iters):
+                new_guess = lhs @ prev_guess
+                new_guess /= new_guess[0]
+                if np.max(np.abs((new_guess - prev_guess) / prev_guess)) <= threshold:
+                    break
+                prev_guess = new_guess
+            evec = new_guess
+        else:
+            ## Fixed point not guaranteed ##
+            try:
+                _, evec = eigs(lhs, k=1, sigma=1)
+            except RuntimeError:
+                # If scipy.linalg.eigs doesn't work, fall back to NumPy
+                evals, evecs = np.linalg.eig(lhs.todense())
+                evec = np.asarray(evecs[:, np.argmin(np.abs(evals - 1))])
+
+            # Flatten and take real component
+            evec = np.real(evec[:, 0])
+
+            # Normalize
+            evec /= evec[0]
+
+        return evec
