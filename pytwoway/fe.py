@@ -528,7 +528,7 @@ class FEEstimator:
         Attach the estimated psi_hat and alpha_hat as columns to the input dataframe.
         '''
         # Add 0 for normalized firm
-        psi_hat = np.concatenate([self.psi_hat, np.array([0])])
+        psi_hat = np.append(self.psi_hat, 0)
         alpha_hat = self.alpha_hat
 
         # Attach columns

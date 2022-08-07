@@ -3,13 +3,13 @@ Estimate the interacted model from Bonhomme, Lamadon, & Manresa.
 '''
 from tqdm.auto import tqdm, trange
 import numpy as np
-from scipy.sparse import csc_matrix, eye, hstack
+from scipy.sparse import csc_matrix, eye, hstack, tril
 from scipy.sparse.linalg import eigs, inv
 from qpsolvers import solve_qp
 from pyamg import ruge_stuben_solver as rss
 import bipartitepandas as bpd
 from bipartitepandas.util import ParamsDict, ChainedAssignment
-from pytwoway.util import DxSP, SPxD, diag_of_sp_prod
+from pytwoway.util import weighted_mean, DxSP, SPxD, diag_of_sp_prod
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq0(a):
@@ -149,77 +149,65 @@ class InteractedBLMEstimator():
 
         #### Estimate model ####
         ### Keep only movers ###
-        jdata = adata.loc[adata.get_worker_m(is_sorted=True), :].clean(bpd.clean_params({'is_sorted': True, 'copy': True, 'verbose': False}))
+        jdata = adata.loc[adata.get_worker_m(is_sorted=True), :]
 
         ### Estimate ###
         if estimator == 'linear':
-            A1, A2, B1, B2 = self._fit_b_linear(jdata.to_eventstudy())
-            A, B = A1[1:], B1
+            jdata = jdata.to_permutedeventstudy(order='income', is_sorted=True, copy=False)
+            A1, A2, B1, B2 = self._fit_a_b_linear(jdata)
+
+            ## alpha_j1_j2 ##
+            y1 = jdata.loc[:, 'y1'].to_numpy()
+            y2 = jdata.loc[:, 'y2'].to_numpy()
+            j1 = jdata.loc[:, 'j1'].to_numpy()
+            j2 = jdata.loc[:, 'j2'].to_numpy()
+
+            jdata.loc[:, 'alpha_j1_j2'] = (y1 - A1[j1]) / B1[j1] + (y2 - A2[j2]) / B2[j2]
+            if weighted:
+                jdata.loc[:, 'w'] = jdata.loc[:, 'w1'].to_numpy() * jdata.loc[:, 'w2'].to_numpy()
+                jdata.loc[:, 'alpha_j1_j2'] *= jdata.loc[:, 'w'].to_numpy()
+                groupby_j = jdata.groupby(['j1', 'j2'])
+                alpha_j1_j2 = groupby_j['alpha_j1_j2'].sum() / groupby_j['w'].sum()
+                jdata.drop('w', axis=1, inplace=True)
+            else:
+                alpha_j1_j2 = jdata.groupby(['j1', 'j2'])['alpha_j1_j2'].mean()
+            jdata.drop('alpha_j1_j2', axis=1, inplace=True)
+
+            # NOTE: is it correct to multiply by (1 / 2) here?
+            alpha_j1_j2 = (1 / 2) * alpha_j1_j2.unstack(fill_value=0).to_numpy()
+
+            ## alpha_j ##
+            sdata = adata.loc[~(adata.get_worker_m(is_sorted=True)), :].to_eventstudy(is_sorted=True, copy=False)
+            y1 = sdata.loc[:, 'y1'].to_numpy()
+            y2 = sdata.loc[:, 'y2'].to_numpy()
+            j1 = sdata.loc[:, 'j1'].to_numpy()
+            j2 = sdata.loc[:, 'j2'].to_numpy()
+
+            sdata.loc[:, 'alpha_j'] = (y1 - A1[j1]) / B1[j1] + (y2 - A2[j2]) / B2[j2]
+            if weighted:
+                sdata.loc[:, 'w'] = sdata.loc[:, 'w1'].to_numpy() * sdata.loc[:, 'w2'].to_numpy()
+                sdata.loc[:, 'alpha_j'] *= sdata.loc[:, 'w'].to_numpy()
+                groupby_j = sdata.groupby('j1')
+                alpha_j = groupby_j['alpha_j'].sum() / groupby_j['w'].sum()
+                sdata.drop('w', axis=1, inplace=True)
+            else:
+                alpha_j = sdata.groupby('j1')['alpha_j'].mean()
+            sdata.drop('alpha_j', axis=1, inplace=True)
+
+            # NOTE: is it correct to multiply by (1 / 2) here?
+            alpha_j = (1 / 2) * alpha_j.to_numpy()
+
+            ## Update parameters ##
+            A, B, alpha = A1, B1, alpha_j
         elif estimator == 'fixed_point':
             B = self._fit_b_fixed_point(jdata, rng)
-        del jdata
+            A, alpha = self._fit_a_alpha_fixed_point(adata, B)
 
-        ### Prepare matrices ###
-        nn = len(adata)
-        nf = adata.n_firms()
-        nw = adata.n_workers()
+        return A, B, alpha
 
-        ## Y (income) ##
-        Y = adata.loc[:, 'y'].to_numpy()
-
-        ## J (firms) ##
-        J = csc_matrix((np.ones(nn), (adata.index.to_numpy(), adata.loc[:, 'j'].to_numpy())), shape=(nn, nf))
-
-        # Normalize one firm to 0
-        J = J[:, range(nf - 1)]
-
-        ## W (workers) ##
-        W = csc_matrix((B[adata.loc[:, 'j'].to_numpy()], (adata.index.to_numpy(), adata.loc[:, 'i'].to_numpy())), shape=(nn, nw))
-
-        if self.weighted:
-            ### Weighted ###
-            ## Dp (weight) ##
-            Dp = adata.loc[:, 'w'].to_numpy()
-
-            ## Weighted J and W ##
-            DpJ = DxSP(Dp, J)
-            DpW = DxSP(Dp, W)
-        else:
-            ## Unweighted ##
-            ## Dp (weight) ##
-            Dp = 1
-
-            ## Weighted J and W ##
-            DpJ = J
-            DpW = W
-
-        ## Dwinv ##
-        Dwinv = 1 / diag_of_sp_prod(W.T, DpW)
-
-        ## Dwinv @ W.T @ Dp @ J ##
-        WtDpJ = W.T @ DpJ
-        DwinvWtDpJ = DxSP(Dwinv, WtDpJ.tocsc())
-
-        ## M ##
-        M = rss(J.T @ DpJ - WtDpJ.T @ DwinvWtDpJ)
-
-        ## Estimate A and alpha ##
-        if estimator == 'fixed_point':
-            A = M.solve(DpJ.T @ Y - DwinvWtDpJ.T @ DpW.T @ Y, tol=1e-10)
-
-        alpha = Dwinv * (DpW.T @ Y) - DwinvWtDpJ @ A
-
-        ## Add 0 for normalized firm ##
-        if estimator == 'fixed_point':
-            A = np.append(A, 0)
-        else:
-            A = A1
-
-        return A, B, alpha        
-
-    def _fit_b_linear(self, jdata):
+    def _fit_a_b_linear(self, jdata):
         '''
-        Fit b using the linear estimator.
+        Fit A and B using the linear estimator.
 
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
@@ -285,7 +273,7 @@ class InteractedBLMEstimator():
             ## Extract results ##
             B1 = np.ones(nf)
             B2 = B1
-            A1 = np.concatenate([[0], ints[: nf - 1]])
+            A1 = np.append(0, ints[: nf - 1])
             if stationary_a:
                 A2 = A1
             else:
@@ -483,7 +471,7 @@ class InteractedBLMEstimator():
         else:
             B2 = 1 / beta_hat[idx: idx + nf]
             idx += nf
-        A1 = np.concatenate([[0], beta_hat[idx: idx + (nf - 1)]]) * B1
+        A1 = np.append(0, beta_hat[idx: idx + (nf - 1)]) * B1
         idx += (nf - 1)
         if stationary_a:
             A2 = A1 * (B2 / B1)
@@ -494,7 +482,7 @@ class InteractedBLMEstimator():
 
     def _fit_b_fixed_point(self, jdata, rng=None):
         '''
-        Fit b using the fixed-point estimator.
+        Fit B using the fixed-point estimator.
 
         Arguments:
             jdata (BipartitePandas DataFrame): long or collapsed long format labor data for movers
@@ -510,16 +498,77 @@ class InteractedBLMEstimator():
         weighted = self.weighted
         how_split, alternative_estimator, weight_firm_pairs = self.params.get_multiple(('how_split', 'alternative_estimator', 'weight_firm_pairs')) # max_iters, threshold
 
+        # ## Estimate using event study format ##
+        # if weighted:
+        #     # Weight y1 and y2
+        #     w1 = jdata.loc[:, 'w1'].to_numpy()
+        #     w2 = jdata.loc[:, 'w2'].to_numpy()
+        #     y1 = jdata.loc[:, 'y1'].to_numpy().copy()
+        #     y2 = jdata.loc[:, 'y2'].to_numpy().copy()
+        #     jdata.loc[:, 'y1'] = w1 * y1
+        #     jdata.loc[:, 'y2'] = w2 * y2
+        # groupby_j1j2 = jdata.groupby(['j1', 'j2'])
+
+        # ## Solve for y1 ##
+        # if weighted:
+        #     w1_sum = groupby_j1j2['w1'].sum()
+        #     y1_mean = groupby_j1j2['y1'].sum() / w1_sum
+        # else:
+        #     if weight_firm_pairs:
+        #         w1_sum = groupby_j1j2['y1'].size()
+        #     y1_mean = groupby_j1j2['y1'].mean()
+        # row = y1_mean.index.get_level_values(0)
+        # col = y1_mean.index.get_level_values(1)
+        # M_y1 = csc_matrix((y1_mean, (row, col)))
+
+        # ## Solve for y2 ##
+        # if weighted:
+        #     w2_sum = groupby_j1j2['w2'].sum()
+        #     y2_mean = groupby_j1j2['y2'].sum() / w2_sum
+        # else:
+        #     if weight_firm_pairs:
+        #         w2_sum = groupby_j1j2['y2'].size()
+        #     y2_mean = groupby_j1j2['y2'].mean()
+        # row = y2_mean.index.get_level_values(0)
+        # col = y2_mean.index.get_level_values(1)
+        # M_y2 = csc_matrix((y2_mean, (row, col)))
+
+        # ## Combine ##
+        # M0 = M_y2.T - M_y1
+
+        # if alternative_estimator:
+        #     # Multiply lower triangular part of M0 by -1 (we equivalently subtract twice its value)
+        #     M0 -= 2 * tril(M0, k=-1)
+
+        # if weight_firm_pairs:
+        #     ## Weight firm pairs ##
+        #     # w1_sum
+        #     row = w1_sum.index.get_level_values(0)
+        #     col = w1_sum.index.get_level_values(1)
+        #     w1_sum = csc_matrix((w1_sum, (row, col)))
+        #     # w2_sum
+        #     row = w2_sum.index.get_level_values(0)
+        #     col = w2_sum.index.get_level_values(1)
+        #     w2_sum = csc_matrix((w2_sum, (row, col)))
+        #     # Weight
+        #     M0 = M0.multiply(w1_sum + w2_sum.T)
+
+        # if weighted:
+        #     # Restore original y1 and y2
+        #     jdata.loc[:, 'y1'] = y1
+        #     jdata.loc[:, 'y2'] = y2
+
         if how_split == 'income':
             # Sort workers by average income
-            if weighted:
-                jdata['weighted_y'] = jdata['w'] * jdata['y']
-                jdata['mean_y'] = jdata.groupby('i')['weighted_y'].transform('sum') / jdata.groupby('i')['w'].transform('sum')
-                jdata.drop('weighted_y', axis=1, inplace=True)
-            else:
-                jdata['mean_y'] = jdata.groupby('i')['y'].transform('mean')
-            jdata.sort_values('mean_y', inplace=True)
-            jdata.drop('mean_y', axis=1, inplace=True)
+            with ChainedAssignment():
+                if weighted:
+                    jdata.loc[:, 'weighted_y'] = jdata.loc[:, 'w'].to_numpy() * jdata.loc[:, 'y'].to_numpy()
+                    jdata['mean_y'] = jdata.groupby('i')['weighted_y'].transform('sum') / jdata.groupby('i')['w'].transform('sum')
+                    jdata.drop('weighted_y', axis=1, inplace=True)
+                else:
+                    jdata['mean_y'] = jdata.groupby('i')['y'].transform('mean')
+                jdata.sort_values('mean_y', inplace=True)
+                jdata.drop('mean_y', axis=1, inplace=True)
 
         # Initial data construction
         nf = jdata.n_firms()
@@ -538,7 +587,8 @@ class InteractedBLMEstimator():
             ### Iterate over all firms ###
             # Find workers who worked at firm j1
             obs_in_j1 = (j == j1)
-            jdata.loc[:, 'obs_in_j1'] = obs_in_j1
+            with ChainedAssignment():
+                jdata.loc[:, 'obs_in_j1'] = obs_in_j1
             i_in_j1 = jdata.groupby('i', sort=False)['obs_in_j1'].transform('max').to_numpy()
             # Take subset of data for workers who worked at firm j1
             jdata_j1 = jdata.loc[i_in_j1, :]
@@ -665,3 +715,68 @@ class InteractedBLMEstimator():
             evec /= evec[0]
 
         return evec
+
+    def _fit_a_alpha_fixed_point(self, adata, B):
+        '''
+        Fit A and alpha using the fixed-point estimator.
+
+        Arguments:
+            adata (BipartitePandas DataFrame): long or collapsed long format labor data
+            B (NumPy Array): estimated B
+
+        Returns:
+            (tuple of NumPy Arrays): estimated A and alpha
+        '''
+        ### Prepare matrices ###
+        nn = len(adata)
+        nf = adata.n_firms()
+        nw = adata.n_workers()
+
+        ## Y (income) ##
+        Y = adata.loc[:, 'y'].to_numpy()
+
+        ## J (firms) ##
+        J = csc_matrix((np.ones(nn), (adata.index.to_numpy(), adata.loc[:, 'j'].to_numpy())), shape=(nn, nf))
+
+        # Normalize one firm to 0
+        J = J[:, range(nf - 1)]
+
+        ## W (workers) ##
+        W = csc_matrix((B[adata.loc[:, 'j'].to_numpy()], (adata.index.to_numpy(), adata.loc[:, 'i'].to_numpy())), shape=(nn, nw))
+
+        if self.weighted:
+            ### Weighted ###
+            ## Dp (weight) ##
+            Dp = adata.loc[:, 'w'].to_numpy()
+
+            ## Weighted J and W ##
+            DpJ = DxSP(Dp, J)
+            DpW = DxSP(Dp, W)
+        else:
+            ## Unweighted ##
+            ## Dp (weight) ##
+            Dp = 1
+
+            ## Weighted J and W ##
+            DpJ = J
+            DpW = W
+
+        ## Dwinv ##
+        Dwinv = 1 / diag_of_sp_prod(W.T, DpW)
+
+        ## Dwinv @ W.T @ Dp @ J ##
+        WtDpJ = W.T @ DpJ
+        DwinvWtDpJ = DxSP(Dwinv, WtDpJ.tocsc())
+
+        ## M ##
+        M = rss(J.T @ DpJ - WtDpJ.T @ DwinvWtDpJ)
+
+        ## Estimate A and alpha ##
+        A = M.solve(DpJ.T @ Y - DwinvWtDpJ.T @ DpW.T @ Y, tol=1e-10)
+
+        alpha = Dwinv * (DpW.T @ Y) - DwinvWtDpJ @ A
+
+        ## Add 0 for normalized firm ##
+        A = np.append(A, 0)
+
+        return A, alpha

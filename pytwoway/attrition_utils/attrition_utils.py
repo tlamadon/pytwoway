@@ -63,7 +63,7 @@ class AttritionIncreasing():
             clean_params['drop_single_stayers'] = False
 
         # Get subset fractions
-        fracs = self.subset_fractions
+        drop_fracs = 1 - self.subset_fractions
 
         # Must reset id_reference_dict
         bdf = bdf._reset_id_reference_dict(include=True)
@@ -78,7 +78,7 @@ class AttritionIncreasing():
             # Sometimes we draw so few firms that it's likely to end up with no observations left, so redraw until success
             ## Draw first subset ##
             # Number of wids to drop
-            n_wid_drops_1 = int(np.floor((1 - fracs[0]) * len(wids_init)))
+            n_wid_drops_1 = int(np.round(drop_fracs[0] * len(wids_init)))
             # Draw wids to drop
             wid_drops_1 = set(rng.choice(wids_init, size=n_wid_drops_1, replace=False))
             try:
@@ -168,11 +168,13 @@ class AttritionIncreasing():
         all_valid_wids = set(subset_2.loc[subset_2.loc[:, 'm'].to_numpy() > 0, :].unique_ids('i'))
         wids_to_drop = all_valid_wids.difference(drawn_wids)
 
-        for i, frac in enumerate(fracs[1:]):
-            # Each step, drop fewer wids
-            n_wid_draws_i = min(int(np.round((1 - frac) * len(all_valid_wids), 1)), len(wids_to_drop))
-            if n_wid_draws_i > 0:
-                wids_to_drop = set(rng.choice(list(wids_to_drop), size=n_wid_draws_i, replace=False))
+        for i, drop_frac in enumerate(drop_fracs[1:]):
+            ## Each step, drop fewer wids ##
+            n_wid_drops_i = min(int(np.round(drop_frac * len(all_valid_wids))), len(wids_to_drop))
+            if n_wid_drops_i == 0:
+                wids_to_drop = set()
+            elif 0 < n_wid_drops_i < len(wids_to_drop):
+                wids_to_drop = set(rng.choice(list(wids_to_drop), size=n_wid_drops_i, replace=False))
             else:
                 warnings.warn(f'Attrition plot does not change at iteration {i}')
 
@@ -248,29 +250,26 @@ class AttritionDecreasing():
 
         # Worker ids in base subset
         wids_movers = set(bdf.loc[bdf.loc[:, 'm'].to_numpy() > 0, :].unique_ids('i'))
-        # wids_stayers = list(bdf.loc[bdf.loc[:, 'm'].to_numpy() == 0, :].unique_ids('i'))
 
-        # # Drop m since it can change for leave-one-out components
-        # bdf.drop('m')
-
-        relative_drop_fraction = 1 - self.subset_fractions / (np.concatenate([[1], self.subset_fractions]))[:-1]
+        # Compute fraction to drop at each step
+        relative_drop_fracs = 1 - self.subset_fractions / (np.append(1, self.subset_fractions))[:-1]
         wids_to_drop = set()
 
-        for i, drop_frac in enumerate(relative_drop_fraction):
-            n_wid_draws_i = min(int(np.round(drop_frac * len(wids_movers), 1)), len(wids_movers))
-            if n_wid_draws_i > 0:
-                wid_draws_i = set(rng.choice(list(wids_movers), size=n_wid_draws_i, replace=False))
-                wids_movers = wids_movers.difference(wid_draws_i)
-                wids_to_drop = wids_to_drop.union(wid_draws_i)
-            else:
-                warnings.warn(f'Attrition plot does not change at iteration {i}')
+        for i, drop_frac in enumerate(relative_drop_fracs):
+            if drop_frac > 0:
+                # NOTE: drop_frac can be 0 if the largest subset is the entire dataset
+                n_wid_drops_i = min(int(np.round(drop_frac * len(wids_movers))), len(wids_movers))
+                if n_wid_drops_i > 0:
+                    wid_drops_i = set(rng.choice(list(wids_movers), size=n_wid_drops_i, replace=False))
+                    wids_movers = wids_movers.difference(wid_drops_i)
+                    wids_to_drop = wids_to_drop.union(wid_drops_i)
+                else:
+                    warnings.warn(f'Attrition plot does not change at iteration {i}')
 
             if len(wids_to_drop) > 0:
                 return_lst.append((None, wids_to_drop))
             else:
                 return_lst.append((None, None))
-
-            # subset_i = bdf.keep_ids('i', wids_movers + wids_stayers, copy=True)._reset_id_reference_dict()._reset_attributes(columns_contig=True, connected=True, no_na=False, no_duplicates=False, i_t_unique=False, no_returns=False)
 
         return return_lst
 

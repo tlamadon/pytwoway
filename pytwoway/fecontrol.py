@@ -629,7 +629,7 @@ class FEControlEstimator:
 
         ## psi and alpha ##
         # Add 0 for normalized firm
-        psi_hat = np.concatenate([gh['psi'], np.array([0])])
+        psi_hat = np.append(gh['psi'], 0)
         alpha_hat = gh['alpha']
 
         # Attach columns
