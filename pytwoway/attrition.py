@@ -17,7 +17,7 @@ class Attrition:
     Class of Attrition, which generates attrition plots using bipartite labor data.
 
     Arguments:
-        min_moves_threshold (int): minimum number of moves required to keep a firm
+        min_movers_threshold (int): minimum number of movers required to keep a firm
         attrition_how (tw.attrition_utils.AttritionIncreasing() or tw.attrition_utils.AttritionDecreasing()): instance of AttritionIncreasing() or AttritionDecreasing(), used to specify if attrition should use increasing (building up from a fixed set of firms) or decreasing (with varying sets of firms) fractions of movers; None is equivalent to AttritionIncreasing()
         fe_params (ParamsDict or None): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().
         cre_params (ParamsDict or None): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.cre_params().
@@ -25,7 +25,7 @@ class Attrition:
         clean_params (ParamsDict or None): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.clean_params().
     '''
 
-    def __init__(self, min_moves_threshold=15, attrition_how=None, fe_params=None, cre_params=None, cluster_params=None, clean_params=None):
+    def __init__(self, min_movers_threshold=15, attrition_how=None, fe_params=None, cre_params=None, cluster_params=None, clean_params=None):
         if attrition_how is None:
             attrition_how = tw.attrition_utils.AttritionIncreasing()
         if fe_params is None:
@@ -38,8 +38,8 @@ class Attrition:
             clean_params = bpd.clean_params()
 
         ## Save attributes ##
-        # Minimum number of moves required to keep a firm
-        self.min_moves_threshold = min_moves_threshold
+        # Minimum number of movers required to keep a firm
+        self.min_movers_threshold = min_movers_threshold
         # AttritionIncreasing() or AttritionDecreasing()
         self.attrition_how = attrition_how
         # Prevent plotting until results exist
@@ -254,14 +254,14 @@ class Attrition:
         # For HE
         res_he = {'fe': [], 'cre': []}
 
-        # Save movers per firm (do this before taking subset of firms that meet threshold of sufficiently many moves)
+        # Save movers per firm (do this before taking subset of firms that meet threshold of sufficiently many movers)
         self.movers_per_firm = bdf.loc[bdf.loc[:, 'm'] > 0, :].n_workers() / bdf.n_firms() # bdf.loc[bdf.loc[:, 'm'] > 0, :].groupby('j')['i'].nunique().mean()
 
-        # Take subset of firms that meet threshold of sufficiently many moves
-        bdf = bdf.min_moves_frame(threshold=self.min_moves_threshold, drop_returns_to_stays=self.clean_params['drop_returns_to_stays'], is_sorted=True, reset_index=True, copy=False)
+        # Take subset of firms that meet threshold of sufficiently many movers
+        bdf = bdf.min_movers_frame(threshold=self.min_movers_threshold, drop_returns_to_stays=self.clean_params['drop_returns_to_stays'], is_sorted=True, reset_index=True, copy=False)
 
         if len(bdf) == 0:
-            raise ValueError("Length of dataframe is 0 after dropping firms with too few moves, consider lowering `min_moves_threshold` for tw.Attrition().")
+            raise ValueError("Length of dataframe is 0 after dropping firms with too few movers, consider lowering `min_movers_threshold` for tw.Attrition().")
 
         if False: # ncore > 1:
             # Estimate with multi-processing
