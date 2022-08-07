@@ -15,7 +15,7 @@ import bipartitepandas as bpd
 from bipartitepandas.util import ParamsDict, to_list, HiddenPrints # , _is_subtype
 import pytwoway as tw
 from pytwoway import constraints as cons
-from pytwoway.util import weighted_var, weighted_cov, DxSP, diag_of_sp_prod, jitter_scatter
+from pytwoway.util import DxSP, DxM, diag_of_sp_prod, jitter_scatter
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq2(a):
@@ -382,8 +382,8 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
     Using data and estimated BLM parameters, simulate worker types and wages.
 
     Arguments:
-        jdata (BipartitePandas DataFrame): data for movers
-        sdata (BipartitePandas DataFrame): data for stayers
+        jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
+        sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
         gj (NumPy Array): mover firm types both periods
         gs (NumPy Array): stayer firm types for the first period
         blm_model (BLMModel): BLM model with estimated parameters
@@ -1285,7 +1285,7 @@ class BLMModel:
         EM algorithm for movers.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
+            jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # Unpack parameters
@@ -1343,7 +1343,7 @@ class BLMModel:
         Wrapped EM algorithm for movers.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
+            jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
             min_firm_type (int or None): if params['force_min_firm_type'] == True, gives the firm type to force as the lowest firm type; if params['force_min_firm_type'] == False, this parameter is not used
         '''
@@ -1596,18 +1596,21 @@ class BLMModel:
                     cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type)
                 try:
                     cons_a.solve(XwX, -XwY, solver='quadprog')
-                    res_a1, res_a2 = cons_a.res[: len(cons_a.res) // 2], cons_a.res[len(cons_a.res) // 2:]
-                    # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
-                    #     raise ValueError('Estimated A1/A2 has NaN values')
-                    A1 = np.reshape(res_a1, self.dims)
-                    A2 = np.reshape(res_a2, self.dims)
+                    if cons_a.res is None:
+                        # If constraints inconsistent, keep A1 and A2 the same
+                        if params['verbose'] in [2, 3]:
+                            print(f'Passing A1/A2: {e}')
+                    else:
+                        res_a1, res_a2 = cons_a.res[: len(cons_a.res) // 2], cons_a.res[len(cons_a.res) // 2:]
+                        # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
+                        #     raise ValueError('Estimated A1/A2 has NaN values')
+                        A1 = np.reshape(res_a1, self.dims)
+                        A2 = np.reshape(res_a2, self.dims)
 
                 except ValueError as e:
                     # If constraints inconsistent, keep A1 and A2 the same
                     if params['verbose'] in [2, 3]:
                         print(f'Passing A1/A2: {e}')
-                    # stop
-                    pass
 
             ## Categorical ##
             CC1_cat_weighted = {}
@@ -1653,22 +1656,26 @@ class BLMModel:
                     try:
                         a_solver = cons_a_dict[col]
                         a_solver.solve(XwX_cat[col], -XwY_cat[col], solver='quadprog')
-                        res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2], a_solver.res[len(a_solver.res) // 2:]
-                        # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
-                        #     raise ValueError(f'Estimated A1_cat/A2_cat has NaN values for column {col!r}')
-                        if cat_dict[col]['worker_type_interaction']:
-                            A1_cat[col] = np.reshape(res_a1, (nl, col_n))
-                            A2_cat[col] = np.reshape(res_a2, (nl, col_n))
+                        if a_solver.res is None:
+                            # If constraints inconsistent, keep A1_cat and A2_cat the same
+                            if params['verbose'] in [2, 3]:
+                                print(f'Passing A1_cat/A2_cat for column {col!r}: {e}')
                         else:
-                            A1_cat[col] = res_a1[: col_n]
-                            A2_cat[col] = res_a2[: col_n]
+                            res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2], a_solver.res[len(a_solver.res) // 2:]
+                            # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
+                            #     raise ValueError(f'Estimated A1_cat/A2_cat has NaN values for column {col!r}')
+                            if cat_dict[col]['worker_type_interaction']:
+                                A1_cat[col] = np.reshape(res_a1, (nl, col_n))
+                                A2_cat[col] = np.reshape(res_a2, (nl, col_n))
+                            else:
+                                A1_cat[col] = res_a1[: col_n]
+                                A2_cat[col] = res_a2[: col_n]
 
                     except ValueError as e:
                         # If constraints inconsistent, keep A1_cat and A2_cat the same
                         if params['verbose'] in [2, 3]:
                             print(f'Passing A1_cat/A2_cat for column {col!r}: {e}')
-                        # stop
-                        pass
+
                 if not cat_dict[col]['worker_type_interaction']:
                     Y1_adj -= A1_cat[col][C1[col]]
                     Y2_adj -= A2_cat[col][C2[col]]
@@ -1715,22 +1722,26 @@ class BLMModel:
                     try:
                         a_solver = cons_a_dict[col]
                         a_solver.solve(XwX_cts[col], -XwY_cts[col], solver='quadprog')
-                        res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2], a_solver.res[len(a_solver.res) // 2:]
-                        # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
-                        #     raise ValueError(f'Estimated A1_cts/A2_cts has NaN values for column {col!r}')
-                        if cts_dict[col]['worker_type_interaction']:
-                            A1_cts[col] = res_a1
-                            A2_cts[col] = res_a2
+                        if a_solver.res is None:
+                            # If constraints inconsistent, keep A1_cts and A2_cts the same
+                            if params['verbose'] in [2, 3]:
+                                print(f'Passing A1_cts/A2_cts for column {col!r}: {e}')
                         else:
-                            A1_cts[col] = res_a1[0]
-                            A2_cts[col] = res_a2[0]
+                            res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2], a_solver.res[len(a_solver.res) // 2:]
+                            # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
+                            #     raise ValueError(f'Estimated A1_cts/A2_cts has NaN values for column {col!r}')
+                            if cts_dict[col]['worker_type_interaction']:
+                                A1_cts[col] = res_a1
+                                A2_cts[col] = res_a2
+                            else:
+                                A1_cts[col] = res_a1[0]
+                                A2_cts[col] = res_a2[0]
 
                     except ValueError as e:
                         # If constraints inconsistent, keep A1_cts and A2_cts the same
                         if params['verbose'] in [2, 3]:
                             print(f'Passing A1_cts/A2_cts for column {col!r}: {e}')
-                        # stop
-                        pass
+
                 if not cts_dict[col]['worker_type_interaction']:
                     Y1_adj -= A1_cts[col] * C1[col]
                     Y2_adj -= A2_cts[col] * C2[col]
@@ -1781,18 +1792,21 @@ class BLMModel:
 
                 try:
                     cons_s.solve(XwX, -XwS, solver='quadprog')
-                    res_s1, res_s2 = cons_s.res[: len(cons_s.res) // 2], cons_s.res[len(cons_s.res) // 2:]
-                    # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
-                    #     raise ValueError('Estimated S1/S2 has NaN values')
-                    S1 = np.sqrt(np.reshape(res_s1, self.dims))
-                    S2 = np.sqrt(np.reshape(res_s2, self.dims))
+                    if cons_s.res is None:
+                        # If constraints inconsistent, keep S1 and S2 the same
+                        if params['verbose'] in [2, 3]:
+                            print(f'Passing S1/S2: {e}')
+                    else:
+                        res_s1, res_s2 = cons_s.res[: len(cons_s.res) // 2], cons_s.res[len(cons_s.res) // 2:]
+                        # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
+                        #     raise ValueError('Estimated S1/S2 has NaN values')
+                        S1 = np.sqrt(np.reshape(res_s1, self.dims))
+                        S2 = np.sqrt(np.reshape(res_s2, self.dims))
 
                 except ValueError as e:
                     # If constraints inconsistent, keep S1 and S2 the same
                     if params['verbose'] in [2, 3]:
                         print(f'Passing S1/S2: {e}')
-                    # stop
-                    pass
 
                 ## Categorical ##
                 for col in cat_cols:
@@ -1800,50 +1814,59 @@ class BLMModel:
                         col_n = cat_dict[col]['n']
                         s_solver = cons_s_dict[col]
                         s_solver.solve(XwX_cat[col], -XwS_cat[col], solver='quadprog')
-                        res_s1, res_s2 = s_solver.res[: len(s_solver.res) // 2], s_solver.res[len(s_solver.res) // 2:]
-                        # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
-                        #     raise ValueError(f'Estimated S1_cat/S2_cat has NaN values for column {col!r}')
-                        if cat_dict[col]['worker_type_interaction']:
-                            S1_cat[col] = np.sqrt(np.reshape(res_s1, (nl, col_n)))
-                            S2_cat[col] = np.sqrt(np.reshape(res_s2, (nl, col_n)))
+                        if s_solver.res is None:
+                            # If constraints inconsistent, keep S1_cat and S2_cat the same
+                            if params['verbose'] in [2, 3]:
+                                print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
                         else:
-                            S1_cat[col] = np.sqrt(res_s1[: col_n])
-                            S2_cat[col] = np.sqrt(res_s2[: col_n])
+                            res_s1, res_s2 = s_solver.res[: len(s_solver.res) // 2], s_solver.res[len(s_solver.res) // 2:]
+                            # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
+                            #     raise ValueError(f'Estimated S1_cat/S2_cat has NaN values for column {col!r}')
+                            if cat_dict[col]['worker_type_interaction']:
+                                S1_cat[col] = np.sqrt(np.reshape(res_s1, (nl, col_n)))
+                                S2_cat[col] = np.sqrt(np.reshape(res_s2, (nl, col_n)))
+                            else:
+                                S1_cat[col] = np.sqrt(res_s1[: col_n])
+                                S2_cat[col] = np.sqrt(res_s2[: col_n])
 
                     except ValueError as e:
                         # If constraints inconsistent, keep S1_cat and S2_cat the same
                         if params['verbose'] in [2, 3]:
                             print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
-                        # stop
-                        pass
 
                 ## Continuous ##
                 for col in cts_cols:
                     try:
                         s_solver = cons_s_dict[col]
                         s_solver.solve(XwX_cts[col], -XwS_cts[col], solver='quadprog')
-                        res_s1, res_s2 = s_solver.res[: len(s_solver.res) // 2], s_solver.res[len(s_solver.res) // 2:]
-                        # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
-                        #     raise ValueError(f'Estimated S1_cts/S2_cts has NaN values for column {col!r}')
-                        if cts_dict[col]['worker_type_interaction']:
-                            S1_cts[col] = np.sqrt(res_s1)
-                            S2_cts[col] = np.sqrt(res_s2)
+                        if s_solver.res is None:
+                            # If constraints inconsistent, keep S1_cts and S2_cts the same
+                            if params['verbose'] in [2, 3]:
+                                print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
                         else:
-                            S1_cts[col] = np.sqrt(res_s1[0])
-                            S2_cts[col] = np.sqrt(res_s2[0])
+                            res_s1, res_s2 = s_solver.res[: len(s_solver.res) // 2], s_solver.res[len(s_solver.res) // 2:]
+                            # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
+                            #     raise ValueError(f'Estimated S1_cts/S2_cts has NaN values for column {col!r}')
+                            if cts_dict[col]['worker_type_interaction']:
+                                S1_cts[col] = np.sqrt(res_s1)
+                                S2_cts[col] = np.sqrt(res_s2)
+                            else:
+                                S1_cts[col] = np.sqrt(res_s1[0])
+                                S2_cts[col] = np.sqrt(res_s2[0])
 
                     except ValueError as e:
                         # If constraints inconsistent, keep S1_cts and S2_cts the same
                         if params['verbose'] in [2, 3]:
                             print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
-                        # stop
-                        pass
 
             if params['update_pk1']:
                 # NOTE: add dirichlet prior
                 pk1 = GG12.T @ (W * (qi.T + d_prior - 1)).T
                 # Normalize rows to sum to 1
-                pk1 = (pk1.T / np.sum(pk1, axis=1).T).T
+                pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
+
+                if pd.isna(pk1).any():
+                    raise ValueError('Estimated pk1 has NaN values. Please try a different set of starting values.')
 
             # print('A1 after:')
             # print(A1)
@@ -1899,7 +1922,7 @@ class BLMModel:
         EM algorithm for stayers.
 
         Arguments:
-            sdata (BipartitePandas DataFrame): data for stayers
+            sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
             compute_NNs (bool): if True, compute vector giving the number of stayers at each firm type (e.g. entry (1) gives the number of stayers at firm type 1)
         '''
         # Unpack parameters
@@ -2014,7 +2037,7 @@ class BLMModel:
             # NOTE: add dirichlet prior
             pk0 = GG1.T @ (W * (qi.T + d_prior - 1)).T
             # Normalize rows to sum to 1
-            pk0 = (pk0.T / np.sum(pk0, axis=1).T).T
+            pk0 = DxM(1 / np.sum(pk0, axis=1), pk0)
 
         self.pk0, self.lik0 = pk0, lik0
         self.liks0 = liks0 # np.concatenate([self.liks0, liks0])
@@ -2030,7 +2053,7 @@ class BLMModel:
         Run fit_movers(), first constrained, then using results as starting values, run unconstrained.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
+            jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         ## First, simulate parameters but keep A fixed ##
@@ -2088,7 +2111,7 @@ class BLMModel:
         Run fit_movers() and update A while keeping S and pk1 fixed.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
+            jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # Save original parameters
@@ -2109,7 +2132,7 @@ class BLMModel:
         Run fit_movers() and update S while keeping A and pk1 fixed.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
+            jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # Save original parameters
@@ -2130,7 +2153,7 @@ class BLMModel:
         Run fit_movers() and update pk1 while keeping A and S fixed.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
+            jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         # Save original parameters
@@ -2297,7 +2320,7 @@ class BLMEstimator:
         Generate model and run fit_movers_cstr_uncstr() given parameters.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
+            jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
         if rng is None:
@@ -2312,8 +2335,8 @@ class BLMEstimator:
         EM model for movers and stayers.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
-            sdata (BipartitePandas DataFrame): data for stayers
+            jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
+            sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
             n_init (int): number of starting values
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness
             ncore (int): number of cores for multiprocessing
@@ -2447,8 +2470,8 @@ class BLMBootstrap:
         Estimate bootstrap.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
-            sdata (BipartitePandas DataFrame): data for stayers
+            jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
+            sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
             blm_model (BLMModel or None): BLM model estimated using true data; if None, estimate model inside the method. For use with parametric bootstrap.
             n_samples (int): number of bootstrap samples to estimate
             n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
@@ -2678,23 +2701,26 @@ class BLMVarianceDecomposition:
     def __init__(self, params):
         self.params = params
         # No initial results
-        self.est_params = None
+        self.res = None
 
-    def fit(self, jdata, sdata, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, true_worker_types=True, reallocate=False, reallocate_jointly=True, reallocate_period='first', ncore=1, rng=None):
+    def fit(self, jdata, sdata, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', Q_var=None, Q_cov=None, firm_clusters_as_ids=True, worker_types_as_ids=True, ncore=1, rng=None):
         '''
         Estimate variance decomposition.
 
         Arguments:
-            jdata (BipartitePandas DataFrame): data for movers
-            sdata (BipartitePandas DataFrame): data for stayers
+            jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
+            sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
             blm_model (BLMModel or None): BLM model estimated using true data; if None, estimate model inside the method
             n_samples (int): number of bootstrap samples to estimate
             n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
-            true_worker_types (bool): if True, regress on true, simulated worker types; if False, regress on worker ids
             reallocate (bool): if True, draw worker type proportions independently of firm type; if False, uses worker type proportions that are conditional on firm type
             reallocate_jointly (bool): if True, worker type proportions take the average over movers and stayers (i.e. all workers use the same type proportions); if False, consider movers and stayers separately
             reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
+            Q_var (list of Q variances): list of Q matrices to use when estimating variance term; None is equivalent to tw.Q.VarPsi() without controls, or tw.Q.VarCovariate('psi') with controls
+            Q_cov (list of Q covariances): list of Q matrices to use when estimating covariance term; None is equivalent to tw.Q.CovPsiAlpha() without controls, or tw.Q.CovCovariate('psi', 'alpha') with controls
+            firm_clusters_as_ids (bool): if True, regress on firm clusters; if False, regress on firm ids
+            worker_types_as_ids (bool): if True, regress on true, simulated worker types; if False, regress on worker ids
             ncore (int): number of cores for multiprocessing
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
@@ -2707,29 +2733,34 @@ class BLMVarianceDecomposition:
         no_controls = (no_cat_controls and no_cts_controls)
         if no_controls:
             # If no controls
-            fe_params = tw.fe_params({
-                'feonly': True,
-                'attach_fe_estimates': True
-            })
+            fe_params = tw.fe_params()
         else:
             # If controls
-            fe_params = tw.fecontrol_params({
-                'feonly': True,
-                'attach_fe_estimates': True
-            })
+            fe_params = tw.fecontrol_params()
             if not no_cat_controls:
                 fe_params['categorical_controls'] = self.params['categorical_controls'].keys()
             if not no_cts_controls:
                 fe_params['continuous_controls'] = self.params['continuous_controls'].keys()
+        fe_params['ho'] = False
+        if Q_var is not None:
+            fe_params['Q_var'] = Q_var
+        if Q_cov is not None:
+            fe_params['Q_cov'] = Q_cov
 
-        # Copy original (ids), wages, and firm types
-        if true_worker_types:
-            ij = jdata.loc[:, 'i'].to_numpy().copy()
-            is_ = sdata.loc[:, 'i'].to_numpy().copy()
+        # Copy original wages, firm types, and optionally ids
         yj = jdata.loc[:, ['y1', 'y2']].to_numpy().copy()
         ys = sdata.loc[:, ['y1', 'y2']].to_numpy().copy()
-        gj = jdata.loc[:, ['g1', 'g2']].to_numpy() # .copy()
-        gs = sdata.loc[:, 'g1'].to_numpy() # .copy()
+        gj = jdata.loc[:, ['g1', 'g2']].to_numpy()
+        gs = sdata.loc[:, 'g1'].to_numpy()
+        if firm_clusters_as_ids:
+            jj = jdata.loc[:, ['j1', 'j2']].to_numpy().copy()
+            js = sdata.loc[:, 'j1'].to_numpy().copy()
+            with bpd.util.ChainedAssignment():
+                jdata.loc[:, ['j1', 'j2']] = gj
+                sdata.loc[:, 'j1'], sdata.loc[:, 'j2'] = (gs, gs)
+        if worker_types_as_ids:
+            ij = jdata.loc[:, 'i'].to_numpy().copy()
+            is_ = sdata.loc[:, 'i'].to_numpy().copy()
 
         if blm_model is None:
             # Run initial BLM estimator
@@ -2738,67 +2769,44 @@ class BLMVarianceDecomposition:
             blm_model = blm_fit_init.model
 
         # Run bootstrap
-        est_params = {
-            col: np.zeros(n_samples) for col in ['var_y', 'var_psi', 'var_alpha', 'cov_psi_alpha', 'var_eps']
-        }
+        res_lst = []
         for i in trange(n_samples):
             # Simulate worker types then draw wages
             yj_i, ys_i, Lm_i, Ls_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=reallocate, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, rng=rng)
             with bpd.util.ChainedAssignment():
-                if true_worker_types:
+                if worker_types_as_ids:
                     jdata.loc[:, 'i'] = Lm_i
                     sdata.loc[:, 'i'] = Ls_i
                 jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
                 sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
             # Convert to BipartitePandas DataFrame
             bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False)).to_long(is_sorted=True, copy=False)
-            w = bdf.loc[:, 'w'].to_numpy()
             # Estimate OLS
             if no_controls:
                 fe_estimator = tw.FEEstimator(bdf, fe_params)
             else:
                 fe_estimator = tw.FEControlEstimator(bdf, fe_params)
             fe_estimator.fit()
-            est_params['var_y'][i] = fe_estimator.res['var(y)']
-            est_params['var_psi'][i] = weighted_var(bdf.loc[:, 'psi_hat'].to_numpy(), w)
-            est_params['var_alpha'][i] = weighted_var(bdf.loc[:, 'alpha_hat'].to_numpy(), w)
-            est_params['cov_psi_alpha'][i] = weighted_cov(bdf.loc[:, 'psi_hat'].to_numpy(), bdf.loc[:, 'alpha_hat'].to_numpy(), w, w)
-            est_params['var_eps'][i] = weighted_var(bdf.loc[:, 'y'].to_numpy() - bdf.loc[:, 'psi_hat'].to_numpy() - bdf.loc[:, 'alpha_hat'].to_numpy(), w)
+            res_lst.append(fe_estimator.summary)
 
         with bpd.util.ChainedAssignment():
-            # Re-assign original (ids), wages, and firm types
-            if true_worker_types:
-                jdata.loc[:, 'i'] = ij
-                sdata.loc[:, 'i'] = is_
+            # Restore original wages and optionally ids
             jdata.loc[:, ['y1', 'y2']] = yj
             sdata.loc[:, ['y1', 'y2']] = ys
-            # jdata.loc[:, ['g1', 'g2']] = gj
-            # sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
+            if firm_clusters_as_ids:
+                jdata.loc[:, ['j1', 'j2']] = jj
+                sdata.loc[:, 'j1'], sdata.loc[:, 'j2'] = (js, js)
+            if worker_types_as_ids:
+                jdata.loc[:, 'i'] = ij
+                sdata.loc[:, 'i'] = is_
 
-        self.est_params = est_params
+        ## Unpack results ##
+        res = {k: np.zeros(n_samples) for k in res_lst[0].keys()}
+        for i in range(n_samples):
+            for k, v in res_lst[i].items():
+                res[k][i] = v
 
-    def table(self):
-        '''
-        Print LaTeX table of results.
-        '''
-        if self.est_params is None:
-            warnings.warn('Estimation has not yet been run.')
-        else:
-            var_y = self.est_params['var_y']
-            var_psi = self.est_params['var_psi']
-            var_alpha = self.est_params['var_alpha']
-            cov_psi_alpha = self.est_params['cov_psi_alpha']
-            var_eps = self.est_params['var_eps']
+        # Remove '_fe' from result names
+        res = {k.replace('_fe', ''): v for k, v in res.items()}
 
-            ret_str = r'''
-            &\multicolumn{{5}}{{c}}{{Variance Decomposition (\(\\times\) 100)}} \\
-            \hline\addlinespace
-            \(\frac{\text{Var}(\alpha)}{\text{Var}(y)}\) & \(\frac{\text{Var}(\varpsi)}{\text{Var}(y)}\) & \(\frac{2\text{Cov}(\alpha, \varpsi)}{\text{Var}(y)}\) & \(\frac{\text{Var}(\epsilon)}{\text{Var}(y)}\) & Corr(\(\alpha, \varpsi\)) \\
-            \hline\addlinespace
-            '''
-            ret_str += f'''
-            {100 * np.mean(var_alpha / var_y):2.2f} & {100 * np.mean(var_psi / var_y):2.2f} & {100 * np.mean(2 * cov_psi_alpha / var_y):2.2f} & {100 * np.mean(var_eps / var_y):2.2f} & {100 * np.mean(cov_psi_alpha / np.sqrt(var_psi * var_alpha)):2.2f} \\\\
-            ({100 * np.std(var_alpha / var_y):2.2f}) & ({100 * np.std(var_psi / var_y):2.2f}) & ({100 * np.std(2 * cov_psi_alpha / var_y):2.2f}) & ({100 * np.std(var_eps / var_y):2.2f}) & ({100 * np.std(cov_psi_alpha / np.sqrt(var_psi * var_alpha)):2.2f}) \\\\
-            '''
-
-            print(ret_str)
+        self.res = res
