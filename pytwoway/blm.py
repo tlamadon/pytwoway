@@ -377,19 +377,21 @@ def _fast_lognormpdf(x, mu, sd, G):
     res -= (x - mu[G]) ** 2 / (2 * sd_sq[G])
     return res
 
-def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, reallocate_jointly=True, reallocate_period='first', rng=None):
+def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, reallocate_jointly=True, reallocate_period='first', wj=None, ws=None, rng=None):
     '''
     Using data and estimated BLM parameters, simulate worker types and wages.
 
     Arguments:
         jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
         sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
-        gj (NumPy Array): mover firm types both periods
+        gj (NumPy Array): mover firm types for both periods
         gs (NumPy Array): stayer firm types for the first period
         blm_model (BLMModel): BLM model with estimated parameters
         reallocate (bool): if True, draw worker type proportions independently of firm type; if False, uses worker type proportions that are conditional on firm type
         reallocate_jointly (bool): if True, worker type proportions take the average over movers and stayers (i.e. all workers use the same type proportions); if False, consider movers and stayers separately
         reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
+        wj (NumPy Array or None): mover weights for both periods; if None, don't weight
+        ws (NumPy Array or None): stayer weights for the first period; if None, don't weight
         rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
     Returns:
@@ -405,6 +407,12 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
     # Correct datatype for gj and gs
     gj = gj.astype(int, copy=False)
     gs = gs.astype(int, copy=False)
+
+    # Unpack weights
+    if wj is None:
+        wj = np.array([[1, 1]])
+    if ws is None:
+        ws = 1
 
     # Worker types
     worker_types = np.arange(nl)
@@ -532,13 +540,13 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
                     S1_sum_sq += S1_cts[col] ** 2
                     S2_sum_sq += S2_cts[col] ** 2
 
-        Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq), size=nmi)
-        Y2 = rng.normal(loc=A2_sum, scale=np.sqrt(S2_sum_sq), size=nmi)
+        Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq) / wj[:, 0], size=nmi)
+        Y2 = rng.normal(loc=A2_sum, scale=np.sqrt(S2_sum_sq) / wj[:, 1], size=nmi)
         del S1_sum_sq, S2_sum_sq
     else:
         #### No control variables ####
-        Y1 = rng.normal(loc=A1_sum, scale=S1_sum, size=nmi)
-        Y2 = rng.normal(loc=A2_sum, scale=S2_sum, size=nmi)
+        Y1 = rng.normal(loc=A1_sum, scale=S1_sum / wj[:, 0], size=nmi)
+        Y2 = rng.normal(loc=A2_sum, scale=S2_sum / wj[:, 1], size=nmi)
     yj = (Y1, Y2)
     del A1_sum, A2_sum, S1_sum, S2_sum, Y1, Y2
 
@@ -583,10 +591,10 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
                     A1_sum += A1_cts[col] * sdata.loc[:, subcol_1]
                     S1_sum_sq += S1_cts[col] ** 2
 
-        Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq), size=nsi)
+        Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq) / ws, size=nsi)
     else:
         #### No control variables ####
-        Y1 = rng.normal(loc=A1_sum, scale=S1_sum, size=nsi)
+        Y1 = rng.normal(loc=A1_sum, scale=S1_sum / ws, size=nsi)
     ys = Y1
 
     return (yj, ys, Lm, Ls)
@@ -2503,6 +2511,13 @@ class BLMBootstrap:
             ys = sdata.loc[:, ['y1', 'y2']].to_numpy().copy()
             gj = jdata.loc[:, ['g1', 'g2']].to_numpy().copy()
             gs = sdata.loc[:, 'g1'].to_numpy().copy()
+            ## Weights ##
+            wj = None
+            ws = None
+            if jdata._col_included('w'):
+                wj = jdata.loc[:, ['w1', 'w2']].to_numpy()
+            if sdata._col_included('w'):
+                ws = sdata.loc[:, 'w1'].to_numpy()
 
             if blm_model is None:
                 # Run initial BLM estimator
@@ -2514,7 +2529,7 @@ class BLMBootstrap:
             models = []
             for _ in trange(n_samples):
                 # Simulate worker types then draw wages
-                yj_i, ys_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=reallocate, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, rng=rng)[:2]
+                yj_i, ys_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=reallocate, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, wj=wj, ws=ws, rng=rng)[:2]
                 with bpd.util.ChainedAssignment():
                     jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
                     sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
@@ -2761,6 +2776,22 @@ class BLMVarianceDecomposition:
         if worker_types_as_ids:
             ij = jdata.loc[:, 'i'].to_numpy().copy()
             is_ = sdata.loc[:, 'i'].to_numpy().copy()
+        tj = False
+        ts = False
+        if not jdata._col_included('t'):
+            jdata = jdata.construct_artificial_time(is_sorted=True, copy=False)
+            tj = True
+        if not sdata._col_included('t'):
+            sdata = sdata.construct_artificial_time(is_sorted=True, copy=False)
+            ts = True
+
+        ## Weights ##
+        wj = None
+        ws = None
+        if jdata._col_included('w'):
+            wj = jdata.loc[:, ['w1', 'w2']].to_numpy()
+        if sdata._col_included('w'):
+            ws = sdata.loc[:, 'w1'].to_numpy()
 
         if blm_model is None:
             # Run initial BLM estimator
@@ -2772,7 +2803,7 @@ class BLMVarianceDecomposition:
         res_lst = []
         for i in trange(n_samples):
             # Simulate worker types then draw wages
-            yj_i, ys_i, Lm_i, Ls_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=reallocate, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, rng=rng)
+            yj_i, ys_i, Lm_i, Ls_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=reallocate, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, wj=wj, ws=ws, rng=rng)
             with bpd.util.ChainedAssignment():
                 if worker_types_as_ids:
                     jdata.loc[:, 'i'] = Lm_i
@@ -2780,7 +2811,10 @@ class BLMVarianceDecomposition:
                 jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
                 sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
             # Convert to BipartitePandas DataFrame
-            bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False)).to_long(is_sorted=True, copy=False)
+            bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
+            # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
+            bdf._set_attributes(jdata)
+            bdf = bdf.to_long(is_sorted=True, copy=False)
             # Estimate OLS
             if no_controls:
                 fe_estimator = tw.FEEstimator(bdf, fe_params)
@@ -2808,5 +2842,11 @@ class BLMVarianceDecomposition:
 
         # Remove '_fe' from result names
         res = {k.replace('_fe', ''): v for k, v in res.items()}
+
+        # Drop time column
+        if tj:
+            jdata = jdata.drop('t', axis=1, inplace=True, allow_optional=True)
+        if ts:
+            sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
 
         self.res = res

@@ -16,7 +16,7 @@ setuptools.setup(
     install_requires=[
         'numpy',
         'pandas',
-        'bipartitepandas>=1.0.34',
+        'bipartitepandas>=1.0.35',
         'scipy',
         'statsmodels',
         'pyamg',

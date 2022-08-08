@@ -4,8 +4,7 @@ Defines class FEControlEstimator, which estimates weighted two way fixed effect 
 '''
 TODO:
     -leave-out-worker
-    -Q with exact trace for more than psi and alpha
-    -control variables
+    -exact trace
 '''
 from tqdm.auto import tqdm, trange
 import time, pickle, json, glob # warnings

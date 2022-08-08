@@ -63,6 +63,10 @@ class BSEstimator():
             alternative_estimator (bool): if True, estimate using alternative estimator
             weighted (bool): if True, run estimator with weights
         '''
+        if not adata.no_returns:
+            # Borovickova-Shimer requires no returns
+            raise ValueError("Cannot run the Borovickova-Shimer estimator if there are returns in the data. When cleaning your data, please set the parameter 'drop_returns' to drop returns.")
+
         if not adata._col_included('w'):
             # Skip weighting if no weight column included
             weighted = False

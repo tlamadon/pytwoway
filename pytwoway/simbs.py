@@ -181,21 +181,12 @@ class SimBS:
         bdf = BipartiteDataFrame(i=i, j=j, y=y, lambda_i=a * lambda_i[i], mu_j=b * mu_j[j]).construct_artificial_time(time_per_worker=True, is_sorted=True, copy=False)
 
         ## Clean ##
-        cp1 = clean_params({'connectedness': 'strongly_connected', 'drop_returns': 'returns', 'is_sorted': True, 'copy': False, 'verbose': False})
-        cp2 = clean_params({'connectedness': 'strongly_connected', 'is_sorted': True, 'copy': False, 'verbose': False})
-        bdf = bdf.clean(cp1)
+        # Clean parameters
+        cp1 = clean_params({'drop_returns': 'returns', 'is_sorted': True, 'copy': False, 'verbose': False})
+        cp2 = clean_params({'is_sorted': True, 'copy': False, 'verbose': False})
 
-        prev_len = len(bdf)
-        len_diff = 1
-        while len_diff > 0:
-            ## Make sure all firms and workers have at least 2 observations ##
-            bdf = bdf.min_joint_obs_frame(is_sorted=True, copy=False)
-
-            ## Clean ##
-            bdf = bdf.clean(cp2)
-
-            len_diff = prev_len - len(bdf)
-            prev_len = len(bdf)
+        # Clean
+        bdf = bdf.clean(cp1).min_joint_obs_frame(is_sorted=True, copy=False).clean(cp2)
 
         # Drop m column
         bdf = bdf.drop('m', axis=1, inplace=True, allow_optional=True)

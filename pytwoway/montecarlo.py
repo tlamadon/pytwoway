@@ -69,7 +69,7 @@ class MonteCarlo:
         self.clean_params['copy'] = False
         if collapse is None:
             # FIXME at the moment, CRE requires collapsed data
-            warnings.warn("CRE currently requires data that is collapsed at the spell or match level; to avoid an error, collapsed=None changed to collapsed='leave_out_spell'.")
+            warnings.warn("CRE currently requires data that is collapsed at the spell or match level; to avoid an error, collapse=None changed to collapse='spell'.")
             self.clean_params['connectedness'] = 'leave_out_spell'
             # self.clean_params['connectedness'] = 'leave_out_observation'
         elif collapse == 'spell':
@@ -151,18 +151,17 @@ class MonteCarlo:
 
         if self.estimate_bs:
             ## Estimate Borovickova-Shimer model ##
-            ## Make sure all workers and firms have at least 2 observations ##
-            len_diff = 1
-            prev_len = len(sim_data)
-            clean_params = self.clean_params.copy()
-            clean_params['connectedness'] = 'strongly_connected'
-            while len_diff > 0:
-                sim_data = sim_data.min_joint_obs_frame(is_sorted=True, copy=False)
+            # Make sure there are no returners and that all workers and firms have at least 2 observations
 
-                sim_data = sim_data.clean(clean_params)
+            # Clean parameters
+            clean_params_1 = self.clean_params.copy()
+            clean_params_2 = self.clean_params.copy()
+            clean_params_1['connectedness'] = None
+            clean_params_1['drop_returns'] = 'returns'
+            clean_params_2['connectedness'] = None
 
-                len_diff = prev_len - len(sim_data)
-                prev_len = len(sim_data)
+            # Clean
+            sim_data = sim_data.clean(clean_params_1).min_joint_obs_frame(is_sorted=True, copy=False).clean(clean_params_2)
 
             ### Estimate ###
             bs_estimator = tw.BSEstimator()

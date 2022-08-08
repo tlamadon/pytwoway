@@ -5,7 +5,6 @@ Defines class FEEstimator, which uses multigrid and partialing out to estimate w
 TODO:
     -leave-out-worker
     -Q with exact trace for more than psi and alpha
-    -control variables
 '''
 from tqdm.auto import tqdm, trange
 import time, pickle, json, glob # warnings
