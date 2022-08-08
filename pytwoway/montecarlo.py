@@ -17,6 +17,7 @@ class MonteCarlo:
         sim_params (ParamsDict or None): dictionary of parameters for simulating data. Run bpd.sim_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.sim_params().
         fe_params (ParamsDict or None): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().
         cre_params (ParamsDict or None): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.cre_params().
+        estimate_bs (bool): if True, estimate Borovickova-Shimer model
         cluster_params (ParamsDict or None): dictionary of parameters for clustering in CRE estimation. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.cluster_params().
         clean_params (ParamsDict or None): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.clean_params().
         collapse (str or None): if None, run estimators on full dataset; if 'spell', run estimators on data collapsed at the worker-firm spell level; if 'spell', run estimators on data collapsed at the worker-firm match level
@@ -24,7 +25,7 @@ class MonteCarlo:
         log (bool): if True, will create log file(s)
     '''
 
-    def __init__(self, sim_params=None, fe_params=None, cre_params=None, cluster_params=None, clean_params=None, collapse=None, move_to_worker=False, log=False):
+    def __init__(self, sim_params=None, fe_params=None, cre_params=None, estimate_bs=False, cluster_params=None, clean_params=None, collapse=None, move_to_worker=False, log=False):
         # Start logger
         # logger_init(self)
         # self.logger.info('initializing MonteCarlo object')
@@ -48,6 +49,7 @@ class MonteCarlo:
         self.clean_params = clean_params.copy()
         # Other attributes
         self.sim_network = bpd.SimBipartite(sim_params)
+        self.estimate_bs = estimate_bs
         self.collapse = collapse
         self.move_to_worker = move_to_worker
         self.log = log
@@ -81,8 +83,8 @@ class MonteCarlo:
         self.cluster_params['is_sorted'] = True
         self.cluster_params['copy'] = False
 
-        # Prevent plotting until results exist
-        self.monte_carlo_res = False
+        # No results yet
+        self.res = None
 
         # self.logger.info('MonteCarlo object initialized')
 
@@ -96,16 +98,7 @@ class MonteCarlo:
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            true_psi_var (float): true simulated sample variance of psi
-            true_psi_alpha_cov (float): true simulated sample covariance of psi and alpha
-            cre_psi_var (float): CRE estimate of variance of psi
-            cre_psi_alpha_cov (float): CRE estimate of covariance of psi and alpha
-            fe_psi_var (float): FE estimate of variance of psi
-            fe_psi_alpha_cov (float): FE estimate of covariance of psi and alpha
-            ho_psi_var (float): homoskedastic-corrected estimate of variance of psi
-            ho_psi_alpha_cov (float): homoskedastic-corrected estimate of covariance of psi and alpha
-            he_psi_var (float): heteroskedastic-corrected estimate of variance of psi
-            he_psi_alpha_cov (float): heteroskedastic-corrected estimate of covariance of psi and alpha
+            (dict): true, plug-in FE, HO-corrected, HE-corrected, CRE, and Borovickova-Shimer estimates for var(psi) and cov(psi, alpha), where psi gives firm effects and alpha gives worker effects
         '''
         if rng is None:
             rng = np.random.default_rng(None)
@@ -114,21 +107,26 @@ class MonteCarlo:
 
         ## Simulate data ##
         sim_data = self.sim_network.simulate(rng)
+
         ## Compute true sample variance of psi and covariance of psi and alpha ##
-        psi_var = np.var(sim_data.loc[:, 'psi'].to_numpy(), ddof=0)
-        psi_alpha_cov = np.cov(sim_data.loc[:, 'psi'].to_numpy(), sim_data.loc[:, 'alpha'].to_numpy(), ddof=0)[0, 1]
+        var_psi = np.var(sim_data.loc[:, 'psi'].to_numpy(), ddof=0)
+        cov_psi_alpha = np.cov(sim_data.loc[:, 'psi'].to_numpy(), sim_data.loc[:, 'alpha'].to_numpy(), ddof=0)[0, 1]
+
         ## Convert into BipartiteDataFrame ##
         sim_data = bpd.BipartiteLong(sim_data.loc[:, ['i', 'j', 'y', 't']], log=self.log)
         if self.move_to_worker:
             ## Set moves to worker ids ##
             sim_data = sim_data.to_eventstudy(move_to_worker=True, is_sorted=True, copy=False).to_long(is_sorted=True, copy=False)
+
         ## Clean data ##
         sim_data = sim_data.clean(self.clean_params)
+
         ## Estimate FE model ##
         fe_estimator = tw.FEEstimator(sim_data, params=self.fe_params)
         fe_estimator.fit(rng)
         # Save results
         fe_res = fe_estimator.res
+
         ## Estimate CRE model ##
         # Cluster
         sim_data = sim_data.cluster(self.cluster_params, rng=rng)
@@ -138,35 +136,58 @@ class MonteCarlo:
         # Save results
         cre_res = cre_estimator.res
 
-        return psi_var, psi_alpha_cov, \
-                cre_res['tot_var'], cre_res['tot_cov'], \
-                fe_res['var(psi)_fe'], fe_res['cov(psi, alpha)_fe'], \
-                fe_res['var(psi)_ho'], fe_res['cov(psi, alpha)_ho'], \
-                fe_res['var(psi)_he'], fe_res['cov(psi, alpha)_he']
+        res = {
+            'var(psi)_true': var_psi,
+            'var(psi)_fe': fe_res['var(psi)_fe'],
+            'var(psi)_ho': fe_res['var(psi)_ho'],
+            'var(psi)_he': fe_res['var(psi)_he'],
+            'var(psi)_cre': cre_res['tot_var'],
+            'cov(psi, alpha)_true': cov_psi_alpha,
+            'cov(psi, alpha)_fe': fe_res['cov(psi, alpha)_fe'],
+            'cov(psi, alpha)_ho': fe_res['cov(psi, alpha)_ho'],
+            'cov(psi, alpha)_he': fe_res['cov(psi, alpha)_he'],
+            'cov(psi, alpha)_cre': cre_res['tot_cov']
+        }
+
+        if self.estimate_bs:
+            ## Estimate Borovickova-Shimer model ##
+            ## Make sure all workers and firms have at least 2 observations ##
+            len_diff = 1
+            prev_len = len(sim_data)
+            clean_params = self.clean_params.copy()
+            clean_params['connectedness'] = 'strongly_connected'
+            while len_diff > 0:
+                sim_data = sim_data.min_joint_obs_frame(is_sorted=True, copy=False)
+
+                sim_data = sim_data.clean(clean_params)
+
+                len_diff = prev_len - len(sim_data)
+                prev_len = len(sim_data)
+
+            ### Estimate ###
+            bs_estimator = tw.BSEstimator()
+
+            ## Standard ##
+            bs_estimator.fit(sim_data, alternative_estimator=False)
+            # Save results
+            bs_res = bs_estimator.res
+
+            res['var(psi)_bs1'] = bs_res['var(mu)']
+            res['cov(psi, alpha)_bs1'] = bs_res['cov(lambda, mu)']
+
+            ## Alternative ##
+            bs_estimator.fit(sim_data, alternative_estimator=True)
+            # Save results
+            bs_res = bs_estimator.res
+
+            res['var(psi)_bs2'] = bs_res['var(mu)']
+            res['cov(psi, alpha)_bs2'] = bs_res['cov(lambda, mu)']
+
+        return res
 
     def monte_carlo(self, N=10, ncore=1, rng=None):
         '''
-        Run Monte Carlo simulations of two way fixed effect models to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res:
-
-            true_psi_var (NumPy Array): true simulated sample variance of psi
-
-            true_psi_alpha_cov (NumPy Array): true simulated sample covariance of psi and alpha
-
-            cre_psi_var (NumPy Array): CRE estimate of variance of psi
-
-            cre_psi_alpha_cov (NumPy Array): CRE estimate of covariance of psi and alpha
-
-            fe_psi_var (NumPy Array): AKM estimate of variance of psi
-
-            fe_psi_alpha_cov (NumPy Array): AKM estimate of covariance of psi and alpha
-
-            ho_psi_var (NumPy Array): homoskedastic-corrected AKM estimate of variance of psi
-
-            ho_psi_alpha_cov (NumPy Array): homoskedastic-corrected AKM estimate of covariance of psi and alpha
-
-            he_psi_var (NumPy Array): heteroskedastic-corrected AKM estimate of variance of psi
-
-            he_psi_alpha_cov (NumPy Array): heteroskedastic-corrected AKM estimate of covariance of psi and alpha
+        Run Monte Carlo simulations of two way fixed effect models to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res: true, plug-in FE, HO-corrected, HE-corrected, CRE, and Borovickova-Shimer estimates for var(psi) and cov(psi, alpha), where psi gives firm effects and alpha gives worker effects.
 
         Arguments:
             N (int): number of simulations
@@ -175,18 +196,6 @@ class MonteCarlo:
         '''
         if rng is None:
             rng = np.random.default_rng(None)
-
-        # Initialize NumPy arrays to store results
-        true_psi_var = np.zeros(N)
-        true_psi_alpha_cov = np.zeros(N)
-        cre_psi_var = np.zeros(N)
-        cre_psi_alpha_cov = np.zeros(N)
-        fe_psi_var = np.zeros(N)
-        fe_psi_alpha_cov = np.zeros(N)
-        ho_psi_var = np.zeros(N)
-        ho_psi_alpha_cov = np.zeros(N)
-        he_psi_var = np.zeros(N)
-        he_psi_alpha_cov = np.zeros(N)
 
         # Simulate networks
         if ncore > 1:
@@ -202,26 +211,23 @@ class MonteCarlo:
             all_res = [self._monte_carlo_interior(rng) for _ in trange(N)]
 
         # Extract results
+        estimators = [
+            'var(psi)_true', 'var(psi)_fe', 'var(psi)_ho',
+            'var(psi)_he', 'var(psi)_cre',
+            'cov(psi, alpha)_true', 'cov(psi, alpha)_fe', 'cov(psi, alpha)_ho',
+            'cov(psi, alpha)_he', 'cov(psi, alpha)_cre'
+        ]
+        if self.estimate_bs:
+            estimators += ['var(psi)_bs1', 'var(psi)_bs2', 'cov(psi, alpha)_bs1', 'cov(psi, alpha)_bs2']
+        res = {estimator: np.zeros(N) for estimator in estimators}
+
         for i, res_i in enumerate(all_res):
-            true_psi_var[i], true_psi_alpha_cov[i], cre_psi_var[i], cre_psi_alpha_cov[i], fe_psi_var[i], fe_psi_alpha_cov[i], ho_psi_var[i], ho_psi_alpha_cov[i], he_psi_var[i], he_psi_alpha_cov[i] = res_i
-
-        res = {}
-
-        res['true_psi_var'] = true_psi_var
-        res['true_psi_alpha_cov'] = true_psi_alpha_cov
-        res['cre_psi_var'] = cre_psi_var
-        res['cre_psi_alpha_cov'] = cre_psi_alpha_cov
-        res['fe_psi_var'] = fe_psi_var
-        res['fe_psi_alpha_cov'] = fe_psi_alpha_cov
-        res['ho_psi_var'] = ho_psi_var
-        res['ho_psi_alpha_cov'] = ho_psi_alpha_cov
-        res['he_psi_var'] = he_psi_var
-        res['he_psi_alpha_cov'] = he_psi_alpha_cov
+            for estimator in estimators:
+                res[estimator][i] = res_i[estimator]
 
         self.res = res
-        self.monte_carlo_res = True
 
-    def hist(self, density=False, fe=True, ho=True, he=True, cre=True):
+    def hist(self, density=False, fe=True, ho=True, he=True, cre=True, bs1=True, bs2=True):
         '''
         Plot histogram of how Monte Carlo simulation results differ from truth.
 
@@ -231,74 +237,86 @@ class MonteCarlo:
             ho (bool): if True, plot homoskedastic correction results
             he (bool): if True, plot heteroskedastic correction results
             cre (bool): if True, plot CRE results
+            bs1 (bool): if True, plot staBorovickova-Shimer results for the standard estimator
+            bs2 (bool): if True, plot staBorovickova-Shimer results for the alternative estimator
         '''
-        if not self.monte_carlo_res:
+        if self.res is None:
             warnings.warn('Must run Monte Carlo simulations before histogram can be generated. This can be done by running the method .fit().')
 
         else:
+            if not self.estimate_bs:
+                bs1 = False
+                bs2 = False
             # Extract results
-            true_psi_var = self.res['true_psi_var']
-            true_psi_alpha_cov = self.res['true_psi_alpha_cov']
-            cre_psi_var = self.res['cre_psi_var']
-            cre_psi_alpha_cov = self.res['cre_psi_alpha_cov']
-            fe_psi_var = self.res['fe_psi_var']
-            fe_psi_alpha_cov = self.res['fe_psi_alpha_cov']
-            ho_psi_var = self.res['ho_psi_var']
-            ho_psi_alpha_cov = self.res['ho_psi_alpha_cov']
-            he_psi_var = self.res['he_psi_var']
-            he_psi_alpha_cov = self.res['he_psi_alpha_cov']
+            res = self.res
+            to_plot_dict = {
+                'fe': fe,
+                'ho': ho,
+                'he': he,
+                'cre': cre,
+                'bs1': bs1,
+                'bs2': bs2
+            }
+            plot_options_dict = {
+                'fe': {
+                    'label': 'FE',
+                    'color': 'C0'
+                },
+                'ho': {
+                    'label': 'HO-corrected',
+                    'color': 'C1'
+                },
+                'he': {
+                    'label': 'HE-corrected',
+                    'color': 'C2'
+                },
+                'cre': {
+                    'label': 'CRE',
+                    'color': 'C3'
+                },
+                'bs1': {
+                    'label': 'BS-standard',
+                    'color': 'C4'
+                },
+                'bs2': {
+                    'label': 'BS-alternative',
+                    'color': 'C5'
+                }
+            }
 
             # Define differences
-            cre_psi_diff = sorted(cre_psi_var - true_psi_var)
-            cre_psi_alpha_diff = sorted(cre_psi_alpha_cov - true_psi_alpha_cov)
-            fe_psi_diff = sorted(fe_psi_var - true_psi_var)
-            fe_psi_alpha_diff = sorted(fe_psi_alpha_cov - true_psi_alpha_cov)
-            ho_psi_diff = sorted(ho_psi_var - true_psi_var)
-            ho_psi_alpha_diff = sorted(ho_psi_alpha_cov - true_psi_alpha_cov)
-            he_psi_diff = sorted(he_psi_var - true_psi_var)
-            he_psi_alpha_diff = sorted(he_psi_alpha_cov - true_psi_alpha_cov)
+            var_diffs = {estimator: np.sort(res[f'var(psi)_{estimator}'] - res['var(psi)_true']) for estimator, to_plot in to_plot_dict.items() if to_plot}
+            cov_diffs = {estimator: np.sort(res[f'cov(psi, alpha)_{estimator}'] - res['cov(psi, alpha)_true']) for estimator, to_plot in to_plot_dict.items() if to_plot}
 
-            # Plot histograms
+            ### Plot histograms ###
             fig, axs = plt.subplots(nrows=1, ncols=2, sharex=False, sharey=True, dpi=150)
-            # First, var(psi)
-            # Source for fixing bin size:
-            # https://stackoverflow.com/a/50864765
-            min_err = np.inf
-            if fe:
-                min_err = min(min_err, np.min(fe_psi_diff))
-            if ho:
-                min_err = min(min_err, np.min(ho_psi_diff))
-            if he:
-                min_err = min(min_err, np.min(he_psi_diff))
-            if cre:
-                min_err = min(min_err, np.min(cre_psi_diff))
-            max_err = -np.inf
-            if fe:
-                max_err = max(max_err, np.max(fe_psi_diff))
-            if ho:
-                max_err = max(max_err, np.max(ho_psi_diff))
-            if he:
-                max_err = max(max_err, np.max(he_psi_diff))
-            if cre:
-                max_err = max(max_err, np.max(cre_psi_diff))
-            if min_err > 0:
-                min_err *= 0.95
-            else:
-                min_err *= 1.05
-            if max_err > 0:
-                max_err *= 1.05
-            else:
-                max_err *= 0.95
-            plt_range = (min_err, max_err)
+
+            ## Define plot bounds (source: https://stackoverflow.com/a/50864765) ##
+            min_err_var = np.inf
+            min_err_cov = np.inf
+            max_err_var = -np.inf
+            max_err_cov = -np.inf
+            for estimator, to_plot in to_plot_dict.items():
+                if to_plot:
+                    min_err_var = min(min_err_var, np.min(var_diffs[estimator]))
+                    min_err_cov = min(min_err_cov, np.min(cov_diffs[estimator]))
+                    max_err_var = max(max_err_var, np.max(var_diffs[estimator]))
+                    max_err_cov = max(max_err_cov, np.max(cov_diffs[estimator]))
+            min_err_var *= ((min_err_var <= 0) * 1.05 + (min_err_var > 0) * 0.95)
+            min_err_cov *= ((min_err_cov <= 0) * 1.05 + (min_err_cov > 0) * 0.95)
+            max_err_var *= ((max_err_var <= 0) * 0.95 + (max_err_var > 0) * 1.05)
+            max_err_cov *= ((max_err_cov <= 0) * 0.95 + (max_err_cov > 0) * 1.05)
+
+            # Plot bounds
+            plt_range_var = (min_err_var, max_err_var)
+            plt_range_cov = (min_err_cov, max_err_cov)
+
+            ## var(psi) ##
             axs[0].axvline(x=0, color='purple', linestyle='--', label=r'$\Delta$truth=0')
-            if fe:
-                axs[0].hist(fe_psi_diff, bins=50, range=plt_range, density=density, color='C0', label='FE')
-            if ho:
-                axs[0].hist(ho_psi_diff, bins=50, range=plt_range, density=density, color='C1', label='HO-corrected')
-            if he:
-                axs[0].hist(he_psi_diff, bins=50, range=plt_range, density=density, color='C2', label='HE-corrected')
-            if cre:
-                axs[0].hist(cre_psi_diff, bins=50, range=plt_range, density=density, color='C3', label='CRE')
+            for estimator, plot_options in plot_options_dict.items():
+                if to_plot_dict[estimator]:
+                    # Plot if to_plot=True
+                    axs[0].hist(var_diffs[estimator], bins=50, range=plt_range_var, density=density, color=plot_options['color'], label=plot_options['label'])
             # axs[0].legend()
             axs[0].set_title(r'var($\psi$)')
             axs[0].set_xlabel(r'$\Delta$truth')
@@ -307,43 +325,12 @@ class MonteCarlo:
             else:
                 axs[0].set_ylabel('frequency')
 
-            # Second, cov(psi, alpha)
-            min_err = np.inf
-            if fe:
-                min_err = min(min_err, np.min(fe_psi_alpha_diff))
-            if ho:
-                min_err = min(min_err, np.min(ho_psi_alpha_diff))
-            if he:
-                min_err = min(min_err, np.min(he_psi_alpha_diff))
-            if cre:
-                min_err = min(min_err, np.min(cre_psi_alpha_diff))
-            max_err = -np.inf
-            if fe:
-                max_err = max(max_err, np.max(fe_psi_alpha_diff))
-            if ho:
-                max_err = max(max_err, np.max(ho_psi_alpha_diff))
-            if he:
-                max_err = max(max_err, np.max(he_psi_alpha_diff))
-            if cre:
-                max_err = max(max_err, np.max(cre_psi_alpha_diff))
-            if min_err > 0:
-                min_err *= 0.95
-            else:
-                min_err *= 1.05
-            if max_err > 0:
-                max_err *= 1.05
-            else:
-                max_err *= 0.95
-            plt_range = (min_err, max_err)
+            ## cov(psi, alpha) ##
             axs[1].axvline(x=0, color='purple', linestyle='--', label=r'$\Delta$truth=0')
-            if fe:
-                axs[1].hist(fe_psi_alpha_diff, bins=50, range=plt_range, density=density, color='C0', label='FE')
-            if ho:
-                axs[1].hist(ho_psi_alpha_diff, bins=50, range=plt_range, density=density, color='C1', label='HO-corrected')
-            if he:
-                axs[1].hist(he_psi_alpha_diff, bins=50, range=plt_range, density=density, color='C2', label='HE-corrected')
-            if cre:
-                axs[1].hist(cre_psi_alpha_diff, bins=50, range=plt_range, density=density, color='C3', label='CRE')
+            for estimator, plot_options in plot_options_dict.items():
+                if to_plot_dict[estimator]:
+                    # Plot if to_plot=True
+                    axs[1].hist(cov_diffs[estimator], bins=50, range=plt_range_cov, density=density, color=plot_options['color'], label=plot_options['label'])
             # axs[1].legend()
             axs[1].set_title(r'cov($\psi$, $\alpha$)')
             axs[1].set_xlabel(r'$\Delta$truth')
