@@ -494,6 +494,10 @@ class InteractedBLMEstimator():
         if rng is None:
             rng = np.random.default_rng(None)
 
+        # Check that jdata has no returns
+        if not jdata.no_returns:
+            raise ValueError("Cannot run the fixed-point estimator if there are returns in the data. When cleaning your data, please set the parameter 'drop_returns' to drop returns.")
+
         # Unpack parameters
         weighted = self.weighted
         how_split, alternative_estimator, weight_firm_pairs = self.params.get_multiple(('how_split', 'alternative_estimator', 'weight_firm_pairs')) # max_iters, threshold

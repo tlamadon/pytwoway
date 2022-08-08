@@ -6,7 +6,7 @@ import numpy as np
 
 def _compute_mean_sq(col_groupby, col_grouped, weights=None):
     '''
-    Compute lambda_sq_i and mu_sq_j.
+    Compute lambda_i_sq and mu_j_sq.
 
     Arguments:
         col_groupby (NumPy Array): data to group by
@@ -14,7 +14,7 @@ def _compute_mean_sq(col_groupby, col_grouped, weights=None):
         weights (NumPy Array or None): weight column
 
     Returns:
-        (NumPy Array): computed lambda_sq_i or mu_sq_j
+        (NumPy Array): computed lambda_i_sq or mu_j_sq
     '''
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
@@ -94,13 +94,13 @@ class BSEstimator():
                 weights = None
                 weighted_y = adata.loc[:, 'y'].to_numpy()
 
-            lambda_sq_i = _compute_mean_sq(adata.loc[:, 'i'].to_numpy(), weighted_y, weights=weights)
+            lambda_i_sq = _compute_mean_sq(adata.loc[:, 'i'].to_numpy(), weighted_y, weights=weights)
 
             ## y_bar ##
             y_bar = np.sum(weights_sum_i * lambda_i) / np.sum(weights_sum_i)
 
-            ## sigma_sq_lambda ##
-            sigma_sq_lambda = np.sum(weights_sum_i * lambda_sq_i) / np.sum(weights_sum_i) - (y_bar ** 2)
+            ## sigma_lambda_sq ##
+            sigma_lambda_sq = np.sum(weights_sum_i * lambda_i_sq) / np.sum(weights_sum_i) - (y_bar ** 2)
 
             ## Covariance (worker component) ##
             y_i = groupby_i['y'].transform('sum').to_numpy()
@@ -133,10 +133,10 @@ class BSEstimator():
                 weights = None
                 weighted_y = adata.loc[:, 'y'].to_numpy()
 
-            mu_sq_j = _compute_mean_sq(adata.loc[:, 'j'].to_numpy(), weighted_y, weights=weights)
+            mu_j_sq = _compute_mean_sq(adata.loc[:, 'j'].to_numpy(), weighted_y, weights=weights)
 
-            ## sigma_sq_mu ##
-            sigma_sq_mu = np.sum(weights_sum_j * mu_sq_j) / np.sum(weights_sum_j) - (y_bar ** 2)
+            ## sigma_mu_sq ##
+            sigma_mu_sq = np.sum(weights_sum_j * mu_j_sq) / np.sum(weights_sum_j) - (y_bar ** 2)
 
             ## Covariance (firm component) ##
             y_j = groupby_j['y'].transform('sum').to_numpy()
@@ -156,11 +156,11 @@ class BSEstimator():
 
             # Store results
             self.res = {
-                'y_bar': y_bar,
-                'sigma_sq_lambda': sigma_sq_lambda,
-                'sigma_sq_mu': sigma_sq_mu,
+                'mean(y)': y_bar,
+                'var(lambda)': sigma_lambda_sq,
+                'var(mu)': sigma_mu_sq,
                 'cov(lambda, mu)': cov,
-                'corr(lambda, mu)': cov / np.sqrt(sigma_sq_lambda * sigma_sq_mu)
+                'corr(lambda, mu)': cov / np.sqrt(sigma_lambda_sq * sigma_mu_sq)
             }
 
         else:
@@ -182,7 +182,7 @@ class BSEstimator():
                 weights_sum_i = groupby_i['y'].size().to_numpy()
 
             ## Worker mean squared ##
-            weighted_lambda_sq_i = _compute_mean_sq(adata.loc[:, 'i'].to_numpy(), adata.loc[:, 'y'].to_numpy(), weights=None)
+            weighted_lambda_i_sq = _compute_mean_sq(adata.loc[:, 'i'].to_numpy(), adata.loc[:, 'y'].to_numpy(), weights=None)
             if weighted:
                 # FIXME I am not sure why this needs to be multiplied by 2
                 weights_sq_i = 2 * _compute_mean_sq(adata.loc[:, 'i'].to_numpy(), adata.loc[:, 'w'].to_numpy(), weights=None)
@@ -190,9 +190,9 @@ class BSEstimator():
                 # FIXME I am not sure why this needs to be multiplied by 2
                 weights_sq_i = 2 * (1 / 2)
 
-            ## sigma_sq_lambda ##
+            ## sigma_lambda_sq ##
             y_bar_i = np.sum(weights_sum_i * weighted_lambda_i) / np.sum(weights_sum_i * weights_i)
-            sigma_sq_lambda = np.sum(weights_sum_i * weighted_lambda_sq_i) / np.sum(weights_sum_i * weights_sq_i) - (y_bar_i ** 2)
+            sigma_lambda_sq = np.sum(weights_sum_i * weighted_lambda_i_sq) / np.sum(weights_sum_i * weights_sq_i) - (y_bar_i ** 2)
 
             ## Covariance (worker component) ##
             size_i = groupby_i['y'].transform('size').to_numpy()
@@ -218,7 +218,7 @@ class BSEstimator():
                 weights_sum_j = groupby_j['y'].size().to_numpy()
 
             ## Firm mean squared ##
-            weighted_mu_sq_j = _compute_mean_sq(adata.loc[:, 'j'].to_numpy(), adata.loc[:, 'y'].to_numpy(), weights=None)
+            weighted_mu_j_sq = _compute_mean_sq(adata.loc[:, 'j'].to_numpy(), adata.loc[:, 'y'].to_numpy(), weights=None)
             if weighted:
                 # FIXME I am not sure why this needs to be multiplied by 2
                 weights_sq_j = 2 * _compute_mean_sq(adata.loc[:, 'j'].to_numpy(), adata.loc[:, 'w'].to_numpy(), weights=None)
@@ -226,9 +226,9 @@ class BSEstimator():
                 # FIXME I am not sure why this needs to be multiplied by 2
                 weights_sq_j = 2 * (1 / 2)
 
-            ## sigma_sq_mu ##
+            ## sigma_mu_sq ##
             y_bar_j = np.sum(weights_sum_j * weighted_mu_j) / np.sum(weights_sum_j * weights_j)
-            sigma_sq_mu = np.sum(weights_sum_j * weighted_mu_sq_j) / np.sum(weights_sum_j * weights_sq_j) - (y_bar_j ** 2)
+            sigma_mu_sq = np.sum(weights_sum_j * weighted_mu_j_sq) / np.sum(weights_sum_j * weights_sq_j) - (y_bar_j ** 2)
 
             ## Covariance (firm component) ##
             size_j = groupby_j['y'].transform('size').to_numpy()
@@ -247,13 +247,15 @@ class BSEstimator():
                 cov = np.mean(weighted_c_i_j) - (y_bar_i * y_bar_j)
 
             # Store results
+            
             self.res = {
-                'y_bar_i': y_bar_i,
-                'y_bar_j': y_bar_j,
-                'sigma_sq_lambda': sigma_sq_lambda,
-                'sigma_sq_mu': sigma_sq_mu,
+                # 'y_bar_i': y_bar_i,
+                # 'y_bar_j': y_bar_j,
+                'mean(y)': (y_bar_i + y_bar_j) / 2,
+                'var(lambda)': sigma_lambda_sq,
+                'var(mu)': sigma_mu_sq,
                 'cov(lambda, mu)': cov,
-                'corr(lambda, mu)': cov / np.sqrt(sigma_sq_lambda * sigma_sq_mu)
+                'corr(lambda, mu)': cov / np.sqrt(sigma_lambda_sq * sigma_mu_sq)
             }
 
         ### Restore values ###
