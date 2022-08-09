@@ -478,35 +478,35 @@ def test_monte_carlo():
     twmc_net.monte_carlo(N=50, ncore=4, rng=np.random.default_rng(1240))
 
     # Extract results
-    true_psi_var = twmc_net.res['true_psi_var']
-    true_psi_alpha_cov = twmc_net.res['true_psi_alpha_cov']
-    cre_psi_var = twmc_net.res['cre_psi_var']
-    cre_psi_alpha_cov = twmc_net.res['cre_psi_alpha_cov']
-    fe_psi_var = twmc_net.res['fe_psi_var']
-    fe_psi_alpha_cov = twmc_net.res['fe_psi_alpha_cov']
-    ho_psi_var = twmc_net.res['ho_psi_var']
-    ho_psi_alpha_cov = twmc_net.res['ho_psi_alpha_cov']
-    he_psi_var = twmc_net.res['he_psi_var']
-    he_psi_alpha_cov = twmc_net.res['he_psi_alpha_cov']
+    var_psi_true = twmc_net.res['var(psi)_true']
+    var_psi_cre = twmc_net.res['var(psi)_cre']
+    var_psi_fe = twmc_net.res['var(psi)_fe']
+    var_psi_ho = twmc_net.res['var(psi)_ho']
+    var_psi_he = twmc_net.res['var(psi)_he']
+    cov_psi_alpha_true = twmc_net.res['cov(psi, alpha)_true']
+    cov_psi_alpha_cre = twmc_net.res['cov(psi, alpha)_cre']
+    cov_psi_alpha_fe = twmc_net.res['cov(psi, alpha)_fe']
+    cov_psi_alpha_ho = twmc_net.res['cov(psi, alpha)_ho']
+    cov_psi_alpha_he = twmc_net.res['cov(psi, alpha)_he']
 
     # Compute mean percent differences from truth
-    cre_psi_diff = abs(np.mean((cre_psi_var - true_psi_var) / true_psi_var))
-    cre_psi_alpha_diff = abs(np.mean((cre_psi_alpha_cov - true_psi_alpha_cov) / true_psi_alpha_cov))
-    fe_psi_diff = abs(np.mean((fe_psi_var - true_psi_var) / true_psi_var))
-    fe_psi_alpha_diff = abs(np.mean((fe_psi_alpha_cov - true_psi_alpha_cov) / true_psi_alpha_cov))
-    ho_psi_diff = abs(np.mean((ho_psi_var - true_psi_var) / true_psi_var))
-    ho_psi_alpha_diff = abs(np.mean((ho_psi_alpha_cov - true_psi_alpha_cov) / true_psi_alpha_cov))
-    he_psi_diff = abs(np.mean((he_psi_var - true_psi_var) / true_psi_var))
-    he_psi_alpha_diff = abs(np.mean((he_psi_alpha_cov - true_psi_alpha_cov) / true_psi_alpha_cov))
+    psi_diff_cre = abs(np.mean((var_psi_cre - var_psi_true) / var_psi_true))
+    psi_diff_fe = abs(np.mean((var_psi_fe - var_psi_true) / var_psi_true))
+    psi_diff_ho = abs(np.mean((var_psi_ho - var_psi_true) / var_psi_true))
+    psi_diff_he = abs(np.mean((var_psi_he - var_psi_true) / var_psi_true))
+    psi_alpha_diff_cre = abs(np.mean((cov_psi_alpha_cre - cov_psi_alpha_true) / cov_psi_alpha_true))
+    psi_alpha_diff_fe = abs(np.mean((cov_psi_alpha_fe - cov_psi_alpha_true) / cov_psi_alpha_true))
+    psi_alpha_diff_ho = abs(np.mean((cov_psi_alpha_ho - cov_psi_alpha_true) / cov_psi_alpha_true))
+    psi_alpha_diff_he = abs(np.mean((cov_psi_alpha_he - cov_psi_alpha_true) / cov_psi_alpha_true))
 
-    assert cre_psi_diff < 0.03
-    assert cre_psi_alpha_diff < 1e-2
-    assert fe_psi_diff < 0.02
-    assert fe_psi_alpha_diff < 0.015
-    assert ho_psi_diff < 1e-2
-    assert ho_psi_alpha_diff < 1e-3
-    assert he_psi_diff < 1e-2
-    assert he_psi_alpha_diff < 1e-3
+    assert psi_diff_cre < 0.03
+    assert psi_diff_fe < 0.02
+    assert psi_diff_ho < 1e-2
+    assert psi_diff_he < 1e-2
+    assert psi_alpha_diff_cre < 1e-2
+    assert psi_alpha_diff_fe < 0.015
+    assert psi_alpha_diff_ho < 1e-3
+    assert psi_alpha_diff_he < 1e-3
 
 #####################
 ##### Attrition #####
