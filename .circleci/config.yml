@@ -50,7 +50,11 @@ jobs:
           # command: |
           #   poetry run python -m pytest
           command: |
-            python -m pytest
+            python -m pytest | circleci tests split --split-by=timings
+
+      # Store test timing results so parallelism splits tests more efficiently
+      - store_test_results:
+          path: test-results
 
 # In the workflows section, we specify when we want to run the jobs defined
 workflows:

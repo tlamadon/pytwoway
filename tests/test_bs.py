@@ -47,7 +47,7 @@ def test_bs():
     assert np.abs((res_3['var(mu)'] - sigma_mu_sq) / sigma_mu_sq) < 1e-2
     assert np.abs((res_4['var(mu)'] - sigma_mu_sq) / sigma_mu_sq) < 1e-2
     # rho
-    assert np.abs((res_1['corr(mu, lambda)'] - rho) / rho) < 0.05
-    assert np.abs((res_2['corr(mu, lambda)'] - rho) / rho) < 0.05
-    assert np.abs((res_3['corr(mu, lambda)'] - rho) / rho) < 0.05
-    assert np.abs((res_4['corr(mu, lambda)'] - rho) / rho) < 0.05
+    assert np.abs((res_1['corr(lambda, mu)'] - rho) / rho) < 0.05
+    assert np.abs((res_2['corr(lambda, mu)'] - rho) / rho) < 0.05
+    assert np.abs((res_3['corr(lambda, mu)'] - rho) / rho) < 0.05
+    assert np.abs((res_4['corr(lambda, mu)'] - rho) / rho) < 0.05
