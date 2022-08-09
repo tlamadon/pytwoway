@@ -5,7 +5,6 @@ Defines class FEEstimator, which uses multigrid and partialing out to estimate w
 TODO:
     -leave-out-worker
     -Q with exact trace for more than psi and alpha
-    -control variables
 '''
 from tqdm.auto import tqdm, trange
 import time, pickle, json, glob # warnings
@@ -14,7 +13,7 @@ from multiprocessing import Pool
 import numpy as np
 import pandas as pd
 from scipy.sparse import csc_matrix
-import pyamg
+from pyamg import ruge_stuben_solver as rss
 from bipartitepandas.util import ParamsDict, to_list, logger_init
 from pytwoway import Q
 from pytwoway.util import weighted_mean, weighted_var, weighted_cov, weighted_quantile, DxSP, SPxD, DxM, MxD, diag_of_sp_prod, diag_of_prod
@@ -148,11 +147,11 @@ class FEEstimator:
     Uses multigrid and partialing out to solve two way fixed effect models. This includes AKM, the Andrews et al. homoskedastic correction, and the Kline et al. heteroskedastic correction.
 
     Arguments:
-        data (BipartiteDataFrame): long or collapsed long format labor data
+        adata (BipartiteDataFrame): long or collapsed long format labor data
         params (ParamsDict or None): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().
     '''
 
-    def __init__(self, data, params=None):
+    def __init__(self, adata, params=None):
         # Start logger
         logger_init(self)
         # self.logger.info('initializing FEEstimator object')
@@ -160,7 +159,7 @@ class FEEstimator:
         if params is None:
             params = fe_params()
 
-        self.adata = data
+        self.adata = adata
 
         self.params = params
         # Results dictionary
@@ -171,9 +170,9 @@ class FEEstimator:
         ### Save some commonly used parameters as attributes ###
         ## All ##
         # Whether data is weighted
-        self.weighted = (params['weighted'] and ('w' in data.columns))
+        self.weighted = (params['weighted'] and ('w' in adata.columns))
         # Progress bars
-        self.no_pbars = not params['progress_bars']
+        self.no_pbars = (not params['progress_bars'])
         # Verbose
         self.verbose = params['verbose']
         # Number of cores to use
@@ -218,7 +217,7 @@ class FEEstimator:
         # Need to recreate the simple model and the search representation
         # Make d the attribute dictionary
         self.__dict__ = d
-        self.ml = pyamg.ruge_stuben_solver(self.Minv)
+        self.ml = rss(self.Minv)
 
     @staticmethod
     def __load(filename):
@@ -440,7 +439,7 @@ class FEEstimator:
         ## Dwinv ##
         Dwinv = 1 / diag_of_sp_prod(W.T, DpW)
 
-        ## Dwinv @ W.T @ DpJ ##
+        ## Dwinv @ W.T @ Dp @ J ##
         WtDpJ = W.T @ DpJ
         DwinvWtDpJ = DxSP(Dwinv, WtDpJ.tocsc())
 
@@ -460,7 +459,7 @@ class FEEstimator:
         self.Minv = Minv
 
         self.logger.info('preparing linear solver')
-        self.ml = pyamg.ruge_stuben_solver(Minv)
+        self.ml = rss(Minv)
 
         # Save time variable
         self.last_invert_time = 0
@@ -528,7 +527,7 @@ class FEEstimator:
         Attach the estimated psi_hat and alpha_hat as columns to the input dataframe.
         '''
         # Add 0 for normalized firm
-        psi_hat = np.concatenate([self.psi_hat, np.array([0])])
+        psi_hat = np.append(self.psi_hat, 0)
         alpha_hat = self.alpha_hat
 
         # Attach columns

@@ -33,13 +33,13 @@ _sim_bs_params_default = ParamsDict({
         '''
             (default=20) Average number of employees at each firm, drawn from a Poisson distribution. Firms are constrained to have at least 2 employees.
         ''', '>= 2'),
-    'sigma_lambda': (1, 'type_constrained', ((float, int), _gteq0),
+    'sigma_lambda_sq': (1, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=1) Standard error of lambda_i.
+            (default=1) Variance of lambda_i.
         ''', '>= 0'),
-    'sigma_mu': (1, 'type_constrained', ((float, int), _gteq0),
+    'sigma_mu_sq': (1, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=1) Standard error of mu_j.
+            (default=1) Variance of mu_j.
         ''', '>= 0'),
     'sigma_wages': (2, 'type_constrained', ((float, int), _gteq0),
         '''
@@ -79,7 +79,8 @@ class SimBS:
             sim_params = sim_bs_params()
 
         # Check that sigma_wages is large enough
-        sigma_lambda, sigma_mu, sigma_wages, rho = sim_params.get_multiple(('sigma_lambda', 'sigma_mu', 'sigma_wages', 'rho'))
+        sigma_lambda_sq, sigma_mu_sq, sigma_wages, rho = sim_params.get_multiple(('sigma_lambda_sq', 'sigma_mu_sq', 'sigma_wages', 'rho'))
+        sigma_lambda, sigma_mu = np.sqrt(sigma_lambda_sq), np.sqrt(sigma_mu_sq)
 
         thres = np.sqrt((sigma_lambda ** 2 + sigma_mu ** 2 - 2 * rho * sigma_lambda * sigma_mu) / (1 - rho ** 2))
 
@@ -142,7 +143,8 @@ class SimBS:
             rng = np.random.default_rng(None)
 
         # Extract parameters
-        sigma_lambda, sigma_mu, sigma_wages, rho = self.params.get_multiple(('sigma_lambda', 'sigma_mu', 'sigma_wages', 'rho'))
+        sigma_lambda_sq, sigma_mu_sq, sigma_wages, rho = self.params.get_multiple(('sigma_lambda_sq', 'sigma_mu_sq', 'sigma_wages', 'rho'))
+        sigma_lambda, sigma_mu = np.sqrt(sigma_lambda_sq), np.sqrt(sigma_mu_sq)
 
         # Simulate number of jobs for each worker and number of employees for each firm
         n_matches_workers, n_matches_firms = self._simulate_workers_firms(rng)
@@ -178,19 +180,13 @@ class SimBS:
         # Convert into BipartiteDataFrame
         bdf = BipartiteDataFrame(i=i, j=j, y=y, lambda_i=a * lambda_i[i], mu_j=b * mu_j[j]).construct_artificial_time(time_per_worker=True, is_sorted=True, copy=False)
 
-        ## Make sure all workers and firms have at least 2 observations ##
-        prev_len = 0
-        cp = clean_params({'drop_returns': 'returns', 'is_sorted': True, 'copy': False, 'verbose': False})
-        # Make sure there are no returns
-        bdf = bdf.clean(cp)
-        while prev_len != len(bdf):
-            prev_len = len(bdf)
+        ## Clean ##
+        # Clean parameters
+        cp1 = clean_params({'drop_returns': 'returns', 'is_sorted': True, 'copy': False, 'verbose': False})
+        cp2 = clean_params({'is_sorted': True, 'copy': False, 'verbose': False})
 
-            # Drop stayers
-            bdf = bdf.loc[bdf.get_worker_m(is_sorted=True), :].clean(cp)
-
-            # Drop firms with a single observation
-            bdf = bdf.min_obs_frame(is_sorted=True, copy=False).clean(cp)
+        # Clean
+        bdf = bdf.clean(cp1).min_joint_obs_frame(is_sorted=True, copy=False).clean(cp2)
 
         # Drop m column
         bdf = bdf.drop('m', axis=1, inplace=True, allow_optional=True)

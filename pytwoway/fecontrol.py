@@ -4,8 +4,7 @@ Defines class FEControlEstimator, which estimates weighted two way fixed effect 
 '''
 TODO:
     -leave-out-worker
-    -Q with exact trace for more than psi and alpha
-    -control variables
+    -exact trace
 '''
 from tqdm.auto import tqdm, trange
 import time, pickle, json, glob # warnings
@@ -14,7 +13,7 @@ from multiprocessing import Pool
 import numpy as np
 import pandas as pd
 from scipy.sparse import csc_matrix, hstack
-import pyamg
+from pyamg import ruge_stuben_solver as rss
 # from qpsolvers import solve_qp
 from bipartitepandas.util import ParamsDict, to_list, logger_init
 from pytwoway import Q
@@ -238,7 +237,7 @@ class FEControlEstimator:
         # Need to recreate the simple model and the search representation
         # Make d the attribute dictionary
         self.__dict__ = d
-        self.ml = pyamg.ruge_stuben_solver(self.Minv)
+        self.ml = rss(self.Minv)
 
     @staticmethod
     def __load(filename):
@@ -497,7 +496,7 @@ class FEControlEstimator:
                 sqrt_DpA = A
 
         ## (A.T @ Dp @ A)^{-1} ##
-        AAinv_solver = pyamg.ruge_stuben_solver(A.T @ DpA)
+        AAinv_solver = rss(A.T @ DpA)
 
         ## Store matrices ##
         self.Y = self.adata.loc[:, 'y'].to_numpy()
@@ -629,7 +628,7 @@ class FEControlEstimator:
 
         ## psi and alpha ##
         # Add 0 for normalized firm
-        psi_hat = np.concatenate([gh['psi'], np.array([0])])
+        psi_hat = np.append(gh['psi'], 0)
         alpha_hat = gh['alpha']
 
         # Attach columns

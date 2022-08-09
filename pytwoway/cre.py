@@ -3,20 +3,19 @@ Defines class CREEstimator, which uses a trace approximation to estimate the CRE
 '''
 # import logging
 # from pathlib import Path
-import pyamg
+from tqdm.auto import tqdm, trange
+import time, json
 import numpy as np
 import pandas as pd
-from bipartitepandas.util import ParamsDict, logger_init
 from scipy.sparse import csc_matrix, coo_matrix, diags, linalg, eye
-import time
+from pyamg import ruge_stuben_solver as rss
+from bipartitepandas.util import ParamsDict, logger_init
 # import pyreadr
 # import os
 # from multiprocessing import Pool, TimeoutError
 # from timeit import default_timer as timer
 # import argparse
-import json
 # import itertools
-from tqdm.auto import tqdm, trange
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq1(a):
@@ -547,7 +546,7 @@ class CREEstimator:
 
         self.logger.info('preparing linear solver')
         M = 1 / self.within_params['var_psi'] * eye(self.nf) + 1 / self.within_params['var_eps'] * Jd.transpose() * Jd
-        self.ml = pyamg.ruge_stuben_solver(M)
+        self.ml = rss(M)
 
     def __compute_posterior_var(self, rng=None):
         '''
