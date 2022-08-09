@@ -49,13 +49,14 @@ jobs:
           no_output_timeout: 20m
           # command: |
           #   poetry run python -m pytest
+          # First line is to split tests by timing, then stores test-files for each parallel run in /tmp/tests-to-run (source: https://www.browserstack.com/guide/parallel-testing-with-circleci)
           command: |
-            python -m pytest
-          # Add to end of command to split tests by timing (DON'T ADD THIS, IT'S VERY SLOW): | circleci tests split --split-by=timings
+            circleci tests glob "tests/*.py" | circleci tests split --split-by=timings > /tmp/tests-to-run
+            python -m pytest $(cat /tmp/tests-to-run)
 
-      # # Store test timing results so parallelism splits tests more efficiently
-      # - store_test_results:
-      #     path: test-results
+      # Store test timing results so parallelism splits tests more efficiently
+      - store_test_results:
+          path: test-results
 
 # In the workflows section, we specify when we want to run the jobs defined
 workflows:
