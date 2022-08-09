@@ -1,44 +1,33 @@
+# Source: https://circleci.com/developer/orbs/orb/circleci/python
+# Check out the section work-with-poetry
+
 version: 2.1
 
-jobs:
+orbs: 
+  python: circleci/python@2.0.3
 
-  # Building and testing the project
-  # Useful when a PR is open, for example
+jobs:
+  # Building and testing the project (this can be any name you choose)
   build-and-test:
-    # Our environment, Python 3.6.8
-    docker:
-      - image: circleci/python:3.8
+    # # Our environment, Python 3.10.6
+    # docker:
+    #   - image: cimg/python:3.10.6
+
+    # Run with Python (instead of using docker)
+    executor: python/default
 
     # The steps for our build-and-test
     steps:
       # Get the code
       - checkout
 
-      # Cache can be tricky at first, but this means
-      # Please, restore my cache (what is actually on the cache will be defined later)
-      # if the text key `deps-{{ checksum "poetry.lock" }}` changes (and it WILL change everytime poetry.lock is updated since we rely on its checksum)
-      # and poetry.lock is updated every time we add a new dependency to our project
-      - restore_cache:
-          keys:
-            - deps-{{ checksum "poetry.lock" }}
+      # Install dependencies and cache them for future tests
+      - python/install-packages:
+          pkg-manager: poetry
 
-      # Install the dependencies
+      # Run tests
       - run:
-          name: Install Dependencies
-          command: |
-            poetry install
-
-      # Save's the specified path as a cache. This is the path Poetry uses to install the dependencies
-      # So if you don't install anything new, this folder won't change and the cache will be effective
-      - save_cache:
-          key: deps-{{ checksum "poetry.lock" }}
-          paths:
-            - /home/circleci/.cache/pypoetry/virtualenvs
-
-      # Last step, runs our tests omitting the dependencies path (so we don't take their coverage into account)
-      # And send our coverage somewhere, in this case, coveralls
-      - run:
-          name: Run Pytest
+          name: Run PyTest
           no_output_timeout: 20m
           command: |
             poetry run python -m pytest
