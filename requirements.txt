@@ -1,0 +1,11 @@
+numpy
+pandas
+bipartitepandas >= 1.0.35
+scipy
+statsmodels
+pyamg
+qpsolvers
+quadprog
+# ConfigArgParse
+matplotlib
+tqdm
