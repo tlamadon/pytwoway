@@ -1,9 +1,9 @@
 # Source: https://circleci.com/developer/orbs/orb/circleci/python
-# Check out the section work-with-poetry
+# Check out the sections work-with-poetry and work-with-pip
 
 version: 2.1
 
-orbs: 
+orbs:
   python: circleci/python@2.0.3
 
 jobs:
@@ -18,7 +18,7 @@ jobs:
 
     # Allow multiple tests to run in parallel (max 4 for free plans)
     parallelism: 4
-    
+
     # Allocate more memory
     resource_class: large
 
@@ -28,15 +28,28 @@ jobs:
       - checkout
 
       # Install dependencies and cache them for future tests
+      ## Poetry (way too slow) ##
+      # - python/install-packages:
+      #     pkg-manager: poetry
+      ## Pip ##
       - python/install-packages:
-          pkg-manager: poetry
+          pkg-manager: pip
+      - python/install-packages:
+          pip-dependency-file: dev-requirements.txt
+          pkg-manager: pip
+      - python/install-packages:
+          args: pytest
+          pkg-manager: pip
+          pypi-cache: false
 
       # Run tests
       - run:
           name: Run PyTest
           no_output_timeout: 20m
+          # command: |
+          #   poetry run python -m pytest
           command: |
-            poetry run python -m pytest
+            pytest --version
 
 # In the workflows section, we specify when we want to run the jobs defined
 workflows:
