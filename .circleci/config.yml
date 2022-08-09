@@ -47,10 +47,8 @@ jobs:
       - run:
           name: Run PyTest
           no_output_timeout: 20m
-          # command: |
-          #   poetry run python -m pytest
           command: |
-            pytest --version
+            poetry run python -m pytest
 
 # In the workflows section, we specify when we want to run the jobs defined
 workflows:
