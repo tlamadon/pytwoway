@@ -34,9 +34,10 @@ jobs:
       ## Pip ##
       - python/install-packages:
           pkg-manager: pip
-      - python/install-packages:
-          pip-dependency-file: dev-requirements.txt
-          pkg-manager: pip
+      # Uncomment the following lines if development requires additional packages
+      # - python/install-packages:
+      #     pip-dependency-file: dev-requirements.txt
+      #     pkg-manager: pip
       - python/install-packages:
           args: pytest
           pkg-manager: pip
