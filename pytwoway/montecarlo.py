@@ -226,18 +226,18 @@ class MonteCarlo:
 
         self.res = res
 
-    def hist(self, density=False, fe=True, ho=True, he=True, cre=True, bs1=True, bs2=True):
+    def hist(self, fe=True, ho=True, he=True, cre=True, bs1=True, bs2=True, density=False):
         '''
         Plot histogram of how Monte Carlo simulation results differ from truth.
 
         Arguments:
-            density (bool): if True, plot density; if False, plot count
             fe (bool): if True, plot FE results
             ho (bool): if True, plot homoskedastic correction results
             he (bool): if True, plot heteroskedastic correction results
             cre (bool): if True, plot CRE results
             bs1 (bool): if True, plot staBorovickova-Shimer results for the standard estimator
             bs2 (bool): if True, plot staBorovickova-Shimer results for the alternative estimator
+            density (bool): if True, plot density; if False, plot count
         '''
         if self.res is None:
             raise AttributeError('Attribute .res is None - must run Monte Carlo simulations before histogram can be generated. This can be done by running .fit()')

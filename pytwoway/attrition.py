@@ -433,19 +433,19 @@ class Attrition:
 
         return (var_diffs_non_he, var_diffs_he, cov_diffs_non_he, cov_diffs_he, x_axis)
 
-    def plots(self, line_at_movers_per_firm=True, xticks_round=1, fe=True, ho=True, he=True, cre=True):
+    def plots(self, fe=True, ho=True, he=True, cre=True, line_at_movers_per_firm=True, xticks_round=1):
         '''
         Generate attrition result plots.
 
         Arguments:
-            line_at_movers_per_firm (bool): if True, plot a dashed line where movers per firm in the subsample is approximately the number of movers per firm in the full sample
-            xticks_round (int): how many digits to round x ticks
             fe (bool): if True, plot FE results
             ho (bool): if True, plot homoskedastic correction results
             he (bool): if True, plot heteroskedastic correction results
             cre (bool): if True, plot CRE results
+            line_at_movers_per_firm (bool): if True, plot a dashed line where movers per firm in the subsample is approximately the number of movers per firm in the full sample
+            xticks_round (int): how many digits to round x ticks
         '''
-        ## Plotting dictionary ##
+        ## Plotting dictionaries ##
         to_plot_dict = {
             'fe': fe,
             'ho': ho,
@@ -460,11 +460,11 @@ class Attrition:
                 'color': 'C0'
             },
             'ho': {
-                'label': 'HO-corrected',
+                'label': 'FE-HO',
                 'color': 'C1'
             },
             'he': {
-                'label': 'HE-corrected',
+                'label': 'FE-HE',
                 'color': 'C2'
             },
             'cre': {
@@ -485,23 +485,25 @@ class Attrition:
         var_diffs_non_he, var_diffs_he, cov_diffs_non_he, cov_diffs_he, movers_per_firm_line_non_he, movers_per_firm_line_he, x_axis = self._combine_res(to_plot_dict, line_at_movers_per_firm=line_at_movers_per_firm, xticks_round=xticks_round)
 
         ### Plot figures ###
+        ## Information for plots ##
+        row_titles = ['Firm effects', 'Sorting']
+        col_titles = ['Connected set', 'Leave-one-out set']
+        data_array = [[var_diffs_non_he, var_diffs_he], [cov_diffs_non_he, cov_diffs_he]]
+        movers_per_firm_lst = [movers_per_firm_line_non_he, movers_per_firm_line_he]
+
+        ## Plot ##
         # Source: https://stackoverflow.com/a/68209152/17333120
         fig = plt.figure(constrained_layout=True, dpi=150)
         subfigs = fig.subfigures(nrows=2, ncols=1)
 
-        # Information for plots
-        row_titles = ['Firm effects', 'Sorting']
-        col_titles = ['Connected set', 'Leave-one-out set']
-        data_array = [[var_diffs_non_he, var_diffs_he], [cov_diffs_non_he, cov_diffs_he]]
-
         for i, subfig in enumerate(subfigs):
-            ## Rows of the plot ##
+            ## Rows of the plot (firm effects vs. sorting) ##
             subfig.suptitle(row_titles[i], x=0.545)
             axs = subfig.subplots(nrows=1, ncols=2)
             for j, subaxs in enumerate(axs):
-                ## Columns of the plot ##
+                ## Columns of the plot (connected vs. leave-one-out) ##
                 if line_at_movers_per_firm:
-                    subaxs.axvline(movers_per_firm_line_non_he, color='k', linestyle='--')
+                    subaxs.axvline(movers_per_firm_lst[j], color='k', linestyle='--')
                 for estimator, plot_options in plot_options_dict.items():
                     if to_plot_dict[estimator] and not ((estimator == 'he') and (j == 0)):
                         # Plot if to_plot=True
@@ -521,93 +523,99 @@ class Attrition:
         subfigs[1].legend(handles, labels, loc=(1.02, 0.78))
         plt.show()
 
-    def boxplots(self, xticks_round=1):
+    def boxplots(self, fe=True, ho=True, he=True, cre=True, xticks_round=1):
         '''
         Generate attrition result boxplots.
 
         Arguments:
+            fe (bool): if True, plot FE results
+            ho (bool): if True, plot homoskedastic correction results
+            he (bool): if True, plot heteroskedastic correction results
+            cre (bool): if True, plot CRE results
             line_at_movers_per_firm (bool): if True, plot a dashed line where movers per firm in the subsample is approximately the number of movers per firm in the full sample
             xticks_round (int): how many digits to round x ticks
         '''
-        # Extract results
-        var_diffs_non_he, var_diffs_he, cov_diffs_non_he, cov_diffs_he, x_axis = self._combine_res(line_at_movers_per_firm=False, xticks_round=xticks_round)
+        ## Plotting dictionaries ##
+        to_plot_dict = {
+            'fe': fe,
+            'ho': ho,
+            'he': he,
+            'cre': cre # ,
+            # 'bs1': bs1,
+            # 'bs2': bs2
+        }
+        plot_options_dict = {
+            'fe': {
+                'label': 'FE',
+                'color': 'C0'
+            },
+            'ho': {
+                'label': 'FE-HO',
+                'color': 'C1'
+            },
+            'he': {
+                'label': 'FE-HE',
+                'color': 'C2'
+            },
+            'cre': {
+                'label': 'CRE',
+                'color': 'C3'
+            } # ,
+            # 'bs1': {
+            #     'label': 'BS-standard',
+            #     'color': 'C4'
+            # },
+            # 'bs2': {
+            #     'label': 'BS-alternative',
+            #     'color': 'C5'
+            # }
+        }
+        # Subtract 1 plot if HE is being estimated (since baseline plot doesn't include it)
+        n_plots = sum(to_plot_dict.values()) - 1 * he
+
+        ## Extract results ##
+        var_diffs_non_he, var_diffs_he, cov_diffs_non_he, cov_diffs_he, x_axis = self._combine_res(to_plot_dict, line_at_movers_per_firm=False, xticks_round=xticks_round)
 
         ### Plot boxplots ###
+        ## Information for plots ##
+        row_titles = ['Firm effects', 'Sorting']
+        col_titles = ['Connected set', 'Leave-one-out set']
+        data_array = [[var_diffs_non_he, var_diffs_he], [cov_diffs_non_he, cov_diffs_he]]
+
+        ## Plot ##
         # Source: https://matplotlib.org/devdocs/gallery/subplots_axes_and_figures/subfigures.html
         fig = plt.figure(constrained_layout=True, dpi=150)
         subfigs = fig.subfigures(nrows=2, ncols=1)
 
-        ## Firm effects ##
-        subfigs[0].suptitle('Firm effects', x=0.545)
-        subsubfigs = subfigs[0].subfigures(nrows=1, ncols=2)
+        for i, subfig in enumerate(subfigs):
+            ## Rows of the plot (firm effects vs. sorting) ##
+            subfig.suptitle(row_titles[i], x=0.545)
+            subsubfigs = subfig.subfigures(nrows=1, ncols=2)
+            for j, subsubfig in enumerate(subsubfigs):
+                ## Main columns of the plot (connected vs. leave-one-out) ##
+                # Column labels
+                subsubfig.suptitle(col_titles[j], fontsize=9)
+                subsubfig.supxlabel('Share of Movers Kept (%)', fontsize=7)
+                if j == 0:
+                    subsubfig.supylabel('Share of Variance (%)', fontsize=7)
+                else:
+                    subsubfig.supylabel(' ')
 
-        # Firm effects (non-HE set)
-        axs = subsubfigs[0].subplots(nrows=1, ncols=3, sharey=True)
-        subtitles = ['FE', 'FE-HO', 'CRE']
-
-        for i, row in enumerate(axs):
-            # for col in row:
-            row.boxplot(var_diffs_non_he[:, :, i], showfliers=False)
-            row.set_xticklabels(x_axis, fontsize=5)
-            row.tick_params(axis='y', labelsize=5)
-            row.grid()
-            row.set_title(subtitles[i], fontsize=7)
-        subsubfigs[0].suptitle('Connected set', fontsize=9)
-        subsubfigs[0].supxlabel('Share of Movers Kept (%)', fontsize=7)
-        subsubfigs[0].supylabel('Share of Variance (%)', fontsize=7)
-
-        # Firm effects (HE set)
-        axs = subsubfigs[1].subplots(nrows=1, ncols=4, sharey=True)
-        subtitles = ['FE', 'FE-HO', 'CRE', 'FE-HE']
-        # Change order because data is FE, FE-HO, CRE, FE-HE but want FE, FE-HO, FE-HE, CRE
-        order = [0, 1, 3, 2]
-
-        for i, row in enumerate(axs):
-            # for col in row:
-            row.boxplot(var_diffs_he[:, :, order[i]], showfliers=False)
-            row.set_xticklabels(x_axis, fontsize=5)
-            row.tick_params(axis='y', labelsize=5)
-            row.grid()
-            row.set_title(subtitles[order[i]], fontsize=7)
-        subsubfigs[1].suptitle('Leave-one-out set', fontsize=9)
-        subsubfigs[1].supxlabel('Share of Movers Kept (%)', fontsize=7)
-        subsubfigs[1].supylabel(' ')
-
-        ## Sorting ##
-        subfigs[1].suptitle('Sorting', x=0.545)
-        subsubfigs = subfigs[1].subfigures(nrows=1, ncols=2)
-
-        # Sorting (non-HE set)
-        axs = subsubfigs[0].subplots(nrows=1, ncols=3, sharey=True)
-        subtitles = ['FE', 'FE-HO', 'CRE']
-
-        for i, row in enumerate(axs):
-            # for col in row:
-            row.boxplot(cov_diffs_non_he[:, :, i], showfliers=False)
-            row.set_xticklabels(x_axis, fontsize=5)
-            row.tick_params(axis='y', labelsize=5)
-            row.grid()
-            row.set_title(subtitles[i], fontsize=7)
-        subsubfigs[0].suptitle('Connected set', fontsize=9)
-        subsubfigs[0].supxlabel('Share of Movers Kept (%)', fontsize=7)
-        subsubfigs[0].supylabel('Share of Variance (%)', fontsize=7)
-
-        # Sorting (HE set)
-        axs = subsubfigs[1].subplots(nrows=1, ncols=4, sharey=True)
-        subtitles = ['FE', 'FE-HO', 'CRE', 'FE-HE']
-        # Change order because data is FE, FE-HO, CRE, FE-HE but want FE, FE-HO, FE-HE, CRE
-        order = [0, 1, 3, 2]
-
-        for i, row in enumerate(axs):
-            # for col in row:
-            row.boxplot(cov_diffs_he[:, :, order[i]], showfliers=False)
-            row.set_xticklabels(x_axis, fontsize=5)
-            row.tick_params(axis='y', labelsize=5)
-            row.grid()
-            row.set_title(subtitles[order[i]], fontsize=7)
-        subsubfigs[1].suptitle('Leave-one-out set', fontsize=9)
-        subsubfigs[1].supxlabel('Share of Movers Kept (%)', fontsize=7)
-        subsubfigs[1].supylabel(' ')
+                # Plots (add 1 column for leave-out-set if HE is being plotted)
+                axs = subsubfig.subplots(nrows=1, ncols=n_plots + he * (j == 1), sharey=True)
+                k = 0
+                for estimator, plot_options in plot_options_dict.items():
+                    ## Sub-columns of the plot (FE vs. FE-HO vs. FE-HE vs. CRE) ##
+                    if to_plot_dict[estimator] and not ((estimator == 'he') and (j == 0)):
+                        # Plot if to_plot=True
+                        subaxs = axs[k]
+                        subaxs.boxplot(data_array[i][j][estimator], showfliers=False)
+                        subaxs.set_title(plot_options['label'], fontsize=7)
+                        subaxs.set_xticklabels(x_axis, fontsize=5)
+                        subaxs.tick_params(axis='y', labelsize=5)
+                        subaxs.grid()
+                        # Only iterate k if estimator is plotted
+                        k += 1
 
         # NOTE: must use plt.show(), fig.show() raises a warning in Jupyter Notebook (source: https://stackoverflow.com/a/52827912/17333120)
         plt.show()
