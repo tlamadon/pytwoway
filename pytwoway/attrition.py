@@ -21,11 +21,12 @@ class Attrition:
         attrition_how (tw.attrition_utils.AttritionIncreasing() or tw.attrition_utils.AttritionDecreasing()): instance of AttritionIncreasing() or AttritionDecreasing(), used to specify if attrition should use increasing (building up from a fixed set of firms) or decreasing (with varying sets of firms) fractions of movers; None is equivalent to AttritionIncreasing()
         fe_params (ParamsDict or None): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().
         cre_params (ParamsDict or None): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.cre_params().
+        estimate_bs (bool): if True, estimate Borovickova-Shimer model
         cluster_params (ParamsDict or None): dictionary of parameters for clustering in CRE estimation. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.cluster_params().
         clean_params (ParamsDict or None): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.clean_params().
     '''
 
-    def __init__(self, min_movers_threshold=15, attrition_how=None, fe_params=None, cre_params=None, cluster_params=None, clean_params=None):
+    def __init__(self, min_movers_threshold=15, attrition_how=None, fe_params=None, cre_params=None, estimate_bs=False, cluster_params=None, clean_params=None):
         if attrition_how is None:
             attrition_how = tw.attrition_utils.AttritionIncreasing()
         if fe_params is None:
@@ -42,8 +43,16 @@ class Attrition:
         self.min_movers_threshold = min_movers_threshold
         # AttritionIncreasing() or AttritionDecreasing()
         self.attrition_how = attrition_how
+        # Whether to estimate Borovickova-Shimer model
+        self.estimate_bs = estimate_bs
         # Prevent plotting until results exist
-        self.attrition_res = None
+        self.res = None
+
+        ## Models to estimate ##
+        models = ['fe', 'cre']
+        if estimate_bs:
+            models.append('bs')
+        self.models = models
 
         #### Parameter dictionaries ####
         ### Save parameter dictionaries ###
@@ -114,7 +123,7 @@ class Attrition:
             rng (np.random.Generator or None): NumPy random number generator. This overrides the random number generators for FE and CRE. None is equivalent to np.random.default_rng(None).
 
         Returns:
-            (dict): {'fe': FE results, 'cre': CRE results}
+            (dict): {'fe': FE results, 'cre': CRE results}; if estimating Borovickova-Shimer estimator, then add key {'bs': Borovickova-Shimer results}
         '''
         if fe_params is None:
             fe_params = tw.fe_params()
@@ -150,9 +159,47 @@ class Attrition:
         fe_estimator = tw.FEEstimator(bdf, fe_params)
         fe_estimator.fit(rng)
         fe_res = fe_estimator.res
-        del bdf, fe_estimator
+        del fe_estimator
 
-        return {'fe': fe_res, 'cre': cre_res}
+        res = {'fe': fe_res, 'cre': cre_res}
+
+        if self.estimate_bs:
+            ## Estimate Borovickova-Shimer model ##
+            # Make sure there are no returners and that all workers and firms have at least 2 observations
+
+            # Clean parameters
+            clean_params_1 = clean_params.copy()
+            clean_params_2 = clean_params.copy()
+            clean_params_1['connectedness'] = None
+            clean_params_1['drop_returns'] = 'returns'
+            clean_params_2['connectedness'] = None
+
+            # Clean
+            bdf = bdf.clean(clean_params_1).min_joint_obs_frame(is_sorted=True, copy=False).clean(clean_params_2)
+
+            ### Estimate ###
+            bs_estimator = tw.BSEstimator()
+
+            ## Standard ##
+            bs_estimator.fit(bdf, alternative_estimator=False)
+            # Save results
+            bs1_res = bs_estimator.res
+
+            ## Alternative ##
+            bs_estimator.fit(bdf, alternative_estimator=True)
+            # Save results
+            bs2_res = bs_estimator.res
+
+            ## Combine ##
+            bs_res = {k + '_bs1' if k != 'var(y)' else k: v for k, v in bs1_res.items()}
+            bs_res.update({k + '_bs2': v for k, v in bs2_res.items() if k != 'var(y)'})
+
+            # Save results
+            res['bs'] = bs_res
+
+            del bs_estimator
+
+        return res
 
     def _attrition_single(self, bdf, ncore=1, rng=None):
         '''
@@ -171,9 +218,9 @@ class Attrition:
 
         ## Create lists to save results ##
         # For non-HE
-        res_non_he = {'fe': [], 'cre': []}
+        res_non_he = {model: [] for model in self.models}
         # For HE
-        res_he = {'fe': [], 'cre': []}
+        res_he = {model: [] for model in self.models}
         # Combined
         res_all = {
             'non_he': res_non_he,
@@ -225,8 +272,8 @@ class Attrition:
 
             ## Extract results ##
             for res in V:
-                res_all[non_he_he]['fe'].append(res['fe'])
-                res_all[non_he_he]['cre'].append(res['cre'])
+                for model in self.models:
+                    res_all[non_he_he][model].append(res[model])
 
         return res_all
 
@@ -250,9 +297,9 @@ class Attrition:
 
         ## Create lists to save results ##
         # For non-HE
-        res_non_he = {'fe': [], 'cre': []}
+        res_non_he = {model: [] for model in self.models}
         # For HE
-        res_he = {'fe': [], 'cre': []}
+        res_he = {model: [] for model in self.models}
 
         # Save movers per firm (do this before taking subset of firms that meet threshold of sufficiently many movers)
         self.movers_per_firm = bdf.loc[bdf.loc[:, 'm'] > 0, :].n_workers() / bdf.n_firms() # bdf.loc[bdf.loc[:, 'm'] > 0, :].groupby('j')['i'].nunique().mean()
@@ -270,321 +317,364 @@ class Attrition:
                 # Multiprocessing tqdm source: https://stackoverflow.com/a/45276885/17333120
                 V = list(tqdm(pool.starmap(self._attrition_single, [(bdf, ncore, np.random.default_rng(seed)) for seed in rng.bit_generator._seed_seq.spawn(N)]), total=N))
             for res in V:
-                res_non_he['fe'].append(res['non_he']['fe'])
-                res_non_he['cre'].append(res['non_he']['cre'])
-                res_he['fe'].append(res['he']['fe'])
-                res_he['cre'].append(res['he']['cre'])
+                for model in self.models:
+                    res_non_he[model].append(res['non_he'][model])
+                    res_he[model].append(res['he'][model])
         else:
             # Estimate without multi-processing
             pbar = trange(N)
             pbar.set_description('attrition main')
             for _ in pbar:
                 res = self._attrition_single(bdf=bdf, ncore=ncore, rng=rng)
-                res_non_he['fe'].append(res['non_he']['fe'])
-                res_non_he['cre'].append(res['non_he']['cre'])
-                res_he['fe'].append(res['he']['fe'])
-                res_he['cre'].append(res['he']['cre'])
+                for model in self.models:
+                    res_non_he[model].append(res['non_he'][model])
+                    res_he[model].append(res['he'][model])
 
         # Combine results
-        self.attrition_res = {'non_he': res_non_he, 'he': res_he}
+        self.res = {'non_he': res_non_he, 'he': res_he}
 
-    def _combine_res(self, line_at_movers_per_firm=True, xticks_round=1):
+    def _combine_res(self, to_plot_dict, line_at_movers_per_firm=True, xticks_round=1):
         '''
         Combine attrition results into NumPy Arrays.
 
         Arguments:
+            to_plot_dict (dict): dictionary linking estimator name to whether it will be plotted
             line_at_movers_per_firm (bool): if True, plot a dashed line where movers per firm in the subsample is approximately the number of movers per firm in the full sample
             xticks_round (int): how many digits to round x ticks
 
         Returns:
-            (tuple): if line_at_movers_per_firm=True, (non_he_var_psi_pct, he_var_psi_pct, non_he_cov_psi_alpha_pct, he_cov_psi_alpha_pct, non_he_movers_per_firm_line, he_movers_per_firm_line, x_axis); if line_at_movers_per_firm=False, (non_he_var_psi_pct, he_var_psi_pct, non_he_cov_psi_alpha_pct, he_cov_psi_alpha_pct, x_axis)
+            (tuple): if line_at_movers_per_firm=True, (var_diffs_non_he, var_diffs_he, cov_diffs_non_he, cov_diffs_he, movers_per_firm_line_non_he, movers_per_firm_line_he, x_axis); if line_at_movers_per_firm=False, (var_diffs_non_he, var_diffs_he, cov_diffs_non_he, cov_diffs_he, x_axis)
         '''
-        if self.attrition_res is None:
-            raise AttributeError('Attribute attrition_res does not exist - must generate attrition data before results can be plotted. This can be done by running .attrition()')
+        if self.res is None:
+            raise AttributeError('Attribute .res is None - must generate attrition data before results can be plotted. This can be done by running .attrition()')
 
         ## Get N, M ##
         # Number of estimations
-        N = len(self.attrition_res['non_he']['fe'])
+        N = len(self.res['non_he']['fe'])
         # Number of attritions per estimation
-        M = len(self.attrition_res['non_he']['fe'][0])
+        M = len(self.res['non_he']['fe'][0])
+
+        ## Data construction dictionaries ##
+        model_dict = {
+            'fe': 'fe',
+            'ho': 'fe',
+            'he': 'fe',
+            'cre': 'cre',
+            'bs1': 'bs',
+            'bs2': 'bs'
+        }
+        var_y_dict = {
+            'fe': 'var(y)',
+            'cre': 'var_y',
+            'bs': 'var(y)'
+        }
+        var_psi_dict = {
+            'fe': 'var(psi)_fe',
+            'ho': 'var(psi)_ho',
+            'he': 'var(psi)_he',
+            'cre': 'tot_var',
+            'bs1': 'var(mu)_bs1',
+            'bs2': 'var(mu)_bs2'
+        }
+        cov_dict = {
+            'fe': 'cov(psi, alpha)_fe',
+            'ho': 'cov(psi, alpha)_ho',
+            'he': 'cov(psi, alpha)_he',
+            'cre': 'tot_cov',
+            'bs1': 'cov(lambda, mu)_bs1',
+            'bs2': 'cov(lambda, mu)_bs2'
+        }
+
         ## Extract results ##
         # Non-HE
-        non_he_var_psi_pct = np.zeros(shape=[N, M, 3])
-        non_he_cov_psi_alpha_pct = np.zeros(shape=[N, M, 3])
+        var_diffs_non_he = {estimator: np.zeros(shape=[N, M]) for estimator, to_plot in to_plot_dict.items() if (to_plot and estimator != 'he')}
+        cov_diffs_non_he = {estimator: np.zeros(shape=[N, M]) for estimator, to_plot in to_plot_dict.items() if (to_plot and estimator != 'he')}
         # HE
-        he_var_psi_pct = np.zeros(shape=[N, M, 4])
-        he_cov_psi_alpha_pct = np.zeros(shape=[N, M, 4])
+        var_diffs_he = {estimator: np.zeros(shape=[N, M]) for estimator, to_plot in to_plot_dict.items() if to_plot}
+        cov_diffs_he = {estimator: np.zeros(shape=[N, M]) for estimator, to_plot in to_plot_dict.items() if to_plot}
         for i in range(N):
             for j in range(M):
-                ## Non-HE ##
-                non_he_res_fe_dict = self.attrition_res['non_he']['fe'][i][j]
-                non_he_res_cre_dict = self.attrition_res['non_he']['cre'][i][j]
-                # var(psi)
-                non_he_var_psi_pct[i, j, 0] = float(non_he_res_fe_dict['var(psi)_fe']) / float(non_he_res_fe_dict['var(y)'])
-                non_he_var_psi_pct[i, j, 1] = float(non_he_res_fe_dict['var(psi)_ho']) / float(non_he_res_fe_dict['var(y)'])
-                non_he_var_psi_pct[i, j, 2] = float(non_he_res_cre_dict['tot_var']) / float(non_he_res_cre_dict['var_y'])
-                # cov(psi, alpha)
-                non_he_cov_psi_alpha_pct[i, j, 0] = 2 * float(non_he_res_fe_dict['cov(psi, alpha)_fe']) / float(non_he_res_fe_dict['var(y)'])
-                non_he_cov_psi_alpha_pct[i, j, 1] = 2 * float(non_he_res_fe_dict['cov(psi, alpha)_ho']) / float(non_he_res_fe_dict['var(y)'])
-                non_he_cov_psi_alpha_pct[i, j, 2] = 2 * float(non_he_res_cre_dict['tot_cov']) / float(non_he_res_cre_dict['var_y'])
+                for estimator, model in model_dict.items():
+                    if to_plot_dict[estimator]:
+                        # If plotting this estimator
+                        if estimator != 'he':
+                            ## Non-HE ##
+                            non_he_res_dict = self.res['non_he'][model][i][j]
+                            # var(psi)
+                            var_diffs_non_he[estimator][i, j] = 100 * (float(non_he_res_dict[var_psi_dict[estimator]]) / float(non_he_res_dict[var_y_dict[model]]))
+                            # cov(psi, alpha)
+                            cov_diffs_non_he[estimator][i, j] = 100 * (float(non_he_res_dict[cov_dict[estimator]]) / float(non_he_res_dict[var_y_dict[model]]))
 
-                ## HE ##
-                he_res_fe_dict = self.attrition_res['he']['fe'][i][j]
-                he_res_cre_dict = self.attrition_res['he']['cre'][i][j]
-                # var(psi)
-                he_var_psi_pct[i, j, 0] = float(he_res_fe_dict['var(psi)_fe']) / float(he_res_fe_dict['var(y)'])
-                he_var_psi_pct[i, j, 1] = float(he_res_fe_dict['var(psi)_ho']) / float(he_res_fe_dict['var(y)'])
-                he_var_psi_pct[i, j, 2] = float(he_res_cre_dict['tot_var']) / float(he_res_cre_dict['var_y'])
-                he_var_psi_pct[i, j, 3] = float(he_res_fe_dict['var(psi)_he']) / float(he_res_fe_dict['var(y)'])
-
-                # cov(psi, alpha)
-                he_cov_psi_alpha_pct[i, j, 0] = 2 * float(he_res_fe_dict['cov(psi, alpha)_fe']) / float(he_res_fe_dict['var(y)'])
-                he_cov_psi_alpha_pct[i, j, 1] = 2 * float(he_res_fe_dict['cov(psi, alpha)_ho']) / float(he_res_fe_dict['var(y)'])
-                he_cov_psi_alpha_pct[i, j, 2] = 2 * float(he_res_cre_dict['tot_cov']) / float(he_res_cre_dict['var_y'])
-                he_cov_psi_alpha_pct[i, j, 3] = 2 * float(he_res_fe_dict['cov(psi, alpha)_he']) / float(he_res_fe_dict['var(y)'])
+                        ## HE ##
+                        he_res_dict = self.res['he'][model][i][j]
+                        # var(psi)
+                        var_diffs_he[estimator][i, j] = 100 * (float(he_res_dict[var_psi_dict[estimator]]) / float(he_res_dict[var_y_dict[model]]))
+                        # cov(psi, alpha)
+                        cov_diffs_he[estimator][i, j] = 100 * (float(he_res_dict[cov_dict[estimator]]) / float(he_res_dict[var_y_dict[model]]))
 
         # x-axis
         x_axis = np.round(100 * self.attrition_how.subset_fractions, xticks_round)
         if np.all(x_axis == x_axis.astype(int)):
             # This is necessary for the boxplots, since they don't automatically convert to integers
             x_axis = x_axis.astype(int, copy=False)
-        non_he_var_psi_pct = 100 * non_he_var_psi_pct
-        non_he_cov_psi_alpha_pct = 100 * non_he_cov_psi_alpha_pct
-        he_var_psi_pct = 100 * he_var_psi_pct
-        he_cov_psi_alpha_pct = 100 * he_cov_psi_alpha_pct
 
         # Flip along 1st axis so that both increasing and decreasing have the same order
         if np.max(np.diff(self.attrition_how.subset_fractions)) <= 0:
             # If decreasing
             x_axis = np.flip(x_axis)
-            non_he_var_psi_pct = np.flip(non_he_var_psi_pct, axis=1)
-            non_he_cov_psi_alpha_pct = np.flip(non_he_cov_psi_alpha_pct, axis=1)
-            he_var_psi_pct = np.flip(he_var_psi_pct, axis=1)
-            he_cov_psi_alpha_pct = np.flip(he_cov_psi_alpha_pct, axis=1)
+            var_diffs_non_he = np.flip(var_diffs_non_he, axis=1)
+            cov_diffs_non_he = np.flip(cov_diffs_non_he, axis=1)
+            var_diffs_he = np.flip(var_diffs_he, axis=1)
+            cov_diffs_he = np.flip(cov_diffs_he, axis=1)
 
         ## Prepare line at movers per firm
         if line_at_movers_per_firm:
-            non_he_movers_per_firm = np.zeros(shape=M)
-            he_movers_per_firm = np.zeros(shape=M)
+            movers_per_firm_non_he = np.zeros(shape=M)
+            movers_per_firm_he = np.zeros(shape=M)
 
             for i in range(N):
                 for j in range(M):
                     # Sum over movers per firm for all iterations
-                    non_he_movers_i_j = self.attrition_res['non_he']['fe'][i][j]
-                    he_movers_i_j = self.attrition_res['he']['fe'][i][j]
-                    non_he_movers_per_firm[j] += (int(non_he_movers_i_j['n_movers']) / int(non_he_movers_i_j['n_firms'])) # float(non_he_movers_i_j['movers_per_firm'])
-                    he_movers_per_firm[j] += (int(he_movers_i_j['n_movers']) / int(he_movers_i_j['n_firms'])) # float(he_movers_i_j['movers_per_firm'])
+                    movers_i_j_non_he = self.res['non_he']['fe'][i][j]
+                    movers_i_j_he = self.res['he']['fe'][i][j]
+                    movers_per_firm_non_he[j] += (int(movers_i_j_non_he['n_movers']) / int(movers_i_j_non_he['n_firms'])) # float(movers_i_j_non_he['movers_per_firm'])
+                    movers_per_firm_he[j] += (int(movers_i_j_he['n_movers']) / int(movers_i_j_he['n_firms'])) # float(movers_i_j_he['movers_per_firm'])
             # Take average
-            non_he_movers_per_firm /= N
-            he_movers_per_firm /= N
+            movers_per_firm_non_he /= N
+            movers_per_firm_he /= N
             # Increase by 5%, because we are approximating
-            non_he_movers_per_firm *= 1.05
-            he_movers_per_firm *= 1.05
+            movers_per_firm_non_he *= 1.05
+            movers_per_firm_he *= 1.05
 
             # Reverse order so that both increasing and decreasing have the same order
             if np.max(np.diff(self.attrition_how.subset_fractions)) <= 0:
                 # If decreasing
-                non_he_movers_per_firm = np.flip(non_he_movers_per_firm, axis=0)
-                he_movers_per_firm = np.flip(he_movers_per_firm, axis=0)
+                movers_per_firm_non_he = np.flip(movers_per_firm_non_he, axis=0)
+                movers_per_firm_he = np.flip(movers_per_firm_he, axis=0)
 
-            if self.movers_per_firm >= np.max(non_he_movers_per_firm):
-                non_he_movers_per_firm_line = np.max(x_axis)
-            elif self.movers_per_firm <= np.min(non_he_movers_per_firm):
-                non_he_movers_per_firm_line = np.min(x_axis)
+            if self.movers_per_firm >= np.max(movers_per_firm_non_he):
+                movers_per_firm_line_non_he = np.max(x_axis)
+            elif self.movers_per_firm <= np.min(movers_per_firm_non_he):
+                movers_per_firm_line_non_he = np.min(x_axis)
             else:
                 # Find where movers per firm in subset approximates movers per firm in entire dataset
-                for i, non_he_movers_per_firm_i in enumerate(non_he_movers_per_firm[1:]):
-                    if self.movers_per_firm < non_he_movers_per_firm_i:
-                        frac = (self.movers_per_firm - non_he_movers_per_firm[i]) / (non_he_movers_per_firm_i - non_he_movers_per_firm[i])
-                        non_he_movers_per_firm_line = x_axis[i] + frac * (x_axis[i + 1] - x_axis[i])
+                for i, movers_per_firm_non_he_i in enumerate(movers_per_firm_non_he[1:]):
+                    if self.movers_per_firm < movers_per_firm_non_he_i:
+                        frac = (self.movers_per_firm - movers_per_firm_non_he[i]) / (movers_per_firm_non_he_i - movers_per_firm_non_he[i])
+                        movers_per_firm_line_non_he = x_axis[i] + frac * (x_axis[i + 1] - x_axis[i])
                         break
 
-            if self.movers_per_firm >= np.max(he_movers_per_firm):
-                he_movers_per_firm_line = np.max(x_axis)
-            elif self.movers_per_firm <= np.min(he_movers_per_firm):
-                he_movers_per_firm_line = np.min(x_axis)
+            if self.movers_per_firm >= np.max(movers_per_firm_he):
+                movers_per_firm_line_he = np.max(x_axis)
+            elif self.movers_per_firm <= np.min(movers_per_firm_he):
+                movers_per_firm_line_he = np.min(x_axis)
             else:
                 # Find where movers per firm in subset approximates movers per firm in entire dataset
-                for i, he_movers_per_firm_i in enumerate(he_movers_per_firm[1:]):
-                    if self.movers_per_firm < he_movers_per_firm_i:
-                        frac = (self.movers_per_firm - he_movers_per_firm[i]) / (he_movers_per_firm_i - he_movers_per_firm[i])
-                        he_movers_per_firm_line = x_axis[i] + frac * (x_axis[i + 1] - x_axis[i])
+                for i, movers_per_firm_he_i in enumerate(movers_per_firm_he[1:]):
+                    if self.movers_per_firm < movers_per_firm_he_i:
+                        frac = (self.movers_per_firm - movers_per_firm_he[i]) / (movers_per_firm_he_i - movers_per_firm_he[i])
+                        movers_per_firm_line_he = x_axis[i] + frac * (x_axis[i + 1] - x_axis[i])
                         break
 
-            return (non_he_var_psi_pct, he_var_psi_pct, non_he_cov_psi_alpha_pct, he_cov_psi_alpha_pct, non_he_movers_per_firm_line, he_movers_per_firm_line, x_axis)
+            return (var_diffs_non_he, var_diffs_he, cov_diffs_non_he, cov_diffs_he, movers_per_firm_line_non_he, movers_per_firm_line_he, x_axis)
 
-        return (non_he_var_psi_pct, he_var_psi_pct, non_he_cov_psi_alpha_pct, he_cov_psi_alpha_pct, x_axis)
+        return (var_diffs_non_he, var_diffs_he, cov_diffs_non_he, cov_diffs_he, x_axis)
 
-    def plots(self, line_at_movers_per_firm=True, xticks_round=1):
+    def plots(self, fe=True, ho=True, he=True, cre=True, bs1=True, bs2=True, line_at_movers_per_firm=True, xticks_round=1):
         '''
         Generate attrition result plots.
 
         Arguments:
+            fe (bool): if True, plot FE results
+            ho (bool): if True, plot homoskedastic correction results
+            he (bool): if True, plot heteroskedastic correction results
+            cre (bool): if True, plot CRE results
+            bs1 (bool): if True, plot Borovickova-Shimer results for the standard estimator
+            bs2 (bool): if True, plot Borovickova-Shimer results for the alternative estimator
             line_at_movers_per_firm (bool): if True, plot a dashed line where movers per firm in the subsample is approximately the number of movers per firm in the full sample
             xticks_round (int): how many digits to round x ticks
         '''
-        # Extract results
-        non_he_var_psi_pct, he_var_psi_pct, non_he_cov_psi_alpha_pct, he_cov_psi_alpha_pct, non_he_movers_per_firm_line, he_movers_per_firm_line, x_axis = self._combine_res(line_at_movers_per_firm=line_at_movers_per_firm, xticks_round=xticks_round)
+        if self.res is None:
+            raise AttributeError('Attribute .res is None - must generate attrition data before results can be plotted. This can be done by running .attrition()')
+
+        if not self.estimate_bs:
+            bs1 = False
+            bs2 = False
+
+        ## Plotting dictionaries ##
+        to_plot_dict = {
+            'fe': fe,
+            'ho': ho,
+            'he': he,
+            'cre': cre,
+            'bs1': bs1,
+            'bs2': bs2
+        }
+        plot_options_dict = {
+            'fe': {
+                'label': 'FE',
+                'color': 'C0'
+            },
+            'ho': {
+                'label': 'FE-HO',
+                'color': 'C1'
+            },
+            'he': {
+                'label': 'FE-HE',
+                'color': 'C2'
+            },
+            'cre': {
+                'label': 'CRE',
+                'color': 'C3'
+            },
+            'bs1': {
+                'label': 'BS-1',
+                'color': 'C4'
+            },
+            'bs2': {
+                'label': 'BS-2',
+                'color': 'C5'
+            }
+        }
+
+        ## Extract results ##
+        var_diffs_non_he, var_diffs_he, cov_diffs_non_he, cov_diffs_he, movers_per_firm_line_non_he, movers_per_firm_line_he, x_axis = self._combine_res(to_plot_dict, line_at_movers_per_firm=line_at_movers_per_firm, xticks_round=xticks_round)
 
         ### Plot figures ###
+        ## Information for plots ##
+        row_titles = ['Firm effects', 'Sorting']
+        col_titles = ['Connected set', 'Leave-one-out set']
+        data_array = [[var_diffs_non_he, var_diffs_he], [cov_diffs_non_he, cov_diffs_he]]
+        movers_per_firm_lst = [movers_per_firm_line_non_he, movers_per_firm_line_he]
+
+        ## Plot ##
         # Source: https://stackoverflow.com/a/68209152/17333120
         fig = plt.figure(constrained_layout=True, dpi=150)
         subfigs = fig.subfigures(nrows=2, ncols=1)
 
-        ## Firm effects ##
-        subfigs[0].suptitle('Firm effects', x=0.545)
-        axs = subfigs[0].subplots(nrows=1, ncols=2)
-
-        # Firm effects (non-HE)
-        axs[0].plot(x_axis, non_he_var_psi_pct[:, :, 0].mean(axis=0), color='C0', label='FE')
-        axs[0].plot(x_axis, non_he_var_psi_pct[:, :, 1].mean(axis=0), color='C1', label='HO')
-        axs[0].plot(x_axis, non_he_var_psi_pct[:, :, 2].mean(axis=0), color='C3', label='CRE')
-        if line_at_movers_per_firm:
-            axs[0].axvline(non_he_movers_per_firm_line, color='k', linestyle='--')
-        axs[0].set_title('Connected set', fontsize=9)
-        axs[0].set_xlabel('Share of Movers Kept (%)', fontsize=7)
-        axs[0].set_ylabel('Share of Variance (%)', fontsize=7)
-        axs[0].tick_params(axis='x', labelsize=7)
-        axs[0].tick_params(axis='y', labelsize=5)
-        axs[0].grid()
-
-        # Firm effects (HE)
-        axs[1].plot(x_axis, he_var_psi_pct[:, :, 0].mean(axis=0), color='C0', label='FE')
-        axs[1].plot(x_axis, he_var_psi_pct[:, :, 1].mean(axis=0), color='C1', label='HO')
-        axs[1].plot(x_axis, he_var_psi_pct[:, :, 3].mean(axis=0), color='C2', label='HE')
-        axs[1].plot(x_axis, he_var_psi_pct[:, :, 2].mean(axis=0), color='C3', label='CRE')
-        if line_at_movers_per_firm:
-            axs[1].axvline(he_movers_per_firm_line, color='k', linestyle='--')
-        axs[1].set_title('Leave-one-out set', fontsize=9)
-        axs[1].set_xlabel('Share of Movers Kept (%)', fontsize=7)
-        axs[1].set_ylabel(' ')
-        axs[1].tick_params(axis='x', labelsize=7)
-        axs[1].tick_params(axis='y', labelsize=5)
-        axs[1].grid()
-
-        ## Sorting ##
-        subfigs[1].suptitle('Sorting', x=0.545)
-        axs = subfigs[1].subplots(nrows=1, ncols=2)
-
-        # Sorting (non-HE)
-        axs[0].plot(x_axis, non_he_cov_psi_alpha_pct[:, :, 0].mean(axis=0), color='C0', label='FE')
-        axs[0].plot(x_axis, non_he_cov_psi_alpha_pct[:, :, 1].mean(axis=0), color='C1', label='HO')
-        axs[0].plot(x_axis, non_he_cov_psi_alpha_pct[:, :, 2].mean(axis=0), color='C3', label='CRE')
-        if line_at_movers_per_firm:
-            axs[0].axvline(non_he_movers_per_firm_line, color='k', linestyle='--')
-        axs[0].set_title('Connected set', fontsize=9)
-        axs[0].set_xlabel('Share of Movers Kept (%)', fontsize=7)
-        axs[0].set_ylabel('Share of Variance (%)', fontsize=7)
-        axs[0].tick_params(axis='x', labelsize=7)
-        axs[0].tick_params(axis='y', labelsize=5)
-        axs[0].grid()
-
-        # Sorting (HE)
-        axs[1].plot(x_axis, he_cov_psi_alpha_pct[:, :, 0].mean(axis=0), color='C0', label='FE')
-        axs[1].plot(x_axis, he_cov_psi_alpha_pct[:, :, 1].mean(axis=0), color='C1', label='HO')
-        axs[1].plot(x_axis, he_cov_psi_alpha_pct[:, :, 3].mean(axis=0), color='C2', label='HE')
-        axs[1].plot(x_axis, he_cov_psi_alpha_pct[:, :, 2].mean(axis=0), color='C3', label='CRE')
-        if line_at_movers_per_firm:
-            axs[1].axvline(he_movers_per_firm_line, color='k', linestyle='--')
-        axs[1].set_title('Leave-one-out set', fontsize=9)
-        axs[1].set_xlabel('Share of Movers Kept (%)', fontsize=7)
-        axs[1].set_ylabel(' ')
-        axs[1].tick_params(axis='x', labelsize=7)
-        axs[1].tick_params(axis='y', labelsize=5)
-        axs[1].grid()
+        for i, subfig in enumerate(subfigs):
+            ## Rows of the plot (firm effects vs. sorting) ##
+            subfig.suptitle(row_titles[i], x=0.545)
+            axs = subfig.subplots(nrows=1, ncols=2)
+            for j, subaxs in enumerate(axs):
+                ## Columns of the plot (connected vs. leave-one-out) ##
+                if line_at_movers_per_firm:
+                    subaxs.axvline(movers_per_firm_lst[j], color='k', linestyle='--')
+                for estimator, plot_options in plot_options_dict.items():
+                    if to_plot_dict[estimator] and not ((estimator == 'he') and (j == 0)):
+                        # Plot if to_plot=True
+                        subaxs.plot(x_axis, data_array[i][j][estimator].mean(axis=0), color=plot_options['color'], label=plot_options['label'])
+                subaxs.set_title(col_titles[j], fontsize=9)
+                subaxs.set_xlabel('Share of Movers Kept (%)', fontsize=7)
+                if j == 0:
+                    subaxs.set_ylabel('Share of Variance (%)', fontsize=7)
+                else:
+                    subaxs.set_ylabel(' ')
+                subaxs.tick_params(axis='x', labelsize=7)
+                subaxs.tick_params(axis='y', labelsize=5)
+                subaxs.grid()
 
         # Shared legend (source: https://stackoverflow.com/a/46921590/17333120)
         handles, labels = axs[1].get_legend_handles_labels()
         subfigs[1].legend(handles, labels, loc=(1.02, 0.78))
         plt.show()
 
-    def boxplots(self, xticks_round=1):
+    def boxplots(self, fe=True, ho=True, he=True, cre=True, bs1=True, bs2=True, xticks_round=1):
         '''
         Generate attrition result boxplots.
 
         Arguments:
+            fe (bool): if True, plot FE results
+            ho (bool): if True, plot homoskedastic correction results
+            he (bool): if True, plot heteroskedastic correction results
+            cre (bool): if True, plot CRE results
+            bs1 (bool): if True, plot Borovickova-Shimer results for the standard estimator
+            bs2 (bool): if True, plot Borovickova-Shimer results for the alternative estimator
             line_at_movers_per_firm (bool): if True, plot a dashed line where movers per firm in the subsample is approximately the number of movers per firm in the full sample
             xticks_round (int): how many digits to round x ticks
         '''
-        # Extract results
-        non_he_var_psi_pct, he_var_psi_pct, non_he_cov_psi_alpha_pct, he_cov_psi_alpha_pct, x_axis = self._combine_res(line_at_movers_per_firm=False, xticks_round=xticks_round)
+        if self.res is None:
+            raise AttributeError('Attribute .res is None - must generate attrition data before results can be plotted. This can be done by running .attrition()')
+
+        if not self.estimate_bs:
+            bs1 = False
+            bs2 = False
+
+        ## Plotting dictionaries ##
+        to_plot_dict = {
+            'fe': fe,
+            'ho': ho,
+            'he': he,
+            'cre': cre,
+            'bs1': bs1,
+            'bs2': bs2
+        }
+        plot_options_dict = {
+            'fe': {
+                'label': 'FE'
+            },
+            'ho': {
+                'label': 'FE-HO'
+            },
+            'he': {
+                'label': 'FE-HE'
+            },
+            'cre': {
+                'label': 'CRE'
+            },
+            'bs1': {
+                'label': 'BS-1'
+            },
+            'bs2': {
+                'label': 'BS-2'
+            }
+        }
+        # Subtract 1 plot if HE is being estimated (since baseline plot doesn't include it)
+        n_plots = sum(to_plot_dict.values()) - 1 * he
+
+        ## Extract results ##
+        var_diffs_non_he, var_diffs_he, cov_diffs_non_he, cov_diffs_he, x_axis = self._combine_res(to_plot_dict, line_at_movers_per_firm=False, xticks_round=xticks_round)
 
         ### Plot boxplots ###
+        ## Information for plots ##
+        row_titles = ['Firm effects', 'Sorting']
+        col_titles = ['Connected set', 'Leave-one-out set']
+        data_array = [[var_diffs_non_he, var_diffs_he], [cov_diffs_non_he, cov_diffs_he]]
+
+        ## Plot ##
         # Source: https://matplotlib.org/devdocs/gallery/subplots_axes_and_figures/subfigures.html
         fig = plt.figure(constrained_layout=True, dpi=150)
         subfigs = fig.subfigures(nrows=2, ncols=1)
 
-        ## Firm effects ##
-        subfigs[0].suptitle('Firm effects', x=0.545)
-        subsubfigs = subfigs[0].subfigures(nrows=1, ncols=2)
+        for i, subfig in enumerate(subfigs):
+            ## Rows of the plot (firm effects vs. sorting) ##
+            subfig.suptitle(row_titles[i], x=0.545)
+            subsubfigs = subfig.subfigures(nrows=1, ncols=2)
+            for j, subsubfig in enumerate(subsubfigs):
+                ## Main columns of the plot (connected vs. leave-one-out) ##
+                # Column labels
+                subsubfig.suptitle(col_titles[j], fontsize=9)
+                subsubfig.supxlabel('Share of Movers Kept (%)', fontsize=7)
+                if j == 0:
+                    subsubfig.supylabel('Share of Variance (%)', fontsize=7)
+                else:
+                    subsubfig.supylabel(' ')
 
-        # Firm effects (non-HE set)
-        axs = subsubfigs[0].subplots(nrows=1, ncols=3, sharey=True)
-        subtitles = ['FE', 'FE-HO', 'CRE']
-
-        for i, row in enumerate(axs):
-            # for col in row:
-            row.boxplot(non_he_var_psi_pct[:, :, i], showfliers=False)
-            row.set_xticklabels(x_axis, fontsize=5)
-            row.tick_params(axis='y', labelsize=5)
-            row.grid()
-            row.set_title(subtitles[i], fontsize=7)
-        subsubfigs[0].suptitle('Connected set', fontsize=9)
-        subsubfigs[0].supxlabel('Share of Movers Kept (%)', fontsize=7)
-        subsubfigs[0].supylabel('Share of Variance (%)', fontsize=7)
-
-        # Firm effects (HE set)
-        axs = subsubfigs[1].subplots(nrows=1, ncols=4, sharey=True)
-        subtitles = ['FE', 'FE-HO', 'CRE', 'FE-HE']
-        # Change order because data is FE, FE-HO, CRE, FE-HE but want FE, FE-HO, FE-HE, CRE
-        order = [0, 1, 3, 2]
-
-        for i, row in enumerate(axs):
-            # for col in row:
-            row.boxplot(he_var_psi_pct[:, :, order[i]], showfliers=False)
-            row.set_xticklabels(x_axis, fontsize=5)
-            row.tick_params(axis='y', labelsize=5)
-            row.grid()
-            row.set_title(subtitles[order[i]], fontsize=7)
-        subsubfigs[1].suptitle('Leave-one-out set', fontsize=9)
-        subsubfigs[1].supxlabel('Share of Movers Kept (%)', fontsize=7)
-        subsubfigs[1].supylabel(' ')
-
-        ## Sorting ##
-        subfigs[1].suptitle('Sorting', x=0.545)
-        subsubfigs = subfigs[1].subfigures(nrows=1, ncols=2)
-
-        # Sorting (non-HE set)
-        axs = subsubfigs[0].subplots(nrows=1, ncols=3, sharey=True)
-        subtitles = ['FE', 'FE-HO', 'CRE']
-
-        for i, row in enumerate(axs):
-            # for col in row:
-            row.boxplot(non_he_cov_psi_alpha_pct[:, :, i], showfliers=False)
-            row.set_xticklabels(x_axis, fontsize=5)
-            row.tick_params(axis='y', labelsize=5)
-            row.grid()
-            row.set_title(subtitles[i], fontsize=7)
-        subsubfigs[0].suptitle('Connected set', fontsize=9)
-        subsubfigs[0].supxlabel('Share of Movers Kept (%)', fontsize=7)
-        subsubfigs[0].supylabel('Share of Variance (%)', fontsize=7)
-
-        # Sorting (HE set)
-        axs = subsubfigs[1].subplots(nrows=1, ncols=4, sharey=True)
-        subtitles = ['FE', 'FE-HO', 'CRE', 'FE-HE']
-        # Change order because data is FE, FE-HO, CRE, FE-HE but want FE, FE-HO, FE-HE, CRE
-        order = [0, 1, 3, 2]
-
-        for i, row in enumerate(axs):
-            # for col in row:
-            row.boxplot(he_cov_psi_alpha_pct[:, :, order[i]], showfliers=False)
-            row.set_xticklabels(x_axis, fontsize=5)
-            row.tick_params(axis='y', labelsize=5)
-            row.grid()
-            row.set_title(subtitles[order[i]], fontsize=7)
-        subsubfigs[1].suptitle('Leave-one-out set', fontsize=9)
-        subsubfigs[1].supxlabel('Share of Movers Kept (%)', fontsize=7)
-        subsubfigs[1].supylabel(' ')
+                # Plots (add 1 column for leave-out-set if HE is being plotted)
+                axs = subsubfig.subplots(nrows=1, ncols=n_plots + he * (j == 1), sharey=True)
+                k = 0
+                for estimator, plot_options in plot_options_dict.items():
+                    ## Sub-columns of the plot (FE vs. FE-HO vs. FE-HE vs. CRE) ##
+                    if to_plot_dict[estimator] and not ((estimator == 'he') and (j == 0)):
+                        # Plot if to_plot=True
+                        subaxs = axs[k]
+                        subaxs.boxplot(data_array[i][j][estimator], showfliers=False)
+                        subaxs.set_title(plot_options['label'], fontsize=7)
+                        subaxs.set_xticklabels(x_axis, fontsize=5)
+                        subaxs.tick_params(axis='y', labelsize=5)
+                        subaxs.grid()
+                        # Only iterate k if estimator is plotted
+                        k += 1
 
         # NOTE: must use plt.show(), fig.show() raises a warning in Jupyter Notebook (source: https://stackoverflow.com/a/52827912/17333120)
         plt.show()

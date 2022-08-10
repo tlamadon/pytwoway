@@ -226,118 +226,120 @@ class MonteCarlo:
 
         self.res = res
 
-    def hist(self, density=False, fe=True, ho=True, he=True, cre=True, bs1=True, bs2=True):
+    def hist(self, fe=True, ho=True, he=True, cre=True, bs1=True, bs2=True, density=False):
         '''
         Plot histogram of how Monte Carlo simulation results differ from truth.
 
         Arguments:
-            density (bool): if True, plot density; if False, plot count
             fe (bool): if True, plot FE results
             ho (bool): if True, plot homoskedastic correction results
             he (bool): if True, plot heteroskedastic correction results
             cre (bool): if True, plot CRE results
-            bs1 (bool): if True, plot staBorovickova-Shimer results for the standard estimator
-            bs2 (bool): if True, plot staBorovickova-Shimer results for the alternative estimator
+            bs1 (bool): if True, plot Borovickova-Shimer results for the standard estimator
+            bs2 (bool): if True, plot Borovickova-Shimer results for the alternative estimator
+            density (bool): if True, plot density; if False, plot count
         '''
         if self.res is None:
-            warnings.warn('Must run Monte Carlo simulations before histogram can be generated. This can be done by running the method .fit().')
+            raise AttributeError('Attribute .res is None - must run Monte Carlo simulations before histogram can be generated. This can be done by running .fit()')
 
+        if not self.estimate_bs:
+            bs1 = False
+            bs2 = False
+
+        # Extract results
+        res = self.res
+
+        ## Plotting dictionaries ##
+        to_plot_dict = {
+            'fe': fe,
+            'ho': ho,
+            'he': he,
+            'cre': cre,
+            'bs1': bs1,
+            'bs2': bs2
+        }
+        plot_options_dict = {
+            'fe': {
+                'label': 'FE',
+                'color': 'C0'
+            },
+            'ho': {
+                'label': 'HO-corrected',
+                'color': 'C1'
+            },
+            'he': {
+                'label': 'HE-corrected',
+                'color': 'C2'
+            },
+            'cre': {
+                'label': 'CRE',
+                'color': 'C3'
+            },
+            'bs1': {
+                'label': 'BS-standard',
+                'color': 'C4'
+            },
+            'bs2': {
+                'label': 'BS-alternative',
+                'color': 'C5'
+            }
+        }
+
+        # Define differences
+        var_diffs = {estimator: np.sort(res[f'var(psi)_{estimator}'] - res['var(psi)_true']) for estimator, to_plot in to_plot_dict.items() if to_plot}
+        cov_diffs = {estimator: np.sort(res[f'cov(psi, alpha)_{estimator}'] - res['cov(psi, alpha)_true']) for estimator, to_plot in to_plot_dict.items() if to_plot}
+
+        ### Plot histograms ###
+        fig, axs = plt.subplots(nrows=1, ncols=2, sharex=False, sharey=True, dpi=150)
+
+        ## Define plot bounds (source: https://stackoverflow.com/a/50864765) ##
+        min_err_var = np.inf
+        min_err_cov = np.inf
+        max_err_var = -np.inf
+        max_err_cov = -np.inf
+        for estimator, to_plot in to_plot_dict.items():
+            if to_plot:
+                min_err_var = min(min_err_var, np.min(var_diffs[estimator]))
+                min_err_cov = min(min_err_cov, np.min(cov_diffs[estimator]))
+                max_err_var = max(max_err_var, np.max(var_diffs[estimator]))
+                max_err_cov = max(max_err_cov, np.max(cov_diffs[estimator]))
+        min_err_var *= ((min_err_var <= 0) * 1.05 + (min_err_var > 0) * 0.95)
+        min_err_cov *= ((min_err_cov <= 0) * 1.05 + (min_err_cov > 0) * 0.95)
+        max_err_var *= ((max_err_var <= 0) * 0.95 + (max_err_var > 0) * 1.05)
+        max_err_cov *= ((max_err_cov <= 0) * 0.95 + (max_err_cov > 0) * 1.05)
+
+        # Plot bounds
+        plt_range_var = (min_err_var, max_err_var)
+        plt_range_cov = (min_err_cov, max_err_cov)
+
+        ## var(psi) ##
+        axs[0].axvline(x=0, color='purple', linestyle='--', label=r'$\Delta$truth=0')
+        for estimator, plot_options in plot_options_dict.items():
+            if to_plot_dict[estimator]:
+                # Plot if to_plot=True
+                axs[0].hist(var_diffs[estimator], bins=50, range=plt_range_var, density=density, color=plot_options['color'], label=plot_options['label'])
+        # axs[0].legend()
+        axs[0].set_title(r'var($\psi$)')
+        axs[0].set_xlabel(r'$\Delta$truth')
+        if density:
+            axs[0].set_ylabel('density')
         else:
-            if not self.estimate_bs:
-                bs1 = False
-                bs2 = False
-            # Extract results
-            res = self.res
-            to_plot_dict = {
-                'fe': fe,
-                'ho': ho,
-                'he': he,
-                'cre': cre,
-                'bs1': bs1,
-                'bs2': bs2
-            }
-            plot_options_dict = {
-                'fe': {
-                    'label': 'FE',
-                    'color': 'C0'
-                },
-                'ho': {
-                    'label': 'HO-corrected',
-                    'color': 'C1'
-                },
-                'he': {
-                    'label': 'HE-corrected',
-                    'color': 'C2'
-                },
-                'cre': {
-                    'label': 'CRE',
-                    'color': 'C3'
-                },
-                'bs1': {
-                    'label': 'BS-standard',
-                    'color': 'C4'
-                },
-                'bs2': {
-                    'label': 'BS-alternative',
-                    'color': 'C5'
-                }
-            }
+            axs[0].set_ylabel('frequency')
 
-            # Define differences
-            var_diffs = {estimator: np.sort(res[f'var(psi)_{estimator}'] - res['var(psi)_true']) for estimator, to_plot in to_plot_dict.items() if to_plot}
-            cov_diffs = {estimator: np.sort(res[f'cov(psi, alpha)_{estimator}'] - res['cov(psi, alpha)_true']) for estimator, to_plot in to_plot_dict.items() if to_plot}
+        ## cov(psi, alpha) ##
+        axs[1].axvline(x=0, color='purple', linestyle='--', label=r'$\Delta$truth=0')
+        for estimator, plot_options in plot_options_dict.items():
+            if to_plot_dict[estimator]:
+                # Plot if to_plot=True
+                axs[1].hist(cov_diffs[estimator], bins=50, range=plt_range_cov, density=density, color=plot_options['color'], label=plot_options['label'])
+        # axs[1].legend()
+        axs[1].set_title(r'cov($\psi$, $\alpha$)')
+        axs[1].set_xlabel(r'$\Delta$truth')
 
-            ### Plot histograms ###
-            fig, axs = plt.subplots(nrows=1, ncols=2, sharex=False, sharey=True, dpi=150)
-
-            ## Define plot bounds (source: https://stackoverflow.com/a/50864765) ##
-            min_err_var = np.inf
-            min_err_cov = np.inf
-            max_err_var = -np.inf
-            max_err_cov = -np.inf
-            for estimator, to_plot in to_plot_dict.items():
-                if to_plot:
-                    min_err_var = min(min_err_var, np.min(var_diffs[estimator]))
-                    min_err_cov = min(min_err_cov, np.min(cov_diffs[estimator]))
-                    max_err_var = max(max_err_var, np.max(var_diffs[estimator]))
-                    max_err_cov = max(max_err_cov, np.max(cov_diffs[estimator]))
-            min_err_var *= ((min_err_var <= 0) * 1.05 + (min_err_var > 0) * 0.95)
-            min_err_cov *= ((min_err_cov <= 0) * 1.05 + (min_err_cov > 0) * 0.95)
-            max_err_var *= ((max_err_var <= 0) * 0.95 + (max_err_var > 0) * 1.05)
-            max_err_cov *= ((max_err_cov <= 0) * 0.95 + (max_err_cov > 0) * 1.05)
-
-            # Plot bounds
-            plt_range_var = (min_err_var, max_err_var)
-            plt_range_cov = (min_err_cov, max_err_cov)
-
-            ## var(psi) ##
-            axs[0].axvline(x=0, color='purple', linestyle='--', label=r'$\Delta$truth=0')
-            for estimator, plot_options in plot_options_dict.items():
-                if to_plot_dict[estimator]:
-                    # Plot if to_plot=True
-                    axs[0].hist(var_diffs[estimator], bins=50, range=plt_range_var, density=density, color=plot_options['color'], label=plot_options['label'])
-            # axs[0].legend()
-            axs[0].set_title(r'var($\psi$)')
-            axs[0].set_xlabel(r'$\Delta$truth')
-            if density:
-                axs[0].set_ylabel('density')
-            else:
-                axs[0].set_ylabel('frequency')
-
-            ## cov(psi, alpha) ##
-            axs[1].axvline(x=0, color='purple', linestyle='--', label=r'$\Delta$truth=0')
-            for estimator, plot_options in plot_options_dict.items():
-                if to_plot_dict[estimator]:
-                    # Plot if to_plot=True
-                    axs[1].hist(cov_diffs[estimator], bins=50, range=plt_range_cov, density=density, color=plot_options['color'], label=plot_options['label'])
-            # axs[1].legend()
-            axs[1].set_title(r'cov($\psi$, $\alpha$)')
-            axs[1].set_xlabel(r'$\Delta$truth')
-
-            # Shared legend (source: https://stackoverflow.com/a/46921590/17333120)
-            handles, labels = axs[1].get_legend_handles_labels()
-            fig.legend(handles, labels, loc=(0.75, 0.375))
-            fig.tight_layout()
-            # Make space for legend (source: https://stackoverflow.com/a/43439132/17333120)
-            fig.subplots_adjust(right=0.75)
-            plt.show()
+        # Shared legend (source: https://stackoverflow.com/a/46921590/17333120)
+        handles, labels = axs[1].get_legend_handles_labels()
+        fig.legend(handles, labels, loc=(0.75, 0.375))
+        fig.tight_layout()
+        # Make space for legend (source: https://stackoverflow.com/a/43439132/17333120)
+        fig.subplots_adjust(right=0.75)
+        plt.show()

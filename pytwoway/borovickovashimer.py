@@ -3,6 +3,7 @@ Borovickova and Shimer replication code.
 '''
 import warnings
 import numpy as np
+from pytwoway.util import weighted_var
 
 def _compute_mean_sq(col_groupby, col_grouped, weights=None):
     '''
@@ -79,6 +80,11 @@ class BSEstimator():
                 adata.loc[:, 'unweighted_y'] = adata.loc[:, 'y']
                 adata.loc[:, 'y'] = adata.loc[:, 'w'].to_numpy() * adata.loc[:, 'unweighted_y'].to_numpy()
                 adata.loc[:, 'sqrt_w'] = np.sqrt(adata.loc[:, 'w'].to_numpy())
+                # var(y)
+                var_y = weighted_var(adata.loc[:, 'y'].to_numpy(), adata.loc[:, 'w'].to_numpy())
+            else:
+                # var(y)
+                var_y = weighted_var(adata.loc[:, 'y'].to_numpy())
 
             ## Worker mean ##
             groupby_i = adata.groupby('i', sort=False)
@@ -160,6 +166,7 @@ class BSEstimator():
 
             # Store results
             self.res = {
+                'var(y)': var_y,
                 'mean(y)': y_bar,
                 'var(lambda)': sigma_lambda_sq,
                 'var(mu)': sigma_mu_sq,
@@ -174,6 +181,11 @@ class BSEstimator():
                 # If weighted, convert y to weighted y and compute sqrt(weights)
                 adata.loc[:, 'unweighted_y'] = adata.loc[:, 'y']
                 adata.loc[:, 'y'] = adata.loc[:, 'w'].to_numpy() * adata.loc[:, 'unweighted_y'].to_numpy()
+                # var(y)
+                var_y = weighted_var(adata.loc[:, 'y'].to_numpy(), adata.loc[:, 'w'].to_numpy())
+            else:
+                # var(y)
+                var_y = weighted_var(adata.loc[:, 'y'].to_numpy())
 
             ## Worker mean ##
             groupby_i = adata.groupby('i', sort=False)
@@ -253,6 +265,7 @@ class BSEstimator():
             # Store results
             
             self.res = {
+                'var(y)': var_y,
                 # 'y_bar_i': y_bar_i,
                 # 'y_bar_j': y_bar_j,
                 'mean(y)': (y_bar_i + y_bar_j) / 2,
