@@ -21,11 +21,12 @@ class Attrition:
         attrition_how (tw.attrition_utils.AttritionIncreasing() or tw.attrition_utils.AttritionDecreasing()): instance of AttritionIncreasing() or AttritionDecreasing(), used to specify if attrition should use increasing (building up from a fixed set of firms) or decreasing (with varying sets of firms) fractions of movers; None is equivalent to AttritionIncreasing()
         fe_params (ParamsDict or None): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().
         cre_params (ParamsDict or None): dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.cre_params().
+        estimate_bs (bool): if True, estimate Borovickova-Shimer model
         cluster_params (ParamsDict or None): dictionary of parameters for clustering in CRE estimation. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.cluster_params().
         clean_params (ParamsDict or None): dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.clean_params().
     '''
 
-    def __init__(self, min_movers_threshold=15, attrition_how=None, fe_params=None, cre_params=None, cluster_params=None, clean_params=None):
+    def __init__(self, min_movers_threshold=15, attrition_how=None, fe_params=None, cre_params=None, estimate_bs=False, cluster_params=None, clean_params=None):
         if attrition_how is None:
             attrition_how = tw.attrition_utils.AttritionIncreasing()
         if fe_params is None:
@@ -42,8 +43,16 @@ class Attrition:
         self.min_movers_threshold = min_movers_threshold
         # AttritionIncreasing() or AttritionDecreasing()
         self.attrition_how = attrition_how
+        # Whether to estimate Borovickova-Shimer model
+        self.estimate_bs = estimate_bs
         # Prevent plotting until results exist
         self.res = None
+
+        ## Models to estimate ##
+        models = ['fe', 'cre']
+        if estimate_bs:
+            models.append('bs')
+        self.models = models
 
         #### Parameter dictionaries ####
         ### Save parameter dictionaries ###
@@ -114,7 +123,7 @@ class Attrition:
             rng (np.random.Generator or None): NumPy random number generator. This overrides the random number generators for FE and CRE. None is equivalent to np.random.default_rng(None).
 
         Returns:
-            (dict): {'fe': FE results, 'cre': CRE results}
+            (dict): {'fe': FE results, 'cre': CRE results}; if estimating Borovickova-Shimer estimator, then add key {'bs': Borovickova-Shimer results}
         '''
         if fe_params is None:
             fe_params = tw.fe_params()
@@ -150,9 +159,47 @@ class Attrition:
         fe_estimator = tw.FEEstimator(bdf, fe_params)
         fe_estimator.fit(rng)
         fe_res = fe_estimator.res
-        del bdf, fe_estimator
+        del fe_estimator
 
-        return {'fe': fe_res, 'cre': cre_res}
+        res = {'fe': fe_res, 'cre': cre_res}
+
+        if self.estimate_bs:
+            ## Estimate Borovickova-Shimer model ##
+            # Make sure there are no returners and that all workers and firms have at least 2 observations
+
+            # Clean parameters
+            clean_params_1 = clean_params.copy()
+            clean_params_2 = clean_params.copy()
+            clean_params_1['connectedness'] = None
+            clean_params_1['drop_returns'] = 'returns'
+            clean_params_2['connectedness'] = None
+
+            # Clean
+            bdf = bdf.clean(clean_params_1).min_joint_obs_frame(is_sorted=True, copy=False).clean(clean_params_2)
+
+            ### Estimate ###
+            bs_estimator = tw.BSEstimator()
+
+            ## Standard ##
+            bs_estimator.fit(bdf, alternative_estimator=False)
+            # Save results
+            bs1_res = bs_estimator.res
+
+            ## Alternative ##
+            bs_estimator.fit(bdf, alternative_estimator=True)
+            # Save results
+            bs2_res = bs_estimator.res
+
+            ## Combine ##
+            bs_res = {k + '_bs1' if k != 'var(y)' else k: v for k, v in bs1_res.items()}
+            bs_res.update({k + '_bs2': v for k, v in bs2_res.items() if k != 'var(y)'})
+
+            # Save results
+            res['bs'] = bs_res
+
+            del bs_estimator
+
+        return res
 
     def _attrition_single(self, bdf, ncore=1, rng=None):
         '''
@@ -171,9 +218,9 @@ class Attrition:
 
         ## Create lists to save results ##
         # For non-HE
-        res_non_he = {'fe': [], 'cre': []}
+        res_non_he = {model: [] for model in self.models}
         # For HE
-        res_he = {'fe': [], 'cre': []}
+        res_he = {model: [] for model in self.models}
         # Combined
         res_all = {
             'non_he': res_non_he,
@@ -225,8 +272,8 @@ class Attrition:
 
             ## Extract results ##
             for res in V:
-                res_all[non_he_he]['fe'].append(res['fe'])
-                res_all[non_he_he]['cre'].append(res['cre'])
+                for model in self.models:
+                    res_all[non_he_he][model].append(res[model])
 
         return res_all
 
@@ -250,9 +297,9 @@ class Attrition:
 
         ## Create lists to save results ##
         # For non-HE
-        res_non_he = {'fe': [], 'cre': []}
+        res_non_he = {model: [] for model in self.models}
         # For HE
-        res_he = {'fe': [], 'cre': []}
+        res_he = {model: [] for model in self.models}
 
         # Save movers per firm (do this before taking subset of firms that meet threshold of sufficiently many movers)
         self.movers_per_firm = bdf.loc[bdf.loc[:, 'm'] > 0, :].n_workers() / bdf.n_firms() # bdf.loc[bdf.loc[:, 'm'] > 0, :].groupby('j')['i'].nunique().mean()
@@ -270,20 +317,18 @@ class Attrition:
                 # Multiprocessing tqdm source: https://stackoverflow.com/a/45276885/17333120
                 V = list(tqdm(pool.starmap(self._attrition_single, [(bdf, ncore, np.random.default_rng(seed)) for seed in rng.bit_generator._seed_seq.spawn(N)]), total=N))
             for res in V:
-                res_non_he['fe'].append(res['non_he']['fe'])
-                res_non_he['cre'].append(res['non_he']['cre'])
-                res_he['fe'].append(res['he']['fe'])
-                res_he['cre'].append(res['he']['cre'])
+                for model in self.models:
+                    res_non_he[model].append(res['non_he'][model])
+                    res_he[model].append(res['he'][model])
         else:
             # Estimate without multi-processing
             pbar = trange(N)
             pbar.set_description('attrition main')
             for _ in pbar:
                 res = self._attrition_single(bdf=bdf, ncore=ncore, rng=rng)
-                res_non_he['fe'].append(res['non_he']['fe'])
-                res_non_he['cre'].append(res['non_he']['cre'])
-                res_he['fe'].append(res['he']['fe'])
-                res_he['cre'].append(res['he']['cre'])
+                for model in self.models:
+                    res_non_he[model].append(res['non_he'][model])
+                    res_he[model].append(res['he'][model])
 
         # Combine results
         self.res = {'non_he': res_non_he, 'he': res_he}
@@ -314,28 +359,30 @@ class Attrition:
             'fe': 'fe',
             'ho': 'fe',
             'he': 'fe',
-            'cre': 'cre' # ,
-            # 'bs1': 'bs',
-            # 'bs2': 'bs'
+            'cre': 'cre',
+            'bs1': 'bs',
+            'bs2': 'bs'
         }
         var_y_dict = {
             'fe': 'var(y)',
-            'cre': 'var_y'
+            'cre': 'var_y',
+            'bs': 'var(y)'
         }
         var_psi_dict = {
             'fe': 'var(psi)_fe',
             'ho': 'var(psi)_ho',
             'he': 'var(psi)_he',
-            'cre': 'tot_var' # ,
-            # 'bs1': 'var(mu)',
-            # 'bs2': 'var(mu)'
+            'cre': 'tot_var',
+            'bs1': 'var(mu)_bs1',
+            'bs2': 'var(mu)_bs2'
         }
         cov_dict = {
             'fe': 'cov(psi, alpha)_fe',
             'ho': 'cov(psi, alpha)_ho',
             'he': 'cov(psi, alpha)_he',
-            'cre': 'tot_cov' # ,
-            # 'bs': 'cov(lambda, mu)'
+            'cre': 'tot_cov',
+            'bs1': 'cov(lambda, mu)_bs1',
+            'bs2': 'cov(lambda, mu)_bs2'
         }
 
         ## Extract results ##
@@ -433,7 +480,7 @@ class Attrition:
 
         return (var_diffs_non_he, var_diffs_he, cov_diffs_non_he, cov_diffs_he, x_axis)
 
-    def plots(self, fe=True, ho=True, he=True, cre=True, line_at_movers_per_firm=True, xticks_round=1):
+    def plots(self, fe=True, ho=True, he=True, cre=True, bs1=True, bs2=True, line_at_movers_per_firm=True, xticks_round=1):
         '''
         Generate attrition result plots.
 
@@ -442,17 +489,26 @@ class Attrition:
             ho (bool): if True, plot homoskedastic correction results
             he (bool): if True, plot heteroskedastic correction results
             cre (bool): if True, plot CRE results
+            bs1 (bool): if True, plot Borovickova-Shimer results for the standard estimator
+            bs2 (bool): if True, plot Borovickova-Shimer results for the alternative estimator
             line_at_movers_per_firm (bool): if True, plot a dashed line where movers per firm in the subsample is approximately the number of movers per firm in the full sample
             xticks_round (int): how many digits to round x ticks
         '''
+        if self.res is None:
+            raise AttributeError('Attribute .res is None - must generate attrition data before results can be plotted. This can be done by running .attrition()')
+
+        if not self.estimate_bs:
+            bs1 = False
+            bs2 = False
+
         ## Plotting dictionaries ##
         to_plot_dict = {
             'fe': fe,
             'ho': ho,
             'he': he,
-            'cre': cre # ,
-            # 'bs1': bs1,
-            # 'bs2': bs2
+            'cre': cre,
+            'bs1': bs1,
+            'bs2': bs2
         }
         plot_options_dict = {
             'fe': {
@@ -470,15 +526,15 @@ class Attrition:
             'cre': {
                 'label': 'CRE',
                 'color': 'C3'
-            } # ,
-            # 'bs1': {
-            #     'label': 'BS-standard',
-            #     'color': 'C4'
-            # },
-            # 'bs2': {
-            #     'label': 'BS-alternative',
-            #     'color': 'C5'
-            # }
+            },
+            'bs1': {
+                'label': 'BS-1',
+                'color': 'C4'
+            },
+            'bs2': {
+                'label': 'BS-2',
+                'color': 'C5'
+            }
         }
 
         ## Extract results ##
@@ -523,7 +579,7 @@ class Attrition:
         subfigs[1].legend(handles, labels, loc=(1.02, 0.78))
         plt.show()
 
-    def boxplots(self, fe=True, ho=True, he=True, cre=True, xticks_round=1):
+    def boxplots(self, fe=True, ho=True, he=True, cre=True, bs1=True, bs2=True, xticks_round=1):
         '''
         Generate attrition result boxplots.
 
@@ -532,43 +588,46 @@ class Attrition:
             ho (bool): if True, plot homoskedastic correction results
             he (bool): if True, plot heteroskedastic correction results
             cre (bool): if True, plot CRE results
+            bs1 (bool): if True, plot Borovickova-Shimer results for the standard estimator
+            bs2 (bool): if True, plot Borovickova-Shimer results for the alternative estimator
             line_at_movers_per_firm (bool): if True, plot a dashed line where movers per firm in the subsample is approximately the number of movers per firm in the full sample
             xticks_round (int): how many digits to round x ticks
         '''
+        if self.res is None:
+            raise AttributeError('Attribute .res is None - must generate attrition data before results can be plotted. This can be done by running .attrition()')
+
+        if not self.estimate_bs:
+            bs1 = False
+            bs2 = False
+
         ## Plotting dictionaries ##
         to_plot_dict = {
             'fe': fe,
             'ho': ho,
             'he': he,
-            'cre': cre # ,
-            # 'bs1': bs1,
-            # 'bs2': bs2
+            'cre': cre,
+            'bs1': bs1,
+            'bs2': bs2
         }
         plot_options_dict = {
             'fe': {
-                'label': 'FE',
-                'color': 'C0'
+                'label': 'FE'
             },
             'ho': {
-                'label': 'FE-HO',
-                'color': 'C1'
+                'label': 'FE-HO'
             },
             'he': {
-                'label': 'FE-HE',
-                'color': 'C2'
+                'label': 'FE-HE'
             },
             'cre': {
-                'label': 'CRE',
-                'color': 'C3'
-            } # ,
-            # 'bs1': {
-            #     'label': 'BS-standard',
-            #     'color': 'C4'
-            # },
-            # 'bs2': {
-            #     'label': 'BS-alternative',
-            #     'color': 'C5'
-            # }
+                'label': 'CRE'
+            },
+            'bs1': {
+                'label': 'BS-1'
+            },
+            'bs2': {
+                'label': 'BS-2'
+            }
         }
         # Subtract 1 plot if HE is being estimated (since baseline plot doesn't include it)
         n_plots = sum(to_plot_dict.values()) - 1 * he
