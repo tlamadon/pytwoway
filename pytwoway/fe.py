@@ -1410,8 +1410,15 @@ class FEEstimator:
             with Pool(processes=self.ncore) as pool:
                 pbar2 = tqdm([(self.params['lev_batchsize_he'], np.random.default_rng(seed)) for seed in seeds], total=ndraw_seeds, disable=self.no_pbars)
                 pbar2.set_description('leverages batch')
-                Pii_all, Pii_sq_all, Mii_all, Mii_sq_all, Pii_Mii_all = pool.starmap(self._leverage_approx, pbar2)
+                V = pool.starmap(self._leverage_approx, pbar2)
                 del pbar2
+                
+            # Extract results
+            Pii_all = [subV[0] for subV in V]
+            Pii_sq_all = [subV[1] for subV in V]
+            Mii_all = [subV[2] for subV in V]
+            Mii_sq_all = [subV[3] for subV in V]
+            Pii_Mii_all = [subV[4] for subV in V]
 
             # Take mean over draws
             Pii = sum(Pii_all) / ndraw_seeds
