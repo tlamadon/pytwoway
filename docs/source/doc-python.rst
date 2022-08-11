@@ -78,15 +78,17 @@ To run in Python:
    # Collapse data at the worker-firm spell level
    bdf = bdf.collapse()
    # Cluster
-   bdf = bdf.cluster()
+   n_firm_types = 6
+   cluster_params = bpd.cluster_params({'grouping': bpd.grouping.KMeans(n_clusters=n_firm_types)})
+   bdf = bdf.cluster(cluster_params)
    # Convert to event study format
    bdf = bdf.to_eventstudy()
    # Separate movers and stayers
    movers = bdf.get_worker_m()
-   jdata = sim_data_observed.loc[movers, :]
-   sdata = sim_data_observed.loc[~movers, :]
+   jdata = bdf.loc[movers, :]
+   sdata = bdf.loc[~movers, :]
    # Initialize BLM estimator
-   blm_estimator = tw.BLMEstimator(bdf)
+   blm_estimator = tw.BLMEstimator(tw.blm_params({'nk': n_firm_types}))
    # Fit BLM estimator
    blm_estimator.fit(jdata, sdata)
    # Plot results
@@ -127,18 +129,13 @@ To run in Python:
    df = pd.read_csv(filepath)
    # Convert into BipartitePandas DataFrame
    bdf = bpd.BipartiteDataFrame(i=df['i'], j=df['j'], y=df['y'], t=df['t'])
-   # Clean data and collapse it at the worker-firm spell level
-   bdf = bdf.clean().collapse()
-   ## Make sure all workers and firms have at least 2 observations ##
-   prev_len = 0
-   while prev_len != len(bdf):
-      prev_len = len(bdf)
-
-      # Drop stayers
-      bdf = bdf.loc[bdf.get_worker_m(is_sorted=True), :].clean()
-
-      # Drop firms with a single observation
-      bdf = bdf.min_obs_frame(is_sorted=True, copy=False).clean()
+   # Clean data and collapse it at the worker-firm spell level (make sure to drop returns)
+   clean_params = bpd.clean_params({'drop_returns': 'returns'})
+   bdf = bdf.clean(clean_params).collapse()
+   # Make sure all workers and firms have at least 2 observations
+   bdf = bdf.min_joint_obs_frame(is_sorted=True, copy=False).clean()
+   # Clean up ids
+   bdf = bdf.clean()
    # Initialize Borovickova-Shimer estimator
    bs_estimator = tw.BSEstimator()
    # Fit Borovickova-Shimer estimator
