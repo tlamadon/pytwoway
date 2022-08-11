@@ -133,7 +133,7 @@ To run in Python:
    clean_params = bpd.clean_params({'drop_returns': 'returns'})
    bdf = bdf.clean(clean_params).collapse()
    # Make sure all workers and firms have at least 2 observations
-   bdf = bdf.min_joint_obs_frame().clean()
+   bdf = bdf.min_joint_obs_frame()
    # Clean up ids
    bdf = bdf.clean()
    # Initialize Borovickova-Shimer estimator
