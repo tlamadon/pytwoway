@@ -59,6 +59,11 @@ To install via pip, from the command line run::
 
     pip install pytwoway
 
+Help with Running the Package
+-----------------------------
+
+Please check out the `documentation <https://tlamadon.github.io/pytwoway/>`_ for detailed examples of how to use `PyTwoWay`. If you have a question that the documentation doesn't answer, please also check the `past Issues <https://github.com/tlamadon/pytwoway/issues?q=is%3Aissue+is%3Aclosed/>`_ to see if someone else has already asked this question and an answer has been provided. If you still can't find an answer, please open a new `Issue <https://github.com/tlamadon/pytwoway/issues/>`_ and we will try to answer as quickly as possible.
+
 Benchmarking
 ------------
 
@@ -74,7 +79,7 @@ Data is simulated from `BipartitePandas <https://github.com/tlamadon/bipartitepa
 
     sim_data = bpd.SimBipartite(sim_params).simulate(rng)
 
-This data is then estimated using the class `FEEsimator` and using the MATLAB package `LeaveOutTwoWay <https://github.com/rsaggio87/LeaveOutTwoWay/>`_.
+This data is then estimated using the `PyTwoWay` class `FEEstimator` and using the MATLAB package `LeaveOutTwoWay <https://github.com/rsaggio87/LeaveOutTwoWay/>`_.
 
 Results are estimated on a 2021 MacBook Pro 14" with 16 GB Ram and an Apple M1 Pro processor with 8 cores.
 
@@ -138,22 +143,13 @@ Bibtex entry::
     institution={National Bureau of Economic Research}
   }
 
+Contributing to the Package
+----------------------------
 
-Development
------------
+If you want to contribute to the package, the easiest way is to test that it's working properly! If you notice a part of the package is giving incorrect results, please add a new post in `Issues <https://github.com/tlamadon/pytwoway/issues/>`_ and we will do our best to fix it as soon as possible.
 
-If you want to contribute to the package, the easiest way is to use poetry to set up a local environment::
+We are also happy to consider any suggestions to improve the package and documentation, whether to add a new feature, make a feature more user-friendly, or make the documentation clearer. Please also post suggestions in `Issues <https://github.com/tlamadon/pytwoway/issues/>`_.
 
-    poetry install
-    poetry run python -m pytest
+Finally, if you would like to help with developing the package, please make a branch of the repository and submit pull requests with any changes you make! These will be promptly reviewed, and hopefully accepted!
 
-To push the package to PiP, increase the version number in the `pyproject.toml` file and then::
-
-    poetry build
-    poetry publish
-
-Finally to build the package for conda and upload it::
-
-    conda skeleton pypi pytwoway
-    conda config --set anaconda_upload yes
-    conda-build pytwoway -c tlamadon --output-folder pytwoway
+We are extremely grateful for all contributions made by the community!
