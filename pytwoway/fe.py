@@ -385,7 +385,9 @@ class FEEstimator:
                 self._collect_res()
 
         # Clear attributes
-        del self.worker_m, self.Y, self.J, self.DpJ, self.W, self.DpW, self.Dp, self.Dwinv, self.DwinvWtDpJ, self.Minv, self.ml
+        del self.worker_m, self.Y, self.J, self.DpJ, self.W, self.DpW, self.Dp, self.Dwinv, self.DwinvWtDpJ, self.Minv
+        if self.params['solver'] == 'amg':
+            del self.ml
 
         # Total estimation time
         end_time = time.time()
@@ -490,8 +492,9 @@ class FEEstimator:
         self.DwinvWtDpJ = DwinvWtDpJ
         self.Minv = Minv
 
-        self.logger.info('preparing linear solver')
-        self.ml = rss(Minv)
+        if self.params['solver'] == 'amg':
+            self.logger.info('preparing linear solver')
+            self.ml = rss(Minv)
 
         # Save time variable
         self.last_invert_time = 0
@@ -1333,8 +1336,21 @@ class FEEstimator:
             D = DpW_i @ self.AA_inv_D @ DpW_i
         else:
             # M^{-1} has not been explicitly computed
-            M_DpJ_i = self.ml.solve(DpJ_i)
-            M_B = self.ml.solve(self.AA_inv_B @ DpW_i)
+            solver_name = self.params['solver']
+            tol = self.params['solver_tol']
+            if solver_name == 'amg':
+                # Use AMG solver
+                M_DpJ_i = self.ml.solve(DpJ_i)
+                M_B = self.ml.solve(self.AA_inv_B @ DpW_i)
+            else:
+                # Use SciPy sparse iterative solver
+                solver = solver_dict[solver_name]
+                if solver_name == 'minres':
+                    M_DpJ_i = solver(self.Minv, DpJ_i, tol=tol)[0]
+                    M_B = solver(self.Minv, self.AA_inv_B @ DpW_i, tol=tol)[0]
+                else:
+                    M_DpJ_i = solver(self.Minv, DpJ_i, tol=tol, atol=0)[0]
+                    M_B = solver(self.Minv, self.AA_inv_B @ DpW_i, tol=tol, atol=0)[0]
 
             # Construct blocks
             A = DpJ_i @ M_DpJ_i

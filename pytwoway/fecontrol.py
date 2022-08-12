@@ -408,7 +408,9 @@ class FEControlEstimator:
                 self._collect_res()
 
         # Clear attributes
-        del self.worker_m, self.Y, self.A, self.DpA, self.AtDpA, self.Dp, self.AAinv_solver
+        del self.worker_m, self.Y, self.A, self.DpA, self.AtDpA, self.Dp
+        if self.params['solver'] == 'amg':
+            del self.AAinv_solver
 
         # Total estimation time
         end_time = time.time()
@@ -529,11 +531,14 @@ class FEControlEstimator:
 
         ## (A.T @ Dp @ A)^{-1} ##
         AtDpA = A.T @ DpA
-        AAinv_solver = rss(AtDpA)
+        if self.params['solver'] == 'amg':
+            AAinv_solver = rss(AtDpA)
 
         ## Store matrices ##
         self.Y = self.adata.loc[:, 'y'].to_numpy()
-        self.A, self.DpA, self.AtDpA, self.AAinv_solver = A, DpA, AtDpA, AAinv_solver
+        self.A, self.DpA, self.AtDpA = A, DpA, AtDpA
+        if self.params['solver'] == 'amg':
+            self.AAinv_solver = AAinv_solver
         if self.params['he'] and (not self.params['levfile']):
             self.sqrt_DpA = sqrt_DpA
         self.Dp = Dp
