@@ -7,12 +7,25 @@ TODO:
     -exact trace
 '''
 from tqdm.auto import tqdm, trange
-import time, pickle, json, glob # warnings
+import time, pickle, json, glob
 from timeit import default_timer as timer
-from multiprocessing import Pool
+try:
+    from multiprocess import Pool
+except ImportError:
+    from multiprocessing import Pool
 import numpy as np
 import pandas as pd
 from scipy.sparse import csc_matrix, hstack
+from scipy.sparse.linalg import bicg, bicgstab, cg, cgs, gmres, minres, qmr
+solver_dict = {
+    'bicg': bicg,
+    'bicgstab': bicgstab,
+    'cg': cg,
+    'cgs': cgs,
+    'gmres': gmres,
+    'minres': minres,
+    'qmr': qmr
+}
 from pyamg import ruge_stuben_solver as rss
 # from qpsolvers import solve_qp
 from bipartitepandas.util import ParamsDict, to_list, logger_init
@@ -27,6 +40,8 @@ from pytwoway.util import weighted_mean, weighted_var, weighted_cov, weighted_qu
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq1(a):
     return a >= 1
+def _gteq0(a):
+    return a >= 0
 
 # Define default parameter dictionary
 _fecontrol_params_default = ParamsDict({
@@ -38,10 +53,6 @@ _fecontrol_params_default = ParamsDict({
         '''
             (default=None) List of columns to use as continuous controls. None is equivalent to [].
         ''', None),
-    'ncore': (1, 'type_constrained', (int, _gteq1),
-        '''
-            (default=1) Number of cores to use.
-        ''', '>= 1'),
     'weighted': (True, 'type', bool,
         '''
             (default=True) If True, use weighted estimators.
@@ -110,10 +121,6 @@ _fecontrol_params_default = ParamsDict({
         '''
             (default=50) Number of draws to use when estimating leverage approximation for heteroskedastic correction.
         ''', '>= 1'),
-    'lev_batchsize_he': (10, 'type_constrained', (int, _gteq1),
-        '''
-            (default=10) Batch size to send in parallel. Should evenly divide 'ndraw_lev_he'.
-        ''', '>= 1'),
     'levfile': ('', 'type', str,
         '''
             (default='') File to load precomputed leverages for heteroskedastic correction.
@@ -122,6 +129,26 @@ _fecontrol_params_default = ParamsDict({
     #     '''
     #         (default=False) Computes the smallest eigenvalues, this is the filepath where these results are saved.
     #     ''', None),
+    'ncore': (1, 'type_constrained', (int, _gteq1),
+        '''
+            (default=1) Number of cores to use.
+        ''', '>= 1'),
+    'solver': ('minres', 'set', ['bicg', 'bicgstab', 'cg', 'cgs', 'gmres', 'minres', 'qmr', 'amg'],
+        '''
+            (default='minres') Solver to use for solving linear systems. The recommended solver is 'minres', unless you are working with very large datasets (e.g. 1 billion observations or more), in which case it is recommended to use 'amg'. Options are:
+                bicg: BIConjugate Gradient
+                bicgstab: BIConjugate Gradient STABilized
+                cg: Conjugate Gradient
+                cgs: Conjugate Gradient Squared
+                gmres: Generalized Minimal RESidual
+                minres: MINimum RESidual
+                qmr: Quasi-Minimal Residual
+                amg: Algebraic Multi-Grid
+        ''', None),
+    'solver_tol': (1e-10, 'type_constrained', (int, _gteq0),
+        '''
+            (default=1e-10) Tolerance for convergence of linear solver (Ax=b), iterations stop when norm(residual) <= tol * norm(b). A lower tolerance will achieve better estimates at the cost of computation time.
+        ''', '>= 0'),
     'outputfile': (None, 'type_none', str,
         '''
             (default=None) Outputfile where results will be saved in json format. If None, results will not be saved.
@@ -210,6 +237,11 @@ class FEControlEstimator:
         self.ndraw_trace_he = params['ndraw_trace_he']
         # Number of draws to compute leverage for heteroskedastic correction
         self.ndraw_lev_he = params['ndraw_lev_he']
+
+        ## Check that 'ndraw_lev_he' is a multiple of 'ncore' ##
+        self.batchsize_he = self.ndraw_lev_he // self.ncore
+        if self.compute_he and (self.batchsize_he * self.ncore != self.ndraw_lev_he):
+            raise ValueError(f"'ndraw_lev_he' (currently {self.ndraw_lev_he}) should be a multiple of 'ncore' (currently {self.ncore}).")
 
 
         ## Store some parameters in results dictionary ##
@@ -376,7 +408,7 @@ class FEControlEstimator:
                 self._collect_res()
 
         # Clear attributes
-        del self.worker_m, self.Y, self.A, self.DpA, self.Dp, self.AAinv_solver
+        del self.worker_m, self.Y, self.A, self.DpA, self.AtDpA, self.Dp, self.AAinv_solver
 
         # Total estimation time
         end_time = time.time()
@@ -496,11 +528,12 @@ class FEControlEstimator:
                 sqrt_DpA = A
 
         ## (A.T @ Dp @ A)^{-1} ##
-        AAinv_solver = rss(A.T @ DpA)
+        AtDpA = A.T @ DpA
+        AAinv_solver = rss(AtDpA)
 
         ## Store matrices ##
         self.Y = self.adata.loc[:, 'y'].to_numpy()
-        self.A, self.DpA, self.AAinv_solver = A, DpA, AAinv_solver
+        self.A, self.DpA, self.AtDpA, self.AAinv_solver = A, DpA, AtDpA, AAinv_solver
         if self.params['he'] and (not self.params['levfile']):
             self.sqrt_DpA = sqrt_DpA
         self.Dp = Dp
@@ -1122,7 +1155,19 @@ class FEControlEstimator:
             (NumPy Array): vector result of (A' @ Dp @ A)^{-1} @ v
         '''
         start = timer()
-        v_out = self.AAinv_solver.solve(v, tol=1e-10)
+
+        solver_name = self.params['solver']
+        tol = self.params['solver_tol']
+        if solver_name == 'amg':
+            # Use AMG solver
+            v_out = self.AAinv_solver.solve(v, tol=tol)
+        else:
+            # Use SciPy sparse iterative solver
+            solver = solver_dict[solver_name]
+            if solver_name == 'minres':
+                v_out = solver(self.AtDpA, v, tol=tol)[0]
+            else:
+                v_out = solver(self.AtDpA, v, tol=tol, atol=0)[0]
         self.last_invert_time = timer() - start
 
         return v_out
@@ -1205,19 +1250,16 @@ class FEControlEstimator:
 
         Pii = np.zeros(self.nn)
         worker_m = self.worker_m
+        ncore = self.ncore
 
-        self.logger.info(f"[he] [approximate pii] ndraw_lev_he={self.ndraw_lev_he}, lev_batchsize_he={self.params['lev_batchsize_he']}, using {self.ncore} core(s)")
+        self.logger.info(f"[he] [approximate pii] ndraw_lev_he={self.ndraw_lev_he}, using {ncore} core(s)")
 
-        if self.ncore > 1:
-            # Multiprocessing
-            ndraw_seeds = self.ndraw_lev_he // self.params['lev_batchsize_he']
-            if np.round(ndraw_seeds * self.params['lev_batchsize_he']) != self.ndraw_lev_he:
-                # 'lev_batchsize_he' must evenly divide 'ndraw_lev_he'
-                raise ValueError(f"'lev_batchsize_he' (currently {self.params['lev_batchsize_he']}) should evenly divide 'ndraw_lev_he' (currently {self.ndraw_lev_he}).")
+        if ncore > 1:
+            ## Multiprocessing ##
             # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
-            seeds = rng.bit_generator._seed_seq.spawn(ndraw_seeds)
-            with Pool(processes=self.ncore) as pool:
-                pbar2 = tqdm([(self.params['lev_batchsize_he'], np.random.default_rng(seed)) for seed in seeds], total=ndraw_seeds, disable=self.no_pbars)
+            seeds = rng.bit_generator._seed_seq.spawn(ncore)
+            with Pool(processes=ncore) as pool:
+                pbar2 = tqdm([(self.batchsize_he, np.random.default_rng(seed)) for seed in seeds], total=ncore, disable=self.no_pbars)
                 pbar2.set_description('leverages batch')
                 V = pool.starmap(self._leverage_approx, pbar2)
                 del pbar2
@@ -1230,11 +1272,11 @@ class FEControlEstimator:
             Pii_Mii_all = [subV[4] for subV in V]
 
             # Take mean over draws
-            Pii = sum(Pii_all) / ndraw_seeds
-            Pii_sq = sum(Pii_sq_all) / ndraw_seeds
-            Mii = sum(Mii_all) / ndraw_seeds
-            Mii_sq = sum(Mii_sq_all) / ndraw_seeds
-            Pii_Mii = sum(Pii_Mii_all) / ndraw_seeds
+            Pii = sum(Pii_all) / ncore
+            Pii_sq = sum(Pii_sq_all) / ncore
+            Mii = sum(Mii_all) / ncore
+            Mii_sq = sum(Mii_sq_all) / ncore
+            Pii_Mii = sum(Pii_Mii_all) / ncore
         else:
             # Single core
             Pii, Pii_sq, Mii, Mii_sq, Pii_Mii = self._leverage_approx(self.ndraw_lev_he, rng)
