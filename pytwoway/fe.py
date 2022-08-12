@@ -232,24 +232,24 @@ class FEEstimator:
 
         # self.logger.info('FEEstimator object initialized')
 
-    def __getstate__(self):
-        '''
-        Defines how the model is pickled.
-        '''
-        odict = {k: self.__dict__[k] for k in self.__dict__.keys() - {'ml'}}
-        return odict
+    # def __getstate__(self):
+    #     '''
+    #     Defines how the model is pickled.
+    #     '''
+    #     odict = {k: self.__dict__[k] for k in self.__dict__.keys() - {'ml'}}
+    #     return odict
 
-    def __setstate__(self, d):
-        '''
-        Defines how the model is unpickled.
+    # def __setstate__(self, d):
+    #     '''
+    #     Defines how the model is unpickled.
 
-        Arguments:
-            d (dict): attribute dictionary
-        '''
-        # Need to recreate the simple model and the search representation
-        # Make d the attribute dictionary
-        self.__dict__ = d
-        self.ml = rss(self.Minv)
+    #     Arguments:
+    #         d (dict): attribute dictionary
+    #     '''
+    #     # Need to recreate the simple model and the search representation
+    #     # Make d the attribute dictionary
+    #     self.__dict__ = d
+    #     self.ml = rss(self.Minv)
 
     @staticmethod
     def __load(filename):
