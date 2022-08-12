@@ -21,8 +21,8 @@ PyTwoWay
 
 `PyTwoWay` is the Python package associated with the following paper:
 
-"`How Much Should we Trust Estimates of Firm Effects and Worker Sorting? <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_" 
-by Stéphane Bonhomme, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler.  
+"`How Much Should we Trust Estimates of Firm Effects and Worker Sorting? <https://www.nber.org/system/files/working_papers/w27368/w27368.pdf>`_"
+by Stéphane Bonhomme, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler.
 No. w27368. National Bureau of Economic Research, 2020.
 
 The package provides implementations for a series of estimators for models with two sided heterogeneity:
@@ -35,15 +35,15 @@ The package provides implementations for a series of estimators for models with 
 6. fixed-point revealed preference estimator as in `Sorkin <https://doi.org/10.1093/qje/qjy001>`_
 7. non-parametric sorting estimator as in `Borovičková and Shimer <https://drive.google.com/file/d/1KW0sZ4nV9bIdVhcs-UW8yW_dzUr782v5/view>`_
 
-.. |binder_fe| image:: https://mybinder.org/badge_logo.svg 
+.. |binder_fe| image:: https://mybinder.org/badge_logo.svg
     :target: https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fsource%2Fnotebooks%2Ffe_example.ipynb
-.. |binder_cre| image:: https://mybinder.org/badge_logo.svg 
+.. |binder_cre| image:: https://mybinder.org/badge_logo.svg
     :target: https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fsource%2Fnotebooks%2Fcre_example.ipynb
-.. |binder_blm| image:: https://mybinder.org/badge_logo.svg 
+.. |binder_blm| image:: https://mybinder.org/badge_logo.svg
     :target: https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fsource%2Fnotebooks%2Fblm_example.ipynb
-.. |binder_sorkin| image:: https://mybinder.org/badge_logo.svg 
+.. |binder_sorkin| image:: https://mybinder.org/badge_logo.svg
     :target: https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fsource%2Fnotebooks%2Fsorkin_example.ipynb
-.. |binder_bs| image:: https://mybinder.org/badge_logo.svg 
+.. |binder_bs| image:: https://mybinder.org/badge_logo.svg
     :target: https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fsource%2Fnotebooks%2Fborovickovashimer_example.ipynb
 
 If you want to give it a try, you can start an example notebook for the FE estimator here: |binder_fe| for the CRE estimator here: |binder_cre| for the BLM estimator here: |binder_blm| for the Sorkin estimator here: |binder_sorkin| and for the Borovickova-Shimer estimator here: |binder_bs|. These start fully interactive notebooks with simple examples that simulate data and run the estimators.
@@ -58,6 +58,64 @@ Quick Start
 To install via pip, from the command line run::
 
     pip install pytwoway
+
+Help with Running the Package
+-----------------------------
+
+Please check out the `documentation <https://tlamadon.github.io/pytwoway/>`_ for detailed examples of how to use `PyTwoWay`. If you have a question that the documentation doesn't answer, please also check the `past Issues <https://github.com/tlamadon/pytwoway/issues?q=is%3Aissue+is%3Aclosed/>`_ to see if someone else has already asked this question and an answer has been provided. If you still can't find an answer, please open a new `Issue <https://github.com/tlamadon/pytwoway/issues/>`_ and we will try to answer as quickly as possible.
+
+Benchmarking
+------------
+
+Data is simulated from `BipartitePandas <https://github.com/tlamadon/bipartitepandas/>`_ using the following code:
+
+.. code-block:: python
+
+    import numpy as np
+    import bipartitepandas as bpd
+
+    sim_params = bpd.sim_params({'n_workers': 500000, 'firm_size': 10, 'p_move': 0.05})
+    rng = np.random.default_rng(1234)
+
+    sim_data = bpd.SimBipartite(sim_params).simulate(rng)
+
+This data is then estimated using the `PyTwoWay` class `FEEstimator` and using the MATLAB package `LeaveOutTwoWay <https://github.com/rsaggio87/LeaveOutTwoWay/>`_.
+
+Results are estimated on a 2021 MacBook Pro 14" with 16 GB Ram and an Apple M1 Pro processor with 8 cores.
+
+Some summary statistics about the largest leave-one-match-out set:
+
++----------+-----------+--------+---------+
+| Package  | #obs      | #firms | #movers |
++==========+===========+========+=========+
+| KSS      | 2,255,370 | 44,510 | 88,542  |
++----------+-----------+--------+---------+
+| PyTwoWay | 2,269,665 | 44,601 | 89,098  |
++----------+-----------+--------+---------+
+
+Run time:
+
++---------------+----------+------------+--------+
+| Solver        | Cleaning | Estimation | Total  |
++===============+==========+============+========+
+| KSS           | N/A      | N/A        | 55.2s  |
++---------------+----------+------------+--------+
+| PYTW-AMG      | 4.0s     | 3m2s       | 3m6s   |
++---------------+----------+------------+--------+
+| PYTW-BICG     | 4.0s     | 57.2s      | 1m1.2s |
++---------------+----------+------------+--------+
+| PYTW-BICGSTAB | 4.0s     | 2m10s      | 2m14s  |
++---------------+----------+------------+--------+
+| PYTW-CG       | 4.0s     | 53.4s      | 57.4s  |
++---------------+----------+------------+--------+
+| PYTW-CGS      | 4.0s     | 1m13s      | 1m17s  |
++---------------+----------+------------+--------+
+| PYTW-GMRES    | 4.0s     | N/A        | N/A    |
++---------------+----------+------------+--------+
+| PYTW-MINRES   | 4.0s     | 25.7s      | 29.7s  |
++---------------+----------+------------+--------+
+| PYTW-QMR      | 4.0s     | 3m25s      | 3m29s  |
++---------------+----------+------------+--------+
 
 Authors
 -------
@@ -85,22 +143,13 @@ Bibtex entry::
     institution={National Bureau of Economic Research}
   }
 
+Contributing to the Package
+----------------------------
 
-Development
------------
+If you want to contribute to the package, the easiest way is to test that it's working properly! If you notice a part of the package is giving incorrect results, please add a new post in `Issues <https://github.com/tlamadon/pytwoway/issues/>`_ and we will do our best to fix it as soon as possible.
 
-If you want to contribute to the package, the easiest way is to use poetry to set up a local environment::
+We are also happy to consider any suggestions to improve the package and documentation, whether to add a new feature, make a feature more user-friendly, or make the documentation clearer. Please also post suggestions in `Issues <https://github.com/tlamadon/pytwoway/issues/>`_.
 
-    poetry install
-    poetry run python -m pytest
+Finally, if you would like to help with developing the package, please make a branch of the repository and submit pull requests with any changes you make! These will be promptly reviewed, and hopefully accepted!
 
-To push the package to PiP, increase the version number in the `pyproject.toml` file and then::
-
-    poetry build
-    poetry publish
-
-Finally to build the package for conda and upload it::
-
-    conda skeleton pypi pytwoway
-    conda config --set anaconda_upload yes
-    conda-build pytwoway -c tlamadon --output-folder pytwoway
+We are extremely grateful for all contributions made by the community!

@@ -2,7 +2,10 @@
 Sorkin (2018) replication code.
 '''
 from tqdm.auto import tqdm, trange
-from multiprocessing import Pool
+try:
+    from multiprocess import Pool
+except ImportError:
+    from multiprocessing import Pool
 import numpy as np
 from scipy.sparse import csc_matrix
 # from scipy.sparse.linalg import eigs

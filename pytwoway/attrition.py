@@ -3,7 +3,10 @@ Class for attrition estimation and plotting.
 '''
 from tqdm.auto import tqdm, trange
 # import itertools
-from multiprocessing import Pool
+try:
+    from multiprocess import Pool
+except ImportError:
+    from multiprocessing import Pool
 import numpy as np
 # import pandas as pd
 from matplotlib import pyplot as plt

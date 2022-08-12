@@ -3,7 +3,10 @@ Class for running Monte Carlo estimations on simulated bipartite networks
 '''
 from tqdm.auto import tqdm, trange
 import warnings
-from multiprocessing import Pool
+try:
+    from multiprocess import Pool
+except ImportError:
+    from multiprocessing import Pool
 import numpy as np
 from matplotlib import pyplot as plt
 import bipartitepandas as bpd
