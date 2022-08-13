@@ -156,6 +156,6 @@ If you want to contribute to the package, the easiest way is to test that it's w
 
 We are also happy to consider any suggestions to improve the package and documentation, whether to add a new feature, make a feature more user-friendly, or make the documentation clearer. Please also post suggestions in `Issues <https://github.com/tlamadon/pytwoway/issues/>`_.
 
-Finally, if you would like to help with developing the package, please make a branch of the repository and submit pull requests with any changes you make! These will be promptly reviewed, and hopefully accepted!
+Finally, if you would like to help with developing the package, please make a fork of the repository and submit pull requests with any changes you make! These will be promptly reviewed, and hopefully accepted!
 
 We are extremely grateful for all contributions made by the community!
