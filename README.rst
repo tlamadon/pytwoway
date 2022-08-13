@@ -59,6 +59,12 @@ To install via pip, from the command line run::
 
     pip install pytwoway
 
+To make sure you are running the most up-to-date version of `PyTwoWay`, from the command line run::
+
+    pip install --upgrade pytwoway
+
+Please DO NOT download the Conda version of the package, as it is outdated!
+
 Help with Running the Package
 -----------------------------
 
