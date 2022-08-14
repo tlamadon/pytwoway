@@ -68,7 +68,7 @@ Please DO NOT download the Conda version of the package, as it is outdated!
 Help with Running the Package
 -----------------------------
 
-Please check out the `documentation <https://tlamadon.github.io/pytwoway/>`_ for detailed examples of how to use `PyTwoWay`. If you have a question that the documentation doesn't answer, please also check the `past Issues <https://github.com/tlamadon/pytwoway/issues?q=is%3Aissue+is%3Aclosed/>`_ to see if someone else has already asked this question and an answer has been provided. If you still can't find an answer, please open a new `Issue <https://github.com/tlamadon/pytwoway/issues/>`_ and we will try to answer as quickly as possible.
+Please check out the `documentation <https://tlamadon.github.io/pytwoway/>`_ for detailed examples of how to use `PyTwoWay`. If you have a question that the documentation doesn't answer, please also check the `past Issues <https://github.com/tlamadon/pytwoway/issues?q=is%3Aissue+is%3Aclosed/>`_ to see if someone else has already asked this question and an answer has been provided. If you still can't find an answer, please open a `new Issue <https://github.com/tlamadon/pytwoway/issues/>`_ and we will try to answer as quickly as possible.
 
 Benchmarking
 ------------
