@@ -2,6 +2,7 @@
 from .Q import Q
 from .constraints import constraints
 from .attrition_utils import attrition_utils
+import pytwoway.preconditioners
 from .fe import fe_params, FEEstimator
 from .fecontrol import fecontrol_params, FEControlEstimator
 from .cre import cre_params, CREEstimator

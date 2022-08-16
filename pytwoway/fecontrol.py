@@ -16,7 +16,7 @@ except ImportError:
 import numpy as np
 import pandas as pd
 from scipy.sparse import csc_matrix, hstack
-from scipy.sparse.linalg import bicg, bicgstab, cg, cgs, gmres, minres, qmr
+from scipy.sparse.linalg import bicg, bicgstab, cg, cgs, gmres, minres, qmr, LinearOperator, spilu
 solver_dict = {
     'bicg': bicg,
     'bicgstab': bicgstab,
@@ -30,7 +30,8 @@ from pyamg import ruge_stuben_solver as rss
 # from qpsolvers import solve_qp
 from bipartitepandas.util import ParamsDict, to_list, logger_init
 from pytwoway import Q
-from pytwoway.util import weighted_mean, weighted_var, weighted_cov, weighted_quantile, DxSP, SPxD, diag_of_sp_prod
+from pytwoway import preconditioners as pcd
+from pytwoway.util import weighted_mean, weighted_var, weighted_cov, weighted_quantile, DxSP, SPxD, diag_of_sp_prod, diag_of_prod
 
 # def pipe_qcov(df, e1, e2): # FIXME I moved this from above, also this is used only in commented out code
 #     v1 = df.eval(e1)
@@ -149,6 +150,18 @@ _fecontrol_params_default = ParamsDict({
         '''
             (default=1e-10) Tolerance for convergence of linear solver (Ax=b), iterations stop when norm(residual) <= tol * norm(b). A lower tolerance will achieve better estimates at the cost of computation time.
         ''', '>= 0'),
+    'preconditioner': ('ichol', 'set', (None, 'jacobi', 'vcycle', 'ichol', 'ilu'),
+        '''
+            (default='ichol') Preconditioner for linear solver. 'jacobi' uses Jacobi preconditioner; 'vcycle' uses V-Cycle preconditioner; 'ichol' uses incomplete Cholesky decomposition preconditioner; 'ilu' uses incomplete LU decomposition preconditioner. If None, do not precondition linear solver. For large datasets, it is recommended to switch to the Jacobi preconditioner. Not used for 'amg' solver.
+        ''', None),
+    'preconditioner_options': (None, 'type_none', dict,
+        '''
+            (default=None) Dictionary of preconditioner options. If None, sets discard threshold to 0.05 for 'ichol' and 'ilu' preconditioners, but uses default values for all other parameters. Options for the Jacobi, iCholesky, and V-Cycle preconditioners can be found here: https://pymatting.github.io/pymatting.preconditioner.html. Options for the iLU preconditioner can be found here: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spilu.html.
+        ''', None),
+    'tr_method': ('hutchinson', 'set', ('hutchinson', 'hutch++'),
+        '''
+            (default='hutchinson') Algorithm to use to approximate trace. Note that hutch++ should require 1/3 as many trace draws for equivalent approximation error. Currently only used for computing trace for sigma^2.
+        ''', None),
     'outputfile': (None, 'type_none', str,
         '''
             (default=None) Outputfile where results will be saved in json format. If None, results will not be saved.
@@ -531,14 +544,40 @@ class FEControlEstimator:
 
         ## (A.T @ Dp @ A)^{-1} ##
         AtDpA = A.T @ DpA
-        if self.params['solver'] == 'amg':
-            AAinv_solver = rss(AtDpA)
+        if not self.params['statsonly']:
+            self.logger.info('preparing linear solver')
+
+            if self.params['solver'] == 'amg':
+                # Prepare AMG solver
+                self.AAinv_solver = rss(AtDpA)
+            else:
+                # Prepare SciPy linear solver
+                pcdr = self.params['preconditioner']
+                pcd_options = self.params['preconditioner_options']
+                if pcdr is None:
+                    self.preconditioner = None
+                else:
+                    if pcdr == 'jacobi':
+                        pcd_operator = pcd.jacobi(AtDpA.tocsc()).precondition
+                    elif pcdr == 'vcycle':
+                        if pcd_options is None:
+                            pcd_options = {}
+                        # Always set 'direct_solve_size' = 0, otherwise it runs scipy.sparse.linalg.spsolve, which we don't want
+                        pcd_options['direct_solve_size'] = 0
+                        pcd_operator = pcd.vcycle(AtDpA.tocsc(), (AtDpA.shape[0], 1), **pcd_options).precondition
+                    elif pcdr == 'ichol':
+                        if pcd_options is None:
+                            pcd_options = {'discard_threshold': 0.05}
+                        pcd_operator = pcd.ichol(AtDpA.tocsc(), **pcd_options)
+                    elif pcdr == 'ilu':
+                        if pcd_options is None:
+                            pcd_options = {'drop_tol': 0.05}
+                        pcd_operator = spilu(AtDpA.tocsc(), **pcd_options).solve
+                    self.preconditioner = LinearOperator(AtDpA.shape, pcd_operator)
 
         ## Store matrices ##
         self.Y = self.adata.loc[:, 'y'].to_numpy()
         self.A, self.DpA, self.AtDpA = A, DpA, AtDpA
-        if self.params['solver'] == 'amg':
-            self.AAinv_solver = AAinv_solver
         if self.params['he'] and (not self.params['levfile']):
             self.sqrt_DpA = sqrt_DpA
         self.Dp = Dp
@@ -795,27 +834,61 @@ class FEControlEstimator:
         Arguments:
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
-        self.logger.info(f'[sigma^2] [approximate trace] ndraws={self.ndraw_trace_sigma_2}')
-
         if rng is None:
             rng = np.random.default_rng(None)
 
-        # Begin trace approximation
-        self.tr_sigma_ho_all = np.zeros(self.ndraw_trace_sigma_2)
+        n_draws = self.ndraw_trace_sigma_2
+        self.logger.info(f'[sigma^2] [approximate trace] ndraws={n_draws}')
 
-        pbar = trange(self.ndraw_trace_sigma_2, disable=self.no_pbars)
+        # Begin trace approximation
+        if self.params['tr_method'] == 'hutchinson':
+            self.tr_sigma_ho_all = np.zeros(n_draws)
+        elif self.params['tr_method'] == 'hutch++':
+            Az_lst = []
+
+        pbar = trange(n_draws, disable=self.no_pbars)
         pbar.set_description('sigma^2')
         for r in pbar:
             ## Compute Tr[A @ (A'D_pA)^{-1} @ A'] ##
             # Generate -1 or 1
             Z = 2 * rng.binomial(1, 0.5, self.nn) - 1
 
-            # Compute Z.T @ A @ (A'D_pA)^{-1} @ A' @ Z
-            self.tr_sigma_ho_all[r] = Z.T @ self._mult_A( # Z.T @ A @
+            # Compute A @ (A'D_pA)^{-1} @ A' @ Z
+            Az = self._mult_A( # A @
                 self._solve(Z, Dp2=False), weighted=False # (A'D_pA)^{-1} @ A' @ Z
             )
+            if self.params['tr_method'] == 'hutchinson':
+                # Compute Z.T @ A @ (A'D_pA)^{-1} @ A' @ Z
+                self.tr_sigma_ho_all[r] = Z.T @ Az
+            elif self.params['tr_method'] == 'hutch++':
+                # Store Az
+                Az_lst.append(Az)
 
-            self.logger.debug(f'[sigma^2] [approximate trace] step {r}/{self.ndraw_trace_sigma_2} done')
+            self.logger.debug(f'[sigma^2] [approximate trace] step {r}/{n_draws} done')
+
+        if self.params['tr_method'] == 'hutch++':
+            ## Compute Hutch++ ##
+            G = 2 * rng.binomial(1, 0.5, size=(self.nn, n_draws)) - 1
+            Q = np.linalg.qr(np.stack(Az_lst, axis=1))[0]
+            G = G - Q @ (Q.T @ G)
+            Aq_lst = []
+            Ag_lst = []
+            pbar = trange(n_draws, disable=self.no_pbars)
+            pbar.set_description('sigma^2 part 2')
+            for r in pbar:
+                ## (A) @ Q and (A) @ G ##
+                # where (A) = A @ (A'D_pA)^{-1} @ A'
+                AQ_r = self._mult_A( # A @
+                    self._solve(Q[:, r], Dp2=False), weighted=False # (A'D_pA)^{-1} @ A' @ Q[:, r]
+                )
+                AG_r = self._mult_A( # A @
+                    self._solve(G[:, r], Dp2=False), weighted=False # (A'D_pA)^{-1} @ A' @ G[:, r]
+                )
+                Aq_lst.append(AQ_r)
+                Ag_lst.append(AG_r)
+            ## tr[Q.T @ (A) @ Q] + (1 / n_draws) * tr[G.T @ (A) @ G] ##
+            # where (A) = A @ (A'D_pA)^{-1} @ A'
+            self.tr_sigma_ho_all = np.sum(diag_of_prod(Q.T, np.stack(Aq_lst, axis=1))) + (1 / n_draws) * np.sum(diag_of_prod(G.T, np.stack(Ag_lst, axis=1)))
 
     def _estimate_sigma_2_ho(self):
         '''
@@ -1170,9 +1243,9 @@ class FEControlEstimator:
             # Use SciPy sparse iterative solver
             solver = solver_dict[solver_name]
             if solver_name == 'minres':
-                v_out = solver(self.AtDpA, v, tol=tol)[0]
+                v_out = solver(self.AtDpA, v, M=self.preconditioner, tol=tol)[0]
             else:
-                v_out = solver(self.AtDpA, v, tol=tol, atol=0)[0]
+                v_out = solver(self.AtDpA, v, M=self.preconditioner, tol=tol, atol=0)[0]
         self.last_invert_time = timer() - start
 
         return v_out

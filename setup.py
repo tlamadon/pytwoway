@@ -16,6 +16,7 @@ setuptools.setup(
     install_requires=[
         'numpy',
         'pandas',
+        'numba'
         'bipartitepandas>=1.0.35',
         'scipy',
         'statsmodels',
