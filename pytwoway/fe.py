@@ -399,8 +399,11 @@ class FEEstimator:
 
         # Clear attributes
         del self.worker_m, self.Y, self.J, self.DpJ, self.W, self.DpW, self.Dp, self.Dwinv, self.DwinvWtDpJ, self.Minv
-        if self.params['solver'] == 'amg':
-            del self.Minv_solver
+        if not self.params['statsonly']:
+            if self.params['solver'] == 'amg':
+                del self.Minv_solver
+            else:
+                del self.preconditioner
 
         # Total estimation time
         end_time = time.time()
@@ -508,7 +511,8 @@ class FEEstimator:
         if not self.params['statsonly']:
             self.logger.info('preparing linear solver')
 
-            if self.params['solver'] == 'amg':
+            solver = self.params['solver']
+            if solver == 'amg':
                 # Prepare AMG solver
                 self.Minv_solver = rss(Minv)
             else:
@@ -518,23 +522,36 @@ class FEEstimator:
                 if pcdr is None:
                     self.preconditioner = None
                 else:
+                    pcdT_operator = None
                     if pcdr == 'jacobi':
                         pcd_operator = pcd.jacobi(Minv.tocsc()).precondition
+                        if solver in ['bicg', 'qmr']:
+                            # These solvers need the preconditioner for M.T
+                            pcdT_operator = pcd.jacobi(Minv.T).precondition
                     elif pcdr == 'vcycle':
                         if pcd_options is None:
                             pcd_options = {}
                         # Always set 'direct_solve_size' = 0, otherwise it runs scipy.sparse.linalg.spsolve, which we don't want
                         pcd_options['direct_solve_size'] = 0
                         pcd_operator = pcd.vcycle(Minv.tocsc(), (Minv.shape[0], 1), **pcd_options).precondition
+                        if solver in ['bicg', 'qmr']:
+                            # These solvers need the preconditioner for M.T
+                            pcdT_operator = pcd.vcycle(Minv.T, (Minv.shape[0], 1), **pcd_options).precondition
                     elif pcdr == 'ichol':
                         if pcd_options is None:
                             pcd_options = {'discard_threshold': 0.05}
                         pcd_operator = pcd.ichol(Minv.tocsc(), **pcd_options)
+                        if solver in ['bicg', 'qmr']:
+                            # These solvers need the preconditioner for M.T
+                            pcdT_operator = pcd.ichol(Minv.T, **pcd_options)
                     elif pcdr == 'ilu':
                         if pcd_options is None:
                             pcd_options = {'drop_tol': 0.05}
                         pcd_operator = spilu(Minv.tocsc(), **pcd_options).solve
-                    self.preconditioner = LinearOperator(Minv.shape, pcd_operator)
+                        if solver in ['bicg', 'qmr']:
+                            # These solvers need the preconditioner for M.T
+                            pcdT_operator = spilu(Minv.T, **pcd_options).solve
+                    self.preconditioner = LinearOperator(Minv.shape, matvec=pcd_operator, rmatvec=pcdT_operator)
 
         # Save time variable
         self.last_invert_time = 0
@@ -1352,6 +1369,8 @@ class FEEstimator:
             solver = solver_dict[solver_name]
             if solver_name == 'minres':
                 psi_out = solver(self.Minv, psi - self.DwinvWtDpJ.T @ alpha, M=self.preconditioner, tol=tol)[0]
+            elif solver_name == 'qmr':
+                psi_out = solver(self.Minv, psi - self.DwinvWtDpJ.T @ alpha, tol=tol, atol=0)[0]
             else:
                 psi_out = solver(self.Minv, psi - self.DwinvWtDpJ.T @ alpha, M=self.preconditioner, tol=tol, atol=0)[0]
         self.last_invert_time = timer() - start

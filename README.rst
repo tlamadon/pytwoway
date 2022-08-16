@@ -85,7 +85,7 @@ Data is simulated from `BipartitePandas <https://github.com/tlamadon/bipartitepa
 
     sim_data = bpd.SimBipartite(sim_params).simulate(rng)
 
-This data is then estimated using the `PyTwoWay` class `FEEstimator` and using the MATLAB package `LeaveOutTwoWay <https://github.com/rsaggio87/LeaveOutTwoWay/>`_.
+This data is then estimated using the `PyTwoWay` class `FEEstimator` and using the MATLAB package `LeaveOutTwoWay <https://github.com/rsaggio87/LeaveOutTwoWay/>`_. For estimation using `PyTwoWay`, all estimators other than AMG use the incomplete Cholesky decomposition as a preconditioner.
 
 Results are estimated on a 2021 MacBook Pro 14" with 16 GB Ram and an Apple M1 Pro processor with 8 cores.
 
@@ -108,19 +108,19 @@ Run time:
 +---------------+----------+------------+--------+
 | PYTW-AMG      | 4.0s     | 3m2s       | 3m6s   |
 +---------------+----------+------------+--------+
-| PYTW-BICG     | 4.0s     | 57.2s      | 1m1.2s |
+| PYTW-BICG     | 4.0s     | 20.4s      | 24.4s  |
 +---------------+----------+------------+--------+
-| PYTW-BICGSTAB | 4.0s     | 2m10s      | 2m14s  |
+| PYTW-BICGSTAB | 4.0s     | 21.9s      | 25.9s  |
 +---------------+----------+------------+--------+
-| PYTW-CG       | 4.0s     | 53.4s      | 57.4s  |
+| PYTW-CG       | 4.0s     | 19.6s      | 23.6s  |
 +---------------+----------+------------+--------+
-| PYTW-CGS      | 4.0s     | 1m13s      | 1m17s  |
+| PYTW-CGS      | 4.0s     | 20.6s      | 24.6s  |
 +---------------+----------+------------+--------+
-| PYTW-GMRES    | 4.0s     | N/A        | N/A    |
+| PYTW-GMRES    | 4.0s     | 32.9s      | 36.9s  |
 +---------------+----------+------------+--------+
-| PYTW-MINRES   | 4.0s     | 25.7s      | 29.7s  |
+| PYTW-MINRES   | 4.0s     | 10.7s      | 14.7s  |
 +---------------+----------+------------+--------+
-| PYTW-QMR      | 4.0s     | 3m25s      | 3m29s  |
+| PYTW-QMR      | 4.0s     | 3m53s      | 3m57s  |
 +---------------+----------+------------+--------+
 
 Authors

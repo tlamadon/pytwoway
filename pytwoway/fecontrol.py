@@ -422,8 +422,11 @@ class FEControlEstimator:
 
         # Clear attributes
         del self.worker_m, self.Y, self.A, self.DpA, self.AtDpA, self.Dp
-        if self.params['solver'] == 'amg':
-            del self.AAinv_solver
+        if not self.params['statsonly']:
+            if self.params['solver'] == 'amg':
+                del self.AAinv_solver
+            else:
+                del self.preconditioner
 
         # Total estimation time
         end_time = time.time()
@@ -547,7 +550,8 @@ class FEControlEstimator:
         if not self.params['statsonly']:
             self.logger.info('preparing linear solver')
 
-            if self.params['solver'] == 'amg':
+            solver = self.params['solver']
+            if solver == 'amg':
                 # Prepare AMG solver
                 self.AAinv_solver = rss(AtDpA)
             else:
@@ -557,23 +561,36 @@ class FEControlEstimator:
                 if pcdr is None:
                     self.preconditioner = None
                 else:
+                    pcdT_operator = None
                     if pcdr == 'jacobi':
                         pcd_operator = pcd.jacobi(AtDpA.tocsc()).precondition
+                        if solver in ['bicg', 'qmr']:
+                            # These solvers need the preconditioner for AA.T
+                            pcdT_operator = pcd.jacobi(AtDpA.T).precondition
                     elif pcdr == 'vcycle':
                         if pcd_options is None:
                             pcd_options = {}
                         # Always set 'direct_solve_size' = 0, otherwise it runs scipy.sparse.linalg.spsolve, which we don't want
                         pcd_options['direct_solve_size'] = 0
                         pcd_operator = pcd.vcycle(AtDpA.tocsc(), (AtDpA.shape[0], 1), **pcd_options).precondition
+                        if solver in ['bicg', 'qmr']:
+                            # These solvers need the preconditioner for AA.T
+                            pcdT_operator = pcd.vcycle(AtDpA.T, (AtDpA.shape[0], 1), **pcd_options).precondition
                     elif pcdr == 'ichol':
                         if pcd_options is None:
                             pcd_options = {'discard_threshold': 0.05}
                         pcd_operator = pcd.ichol(AtDpA.tocsc(), **pcd_options)
+                        if solver in ['bicg', 'qmr']:
+                            # These solvers need the preconditioner for AA.T
+                            pcdT_operator = pcd.ichol(AtDpA.T, **pcd_options)
                     elif pcdr == 'ilu':
                         if pcd_options is None:
                             pcd_options = {'drop_tol': 0.05}
                         pcd_operator = spilu(AtDpA.tocsc(), **pcd_options).solve
-                    self.preconditioner = LinearOperator(AtDpA.shape, pcd_operator)
+                        if solver in ['bicg', 'qmr']:
+                            # These solvers need the preconditioner for AA.T
+                            pcdT_operator = spilu(AtDpA.T, **pcd_options).solve
+                    self.preconditioner = LinearOperator(AtDpA.shape, matvec=pcd_operator, rmatvec=pcdT_operator)
 
         ## Store matrices ##
         self.Y = self.adata.loc[:, 'y'].to_numpy()
@@ -1244,6 +1261,8 @@ class FEControlEstimator:
             solver = solver_dict[solver_name]
             if solver_name == 'minres':
                 v_out = solver(self.AtDpA, v, M=self.preconditioner, tol=tol)[0]
+            elif solver_name == 'qmr':
+                v_out = solver(self.AtDpA, v, tol=tol, atol=0)[0]
             else:
                 v_out = solver(self.AtDpA, v, M=self.preconditioner, tol=tol, atol=0)[0]
         self.last_invert_time = timer() - start
