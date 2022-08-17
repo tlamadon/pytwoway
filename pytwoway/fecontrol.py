@@ -119,9 +119,9 @@ _fecontrol_params_default = ParamsDict({
         '''
             (default=False) If True, estimate leverages analytically for heteroskedastic correction; if False, use the JL approximation.
         ''', None),
-    'ndraw_lev_he': (50, 'type_constrained', (int, _gteq1),
+    'ndraw_lev_he': (200, 'type_constrained', (int, _gteq1),
         '''
-            (default=50) Number of draws to use when estimating leverage approximation for heteroskedastic correction.
+            (default=200) Number of draws to use when estimating leverage approximation for heteroskedastic correction.
         ''', '>= 1'),
     'levfile': ('', 'type', str,
         '''
