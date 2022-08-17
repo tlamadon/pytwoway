@@ -5,7 +5,7 @@ with open('README.rst', 'r', encoding='utf-8') as fh:
 
 setuptools.setup(
     name='pytwoway',
-    version='0.3.9',
+    version='0.3.10',
     author='Thibaut Lamadon',
     author_email='thibaut.lamadon@gmail.com',
     description='Estimate two way fixed effect labor models',
@@ -16,7 +16,7 @@ setuptools.setup(
     install_requires=[
         'numpy',
         'pandas',
-        'numba'
+        'numba',
         'bipartitepandas>=1.0.35',
         'scipy',
         'statsmodels',
