@@ -82,7 +82,7 @@ Data cleaning is handled by `BipartitePandas <https://github.com/tlamadon/bipart
 
 We also rely on a number of standard libraries, such as `NumPy`, `Pandas`, `matplotlib`, etc.
 
-Optionally, the code is compatible with `multiprocess <hhttps://github.com/uqfoundation/multiprocess/>`_. Installing this may help if multiprocessing is raising errors related to pickling objects.
+Optionally, the code is compatible with `multiprocess <https://github.com/uqfoundation/multiprocess/>`_. Installing this may help if multiprocessing is raising errors related to pickling objects.
 
 Help with Running the Package
 -----------------------------
