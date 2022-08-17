@@ -5,6 +5,7 @@ docs/build/
 pytwoway/__pycache__/
 pytwoway/attrition_utils/__pycache__/
 pytwoway/constraints/__pycache__/
+pytwoway/preconditioners/__pycache__/
 pytwoway/Q/__pycache__/
 tests/__pycache__/
 .pytest_cache/

@@ -1,1 +1,0 @@
-The code for this module (preconditioners) is taken directly from the Python package PyMatting (https://github.com/pymatting/pymatting).
