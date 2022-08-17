@@ -65,25 +65,6 @@ To make sure you are running the most up-to-date version of `PyTwoWay`, from the
 
 Please DO NOT download the Conda version of the package, as it is outdated!
 
-Dependencies
-------------
-
-Solving large sparse linear models relies on a combination of `PyAMG <https://github.com/pyamg/pyamg/>`_ (this is the package we use to estimate the different decompositions on US data) and `SciPy`'s `iterative sparse linear solvers <https://scipy-lectures.org/advanced/scipy_sparse/solvers.html/>`_.
-
-Many tools for handling sparse matrices come from `SciPy <https://scipy.org/>`_
-
-Additional preconditioners for linear solvers come from `PyMatting <https://github.com/pymatting/pymatting/>`_ (installing the package is not required, as the necessary files have been copied into the submodule `preconditioners`). The incomplete Cholesky preconditioner in turn relies on `Numba <http://numba.pydata.org/>`_.
-
-Constrained optimization is handled by `QPSolvers <https://github.com/stephane-caron/qpsolvers/>`_.
-
-Progress bars are generated with `tqdm <https://github.com/tqdm/tqdm/>`_.
-
-Data cleaning is handled by `BipartitePandas <https://github.com/tlamadon/bipartitepandas/>`_.
-
-We also rely on a number of standard libraries, such as `NumPy`, `Pandas`, `matplotlib`, etc.
-
-Optionally, the code is compatible with `multiprocess <https://github.com/uqfoundation/multiprocess/>`_. Installing this may help if multiprocessing is raising errors related to pickling objects.
-
 Help with Running the Package
 -----------------------------
 
@@ -142,17 +123,35 @@ Run time:
 | PYTW-QMR      | 4.0s     | 3m53s      | 3m57s  |
 +---------------+----------+------------+--------+
 
-Authors
--------
+Contributing to the Package
+----------------------------
 
-Thibaut Lamadon,
-Assistant Professor in Economics, University of Chicago,
-lamadon@uchicago.edu
+If you want to contribute to the package, the easiest way is to test that it's working properly! If you notice a part of the package is giving incorrect results, please add a new post in `Issues <https://github.com/tlamadon/pytwoway/issues/>`_ and we will do our best to fix it as soon as possible.
 
+We are also happy to consider any suggestions to improve the package and documentation, whether to add a new feature, make a feature more user-friendly, or make the documentation clearer. Please also post suggestions in `Issues <https://github.com/tlamadon/pytwoway/issues/>`_.
 
-Adam A. Oppenheimer,
-Research Professional, University of Chicago,
-oppenheimer@uchicago.edu
+Finally, if you would like to help with developing the package, please make a fork of the repository and submit pull requests with any changes you make! These will be promptly reviewed, and hopefully accepted!
+
+We are extremely grateful for all contributions made by the community!
+
+Dependencies
+------------
+
+Solving large sparse linear models relies on a combination of `PyAMG <https://github.com/pyamg/pyamg/>`_ (this is the package we use to estimate the different decompositions on US data) and `SciPy`'s `iterative sparse linear solvers <https://scipy-lectures.org/advanced/scipy_sparse/solvers.html/>`_.
+
+Many tools for handling sparse matrices come from `SciPy <https://scipy.org/>`_
+
+Additional preconditioners for linear solvers come from `PyMatting <https://github.com/pymatting/pymatting/>`_ (installing the package is not required, as the necessary files have been copied into the submodule `preconditioners`). The incomplete Cholesky preconditioner in turn relies on `Numba <http://numba.pydata.org/>`_.
+
+Constrained optimization is handled by `QPSolvers <https://github.com/stephane-caron/qpsolvers/>`_.
+
+Progress bars are generated with `tqdm <https://github.com/tqdm/tqdm/>`_.
+
+Data cleaning is handled by `BipartitePandas <https://github.com/tlamadon/bipartitepandas/>`_.
+
+We also rely on a number of standard libraries, such as `NumPy`, `Pandas`, `matplotlib`, etc.
+
+Optionally, the code is compatible with `multiprocess <https://github.com/uqfoundation/multiprocess/>`_. Installing this may help if multiprocessing is raising errors related to pickling objects.
 
 Citation
 --------
@@ -168,13 +167,14 @@ Bibtex entry::
     institution={National Bureau of Economic Research}
   }
 
-Contributing to the Package
-----------------------------
+Authors
+-------
 
-If you want to contribute to the package, the easiest way is to test that it's working properly! If you notice a part of the package is giving incorrect results, please add a new post in `Issues <https://github.com/tlamadon/pytwoway/issues/>`_ and we will do our best to fix it as soon as possible.
+Thibaut Lamadon,
+Assistant Professor in Economics, University of Chicago,
+lamadon@uchicago.edu
 
-We are also happy to consider any suggestions to improve the package and documentation, whether to add a new feature, make a feature more user-friendly, or make the documentation clearer. Please also post suggestions in `Issues <https://github.com/tlamadon/pytwoway/issues/>`_.
 
-Finally, if you would like to help with developing the package, please make a fork of the repository and submit pull requests with any changes you make! These will be promptly reviewed, and hopefully accepted!
-
-We are extremely grateful for all contributions made by the community!
+Adam A. Oppenheimer,
+Research Professional, University of Chicago,
+oppenheimer@uchicago.edu
