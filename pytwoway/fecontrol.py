@@ -921,7 +921,7 @@ class FEControlEstimator:
             trace_approximation = np.mean(self.tr_sigma_ho_all)
             self.sigma_2_ho = (self.nn * sigma_2_unweighted) / (np.sum(1 / self.Dp) - trace_approximation)
         else:
-            self.sigma_2_ho = (self.nn * self.sigma_2_pi) / (self.nn - (self.nw + self.nf - 1))
+            self.sigma_2_ho = (self.nn * self.sigma_2_pi) / (self.nn - self.n_cov)
 
         self.logger.info(f'[ho] variance of residuals {self.sigma_2_ho:2.4f}')
 
