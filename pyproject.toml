@@ -1,7 +1,7 @@
 [tool]
 [tool.poetry]
 name = "pytwoway"
-version = "0.3.13"
+version = "0.3.14"
 description = "Estimate two way fixed effect labor models"
 classifiers = ["Programming Language :: Python :: 3", "License :: OSI Approved :: MIT License", "Operating System :: OS Independent"]
 homepage = "https://github.com/tlamadon/pytwoway"
