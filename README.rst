@@ -139,7 +139,7 @@ Dependencies
 
 Solving large sparse linear models relies on a combination of `PyAMG <https://github.com/pyamg/pyamg/>`_ (this is the package we use to estimate the different decompositions on US data) and `SciPy`'s `iterative sparse linear solvers <https://scipy-lectures.org/advanced/scipy_sparse/solvers.html/>`_.
 
-Many tools for handling sparse matrices come from `SciPy <https://scipy.org/>`_
+Many tools for handling sparse matrices come from `SciPy <https://scipy.org/>`_.
 
 Additional preconditioners for linear solvers come from `PyMatting <https://github.com/pymatting/pymatting/>`_ (installing the package is not required, as the necessary files have been copied into the submodule `preconditioners`). The incomplete Cholesky preconditioner in turn relies on `Numba <http://numba.pydata.org/>`_.
 
