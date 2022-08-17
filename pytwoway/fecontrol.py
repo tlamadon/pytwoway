@@ -548,6 +548,16 @@ class FEControlEstimator:
 
         ## (A.T @ Dp @ A)^{-1} ##
         AtDpA = A.T @ DpA
+        # Force symmetry
+        AtDpA = (AtDpA + AtDpA.T) / 2
+
+        ## Store matrices ##
+        self.Y = self.adata.loc[:, 'y'].to_numpy()
+        self.A, self.DpA, self.AtDpA = A, DpA, AtDpA
+        if self.params['he'] and (not self.params['levfile']):
+            self.sqrt_DpA = sqrt_DpA
+        self.Dp = Dp
+
         if not self.params['statsonly']:
             self.logger.info('preparing linear solver')
 
@@ -592,13 +602,6 @@ class FEControlEstimator:
                             # These solvers need the preconditioner for AA.T
                             pcdT_operator = spilu(AtDpA.T, **pcd_options).solve
                     self.preconditioner = LinearOperator(AtDpA.shape, matvec=pcd_operator, rmatvec=pcdT_operator)
-
-        ## Store matrices ##
-        self.Y = self.adata.loc[:, 'y'].to_numpy()
-        self.A, self.DpA, self.AtDpA = A, DpA, AtDpA
-        if self.params['he'] and (not self.params['levfile']):
-            self.sqrt_DpA = sqrt_DpA
-        self.Dp = Dp
 
         # Save time variable
         self.last_invert_time = 0
