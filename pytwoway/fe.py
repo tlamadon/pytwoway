@@ -496,8 +496,8 @@ class FEEstimator:
 
         ## Minv ##
         Minv = J.T @ DpJ - WtDpJ.T @ DwinvWtDpJ
-        # Force symmetry
-        Minv = (Minv + Minv.T) / 2
+        # # Force symmetry
+        # Minv = (Minv + Minv.T) / 2
 
         ## Store matrices ##
         self.Y = self.adata.loc[:, 'y'].to_numpy()

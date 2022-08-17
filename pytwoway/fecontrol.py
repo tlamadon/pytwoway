@@ -548,8 +548,8 @@ class FEControlEstimator:
 
         ## (A.T @ Dp @ A)^{-1} ##
         AtDpA = A.T @ DpA
-        # Force symmetry
-        AtDpA = (AtDpA + AtDpA.T) / 2
+        # # Force symmetry
+        # AtDpA = (AtDpA + AtDpA.T) / 2
 
         ## Store matrices ##
         self.Y = self.adata.loc[:, 'y'].to_numpy()
