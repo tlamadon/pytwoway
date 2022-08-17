@@ -159,7 +159,7 @@ _fecontrol_params_default = ParamsDict({
         '''
             (default=None) Dictionary of preconditioner options. If None, sets discard threshold to 0.05 for 'ichol' and 'ilu' preconditioners, but uses default values for all other parameters. Options for the Jacobi, iCholesky, and V-Cycle preconditioners can be found here: https://pymatting.github.io/pymatting.preconditioner.html. Options for the iLU preconditioner can be found here: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spilu.html.
         ''', None),
-    'tr_method': ('hutchinson', 'set', ('hutchinson', 'hutch++'),
+    'tr_method_sigma_2': ('hutchinson', 'set', ('hutchinson', 'hutch++'),
         '''
             (default='hutchinson') Algorithm to use to approximate trace for sigma^2. Note that hutch++ should require 1/3 as many trace draws for equivalent approximation error.
         ''', None),
@@ -859,9 +859,9 @@ class FEControlEstimator:
         self.logger.info(f'[sigma^2] [approximate trace] ndraws={n_draws}')
 
         # Begin trace approximation
-        if self.params['tr_method'] == 'hutchinson':
+        if self.params['tr_method_sigma_2'] == 'hutchinson':
             self.tr_sigma_ho_all = np.zeros(n_draws)
-        elif self.params['tr_method'] == 'hutch++':
+        elif self.params['tr_method_sigma_2'] == 'hutch++':
             Az_lst = []
 
         pbar = trange(n_draws, disable=self.no_pbars)
@@ -875,16 +875,16 @@ class FEControlEstimator:
             Az = self._mult_A( # A @
                 self._solve(Z, Dp2=False), weighted=False # (A'D_pA)^{-1} @ A' @ Z
             )
-            if self.params['tr_method'] == 'hutchinson':
+            if self.params['tr_method_sigma_2'] == 'hutchinson':
                 # Compute Z.T @ A @ (A'D_pA)^{-1} @ A' @ Z
                 self.tr_sigma_ho_all[r] = Z.T @ Az
-            elif self.params['tr_method'] == 'hutch++':
+            elif self.params['tr_method_sigma_2'] == 'hutch++':
                 # Store Az
                 Az_lst.append(Az)
 
             self.logger.debug(f'[sigma^2] [approximate trace] step {r}/{n_draws} done')
 
-        if self.params['tr_method'] == 'hutch++':
+        if self.params['tr_method_sigma_2'] == 'hutch++':
             ## Compute Hutch++ ##
             G = 2 * rng.binomial(1, 0.5, size=(self.nn, n_draws)) - 1
             Q = np.linalg.qr(np.stack(Az_lst, axis=1))[0]

@@ -101,7 +101,7 @@ class MonteCarlo:
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            (dict): true, plug-in FE, HO-corrected, HE-corrected, CRE, and Borovickova-Shimer estimates for var(psi) and cov(psi, alpha), where psi gives firm effects and alpha gives worker effects
+            (dict): true, plug-in FE, FE-HO, FE-HE, CRE, and Borovickova-Shimer estimates for var(psi) and cov(psi, alpha), where psi gives firm effects and alpha gives worker effects
         '''
         if rng is None:
             rng = np.random.default_rng(None)
@@ -189,7 +189,7 @@ class MonteCarlo:
 
     def monte_carlo(self, N=10, ncore=1, rng=None):
         '''
-        Run Monte Carlo simulations of two way fixed effect models to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res: true, plug-in FE, HO-corrected, HE-corrected, CRE, and Borovickova-Shimer estimates for var(psi) and cov(psi, alpha), where psi gives firm effects and alpha gives worker effects.
+        Run Monte Carlo simulations of two way fixed effect models to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res: true, plug-in FE, FE-HO, FE-HE, CRE, and Borovickova-Shimer estimates for var(psi) and cov(psi, alpha), where psi gives firm effects and alpha gives worker effects.
 
         Arguments:
             N (int): number of simulations
@@ -235,8 +235,8 @@ class MonteCarlo:
 
         Arguments:
             fe (bool): if True, plot FE results
-            ho (bool): if True, plot homoskedastic correction results
-            he (bool): if True, plot heteroskedastic correction results
+            ho (bool): if True, plot FE-HO results
+            he (bool): if True, plot FE-HE results
             cre (bool): if True, plot CRE results
             bs1 (bool): if True, plot Borovickova-Shimer results for the standard estimator
             bs2 (bool): if True, plot Borovickova-Shimer results for the alternative estimator
@@ -267,11 +267,11 @@ class MonteCarlo:
                 'color': 'C0'
             },
             'ho': {
-                'label': 'HO-corrected',
+                'label': 'FE-HO',
                 'color': 'C1'
             },
             'he': {
-                'label': 'HE-corrected',
+                'label': 'FE-HE',
                 'color': 'C2'
             },
             'cre': {
@@ -279,11 +279,11 @@ class MonteCarlo:
                 'color': 'C3'
             },
             'bs1': {
-                'label': 'BS-standard',
+                'label': 'BS-1',
                 'color': 'C4'
             },
             'bs2': {
-                'label': 'BS-alternative',
+                'label': 'BS-2',
                 'color': 'C5'
             }
         }
