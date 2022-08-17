@@ -5,6 +5,7 @@ Defines class FEEstimator, which uses multigrid and partialing out to estimate w
 TODO:
     -leave-out-worker
     -Q with exact trace for more than psi and alpha
+    -Hutch++ for HO and HE trace approximations
 '''
 from tqdm.auto import tqdm, trange
 import time, pickle, json, glob
@@ -151,7 +152,7 @@ _fe_params_default = ParamsDict({
         ''', None),
     'tr_method': ('hutchinson', 'set', ('hutchinson', 'hutch++'),
         '''
-            (default='hutchinson') Algorithm to use to approximate trace. Note that hutch++ should require 1/3 as many trace draws for equivalent approximation error. Currently only used for computing trace for sigma^2.
+            (default='hutchinson') Algorithm to use to approximate trace for sigma^2. Note that hutch++ should require 1/3 as many trace draws for equivalent approximation error.
         ''', None),
     'outputfile': (None, 'type_none', str,
         '''
