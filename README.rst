@@ -48,9 +48,9 @@ The package provides implementations for a series of estimators for models with 
 
 If you want to give it a try, you can start an example notebook for the FE estimator here: |binder_fe| for the CRE estimator here: |binder_cre| for the BLM estimator here: |binder_blm| for the Sorkin estimator here: |binder_sorkin| and for the Borovickova-Shimer estimator here: |binder_bs|. These start fully interactive notebooks with simple examples that simulate data and run the estimators.
 
-The code is relatively efficient. Solving large sparse linear models relies on `PyAMG <https://github.com/pyamg/pyamg>`_. This is the code we use to estimate the different decompositions on US data. Data cleaning is handled by `BipartitePandas <https://github.com/tlamadon/bipartitepandas/>`_.
-
 The package provides a Python interface. Installation is handled by `pip` or `Conda` (TBD). The source of the package is available on GitHub at `PyTwoWay <https://github.com/tlamadon/pytwoway>`_. The online documentation is hosted `here <https://tlamadon.github.io/pytwoway/>`_.
+
+The code is relatively efficient. A benchmark below compares `PyTwoWay`'s speed with that of `LeaveOutTwoWay <https://github.com/rsaggio87/LeaveOutTwoWay/>`_, a MATLAB package for estimating AKM and its bias corrections.
 
 Quick Start
 -----------
@@ -64,6 +64,25 @@ To make sure you are running the most up-to-date version of `PyTwoWay`, from the
     pip install --upgrade pytwoway
 
 Please DO NOT download the Conda version of the package, as it is outdated!
+
+Dependencies
+------------
+
+Solving large sparse linear models relies on a combination of `PyAMG <https://github.com/pyamg/pyamg/>`_ (this is the package we use to estimate the different decompositions on US data) and `SciPy`'s `iterative sparse linear solvers <https://scipy-lectures.org/advanced/scipy_sparse/solvers.html/>`_.
+
+Many tools for handling sparse matrices come from `SciPy <https://scipy.org/>`_
+
+Additional preconditioners for linear solvers come from `PyMatting <https://github.com/pymatting/pymatting/>`_ (installing the package is not required, as the necessary files have been copied into the submodule `preconditioners`). The incomplete Cholesky preconditioner in turn relies on `Numba <http://numba.pydata.org/>`_.
+
+Constrained optimization is handled by `QPSolvers <https://github.com/stephane-caron/qpsolvers/>`_.
+
+Progress bars are generated with `tqdm <https://github.com/tqdm/tqdm/>`_.
+
+Data cleaning is handled by `BipartitePandas <https://github.com/tlamadon/bipartitepandas/>`_.
+
+We also rely on a number of standard libraries, such as `NumPy`, `Pandas`, `matplotlib`, etc.
+
+Optionally, the code is compatible with `multiprocess <hhttps://github.com/uqfoundation/multiprocess/>`_. Installing this may help if multiprocessing is raising errors related to pickling objects.
 
 Help with Running the Package
 -----------------------------
@@ -85,7 +104,7 @@ Data is simulated from `BipartitePandas <https://github.com/tlamadon/bipartitepa
 
     sim_data = bpd.SimBipartite(sim_params).simulate(rng)
 
-This data is then estimated using the `PyTwoWay` class `FEEstimator` and using the MATLAB package `LeaveOutTwoWay <https://github.com/rsaggio87/LeaveOutTwoWay/>`_.
+This data is then estimated using the `PyTwoWay` class `FEEstimator` and using the MATLAB package `LeaveOutTwoWay <https://github.com/rsaggio87/LeaveOutTwoWay/>`_. For estimation using `PyTwoWay`, all estimators other than AMG use the incomplete Cholesky decomposition as a preconditioner.
 
 Results are estimated on a 2021 MacBook Pro 14" with 16 GB Ram and an Apple M1 Pro processor with 8 cores.
 
@@ -108,19 +127,19 @@ Run time:
 +---------------+----------+------------+--------+
 | PYTW-AMG      | 4.0s     | 3m2s       | 3m6s   |
 +---------------+----------+------------+--------+
-| PYTW-BICG     | 4.0s     | 57.2s      | 1m1.2s |
+| PYTW-BICG     | 4.0s     | 20.4s      | 24.4s  |
 +---------------+----------+------------+--------+
-| PYTW-BICGSTAB | 4.0s     | 2m10s      | 2m14s  |
+| PYTW-BICGSTAB | 4.0s     | 21.9s      | 25.9s  |
 +---------------+----------+------------+--------+
-| PYTW-CG       | 4.0s     | 53.4s      | 57.4s  |
+| PYTW-CG       | 4.0s     | 19.6s      | 23.6s  |
 +---------------+----------+------------+--------+
-| PYTW-CGS      | 4.0s     | 1m13s      | 1m17s  |
+| PYTW-CGS      | 4.0s     | 20.6s      | 24.6s  |
 +---------------+----------+------------+--------+
-| PYTW-GMRES    | 4.0s     | N/A        | N/A    |
+| PYTW-GMRES    | 4.0s     | 32.9s      | 36.9s  |
 +---------------+----------+------------+--------+
-| PYTW-MINRES   | 4.0s     | 25.7s      | 29.7s  |
+| PYTW-MINRES   | 4.0s     | 10.7s      | 14.7s  |
 +---------------+----------+------------+--------+
-| PYTW-QMR      | 4.0s     | 3m25s      | 3m29s  |
+| PYTW-QMR      | 4.0s     | 3m53s      | 3m57s  |
 +---------------+----------+------------+--------+
 
 Authors

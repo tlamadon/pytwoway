@@ -489,8 +489,8 @@ class Attrition:
 
         Arguments:
             fe (bool): if True, plot FE results
-            ho (bool): if True, plot homoskedastic correction results
-            he (bool): if True, plot heteroskedastic correction results
+            ho (bool): if True, plot FE-HO results
+            he (bool): if True, plot FE-HE results
             cre (bool): if True, plot CRE results
             bs1 (bool): if True, plot Borovickova-Shimer results for the standard estimator
             bs2 (bool): if True, plot Borovickova-Shimer results for the alternative estimator
@@ -588,8 +588,8 @@ class Attrition:
 
         Arguments:
             fe (bool): if True, plot FE results
-            ho (bool): if True, plot homoskedastic correction results
-            he (bool): if True, plot heteroskedastic correction results
+            ho (bool): if True, plot FE-HO results
+            he (bool): if True, plot FE-HE results
             cre (bool): if True, plot CRE results
             bs1 (bool): if True, plot Borovickova-Shimer results for the standard estimator
             bs2 (bool): if True, plot Borovickova-Shimer results for the alternative estimator

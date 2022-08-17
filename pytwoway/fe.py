@@ -5,6 +5,7 @@ Defines class FEEstimator, which uses multigrid and partialing out to estimate w
 TODO:
     -leave-out-worker
     -Q with exact trace for more than psi and alpha
+    -Hutch++ for HO and HE trace approximations
 '''
 from tqdm.auto import tqdm, trange
 import time, pickle, json, glob
@@ -16,7 +17,7 @@ except ImportError:
 import numpy as np
 import pandas as pd
 from scipy.sparse import csc_matrix
-from scipy.sparse.linalg import bicg, bicgstab, cg, cgs, gmres, minres, qmr
+from scipy.sparse.linalg import bicg, bicgstab, cg, cgs, gmres, minres, qmr, LinearOperator, spilu
 solver_dict = {
     'bicg': bicg,
     'bicgstab': bicgstab,
@@ -29,6 +30,7 @@ solver_dict = {
 from pyamg import ruge_stuben_solver as rss
 from bipartitepandas.util import ParamsDict, to_list, logger_init
 from pytwoway import Q
+from pytwoway import preconditioners as pcd
 from pytwoway.util import weighted_mean, weighted_var, weighted_cov, weighted_quantile, DxSP, SPxD, DxM, MxD, diag_of_sp_prod, diag_of_prod
 
 # def pipe_qcov(df, e1, e2): # FIXME I moved this from above, also this is used only in commented out code
@@ -126,7 +128,7 @@ _fe_params_default = ParamsDict({
         ''', '>= 1'),
     'solver': ('minres', 'set', ['bicg', 'bicgstab', 'cg', 'cgs', 'gmres', 'minres', 'qmr', 'amg'],
         '''
-            (default='minres') Solver to use for solving linear systems. The recommended solver is 'minres', unless you are working with very large datasets (e.g. 1 billion observations or more), in which case it is recommended to use 'amg'. Options are:
+            (default='minres') Solver to use for solving linear systems. The recommended solver is 'minres', unless you are working with very large datasets (e.g. 100 million observations or more), in which case it is recommended to use 'amg'. Options are:
                 bicg: BIConjugate Gradient
                 bicgstab: BIConjugate Gradient STABilized
                 cg: Conjugate Gradient
@@ -138,8 +140,20 @@ _fe_params_default = ParamsDict({
         ''', None),
     'solver_tol': (1e-10, 'type_constrained', (int, _gteq0),
         '''
-            (default=1e-10) Tolerance for convergence of linear solver (Ax=b), iterations stop when norm(residual) <= tol * norm(b). A lower tolerance will achieve better estimates at the cost of computation time.
+            (default=1e-10) Tolerance for convergence of linear solver (Ax=b), iterations stop when norm(residual) <= tol * norm(b). A lower tolerance will achieve better estimates at the cost of comp1e-10utation time.
         ''', '>= 0'),
+    'preconditioner': ('ichol', 'set', (None, 'jacobi', 'vcycle', 'ichol', 'ilu'),
+        '''
+            (default='ichol') Preconditioner for linear solver. 'jacobi' uses Jacobi preconditioner; 'vcycle' uses V-Cycle preconditioner; 'ichol' uses incomplete Cholesky decomposition preconditioner; 'ilu' uses incomplete LU decomposition preconditioner. For large datasets, it is recommended to switch to the Jacobi preconditioner. If None, do not precondition linear solver. Not used for 'amg' solver.
+        ''', None),
+    'preconditioner_options': (None, 'type_none', dict,
+        '''
+            (default=None) Dictionary of preconditioner options. If None, sets discard threshold to 0.05 for 'ichol' and 'ilu' preconditioners, but uses default values for all other parameters. Options for the Jacobi, iCholesky, and V-Cycle preconditioners can be found here: https://pymatting.github.io/pymatting.preconditioner.html. Options for the iLU preconditioner can be found here: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spilu.html.
+        ''', None),
+    'tr_method_sigma_2': ('hutchinson', 'set', ('hutchinson', 'hutch++'),
+        '''
+            (default='hutchinson') Algorithm to use to approximate trace for sigma^2. Note that hutch++ should require 1/3 as many trace draws for equivalent approximation error.
+        ''', None),
     'outputfile': (None, 'type_none', str,
         '''
             (default=None) Outputfile where results will be saved in json format. If None, results will not be saved.
@@ -219,9 +233,9 @@ class FEEstimator:
         self.ndraw_lev_he = params['ndraw_lev_he']
 
         ## Check that 'ndraw_lev_he' is a multiple of 'ncore' ##
-        self.batchsize_he = self.ndraw_lev_he // self.ncore
-        if self.compute_he and (self.batchsize_he * self.ncore != self.ndraw_lev_he):
+        if self.compute_he and (self.ndraw_lev_he % self.ncore != 0):
             raise ValueError(f"'ndraw_lev_he' (currently {self.ndraw_lev_he}) should be a multiple of 'ncore' (currently {self.ncore}).")
+        self.batchsize_he = self.ndraw_lev_he // self.ncore
 
 
         ## Store some parameters in results dictionary ##
@@ -249,7 +263,7 @@ class FEEstimator:
     #     # Need to recreate the simple model and the search representation
     #     # Make d the attribute dictionary
     #     self.__dict__ = d
-    #     self.ml = rss(self.Minv)
+    #     self.Minv_solver = rss(self.Minv)
 
     @staticmethod
     def __load(filename):
@@ -386,8 +400,11 @@ class FEEstimator:
 
         # Clear attributes
         del self.worker_m, self.Y, self.J, self.DpJ, self.W, self.DpW, self.Dp, self.Dwinv, self.DwinvWtDpJ, self.Minv
-        if self.params['solver'] == 'amg':
-            del self.ml
+        if not self.params['statsonly']:
+            if self.params['solver'] == 'amg':
+                del self.Minv_solver
+            else:
+                del self.preconditioner
 
         # Total estimation time
         end_time = time.time()
@@ -492,9 +509,50 @@ class FEEstimator:
         self.DwinvWtDpJ = DwinvWtDpJ
         self.Minv = Minv
 
-        if self.params['solver'] == 'amg':
+        if not self.params['statsonly']:
             self.logger.info('preparing linear solver')
-            self.ml = rss(Minv)
+
+            solver = self.params['solver']
+            if solver == 'amg':
+                # Prepare AMG solver
+                self.Minv_solver = rss(Minv)
+            else:
+                # Prepare SciPy linear solver
+                pcdr = self.params['preconditioner']
+                pcd_options = self.params['preconditioner_options']
+                if pcdr is None:
+                    self.preconditioner = None
+                else:
+                    pcdT_operator = None
+                    if pcdr == 'jacobi':
+                        pcd_operator = pcd.jacobi(Minv.tocsc()).precondition
+                        if solver in ['bicg', 'qmr']:
+                            # These solvers need the preconditioner for M.T
+                            pcdT_operator = pcd.jacobi(Minv.T).precondition
+                    elif pcdr == 'vcycle':
+                        if pcd_options is None:
+                            pcd_options = {}
+                        # Always set 'direct_solve_size' = 0, otherwise it runs scipy.sparse.linalg.spsolve, which we don't want
+                        pcd_options['direct_solve_size'] = 0
+                        pcd_operator = pcd.vcycle(Minv.tocsc(), (Minv.shape[0], 1), **pcd_options).precondition
+                        if solver in ['bicg', 'qmr']:
+                            # These solvers need the preconditioner for M.T
+                            pcdT_operator = pcd.vcycle(Minv.T, (Minv.shape[0], 1), **pcd_options).precondition
+                    elif pcdr == 'ichol':
+                        if pcd_options is None:
+                            pcd_options = {'discard_threshold': 0.05}
+                        pcd_operator = pcd.ichol(Minv.tocsc(), **pcd_options)
+                        if solver in ['bicg', 'qmr']:
+                            # These solvers need the preconditioner for M.T
+                            pcdT_operator = pcd.ichol(Minv.T, **pcd_options)
+                    elif pcdr == 'ilu':
+                        if pcd_options is None:
+                            pcd_options = {'drop_tol': 0.05}
+                        pcd_operator = spilu(Minv.tocsc(), **pcd_options).solve
+                        if solver in ['bicg', 'qmr']:
+                            # These solvers need the preconditioner for M.T
+                            pcdT_operator = spilu(Minv.T, **pcd_options).solve
+                    self.preconditioner = LinearOperator(Minv.shape, matvec=pcd_operator, rmatvec=pcdT_operator)
 
         # Save time variable
         self.last_invert_time = 0
@@ -674,27 +732,61 @@ class FEEstimator:
         Arguments:
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
-        self.logger.info(f'[sigma^2] [approximate trace] ndraws={self.ndraw_trace_sigma_2}')
-
         if rng is None:
             rng = np.random.default_rng(None)
 
-        # Begin trace approximation
-        self.tr_sigma_ho_all = np.zeros(self.ndraw_trace_sigma_2)
+        n_draws = self.ndraw_trace_sigma_2
+        self.logger.info(f'[sigma^2] [approximate trace] ndraws={n_draws}')
 
-        pbar = trange(self.ndraw_trace_sigma_2, disable=self.no_pbars)
+        # Begin trace approximation
+        if self.params['tr_method_sigma_2'] == 'hutchinson':
+            self.tr_sigma_ho_all = np.zeros(n_draws)
+        elif self.params['tr_method_sigma_2'] == 'hutch++':
+            Az_lst = []
+
+        pbar = trange(n_draws, disable=self.no_pbars)
         pbar.set_description('sigma^2')
         for r in pbar:
             ## Compute Tr[A @ (A'D_pA)^{-1} @ A'] ##
             # Generate -1 or 1
             Z = 2 * rng.binomial(1, 0.5, self.nn) - 1
 
-            # Compute Z.T @ A @ (A'D_pA)^{-1} @ A' @ Z
-            self.tr_sigma_ho_all[r] = Z.T @ self._mult_A( # Z.T @ A @
+            # Compute A @ (A'D_pA)^{-1} @ A' @ Z
+            Az = self._mult_A( # A @
                 *self._solve(Z, Dp2=False), weighted=False # (A'D_pA)^{-1} @ A' @ Z
             )
+            if self.params['tr_method_sigma_2'] == 'hutchinson':
+                # Compute Z.T @ A @ (A'D_pA)^{-1} @ A' @ Z
+                self.tr_sigma_ho_all[r] = Z.T @ Az
+            elif self.params['tr_method_sigma_2'] == 'hutch++':
+                # Store Az
+                Az_lst.append(Az)
 
-            self.logger.debug(f'[sigma^2] [approximate trace] step {r}/{self.ndraw_trace_sigma_2} done')
+            self.logger.debug(f'[sigma^2] [approximate trace] step {r}/{n_draws} done')
+
+        if self.params['tr_method_sigma_2'] == 'hutch++':
+            ## Compute Hutch++ ##
+            G = 2 * rng.binomial(1, 0.5, size=(self.nn, n_draws)) - 1
+            Q = np.linalg.qr(np.stack(Az_lst, axis=1))[0]
+            G = G - Q @ (Q.T @ G)
+            Aq_lst = []
+            Ag_lst = []
+            pbar = trange(n_draws, disable=self.no_pbars)
+            pbar.set_description('sigma^2 part 2')
+            for r in pbar:
+                ## (A) @ Q and (A) @ G ##
+                # where (A) = A @ (A'D_pA)^{-1} @ A'
+                AQ_r = self._mult_A( # A @
+                    *self._solve(Q[:, r], Dp2=False), weighted=False # (A'D_pA)^{-1} @ A' @ Q[:, r]
+                )
+                AG_r = self._mult_A( # A @
+                    *self._solve(G[:, r], Dp2=False), weighted=False # (A'D_pA)^{-1} @ A' @ G[:, r]
+                )
+                Aq_lst.append(AQ_r)
+                Ag_lst.append(AG_r)
+            ## tr[Q.T @ (A) @ Q] + (1 / n_draws) * tr[G.T @ (A) @ G] ##
+            # where (A) = A @ (A'D_pA)^{-1} @ A'
+            self.tr_sigma_ho_all = np.sum(diag_of_prod(Q.T, np.stack(Aq_lst, axis=1))) + (1 / n_draws) * np.sum(diag_of_prod(G.T, np.stack(Ag_lst, axis=1)))
 
     def _estimate_sigma_2_ho(self):
         '''
@@ -1272,14 +1364,16 @@ class FEEstimator:
         tol = self.params['solver_tol']
         if solver_name == 'amg':
             # Use AMG solver
-            psi_out = self.ml.solve(psi - self.DwinvWtDpJ.T @ alpha, tol=tol)
+            psi_out = self.Minv_solver.solve(psi - self.DwinvWtDpJ.T @ alpha, tol=tol)
         else:
             # Use SciPy sparse iterative solver
             solver = solver_dict[solver_name]
             if solver_name == 'minres':
-                psi_out = solver(self.Minv, psi - self.DwinvWtDpJ.T @ alpha, tol=tol)[0]
-            else:
+                psi_out = solver(self.Minv, psi - self.DwinvWtDpJ.T @ alpha, M=self.preconditioner, tol=tol)[0]
+            elif solver_name == 'qmr':
                 psi_out = solver(self.Minv, psi - self.DwinvWtDpJ.T @ alpha, tol=tol, atol=0)[0]
+            else:
+                psi_out = solver(self.Minv, psi - self.DwinvWtDpJ.T @ alpha, M=self.preconditioner, tol=tol, atol=0)[0]
         self.last_invert_time = timer() - start
 
         alpha_out = self.Dwinv * alpha - self.DwinvWtDpJ @ psi_out
@@ -1340,8 +1434,8 @@ class FEEstimator:
             tol = self.params['solver_tol']
             if solver_name == 'amg':
                 # Use AMG solver
-                M_DpJ_i = self.ml.solve(DpJ_i)
-                M_B = self.ml.solve(self.AA_inv_B @ DpW_i)
+                M_DpJ_i = self.Minv_solver.solve(DpJ_i)
+                M_B = self.Minv_solver.solve(self.AA_inv_B @ DpW_i)
             else:
                 # Use SciPy sparse iterative solver
                 solver = solver_dict[solver_name]
