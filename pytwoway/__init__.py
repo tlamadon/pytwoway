@@ -6,7 +6,8 @@ import pytwoway.preconditioners
 from .fe import fe_params, FEEstimator
 from .fecontrol import fecontrol_params, FEControlEstimator
 from .cre import cre_params, CREEstimator
-from .blm import blm_params, categorical_control_params, continuous_control_params, BLMModel, BLMEstimator, BLMBootstrap, BLMVarianceDecomposition
+# from .blm import blm_params, categorical_control_params, continuous_control_params, BLMModel, BLMEstimator, BLMBootstrap, BLMVarianceDecomposition
+from .blm_dynamic import blm_params, categorical_control_params, continuous_control_params, BLMModel, BLMEstimator, BLMBootstrap, BLMVarianceDecomposition
 from .simblm import sim_blm_params, sim_categorical_control_params, sim_continuous_control_params, SimBLM
 # from .blm_interacted import iblm_params, InteractedBLMEstimator
 from .sorkin import SorkinEstimator, SorkinAttrition

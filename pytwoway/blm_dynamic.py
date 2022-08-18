@@ -1,5 +1,5 @@
 '''
-Implement the static, 2-period non-linear estimator from Bonhomme, Lamadon, & Manresa.
+Implement the dynamic, 4-period non-linear estimator from Bonhomme, Lamadon, & Manresa.
 '''
 from tqdm.auto import tqdm, trange
 import copy
@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 # from scipy.special import logsumexp
 from scipy.sparse import csc_matrix
+from scipy.optimize import minimize as opt
 from matplotlib import pyplot as plt
 import bipartitepandas as bpd
 from bipartitepandas.util import ParamsDict, to_list, HiddenPrints # , _is_subtype
@@ -1250,6 +1251,183 @@ class BLMModel:
             return (A1_sum_l, A2_sum_l)
         if compute_S:
             return (S1_sum_sq_l, S2_sum_sq_l)
+
+    def _var_stayers(self, sdata, rho_1, rho_4, rho_t, weights=None, diff=False):
+        '''
+        Compute var(alpha | g1, g2) and var(epsilon | g1) using stayers.
+
+        Arguments:
+            sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
+            rho_1 (float): rho in period 1
+            rho_4 (float): rho in period 4
+            rho_t (float): rho in period t
+            weights (tuple or None): weights for rho; if None, all elements of rho have equal weight
+            diff (bool): if True, estimate rho in differences rather than levels
+
+        Returns:
+            (dict): dictionary with results of variance estimation on stayers. If rho values cannot be resolved, returns {'eps_sq': np.inf}.
+        '''
+        ## Extract parameters ##
+        nk = sdata.n_clusters()
+
+        ## Compute var(epsilon | g1) ##
+        groupby_g1 = sdata.groupby('g1')
+        W = groupby_g1['i'].size().to_numpy()
+
+        ## Y ##
+        var_dict = {t: groupby_g1[f'y{t + 1}'].var(ddof=0).to_numpy() for t in range(4)}
+        cov_dict = {(t1, t2): groupby_g1.apply(lambda df: df[f'y{t1 + 1}'].cov(df[f'y{t2 + 1}'], ddof=0)).to_numpy() for t1 in range(4) for t2 in range(4) if t2 > t1}
+
+        # Combine var_dict and cov_dict into YY_lst
+        YY_lst = []
+        for t in range(4):
+            YY_lst.append(var_dict[t])
+        for t1 in range(4):
+            for t2 in range(4):
+                if t2 > t1:
+                    YY_lst.append(cov_dict[(t1, t2)])
+
+        ## X ##
+        XX_lst = [np.zeros((nk, 5 * nk)) for i in range(10)]
+
+        for g1 in range(nk):
+            ## Compute var(alpha | g1, g2) ##
+            Gs = 0
+
+            for XX in XX_lst:
+                XX[g1, g1] = 1
+
+            Gs += nk
+            
+            ## Compute var(nu_1 | g1) ##
+            XX_lst[0][g1, Gs + g1] = 1
+
+            Gs += nk
+            
+            ## Compute var(nu_2 | g1) ##
+            XX_lst[0][g1, Gs + g1] = rho_1 ** 2
+            XX_lst[1][g1, Gs + g1] = 1
+            XX_lst[2][g1, Gs + g1] = rho_t ** 2
+            XX_lst[3][g1, Gs + g1] = rho_4 ** 2 + rho_t ** 2 # FIXME here should r4!!!!!
+            XX_lst[4][g1, Gs + g1] = rho_1
+            XX_lst[5][g1, Gs + g1] = rho_1 * rho_t
+            XX_lst[6][g1, Gs + g1] = rho_1 * rho_t * rho_4
+            XX_lst[7][g1, Gs + g1] = rho_t
+            XX_lst[8][g1, Gs + g1] = rho_t * rho_4
+            XX_lst[0][g1, Gs + g1] = rho_t ** 2 * rho_4
+
+            Gs += nk
+            
+            ## Compute var(nu_3 | g1) ##
+            XX_lst[2][g1, Gs + g1] = 1
+            XX_lst[3][g1, Gs + g1] = rho_4 ** 2
+            XX_lst[9][g1, Gs + g1] = rho_4
+
+            Gs += nk
+
+            ## Compute var(nu_4 | g1) ##
+            XX_lst[3][g1, Gs + g1] = 1
+
+        if diff:
+            ### If computing rhos in differences ###
+            D = np.array(
+                [
+                    [-1, 1, 0, 0],
+                    [0, -1, 1, 0],
+                    [0, 0, -1, 1]
+                ]
+            )
+            DD = np.kron(D, D)
+            # FIXME I changed this to 8 since it wasn't working with 10
+            DD = np.kron(DD, np.eye(8))
+
+            ## Combine matrices ##
+            rho_order = np.array([
+                    0, 4, 5, 6,
+                    4, 1, 7, 8,
+                    5, 7, 2, 9,
+                    6, 8, 9, 3
+            ])
+            XX = np.vstack([XX_lst[t] for t in rho_order])
+            YY = np.hstack([YY_lst[t] for t in rho_order])
+            
+            # Update XX and YY
+            XX = (DD @ XX)[:, 10:]
+            YY = DD @ YY
+
+            # Update weights
+            weights = np.repeat(W, 9)
+
+        else:
+            ### If computing rhos in levels ###
+            ## Combine matrices ##
+            XX = np.vstack([XX for XX in XX_lst])
+            YY = np.hstack([YY for YY in YY_lst])
+
+            if weights is None:
+                weights = np.repeat(W, 10)
+
+        ## Fit constrained linear model ##
+        cons_lm = cons.QPConstrained(1, XX.shape[1])
+        cons_lm.add_constraints(cons.BoundedBelow(lb=0, nt=1))
+        DpXX = np.diag(weights) @ XX
+        cons_lm.solve(DpXX.T @ XX, -(DpXX.T @ YY))
+
+        ## Results ##
+        beta_hat = cons_lm.res
+        if beta_hat is None:
+            return {'eps_sq': np.inf}
+        eps = (YY - XX @ beta_hat)
+        eps_sq = eps.T @ np.diag(weights) @ eps
+
+        if diff:
+            beta_hat_full = np.concatenate([np.zeros(10), beta_hat])
+        else:
+            beta_hat_full = beta_hat
+
+        BE_sd = np.sqrt(np.maximum(beta_hat_full[: nk], 0))
+        nu1_sd = np.sqrt(np.maximum(beta_hat_full[nk: 2 * nk], 0))
+        nu2_sd = np.sqrt(np.maximum(beta_hat_full[2 * nk: 3 * nk], 0))
+        nu3_sd = np.sqrt(np.maximum(beta_hat_full[3 * nk: 4 * nk], 0))
+        nu4_sd = np.sqrt(np.maximum(beta_hat_full[4 * nk: 5 * nk], 0))
+
+        return {
+            'rho_1': rho_1,
+            'rho_4': rho_4,
+            'rho_t': rho_t,
+            'BE_sd': BE_sd,
+            'nu1_sd': nu1_sd,
+            'nu2_sd': nu2_sd,
+            'nu3_sd': nu3_sd,
+            'nu4_sd': nu4_sd,
+            'eps': eps,
+            'eps_sq': eps_sq,
+            'weights': weights,
+            'XX_beta': XX @ beta_hat,
+            'YY': YY
+        }
+
+    def _rho_init(self, sdata, rho_0=(0.5, 0.5, 0.5), weights=None, diff=False):
+        '''
+        Generate starting value for rho using stayers.
+
+        Arguments:
+            sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
+            rho_0 (tuple): initial guess for rho
+            weights (tuple or None): weights for rho; if None, all elements of rho have equal weight
+            diff (bool): if True, estimate rho in differences rather than levels
+
+        Returns:
+            (dict): dictionary with results of variance estimation on stayers
+        '''
+        # Define function to optimize rho
+        rho_optim_fn = lambda rhos: self._var_stayers(sdata, *rhos, weights=weights, diff=diff)['eps_sq']
+        # Initialize and fit optimizer
+        optim_fn = opt(fun=rho_optim_fn, x0=rho_0, method='BFGS')
+        # Extract optimal rho
+        rho_optim = optim_fn.x
+        # Run _var_stayers with optimal rho
+        return self._var_stayers(sdata, *rho_optim, weights=weights, diff=diff)
 
     def fit_movers(self, jdata, compute_NNm=True):
         '''
