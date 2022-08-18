@@ -269,7 +269,7 @@ class CovPsiPrevPsiNext():
         Ql = csc_matrix((np.ones(n_rows), (np.arange(n_rows, dtype=int), adata.loc[keep_rows, 'j'].to_numpy())), shape=(n_rows, nf))
 
         # Normalize one firm to 0
-        Ql = Ql[:, range(nf - 1)]
+        Ql = Ql[:, 1:]
 
         # Update weights
         if not isinstance(Dp, (float, int)):
@@ -302,7 +302,7 @@ class CovPsiPrevPsiNext():
         Qr = csc_matrix((np.ones(n_rows), (np.arange(n_rows, dtype=int), adata.loc[keep_rows, 'j'].to_numpy())), shape=(n_rows, nf))
 
         # Normalize one firm to 0
-        Qr = Qr[:, range(nf - 1)]
+        Qr = Qr[:, 1:]
 
         # Update weights
         if not isinstance(Dp, (float, int)):
