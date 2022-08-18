@@ -121,11 +121,11 @@ def test_fe_estimator_full_var_uncollapsed():
     # var(psi)
     # assert np.abs((est_pi_var_psi - true_var_psi) / true_var_psi) < 1e-2
     assert np.abs((est_ho_var_psi - true_var_psi) / true_var_psi) < 0.025
-    assert np.abs((est_he_var_psi - true_var_psi) / true_var_psi) < 0.025
+    assert np.abs((est_he_var_psi - true_var_psi) / true_var_psi) < 0.03
     # cov(psi, alpha)
     # assert np.abs((est_pi_cov_psi_alpha - true_cov_psi_alpha) / true_cov_psi_alpha) < 1e-2
     assert np.abs((est_ho_cov_psi_alpha - true_cov_psi_alpha) / true_cov_psi_alpha) < 1e-2
-    assert np.abs((est_he_cov_psi_alpha - true_cov_psi_alpha) / true_cov_psi_alpha) < 0.015
+    assert np.abs((est_he_cov_psi_alpha - true_cov_psi_alpha) / true_cov_psi_alpha) < 0.02
 
     # y
     assert np.sum(np.isclose(b.loc[:, 'psi_hat'].to_numpy() + b.loc[:, 'alpha_hat'].to_numpy(), b.loc[:, 'y'].to_numpy(), atol=1)) / len(b) > 0.75
@@ -300,7 +300,7 @@ def test_fe_weights():
     assert np.abs((est_ho_cov_psi_alpha_b - est_ho_cov_psi_alpha_a) / est_ho_cov_psi_alpha_a) < 1e-2
     # HE
     assert np.abs((est_he_sigma_2_b - est_he_sigma_2_a) / est_he_sigma_2_a) < 0.15
-    assert np.abs((est_he_var_psi_b - est_he_var_psi_a) / est_he_var_psi_a) < 0.025
+    assert np.abs((est_he_var_psi_b - est_he_var_psi_a) / est_he_var_psi_a) < 0.03
     assert np.abs((est_he_cov_psi_alpha_b - est_he_cov_psi_alpha_a) / est_he_cov_psi_alpha_a) < 0.03
 
 def test_fe_controls_novar():
@@ -557,19 +557,19 @@ def test_fe_controls_var():
     # assert np.abs((est_pi_cov_cat_cts - true_cov_cat_cts) / true_cov_cat_cts) < 1e-9
     # assert np.abs((est_pi_cov_psi_alpha_cat_cts - true_cov_psi_alpha_cat_cts) / true_cov_psi_alpha_cat_cts) < 1e-7
     # HO
-    assert np.abs((est_ho_sigma_2 - true_sigma_2) / true_sigma_2) < 0.035
-    assert np.abs((est_ho_var_psi_alpha - true_var_psi_alpha) / true_var_psi_alpha) < 0.055
-    assert np.abs((np.abs(est_ho_var_cat) - true_var_cat) / true_var_cat) < 0.35
-    assert np.abs((est_ho_var_cts - true_var_cts) / true_var_cts) < 1e-2
-    assert np.abs((est_ho_var_cat_cts - true_var_cat_cts) / true_var_cat_cts) < 0.03
+    assert np.abs((est_ho_sigma_2 - true_sigma_2) / true_sigma_2) < 0.05
+    assert np.abs((est_ho_var_psi_alpha - true_var_psi_alpha) / true_var_psi_alpha) < 0.065
+    assert np.abs((np.abs(est_ho_var_cat) - true_var_cat) / true_var_cat) < 0.45
+    assert np.abs((est_ho_var_cts - true_var_cts) / true_var_cts) < 0.02
+    assert np.abs((est_ho_var_cat_cts - true_var_cat_cts) / true_var_cat_cts) < 0.045
     assert np.abs(est_ho_cov_cat_cts - true_cov_cat_cts) < 1e-2
     assert np.abs(est_ho_cov_psi_alpha_cat_cts - true_cov_psi_alpha_cat_cts) < 0.04
     # HE
-    assert np.abs((est_he_sigma_2 - true_sigma_2) / true_sigma_2) < 0.06
-    assert np.abs((est_he_var_psi_alpha - true_var_psi_alpha) / true_var_psi_alpha) < 0.085
+    assert np.abs((est_he_sigma_2 - true_sigma_2) / true_sigma_2) < 0.05
+    assert np.abs((est_he_var_psi_alpha - true_var_psi_alpha) / true_var_psi_alpha) < 0.07
     assert np.abs(np.abs(est_he_var_cat) - true_var_cat) < 1e-2
-    assert np.abs((est_he_var_cts - true_var_cts) / true_var_cts) < 1e-2
-    assert np.abs((est_he_var_cat_cts - true_var_cat_cts) / true_var_cat_cts) < 1e-2
+    assert np.abs((est_he_var_cts - true_var_cts) / true_var_cts) < 0.02
+    assert np.abs((est_he_var_cat_cts - true_var_cat_cts) / true_var_cat_cts) < 0.03
     assert np.abs(est_he_cov_cat_cts - true_cov_cat_cts) < 1e-2
     assert np.abs(est_he_cov_psi_alpha_cat_cts - true_cov_psi_alpha_cat_cts) < 0.04
 

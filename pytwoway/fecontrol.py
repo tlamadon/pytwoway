@@ -450,11 +450,13 @@ class FEControlEstimator:
         self.nw = self.adata.n_workers()
         # Number of each control variable
         self.n_dict = {
+            # Normalize one firm to 0
             'psi': self.nf - 1,
             'alpha': self.nw
         }
         for cat_col in self.cat_cols:
-            self.n_dict[cat_col] = self.adata.n_unique_ids(cat_col)
+            # Normalize one type to 0
+            self.n_dict[cat_col] = self.adata.n_unique_ids(cat_col) - 1
         for cts_col in self.cts_cols:
             for cts_subcol in to_list(self.adata.col_reference_dict[cts_col]):
                 self.n_dict[cts_subcol] = 1
@@ -469,7 +471,7 @@ class FEControlEstimator:
         self.res['n_movers'] = self.adata.loc[self.adata['m'].to_numpy() > 0, :].n_workers()
         self.res['n_stayers'] = self.res['n_workers'] - self.res['n_movers']
         for cat_col in self.cat_cols:
-            self.res[f'n_{cat_col}'] = self.n_dict[cat_col]
+            self.res[f'n_{cat_col}'] = self.n_dict[cat_col] + 1
             # Check that column has only 1 subcolumn
             n_subcols = len(to_list(self.adata.col_reference_dict[cat_col]))
             if n_subcols > 1:
@@ -500,7 +502,7 @@ class FEControlEstimator:
         J = csc_matrix((np.ones(self.nn), (idx, self.adata.loc[:, 'j'].to_numpy())), shape=(self.nn, self.nf))
 
         # Normalize one firm to 0
-        J = J[:, range(self.nf - 1)]
+        J = J[:, 1:]
 
         ## W (workers) ##
         W = csc_matrix((np.ones(self.nn), (idx, self.adata.loc[:, 'i'].to_numpy())), shape=(self.nn, self.nw))
@@ -511,8 +513,11 @@ class FEControlEstimator:
         ## Control variables ##
         # Categorical controls #
         for cat_col in self.cat_cols:
-            n_cat = self.n_dict[cat_col]
+            n_cat = self.n_dict[cat_col] + 1
             cat_mat = csc_matrix((np.ones(self.nn), (idx, self.adata.loc[:, cat_col].to_numpy())), shape=(self.nn, n_cat))
+            # Normalize one type to 0
+            cat_mat = cat_mat[:, 1:]
+            # Append matrix
             A = hstack([A, cat_mat])
         del idx
 
@@ -520,6 +525,7 @@ class FEControlEstimator:
         for cts_col in self.cts_cols:
             cts_subcols = to_list(self.adata.col_reference_dict[cts_col])
             for cts_subcol in cts_subcols:
+                # Append vector
                 A = hstack([A, self.adata.loc[:, cts_subcol].to_numpy()[:, None]])
 
         # Make sure A is csc
@@ -648,7 +654,8 @@ class FEControlEstimator:
         '''
         gh = self.gamma_hat
         gamma_hat_dict = {
-            'psi': gh[: self.nf - 1],
+            # Add back normalized firm
+            'psi': np.append(0, gh[: self.nf - 1]),
             'alpha': gh[self.nf - 1: (self.nf - 1) + self.nw]
         }
         cov_indices = {
@@ -661,7 +668,8 @@ class FEControlEstimator:
         # Categorical controls #
         for cat_col in self.cat_cols:
             n_cat = self.n_dict[cat_col]
-            gamma_hat_dict[cat_col] = gh[n_cov: n_cov + n_cat]
+            # Add back normalized type
+            gamma_hat_dict[cat_col] = np.append(0, gh[n_cov: n_cov + n_cat])
             cov_indices[cat_col] = (n_cov, n_cov + n_cat)
             n_cov += n_cat
 
@@ -726,7 +734,7 @@ class FEControlEstimator:
 
         ## psi and alpha ##
         # Add 0 for normalized firm
-        psi_hat = np.append(gh['psi'], 0)
+        psi_hat = gh['psi']
         alpha_hat = gh['alpha']
 
         # Attach columns

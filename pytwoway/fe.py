@@ -456,7 +456,7 @@ class FEEstimator:
         J = csc_matrix((np.ones(self.nn), (self.adata.index.to_numpy(), self.adata.loc[:, 'j'].to_numpy())), shape=(self.nn, self.nf))
 
         # Normalize one firm to 0
-        J = J[:, range(self.nf - 1)]
+        J = J[:, 1:]
 
         ## W (workers) ##
         W = csc_matrix((np.ones(self.nn), (self.adata.index.to_numpy(), self.adata.loc[:, 'i'].to_numpy())), shape=(self.nn, self.nw))
@@ -622,7 +622,7 @@ class FEEstimator:
         Attach the estimated psi_hat and alpha_hat as columns to the input dataframe.
         '''
         # Add 0 for normalized firm
-        psi_hat = np.append(self.psi_hat, 0)
+        psi_hat = np.append(0, self.psi_hat)
         alpha_hat = self.alpha_hat
 
         # Attach columns

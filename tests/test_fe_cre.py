@@ -225,8 +225,8 @@ def test_fe_estimator_full_approx_analytical_non_collapsed():
     assert np.abs((est_he_var_psi_b - est_he_var_psi_a) / est_he_var_psi_a) < 1e-2
     # cov(psi, alpha)
     assert np.abs((est_pi_cov_psi_alpha_b - est_pi_cov_psi_alpha_a) / est_pi_cov_psi_alpha_a) == 0
-    assert np.abs((est_ho_cov_psi_alpha_b - est_ho_cov_psi_alpha_a) / est_ho_cov_psi_alpha_a) < 1e-2
-    assert np.abs((est_he_cov_psi_alpha_b - est_he_cov_psi_alpha_a) / est_he_cov_psi_alpha_a) < 0.015
+    assert np.abs((est_ho_cov_psi_alpha_b - est_ho_cov_psi_alpha_a) / est_ho_cov_psi_alpha_a) < 0.015
+    assert np.abs((est_he_cov_psi_alpha_b - est_he_cov_psi_alpha_a) / est_he_cov_psi_alpha_a) < 1e-2
 
 def test_fe_estimator_full_approx_analytical_collapsed():
     # Test that FE estimates parameters correctly (sigma^2, var(psi), and cov(psi, alpha)) for plug-in, HO, and HE for analytical vs. approximate estimators, with collapsed data.
@@ -274,12 +274,12 @@ def test_fe_estimator_full_approx_analytical_collapsed():
     assert np.abs((est_he_sigma_2_b - est_he_sigma_2_a) / est_he_sigma_2_a) < 0.015
     # var(psi)
     assert np.abs((est_pi_var_psi_b - est_pi_var_psi_a) / est_pi_var_psi_a) == 0
-    assert np.abs((est_ho_var_psi_b - est_ho_var_psi_a) / est_ho_var_psi_a) < 1e-3
-    assert np.abs((est_he_var_psi_b - est_he_var_psi_a) / est_he_var_psi_a) < 0.02
+    assert np.abs((est_ho_var_psi_b - est_ho_var_psi_a) / est_ho_var_psi_a) < 1e-2
+    assert np.abs((est_he_var_psi_b - est_he_var_psi_a) / est_he_var_psi_a) < 0.015
     # cov(psi, alpha)
     assert np.abs((est_pi_cov_psi_alpha_b - est_pi_cov_psi_alpha_a) / est_pi_cov_psi_alpha_a) == 0
     assert np.abs((est_ho_cov_psi_alpha_b - est_ho_cov_psi_alpha_a) / est_ho_cov_psi_alpha_a) < 1e-2
-    assert np.abs((est_he_cov_psi_alpha_b - est_he_cov_psi_alpha_a) / est_he_cov_psi_alpha_a) < 0.055
+    assert np.abs((est_he_cov_psi_alpha_b - est_he_cov_psi_alpha_a) / est_he_cov_psi_alpha_a) < 0.035
 
 def test_fe_estimator_full_Q():
     # Test that FE estimates custom Q correctly for plug-in, HO, and HE estimators for the variances: Q.VarPsi and Q.VarAlpha(); and covariances: Q.CovPsiAlpha and Q.CovPsiPrevPsiNext().
