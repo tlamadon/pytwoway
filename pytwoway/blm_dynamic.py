@@ -872,7 +872,7 @@ class BLMModel:
                 raise ValueError(f"Categorical control variables must specify 'n', but column {col!r} does not.")
 
         # Check if there are any control variables
-        self.any_controls = len(control_cols) > 0
+        self.any_controls = (len(control_cols) > 0)
         # Check if any control variables interact with worker type
         self.any_worker_type_interactions = any([col_dict['worker_type_interaction'] for col_dict in controls_dict.values()])
         # Check if any control variables don't interact with worker type
@@ -1765,8 +1765,6 @@ class BLMModel:
                 # If column is constant over time
                 subcol_1 = subcols[0]
                 subcol_2 = subcols[0]
-                subcol_3 = subcols[0]
-                subcol_4 = subcols[0]
             elif n_subcols == 4:
                 # If column can change over time
                 subcol_1 = subcols[0]
@@ -1789,8 +1787,6 @@ class BLMModel:
         GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
         CC1 = {col: csc_matrix((np.ones(ni), (range(ni), C1[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
         CC2 = {col: csc_matrix((np.ones(ni), (range(ni), C2[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
-        CC3 = {col: csc_matrix((np.ones(ni), (range(ni), C3[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
-        CC4 = {col: csc_matrix((np.ones(ni), (range(ni), C4[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
 
         # Joint firm indicator
         KK = G1 + nk * G2
@@ -1819,6 +1815,27 @@ class BLMModel:
         # ## Sort ##
         # A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
 
+        ## Prepare matrices aggregated at the type level ##
+        # A[l, g1]
+        XA1 = np.kron(np.eye(nk), np.kron(np.ones(nk), np.eye(nl))).T
+        ZA1 = np.zeros_like(XA1)
+        # A[l, g2]
+        XA2 = np.kron(np.ones(nk), np.kron(np.eye(nk), np.eye(nl))).T
+        ZA2 = np.zeros_like(XA2)
+        # A3mb[g1]
+        XA1b = np.kron(np.eye(nk), np.kron(np.ones(nk), np.ones(nl))).T[:, 1:]
+        # A2mb[g2]
+        XA2b = np.kron(np.ones(nk), np.kron(np.eye(nk), np.ones(nl))).T[:, 1:]
+        # XX
+        XX = np.vstack(
+            [
+                np.hstack([XA1, ZA1, ZA2, ZA2]),
+                np.hstack([ZA1, XA1, ZA2, ZA2]),
+                np.hstack([ZA1, ZA1, XA2, ZA2]),
+                np.hstack([ZA1, ZA1, ZA2, XA2])
+            ]
+        )
+
         ## Constraints ##
         # if params['force_min_firm_type']:
         #     # If forcing minimum firm type
@@ -1830,11 +1847,44 @@ class BLMModel:
         cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints() # prev_min_firm_type)
 
         for iter in range(params['n_iters_movers']):
+            ## Combine into joint matrix representations (using updated rhos) ##
+            ZZ = csc_matrix(((ni, nk)))
+            GG = vstack(
+                [
+                    hstack([GG1, - R12 * GG1, ZZ, ZZ, ZZ, ZZ]),
+                    hstack([ZZ, GG1, ZZ, ZZ, GG2, ZZ]),
+                    hstack([ZZ, - R32m * GG1, GG2, ZZ, - R32m * GG2, GG1]),
+                    hstack([ZZ, ZZ, - R43 * GG2, GG2, ZZ, ZZ])
+                ]
+            )
+            CC = {}
+            for col in cat_cols:
+                n_cat = controls_dict[col]['n']
+                ZZ = csc_matrix(((ni, n_cat)))
+                CC[col] = vstack(
+                    [
+                        hstack([CC1[col], - R12 * CC1[col], ZZ, ZZ, ZZ, ZZ]),
+                        hstack([ZZ, CC1[col], ZZ, ZZ, CC2[col], ZZ]),
+                        hstack([ZZ, - R32m * CC1[col], CC2[col], ZZ, - R32m * CC2[col], CC1[col]]),
+                        hstack([ZZ, ZZ, - R43 * CC2[col], CC2[col], ZZ, ZZ])
+                    ]
+                )
+            ZZ = csc_matrix(((ni, 1)))
+            for col in cts_cols:
+                CC[col] = vstack(
+                    [
+                        hstack([C1[col], - R12 * C1[col], ZZ, ZZ, ZZ, ZZ]),
+                        hstack([ZZ, C1[col], ZZ, ZZ, C2[col], ZZ]),
+                        hstack([ZZ, - R32m * C1[col], C2[col], ZZ, - R32m * C2[col], C1[col]]),
+                        hstack([ZZ, ZZ, - R43 * C2[col], C2[col], ZZ, ZZ])
+                    ]
+                )
+
             # ---------- E-Step ----------
             # We compute the posterior probabilities for each row
             # We iterate over the worker types, should not be be too costly since the vector is quite large within each iteration
             log_pk1 = np.log(pk1)
-            if any_controls > 0:
+            if any_controls:
                 ## Account for control variables ##
                 if iter == 0:
                     A_sum, S_sum_sq = self._sum_by_non_nl(ni=ni, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts)
@@ -1868,6 +1918,8 @@ class BLMModel:
 
                     lp[:, l] = log_pk1[KK, l] + lp1 + lp2 + lp3 + lp4
             else:
+                A_sum = {period: 0 for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']}
+                S_sum_sq = {period: 0 for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']}
                 # Loop over firm classes so means/variances are single values rather than vectors (computing log/square is much faster this way)
                 for g1 in range(nk):
                     for g2 in range(nk):
@@ -1945,63 +1997,43 @@ class BLMModel:
             # Instead we will construct X'X and X'Y by looping over nl
             # We also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
             ## General ##
-            # Shift for period 2
+            # Shift for period 2+
             ts = nl * nk
-            # Only store the diagonal
-            XwX = np.zeros(shape=2 * ts)
+            XwX = csc_matrix((4 * ts, 6 * ts))
             if params['update_a']:
-                XwY = np.zeros(shape=2 * ts)
+                XwY = np.zeros(shape=6 * ts)
 
             ## Categorical ##
             if len(cat_cols) > 0:
                 ts_cat = {col: nl * col_dict['n'] for col, col_dict in cat_dict.items()}
-                XwX_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
+                XwX_cat = {col: csc_matrix((4 * col_ts, 6 * col_ts)) for col, col_ts in ts_cat.items()}
                 if params['update_a']:
-                    XwY_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
+                    XwY_cat = {col: np.zeros(shape=6 * col_ts) for col, col_ts in ts_cat.items()}
             ### Continuous ###
             if len(cts_cols) > 0:
-                XwX_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
+                XwX_cts = {col: csc_matrix((4 * nl, 6 * nl)) for col in cts_cols}
                 if params['update_a']:
-                    XwY_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
-
-            if iter == 0:
-                if any_non_worker_type_interactions:
-                    Y1_adj = Y1.copy()
-                    Y2_adj = Y2.copy()
-                    Y1_adj -= A1_sum
-                    Y2_adj -= A2_sum
-                else:
-                    Y1_adj = Y1
-                    Y2_adj = Y2
+                    XwY_cts = {col: np.zeros(shape=6 * nl) for col in cts_cols}
 
             ## Update A ##
-            GG1_weighted = []
-            GG2_weighted = []
+            GG_weighted = []
             for l in range(nl):
-                # (We might be better off trying this within numba or something)
                 l_index, r_index = l * nk, (l + 1) * nk
                 # Shared weighted terms
-                GG1_weighted.append(DxSP(W1 * qi[:, l] / S1[l, G1], GG1).T)
-                GG2_weighted.append(DxSP(W2 * qi[:, l] / S2[l, G2], GG2).T)
+                GG_weighted.append(DxSP(np.tile(qi[:, l] / S1[l, G1], 4), GG).T)
                 ## Compute XwX terms ##
-                XwX[l_index: r_index] = diag_of_sp_prod(GG1_weighted[l], GG1)
-                XwX[ts + l_index: ts + r_index] = np.asarray(GG2_weighted[l].multiply(GG2.T).sum(axis=1))[:, 0]
+                XwX[l_index: r_index, l_index: r_index] = GG_weighted[l] @ GG
                 if params['update_a']:
                     # Update A_sum to account for worker-interaction terms
-                    A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l = self._sum_by_nl_l(
-                        ni=ni, l=l, C1=C1, C2=C2, C3=C3, C4=C4,
-                        A12_cat=A12_cat, A43_cat=A43_cat, S12_cat=S12_cat, S43_cat=S43_cat,
-                        A2ma_cat=A2ma_cat, A2mb_cat=A2mb_cat, S2m_cat=S2m_cat,
-                        A3ma_cat=A3ma_cat, A3mb_cat=A3mb_cat, S3m_cat=S3m_cat,
-                        A12_cts=A12_cts, A43_cts=A43_cts, S12_cts=S12_cts, S43_cts=S43_cts,
-                        A2ma_cts=A2ma_cts, A2mb_cts=A2mb_cts, S2m_cts=S2m_cts,
-                        A3ma_cts=A3ma_cts, A3mb_cts=A3mb_cts, S3m_cts=S3m_cts, compute_S=False)
+                    A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False)
                     ## Compute XwY terms ##
-                    XwY[l_index: r_index] = GG1_weighted[l] @ (Y1_adj - A1_sum_l)
-                    XwY[ts + l_index: ts + r_index] = GG2_weighted[l] @ (Y2_adj - A2_sum_l)
-                    del A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l
+                    XwY[l_index + 0 * nk: r_index + 0 * nk] = GG_weighted[l] @ (Y1 - R12 * (Y2 - A_sum['2ma'] - A_sum_l['2ma']) - A_sum['12'] - A_sum_l['12'])
+                    XwY[l_index + 1 * nk: r_index + 1 * nk] = GG_weighted[l] @ (Y2 - (A_sum['2ma'] + A_sum['2mb']) - (A_sum_l['2ma'] + A_sum_l['2mb']))
+                    XwY[l_index + 2 * nk: r_index + 2 * nk] = GG_weighted[l] @ (Y3 - R32m * (Y2 - (A_sum['2ma'] + A_sum['2mb']) - (A_sum_l['2ma'] + A_sum_l['2mb'])) - (A_sum['3ma'] + A_sum['3mb']) - (A_sum_l['3ma'] + A_sum_l['3mb']))
+                    XwY[l_index + 3 * nk: r_index + 3 * nk] = GG_weighted[l] @ (Y4 - R43 * (Y3 - A_sum['3ma'] - A_sum_l['3ma']) - A_sum['43'] - A_sum_l['43'])
+                    del A_sum_l
             if not params['update_s']:
-                del GG1_weighted, GG2_weighted
+                del GG_weighted
 
             # print('A1 before:')
             # print(A1)
@@ -2071,22 +2103,15 @@ class BLMModel:
                     else:
                         S1_cat_l = S1_cat[col][C1[col]]
                         S2_cat_l = S2_cat[col][C2[col]]
-                    CC1_cat_weighted[col].append(DxSP(W1 * qi[:, l] / S1_cat_l, CC1[col]).T)
-                    CC2_cat_weighted[col].append(DxSP(W2 * qi[:, l] / S2_cat_l, CC2[col]).T)
+                    CC1_cat_weighted[col].append(DxSP(qi[:, l] / S1_cat_l, CC1[col]).T)
+                    CC2_cat_weighted[col].append(DxSP(qi[:, l] / S2_cat_l, CC2[col]).T)
                     del S1_cat_l, S2_cat_l
                     ## Compute XwX_cat terms ##
                     XwX_cat[col][l_index: r_index] = diag_of_sp_prod(CC1_cat_weighted[col][l], CC1[col])
-                    XwX_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = np.asarray(CC2_cat_weighted[col][l].multiply(CC2[col].T).sum(axis=1))[:, 0]
+                    XwX_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = diag_of_sp_prod(CC2_cat_weighted[col][l], CC2[col])
                     if params['update_a']:
                         # Update A_sum to account for worker-interaction terms
-                        A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l = self._sum_by_nl_l(
-                            ni=ni, l=l, C1=C1, C2=C2, C3=C3, C4=C4,
-                            A12_cat=A12_cat, A43_cat=A43_cat, S12_cat=S12_cat, S43_cat=S43_cat,
-                            A2ma_cat=A2ma_cat, A2mb_cat=A2mb_cat, S2m_cat=S2m_cat,
-                            A3ma_cat=A3ma_cat, A3mb_cat=A3mb_cat, S3m_cat=S3m_cat,
-                            A12_cts=A12_cts, A43_cts=A43_cts, S12_cts=S12_cts, S43_cts=S43_cts,
-                            A2ma_cts=A2ma_cts, A2mb_cts=A2mb_cts, S2m_cts=S2m_cts,
-                            A3ma_cts=A3ma_cts, A3mb_cts=A3mb_cts, S3m_cts=S3m_cts, compute_S=False)
+                        A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False)
                         if cat_dict[col]['worker_type_interaction']:
                             A1_sum_l -= A1_cat[col][l, C1[col]]
                             A2_sum_l -= A2_cat[col][l, C2[col]]
@@ -2152,14 +2177,7 @@ class BLMModel:
                     XwX_cts[col][nl + l] = (CC2_cts_weighted[col][l] @ C2[col])
                     if params['update_a']:
                         # Update A_sum to account for worker-interaction terms
-                        A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l = self._sum_by_nl_l(
-                            ni=ni, l=l, C1=C1, C2=C2, C3=C3, C4=C4,
-                            A12_cat=A12_cat, A43_cat=A43_cat, S12_cat=S12_cat, S43_cat=S43_cat,
-                            A2ma_cat=A2ma_cat, A2mb_cat=A2mb_cat, S2m_cat=S2m_cat,
-                            A3ma_cat=A3ma_cat, A3mb_cat=A3mb_cat, S3m_cat=S3m_cat,
-                            A12_cts=A12_cts, A43_cts=A43_cts, S12_cts=S12_cts, S43_cts=S43_cts,
-                            A2ma_cts=A2ma_cts, A2mb_cts=A2mb_cts, S2m_cts=S2m_cts,
-                            A3ma_cts=A3ma_cts, A3mb_cts=A3mb_cts, S3m_cts=S3m_cts, compute_S=False)
+                        A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False)
                         if cts_dict[col]['worker_type_interaction']:
                             A1_sum_l -= A1_cts[col][l] * C1[col]
                             A2_sum_l -= A2_cts[col][l] * C2[col]
@@ -2220,14 +2238,7 @@ class BLMModel:
                 ## Update S ##
                 for l in range(nl):
                     # Update A_sum to account for worker-interaction terms
-                    A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l = self._sum_by_nl_l(
-                        ni=ni, l=l, C1=C1, C2=C2, C3=C3, C4=C4,
-                        A12_cat=A12_cat, A43_cat=A43_cat, S12_cat=S12_cat, S43_cat=S43_cat,
-                        A2ma_cat=A2ma_cat, A2mb_cat=A2mb_cat, S2m_cat=S2m_cat,
-                        A3ma_cat=A3ma_cat, A3mb_cat=A3mb_cat, S3m_cat=S3m_cat,
-                        A12_cts=A12_cts, A43_cts=A43_cts, S12_cts=S12_cts, S43_cts=S43_cts,
-                        A2ma_cts=A2ma_cts, A2mb_cts=A2mb_cts, S2m_cts=S2m_cts,
-                        A3ma_cts=A3ma_cts, A3mb_cts=A3mb_cts, S3m_cts=S3m_cts, compute_S=False)
+                    A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False)
                     eps1_l_sq = (Y1_adj - A1_sum_l - A1[l, G1]) ** 2
                     eps2_l_sq = (Y2_adj - A2_sum_l - A2[l, G2]) ** 2
                     del A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l
@@ -2389,9 +2400,8 @@ class BLMModel:
         # Unpack parameters
         params = self.params
         nl, nk, ni = self.nl, self.nk, sdata.shape[0]
-        A12, A43, S12, S43 = self.A12, self.A43, self.S12, self.S43
-        A2ma, A2mb, S2m = self.A2ma, self.A2mb, self.S2m
-        A3ma, A3mb, S3m = self.A3ma, self.A3ma, self.S3m
+        R32s = self.R32s
+        A, A_cat, A_cts, S, S_cat, S_cts = self.A, self.A_cat, self.A_cts, self.S, self.S_cat, self.S_cts
         cat_cols, cts_cols = self.cat_cols, self.cts_cols
         any_controls = self.any_controls
         # Fix error from bad initial guesses causing probabilities to be too low
@@ -2408,8 +2418,6 @@ class BLMModel:
             ## Control variables ##
             C1 = {}
             C2 = {}
-            C3 = {}
-            C4 = {}
             for i, col in enumerate(cat_cols + cts_cols):
                 # Get subcolumns associated with col
                 subcols = to_list(sdata.col_reference_dict[col])
@@ -2418,29 +2426,23 @@ class BLMModel:
                     # If column is constant over time
                     subcol_1 = subcols[0]
                     subcol_2 = subcols[0]
-                    subcol_3 = subcols[0]
-                    subcol_4 = subcols[0]
                 elif n_subcols == 4:
                     # If column can change over time
                     subcol_1 = subcols[0]
-                    subcol_2 = subcols[1]
-                    subcol_3 = subcols[2]
-                    subcol_4 = subcols[3]
+                    subcol_2 = subcols[3]
                 else:
                     raise NotImplementedError(f'Column names must have either one or four associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
                 if i < len(cat_cols):
                     # Categorical
                     C1[col] = sdata.loc[:, subcol_1].to_numpy().astype(int, copy=False)
                     C2[col] = sdata.loc[:, subcol_2].to_numpy().astype(int, copy=False)
-                    C3[col] = sdata.loc[:, subcol_3].to_numpy().astype(int, copy=False)
-                    C4[col] = sdata.loc[:, subcol_4].to_numpy().astype(int, copy=False)
                 else:
                     # Continuous
                     C1[col] = sdata.loc[:, subcol_1].to_numpy()
                     C2[col] = sdata.loc[:, subcol_2].to_numpy()
-                    C3[col] = sdata.loc[:, subcol_3].to_numpy()
-                    C4[col] = sdata.loc[:, subcol_4].to_numpy()
-
+        C1_periods = ['12', '2ma', '3mb']
+        C2_periods = ['43', '2mb', '3ma']
+        C_dict = {period: C1 if period in C1_periods else C2 for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']}
         # Matrix of prior probabilities
         pk0 = self.pk0
         # Matrix of posterior probabilities
@@ -2456,33 +2458,20 @@ class BLMModel:
 
         if any_controls:
             ## Account for control variables ##
-            A12_sum, A43_sum, A2ma_sum, A2mb_sum, A3ma_sum, A3mb_sum, S12_sum_sq, S43_sum_sq, S2m_sum_sq, S3m_sum_sq = self._sum_by_non_nl(
-                ni=ni, C1=C1, C2=C2, C3=C3, C4=C4,
-                A12_cat=self.A12_cat, A43_cat=self.A43_cat, S12_cat=self.S12_cat, S43_cat=self.S43_cat,
-                A2ma_cat=self.A2ma_cat, A2mb_cat=self.A2mb_cat, S2m_cat=self.S2m_cat,
-                A3ma_cat=self.A3ma_cat, A3mb_cat=self.A3mb_cat, S3m_cat=self.S3m_cat,
-                A12_cts=self.A12_cts, A43_cts=self.A43_cts, S12_cts=self.S12_cts, S43_cts=self.S43_cts,
-                A2ma_cts=self.A2ma_cts, A2mb_cts=self.A2mb_cts, S2m_cts=self.S2m_cts,
-                A3ma_cts=self.A3ma_cts, A3mb_cts=self.A3mb_cts, S3m_cts=self.S3m_cts)
+            A_sum, S_sum_sq = self._sum_by_non_nl(ni=ni, C_dict=C_dict, A_cat=self.A_cat, S_cat=self.S_cat, A_cts=self.A_cts, S_cts=self.S_cts)
 
             for l in range(nl):
                 # Update A_sum/S_sum_sq to account for worker-interaction terms
-                A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l, S12_sum_sq_l, S43_sum_sq_l, S2m_sum_sq_l, S3m_sum_sq_l = self._sum_by_nl_l(
-                    ni=ni, l=l, C1=C1, C2=C2, C3=C3, C4=C4,
-                    A12_cat=self.A12_cat, A43_cat=self.A43_cat, S12_cat=self.S12_cat, S43_cat=self.S43_cat,
-                    A2ma_cat=self.A2ma_cat, A2mb_cat=self.A2mb_cat, S2m_cat=self.S2m_cat,
-                    A3ma_cat=self.A3ma_cat, A3mb_cat=self.A3mb_cat, S3m_cat=self.S3m_cat,
-                    A12_cts=self.A12_cts, A43_cts=self.A43_cts, S12_cts=self.S12_cts, S43_cts=self.S43_cts,
-                    A2ma_cts=self.A2ma_cts, A2mb_cts=self.A2mb_cts, S2m_cts=self.S2m_cts,
-                    A3ma_cts=self.A3ma_cts, A3mb_cts=self.A3mb_cts, S3m_cts=self.S3m_cts)
+                A_sum_l, S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts)
+
                 lp1 = lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
                 # lp2 = lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
-                lp_stable[:, l] = W1 * lp1 # + W2 * lp2
+                lp_stable[:, l] = lp1 # + lp2
         else:
             for l in range(nl):
                 lp1 = lognormpdf(Y1, A1[l, G1], S1[l, G1])
                 # lp2 = lognormpdf(Y2, A2[l, G2], S2[l, G2])
-                lp_stable[:, l] = W1 * lp1 # + W2 * lp2
+                lp_stable[:, l] = lp1 # + lp2
         del lp1 #, lp2
 
         for iter in range(params['n_iters_stayers']):
