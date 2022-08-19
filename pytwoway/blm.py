@@ -1425,8 +1425,8 @@ class BLMModel:
                 for l in range(nl):
                     # Update A1_sum/A2_sum/S1_sum_sq/S2_sum_sq to account for worker-interaction terms
                     A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts)
-                    lp1 = lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
-                    lp2 = lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
+                    lp1 = lognormpdf(Y1, A1[l, G1] + A1_sum + A1_sum_l, np.sqrt(S1[l, G1] ** 2 + S1_sum_sq + S1_sum_sq_l))
+                    lp2 = lognormpdf(Y2, A2[l, G2] + A2_sum + A2_sum_l, np.sqrt(S2[l, G2] ** 2 + S2_sum_sq + S2_sum_sq_l))
                     lp[:, l] = log_pk1[KK, l] + W1 * lp1 + W2 * lp2
             else:
                 for l in range(nl):
@@ -1966,8 +1966,8 @@ class BLMModel:
             for l in range(nl):
                 # Update A1_sum/S1_sum_sq to account for worker-interaction terms
                 A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=self.A1_cat, A2_cat=self.A2_cat, S1_cat=self.S1_cat, S2_cat=self.S2_cat, A1_cts=self.A1_cts, A2_cts=self.A2_cts, S1_cts=self.S1_cts, S2_cts=self.S2_cts)
-                lp1 = lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
-                # lp2 = lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
+                lp1 = lognormpdf(Y1, A1[l, G1] + A1_sum + A1_sum_l, np.sqrt(S1[l, G1] ** 2 + S1_sum_sq + S1_sum_sq_l))
+                # lp2 = lognormpdf(Y2, A2[l, G2] + A2_sum + A2_sum_l, np.sqrt(S2[l, G2] ** 2 + S2_sum_sq + S2_sum_sq_l))
                 lp_stable[:, l] = W1 * lp1 # + W2 * lp2
         else:
             for l in range(nl):

@@ -46,11 +46,11 @@ _blm_dynamic_params_default = ParamsDict({
         ''', '>= 1'),
     'categorical_controls': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary linking column names to instances of tw.categorical_control_params(). Each instance specifies a new categorical control variable and how its starting values should be generated. Run tw.categorical_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.categorical_control_dynamic_params(). Each instance specifies a new categorical control variable and how its starting values should be generated. Run tw.categorical_control_dynamic_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
     'continuous_controls': (None, 'dict_of_type_none', ParamsDict,
         '''
-            (default=None) Dictionary linking column names to instances of tw.continuous_control_params(). Each instance specifies a new continuous control variable and how its starting values should be generated. Run tw.continuous_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.continuous_control_dynamic_params(). Each instance specifies a new continuous control variable and how its starting values should be generated. Run tw.continuous_control_dynamic_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
     'primary_period': ('first', 'set', ['first', 'second', 'all'],
         '''
@@ -103,19 +103,19 @@ _blm_dynamic_params_default = ParamsDict({
         ''', '>= 0'),
     'a3ma_mu': (1, 'type', (float, int),
         '''
-            (default=1) Mean of simulated A3 for movers (mean of fixed effects).
+            (default=1) Mean of simulated A3a for movers (mean of fixed effects).
         ''', None),
     'a3ma_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.5) Standard error of simulated A3 for movers (mean of fixed effects).
+            (default=0.5) Standard error of simulated A3a for movers (mean of fixed effects).
         ''', '>= 0'),
     'a3mb_mu': (1, 'type', (float, int),
         '''
-            (default=1) Mean of simulated A3 for movers (mean of fixed effects).
+            (default=1) Mean of simulated A3b for movers (mean of fixed effects).
         ''', None),
     'a3mb_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.5) Standard error of simulated A3 for movers (mean of fixed effects).
+            (default=0.5) Standard error of simulated A3b for movers (mean of fixed effects).
         ''', '>= 0'),
     'a3s_mu': (1, 'type', (float, int),
         '''
@@ -294,37 +294,117 @@ _categorical_control_dynamic_params_default = ParamsDict({
         '''
             (default=6) Number of types for the parameter. None will raise an error when running the estimator.
         ''', '>= 2'),
-    'a1_mu': (1, 'type', (float, int),
+    'a12_mu': (1, 'type', (float, int),
         '''
-            (default=1) Mean of starting values for A1_cat (mean of fixed effects in first period).
+            (default=1) Mean of starting values for A12_cat (mean of fixed effects).
         ''', None),
-    'a1_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a12_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.5) Standard error of starting values for A1_cat (mean of fixed effects in first period).
+            (default=0.5) Standard error of starting values for A12_cat (mean of fixed effects).
         ''', '>= 0'),
-    'a2_mu': (1, 'type', (float, int),
+    'a43_mu': (1, 'type', (float, int),
         '''
-            (default=1) Mean of starting values for A2_cat (mean of fixed effects in second period).
+            (default=1) Mean of starting values for A43_cat (mean of fixed effects).
         ''', None),
-    'a2_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a43_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.5) Standard error of starting values for A2_cat (mean of fixed effects in second period).
+            (default=0.5) Standard error of starting values for A43_cat (mean of fixed effects).
         ''', '>= 0'),
-    's1_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    'a2ma_mu': (1, 'type', (float, int),
         '''
-            (default=0.3) Minimum value of starting values for S1_cat (standard deviation of fixed effects in first period).
+            (default=1) Mean of starting values for A2a_cat for movers (mean of fixed effects).
+        ''', None),
+    'a2ma_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of starting values for A2a_cat for movers (mean of fixed effects).
         ''', '>= 0'),
-    's1_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a2mb_mu': (1, 'type', (float, int),
         '''
-            (default=0.5) Maximum value of starting values for S1_cat (standard deviation of fixed effects in first period).
+            (default=1) Mean of starting values for A2b_cat for movers (mean of fixed effects).
+        ''', None),
+    'a2mb_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of starting values for A2b_cat for movers (mean of fixed effects).
         ''', '>= 0'),
-    's2_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    'a2s_mu': (1, 'type', (float, int),
         '''
-            (default=0.3) Minimum value of starting values for S2_cat (standard deviation of fixed effects in second period).
+            (default=1) Mean of starting values for A2_cat for stayers (mean of fixed effects).
+        ''', None),
+    'a2s_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of starting values for A2_cat for stayers (mean of fixed effects).
         ''', '>= 0'),
-    's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a3ma_mu': (1, 'type', (float, int),
         '''
-            (default=0.5) Maximum value of starting values for S2_cat (standard deviation of fixed effects in second period).
+            (default=1) Mean of starting values for A3a_cat for movers (mean of fixed effects).
+        ''', None),
+    'a3ma_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of starting values for A3a_cat for movers (mean of fixed effects).
+        ''', '>= 0'),
+    'a3mb_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of starting values for A3b_cat for movers (mean of fixed effects).
+        ''', None),
+    'a3mb_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of starting values for A3b_cat for movers (mean of fixed effects).
+        ''', '>= 0'),
+    'a3s_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of starting values for A3_cat for stayers (mean of fixed effects).
+        ''', None),
+    'a3s_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of starting values for A3_cat for stayers (mean of fixed effects).
+        ''', '>= 0'),
+    's12_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S12_cat (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's12_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S12_cat (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's43_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S43_cat (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's43_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S43_cat (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2m_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S2_cat for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2m_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S2_cat for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S2_cat for stayers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2s_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S2_cat for stayers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3m_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S3_cat for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3m_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S3_cat for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S3_cat for stayers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3s_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S3_cat for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
     'worker_type_interaction': (False, 'type', bool,
         '''
@@ -332,11 +412,11 @@ _categorical_control_dynamic_params_default = ParamsDict({
         ''', None),
     'cons_a': (None, 'list_of_type_none', (cons.Linear, cons.LinearAdditive, cons.Monotonic, cons.MonotonicMean, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=None) Constraint object or list of constraint objects that define constraints on A1 and A2. None is equivalent to [].
+            (default=None) Constraint object or list of constraint objects that define constraints on A12_cat/A43_cat/A2ma_cat/A2mb_cat/A2s_cat/A3ma_cat/A3mb_cat/A3s_cat. None is equivalent to [].
         ''', None),
     'cons_s': (None, 'list_of_type_none', (cons.Linear, cons.LinearAdditive, cons.Monotonic, cons.MonotonicMean, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=None) Constraint object or list of constraint objects that define constraints on S1 and S2. None is equivalent to [].
+            (default=None) Constraint object or list of constraint objects that define constraints on S12_cat/S43_cat/S2m_cat/S2s_cat/S3m_cat/S3s_cat. None is equivalent to [].
         ''', None)
 })
 
@@ -356,37 +436,117 @@ def categorical_control_dynamic_params(update_dict=None):
     return new_dict
 
 _continuous_control_dynamic_params_default = ParamsDict({
-    'a1_mu': (1, 'type', (float, int),
+    'a12_mu': (1, 'type', (float, int),
         '''
-            (default=1) Mean of starting values for A1_cts (mean of coefficient in first period).
+            (default=1) Mean of starting values for A12_cts (mean of fixed effects).
         ''', None),
-    'a1_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a12_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.5) Standard error of starting values for A1_cts (mean of coefficient in first period).
+            (default=0.5) Standard error of starting values for A12_cts (mean of fixed effects).
         ''', '>= 0'),
-    'a2_mu': (1, 'type', (float, int),
+    'a43_mu': (1, 'type', (float, int),
         '''
-            (default=1) Mean of starting values for A2_cts (mean of coefficient in second period).
+            (default=1) Mean of starting values for A43_cts (mean of fixed effects).
         ''', None),
-    'a2_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a43_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.5) Standard error of starting values for A2_cts (mean of coefficient in second period).
+            (default=0.5) Standard error of starting values for A43_cts (mean of fixed effects).
         ''', '>= 0'),
-    's1_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    'a2ma_mu': (1, 'type', (float, int),
         '''
-            (default=0.3) Minimum value of starting values for S1_cts (standard deviation of coefficient in first period).
+            (default=1) Mean of starting values for A2a_cts for movers (mean of fixed effects).
+        ''', None),
+    'a2ma_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of starting values for A2a_cts for movers (mean of fixed effects).
         ''', '>= 0'),
-    's1_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a2mb_mu': (1, 'type', (float, int),
         '''
-            (default=0.5) Maximum value of starting values for S1_cts (standard deviation of coefficient in first period).
+            (default=1) Mean of starting values for A2b_cts for movers (mean of fixed effects).
+        ''', None),
+    'a2mb_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of starting values for A2b_cts for movers (mean of fixed effects).
         ''', '>= 0'),
-    's2_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    'a2s_mu': (1, 'type', (float, int),
         '''
-            (default=0.3) Minimum value of starting values for S2_cts (standard deviation of coefficient in second period).
+            (default=1) Mean of starting values for A2_cts for stayers (mean of fixed effects).
+        ''', None),
+    'a2s_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of starting values for A2_cts for stayers (mean of fixed effects).
         ''', '>= 0'),
-    's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a3ma_mu': (1, 'type', (float, int),
         '''
-            (default=0.5) Maximum value of starting values for S2_cts (standard deviation of coefficient in second period).
+            (default=1) Mean of starting values for A3a_cts for movers (mean of fixed effects).
+        ''', None),
+    'a3ma_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of starting values for A3a_cts for movers (mean of fixed effects).
+        ''', '>= 0'),
+    'a3mb_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of starting values for A3b_cts for movers (mean of fixed effects).
+        ''', None),
+    'a3mb_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of starting values for A3b_cts for movers (mean of fixed effects).
+        ''', '>= 0'),
+    'a3s_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of starting values for A3_cts for stayers (mean of fixed effects).
+        ''', None),
+    'a3s_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of starting values for A3_cts for stayers (mean of fixed effects).
+        ''', '>= 0'),
+    's12_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S12_cts (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's12_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S12_cts (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's43_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S43_cts (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's43_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S43_cts (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2m_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S2_cts for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2m_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S2_cts for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S2_cts for stayers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2s_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S2_cts for stayers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3m_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S3_cts for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3m_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S3_cts for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S3_cts for stayers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3s_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S3_cts for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
     'worker_type_interaction': (False, 'type', bool,
         '''
@@ -394,11 +554,11 @@ _continuous_control_dynamic_params_default = ParamsDict({
         ''', None),
     'cons_a': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=None) Constraint object or list of constraint objects that define constraints on A1 and A2. None is equivalent to [].
+            (default=None) Constraint object or list of constraint objects that define constraints on A12_cts/A43_cts/A2ma_cts/A2mb_cts/A2s_cts/A3ma_cts/A3mb_cts/A3s_cts. None is equivalent to [].
         ''', None),
     'cons_s': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=None) Constraint object or list of constraint objects that define constraints on S1 and S2. None is equivalent to [].
+            (default=None) Constraint object or list of constraint objects that define constraints on S12_cts/S43_cts/S2m_cts/S2s_cts/S3m_cts/S3s_cts. None is equivalent to [].
         ''', None)
 })
 
@@ -654,8 +814,9 @@ class BLMModel:
 
         # Store parameters
         self.params = params.copy()
+        params = self.params
         self.rng = rng
-        nl, nk = self.params.get_multiple(('nl', 'nk'))
+        nl, nk = params.get_multiple(('nl', 'nk'))
         # Make sure that nk is specified
         if nk is None:
             raise ValueError(f"tw.blm_params() key 'nk' must be changed from the default value of None.")
@@ -676,8 +837,8 @@ class BLMModel:
         self.dims = dims
 
         ## Unpack control variable parameters ##
-        cat_dict = self.params['categorical_controls']
-        cts_dict = self.params['continuous_controls']
+        cat_dict = params['categorical_controls']
+        cts_dict = params['continuous_controls']
         ## Check if control variable parameters are None ##
         if cat_dict is None:
             cat_dict = {}
@@ -718,199 +879,79 @@ class BLMModel:
         self.any_non_worker_type_interactions = any([not col_dict['worker_type_interaction'] for col_dict in controls_dict.values()])
 
         ## Generate starting values ##
+        s_lb = params['s_lower_bound']
         # rho is already computed
         self.R12 = rhos['rho_1']
         self.R43 = rhos['rho_4']
         self.R32m = 0.6
         # We simulate starting values for everything else
-        a12_mu, a12_sig, a43_mu, a43_sig, a2ma_mu, a2ma_sig, a2mb_mu, a2mb_sig, a3ma_mu, a3ma_sig, a3mb_mu, a3mb_sig, a2s_mu, a2s_sig, a3s_mu, a3s_sig = self.params.get_multiple(('a12_mu', 'a12_sig', 'a43_mu', 'a43_sig', 'a2ma_mu', 'a2ma_sig', 'a2mb_mu', 'a2mb_sig', 'a3ma_mu', 'a3ma_sig', 'a3mb_mu', 'a3mb_sig', 'a2s_mu', 'a2s_sig', 'a3s_mu', 'a3s_sig'))
-        s12_low, s12_high, s43_low, s43_high, s2m_low, s2m_high, s3m_low, s3m_high, s2s_low, s2s_high, s3s_low, s3s_high, pk1_prior = self.params.get_multiple(('s12_low', 's12_high', 's43_low', 's43_high', 's2m_low', 's2m_high', 's3m_low', 's3m_high', 's2s_low', 's2s_high', 's3s_low', 's3s_high', 'pk1_prior')) # pk0_prior
-        s_lb = params['s_lower_bound']
-        # Model for Y1 | Y2, l, k for movers and stayers
-        self.A12 = rng.normal(loc=a12_mu, scale=a12_sig, size=dims)
-        self.S12 = rng.uniform(low=max(s12_low, s_lb), high=s12_high, size=dims)
-        # Model for Y4 | Y3, l, k for movers and stayers
-        self.A43 = rng.normal(loc=a43_mu, scale=a43_sig, size=dims)
-        self.S43 = rng.uniform(low=max(s43_low, s_lb), high=s43_high, size=dims)
-        # Model for Y2 | l, k for movers
-        self.A2ma = rng.normal(loc=a2ma_mu, scale=a2ma_sig, size=dims)
-        self.A2mb = rng.normal(loc=a2mb_mu, scale=a2mb_sig, size=dims)
-        self.S2m = rng.uniform(low=max(s2m_low, s_lb), high=s2m_high, size=dims)
-        # Model for Y2 | l, k for stayers
-        self.A2s = rng.normal(loc=a2s_mu, scale=a2s_sig, size=dims)
-        self.S2s = rng.uniform(low=max(s2s_low, s_lb), high=s2s_high, size=dims)
-        # Model for Y3 | l, k for movers
-        self.A3ma = rng.normal(loc=a3ma_mu, scale=a3ma_sig, size=dims)
-        self.A3mb = rng.normal(loc=a3mb_mu, scale=a3mb_sig, size=dims)
-        self.S3m = rng.uniform(low=max(s3m_low, s_lb), high=s3m_high, size=dims)
-        # Model for Y3 | l, k for stayers
-        self.A3s = rng.normal(loc=a3s_mu, scale=a3s_sig, size=dims)
-        self.S3s = rng.uniform(low=max(s3s_low, s_lb), high=s3s_high, size=dims)
+        self.A = {
+            period:
+                rng.normal(loc=params[f'a{period}_mu'], scale=params[f'a{period}_sig'], size=dims)
+                    if (period[-1] != 'b') else
+                rng.normal(loc=params[f'a{period}_mu'], scale=params[f'a{period}_sig'], size=nk)
+            for period in ['12', '43', '2ma', '2mb', '3ma', '3mb', '2s', '3s']
+        }
+        self.S = {
+            period:
+                rng.uniform(low=max(params[f's{period}_low'], s_lb), high=params[f's{period}_high'], size=dims)
+                    if (period[-1] != 'b') else
+                rng.uniform(low=max(params[f's{period}_low'], s_lb), high=params[f's{period}_high'], size=nk)
+            for period in ['12', '43', '2ma', '2mb', '3ma', '3mb', '2s', '3s']
+        }
         # Model for p(K | l, l') for movers
-        if pk1_prior is None:
+        if params['pk1_prior'] is None:
             pk1_prior = np.ones(nl)
-        self.pk1 = rng.dirichlet(alpha=pk1_prior, size=nk ** 2)
+        self.pk1 = rng.dirichlet(alpha=params['pk1_prior'], size=nk ** 2)
         # Model for p(K | l, l') for stayers
-        # if pk0_prior is None:
+        # if params['pk0_prior'] is None:
         #     pk0_prior = np.ones(nl)
-        # self.pk0 = rng.dirichlet(alpha=pk0_prior, size=nk)
+        # self.pk0 = rng.dirichlet(alpha=params['pk0_prior'], size=nk)
         self.pk0 = np.ones((nk, nl)) / nl
 
         ### Control variables ###
         ## Categorical ##
-        # Model for Y1 | Y2, l, k for movers and stayers
-        self.A12_cat = {col:
-                rng.normal(loc=controls_dict[col]['a12_mu'], scale=controls_dict[col]['a12_sig'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a12_mu'], scale=controls_dict[col]['a12_sig'], size=controls_dict[col]['n'])
-            for col in cat_cols}
-        self.S12_cat = {col:
-                rng.uniform(low=max(controls_dict[col]['s12_low'], s_lb), high=controls_dict[col]['s12_high'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s12_low'], s_lb), high=controls_dict[col]['s12_high'], size=controls_dict[col]['n'])
-            for col in cat_cols}
-        # Model for Y4 | Y3, l, k for movers and stayers
-        self.A43_cat = {col:
-                rng.normal(loc=controls_dict[col]['a43_mu'], scale=controls_dict[col]['a43_sig'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a43_mu'], scale=controls_dict[col]['a43_sig'], size=controls_dict[col]['n'])
-            for col in cat_cols}
-        self.S43_cat = {col:
-                rng.uniform(low=max(controls_dict[col]['s43_low'], s_lb), high=controls_dict[col]['s43_high'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s43_low'], s_lb), high=controls_dict[col]['s43_high'], size=controls_dict[col]['n'])
-            for col in cat_cols}
-        # Model for Y2 | l, k for movers
-        self.A2ma_cat = {col:
-                rng.normal(loc=controls_dict[col]['a2ma_mu'], scale=controls_dict[col]['a2ma_sig'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a2ma_mu'], scale=controls_dict[col]['a2ma_sig'], size=controls_dict[col]['n'])
-            for col in cat_cols}
-        self.A2mb_cat = {col:
-                rng.normal(loc=controls_dict[col]['a2mb_mu'], scale=controls_dict[col]['a2mb_sig'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a2mb_mu'], scale=controls_dict[col]['a2mb_sig'], size=controls_dict[col]['n'])
-            for col in cat_cols}
-        self.S2m_cat = {col:
-                rng.uniform(low=max(controls_dict[col]['s2m_low'], s_lb), high=controls_dict[col]['s2m_high'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s2m_low'], s_lb), high=controls_dict[col]['s2m_high'], size=controls_dict[col]['n'])
-            for col in cat_cols}
-        # Model for Y2 | l, k for stayers
-        self.A2s_cat = {col:
-                rng.normal(loc=controls_dict[col]['a2s_mu'], scale=controls_dict[col]['a2s_sig'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a2s_mu'], scale=controls_dict[col]['a2s_sig'], size=controls_dict[col]['n'])
-            for col in cat_cols}
-        self.S2s_cat = {col:
-                rng.uniform(low=max(controls_dict[col]['s2s_low'], s_lb), high=controls_dict[col]['s2s_high'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s2s_low'], s_lb), high=controls_dict[col]['s2s_high'], size=controls_dict[col]['n'])
-            for col in cat_cols}
-        # Model for Y3 | l, k for movers
-        self.A3ma_cat = {col:
-                rng.normal(loc=controls_dict[col]['a3ma_mu'], scale=controls_dict[col]['a3ma_sig'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a3ma_mu'], scale=controls_dict[col]['a3ma_sig'], size=controls_dict[col]['n'])
-            for col in cat_cols}
-        self.A3mb_cat = {col:
-                rng.normal(loc=controls_dict[col]['a3mb_mu'], scale=controls_dict[col]['a3mb_sig'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a3mb_mu'], scale=controls_dict[col]['a3mb_sig'], size=controls_dict[col]['n'])
-            for col in cat_cols}
-        self.S3m_cat = {col:
-                rng.uniform(low=max(controls_dict[col]['s3m_low'], s_lb), high=controls_dict[col]['s3m_high'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s3m_low'], s_lb), high=controls_dict[col]['s3m_high'], size=controls_dict[col]['n'])
-            for col in cat_cols}
-        # Model for Y3 | l, k for stayers
-        self.A3s_cat = {col:
-                rng.normal(loc=controls_dict[col]['a3s_mu'], scale=controls_dict[col]['a3s_sig'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a3s_mu'], scale=controls_dict[col]['a3s_sig'], size=controls_dict[col]['n'])
-            for col in cat_cols}
-        self.S3s_cat = {col:
-                rng.uniform(low=max(controls_dict[col]['s3s_low'], s_lb), high=controls_dict[col]['s3s_high'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s3s_low'], s_lb), high=controls_dict[col]['s3s_high'], size=controls_dict[col]['n'])
-            for col in cat_cols}
+        self.A_cat = {
+            col: {
+                period:
+                    rng.normal(loc=controls_dict[col][f'a{period}_mu'], scale=controls_dict[col][f'a{period}_sig'], size=(nl, controls_dict[col]['n']))
+                        if (controls_dict[col]['worker_type_interaction'] and (period[-1] != 'b')) else
+                    rng.normal(loc=controls_dict[col][f'a{period}_mu'], scale=controls_dict[col][f'a{period}_sig'], size=controls_dict[col]['n'])
+                for period in ['12', '43', '2ma', '2mb', '3ma', '3mb', '2s', '3s']
+            }
+            for col in cat_cols
+        }
+        self.S_cat = {
+            col: {
+                period:
+                    rng.uniform(low=max(controls_dict[col][f's{period}_low'], s_lb), high=controls_dict[col][f's{period}_high'], size=(nl, controls_dict[col]['n']))
+                        if (controls_dict[col]['worker_type_interaction'] and (period[-1] != 'b')) else
+                    rng.uniform(low=max(controls_dict[col][f's{period}_low'], s_lb), high=controls_dict[col][f's{period}_high'], size=controls_dict[col]['n'])
+                for period in ['12', '43', '2ma', '2mb', '3ma', '3mb', '2s', '3s']
+            }
+            for col in cat_cols
+        }
         ## Continuous ##
-        # Model for Y1 | Y2, l, k for movers and stayers
-        self.A12_cts = {col:
-                rng.normal(loc=controls_dict[col]['a12_mu'], scale=controls_dict[col]['a12_sig'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a12_mu'], scale=controls_dict[col]['a12_sig'], size=1)
-            for col in cts_cols}
-        self.S12_cts = {col:
-                rng.uniform(low=max(controls_dict[col]['s12_low'], s_lb), high=controls_dict[col]['s12_high'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s12_low'], s_lb), high=controls_dict[col]['s12_high'], size=1)
-            for col in cts_cols}
-        # Model for Y4 | Y3, l, k for movers and stayers
-        self.A43_cts = {col:
-                rng.normal(loc=controls_dict[col]['a43_mu'], scale=controls_dict[col]['a43_sig'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a43_mu'], scale=controls_dict[col]['a43_sig'], size=1)
-            for col in cts_cols}
-        self.S43_cts = {col:
-                rng.uniform(low=max(controls_dict[col]['s43_low'], s_lb), high=controls_dict[col]['s43_high'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s43_low'], s_lb), high=controls_dict[col]['s43_high'], size=1)
-            for col in cts_cols}
-        # Model for Y2 | l, k for movers
-        self.A2ma_cts = {col:
-                rng.normal(loc=controls_dict[col]['a2ma_mu'], scale=controls_dict[col]['a2ma_sig'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a2ma_mu'], scale=controls_dict[col]['a2ma_sig'], size=1)
-            for col in cts_cols}
-        self.A2mb_cts = {col:
-                rng.normal(loc=controls_dict[col]['a2mb_mu'], scale=controls_dict[col]['a2mb_sig'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a2mb_mu'], scale=controls_dict[col]['a2mb_sig'], size=1)
-            for col in cts_cols}
-        self.S2m_cts = {col:
-                rng.uniform(low=max(controls_dict[col]['s2m_low'], s_lb), high=controls_dict[col]['s2m_high'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s2m_low'], s_lb), high=controls_dict[col]['s2m_high'], size=1)
-            for col in cts_cols}
-        # Model for Y2 | l, k for stayers
-        self.A2s_cts = {col:
-                rng.normal(loc=controls_dict[col]['a2s_mu'], scale=controls_dict[col]['a2s_sig'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a2s_mu'], scale=controls_dict[col]['a2s_sig'], size=1)
-            for col in cts_cols}
-        self.S2s_cts = {col:
-                rng.uniform(low=max(controls_dict[col]['s2s_low'], s_lb), high=controls_dict[col]['s2s_high'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s2s_low'], s_lb), high=controls_dict[col]['s2s_high'], size=1)
-            for col in cts_cols}
-        # Model for Y3 | l, k for movers
-        self.A3ma_cts = {col:
-                rng.normal(loc=controls_dict[col]['a3ma_mu'], scale=controls_dict[col]['a3ma_sig'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a3ma_mu'], scale=controls_dict[col]['a3ma_sig'], size=1)
-            for col in cts_cols}
-        self.A3mb_cts = {col:
-                rng.normal(loc=controls_dict[col]['a3mb_mu'], scale=controls_dict[col]['a3mb_sig'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a3mb_mu'], scale=controls_dict[col]['a3mb_sig'], size=1)
-            for col in cts_cols}
-        self.S3m_cts = {col:
-                rng.uniform(low=max(controls_dict[col]['s3m_low'], s_lb), high=controls_dict[col]['s3m_high'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s3m_low'], s_lb), high=controls_dict[col]['s3m_high'], size=1)
-            for col in cts_cols}
-        # Model for Y3 | l, k for stayers
-        self.A3s_cts = {col:
-                rng.normal(loc=controls_dict[col]['a3s_mu'], scale=controls_dict[col]['a3s_sig'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a3s_mu'], scale=controls_dict[col]['a3s_sig'], size=1)
-            for col in cts_cols}
-        self.S3s_cts = {col:
-                rng.uniform(low=max(controls_dict[col]['s3s_low'], s_lb), high=controls_dict[col]['s3s_high'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s3s_low'], s_lb), high=controls_dict[col]['s3s_high'], size=1)
-            for col in cts_cols}
+        self.A_cts = {
+            col: {
+                period:
+                    rng.normal(loc=controls_dict[col][f'a{period}_mu'], scale=controls_dict[col][f'a{period}_sig'], size=nl)
+                        if (controls_dict[col]['worker_type_interaction'] and (period[-1] != 'b')) else
+                    rng.normal(loc=controls_dict[col][f'a{period}_mu'], scale=controls_dict[col][f'a{period}_sig'], size=1)
+                for period in ['12', '43', '2ma', '2mb', '3ma', '3mb', '2s', '3s']
+            }
+            for col in cts_cols
+        }
+        self.S_cts = {
+            col: {
+                period:
+                    rng.uniform(low=max(controls_dict[col][f's{period}_low'], s_lb), high=controls_dict[col][f's{period}_high'], size=nl)
+                        if (controls_dict[col]['worker_type_interaction'] and (period[-1] != 'b')) else
+                    rng.uniform(low=max(controls_dict[col][f's{period}_low'], s_lb), high=controls_dict[col][f's{period}_high'], size=1)
+                for period in ['12', '43', '2ma', '2mb', '3ma', '3mb', '2s', '3s']
+            }
+            for col in cts_cols
+        }
 
     def _min_firm_type(self, A1, A2):
         '''
@@ -1304,140 +1345,152 @@ class BLMModel:
 
         return (A1, A2, A1_cat, A2_cat)
 
-    def _sum_by_non_nl(self, ni, C1, C2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, compute_A=True, compute_S=True):
+    def _sum_by_non_nl(self, ni, C_dict, A_cat, S_cat, A_cts, S_cts, compute_A=True, compute_S=True):
         '''
-        Compute A1_sum/A2_sum/S1_sum_sq/S2_sum_sq for non-worker-interaction terms.
+        Compute A_sum/S_sum_sq for non-worker-interaction terms.
 
         Arguments:
             ni (int): number of observations
-            C1 (dict of NumPy Arrays): dictionary linking column names to control variable data for the first period
-            C2 (dict of NumPy Arrays): dictionary linking column names to control variable data for the second period
-            A1_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the first period for categorical control variables
-            A2_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the second period for categorical control variables
-            S1_cat (dict of NumPy Arrays): dictionary linking column names to the standard deviation of fixed effects in the first period for categorical control variables
-            S2_cat (dict of NumPy Arrays): dictionary linking column names to the standard deviation of fixed effects in the second period for categorical control variables
-            A1_cts (dict of NumPy Arrays): dictionary linking column names to the mean of coefficients in the first period for continuous control variables
-            A2_cts (dict of NumPy Arrays): dictionary linking column names to the mean of coefficients in the second period for continuous control variables
-            S1_cts (dict of NumPy Arrays): dictionary linking column names to the standard deviation of coefficients in the first period for continuous control variables
-            S2_cts (dict of NumPy Arrays): dictionary linking column names to the standard deviation of coefficients in the second period for continuous control variables
+            C_dict (dict of dicts): link each period to a dictionary linking column names to control variable data for the corresponding period
+            A_cat (dict of dict of NumPy Arrays): dictionary linking column names to periods, where each period links to a dictionary of the mean of fixed effects for that categorical control variable in that period
+            S_cat (dict of dict of NumPy Arrays): dictionary linking column names to periods, where each period links to a dictionary of the standard deviation of fixed effects for that categorical control variable in that period
+            A_cts (dict of dict of NumPy Arrays): dictionary linking column names to periods, where each period links to a dictionary of the mean of fixed effects for that continuous control variable in that period
+            S_cts (dict of dict of NumPy Arrays): dictionary linking column names to periods, where each period links to a dictionary of the standard deviation of fixed effects for that continuous control variable in that period
             compute_A (bool): if True, compute and return A terms
             compute_S (bool): if True, compute and return S terms
 
         Returns:
-            (tuple of NumPy Arrays): (A1_sum, A2_sum, S1_sum_sq, S2_sum_sq), where each term gives the sum of estimated effects for control variables that do not interact with worker type (A terms are dropped if compute_A=False, and S terms are dropped if compute_S=False)
+            (tuple of dicts of NumPy Arrays): (A_sum, S_sum_sq), where each dictionary links to periods, and each period links to the sum of estimated effects for control variables that do not interact with worker type in that period (A terms are dropped if compute_A=False, and S terms are dropped if compute_S=False)
         '''
         if (not compute_A) and (not compute_S):
-            raise ValueError('compute_A=False and compute_S=False. Must specify at least one to be True.')
+            raise ValueError('`compute_A`=False and `compute_S`=False. Must specify at least one to be True.')
 
-        if not self.any_non_worker_type_interactions:
-            # If all control variables interact with worker type
-            if compute_A and compute_S:
-                return [0] * 4
-            return [0] * 2
+        # if not self.any_non_worker_type_interactions:
+        #     # If all control variables interact with worker type
+        #     if compute_A and compute_S:
+        #         return [0] * 10
+        #     return [0] * 6
 
         cat_cols, cts_cols = self.cat_cols, self.cts_cols
         controls_dict = self.controls_dict
 
         if compute_A:
-            A1_sum = np.zeros(ni)
-            A2_sum = np.zeros(ni)
+            A_sum = {
+                period: np.zeros(ni) for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']
+            }
         if compute_S:
-            S1_sum_sq = np.zeros(ni)
-            S2_sum_sq = np.zeros(ni)
+            S_sum_sq = {
+                period: np.zeros(ni) for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']
+            }
 
         ## Categorical ##
         for col in cat_cols:
-            if not controls_dict[col]['worker_type_interaction']:
-                if compute_A:
-                    A1_sum += A1_cat[col][C1[col]]
-                    A2_sum += A2_cat[col][C2[col]]
-                if compute_S:
-                    S1_sum_sq += S1_cat[col][C1[col]] ** 2
-                    S2_sum_sq += S2_cat[col][C2[col]] ** 2
+            A_cat_col = A_cat[col]
+            S_cat_col = S_cat[col]
+            for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']:
+                A_cat_t = A_cat_col[period]
+                S_cat_t = S_cat_col[period]
+                if (not controls_dict[col]['worker_type_interaction']) or (period[-1] == 'b'):
+                    C_t = C_dict[period][col]
+                    if compute_A:
+                        A_sum[period] += A_cat_t[C_t]
+                    if compute_S:
+                        S_sum_sq[period] += S_cat_t[C_t] ** 2
+
         ## Continuous ##
         for col in cts_cols:
-            if not controls_dict[col]['worker_type_interaction']:
-                if compute_A:
-                    A1_sum += A1_cts[col] * C1[col]
-                    A2_sum += A2_cts[col] * C2[col]
-                if compute_S:
-                    S1_sum_sq += S1_cts[col] ** 2
-                    S2_sum_sq += S2_cts[col] ** 2
+            A_cts_col = A_cts[col]
+            S_cts_col = S_cts[col]
+            for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']:
+                A_cts_t = A_cts_col[period]
+                S_cts_t = S_cts_col[period]
+                if (not controls_dict[col]['worker_type_interaction']) or (period[-1] == 'b'):
+                    if compute_A:
+                        C_t = C_dict[period][col]
+                        A_sum[period] += A_cts_t[col] * C_t
+                    if compute_S:
+                        S_sum_sq[period] += S_cts_t[col] ** 2
 
         if compute_A and compute_S:
-            return (A1_sum, A2_sum, S1_sum_sq, S2_sum_sq)
+            return (A_sum, S_sum_sq)
         if compute_A:
-            return (A1_sum, A2_sum)
+            return A_sum
         if compute_S:
-            return (S1_sum_sq, S2_sum_sq)
+            return S_sum_sq
 
-    def _sum_by_nl_l(self, ni, l, C1, C2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, compute_A=True, compute_S=True):
+    def _sum_by_nl_l(self, ni, l, C_dict, A_cat, S_cat, A_cts, S_cts, compute_A=True, compute_S=True):
         '''
-        Compute A1_sum/A2_sum/S1_sum_sq/S2_sum_sq to account for worker-interaction terms for a particular worker type.
+        Compute A_sum/S_sum_sq to account for worker-interaction terms for a particular worker type.
 
         Arguments:
             ni (int): number of observations
             l (int): worker type (must be in range(0, nl))
-            C1 (dict of NumPy Arrays): dictionary linking column names to control variable data for the first period
-            C2 (dict of NumPy Arrays): dictionary linking column names to control variable data for the second period
-            A1_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the first period for categorical control variables
-            A2_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the second period for categorical control variables
-            S1_cat (dict of NumPy Arrays): dictionary linking column names to the standard deviation of fixed effects in the first period for categorical control variables
-            S2_cat (dict of NumPy Arrays): dictionary linking column names to the standard deviation of fixed effects in the second period for categorical control variables
-            A1_cts (dict of NumPy Arrays): dictionary linking column names to the mean of coefficients in the first period for continuous control variables
-            A2_cts (dict of NumPy Arrays): dictionary linking column names to the mean of coefficients in the second period for continuous control variables
-            S1_cts (dict of NumPy Arrays): dictionary linking column names to the standard deviation of coefficients in the first period for continuous control variables
-            S2_cts (dict of NumPy Arrays): dictionary linking column names to the standard deviation of coefficients in the second period for continuous control variables
+            C_dict (dict of dicts): link each period to a dictionary linking column names to control variable data for the corresponding period
+            A_cat (dict of dict of NumPy Arrays): dictionary linking column names to periods, where each period links to a dictionary of the mean of fixed effects for that categorical control variable in that period
+            S_cat (dict of dict of NumPy Arrays): dictionary linking column names to periods, where each period links to a dictionary of the standard deviation of fixed effects for that categorical control variable in that period
+            A_cts (dict of dict of NumPy Arrays): dictionary linking column names to periods, where each period links to a dictionary of the mean of fixed effects for that continuous control variable in that period
+            S_cts (dict of dict of NumPy Arrays): dictionary linking column names to periods, where each period links to a dictionary of the standard deviation of fixed effects for that continuous control variable in that period
             compute_A (bool): if True, compute and return A terms
             compute_S (bool): if True, compute and return S terms
 
         Returns:
-            (tuple of NumPy Arrays): (A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l), where each term gives the sum of estimated effects for control variables that interact with worker type, specifically for worker type l (A terms are dropped if compute_A=False, and S terms are dropped if compute_S=False)
+            (tuple of dicts of NumPy Arrays): (A_sum_l, S_sum_sq_l), where each dictionary links to periods, and each period links to the sum of estimated effects for control variables that interact with worker type, specifically for worker type l (A terms are dropped if compute_A=False, and S terms are dropped if compute_S=False)
         '''
         if (not compute_A) and (not compute_S):
             raise ValueError('compute_A=False and compute_S=False. Must specify at least one to be True.')
 
-        if not self.any_worker_type_interactions:
-            # If no control variables interact with worker type
-            if compute_A and compute_S:
-                return [0] * 4
-            return [0] * 2
+        # if not self.any_worker_type_interactions:
+        #     # If no control variables interact with worker type
+        #     if compute_A and compute_S:
+        #         return [0] * 10
+        #     return [0] * 6
 
         cat_cols, cts_cols = self.cat_cols, self.cts_cols
         controls_dict = self.controls_dict
 
         if compute_A:
-            A1_sum_l = np.zeros(ni)
-            A2_sum_l = np.zeros(ni)
+            A_sum_l = {
+                period: np.zeros(ni) for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']
+            }
         if compute_S:
-            S1_sum_sq_l = np.zeros(ni)
-            S2_sum_sq_l = np.zeros(ni)
+            S_sum_sq_l = {
+                period: np.zeros(ni) for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']
+            }
 
         ## Categorical ##
         for col in cat_cols:
-            if controls_dict[col]['worker_type_interaction']:
-                if compute_A:
-                    A1_sum_l += A1_cat[col][l, C1[col]]
-                    A2_sum_l += A2_cat[col][l, C2[col]]
-                if compute_S:
-                    S1_sum_sq_l += S1_cat[col][l, C1[col]] ** 2
-                    S2_sum_sq_l += S2_cat[col][l, C2[col]] ** 2
+            A_cat_col = A_cat[col]
+            S_cat_col = S_cat[col]
+            for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']:
+                A_cat_t = A_cat_col[period]
+                S_cat_t = S_cat_col[period]
+                if controls_dict[col]['worker_type_interaction'] and (period[-1] != 'b'):
+                    C_t = C_dict[period][col]
+                    if compute_A:
+                        A_sum_l[period] += A_cat_t[l, C_t]
+                    if compute_S:
+                        S_sum_sq_l[period] += S_cat_t[l, C_t] ** 2
+
         ## Continuous ##
         for col in cts_cols:
-            if controls_dict[col]['worker_type_interaction']:
-                if compute_A:
-                    A1_sum_l += A1_cts[col][l] * C1[col]
-                    A2_sum_l += A2_cts[col][l] * C2[col]
-                if compute_S:
-                    S1_sum_sq_l += S1_cts[col][l] ** 2
-                    S2_sum_sq_l += S2_cts[col][l] ** 2
+            A_cts_col = A_cts[col]
+            S_cts_col = S_cts[col]
+            for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']:
+                A_cts_t = A_cts_col[period]
+                S_cts_t = S_cts_col[period]
+                if controls_dict[col]['worker_type_interaction'] and (period[-1] != 'b'):
+                    if compute_A:
+                        C_t = C_dict[period][col]
+                        A_sum_l[period] += A_cts_t[col][l] * C_t
+                    if compute_S:
+                        S_sum_sq_l[period] += S_cts_t[col][l] ** 2
 
         if compute_A and compute_S:
-            return (A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l)
+            return (A_sum_l, S_sum_sq_l)
         if compute_A:
-            return (A1_sum_l, A2_sum_l)
+            return A_sum_l
         if compute_S:
-            return (S1_sum_sq_l, S2_sum_sq_l)
+            return S_sum_sq_l
 
     def _var_stayers(self, sdata, rho_1, rho_4, rho_t, weights=None, diff=False):
         '''
@@ -1683,12 +1736,11 @@ class BLMModel:
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
             min_firm_type (int or None): if params['force_min_firm_type'] == True, gives the firm type to force as the lowest firm type; if params['force_min_firm_type'] == False, this parameter is not used
         '''
-        # Unpack parameters
+        ## Unpack parameters ##
         params = self.params
         nl, nk, ni = self.nl, self.nk, jdata.shape[0]
-        A1, A2, S1, S2 = self.A1, self.A2, self.S1, self.S2
-        A1_cat, A2_cat, S1_cat, S2_cat = self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat
-        A1_cts, A2_cts, S1_cts, S2_cts = self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts
+        R12, R43, R32m = self.R12, self.R43, self.R32m
+        A, A_cat, A_cts, S, S_cat, S_cts = self.A, self.A_cat, self.A_cts, self.S, self.S_cat, self.S_cts
         cat_cols, cts_cols = self.cat_cols, self.cts_cols
         cat_dict, cts_dict = self.cat_dict, self.cts_dict
         controls_dict = self.controls_dict
@@ -1697,16 +1749,11 @@ class BLMModel:
         # Store wage outcomes and groups
         Y1 = jdata.loc[:, 'y1'].to_numpy()
         Y2 = jdata.loc[:, 'y2'].to_numpy()
+        Y3 = jdata.loc[:, 'y3'].to_numpy()
+        Y4 = jdata.loc[:, 'y4'].to_numpy()
         G1 = jdata.loc[:, 'g1'].to_numpy().astype(int, copy=False)
-        G2 = jdata.loc[:, 'g2'].to_numpy().astype(int, copy=False)
-        # Weights
-        if params['weighted'] and jdata._col_included('w'):
-            W1 = jdata.loc[:, 'w1'].to_numpy()
-            W2 = jdata.loc[:, 'w2'].to_numpy()
-        else:
-            W1 = 1
-            W2 = 1
-        W = np.sqrt(W1 * W2)
+        G2 = jdata.loc[:, 'g4'].to_numpy().astype(int, copy=False)
+
         # Control variables
         C1 = {}
         C2 = {}
@@ -1718,12 +1765,14 @@ class BLMModel:
                 # If column is constant over time
                 subcol_1 = subcols[0]
                 subcol_2 = subcols[0]
-            elif n_subcols == 2:
+                subcol_3 = subcols[0]
+                subcol_4 = subcols[0]
+            elif n_subcols == 4:
                 # If column can change over time
                 subcol_1 = subcols[0]
-                subcol_2 = subcols[1]
+                subcol_2 = subcols[3]
             else:
-                raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
+                raise NotImplementedError(f'Column names must have either one or four associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
             if i < len(cat_cols):
                 # Categorical
                 C1[col] = jdata.loc[:, subcol_1].to_numpy().astype(int, copy=False)
@@ -1732,11 +1781,16 @@ class BLMModel:
                 # Continuous
                 C1[col] = jdata.loc[:, subcol_1].to_numpy()
                 C2[col] = jdata.loc[:, subcol_2].to_numpy()
+        C1_periods = ['12', '2ma', '3mb']
+        C2_periods = ['43', '2mb', '3ma']
+        C_dict = {period: C1 if period in C1_periods else C2 for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']}
         ## Sparse matrix representations ##
         GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
         GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
         CC1 = {col: csc_matrix((np.ones(ni), (range(ni), C1[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
         CC2 = {col: csc_matrix((np.ones(ni), (range(ni), C2[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
+        CC3 = {col: csc_matrix((np.ones(ni), (range(ni), C3[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
+        CC4 = {col: csc_matrix((np.ones(ni), (range(ni), C4[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
 
         # Joint firm indicator
         KK = G1 + nk * G2
@@ -1757,23 +1811,23 @@ class BLMModel:
         prev_lik = np.inf
         # Fix error from bad initial guesses causing probabilities to be too low
         d_prior = params['d_prior_movers']
-        # Track minimum firm type to check whether estimator stuck in a loop
-        min_firm_types = []
+        # # Track minimum firm type to check whether estimator stuck in a loop
+        # min_firm_types = []
         # Whether results should be stored
         store_res = True
 
-        ## Sort ##
-        A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
+        # ## Sort ##
+        # A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
 
         ## Constraints ##
-        if params['force_min_firm_type']:
-            # If forcing minimum firm type
-            prev_min_firm_type = min_firm_type
-            min_firm_type = min_firm_type
-        else:
-            # If not forcing minimum firm type
-            prev_min_firm_type = self._min_firm_type(A1, A2)
-        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(prev_min_firm_type)
+        # if params['force_min_firm_type']:
+        #     # If forcing minimum firm type
+        #     prev_min_firm_type = min_firm_type
+        #     min_firm_type = min_firm_type
+        # else:
+        #     # If not forcing minimum firm type
+        #     prev_min_firm_type = self._min_firm_type(A1, A2)
+        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints() # prev_min_firm_type)
 
         for iter in range(params['n_iters_movers']):
             # ---------- E-Step ----------
@@ -1783,22 +1837,67 @@ class BLMModel:
             if any_controls > 0:
                 ## Account for control variables ##
                 if iter == 0:
-                    A1_sum, A2_sum, S1_sum_sq, S2_sum_sq = self._sum_by_non_nl(ni=ni, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts)
+                    A_sum, S_sum_sq = self._sum_by_non_nl(ni=ni, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts)
                 else:
-                    S1_sum_sq, S2_sum_sq = self._sum_by_non_nl(ni=ni, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_A=False)
+                    S_sum_sq = self._sum_by_non_nl(ni=ni, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_A=False)
 
                 for l in range(nl):
-                    # Update A1_sum/A2_sum/S1_sum_sq/S2_sum_sq to account for worker-interaction terms
-                    A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts)
-                    lp1 = lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
-                    lp2 = lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
-                    lp[:, l] = log_pk1[KK, l] + W1 * lp1 + W2 * lp2
+                    # Update A_sum/S_sum_sq to account for worker-interaction terms
+                    A_sum_l, S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts)
+
+                    for g1 in range(nk):
+                        for g2 in range(nk):
+                            I = (G1 == g1) and (G2 == g2)
+                            lp1 = lognormpdf(
+                                Y1[I] - R12 * (Y2[I] - A['2ma'][l, g1] - A_sum['2ma'] - A_sum_l['2ma']),
+                                A['12'][l, g1] + A_sum['12'] + A_sum_l['12'],
+                                np.sqrt(S['12'][l, g1] ** 2 + S_sum_sq['12'] + S_sum_sq_l['12'])
+                            )
+                            lp2 = lognormpdf(
+                                Y2[I],
+                                (A['2ma'][l, g1] + A['2mb'][g2]) + (A_sum['2ma'] + A_sum['2mb']) + (A_sum_l['2ma'] + A_sum_l['2mb']),
+                                np.sqrt(S['2m'][l, g1] ** 2 + S_sum_sq['2m'] + S_sum_sq_l['2m'])
+                            )
+                            lp3 = lognormpdf(
+                                Y3[I] - R32m * (Y2[I] - (A['2ma'][l, g1] + A['2mb'][g2]) - (A_sum['2ma'] + A_sum['2mb']) - (A_sum_l['2ma'] + A_sum_l['2mb'])),
+                                (A['3ma'][l, g2] + A['3mb'][g1]) + (A_sum['3ma'] + A_sum['3mb']) + (A_sum_l['3ma'] + A_sum_l['3mb']),
+                                np.sqrt(S['3m'][l, g2] ** 2 + S_sum_sq['3m'] + S_sum_sq_l['3m'])
+                            )
+                            lp4 = lognormpdf(
+                                Y4[I] - R43 * (Y3[I] - A['3ma'][l, g2] - A_sum['3ma'] - A_sum_l['3ma']),
+                                A['43'][l, g2] + A_sum['43'] + A_sum_l['43'],
+                                np.sqrt(S['43'][l, g2] ** 2 + S_sum_sq['43'] + S_sum_sq_l['43'])
+                            )
+
+                            lp[I, l] = log_pk1[KK[I], l] + lp1 + lp2 + lp3 + lp4
             else:
-                for l in range(nl):
-                    lp1 = fast_lognormpdf(Y1, A1[l, :], S1[l, :], G1)
-                    lp2 = fast_lognormpdf(Y2, A2[l, :], S2[l, :], G2)
-                    lp[:, l] = log_pk1[KK, l] + W1 * lp1 + W2 * lp2
-            del log_pk1, lp1, lp2
+                for g1 in range(nk):
+                    for g2 in range(nk):
+                        I = (G1 == g1) and (G2 == g2)
+                        for l in range(nl):
+                            lp1 = lognormpdf(
+                                Y1[I] - R12 * (Y2[I] - A['2ma'][l, g1]),
+                                A['12'][l, g1],
+                                S['12'][l, g1]
+                            )
+                            lp2 = lognormpdf(
+                                Y2[I],
+                                A['2ma'][l, g1] + A['2mb'][g2],
+                                S['2m'][l, g1]
+                            )
+                            lp3 = lognormpdf(
+                                Y3[I] - R32m * (Y2[I] - A['2ma'][l, g1] - A['2mb'][g2]),
+                                A['3ma'][l, g2] + A['3mb'][g1],
+                                S['3m'][l, g2]
+                            )
+                            lp4 = lognormpdf(
+                                Y4[I] - R43 * (Y3[I] - A['3ma'][l, g2]),
+                                A['43'][l, g2],
+                                S['43'][l, g2]
+                            )
+
+                            lp[I, l] = log_pk1[KK[I], l] + lp1 + lp2 + lp3 + lp4
+            del log_pk1, lp1, lp2, lp3, lp4
 
             # We compute log sum exp to get likelihoods and probabilities
             lse_lp = logsumexp(lp, axis=1)
@@ -1890,12 +1989,19 @@ class BLMModel:
                 XwX[l_index: r_index] = diag_of_sp_prod(GG1_weighted[l], GG1)
                 XwX[ts + l_index: ts + r_index] = np.asarray(GG2_weighted[l].multiply(GG2.T).sum(axis=1))[:, 0]
                 if params['update_a']:
-                    # Update A1_sum and A2_sum to account for worker-interaction terms
-                    A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
+                    # Update A_sum to account for worker-interaction terms
+                    A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l = self._sum_by_nl_l(
+                        ni=ni, l=l, C1=C1, C2=C2, C3=C3, C4=C4,
+                        A12_cat=A12_cat, A43_cat=A43_cat, S12_cat=S12_cat, S43_cat=S43_cat,
+                        A2ma_cat=A2ma_cat, A2mb_cat=A2mb_cat, S2m_cat=S2m_cat,
+                        A3ma_cat=A3ma_cat, A3mb_cat=A3mb_cat, S3m_cat=S3m_cat,
+                        A12_cts=A12_cts, A43_cts=A43_cts, S12_cts=S12_cts, S43_cts=S43_cts,
+                        A2ma_cts=A2ma_cts, A2mb_cts=A2mb_cts, S2m_cts=S2m_cts,
+                        A3ma_cts=A3ma_cts, A3mb_cts=A3mb_cts, S3m_cts=S3m_cts, compute_S=False)
                     ## Compute XwY terms ##
                     XwY[l_index: r_index] = GG1_weighted[l] @ (Y1_adj - A1_sum_l)
                     XwY[ts + l_index: ts + r_index] = GG2_weighted[l] @ (Y2_adj - A2_sum_l)
-                    del A1_sum_l, A2_sum_l
+                    del A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l
             if not params['update_s']:
                 del GG1_weighted, GG2_weighted
 
@@ -1974,15 +2080,22 @@ class BLMModel:
                     XwX_cat[col][l_index: r_index] = diag_of_sp_prod(CC1_cat_weighted[col][l], CC1[col])
                     XwX_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = np.asarray(CC2_cat_weighted[col][l].multiply(CC2[col].T).sum(axis=1))[:, 0]
                     if params['update_a']:
-                        # Update A1_sum and A2_sum to account for worker-interaction terms
-                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
+                        # Update A_sum to account for worker-interaction terms
+                        A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l = self._sum_by_nl_l(
+                            ni=ni, l=l, C1=C1, C2=C2, C3=C3, C4=C4,
+                            A12_cat=A12_cat, A43_cat=A43_cat, S12_cat=S12_cat, S43_cat=S43_cat,
+                            A2ma_cat=A2ma_cat, A2mb_cat=A2mb_cat, S2m_cat=S2m_cat,
+                            A3ma_cat=A3ma_cat, A3mb_cat=A3mb_cat, S3m_cat=S3m_cat,
+                            A12_cts=A12_cts, A43_cts=A43_cts, S12_cts=S12_cts, S43_cts=S43_cts,
+                            A2ma_cts=A2ma_cts, A2mb_cts=A2mb_cts, S2m_cts=S2m_cts,
+                            A3ma_cts=A3ma_cts, A3mb_cts=A3mb_cts, S3m_cts=S3m_cts, compute_S=False)
                         if cat_dict[col]['worker_type_interaction']:
                             A1_sum_l -= A1_cat[col][l, C1[col]]
                             A2_sum_l -= A2_cat[col][l, C2[col]]
                         ## Compute XwY_cat terms ##
                         XwY_cat[col][l_index: r_index] = CC1_cat_weighted[col][l] @ (Y1_adj - A1_sum_l - A1[l, G1])
                         XwY_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = CC2_cat_weighted[col][l] @ (Y2_adj - A2_sum_l - A2[l, G2])
-                        del A1_sum_l, A2_sum_l
+                        del A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l
                 if not params['update_s']:
                     del CC1_cat_weighted[col], CC2_cat_weighted[col]
 
@@ -2040,15 +2153,22 @@ class BLMModel:
                     XwX_cts[col][l] = (CC1_cts_weighted[col][l] @ C1[col])
                     XwX_cts[col][nl + l] = (CC2_cts_weighted[col][l] @ C2[col])
                     if params['update_a']:
-                        # Update A1_sum and A2_sum to account for worker-interaction terms
-                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
+                        # Update A_sum to account for worker-interaction terms
+                        A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l = self._sum_by_nl_l(
+                            ni=ni, l=l, C1=C1, C2=C2, C3=C3, C4=C4,
+                            A12_cat=A12_cat, A43_cat=A43_cat, S12_cat=S12_cat, S43_cat=S43_cat,
+                            A2ma_cat=A2ma_cat, A2mb_cat=A2mb_cat, S2m_cat=S2m_cat,
+                            A3ma_cat=A3ma_cat, A3mb_cat=A3mb_cat, S3m_cat=S3m_cat,
+                            A12_cts=A12_cts, A43_cts=A43_cts, S12_cts=S12_cts, S43_cts=S43_cts,
+                            A2ma_cts=A2ma_cts, A2mb_cts=A2mb_cts, S2m_cts=S2m_cts,
+                            A3ma_cts=A3ma_cts, A3mb_cts=A3mb_cts, S3m_cts=S3m_cts, compute_S=False)
                         if cts_dict[col]['worker_type_interaction']:
                             A1_sum_l -= A1_cts[col][l] * C1[col]
                             A2_sum_l -= A2_cts[col][l] * C2[col]
                         ## Compute XwY_cts terms ##
                         XwY_cts[col][l] = CC1_cts_weighted[col][l] @ (Y1_adj - A1_sum_l - A1[l, G1])
                         XwY_cts[col][nl + l] = CC2_cts_weighted[col][l] @ (Y2_adj - A2_sum_l - A2[l, G2])
-                        del A1_sum_l, A2_sum_l
+                        del A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l
                 if not params['update_s']:
                     del CC1_cts_weighted[col], CC2_cts_weighted[col]
 
@@ -2101,11 +2221,18 @@ class BLMModel:
 
                 ## Update S ##
                 for l in range(nl):
-                    # Update A1_sum and A2_sum to account for worker-interaction terms
-                    A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
+                    # Update A_sum to account for worker-interaction terms
+                    A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l = self._sum_by_nl_l(
+                        ni=ni, l=l, C1=C1, C2=C2, C3=C3, C4=C4,
+                        A12_cat=A12_cat, A43_cat=A43_cat, S12_cat=S12_cat, S43_cat=S43_cat,
+                        A2ma_cat=A2ma_cat, A2mb_cat=A2mb_cat, S2m_cat=S2m_cat,
+                        A3ma_cat=A3ma_cat, A3mb_cat=A3mb_cat, S3m_cat=S3m_cat,
+                        A12_cts=A12_cts, A43_cts=A43_cts, S12_cts=S12_cts, S43_cts=S43_cts,
+                        A2ma_cts=A2ma_cts, A2mb_cts=A2mb_cts, S2m_cts=S2m_cts,
+                        A3ma_cts=A3ma_cts, A3mb_cts=A3mb_cts, S3m_cts=S3m_cts, compute_S=False)
                     eps1_l_sq = (Y1_adj - A1_sum_l - A1[l, G1]) ** 2
                     eps2_l_sq = (Y2_adj - A2_sum_l - A2[l, G2]) ** 2
-                    del A1_sum_l, A2_sum_l
+                    del A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l
                     ## XwS terms ##
                     l_index, r_index = l * nk, (l + 1) * nk
                     XwS[l_index: r_index] = GG1_weighted[l] @ eps1_l_sq
@@ -2197,7 +2324,7 @@ class BLMModel:
 
             if params['update_pk1']:
                 # NOTE: add dirichlet prior
-                pk1 = GG12.T @ (W * (qi.T + d_prior - 1)).T
+                pk1 = GG12.T @ (qi + d_prior - 1)
                 # Normalize rows to sum to 1
                 pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
 
@@ -2264,7 +2391,9 @@ class BLMModel:
         # Unpack parameters
         params = self.params
         nl, nk, ni = self.nl, self.nk, sdata.shape[0]
-        A1, A2, S1, S2 = self.A1, self.A2, self.S1, self.S2
+        A12, A43, S12, S43 = self.A12, self.A43, self.S12, self.S43
+        A2ma, A2mb, S2m = self.A2ma, self.A2mb, self.S2m
+        A3ma, A3mb, S3m = self.A3ma, self.A3ma, self.S3m
         cat_cols, cts_cols = self.cat_cols, self.cts_cols
         any_controls = self.any_controls
         # Fix error from bad initial guesses causing probabilities to be too low
@@ -2272,22 +2401,17 @@ class BLMModel:
 
         # Store wage outcomes and groups
         Y1 = sdata['y1'].to_numpy()
-        # Y2 = sdata['y2'].to_numpy()
+        Y2 = sdata['y2'].to_numpy()
         G1 = sdata['g1'].to_numpy().astype(int, copy=False)
         # G2 = sdata['g2'].to_numpy().astype(int, copy=False)
         GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
-        # Weights
-        if params['weighted'] and sdata._col_included('w'):
-            W1 = sdata.loc[:, 'w1'].to_numpy()
-            # W2 = sdata.loc[:, 'w2'].to_numpy()
-        else:
-            W1 = 1
-            # W2 = 1
-        W = W1 # np.sqrt(W1 * W2)
+
         if any_controls:
             ## Control variables ##
             C1 = {}
             C2 = {}
+            C3 = {}
+            C4 = {}
             for i, col in enumerate(cat_cols + cts_cols):
                 # Get subcolumns associated with col
                 subcols = to_list(sdata.col_reference_dict[col])
@@ -2296,20 +2420,28 @@ class BLMModel:
                     # If column is constant over time
                     subcol_1 = subcols[0]
                     subcol_2 = subcols[0]
-                elif n_subcols == 2:
+                    subcol_3 = subcols[0]
+                    subcol_4 = subcols[0]
+                elif n_subcols == 4:
                     # If column can change over time
                     subcol_1 = subcols[0]
                     subcol_2 = subcols[1]
+                    subcol_3 = subcols[2]
+                    subcol_4 = subcols[3]
                 else:
-                    raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
+                    raise NotImplementedError(f'Column names must have either one or four associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
                 if i < len(cat_cols):
                     # Categorical
                     C1[col] = sdata.loc[:, subcol_1].to_numpy().astype(int, copy=False)
                     C2[col] = sdata.loc[:, subcol_2].to_numpy().astype(int, copy=False)
+                    C3[col] = sdata.loc[:, subcol_3].to_numpy().astype(int, copy=False)
+                    C4[col] = sdata.loc[:, subcol_4].to_numpy().astype(int, copy=False)
                 else:
                     # Continuous
                     C1[col] = sdata.loc[:, subcol_1].to_numpy()
                     C2[col] = sdata.loc[:, subcol_2].to_numpy()
+                    C3[col] = sdata.loc[:, subcol_3].to_numpy()
+                    C4[col] = sdata.loc[:, subcol_4].to_numpy()
 
         # Matrix of prior probabilities
         pk0 = self.pk0
@@ -2326,11 +2458,25 @@ class BLMModel:
 
         if any_controls:
             ## Account for control variables ##
-            A1_sum, A2_sum, S1_sum_sq, S2_sum_sq = self._sum_by_non_nl(ni=ni, C1=C1, C2=C2, A1_cat=self.A1_cat, A2_cat=self.A2_cat, S1_cat=self.S1_cat, S2_cat=self.S2_cat, A1_cts=self.A1_cts, A2_cts=self.A2_cts, S1_cts=self.S1_cts, S2_cts=self.S2_cts)
+            A12_sum, A43_sum, A2ma_sum, A2mb_sum, A3ma_sum, A3mb_sum, S12_sum_sq, S43_sum_sq, S2m_sum_sq, S3m_sum_sq = self._sum_by_non_nl(
+                ni=ni, C1=C1, C2=C2, C3=C3, C4=C4,
+                A12_cat=self.A12_cat, A43_cat=self.A43_cat, S12_cat=self.S12_cat, S43_cat=self.S43_cat,
+                A2ma_cat=self.A2ma_cat, A2mb_cat=self.A2mb_cat, S2m_cat=self.S2m_cat,
+                A3ma_cat=self.A3ma_cat, A3mb_cat=self.A3mb_cat, S3m_cat=self.S3m_cat,
+                A12_cts=self.A12_cts, A43_cts=self.A43_cts, S12_cts=self.S12_cts, S43_cts=self.S43_cts,
+                A2ma_cts=self.A2ma_cts, A2mb_cts=self.A2mb_cts, S2m_cts=self.S2m_cts,
+                A3ma_cts=self.A3ma_cts, A3mb_cts=self.A3mb_cts, S3m_cts=self.S3m_cts)
 
             for l in range(nl):
-                # Update A1_sum/S1_sum_sq to account for worker-interaction terms
-                A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=self.A1_cat, A2_cat=self.A2_cat, S1_cat=self.S1_cat, S2_cat=self.S2_cat, A1_cts=self.A1_cts, A2_cts=self.A2_cts, S1_cts=self.S1_cts, S2_cts=self.S2_cts)
+                # Update A_sum/S_sum_sq to account for worker-interaction terms
+                A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l, S12_sum_sq_l, S43_sum_sq_l, S2m_sum_sq_l, S3m_sum_sq_l = self._sum_by_nl_l(
+                    ni=ni, l=l, C1=C1, C2=C2, C3=C3, C4=C4,
+                    A12_cat=self.A12_cat, A43_cat=self.A43_cat, S12_cat=self.S12_cat, S43_cat=self.S43_cat,
+                    A2ma_cat=self.A2ma_cat, A2mb_cat=self.A2mb_cat, S2m_cat=self.S2m_cat,
+                    A3ma_cat=self.A3ma_cat, A3mb_cat=self.A3mb_cat, S3m_cat=self.S3m_cat,
+                    A12_cts=self.A12_cts, A43_cts=self.A43_cts, S12_cts=self.S12_cts, S43_cts=self.S43_cts,
+                    A2ma_cts=self.A2ma_cts, A2mb_cts=self.A2mb_cts, S2m_cts=self.S2m_cts,
+                    A3ma_cts=self.A3ma_cts, A3mb_cts=self.A3mb_cts, S3m_cts=self.S3m_cts)
                 lp1 = lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
                 # lp2 = lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
                 lp_stable[:, l] = W1 * lp1 # + W2 * lp2
