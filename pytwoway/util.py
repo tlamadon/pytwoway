@@ -229,10 +229,17 @@ def logsumexp(a, axis=None):
 
 logpi = - 0.5 * np.log(2 * np.pi)
 
-def lognormpdf(x, mu, sd):
-    # Faster to split into multiple lines
-    res = logpi - np.log(sd)
-    res -= (x - mu) ** 2 / (2 * sd ** 2)
+def lognormpdf(x, mu, sd=None, var=None):
+    if ((sd is None) and (var is None)) or ((sd is not None) and (var is not None)):
+        raise ValueError('One of `sd` and `var` must be None, and the other must not be None.')
+    if sd is not None:
+        # Faster to split into multiple lines
+        res = logpi - np.log(sd)
+        res -= (x - mu) ** 2 / (2 * sd ** 2)
+    elif var is not None:
+        # Faster to split into multiple lines
+        res = logpi - (1 / 2) * np.log(var)
+        res -= (x - mu) ** 2 / (2 * var)
     return res
 
 

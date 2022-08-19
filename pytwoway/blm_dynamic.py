@@ -1845,32 +1845,30 @@ class BLMModel:
                     # Update A_sum/S_sum_sq to account for worker-interaction terms
                     A_sum_l, S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts)
 
-                    for g1 in range(nk):
-                        for g2 in range(nk):
-                            I = (G1 == g1) and (G2 == g2)
-                            lp1 = lognormpdf(
-                                Y1[I] - R12 * (Y2[I] - A['2ma'][l, g1] - A_sum['2ma'] - A_sum_l['2ma']),
-                                A['12'][l, g1] + A_sum['12'] + A_sum_l['12'],
-                                np.sqrt(S['12'][l, g1] ** 2 + S_sum_sq['12'] + S_sum_sq_l['12'])
-                            )
-                            lp2 = lognormpdf(
-                                Y2[I],
-                                (A['2ma'][l, g1] + A['2mb'][g2]) + (A_sum['2ma'] + A_sum['2mb']) + (A_sum_l['2ma'] + A_sum_l['2mb']),
-                                np.sqrt(S['2m'][l, g1] ** 2 + S_sum_sq['2m'] + S_sum_sq_l['2m'])
-                            )
-                            lp3 = lognormpdf(
-                                Y3[I] - R32m * (Y2[I] - (A['2ma'][l, g1] + A['2mb'][g2]) - (A_sum['2ma'] + A_sum['2mb']) - (A_sum_l['2ma'] + A_sum_l['2mb'])),
-                                (A['3ma'][l, g2] + A['3mb'][g1]) + (A_sum['3ma'] + A_sum['3mb']) + (A_sum_l['3ma'] + A_sum_l['3mb']),
-                                np.sqrt(S['3m'][l, g2] ** 2 + S_sum_sq['3m'] + S_sum_sq_l['3m'])
-                            )
-                            lp4 = lognormpdf(
-                                Y4[I] - R43 * (Y3[I] - A['3ma'][l, g2] - A_sum['3ma'] - A_sum_l['3ma']),
-                                A['43'][l, g2] + A_sum['43'] + A_sum_l['43'],
-                                np.sqrt(S['43'][l, g2] ** 2 + S_sum_sq['43'] + S_sum_sq_l['43'])
-                            )
+                    lp1 = lognormpdf(
+                        Y1 - R12 * (Y2 - A['2ma'][l, G1] - A_sum['2ma'] - A_sum_l['2ma']),
+                        A['12'][l, G1] + A_sum['12'] + A_sum_l['12'],
+                        var=S['12'][l, G1] ** 2 + S_sum_sq['12'] + S_sum_sq_l['12']
+                    )
+                    lp2 = lognormpdf(
+                        Y2,
+                        (A['2ma'][l, G1] + A['2mb'][G2]) + (A_sum['2ma'] + A_sum['2mb']) + (A_sum_l['2ma'] + A_sum_l['2mb']),
+                        var=S['2m'][l, G1] ** 2 + S_sum_sq['2m'] + S_sum_sq_l['2m']
+                    )
+                    lp3 = lognormpdf(
+                        Y3 - R32m * (Y2 - (A['2ma'][l, G1] + A['2mb'][G2]) - (A_sum['2ma'] + A_sum['2mb']) - (A_sum_l['2ma'] + A_sum_l['2mb'])),
+                        (A['3ma'][l, G2] + A['3mb'][G1]) + (A_sum['3ma'] + A_sum['3mb']) + (A_sum_l['3ma'] + A_sum_l['3mb']),
+                        var=S['3m'][l, G2] ** 2 + S_sum_sq['3m'] + S_sum_sq_l['3m']
+                    )
+                    lp4 = lognormpdf(
+                        Y4 - R43 * (Y3 - A['3ma'][l, G2] - A_sum['3ma'] - A_sum_l['3ma']),
+                        A['43'][l, G2] + A_sum['43'] + A_sum_l['43'],
+                        var=S['43'][l, G2] ** 2 + S_sum_sq['43'] + S_sum_sq_l['43']
+                    )
 
-                            lp[I, l] = log_pk1[KK[I], l] + lp1 + lp2 + lp3 + lp4
+                    lp[:, l] = log_pk1[KK, l] + lp1 + lp2 + lp3 + lp4
             else:
+                # Loop over firm classes so means/variances are single values rather than vectors (computing log/square is much faster this way)
                 for g1 in range(nk):
                     for g2 in range(nk):
                         I = (G1 == g1) and (G2 == g2)
@@ -1878,22 +1876,22 @@ class BLMModel:
                             lp1 = lognormpdf(
                                 Y1[I] - R12 * (Y2[I] - A['2ma'][l, g1]),
                                 A['12'][l, g1],
-                                S['12'][l, g1]
+                                sd=S['12'][l, g1]
                             )
                             lp2 = lognormpdf(
                                 Y2[I],
                                 A['2ma'][l, g1] + A['2mb'][g2],
-                                S['2m'][l, g1]
+                                sd=S['2m'][l, g1]
                             )
                             lp3 = lognormpdf(
                                 Y3[I] - R32m * (Y2[I] - A['2ma'][l, g1] - A['2mb'][g2]),
                                 A['3ma'][l, g2] + A['3mb'][g1],
-                                S['3m'][l, g2]
+                                sd=S['3m'][l, g2]
                             )
                             lp4 = lognormpdf(
                                 Y4[I] - R43 * (Y3[I] - A['3ma'][l, g2]),
                                 A['43'][l, g2],
-                                S['43'][l, g2]
+                                sd=S['43'][l, g2]
                             )
 
                             lp[I, l] = log_pk1[KK[I], l] + lp1 + lp2 + lp3 + lp4
