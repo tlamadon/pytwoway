@@ -34,7 +34,7 @@ def _min_gt0(a):
     return np.min(a) > 0
 
 # Define default parameter dictionaries
-_blm_params_default = ParamsDict({
+_blm_dynamic_params_default = ParamsDict({
     ## Class parameters ##
     'nl': (6, 'type_constrained', (int, _gteq1),
         '''
@@ -61,37 +61,117 @@ _blm_params_default = ParamsDict({
             (default=1) If 0, print no output; if 1, print each major step in estimation; if 2, print warnings during estimation; if 3, print likelihoods at each iteration.
         ''', None),
     ## Starting values ##
-    'a1_mu': (1, 'type', (float, int),
+    'a12_mu': (1, 'type', (float, int),
         '''
-            (default=1) Mean of simulated A1 (mean of fixed effects in first period).
+            (default=1) Mean of simulated A12 (mean of fixed effects).
         ''', None),
-    'a1_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a12_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.5) Standard error of simulated A1 (mean of fixed effects in first period).
+            (default=0.5) Standard error of simulated A12 (mean of fixed effects).
         ''', '>= 0'),
-    'a2_mu': (1, 'type', (float, int),
+    'a43_mu': (1, 'type', (float, int),
         '''
-            (default=1) Mean of simulated A2 (mean of fixed effects in second period).
+            (default=1) Mean of simulated A43 (mean of fixed effects).
         ''', None),
-    'a2_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a43_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.5) Standard error of simulated A2 (mean of fixed effects in second period).
+            (default=0.5) Standard error of simulated A43 (mean of fixed effects).
         ''', '>= 0'),
-    's1_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    'a2ma_mu': (1, 'type', (float, int),
         '''
-            (default=0.3) Minimum value of simulated S1 (standard deviation of fixed effects in first period).
+            (default=1) Mean of simulated A2a for movers (mean of fixed effects).
+        ''', None),
+    'a2ma_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A2a for movers (mean of fixed effects).
         ''', '>= 0'),
-    's1_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a2mb_mu': (1, 'type', (float, int),
         '''
-            (default=0.5) Maximum value of simulated S1 (standard deviation of fixed effects in first period).
+            (default=1) Mean of simulated A2b for movers (mean of fixed effects).
+        ''', None),
+    'a2mb_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A2b for movers (mean of fixed effects).
         ''', '>= 0'),
-    's2_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    'a2s_mu': (1, 'type', (float, int),
         '''
-            (default=0.3) Minimum value of simulated S2 (standard deviation of fixed effects in second period).
+            (default=1) Mean of simulated A2 for stayers (mean of fixed effects).
+        ''', None),
+    'a2s_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A2 for stayers (mean of fixed effects).
         ''', '>= 0'),
-    's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a3ma_mu': (1, 'type', (float, int),
         '''
-            (default=0.5) Maximum value of simulated S2 (standard deviation of fixed effects in second period).
+            (default=1) Mean of simulated A3 for movers (mean of fixed effects).
+        ''', None),
+    'a3ma_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A3 for movers (mean of fixed effects).
+        ''', '>= 0'),
+    'a3mb_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A3 for movers (mean of fixed effects).
+        ''', None),
+    'a3mb_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A3 for movers (mean of fixed effects).
+        ''', '>= 0'),
+    'a3s_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A3 for stayers (mean of fixed effects).
+        ''', None),
+    'a3s_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A3 for stayers (mean of fixed effects).
+        ''', '>= 0'),
+    's12_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S12 (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's12_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S12 (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's43_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S43 (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's43_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S43 (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2m_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S2 for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2m_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S2 for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S2 for stayers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2s_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S2 for stayers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3m_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S3 for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3m_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S3 for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S3 for stayers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3s_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S3 for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
     'pk1_prior': (None, 'array_of_type_constrained_none', (('float', 'int'), _min_gt0),
         '''
@@ -102,10 +182,6 @@ _blm_params_default = ParamsDict({
     #         (default=None) Dirichlet prior for pk0 (probability of being at each firm type for stayers). Must have length nl. None is equivalent to np.ones(nl).
     #     ''', 'min > 0'),
     ## fit_movers() and fit_stayers() parameters ##
-    'weighted': (True, 'type', bool,
-        '''
-            (default=True) If True, run estimator with weights. These come from data columns 'w1' and 'w2'.
-        ''', None),
     'normalize': (True, 'type', bool,
         '''
             (default=True) If True, normalize estimator during estimation if there are categorical controls with constraints. With particular constraints, the estimator may be identified without normalization, in which case this should be set to False.
@@ -125,11 +201,11 @@ _blm_params_default = ParamsDict({
         ''', '>= 0'),
     'update_a': (True, 'type', bool,
         '''
-            (default=True) If False, do not update A1 or A2.
+            (default=True) If False, do not update A12/A43/A2ma/A2mb/A2s/A3ma/A3mb/A3s.
         ''', None),
     'update_s': (True, 'type', bool,
         '''
-            (default=True) If False, do not update S1 or S2.
+            (default=True) If False, do not update S12/S43/S2m/S2s/S3m/S3s.
         ''', None),
     'update_pk1': (True, 'type', bool,
         '''
@@ -137,23 +213,23 @@ _blm_params_default = ParamsDict({
         ''', None),
     'cons_a': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=None) Constraint object or list of constraint objects that define constraints on A1 and A2. None is equivalent to [].
+            (default=None) Constraint object or list of constraint objects that define constraints on A12/A43/A2ma/A2mb/A2s/A3ma/A3mb/A3s. None is equivalent to [].
         ''', None),
     'cons_s': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=None) Constraint object or list of constraint objects that define constraints on S1 and S2. None is equivalent to [].
+            (default=None) Constraint object or list of constraint objects that define constraints on S12/S43/S2m/S2s/S3m/S3s. None is equivalent to [].
         ''', None),
     'cons_a_all': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=None) Constraint object or list of constraint objects that define constraints on A1/A2/A1_cat/A2_cat/A1_cts/A2_cts. None is equivalent to [].
+            (default=None) Constraint object or list of constraint objects that define constraints on A12/A43/A2ma/A2mb/A2s/A3ma/A3mb/A3s plus their categorical and continuous control variants. None is equivalent to [].
         ''', None),
     'cons_s_all': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
-            (default=None) Constraint object or list of constraint objects that define constraints on S1/S2/S1_cat/S2_cat/S1_cts/S2_cts. None is equivalent to [].
+            (default=None) Constraint object or list of constraint objects that define constraints on S12/S43/S2m/S2s/S3m/S3s plus their categorical and continuous control variants. None is equivalent to [].
         ''', None),
     's_lower_bound': (1e-7, 'type_constrained', ((float, int), _gt0),
         '''
-            (default=1e-7) Lower bound on estimated S1/S2/S1_cat/S2_cat/S1_cts/S2_cts.
+            (default=1e-7) Lower bound on estimated S12/S43/S2m/S2s/S3m/S3s plus their categorical and continuous control variants.
         ''', '> 0'),
     'd_prior_movers': (1 + 1e-7, 'type_constrained', ((float, int), _gteq1),
         '''
@@ -198,9 +274,9 @@ _blm_params_default = ParamsDict({
         ''', '>= 1')
 })
 
-def blm_params(update_dict=None):
+def blm_dynamic_params(update_dict=None):
     '''
-    Dictionary of default blm_params. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default blm_dynamic_params. Run tw.blm_dynamic_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
         update_dict (dict or None): user parameter values; None is equivalent to {}
@@ -208,12 +284,12 @@ def blm_params(update_dict=None):
     Returns:
         (ParamsDict) dictionary of blm_params
     '''
-    new_dict = _blm_params_default.copy()
+    new_dict = _blm_dynamic_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
 
-_categorical_control_params_default = ParamsDict({
+_categorical_control_dynamic_params_default = ParamsDict({
     'n': (None, 'type_constrained_none', (int, _gteq2),
         '''
             (default=6) Number of types for the parameter. None will raise an error when running the estimator.
@@ -264,22 +340,22 @@ _categorical_control_params_default = ParamsDict({
         ''', None)
 })
 
-def categorical_control_params(update_dict=None):
+def categorical_control_dynamic_params(update_dict=None):
     '''
-    Dictionary of default categorical_control_params. Run tw.categorical_control_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default categorical_control_dynamic_params. Run tw.categorical_control_dynamic_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
         update_dict (dict or None): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of categorical_control_params
+        (ParamsDict) dictionary of categorical_control_dynamic_params
     '''
-    new_dict = _categorical_control_params_default.copy()
+    new_dict = _categorical_control_dynamic_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
 
-_continuous_control_params_default = ParamsDict({
+_continuous_control_dynamic_params_default = ParamsDict({
     'a1_mu': (1, 'type', (float, int),
         '''
             (default=1) Mean of starting values for A1_cts (mean of coefficient in first period).
@@ -326,17 +402,17 @@ _continuous_control_params_default = ParamsDict({
         ''', None)
 })
 
-def continuous_control_params(update_dict=None):
+def continuous_control_dynamic_params(update_dict=None):
     '''
-    Dictionary of default continuous_control_params. Run tw.continuous_control_params().describe_all() for descriptions of all valid parameters.
+    Dictionary of default continuous_control_dynamic_params. Run tw.continuous_control_dynamic_params().describe_all() for descriptions of all valid parameters.
 
     Arguments:
         update_dict (dict or None): user parameter values; None is equivalent to {}
 
     Returns:
-        (ParamsDict) dictionary of continuous_control_params
+        (ParamsDict) dictionary of continuous_control_dynamic_params
     '''
-    new_dict = _continuous_control_params_default.copy()
+    new_dict = _continuous_control_dynamic_params_default.copy()
     if update_dict is not None:
         new_dict.update(update_dict)
     return new_dict
@@ -569,9 +645,10 @@ class BLMModel:
 
     Arguments:
         params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
+        rhos (tuple of floats): rho values estimated using stayers
         rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
     '''
-    def __init__(self, params, rng=None):
+    def __init__(self, params, rhos, rng=None):
         if rng is None:
             rng = np.random.default_rng(None)
 
@@ -641,14 +718,34 @@ class BLMModel:
         self.any_non_worker_type_interactions = any([not col_dict['worker_type_interaction'] for col_dict in controls_dict.values()])
 
         ## Generate starting values ##
-        a1_mu, a1_sig, a2_mu, a2_sig, s1_low, s1_high, s2_low, s2_high, pk1_prior = self.params.get_multiple(('a1_mu', 'a1_sig', 'a2_mu', 'a2_sig', 's1_low', 's1_high', 's2_low', 's2_high', 'pk1_prior')) # pk0_prior
+        # rho is already computed
+        self.R12 = rhos['rho_1']
+        self.R43 = rhos['rho_4']
+        self.R32m = 0.6
+        # We simulate starting values for everything else
+        a12_mu, a12_sig, a43_mu, a43_sig, a2ma_mu, a2ma_sig, a2mb_mu, a2mb_sig, a3ma_mu, a3ma_sig, a3mb_mu, a3mb_sig, a2s_mu, a2s_sig, a3s_mu, a3s_sig = self.params.get_multiple(('a12_mu', 'a12_sig', 'a43_mu', 'a43_sig', 'a2ma_mu', 'a2ma_sig', 'a2mb_mu', 'a2mb_sig', 'a3ma_mu', 'a3ma_sig', 'a3mb_mu', 'a3mb_sig', 'a2s_mu', 'a2s_sig', 'a3s_mu', 'a3s_sig'))
+        s12_low, s12_high, s43_low, s43_high, s2m_low, s2m_high, s3m_low, s3m_high, s2s_low, s2s_high, s3s_low, s3s_high, pk1_prior = self.params.get_multiple(('s12_low', 's12_high', 's43_low', 's43_high', 's2m_low', 's2m_high', 's3m_low', 's3m_high', 's2s_low', 's2s_high', 's3s_low', 's3s_high', 'pk1_prior')) # pk0_prior
         s_lb = params['s_lower_bound']
         # Model for Y1 | Y2, l, k for movers and stayers
-        self.A1 = rng.normal(loc=a1_mu, scale=a1_sig, size=dims)
-        self.S1 = rng.uniform(low=max(s1_low, s_lb), high=s1_high, size=dims)
+        self.A12 = rng.normal(loc=a12_mu, scale=a12_sig, size=dims)
+        self.S12 = rng.uniform(low=max(s12_low, s_lb), high=s12_high, size=dims)
         # Model for Y4 | Y3, l, k for movers and stayers
-        self.A2 = rng.normal(loc=a2_mu, scale=a2_sig, size=dims)
-        self.S2 = rng.uniform(low=max(s2_low, s_lb), high=s2_high, size=dims)
+        self.A43 = rng.normal(loc=a43_mu, scale=a43_sig, size=dims)
+        self.S43 = rng.uniform(low=max(s43_low, s_lb), high=s43_high, size=dims)
+        # Model for Y2 | l, k for movers
+        self.A2ma = rng.normal(loc=a2ma_mu, scale=a2ma_sig, size=dims)
+        self.A2mb = rng.normal(loc=a2mb_mu, scale=a2mb_sig, size=dims)
+        self.S2m = rng.uniform(low=max(s2m_low, s_lb), high=s2m_high, size=dims)
+        # Model for Y2 | l, k for stayers
+        self.A2s = rng.normal(loc=a2s_mu, scale=a2s_sig, size=dims)
+        self.S2s = rng.uniform(low=max(s2s_low, s_lb), high=s2s_high, size=dims)
+        # Model for Y3 | l, k for movers
+        self.A3ma = rng.normal(loc=a3ma_mu, scale=a3ma_sig, size=dims)
+        self.A3mb = rng.normal(loc=a3mb_mu, scale=a3mb_sig, size=dims)
+        self.S3m = rng.uniform(low=max(s3m_low, s_lb), high=s3m_high, size=dims)
+        # Model for Y3 | l, k for stayers
+        self.A3s = rng.normal(loc=a3s_mu, scale=a3s_sig, size=dims)
+        self.S3s = rng.uniform(low=max(s3s_low, s_lb), high=s3s_high, size=dims)
         # Model for p(K | l, l') for movers
         if pk1_prior is None:
             pk1_prior = np.ones(nl)
@@ -661,69 +758,159 @@ class BLMModel:
 
         ### Control variables ###
         ## Categorical ##
-        self.A1_cat = {col:
-                rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=(nl, controls_dict[col]['n']))
+        # Model for Y1 | Y2, l, k for movers and stayers
+        self.A12_cat = {col:
+                rng.normal(loc=controls_dict[col]['a12_mu'], scale=controls_dict[col]['a12_sig'], size=(nl, controls_dict[col]['n']))
                 if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=controls_dict[col]['n'])
+                rng.normal(loc=controls_dict[col]['a12_mu'], scale=controls_dict[col]['a12_sig'], size=controls_dict[col]['n'])
             for col in cat_cols}
-        self.A2_cat = {col:
-                rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=(nl, controls_dict[col]['n']))
+        self.S12_cat = {col:
+                rng.uniform(low=max(controls_dict[col]['s12_low'], s_lb), high=controls_dict[col]['s12_high'], size=(nl, controls_dict[col]['n']))
                 if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=controls_dict[col]['n'])
+                rng.uniform(low=max(controls_dict[col]['s12_low'], s_lb), high=controls_dict[col]['s12_high'], size=controls_dict[col]['n'])
             for col in cat_cols}
-        self.S1_cat = {col:
-                rng.uniform(low=max(controls_dict[col]['s1_low'], s_lb), high=controls_dict[col]['s1_high'], size=(nl, controls_dict[col]['n']))
+        # Model for Y4 | Y3, l, k for movers and stayers
+        self.A43_cat = {col:
+                rng.normal(loc=controls_dict[col]['a43_mu'], scale=controls_dict[col]['a43_sig'], size=(nl, controls_dict[col]['n']))
                 if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s1_low'], s_lb), high=controls_dict[col]['s1_high'], size=controls_dict[col]['n'])
+                rng.normal(loc=controls_dict[col]['a43_mu'], scale=controls_dict[col]['a43_sig'], size=controls_dict[col]['n'])
             for col in cat_cols}
-        self.S2_cat = {col:
-                rng.uniform(low=max(controls_dict[col]['s2_low'], s_lb), high=controls_dict[col]['s2_high'], size=(nl, controls_dict[col]['n']))
+        self.S43_cat = {col:
+                rng.uniform(low=max(controls_dict[col]['s43_low'], s_lb), high=controls_dict[col]['s43_high'], size=(nl, controls_dict[col]['n']))
                 if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s2_low'], s_lb), high=controls_dict[col]['s2_high'], size=controls_dict[col]['n'])
+                rng.uniform(low=max(controls_dict[col]['s43_low'], s_lb), high=controls_dict[col]['s43_high'], size=controls_dict[col]['n'])
             for col in cat_cols}
-        # # Stationary #
-        # for col in cat_cols:
-        #     if controls_dict[col]['stationary_A']:
-        #         self.A2_cat[col] = self.A1_cat[col]
-        #     if controls_dict[col]['stationary_S']:
-        #         self.S2_cat[col] = self.S1_cat[col]
+        # Model for Y2 | l, k for movers
+        self.A2ma_cat = {col:
+                rng.normal(loc=controls_dict[col]['a2ma_mu'], scale=controls_dict[col]['a2ma_sig'], size=(nl, controls_dict[col]['n']))
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.normal(loc=controls_dict[col]['a2ma_mu'], scale=controls_dict[col]['a2ma_sig'], size=controls_dict[col]['n'])
+            for col in cat_cols}
+        self.A2mb_cat = {col:
+                rng.normal(loc=controls_dict[col]['a2mb_mu'], scale=controls_dict[col]['a2mb_sig'], size=(nl, controls_dict[col]['n']))
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.normal(loc=controls_dict[col]['a2mb_mu'], scale=controls_dict[col]['a2mb_sig'], size=controls_dict[col]['n'])
+            for col in cat_cols}
+        self.S2m_cat = {col:
+                rng.uniform(low=max(controls_dict[col]['s2m_low'], s_lb), high=controls_dict[col]['s2m_high'], size=(nl, controls_dict[col]['n']))
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.uniform(low=max(controls_dict[col]['s2m_low'], s_lb), high=controls_dict[col]['s2m_high'], size=controls_dict[col]['n'])
+            for col in cat_cols}
+        # Model for Y2 | l, k for stayers
+        self.A2s_cat = {col:
+                rng.normal(loc=controls_dict[col]['a2s_mu'], scale=controls_dict[col]['a2s_sig'], size=(nl, controls_dict[col]['n']))
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.normal(loc=controls_dict[col]['a2s_mu'], scale=controls_dict[col]['a2s_sig'], size=controls_dict[col]['n'])
+            for col in cat_cols}
+        self.S2s_cat = {col:
+                rng.uniform(low=max(controls_dict[col]['s2s_low'], s_lb), high=controls_dict[col]['s2s_high'], size=(nl, controls_dict[col]['n']))
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.uniform(low=max(controls_dict[col]['s2s_low'], s_lb), high=controls_dict[col]['s2s_high'], size=controls_dict[col]['n'])
+            for col in cat_cols}
+        # Model for Y3 | l, k for movers
+        self.A3ma_cat = {col:
+                rng.normal(loc=controls_dict[col]['a3ma_mu'], scale=controls_dict[col]['a3ma_sig'], size=(nl, controls_dict[col]['n']))
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.normal(loc=controls_dict[col]['a3ma_mu'], scale=controls_dict[col]['a3ma_sig'], size=controls_dict[col]['n'])
+            for col in cat_cols}
+        self.A3mb_cat = {col:
+                rng.normal(loc=controls_dict[col]['a3mb_mu'], scale=controls_dict[col]['a3mb_sig'], size=(nl, controls_dict[col]['n']))
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.normal(loc=controls_dict[col]['a3mb_mu'], scale=controls_dict[col]['a3mb_sig'], size=controls_dict[col]['n'])
+            for col in cat_cols}
+        self.S3m_cat = {col:
+                rng.uniform(low=max(controls_dict[col]['s3m_low'], s_lb), high=controls_dict[col]['s3m_high'], size=(nl, controls_dict[col]['n']))
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.uniform(low=max(controls_dict[col]['s3m_low'], s_lb), high=controls_dict[col]['s3m_high'], size=controls_dict[col]['n'])
+            for col in cat_cols}
+        # Model for Y3 | l, k for stayers
+        self.A3s_cat = {col:
+                rng.normal(loc=controls_dict[col]['a3s_mu'], scale=controls_dict[col]['a3s_sig'], size=(nl, controls_dict[col]['n']))
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.normal(loc=controls_dict[col]['a3s_mu'], scale=controls_dict[col]['a3s_sig'], size=controls_dict[col]['n'])
+            for col in cat_cols}
+        self.S3s_cat = {col:
+                rng.uniform(low=max(controls_dict[col]['s3s_low'], s_lb), high=controls_dict[col]['s3s_high'], size=(nl, controls_dict[col]['n']))
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.uniform(low=max(controls_dict[col]['s3s_low'], s_lb), high=controls_dict[col]['s3s_high'], size=controls_dict[col]['n'])
+            for col in cat_cols}
         ## Continuous ##
-        self.A1_cts = {col:
-                rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=nl)
+        # Model for Y1 | Y2, l, k for movers and stayers
+        self.A12_cts = {col:
+                rng.normal(loc=controls_dict[col]['a12_mu'], scale=controls_dict[col]['a12_sig'], size=nl)
                 if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=1)
+                rng.normal(loc=controls_dict[col]['a12_mu'], scale=controls_dict[col]['a12_sig'], size=1)
             for col in cts_cols}
-        self.A2_cts = {col:
-                rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=nl)
+        self.S12_cts = {col:
+                rng.uniform(low=max(controls_dict[col]['s12_low'], s_lb), high=controls_dict[col]['s12_high'], size=nl)
                 if controls_dict[col]['worker_type_interaction'] else
-                rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=1)
+                rng.uniform(low=max(controls_dict[col]['s12_low'], s_lb), high=controls_dict[col]['s12_high'], size=1)
             for col in cts_cols}
-        self.S1_cts = {col:
-                rng.uniform(low=max(controls_dict[col]['s1_low'], s_lb), high=controls_dict[col]['s1_high'], size=nl)
+        # Model for Y4 | Y3, l, k for movers and stayers
+        self.A43_cts = {col:
+                rng.normal(loc=controls_dict[col]['a43_mu'], scale=controls_dict[col]['a43_sig'], size=nl)
                 if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s1_low'], s_lb), high=controls_dict[col]['s1_high'], size=1)
+                rng.normal(loc=controls_dict[col]['a43_mu'], scale=controls_dict[col]['a43_sig'], size=1)
             for col in cts_cols}
-        self.S2_cts = {col:
-                rng.uniform(low=max(controls_dict[col]['s2_low'], s_lb), high=controls_dict[col]['s2_high'], size=nl)
+        self.S43_cts = {col:
+                rng.uniform(low=max(controls_dict[col]['s43_low'], s_lb), high=controls_dict[col]['s43_high'], size=nl)
                 if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s2_low'], s_lb), high=controls_dict[col]['s2_high'], size=1)
+                rng.uniform(low=max(controls_dict[col]['s43_low'], s_lb), high=controls_dict[col]['s43_high'], size=1)
             for col in cts_cols}
-        # # Stationary #
-        # for col in cts_cols:
-        #     if controls_dict[col]['stationary_A']:
-        #         self.A2_cts[col] = self.A1_cts[col]
-        #     if controls_dict[col]['stationary_S']:
-        #         self.S2_cts[col] = self.S1_cts[col]
-
-        # for l in range(nl):
-        #     self.A1[l] = np.sort(self.A1[l], axis=0)
-        #     self.A2[l] = np.sort(self.A2[l], axis=0)
-
-        # if self.fixb:
-        #     self.A2 = np.mean(self.A2, axis=1) + self.A1 - np.mean(self.A1, axis=1)
-
-        # if self.stationary:
-        #     self.A2 = self.A1
+        # Model for Y2 | l, k for movers
+        self.A2ma_cts = {col:
+                rng.normal(loc=controls_dict[col]['a2ma_mu'], scale=controls_dict[col]['a2ma_sig'], size=nl)
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.normal(loc=controls_dict[col]['a2ma_mu'], scale=controls_dict[col]['a2ma_sig'], size=1)
+            for col in cts_cols}
+        self.A2mb_cts = {col:
+                rng.normal(loc=controls_dict[col]['a2mb_mu'], scale=controls_dict[col]['a2mb_sig'], size=nl)
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.normal(loc=controls_dict[col]['a2mb_mu'], scale=controls_dict[col]['a2mb_sig'], size=1)
+            for col in cts_cols}
+        self.S2m_cts = {col:
+                rng.uniform(low=max(controls_dict[col]['s2m_low'], s_lb), high=controls_dict[col]['s2m_high'], size=nl)
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.uniform(low=max(controls_dict[col]['s2m_low'], s_lb), high=controls_dict[col]['s2m_high'], size=1)
+            for col in cts_cols}
+        # Model for Y2 | l, k for stayers
+        self.A2s_cts = {col:
+                rng.normal(loc=controls_dict[col]['a2s_mu'], scale=controls_dict[col]['a2s_sig'], size=nl)
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.normal(loc=controls_dict[col]['a2s_mu'], scale=controls_dict[col]['a2s_sig'], size=1)
+            for col in cts_cols}
+        self.S2s_cts = {col:
+                rng.uniform(low=max(controls_dict[col]['s2s_low'], s_lb), high=controls_dict[col]['s2s_high'], size=nl)
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.uniform(low=max(controls_dict[col]['s2s_low'], s_lb), high=controls_dict[col]['s2s_high'], size=1)
+            for col in cts_cols}
+        # Model for Y3 | l, k for movers
+        self.A3ma_cts = {col:
+                rng.normal(loc=controls_dict[col]['a3ma_mu'], scale=controls_dict[col]['a3ma_sig'], size=nl)
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.normal(loc=controls_dict[col]['a3ma_mu'], scale=controls_dict[col]['a3ma_sig'], size=1)
+            for col in cts_cols}
+        self.A3mb_cts = {col:
+                rng.normal(loc=controls_dict[col]['a3mb_mu'], scale=controls_dict[col]['a3mb_sig'], size=nl)
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.normal(loc=controls_dict[col]['a3mb_mu'], scale=controls_dict[col]['a3mb_sig'], size=1)
+            for col in cts_cols}
+        self.S3m_cts = {col:
+                rng.uniform(low=max(controls_dict[col]['s3m_low'], s_lb), high=controls_dict[col]['s3m_high'], size=nl)
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.uniform(low=max(controls_dict[col]['s3m_low'], s_lb), high=controls_dict[col]['s3m_high'], size=1)
+            for col in cts_cols}
+        # Model for Y3 | l, k for stayers
+        self.A3s_cts = {col:
+                rng.normal(loc=controls_dict[col]['a3s_mu'], scale=controls_dict[col]['a3s_sig'], size=nl)
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.normal(loc=controls_dict[col]['a3s_mu'], scale=controls_dict[col]['a3s_sig'], size=1)
+            for col in cts_cols}
+        self.S3s_cts = {col:
+                rng.uniform(low=max(controls_dict[col]['s3s_low'], s_lb), high=controls_dict[col]['s3s_high'], size=nl)
+                if controls_dict[col]['worker_type_interaction'] else
+                rng.uniform(low=max(controls_dict[col]['s3s_low'], s_lb), high=controls_dict[col]['s3s_high'], size=1)
+            for col in cts_cols}
 
     def _min_firm_type(self, A1, A2):
         '''
