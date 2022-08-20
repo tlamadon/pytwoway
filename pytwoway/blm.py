@@ -1516,14 +1516,13 @@ class BLMModel:
             GG1_weighted = []
             GG2_weighted = []
             for l in range(nl):
-                # (We might be better off trying this within numba or something)
                 l_index, r_index = l * nk, (l + 1) * nk
-                # Shared weighted terms
+                ## Compute shared terms ##
                 GG1_weighted.append(DxSP(W1 * qi[:, l] / S1[l, G1], GG1).T)
                 GG2_weighted.append(DxSP(W2 * qi[:, l] / S2[l, G2], GG2).T)
                 ## Compute XwX terms ##
                 XwX[l_index: r_index] = diag_of_sp_prod(GG1_weighted[l], GG1)
-                XwX[ts + l_index: ts + r_index] = np.asarray(GG2_weighted[l].multiply(GG2.T).sum(axis=1))[:, 0]
+                XwX[ts + l_index: ts + r_index] = diag_of_sp_prod(GG2_weighted[l], GG2)
                 if params['update_a']:
                     # Update A1_sum and A2_sum to account for worker-interaction terms
                     A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
@@ -1584,11 +1583,9 @@ class BLMModel:
                         print(f'Passing A1/A2: {e}')
 
             ## Categorical ##
-            CC1_cat_weighted = {}
-            CC2_cat_weighted = {}
+            CC1_cat_weighted = {col: [] for col in cat_cols}
+            CC2_cat_weighted = {col: [] for col in cat_cols}
             for col in cat_cols:
-                CC1_cat_weighted[col] = []
-                CC2_cat_weighted[col] = []
                 col_n = cat_dict[col]['n']
                 if not cat_dict[col]['worker_type_interaction']:
                     Y1_adj += A1_cat[col][C1[col]]
@@ -1607,7 +1604,7 @@ class BLMModel:
                     del S1_cat_l, S2_cat_l
                     ## Compute XwX_cat terms ##
                     XwX_cat[col][l_index: r_index] = diag_of_sp_prod(CC1_cat_weighted[col][l], CC1[col])
-                    XwX_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = np.asarray(CC2_cat_weighted[col][l].multiply(CC2[col].T).sum(axis=1))[:, 0]
+                    XwX_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = diag_of_sp_prod(CC2_cat_weighted[col][l], CC2[col])
                     if params['update_a']:
                         # Update A1_sum and A2_sum to account for worker-interaction terms
                         A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
@@ -1652,11 +1649,9 @@ class BLMModel:
                     Y2_adj -= A2_cat[col][C2[col]]
 
             ## Continuous ##
-            CC1_cts_weighted = {}
-            CC2_cts_weighted = {}
+            CC1_cts_weighted = {col: [] for col in cts_cols}
+            CC2_cts_weighted = {col: [] for col in cts_cols}
             for col in cts_cols:
-                CC1_cts_weighted[col] = []
-                CC2_cts_weighted[col] = []
                 if not cts_dict[col]['worker_type_interaction']:
                     Y1_adj += A1_cts[col] * C1[col]
                     Y2_adj += A2_cts[col] * C2[col]
