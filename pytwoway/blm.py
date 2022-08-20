@@ -1754,7 +1754,7 @@ class BLMModel:
                         XwS_cts[col][l] = np.abs(CC1_cts_weighted[col][l] @ eps1_l_sq)
                         XwS_cts[col][nl + l] = np.abs(CC2_cts_weighted[col][l] @ eps2_l_sq)
                     del eps1_l_sq, eps2_l_sq
-                del GG1_weighted, GG2_weighted, CC1_cat_weighted, CC2_cat_weighted
+                del GG1_weighted, GG2_weighted, CC1_cat_weighted, CC2_cat_weighted, CC1_cts_weighted, CC2_cts_weighted
 
                 try:
                     cons_s.solve(XwX, -XwS, solver='quadprog')

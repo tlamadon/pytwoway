@@ -2088,9 +2088,9 @@ class BLMModel:
                 try:
                     cons_a.solve(XwX, -XwY, solver='quadprog')
                     if cons_a.res is None:
-                        # If constraints inconsistent, keep A the same
+                        # If estimation fails, keep A the same
                         if params['verbose'] in [2, 3]:
-                            print(f'Passing A: {e}')
+                            print(f'Passing A: estimates are None')
                     else:
                         split_res = np.split(cons_a.res, 6)
                         for i, period in enumerate(['12', '43', '2ma', '2mb', '3ma', '3mb']):
@@ -2194,16 +2194,16 @@ class BLMModel:
                         a_solver = cons_a_dict[col]
                         a_solver.solve(XwX_cat[col], -XwY_cat[col], solver='quadprog')
                         if a_solver.res is None:
-                            # If constraints inconsistent, keep A_cat the same
+                            # If estimation fails, keep A_cat the same
                             if params['verbose'] in [2, 3]:
-                                print(f'Passing A_cat for column {col!r}: {e}')
+                                print(f'Passing A_cat for column {col!r}: estimates are None')
                         else:
                             split_res = np.split(a_solver.res, 6)
                             for i, period in enumerate(['12', '43', '2ma', '2mb', '3ma', '3mb']):
                                 if cat_dict[col]['worker_type_interaction']:
                                     A_cat[col][period] = np.reshape(split_res[i], (nl, col_n))
                                 else:
-                                    A_cat[col][period] = split_res[i]
+                                    A_cat[col][period] = split_res[i][: col_n]
 
                     except ValueError as e:
                         # If constraints inconsistent, keep A_cat the same
@@ -2306,9 +2306,9 @@ class BLMModel:
                         a_solver = cons_a_dict[col]
                         a_solver.solve(XwX_cts[col], -XwY_cts[col], solver='quadprog')
                         if a_solver.res is None:
-                            # If constraints inconsistent, keep A_cts the same
+                            # If estimation fails, keep A_cts the same
                             if params['verbose'] in [2, 3]:
-                                print(f'Passing A_cts for column {col!r}: {e}')
+                                print(f'Passing A_cts for column {col!r}: estimates are None')
                         else:
                             split_res = np.split(a_solver.res, 6)
                             for i, period in enumerate(['12', '43', '2ma', '2mb', '3ma', '3mb']):
@@ -2343,46 +2343,84 @@ class BLMModel:
                 for l in range(nl):
                     # Update A_sum to account for worker-interaction terms
                     A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False)
-                    eps1_l_sq = (Y1_adj - A1_sum_l - A1[l, G1]) ** 2
-                    eps2_l_sq = (Y2_adj - A2_sum_l - A2[l, G2]) ** 2
-                    del A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l
+                    eps_l_sq = {}
+                    eps_l_sq['12'] = (Y1 \
+                        - R12 * (Y2 - A['2ma'][l, G1] - A_sum['2ma'] - A_sum_l['2ma']) \
+                        - A_sum['12'] \
+                        - A_sum_l['12'] \
+                        - A['12']) ** 2
+                    eps_l_sq['43'] = (Y4 \
+                                        - R43 * (Y3 \
+                                            - A['3ma'][l, G2] \
+                                            - A_sum['3ma'] \
+                                            - A_sum_l['3ma']) \
+                                        - A_sum['43'] \
+                                        - A_sum_l['43'] \
+                                        - A['43']) ** 2
+                    eps_l_sq['2ma'] = (Y2 \
+                                        - A['2mb'][G2] \
+                                        - (A_sum['2ma'] + A_sum['2mb']) \
+                                        - (A_sum_l['2ma'] + A_sum_l['2mb']) \
+                                        - A['2ma']) ** 2
+                    eps_l_sq['3ma'] = (Y3 \
+                                        - R32m * (Y2 \
+                                            - (A['2ma'][l, G1] + A['2mb'][G2]) \
+                                            - (A_sum['2ma'] + A_sum['2mb']) \
+                                            - (A_sum_l['2ma'] + A_sum_l['2mb'])) \
+                                        - A['3mb'][G1] \
+                                        - (A_sum['3ma'] + A_sum['3mb']) \
+                                        - (A_sum_l['3ma'] + A_sum_l['3mb']) \
+                                        - A['3ma']) ** 2
+                    eps_l_sq['2mb'] = (Y2 \
+                                        - A['2ma'][l, G1] \
+                                        - (A_sum['2ma'] + A_sum['2mb']) \
+                                        - (A_sum_l['2ma'] + A_sum_l['2mb']) \
+                                        - A['2mb']) ** 2
+                    eps_l_sq['3mb'] = (Y3 \
+                                        - R32m * (Y2 \
+                                            - (A['2ma'][l, G1] + A['2mb'][G2]) \
+                                            - (A_sum['2ma'] + A_sum['2mb']) \
+                                            - (A_sum_l['2ma'] + A_sum_l['2mb'])) \
+                                        - A['3ma'][l, G2] \
+                                        - (A_sum['3ma'] + A_sum['3mb']) \
+                                        - (A_sum_l['3ma'] + A_sum_l['3mb']) \
+                                        - A['3mb']) ** 2
+                    del A_sum_l
                     ## XwS terms ##
                     l_index, r_index = l * nk, (l + 1) * nk
-                    XwS[l_index: r_index] = GG1_weighted[l] @ eps1_l_sq
-                    XwS[ts + l_index: ts + r_index] = GG2_weighted[l] @ eps2_l_sq
+                    for i, period in enumerate(['12', '43', '2ma', '2mb', '3ma', '3mb']):
+                        XwS[l_index + i * ts: r_index: i * ts] = GG_weighted[period][l] @ eps_l_sq[period]
                     ## Categorical ##
                     for col in cat_cols:
                         col_n = cat_dict[col]['n']
                         l_index, r_index = l * col_n, (l + 1) * col_n
                         ## XwS_cat terms ##
-                        XwS_cat[col][l_index: r_index] = CC1_cat_weighted[col][l] @ eps1_l_sq
-                        XwS_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = CC2_cat_weighted[col][l] @ eps2_l_sq
+                        for i, period in enumerate(['12', '43', '2ma', '2mb', '3ma', '3mb']):
+                            XwS_cat[col][l_index + i * ts_cat[col]: r_index: i * ts_cat[col]] = CC_cat_weighted[col][period][l] @ eps_l_sq[period]
                     ## Continuous ##
                     for col in cts_cols:
                         ## XwS_cts terms ##
                         # NOTE: take absolute value
-                        XwS_cts[col][l] = np.abs(CC1_cts_weighted[col][l] @ eps1_l_sq)
-                        XwS_cts[col][nl + l] = np.abs(CC2_cts_weighted[col][l] @ eps2_l_sq)
-                    del eps1_l_sq, eps2_l_sq
-                del GG1_weighted, GG2_weighted, CC1_cat_weighted, CC2_cat_weighted
+                        for i, period in enumerate(['12', '43', '2ma', '2mb', '3ma', '3mb']):
+                            XwS_cts[col][l + i * nl] = CC_cts_weighted[col][period][l] @ eps_l_sq[period]
+                    del eps_l_sq
+                del GG_weighted, CC_cat_weighted, CC_cts_weighted
 
                 try:
                     cons_s.solve(XwX, -XwS, solver='quadprog')
                     if cons_s.res is None:
-                        # If constraints inconsistent, keep S1 and S2 the same
+                        # If estimation fails, keep S the same
                         if params['verbose'] in [2, 3]:
-                            print(f'Passing S1/S2: {e}')
+                            print(f'Passing S: estimates are None')
                     else:
-                        res_s1, res_s2 = cons_s.res[: len(cons_s.res) // 2], cons_s.res[len(cons_s.res) // 2:]
-                        # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
-                        #     raise ValueError('Estimated S1/S2 has NaN values')
-                        S1 = np.sqrt(np.reshape(res_s1, self.dims))
-                        S2 = np.sqrt(np.reshape(res_s2, self.dims))
+                        split_res = np.split(cons_s.res, 6)
+                        for i, period in enumerate(['12', '43', '2ma', '2mb', '3ma', '3mb']):
+                            S[period] = np.sqrt(np.reshape(split_res[i], self.dims))
 
                 except ValueError as e:
-                    # If constraints inconsistent, keep S1 and S2 the same
+                    # If constraints inconsistent, keep S the same
                     if params['verbose'] in [2, 3]:
-                        print(f'Passing S1/S2: {e}')
+                        print(f'Passing S: {e}')
 
                 ## Categorical ##
                 for col in cat_cols:
@@ -2391,24 +2429,21 @@ class BLMModel:
                         s_solver = cons_s_dict[col]
                         s_solver.solve(XwX_cat[col], -XwS_cat[col], solver='quadprog')
                         if s_solver.res is None:
-                            # If constraints inconsistent, keep S1_cat and S2_cat the same
+                            # If estimation fails, keep S_cat the same
                             if params['verbose'] in [2, 3]:
-                                print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
+                                print(f'Passing S_cat for column {col!r}: estimates are None')
                         else:
-                            res_s1, res_s2 = s_solver.res[: len(s_solver.res) // 2], s_solver.res[len(s_solver.res) // 2:]
-                            # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
-                            #     raise ValueError(f'Estimated S1_cat/S2_cat has NaN values for column {col!r}')
-                            if cat_dict[col]['worker_type_interaction']:
-                                S1_cat[col] = np.sqrt(np.reshape(res_s1, (nl, col_n)))
-                                S2_cat[col] = np.sqrt(np.reshape(res_s2, (nl, col_n)))
-                            else:
-                                S1_cat[col] = np.sqrt(res_s1[: col_n])
-                                S2_cat[col] = np.sqrt(res_s2[: col_n])
+                            split_res = np.split(s_solver.res, 6)
+                            for i, period in enumerate(['12', '43', '2ma', '2mb', '3ma', '3mb']):
+                                if cat_dict[col]['worker_type_interaction']:
+                                    S_cat[col][period] = np.sqrt(np.reshape(split_res[i], (nl, col_n)))
+                                else:
+                                    S_cat[col][period] = np.sqrt(split_res[i][: col_n])
 
                     except ValueError as e:
-                        # If constraints inconsistent, keep S1_cat and S2_cat the same
+                        # If constraints inconsistent, keep S_cat the same
                         if params['verbose'] in [2, 3]:
-                            print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
+                            print(f'Passing S_cat for column {col!r}: {e}')
 
                 ## Continuous ##
                 for col in cts_cols:
@@ -2416,24 +2451,21 @@ class BLMModel:
                         s_solver = cons_s_dict[col]
                         s_solver.solve(XwX_cts[col], -XwS_cts[col], solver='quadprog')
                         if s_solver.res is None:
-                            # If constraints inconsistent, keep S1_cts and S2_cts the same
+                            # If estimation fails, keep S_cts the same
                             if params['verbose'] in [2, 3]:
-                                print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
+                                print(f'Passing S_cts for column {col!r}: estimates are None')
                         else:
-                            res_s1, res_s2 = s_solver.res[: len(s_solver.res) // 2], s_solver.res[len(s_solver.res) // 2:]
-                            # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
-                            #     raise ValueError(f'Estimated S1_cts/S2_cts has NaN values for column {col!r}')
-                            if cts_dict[col]['worker_type_interaction']:
-                                S1_cts[col] = np.sqrt(res_s1)
-                                S2_cts[col] = np.sqrt(res_s2)
-                            else:
-                                S1_cts[col] = np.sqrt(res_s1[0])
-                                S2_cts[col] = np.sqrt(res_s2[0])
+                            split_res = np.split(s_solver.res, 6)
+                            for i, period in enumerate(['12', '43', '2ma', '2mb', '3ma', '3mb']):
+                                if cat_dict[col]['worker_type_interaction']:
+                                    S_cts[col][period] = np.sqrt(split_res[i])
+                                else:
+                                    S_cts[col][period] = np.sqrt(split_res[i][0])
 
                     except ValueError as e:
-                        # If constraints inconsistent, keep S1_cts and S2_cts the same
+                        # If constraints inconsistent, keep S_cts the same
                         if params['verbose'] in [2, 3]:
-                            print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
+                            print(f'Passing S_cts for column {col!r}: {e}')
 
             if params['update_pk1']:
                 # NOTE: add dirichlet prior
