@@ -242,7 +242,6 @@ def lognormpdf(x, mu, sd=None, var=None):
         res -= (x - mu) ** 2 / (2 * var)
     return res
 
-
 def fast_lognormpdf(x, mu, sd, G):
     # Faster to split into multiple lines
     log_sd = np.log(sd)
