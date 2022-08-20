@@ -2131,14 +2131,14 @@ class BLMModel:
                                 A_sum_l[period] -= A_cat[col][period][l, C_dict[period][col]]
                         ## Compute XwY_cat terms ##
                         # A_cat['12']
-                        XwY_cat[l_index + 0 * ts_cat[col]: r_index + 0 * ts_cat[col]] = CC_cat_weighted[col]['12'][l] @ \
+                        XwY_cat[col][l_index + 0 * ts_cat[col]: r_index + 0 * ts_cat[col]] = CC_cat_weighted[col]['12'][l] @ \
                             (Y1 \
                                 - R12 * (Y2 - A['2ma'][l, G1] - A_sum['2ma'] - A_sum_l['2ma']) \
                                 - A_sum['12'] \
                                 - A_sum_l['12'] \
                                 - A['12'])
                         # A_cat['43']
-                        XwY_cat[l_index + 1 * ts_cat[col]: r_index + 1 * ts_cat[col]] = CC_cat_weighted[col]['43'][l] @ \
+                        XwY_cat[col][l_index + 1 * ts_cat[col]: r_index + 1 * ts_cat[col]] = CC_cat_weighted[col]['43'][l] @ \
                             (Y4 \
                                 - R43 * (Y3 \
                                     - A['3ma'][l, G2] \
@@ -2148,14 +2148,14 @@ class BLMModel:
                                 - A_sum_l['43'] \
                                 - A['43'])
                         # A_cat['2ma']
-                        XwY_cat[l_index + 2 * ts_cat[col]: r_index + 2 * ts_cat[col]] = CC_cat_weighted[col]['2ma'][l] @ \
+                        XwY_cat[col][l_index + 2 * ts_cat[col]: r_index + 2 * ts_cat[col]] = CC_cat_weighted[col]['2ma'][l] @ \
                             (Y2 \
                                 - A['2mb'][G2] \
                                 - (A_sum['2ma'] + A_sum['2mb']) \
                                 - (A_sum_l['2ma'] + A_sum_l['2mb']) \
                                 - A['2ma'])
                         # A_cat['3ma']
-                        XwY_cat[l_index + 3 * ts_cat[col]: r_index + 3 * ts_cat[col]] = CC_cat_weighted[col]['3ma'][l] @ \
+                        XwY_cat[col][l_index + 3 * ts_cat[col]: r_index + 3 * ts_cat[col]] = CC_cat_weighted[col]['3ma'][l] @ \
                             (Y3 \
                                 - R32m * (Y2 \
                                     - (A['2ma'][l, G1] + A['2mb'][G2]) \
@@ -2166,14 +2166,14 @@ class BLMModel:
                                 - (A_sum_l['3ma'] + A_sum_l['3mb']) \
                                 - A['3ma'])
                         # A_cat['2mb']
-                        XwY_cat[l_index + 4 * ts_cat[col]: r_index + 4 * ts_cat[col]] = CC_cat_weighted[col]['2mb'][l] @ \
+                        XwY_cat[col][l_index + 4 * ts_cat[col]: r_index + 4 * ts_cat[col]] = CC_cat_weighted[col]['2mb'][l] @ \
                             (Y2 \
                                 - A['2ma'][l, G1] \
                                 - (A_sum['2ma'] + A_sum['2mb']) \
                                 - (A_sum_l['2ma'] + A_sum_l['2mb']) \
                                 - A['2mb'])
                         # A_cat['3mb']
-                        XwY_cat[l_index + 5 * ts_cat[col]: r_index + 5 * ts_cat[col]] = CC_cat_weighted[col]['3mb'][l] @ \
+                        XwY_cat[col][l_index + 5 * ts_cat[col]: r_index + 5 * ts_cat[col]] = CC_cat_weighted[col]['3mb'][l] @ \
                             (Y3 \
                                 - R32m * (Y2 \
                                     - (A['2ma'][l, G1] + A['2mb'][G2]) \
@@ -2219,34 +2219,85 @@ class BLMModel:
             CC_cts_weighted = {col: {period: [] for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']} for col in cts_cols}
             for col in cts_cols:
                 if not cts_dict[col]['worker_type_interaction']:
-                    Y1_adj += A1_cts[col] * C1[col]
-                    Y2_adj += A2_cts[col] * C2[col]
+                    # Adjust A_sum
+                    for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']:
+                        A_sum[period] -= A_cts[col][period] * C_dict[period][col]
                 for l in range(nl):
                     ## Compute shared terms ##
                     if cts_dict[col]['worker_type_interaction']:
-                        S1_cts_l = S1_cts[col][l]
-                        S2_cts_l = S2_cts[col][l]
+                        S_cts_l_dict = {period: S_cts[col][period.strip('ab')][l] for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']}
                     else:
-                        S1_cts_l = S1_cts[col]
-                        S2_cts_l = S2_cts[col]
-                    CC1_cts_weighted[col].append(C1[col].T * (W1 * qi[:, l] / S1_cts_l))
-                    CC2_cts_weighted[col].append(C2[col].T * (W2 * qi[:, l] / S2_cts_l))
-                    del S1_cts_l, S2_cts_l
+                        S_cts_l_dict = {period: S_cts[col][period.strip('ab')] for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']}
+                    for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']:
+                        CC_cts_weighted[col][period].append(C_dict[period][col].T * (qi[:, l] / S_cts_l_dict[period]))
+                    del S_cts_l_dict
                     ## Compute XwX_cts terms ##
-                    XwX_cts[col][l] = (CC1_cts_weighted[col][l] @ C1[col])
-                    XwX_cts[col][nl + l] = (CC2_cts_weighted[col][l] @ C2[col])
+                    for i, period in enumerate(['12', '43', '2ma', '2mb', '3ma', '3mb']):
+                        XwX_cts[col][l + i * nl] = CC_cts_weighted[col][period][l] @ C_dict[period][col]
                     if params['update_a']:
                         # Update A_sum to account for worker-interaction terms
                         A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False)
                         if cts_dict[col]['worker_type_interaction']:
-                            A1_sum_l -= A1_cts[col][l] * C1[col]
-                            A2_sum_l -= A2_cts[col][l] * C2[col]
+                            # Adjust A_sum
+                            for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']:
+                                A_sum_l[period] -= A_cts[col][period][l] * C_dict[period][col]
                         ## Compute XwY_cts terms ##
-                        XwY_cts[col][l] = CC1_cts_weighted[col][l] @ (Y1_adj - A1_sum_l - A1[l, G1])
-                        XwY_cts[col][nl + l] = CC2_cts_weighted[col][l] @ (Y2_adj - A2_sum_l - A2[l, G2])
-                        del A12_sum_l, A43_sum_l, A2ma_sum_l, A2mb_sum_l, A3ma_sum_l, A3mb_sum_l
+                        # A_cts['12']
+                        XwY_cts[col][l + 0 * nl] = CC_cts_weighted[col]['12'][l] @ \
+                            (Y1 \
+                                - R12 * (Y2 - A['2ma'][l, G1] - A_sum['2ma'] - A_sum_l['2ma']) \
+                                - A_sum['12'] \
+                                - A_sum_l['12'] \
+                                - A['12'])
+                        # A_cts['43']
+                        XwY_cts[col][l + 1 * nl] = CC_cts_weighted[col]['43'][l] @ \
+                            (Y4 \
+                                - R43 * (Y3 \
+                                    - A['3ma'][l, G2] \
+                                    - A_sum['3ma'] \
+                                    - A_sum_l['3ma']) \
+                                - A_sum['43'] \
+                                - A_sum_l['43'] \
+                                - A['43'])
+                        # A_cts['2ma']
+                        XwY_cts[col][l + 2 * nl] = CC_cts_weighted[col]['2ma'][l] @ \
+                            (Y2 \
+                                - A['2mb'][G2] \
+                                - (A_sum['2ma'] + A_sum['2mb']) \
+                                - (A_sum_l['2ma'] + A_sum_l['2mb']) \
+                                - A['2ma'])
+                        # A_cts['3ma']
+                        XwY_cts[col][l + 3 * nl] = CC_cts_weighted[col]['3ma'][l] @ \
+                            (Y3 \
+                                - R32m * (Y2 \
+                                    - (A['2ma'][l, G1] + A['2mb'][G2]) \
+                                    - (A_sum['2ma'] + A_sum['2mb']) \
+                                    - (A_sum_l['2ma'] + A_sum_l['2mb'])) \
+                                - A['3mb'][G1] \
+                                - (A_sum['3ma'] + A_sum['3mb']) \
+                                - (A_sum_l['3ma'] + A_sum_l['3mb']) \
+                                - A['3ma'])
+                        # A_cts['2mb']
+                        XwY_cts[col][l + 4 * nl] = CC_cts_weighted[col]['2mb'][l] @ \
+                            (Y2 \
+                                - A['2ma'][l, G1] \
+                                - (A_sum['2ma'] + A_sum['2mb']) \
+                                - (A_sum_l['2ma'] + A_sum_l['2mb']) \
+                                - A['2mb'])
+                        # A_cts['3mb']
+                        XwY_cts[col][l + 5 * nl] = CC_cts_weighted[col]['3mb'][l] @ \
+                            (Y3 \
+                                - R32m * (Y2 \
+                                    - (A['2ma'][l, G1] + A['2mb'][G2]) \
+                                    - (A_sum['2ma'] + A_sum['2mb']) \
+                                    - (A_sum_l['2ma'] + A_sum_l['2mb'])) \
+                                - A['3ma'][l, G2] \
+                                - (A_sum['3ma'] + A_sum['3mb']) \
+                                - (A_sum_l['3ma'] + A_sum_l['3mb']) \
+                                - A['3mb'])
+                        del A_sum_l
                 if not params['update_s']:
-                    del CC1_cts_weighted[col], CC2_cts_weighted[col]
+                    del CC_cts_weighted[col]
 
                 # We solve the system to get all the parameters (use dense solver)
                 XwX_cts[col] = np.diag(XwX_cts[col])
@@ -2255,33 +2306,26 @@ class BLMModel:
                         a_solver = cons_a_dict[col]
                         a_solver.solve(XwX_cts[col], -XwY_cts[col], solver='quadprog')
                         if a_solver.res is None:
-                            # If constraints inconsistent, keep A1_cts and A2_cts the same
+                            # If constraints inconsistent, keep A_cts the same
                             if params['verbose'] in [2, 3]:
-                                print(f'Passing A1_cts/A2_cts for column {col!r}: {e}')
+                                print(f'Passing A_cts for column {col!r}: {e}')
                         else:
-                            res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2], a_solver.res[len(a_solver.res) // 2:]
-                            # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
-                            #     raise ValueError(f'Estimated A1_cts/A2_cts has NaN values for column {col!r}')
-                            if cts_dict[col]['worker_type_interaction']:
-                                A1_cts[col] = res_a1
-                                A2_cts[col] = res_a2
-                            else:
-                                A1_cts[col] = res_a1[0]
-                                A2_cts[col] = res_a2[0]
+                            split_res = np.split(a_solver.res, 6)
+                            for i, period in enumerate(['12', '43', '2ma', '2mb', '3ma', '3mb']):
+                                if cat_dict[col]['worker_type_interaction']:
+                                    A_cts[col][period] = split_res[i]
+                                else:
+                                    A_cts[col][period] = split_res[i][0]
 
                     except ValueError as e:
-                        # If constraints inconsistent, keep A1_cts and A2_cts the same
+                        # If constraints inconsistent, keep A_cts the same
                         if params['verbose'] in [2, 3]:
-                            print(f'Passing A1_cts/A2_cts for column {col!r}: {e}')
+                            print(f'Passing A_cts for column {col!r}: {e}')
 
                 if not cts_dict[col]['worker_type_interaction']:
-                    Y1_adj -= A1_cts[col] * C1[col]
-                    Y2_adj -= A2_cts[col] * C2[col]
-
-            if any_non_worker_type_interactions:
-                # Update A1_sum and A2_sum
-                A1_sum = Y1 - Y1_adj
-                A2_sum = Y2 - Y2_adj
+                    # Restore A_sum with updated values
+                    for period in ['12', '43', '2ma', '2mb', '3ma', '3mb']:
+                        A_sum[period] += A_cts[col][period] * C_dict[period][col]
 
             if params['update_s']:
                 # Next we extract the variances
