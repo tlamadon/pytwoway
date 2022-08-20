@@ -2093,12 +2093,8 @@ class BLMModel:
                             print(f'Passing A: {e}')
                     else:
                         split_res = np.split(cons_a.res, 6)
-                        A['12'] = np.reshape(split_res[0], self.dims)
-                        A['43'] = np.reshape(split_res[1], self.dims)
-                        A['2ma'] = np.reshape(split_res[2], self.dims)
-                        A['3ma'] = np.reshape(split_res[3], self.dims)
-                        A['2mb'] = np.reshape(split_res[4], self.dims)
-                        A['3mb'] = np.reshape(split_res[5], self.dims)
+                        for i, period in enumerate(['12', '43', '2ma', '2mb', '3ma', '3mb']):
+                            A[period] = np.reshape(split_res[i], self.dims)
 
                 except ValueError as e:
                     # If constraints inconsistent, keep A the same
@@ -2198,24 +2194,21 @@ class BLMModel:
                         a_solver = cons_a_dict[col]
                         a_solver.solve(XwX_cat[col], -XwY_cat[col], solver='quadprog')
                         if a_solver.res is None:
-                            # If constraints inconsistent, keep A1_cat and A2_cat the same
+                            # If constraints inconsistent, keep A_cat the same
                             if params['verbose'] in [2, 3]:
-                                print(f'Passing A1_cat/A2_cat for column {col!r}: {e}')
+                                print(f'Passing A_cat for column {col!r}: {e}')
                         else:
-                            res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2], a_solver.res[len(a_solver.res) // 2:]
-                            # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
-                            #     raise ValueError(f'Estimated A1_cat/A2_cat has NaN values for column {col!r}')
-                            if cat_dict[col]['worker_type_interaction']:
-                                A1_cat[col] = np.reshape(res_a1, (nl, col_n))
-                                A2_cat[col] = np.reshape(res_a2, (nl, col_n))
-                            else:
-                                A1_cat[col] = res_a1[: col_n]
-                                A2_cat[col] = res_a2[: col_n]
+                            split_res = np.split(a_solver.res, 6)
+                            for i, period in enumerate(['12', '43', '2ma', '2mb', '3ma', '3mb']):
+                                if cat_dict[col]['worker_type_interaction']:
+                                    A_cat[col][period] = np.reshape(split_res[i], (nl, col_n))
+                                else:
+                                    A_cat[col][period] = split_res[i]
 
                     except ValueError as e:
-                        # If constraints inconsistent, keep A1_cat and A2_cat the same
+                        # If constraints inconsistent, keep A_cat the same
                         if params['verbose'] in [2, 3]:
-                            print(f'Passing A1_cat/A2_cat for column {col!r}: {e}')
+                            print(f'Passing A_cat for column {col!r}: {e}')
 
                 if not cat_dict[col]['worker_type_interaction']:
                     # Restore A_sum with updated values
