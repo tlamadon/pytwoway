@@ -799,9 +799,9 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
 
     return (yj, ys, Lm, Ls)
 
-class BLMModel:
+class DynamicBLMModel:
     '''
-    Class for estimating BLM using a single set of starting values.
+    Class for estimating dynamic BLM using a single set of starting values.
 
     Arguments:
         params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
@@ -1113,24 +1113,17 @@ class BLMModel:
 
         return (cons_a, cons_s, cons_a_dict, cons_s_dict)
 
-    def _sort_parameters(self, A1, A2, S1=None, S2=None, A1_cat=None, A2_cat=None, S1_cat=None, S2_cat=None, A1_cts=None, A2_cts=None, S1_cts=None, S2_cts=None, pk1=None, pk0=None, NNm=None, NNs=None, sort_firm_types=False, reverse=False):
+    def _sort_parameters(self, A, S=None, A_cat=None, S_cat=None, A_cts=None, S_cts=None, pk1=None, pk0=None, NNm=None, NNs=None, sort_firm_types=False, reverse=False):
         '''
         Sort parameters by worker type order (and optionally firm type order).
 
         Arguments:
-            A1 (NumPy Array): mean of fixed effects in the first period
-            A2 (NumPy Array): mean of fixed effects in the second period
-            S1 (NumPy Array or None): standard deviation of fixed effects in the first period; if None, S1 is not sorted or returned
-            S2 (NumPy Array or None): standard deviation of fixed effects in the second period; if None, S2 is not sorted or returned
-            A1_cat (dict of NumPy Arrays or None): dictionary linking column names to the mean of fixed effects in the first period for categorical control variables
-            ; if None, A1_cat is not sorted or returned
-            A2_cat (dict of NumPy Arrays or None): dictionary linking column names to the mean of fixed effects in the second period for categorical control variables; if None, A2_cat is not sorted or returned
-            S1_cat (dict of NumPy Arrays or None): dictionary linking column names to the standard deviation of fixed effects in the first period for categorical control variables; if None, S1_cat is not sorted or returned
-            S2_cat (dict of NumPy Arrays or None): dictionary linking column names to the standard deviation of fixed effects in the second period for categorical control variables; if None, S2_cat is not sorted or returned
-            A1_cts (dict of NumPy Arrays or None): dictionary linking column names to the mean of coefficients in the first period for continuous control variables; if None, A1_cts is not sorted or returned
-            A2_cts (dict of NumPy Arrays or None): dictionary linking column names to the mean of coefficients in the second period for continuous control variables; if None, A2_cts is not sorted or returned
-            S1_cts (dict of NumPy Arrays or None): dictionary linking column names to the standard deviation of coefficients in the first period for continuous control variables; if None, S1_cts is not sorted or returned
-            S2_cts (dict of NumPy Arrays or None): dictionary linking column names to the standard deviation of coefficients in the second period for continuous control variables; if None, S2_cts is not sorted or returned
+            A (dict of NumPy Arrays): dictionary linking periods to the mean of fixed effects in that period
+            S (dict of NumPy Arrays or None): dictionary linking periods to the standard deviation of fixed effects in that period; if None, S is not sorted or returned
+            A_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the mean of fixed effects in that period; if None, A_cat is not sorted or returned
+            S_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; if None, S_cat is not sorted or returned
+            A_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the mean of fixed effects in that period; if None, A_cat is not sorted or returned
+            S_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; if None, S_cat is not sorted or returned
             pk1 (NumPy Array or None): probability of being at each combination of firm types for movers; if None, pk1 is not sorted or returned
             pk0 (NumPy Array or None): probability of being at each firm type for stayers; if None, pk0 is not sorted or returned
             NNm (NumPy Array or None): the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
@@ -1138,54 +1131,48 @@ class BLMModel:
             sort_firm_types (bool): if True, also sort by firm type order
             reverse (bool): if True, sort in reverse order
 
-        Returns (tuple of NumPy Arrays and dicts of NumPy Arrays): sorted parameters that are not None (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0)
+        Returns (tuple of NumPy Arrays and dicts of NumPy Arrays): sorted parameters that are not None from (A, S, A_cat, S_cat, A_cts, S_cts, pk1, pk0, NNm, NNs)
         '''
         # Copy parameters
-        A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0, NNm, NNs = copy.deepcopy((A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0, NNm, NNs))
+        A, S, A_cat, S_cat, A_cts, S_cts, pk1, pk0, NNm, NNs = copy.deepcopy((A, S, A_cat, S_cat, A_cts, S_cts, pk1, pk0, NNm, NNs))
         # Unpack attributes
         params = self.params
         nl, nk = self.nl, self.nk
         controls_dict = self.controls_dict
         ## Primary period ##
         if params['primary_period'] == 'first':
-            A_mean = A1
+            A_mean = A['12']
         elif params['primary_period'] == 'second':
-            A_mean = A2
+            A_mean = A['43']
         elif params['primary_period'] == 'all':
-            A_mean = (A1 + A2) / 2
-        # ## Compute sum of all effects ##
-        # A_sum = self.A1 + self.A2
-        # for control_dict in (self.A1_cat, self.A2_cat):
-        #     for control_col, control_array in control_dict.items():
-        #         if controls_dict[control_col]['worker_type_interaction']:
-        #             A_sum = (A_sum.T + np.mean(control_array, axis=1)).T
+            A_mean = (A['12'] + A['43']) / 2
+
         ## Sort worker types ##
         worker_type_order = np.mean(A_mean, axis=1).argsort()
         if reverse:
             worker_type_order = list(reversed(worker_type_order))
         if np.any(worker_type_order != np.arange(nl)):
             # Sort if out of order
-            A1 = A1[worker_type_order, :]
-            A2 = A2[worker_type_order, :]
-            if S1 is not None:
-                S1 = S1[worker_type_order, :]
-            if S2 is not None:
-                S2 = S2[worker_type_order, :]
+            A = {k: v[worker_type_order, :] for k, v in A.items()}
+            if S is not None:
+                S = {k: v[worker_type_order, :] for k, v in S.items()}
             if pk1 is not None:
                 pk1 = pk1[:, worker_type_order]
             if pk0 is not None:
                 pk0 = pk0[:, worker_type_order]
             # Sort control variables #
-            for control_dict in (A1_cat, A2_cat, S1_cat, S2_cat):
-                if control_dict is not None:
-                    for control_col, control_array in control_dict.items():
-                        if controls_dict[control_col]['worker_type_interaction']:
-                            control_dict[control_col] = control_array[worker_type_order, :]
-            for control_dict in (A1_cts, A2_cts, S1_cts, S2_cts):
-                if control_dict is not None:
-                    for control_col, control_array in control_dict.items():
-                        if controls_dict[control_col]['worker_type_interaction']:
-                            control_dict[control_col] = control_array[worker_type_order]
+            if A_cat is not None:
+                for col in A_cat.keys():
+                    A_cat[col] = {k: v[worker_type_order, :] for k, v in A_cat[col].items()}
+            if S_cat is not None:
+                for col in S_cat.keys():
+                    S_cat[col] = {k: v[worker_type_order, :] for k, v in S_cat[col].items()}
+            if A_cts is not None:
+                for col in A_cts.keys():
+                    A_cts[col] = {k: v[worker_type_order, :] for k, v in A_cts[col].items()}
+            if S_cts is not None:
+                for col in S_cts.keys():
+                    S_cts[col] = {k: v[worker_type_order, :] for k, v in S_cts[col].items()}
 
         if sort_firm_types:
             ## Sort firm types ##
@@ -1194,12 +1181,9 @@ class BLMModel:
                 firm_type_order = list(reversed(firm_type_order))
             if np.any(firm_type_order != np.arange(nk)):
                 # Sort if out of order
-                A1 = A1[:, firm_type_order]
-                A2 = A2[:, firm_type_order]
-                if S1 is not None:
-                    S1 = S1[:, firm_type_order]
-                if S2 is not None:
-                    S2 = S2[:, firm_type_order]
+                A = {k: v[:, firm_type_order] for k, v in A.items()}
+                if S is not None:
+                    S = {k: v[:, firm_type_order] for k, v in S.items()}
                 if pk0 is not None:
                     pk0 = pk0[firm_type_order, :]
                 if pk1 is not None:
@@ -1219,7 +1203,7 @@ class BLMModel:
                 if NNs is not None:
                     NNs = NNs[firm_type_order]
 
-        return (a for a in (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0, NNm, NNs) if a is not None)
+        return (a for a in (A, S, A_cat, S_cat, A_cts, S_cts, pk1, pk0, NNm, NNs) if a is not None)
 
     def _normalize(self, A1, A2, A1_cat, A2_cat):
         '''
@@ -1818,39 +1802,18 @@ class BLMModel:
         # Whether results should be stored
         store_res = True
 
-        # ## Sort ##
-        # A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
-
-        ## Prepare matrices aggregated at the type level ##
-        # A[l, g1]
-        XA1 = np.kron(np.eye(nk), np.kron(np.ones(nk), np.eye(nl))).T
-        ZA1 = np.zeros_like(XA1)
-        # A[l, g2]
-        XA2 = np.kron(np.ones(nk), np.kron(np.eye(nk), np.eye(nl))).T
-        ZA2 = np.zeros_like(XA2)
-        # A3mb[g1]
-        XA1b = np.kron(np.eye(nk), np.kron(np.ones(nk), np.ones(nl))).T[:, 1:]
-        # A2mb[g2]
-        XA2b = np.kron(np.ones(nk), np.kron(np.eye(nk), np.ones(nl))).T[:, 1:]
-        # XX
-        XX = np.vstack(
-            [
-                np.hstack([XA1, ZA1, ZA2, ZA2]),
-                np.hstack([ZA1, XA1, ZA2, ZA2]),
-                np.hstack([ZA1, ZA1, XA2, ZA2]),
-                np.hstack([ZA1, ZA1, ZA2, XA2])
-            ]
-        )
+        ## Sort ##
+        A, S, A_cat, S_cat, A_cts, S_cts, pk1, self.pk0 = self._sort_parameters(A, S, A_cat, S_cat, A_cts, S_cts, pk1, self.pk0)
 
         ## Constraints ##
-        # if params['force_min_firm_type']:
-        #     # If forcing minimum firm type
-        #     prev_min_firm_type = min_firm_type
-        #     min_firm_type = min_firm_type
-        # else:
-        #     # If not forcing minimum firm type
-        #     prev_min_firm_type = self._min_firm_type(A1, A2)
-        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints() # prev_min_firm_type)
+        if params['force_min_firm_type']:
+            # If forcing minimum firm type
+            prev_min_firm_type = min_firm_type
+            min_firm_type = min_firm_type
+        else:
+            # If not forcing minimum firm type
+            prev_min_firm_type = self._min_firm_type(A1, A2)
+        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(prev_min_firm_type)
 
         for iter in range(params['n_iters_movers']):
             # ---------- E-Step ----------
@@ -2523,7 +2486,7 @@ class BLMModel:
 
             # Update NNm
             if compute_NNm:
-                self.NNm = jdata.groupby('g1')['g2'].value_counts().unstack(fill_value=0).to_numpy()
+                self.NNm = jdata.groupby('g1')['g4'].value_counts().unstack(fill_value=0).to_numpy()
 
     def fit_stayers(self, sdata, compute_NNs=True):
         '''
