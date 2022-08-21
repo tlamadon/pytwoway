@@ -955,13 +955,12 @@ class DynamicBLMModel:
             for col in cts_cols
         }
 
-    def _min_firm_type(self, A1, A2):
+    def _min_firm_type(self, A):
         '''
         Find the lowest firm type.
 
         Arguments:
-            A1 (NumPy Array): mean of fixed effects in the first period
-            A2 (NumPy Array): mean of fixed effects in the second period
+            A (dict of NumPy Arrays): dictionary linking periods to the mean of fixed effects in that period
 
         Returns:
             (int): lowest firm type
@@ -970,11 +969,11 @@ class DynamicBLMModel:
 
         # Compute parameters from primary period
         if params['primary_period'] == 'first':
-            A_mean = A1
+            A_mean = A['12']
         elif params['primary_period'] == 'second':
-            A_mean = A2
+            A_mean = A['43']
         elif params['primary_period'] == 'all':
-            A_mean = (A1 + A2) / 2
+            A_mean = (A['12'] + A['43']) / 2
 
         # Return lowest firm type
         return np.mean(A_mean, axis=0).argsort()[0]
@@ -1153,9 +1152,14 @@ class DynamicBLMModel:
             worker_type_order = list(reversed(worker_type_order))
         if np.any(worker_type_order != np.arange(nl)):
             # Sort if out of order
-            A = {k: v[worker_type_order, :] for k, v in A.items()}
+            print(A['12'].shape)
+            print(worker_type_order)
+            for k, v in A.items():
+                print('k:', k)
+                print('v.shape:', v.shape)
+            A = {k: v[worker_type_order, :] if (k[-1] != 'b') else v for k, v in A.items()}
             if S is not None:
-                S = {k: v[worker_type_order, :] for k, v in S.items()}
+                S = {k: v[worker_type_order, :] if (k[-1] != 'b') else v for k, v in S.items()}
             if pk1 is not None:
                 pk1 = pk1[:, worker_type_order]
             if pk0 is not None:
@@ -1163,16 +1167,16 @@ class DynamicBLMModel:
             # Sort control variables #
             if A_cat is not None:
                 for col in A_cat.keys():
-                    A_cat[col] = {k: v[worker_type_order, :] for k, v in A_cat[col].items()}
+                    A_cat[col] = {k: v[worker_type_order, :] if controls_dict[col]['worker_type_interaction'] else v for k, v in A_cat[col].items()}
             if S_cat is not None:
                 for col in S_cat.keys():
-                    S_cat[col] = {k: v[worker_type_order, :] for k, v in S_cat[col].items()}
+                    S_cat[col] = {k: v[worker_type_order, :] if controls_dict[col]['worker_type_interaction'] else v for k, v in S_cat[col].items()}
             if A_cts is not None:
                 for col in A_cts.keys():
-                    A_cts[col] = {k: v[worker_type_order, :] for k, v in A_cts[col].items()}
+                    A_cts[col] = {k: v[worker_type_order] if controls_dict[col]['worker_type_interaction'] else v for k, v in A_cts[col].items()}
             if S_cts is not None:
                 for col in S_cts.keys():
-                    S_cts[col] = {k: v[worker_type_order, :] for k, v in S_cts[col].items()}
+                    S_cts[col] = {k: v[worker_type_order] if controls_dict[col]['worker_type_interaction'] else v for k, v in S_cts[col].items()}
 
         if sort_firm_types:
             ## Sort firm types ##
@@ -1181,9 +1185,9 @@ class DynamicBLMModel:
                 firm_type_order = list(reversed(firm_type_order))
             if np.any(firm_type_order != np.arange(nk)):
                 # Sort if out of order
-                A = {k: v[:, firm_type_order] for k, v in A.items()}
+                A = {k: v[:, firm_type_order] if (k[-1] != 'b') else v[firm_type_order] for k, v in A.items()}
                 if S is not None:
-                    S = {k: v[:, firm_type_order] for k, v in S.items()}
+                    S = {k: v[:, firm_type_order] if (k[-1] != 'b') else v[firm_type_order] for k, v in S.items()}
                 if pk0 is not None:
                     pk0 = pk0[firm_type_order, :]
                 if pk1 is not None:
@@ -1704,7 +1708,7 @@ class DynamicBLMModel:
 
             if compute_NNm:
                 # Update NNm
-                self.NNm = jdata.groupby('g1')['g2'].value_counts().unstack(fill_value=0).to_numpy()
+                self.NNm = jdata.groupby('g1')['g4'].value_counts().unstack(fill_value=0).to_numpy()
 
         else:
             # If not forcing minimum firm type
@@ -1812,7 +1816,7 @@ class DynamicBLMModel:
             min_firm_type = min_firm_type
         else:
             # If not forcing minimum firm type
-            prev_min_firm_type = self._min_firm_type(A1, A2)
+            prev_min_firm_type = self._min_firm_type(A)
         cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(prev_min_firm_type)
 
         for iter in range(params['n_iters_movers']):
