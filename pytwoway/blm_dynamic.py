@@ -1152,11 +1152,6 @@ class DynamicBLMModel:
             worker_type_order = list(reversed(worker_type_order))
         if np.any(worker_type_order != np.arange(nl)):
             # Sort if out of order
-            print(A['12'].shape)
-            print(worker_type_order)
-            for k, v in A.items():
-                print('k:', k)
-                print('v.shape:', v.shape)
             A = {k: v[worker_type_order, :] if (k[-1] != 'b') else v for k, v in A.items()}
             if S is not None:
                 S = {k: v[worker_type_order, :] if (k[-1] != 'b') else v for k, v in S.items()}
