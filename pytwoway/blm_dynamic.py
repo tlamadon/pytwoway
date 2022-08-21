@@ -997,7 +997,7 @@ class DynamicBLMModel:
         ## General ##
         cons_a = cons.QPConstrained(nl, nk)
         cons_s = cons.QPConstrained(nl, nk)
-        cons_s.add_constraints(cons.BoundedBelow(lb=params['s_lower_bound']))
+        cons_s.add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=6))
 
         if params['cons_a'] is not None:
             cons_a.add_constraints(params['cons_a'])
@@ -1020,11 +1020,11 @@ class DynamicBLMModel:
             cons_a_dict[col] = cons.QPConstrained(nl, 1)
             cons_s_dict[col] = cons.QPConstrained(nl, 1)
         for col in cat_cols + cts_cols:
-            cons_s_dict[col].add_constraints(cons.BoundedBelow(lb=params['s_lower_bound']))
+            cons_s_dict[col].add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=6))
 
             if not controls_dict[col]['worker_type_interaction']:
-                cons_a_dict[col].add_constraints(cons.NoWorkerTypeInteraction())
-                cons_s_dict[col].add_constraints(cons.NoWorkerTypeInteraction())
+                cons_a_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nt=6))
+                cons_s_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nt=6))
 
             if controls_dict[col]['cons_a'] is not None:
                 cons_a_dict[col].add_constraints(controls_dict[col]['cons_a'])
@@ -1086,29 +1086,29 @@ class DynamicBLMModel:
                 sp = secondary_period_dict[params['primary_period']]
                 ### Add constraints ###
                 ## Monotonic worker types ##
-                cons_a.add_constraints(cons.MonotonicMean(md=params['d_mean_worker_effect'], cross_period_mean=True, nnt=pp))
+                cons_a.add_constraints(cons.MonotonicMean(md=params['d_mean_worker_effect'], cross_period_mean=True, nnt=pp, nt=6))
                 if params['normalize']:
                     ## Lowest firm type ##
                     if params['force_min_firm_type'] and params['force_min_firm_type_constraint']:
-                        cons_a.add_constraints(cons.MinFirmType(min_firm_type=min_firm_type, md=params['d_mean_firm_effect'], is_min=True, cross_period_mean=True, nnt=pp))
+                        cons_a.add_constraints(cons.MinFirmType(min_firm_type=min_firm_type, md=params['d_mean_firm_effect'], is_min=True, cross_period_mean=True, nnt=pp, nt=6))
                     ## Normalize ##
                     if any_tv_wi:
                         # Normalize everything
-                        cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=range(2)))
+                        cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=range(2), nt=6))
                     else:
                         if any_tnv_wi:
                             # Normalize primary period
-                            cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp))
+                            cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp, nt=6))
                             if any_tv_nwi:
                                 # Normalize lowest type pair from secondary period
-                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=sp))
+                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=sp, nt=6))
                         else:
                             if any_tv_nwi:
                                 # Normalize lowest type pair in both periods
-                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(2)))
+                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(2), nt=6))
                             elif any_tnv_nwi:
                                 # Normalize lowest type pair in primary period
-                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp))
+                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp, nt=6))
 
         return (cons_a, cons_s, cons_a_dict, cons_s_dict)
 
@@ -2648,9 +2648,9 @@ class DynamicBLMModel:
         if self.nl > 1:
             # Set constraints
             if user_params['cons_a_all'] is None:
-                self.params['cons_a_all'] = cons.LinearAdditive()
+                self.params['cons_a_all'] = cons.LinearAdditive(nt=6)
             else:
-                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.LinearAdditive()]
+                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.LinearAdditive(nt=6)]
             if self.params['verbose'] in [1, 2, 3]:
                 print('Fitting movers with Linear Additive constraint on A')
             self.fit_movers(jdata, compute_NNm=False)
@@ -2659,9 +2659,9 @@ class DynamicBLMModel:
         if self.nl > 1:
             # Set constraints
             if user_params['cons_a_all'] is None:
-                self.params['cons_a_all'] = cons.StationaryFirmTypeVariation()
+                self.params['cons_a_all'] = cons.StationaryFirmTypeVariation(nt=6)
             else:
-                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation()]
+                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation(nt=6)]
             if self.params['verbose'] in [1, 2, 3]:
                 print('Fitting movers with Stationary Firm Type Variation constraint on A')
             self.fit_movers(jdata, compute_NNm=False)
