@@ -1676,17 +1676,13 @@ class DynamicBLMModel:
             best_model = None
             for k in range(nk):
                 # Copy initial guesses
-                A1, A2, S1, S2 = copy.deepcopy((self.A1, self.A2, self.S1, self.S2))
-                A1_cat, A2_cat, S1_cat, S2_cat = copy.deepcopy((self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat))
-                A1_cts, A2_cts, S1_cts, S2_cts = copy.deepcopy((self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts))
+                A, A_cat, A_cts, S, S_cat, S_cts = copy.deepcopy((self.A, self.A_cat, self.A_cts, self.S, self.S_cat, self.S_cts))
                 pk1 = copy.deepcopy(self.pk1)
 
                 ## Estimate with min_firm_type == k ##
-                blm_k = BLMModel(params)
+                blm_k = DynamicBLMModel(params)
                 # Set initial guesses
-                blm_k.A1, blm_k.A2, blm_k.S1, blm_k.S2 = A1, A2, S1, S2
-                blm_k.A1_cat, blm_k.A2_cat, blm_k.S1_cat, blm_k.S2_cat = A1_cat, A2_cat, S1_cat, S2_cat
-                blm_k.A1_cts, blm_k.A2_cts, blm_k.S1_cts, blm_k.S2_cts = A1_cts, A2_cts, S1_cts, S2_cts
+                blm_k.A, blm_k.A_cat, blm_k.A_cts, blm_k.S, blm_k.S_cat, blm_k.S_cts = A, A_cat, A_cts, S, S_cat, S_cts
                 blm_k.pk1 = pk1
                 # Fit estimator
                 blm_k._fit_movers(jdata=jdata, compute_NNm=False, min_firm_type=k)
@@ -1695,9 +1691,7 @@ class DynamicBLMModel:
                 if (best_model is None) or (blm_k.lik1 > best_model.lik1):
                     best_model = blm_k
             ## Update parameters with best model ##
-            self.A1, self.A2, self.S1, self.S2 = best_model.A1, best_model.A2, best_model.S1, best_model.S2
-            self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat = best_model.A1_cat, best_model.A2_cat, best_model.S1_cat, best_model.S2_cat
-            self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts = best_model.A1_cts, best_model.A2_cts, best_model.S1_cts, best_model.S2_cts
+            self.A, self.A_cat, self.A_cts, self.S, self.S_cat, self.S_cts = best_model.A, best_model.A_cat, best_model.A_cts, best_model.S, best_model.S_cat, best_model.S_cts
             self.pk1 = best_model.pk1
             self.liks1, self.lik1 = best_model.liks1, best_model.lik1
 
@@ -2016,30 +2010,18 @@ class DynamicBLMModel:
             if not params['update_s']:
                 del GG_weighted
 
-            # print('A1 before:')
-            # print(A1)
-            # print('A2 before:')
-            # print(A2)
-            # print('S1 before:')
-            # print(S1)
-            # print('S2 before:')
-            # print(S2)
-            # print('A1_cat before:')
-            # print(A1_cat)
-            # print('A2_cat before:')
-            # print(A2_cat)
-            # print('S1_cat before:')
-            # print(S1_cat)
-            # print('S2_cat before:')
-            # print(S2_cat)
-            # print('A1_cts before:')
-            # print(A1_cts)
-            # print('A2_cts before:')
-            # print(A2_cts)
-            # print('S1_cts before:')
-            # print(S1_cts)
-            # print('S2_cts before:')
-            # print(S2_cts)
+            # print('A before:')
+            # print(A)
+            # print('S before:')
+            # print(S)
+            # print('A_cat before:')
+            # print(A_cat)
+            # print('S_cat before:')
+            # print(S_cat)
+            # print('A_cts before:')
+            # print(A_cts)
+            # print('S_cts before:')
+            # print(S_cts)
 
             # We solve the system to get all the parameters (use dense solver)
             XwX = np.diag(XwX)
@@ -2435,6 +2417,19 @@ class DynamicBLMModel:
                         if params['verbose'] in [2, 3]:
                             print(f'Passing S_cts for column {col!r}: {e}')
 
+            # print('A after:')
+            # print(A)
+            # print('S after:')
+            # print(S)
+            # print('A_cat after:')
+            # print(A_cat)
+            # print('S_cat after:')
+            # print(S_cat)
+            # print('A_cts after:')
+            # print(A_cts)
+            # print('S_cts after:')
+            # print(S_cts)
+            
             if params['update_pk1']:
                 # NOTE: add dirichlet prior
                 pk1 = GG12.T @ (qi + d_prior - 1)
@@ -2444,31 +2439,6 @@ class DynamicBLMModel:
                 if pd.isna(pk1).any():
                     raise ValueError('Estimated pk1 has NaN values. Please try a different set of starting values.')
 
-            # print('A1 after:')
-            # print(A1)
-            # print('A2 after:')
-            # print(A2)
-            # print('S1 after:')
-            # print(S1)
-            # print('S2 after:')
-            # print(S2)
-            # print('A1_cat after:')
-            # print(A1_cat)
-            # print('A2_cat after:')
-            # print(A2_cat)
-            # print('S1_cat after:')
-            # print(S1_cat)
-            # print('S2_cat after:')
-            # print(S2_cat)
-            # print('A1_cts after:')
-            # print(A1_cts)
-            # print('A2_cts after:')
-            # print(A2_cts)
-            # print('S1_cts after:')
-            # print(S1_cts)
-            # print('S2_cts after:')
-            # print(S2_cts)
-
         if store_res:
             if len(cat_cols) > 0:
                 ## Normalize ##
@@ -2476,16 +2446,14 @@ class DynamicBLMModel:
                 A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat)
 
             ## Sort parameters ##
-            A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
+            A, S, A_cat, S_cat, A_cts, S_cts, pk1, self.pk0 = self._sort_parameters(A, S, A_cat, S_cat, A_cts, S_cts, pk1, self.pk0)
 
             if len(cat_cols) > 0:
                 ## Normalize again ##
                 A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat)
 
             # Store parameters
-            self.A1, self.A2, self.S1, self.S2 = A1, A2, S1, S2
-            self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat = A1_cat, A2_cat, S1_cat, S2_cat
-            self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts = A1_cts, A2_cts, S1_cts, S2_cts
+            self.A, self.A_cat, self.A_cts, self.S, self.S_cat, self.S_cts = A, A_cat, A_cts, S, S_cat, S_cts
             self.pk1, self.lik1 = pk1, lik1
             self.liks1 = liks1 # np.concatenate([self.liks1, liks1])
 
@@ -2514,8 +2482,12 @@ class DynamicBLMModel:
         # Store wage outcomes and groups
         Y1 = sdata['y1'].to_numpy()
         Y2 = sdata['y2'].to_numpy()
+        # Y3 = sdata['y3'].to_numpy()
+        # Y4 = sdata['y4'].to_numpy()
         G1 = sdata['g1'].to_numpy().astype(int, copy=False)
         # G2 = sdata['g2'].to_numpy().astype(int, copy=False)
+        # G3 = sdata['g3'].to_numpy().astype(int, copy=False)
+        # G4 = sdata['g4'].to_numpy().astype(int, copy=False)
         GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
 
         if any_controls:
