@@ -633,7 +633,7 @@ class BLMModel:
                 raise ValueError(f"Categorical control variables must specify 'n', but column {col!r} does not.")
 
         # Check if there are any control variables
-        self.any_controls = len(control_cols) > 0
+        self.any_controls = (len(control_cols) > 0)
         # Check if any control variables interact with worker type
         self.any_worker_type_interactions = any([col_dict['worker_type_interaction'] for col_dict in controls_dict.values()])
         # Check if any control variables don't interact with worker type
@@ -1415,7 +1415,7 @@ class BLMModel:
             # We compute the posterior probabilities for each row
             # We iterate over the worker types, should not be be too costly since the vector is quite large within each iteration
             log_pk1 = np.log(pk1)
-            if any_controls > 0:
+            if any_controls:
                 ## Account for control variables ##
                 if iter == 0:
                     A1_sum, A2_sum, S1_sum_sq, S2_sum_sq = self._sum_by_non_nl(ni=ni, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts)
