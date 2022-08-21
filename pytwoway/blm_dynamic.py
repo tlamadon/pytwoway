@@ -2576,6 +2576,7 @@ class DynamicBLMModel:
             # Store parameters
             self.A, self.A_cat, self.A_cts, self.S, self.S_cat, self.S_cts = A, A_cat, A_cts, S, S_cat, S_cts
             self.pk1, self.lik1 = pk1, lik1
+            self.R12, self.R43, self.R32m = R12, R43, R32m
             self.liks1 = liks1 # np.concatenate([self.liks1, liks1])
 
             # Update NNm
