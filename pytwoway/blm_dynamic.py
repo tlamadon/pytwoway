@@ -860,11 +860,13 @@ class DynamicBLMModel:
         dims = (nl, nk)
         self.dims = dims
         # Periods to estimate
+        all_periods = ['12', '43', '2ma', '3ma', '2mb', '3mb', '2s', '3s']
         periods = ['12', '43', '2ma', '3ma', '2mb', '3mb', '2s', '3s']
         if not params['endogeneity']:
             periods.remove('2mb')
         if not params['state_dependence']:
             periods.remove('3mb')
+        self.all_periods = all_periods
         self.periods = periods
         self.periods_movers = [period for period in ['12', '43', '2ma', '3ma', '2mb', '3mb'] if period in periods]
         self.periods_stayers = ['12', '43', '2ma', '3ma', '2s', '3s']
@@ -926,12 +928,12 @@ class DynamicBLMModel:
                 rng.normal(loc=params[f'a{period}_mu'], scale=params[f'a{period}_sig'], size=dims)
                     if (period[-1] != 'b') else
                 rng.normal(loc=params[f'a{period}_mu'], scale=params[f'a{period}_sig'], size=nk)
-            for period in periods
+            for period in all_periods
         }
         self.S = {
             period:
                 rng.uniform(low=max(params[f"s{period.strip('ab')}_low"], s_lb), high=params[f"s{period.strip('ab')}_high"], size=dims)
-            for period in periods
+            for period in all_periods
         }
         # Model for p(K | l, l') for movers
         if params['pk1_prior'] is None:
@@ -953,7 +955,7 @@ class DynamicBLMModel:
                     rng.normal(loc=controls_dict[col][f'a{period}_mu'], scale=controls_dict[col][f'a{period}_sig'], size=(nl, controls_dict[col]['n']))
                         if (controls_dict[col]['worker_type_interaction'] and (period[-1] != 'b')) else
                     rng.normal(loc=controls_dict[col][f'a{period}_mu'], scale=controls_dict[col][f'a{period}_sig'], size=controls_dict[col]['n'])
-                for period in ['12', '43', '2ma', '3ma', '2mb', '3mb', '2s', '3s']
+                for period in all_periods
             }
             for col in cat_cols
         }
@@ -963,7 +965,7 @@ class DynamicBLMModel:
                     rng.uniform(low=max(controls_dict[col][f"s{period.strip('ab')}_low"], s_lb), high=controls_dict[col][f"s{period.strip('ab')}_high"], size=(nl, controls_dict[col]['n']))
                         if controls_dict[col]['worker_type_interaction'] else
                     rng.uniform(low=max(controls_dict[col][f"s{period.strip('ab')}_low"], s_lb), high=controls_dict[col][f"s{period.strip('ab')}_high"], size=controls_dict[col]['n'])
-                for period in periods
+                for period in all_periods
             }
             for col in cat_cols
         }
@@ -974,7 +976,7 @@ class DynamicBLMModel:
                     rng.normal(loc=controls_dict[col][f'a{period}_mu'], scale=controls_dict[col][f'a{period}_sig'], size=nl)
                         if (controls_dict[col]['worker_type_interaction'] and (period[-1] != 'b')) else
                     rng.normal(loc=controls_dict[col][f'a{period}_mu'], scale=controls_dict[col][f'a{period}_sig'], size=1)
-                for period in periods
+                for period in all_periods
             }
             for col in cts_cols
         }
@@ -984,7 +986,7 @@ class DynamicBLMModel:
                     rng.uniform(low=max(controls_dict[col][f"s{period.strip('ab')}_low"], s_lb), high=controls_dict[col][f"s{period.strip('ab')}_high"], size=nl)
                         if controls_dict[col]['worker_type_interaction'] else
                     rng.uniform(low=max(controls_dict[col][f"s{period.strip('ab')}_low"], s_lb), high=controls_dict[col][f"s{period.strip('ab')}_high"], size=1)
-                for period in periods
+                for period in all_periods
             }
             for col in cts_cols
         }
@@ -1032,11 +1034,12 @@ class DynamicBLMModel:
         # Return lowest firm type
         return np.mean(A_mean, axis=0).argsort()[0]
 
-    def _gen_constraints(self, min_firm_type):
+    def _gen_constraints(self, nt, min_firm_type):
         '''
-        Generate constraints for estimating A and S in fit_movers().
+        Generate constraints for estimating A and S in fit_movers() and fit_stayers().
 
         Arguments:
+            nt (int): number of periods
             min_firm_type (int): lowest firm type
 
         Returns:
@@ -1051,7 +1054,7 @@ class DynamicBLMModel:
         ## General ##
         cons_a = cons.QPConstrained(nl, nk)
         cons_s = cons.QPConstrained(nl, nk)
-        cons_s.add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=6))
+        cons_s.add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=nt))
 
         if params['cons_a'] is not None:
             cons_a.add_constraints(params['cons_a'])
@@ -1074,11 +1077,11 @@ class DynamicBLMModel:
             cons_a_dict[col] = cons.QPConstrained(nl, 1)
             cons_s_dict[col] = cons.QPConstrained(nl, 1)
         for col in cat_cols + cts_cols:
-            cons_s_dict[col].add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=6))
+            cons_s_dict[col].add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=nt))
 
             if not controls_dict[col]['worker_type_interaction']:
-                cons_a_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nt=6))
-                cons_s_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nt=6))
+                cons_a_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nt=nt))
+                cons_s_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nt=nt))
 
             if controls_dict[col]['cons_a'] is not None:
                 cons_a_dict[col].add_constraints(controls_dict[col]['cons_a'])
@@ -1140,29 +1143,29 @@ class DynamicBLMModel:
                 sp = secondary_period_dict[params['primary_period']]
                 ### Add constraints ###
                 ## Monotonic worker types ##
-                cons_a.add_constraints(cons.MonotonicMean(md=params['d_mean_worker_effect'], cross_period_mean=True, nnt=pp, nt=6))
+                cons_a.add_constraints(cons.MonotonicMean(md=params['d_mean_worker_effect'], cross_period_mean=True, nnt=pp, nt=nt))
                 if params['normalize']:
                     ## Lowest firm type ##
                     if params['force_min_firm_type'] and params['force_min_firm_type_constraint']:
-                        cons_a.add_constraints(cons.MinFirmType(min_firm_type=min_firm_type, md=params['d_mean_firm_effect'], is_min=True, cross_period_mean=True, nnt=pp, nt=6))
+                        cons_a.add_constraints(cons.MinFirmType(min_firm_type=min_firm_type, md=params['d_mean_firm_effect'], is_min=True, cross_period_mean=True, nnt=pp, nt=nt))
                     ## Normalize ##
                     if any_tv_wi:
                         # Normalize everything
-                        cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=range(2), nt=6))
+                        cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=range(2), nt=nt))
                     else:
                         if any_tnv_wi:
                             # Normalize primary period
-                            cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp, nt=6))
+                            cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp, nt=nt))
                             if any_tv_nwi:
                                 # Normalize lowest type pair from secondary period
-                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=sp, nt=6))
+                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=sp, nt=nt))
                         else:
                             if any_tv_nwi:
                                 # Normalize lowest type pair in both periods
-                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(2), nt=6))
+                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(2), nt=nt))
                             elif any_tnv_nwi:
                                 # Normalize lowest type pair in primary period
-                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp, nt=6))
+                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp, nt=nt))
 
         return (cons_a, cons_s, cons_a_dict, cons_s_dict)
 
@@ -1419,11 +1422,11 @@ class DynamicBLMModel:
 
         if compute_A:
             A_sum = {
-                period: np.zeros(ni) for period in periods
+                period: np.zeros(ni) if period in periods else 0 for period in self.all_periods
             }
         if compute_S:
             S_sum_sq = {
-                period: np.zeros(ni) for period in periods
+                period: np.zeros(ni) if period in periods else 0 for period in self.all_periods
             }
 
         ## Categorical ##
@@ -1497,11 +1500,11 @@ class DynamicBLMModel:
 
         if compute_A:
             A_sum_l = {
-                period: np.zeros(ni) for period in periods
+                period: np.zeros(ni) if period in periods else 0 for period in self.all_periods
             }
         if compute_S:
             S_sum_sq_l = {
-                period: np.zeros(ni) for period in periods
+                period: np.zeros(ni) if period in periods else 0 for period in self.all_periods
             }
 
         ## Categorical ##
@@ -1869,7 +1872,7 @@ class DynamicBLMModel:
         else:
             # If not forcing minimum firm type
             prev_min_firm_type = self._min_firm_type(A)
-        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(prev_min_firm_type)
+        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(nt=len(periods), min_firm_type=prev_min_firm_type)
 
         for iter in range(params['n_iters_movers']):
             # ---------- E-Step ----------
@@ -1948,8 +1951,8 @@ class DynamicBLMModel:
 
                     lp[:, l] = log_pk1[KK, l] + lp1 + lp2 + lp3 + lp4
             else:
-                A_sum = {period: 0 for period in periods}
-                S_sum_sq = {period: 0 for period in periods}
+                A_sum = {period: 0 for period in self.all_periods}
+                S_sum_sq = {period: 0 for period in self.all_periods}
                 # Loop over firm classes so means/variances are single values rather than vectors (computing log/square is faster this way)
                 for g1 in range(nk):
                     for g2 in range(nk):
@@ -2205,7 +2208,7 @@ class DynamicBLMModel:
                 if params['update_a']:
                     if iter > 0:
                         ## Constraints ##
-                        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type)
+                        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(nt=len(periods), min_firm_type=min_firm_type)
                     try:
                         cons_a.solve(XwX, -XwY, solver='quadprog')
                         if cons_a.res is None:
@@ -3486,9 +3489,9 @@ class DynamicBLMModel:
         if self.nl > 1:
             # Set constraints
             if user_params['cons_a_all'] is None:
-                self.params['cons_a_all'] = cons.LinearAdditive(nt=6)
+                self.params['cons_a_all'] = cons.LinearAdditive(nt=len(self.periods_movers))
             else:
-                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.LinearAdditive(nt=6)]
+                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.LinearAdditive(nt=len(self.periods_movers))]
             if self.params['verbose'] in [1, 2, 3]:
                 print('Fitting movers with Linear Additive constraint on A')
             self.fit_movers(jdata, compute_NNm=False)
@@ -3497,9 +3500,9 @@ class DynamicBLMModel:
         if self.nl > 1:
             # Set constraints
             if user_params['cons_a_all'] is None:
-                self.params['cons_a_all'] = cons.StationaryFirmTypeVariation(nt=6)
+                self.params['cons_a_all'] = cons.StationaryFirmTypeVariation(nt=len(self.periods_movers))
             else:
-                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation(nt=6)]
+                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation(nt=len(self.periods_movers))]
             if self.params['verbose'] in [1, 2, 3]:
                 print('Fitting movers with Stationary Firm Type Variation constraint on A')
             self.fit_movers(jdata, compute_NNm=False)
