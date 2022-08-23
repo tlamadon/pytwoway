@@ -480,10 +480,15 @@ class NoWorkerTypeInteraction():
     Generate BLM constraints so that for a fixed firm type, worker types effects must all be the same.
 
     Arguments:
+        nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
         nt (int): number of time periods
     '''
 
-    def __init__(self, nt=2):
+    def __init__(self, nnt=None, nt=2):
+        if nnt is None:
+            self.nnt = range(nt)
+        else:
+            self.nnt = to_list(nnt)
         self.nt = nt
 
     def _get_constraints(self, nl, nk):
@@ -497,10 +502,10 @@ class NoWorkerTypeInteraction():
         Returns:
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        nt = self.nt
-        A = np.zeros(shape=(nt * (nl - 1) * nk, nt * nl * nk))
-        for period in range(nt):
-            row_shift = period * (nl - 1) * nk
+        nnt, nt = self.nnt, self.nt
+        A = np.zeros(shape=(len(nnt) * (nl - 1) * nk, nt * nl * nk))
+        for i, period in enumerate(nnt):
+            row_shift = i * (nl - 1) * nk
             col_shift = period * nl * nk
             for k in range(nk):
                 for l in range(nl - 1):

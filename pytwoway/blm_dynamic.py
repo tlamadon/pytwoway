@@ -1034,13 +1034,13 @@ class DynamicBLMModel:
         # Return lowest firm type
         return np.mean(A_mean, axis=0).argsort()[0]
 
-    def _gen_constraints(self, nt, min_firm_type):
+    def _gen_constraints(self, min_firm_type, for_movers):
         '''
         Generate constraints for estimating A and S in fit_movers() and fit_stayers().
 
         Arguments:
-            nt (int): number of periods
             min_firm_type (int): lowest firm type
+            for_movers (bool): if True, generate constraints for movers; if False, generate constraints for stayers
 
         Returns:
             (tuple of constraints): (cons_a --> constraints for base A1 and A2, cons_s --> constraints for base S1 and S2, cons_a_dict --> constraints for A1 and A2 for control variables, cons_s_dict --> controls for S1 and S2 for control variables)
@@ -1051,8 +1051,25 @@ class DynamicBLMModel:
         cat_cols, cts_cols = self.cat_cols, self.cts_cols
         controls_dict = self.controls_dict
 
+        ## Number of periods for constraints ##
+        # If endogeneity or state-dependence, estimate 'b' parameters that do not interact with worker type
+        constrain_b = False
+        if for_movers:
+            nt = len(self.periods_movers)
+            if params['endogeneity'] or params['state_dependence']:
+                # If endogeneity or state-dependence, estimate 'b' parameters that do not interact with worker type
+                nnt_b = []
+                for i, period in enumerate(self.periods_movers):
+                    if period[-1] == 'b':
+                        nnt_b.append(i)
+                constrain_b = (len(nnt_b) > 0)
+        else:
+            nt = len(self.periods_stayers)
+
         ## General ##
         cons_a = cons.QPConstrained(nl, nk)
+        if constrain_b:
+            cons_a.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt))
         cons_s = cons.QPConstrained(nl, nk)
         cons_s.add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=nt))
 
@@ -1082,6 +1099,8 @@ class DynamicBLMModel:
             if not controls_dict[col]['worker_type_interaction']:
                 cons_a_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nt=nt))
                 cons_s_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nt=nt))
+            elif constrain_b:
+                cons_a_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt))
 
             if controls_dict[col]['cons_a'] is not None:
                 cons_a_dict[col].add_constraints(controls_dict[col]['cons_a'])
@@ -1151,7 +1170,7 @@ class DynamicBLMModel:
                     ## Normalize ##
                     if any_tv_wi:
                         # Normalize everything
-                        cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=range(2), nt=nt))
+                        cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=range(nt), nt=nt))
                     else:
                         if any_tnv_wi:
                             # Normalize primary period
@@ -1872,7 +1891,7 @@ class DynamicBLMModel:
         else:
             # If not forcing minimum firm type
             prev_min_firm_type = self._min_firm_type(A)
-        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(nt=len(periods), min_firm_type=prev_min_firm_type)
+        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type=prev_min_firm_type, for_movers=True)
 
         for iter in range(params['n_iters_movers']):
             # ---------- E-Step ----------
@@ -2208,7 +2227,7 @@ class DynamicBLMModel:
                 if params['update_a']:
                     if iter > 0:
                         ## Constraints ##
-                        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(nt=len(periods), min_firm_type=min_firm_type)
+                        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type=min_firm_type, for_movers=True)
                     try:
                         cons_a.solve(XwX, -XwY, solver='quadprog')
                         if cons_a.res is None:
@@ -2745,7 +2764,7 @@ class DynamicBLMModel:
 
         ## Constraints ##
         prev_min_firm_type = self._min_firm_type(A)
-        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(prev_min_firm_type)
+        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type=prev_min_firm_type, for_movers=False)
 
         for iter in range(params['n_iters_stayers']):
             # ---------- E-Step ----------
@@ -3040,7 +3059,7 @@ class DynamicBLMModel:
                 if params['update_a']:
                     if iter > 0:
                         ## Constraints ##
-                        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type)
+                        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type=min_firm_type, for_movers=False)
                     try:
                         cons_a.solve(XwX, -XwY, solver='quadprog')
                         if cons_a.res is None:
