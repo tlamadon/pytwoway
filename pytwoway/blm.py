@@ -1475,6 +1475,16 @@ class BLMModel:
                         store_res = False
                         break
 
+            # ---------- Update pk1 ----------
+            if params['update_pk1']:
+                # NOTE: add dirichlet prior
+                pk1 = GG12.T @ (W * (qi.T + d_prior - 1)).T
+                # Normalize rows to sum to 1
+                pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
+
+                if pd.isna(pk1).any():
+                    raise ValueError('Estimated pk1 has NaN values. Please try a different set of starting values.')
+
             # ---------- M-step ----------
             # Constrained OLS (source: https://scaron.info/blog/quadratic-programming-in-python.html)
 
@@ -1824,15 +1834,6 @@ class BLMModel:
                         # If constraints inconsistent, keep S1_cts and S2_cts the same
                         if params['verbose'] in [2, 3]:
                             print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
-
-            if params['update_pk1']:
-                # NOTE: add dirichlet prior
-                pk1 = GG12.T @ (W * (qi.T + d_prior - 1)).T
-                # Normalize rows to sum to 1
-                pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
-
-                if pd.isna(pk1).any():
-                    raise ValueError('Estimated pk1 has NaN values. Please try a different set of starting values.')
 
             # print('A1 after:')
             # print(A1)

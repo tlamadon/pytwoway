@@ -2041,6 +2041,16 @@ class DynamicBLMModel:
                         store_res = False
                         break
 
+            # ---------- Update pk1 ----------
+            if params['update_pk1']:
+                # NOTE: add dirichlet prior
+                pk1 = GG12.T @ (qi + d_prior - 1)
+                # Normalize rows to sum to 1
+                pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
+
+                if pd.isna(pk1).any():
+                    raise ValueError('Estimated pk1 has NaN values. Please try a different set of starting values.')
+            
             # ---------- M-step ----------
             # Alternate between updating A/S and updating rho
             if update_rho and ((iter % 2) == 1):
@@ -2652,15 +2662,6 @@ class DynamicBLMModel:
                 # print(A_cts)
                 # print('S_cts after:')
                 # print(S_cts)
-
-            if params['update_pk1']:
-                # NOTE: add dirichlet prior
-                pk1 = GG12.T @ (qi + d_prior - 1)
-                # Normalize rows to sum to 1
-                pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
-
-                if pd.isna(pk1).any():
-                    raise ValueError('Estimated pk1 has NaN values. Please try a different set of starting values.')
 
         if store_res:
             if len(cat_cols) > 0:
