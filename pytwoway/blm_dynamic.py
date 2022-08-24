@@ -101,14 +101,6 @@ _blm_dynamic_params_default = ParamsDict({
         '''
             (default=0.5) Standard error of simulated A2b for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a2s_mu': (1, 'type', (float, int),
-        '''
-            (default=1) Mean of simulated A2 for stayers (mean of fixed effects).
-        ''', None),
-    'a2s_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Standard error of simulated A2 for stayers (mean of fixed effects).
-        ''', '>= 0'),
     'a3ma_mu': (1, 'type', (float, int),
         '''
             (default=1) Mean of simulated A3a for movers (mean of fixed effects).
@@ -124,6 +116,14 @@ _blm_dynamic_params_default = ParamsDict({
     'a3mb_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
             (default=0.5) Standard error of simulated A3b for movers (mean of fixed effects).
+        ''', '>= 0'),
+    'a2s_mu': (1, 'type', (float, int),
+        '''
+            (default=1) Mean of simulated A2 for stayers (mean of fixed effects).
+        ''', None),
+    'a2s_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Standard error of simulated A2 for stayers (mean of fixed effects).
         ''', '>= 0'),
     'a3s_mu': (1, 'type', (float, int),
         '''
@@ -157,14 +157,6 @@ _blm_dynamic_params_default = ParamsDict({
         '''
             (default=0.5) Maximum value of simulated S2 for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.3) Minimum value of simulated S2 for stayers (standard deviation of fixed effects).
-        ''', '>= 0'),
-    's2s_high': (0.5, 'type_constrained', ((float, int), _gteq0),
-        '''
-            (default=0.5) Maximum value of simulated S2 for stayers (standard deviation of fixed effects).
-        ''', '>= 0'),
     's3m_low': (0.3, 'type_constrained', ((float, int), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S3 for movers (standard deviation of fixed effects).
@@ -172,6 +164,14 @@ _blm_dynamic_params_default = ParamsDict({
     's3m_high': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S3 for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S2 for stayers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2s_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S2 for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
     's3s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
         '''
@@ -1607,12 +1607,12 @@ class DynamicBLMModel:
                 XX[g1, g1] = 1
 
             Gs += nk
-            
+
             ## Compute var(nu_1 | g1) ##
             XX_lst[0][g1, Gs + g1] = 1
 
             Gs += nk
-            
+
             ## Compute var(nu_2 | g1) ##
             XX_lst[0][g1, Gs + g1] = rho_1 ** 2
             XX_lst[1][g1, Gs + g1] = 1
@@ -1626,7 +1626,7 @@ class DynamicBLMModel:
             XX_lst[0][g1, Gs + g1] = rho_t ** 2 * rho_4
 
             Gs += nk
-            
+
             ## Compute var(nu_3 | g1) ##
             XX_lst[2][g1, Gs + g1] = 1
             XX_lst[3][g1, Gs + g1] = rho_4 ** 2
@@ -1659,7 +1659,7 @@ class DynamicBLMModel:
             ])
             XX = np.vstack([XX_lst[t] for t in rho_order])
             YY = np.hstack([YY_lst[t] for t in rho_order])
-            
+
             # Update XX and YY
             XX = (DD @ XX)[:, 10:]
             YY = DD @ YY
@@ -2652,7 +2652,7 @@ class DynamicBLMModel:
                 # print(A_cts)
                 # print('S_cts after:')
                 # print(S_cts)
-            
+
             if params['update_pk1']:
                 # NOTE: add dirichlet prior
                 pk1 = GG12.T @ (qi + d_prior - 1)
@@ -3460,7 +3460,7 @@ class DynamicBLMModel:
                 # print(A_cts)
                 # print('S_cts after:')
                 # print(S_cts)
-            
+
             if params['update_pk0']:
                 # NOTE: add dirichlet prior
                 pk0 = GG1.T @ (qi + d_prior - 1)
