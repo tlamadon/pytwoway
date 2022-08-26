@@ -1758,16 +1758,15 @@ class BLMModel:
                     A2_sum = Y2 - Y2_adj
 
                 if params['update_s']:
-                    # Next we extract the variances
-                    if iter == 0:
-                        XwS = np.zeros(shape=2 * ts)
+                    ## Update the variances ##
+                    XwS = np.zeros(shape=2 * ts)
 
-                        ## Categorical ##
-                        if len(cat_cols) > 0:
-                            XwS_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
-                        ## Continuous ##
-                        if len(cts_cols) > 0:
-                            XwS_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
+                    ## Categorical ##
+                    if len(cat_cols) > 0:
+                        XwS_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
+                    ## Continuous ##
+                    if len(cts_cols) > 0:
+                        XwS_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
 
                     ## Update S ##
                     for l in range(nl):
@@ -1829,7 +1828,7 @@ class BLMModel:
                             col_n = cat_dict[col]['n']
                             s_solver = cons_s_dict[col]
                             s_solver.solve(XwX_cat[col], -XwS_cat[col], solver='quadprog')
-                            del XwS_cts[col]
+                            del XwS_cat[col]
                             if s_solver.res is None:
                                 # If constraints inconsistent, keep S1_cat and S2_cat the same
                                 if params['verbose'] in [2, 3]:

@@ -2559,16 +2559,15 @@ class DynamicBLMModel:
                             A_sum[period] += A_cts[col][period] * C_dict[period][col]
 
                 if params['update_s']:
-                    # Next we extract the variances
-                    if iter == 0:
-                        XwS = np.zeros(shape=len(periods) * ts)
+                    ## Update the variances ##
+                    XwS = np.zeros(shape=len(periods) * ts)
 
-                        ## Categorical ##
-                        if len(cat_cols) > 0:
-                            XwS_cat = {col: np.zeros(shape=len(periods) * col_ts) for col, col_ts in ts_cat.items()}
-                        ## Continuous ##
-                        if len(cts_cols) > 0:
-                            XwS_cts = {col: np.zeros(shape=len(periods) * nl) for col in cts_cols}
+                    ## Categorical ##
+                    if len(cat_cols) > 0:
+                        XwS_cat = {col: np.zeros(shape=len(periods) * col_ts) for col, col_ts in ts_cat.items()}
+                    ## Continuous ##
+                    if len(cts_cols) > 0:
+                        XwS_cts = {col: np.zeros(shape=len(periods) * nl) for col in cts_cols}
 
                     ## Update S ##
                     for l in range(nl):
@@ -2628,7 +2627,6 @@ class DynamicBLMModel:
                             XwS_cts[col][l_index: r_index] = np.abs(Xw_cts[col][l] @ eps_l_sq)
                             Xw_cts[col][l] = 0
                         del eps_l_sq
-                    del Xw, Xw_cat, Xw_cts
 
                     try:
                         cons_s.solve(XwX, -XwS, solver='quadprog')
