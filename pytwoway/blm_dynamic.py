@@ -12,7 +12,7 @@ except ImportError:
 import numpy as np
 import pandas as pd
 # from scipy.special import logsumexp
-from scipy.sparse import csc_matrix, hstack, vstack
+from scipy.sparse import csc_matrix, lil_matrix, hstack, vstack
 from scipy.optimize import minimize as opt
 from matplotlib import pyplot as plt
 import bipartitepandas as bpd
@@ -2139,7 +2139,7 @@ class DynamicBLMModel:
                 # Shift between periods
                 ts = nl * nk
                 # X
-                X = csc_matrix((4 * ni, len(periods) * nk))
+                X = lil_matrix((4 * ni, len(periods) * nk))
                 # X'X (weighted)
                 XwX = np.zeros((len(periods) * ts, len(periods) * ts))
                 if params['update_a']:
@@ -2176,6 +2176,7 @@ class DynamicBLMModel:
                 # Y4 = A['43'] + R43 * (Y3 - A['3ma'])
                 X[3 * ni: 4 * ni, 1 * nk: 2 * nk] = GG2
                 X[3 * ni: 4 * ni, 3 * nk: 4 * nk] = -(R43 * GG2)
+                X = X.tocsc()
                 # Re-order X to period-nl-nk (this is so constraints are the same order as static BLM)
                 X_np_group = np.tile(np.repeat(np.arange(len(periods)), nk), nl)
                 X_nl_group = np.repeat(np.arange(nl), nk * len(periods))
@@ -2187,7 +2188,7 @@ class DynamicBLMModel:
                 if len(cat_cols) > 0:
                     ts_cat = {col: nl * col_dict['n'] for col, col_dict in cat_dict.items()}
                     # X_cat
-                    X_cat = {col: csc_matrix((4 * ni, len(periods) * cat_dict[col]['n'])) for col in cat_cols}
+                    X_cat = {col: lil_matrix((4 * ni, len(periods) * cat_dict[col]['n'])) for col in cat_cols}
                     # X_cat'X_cat (weighted)
                     XwX_cat = {col: np.zeros((len(periods) * col_ts, len(periods) * col_ts)) for col, col_ts in ts_cat.items()}
                     # Re-order X to period-nl-n_col (this is so constraints are the same order as static BLM)
@@ -2215,6 +2216,7 @@ class DynamicBLMModel:
                         # Y4 = A['43'] + R43 * (Y3 - A['3ma'])
                         X_cat[col][3 * ni: 4 * ni, 1 * col_n: 2 * col_n] = CC2[col]
                         X_cat[col][3 * ni: 4 * ni, 3 * col_n: 4 * col_n] = -(R43 * CC2[col])
+                        X_cat[col] = X_cat[col].tocsc()
                         # Re-order X to period-nl-n_col (this is so constraints are the same order as static BLM)
                         X_np_group = np.tile(np.repeat(np.arange(len(periods)), col_n), nl)
                         X_nl_group = np.repeat(np.arange(nl), nk * len(periods))
@@ -2225,7 +2227,7 @@ class DynamicBLMModel:
                 ### Continuous ###
                 if len(cts_cols) > 0:
                     # X_cts
-                    X_cts = {col: csc_matrix((4 * ni, len(periods))) for col in cts_cols}
+                    X_cts = {col: lil_matrix((4 * ni, len(periods))) for col in cts_cols}
                     # X_cts'X_cts (weighted)
                     XwX_cts = {col: np.zeros((len(periods) * nl, len(periods) * nl)) for col in cts_cols}
                     # Re-order X to period-nl
@@ -2252,6 +2254,7 @@ class DynamicBLMModel:
                         # Y4 = A['43'] + R43 * (Y3 - A['3ma'])
                         X_cts[col][3 * ni: 4 * ni, 1] = C2[col]
                         X_cts[col][3 * ni: 4 * ni, 3] = -(R43 * C2[col])
+                        X_cts[col] = X_cts[col].tocsc()
                         # Re-order X to period-nl-n_col
                         X_np_group = np.tile(np.repeat(np.arange(len(periods)), col_n), nl)
                         X_nl_group = np.repeat(np.arange(nl), nk * len(periods))
@@ -2711,7 +2714,7 @@ class DynamicBLMModel:
                     for col in cts_cols:
                         try:
                             s_solver = cons_s_dict[col]
-                            s_solver.solve(XwX_cts[col][X_order_cat[col], X_order_cat[col]], -XwS_cts[col][X_order_cat[col]], solver='quadprog')
+                            s_solver.solve(XwX_cts[col][X_order_cts[col], X_order_cts[col]], -XwS_cts[col][X_order_cts[col]], solver='quadprog')
                             del XwS_cts[col]
                             if s_solver.res is None:
                                 # If estimation fails, keep S_cts the same
