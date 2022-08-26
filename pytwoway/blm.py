@@ -988,7 +988,12 @@ class BLMModel:
                 if NNs is not None:
                     NNs = NNs[firm_type_order]
 
-        return (a for a in (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0, NNm, NNs) if a is not None)
+        res = [a for a in (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0, NNm, NNs) if a is not None]
+
+        if len(res) == 1:
+            res = res[0]
+
+        return res
 
     def _normalize(self, A1, A2, A1_cat, A2_cat):
         '''
