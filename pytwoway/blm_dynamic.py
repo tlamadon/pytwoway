@@ -2346,7 +2346,7 @@ class DynamicBLMModel:
                         ## Constraints ##
                         cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type=min_firm_type, for_movers=True)
                     try:
-                        cons_a.solve(XwX[X_order, :][:, X_order], -XwY[X_order], solver='quadprog')
+                        cons_a.solve(XwX[X_order, :][:, X_order], -XwY[X_order], solver='osqp')
                         del XwY
                         if cons_a.res is None:
                             # If estimation fails, keep A the same
@@ -2459,7 +2459,7 @@ class DynamicBLMModel:
                     if params['update_a']:
                         try:
                             a_solver = cons_a_dict[col]
-                            a_solver.solve(XwX_cat[col][X_order_cat[col], :][:, X_order_cat[col]], -XwY_cat[col][X_order_cat[col]], solver='quadprog')
+                            a_solver.solve(XwX_cat[col][X_order_cat[col], :][:, X_order_cat[col]], -XwY_cat[col][X_order_cat[col]], solver='osqp')
                             del XwY_cat[col]
                             if a_solver.res is None:
                                 # If estimation fails, keep A_cat the same
@@ -2575,7 +2575,7 @@ class DynamicBLMModel:
                     if params['update_a']:
                         try:
                             a_solver = cons_a_dict[col]
-                            a_solver.solve(XwX_cts[col][X_order_cts[col], :][:, X_order_cts[col]], -XwY_cts[col][X_order_cts[col]], solver='quadprog')
+                            a_solver.solve(XwX_cts[col][X_order_cts[col], :][:, X_order_cts[col]], -XwY_cts[col][X_order_cts[col]], solver='osqp')
                             del XwY_cts[col]
                             if a_solver.res is None:
                                 # If estimation fails, keep A_cts the same
@@ -2670,7 +2670,7 @@ class DynamicBLMModel:
                         del eps_l_sq
 
                     try:
-                        cons_s.solve(XwX[X_order, :][:, X_order], -XwS[X_order], solver='quadprog')
+                        cons_s.solve(XwX[X_order, :][:, X_order], -XwS[X_order], solver='osqp')
                         del XwS
                         if cons_s.res is None:
                             # If estimation fails, keep S the same
@@ -2691,7 +2691,7 @@ class DynamicBLMModel:
                         try:
                             col_n = cat_dict[col]['n']
                             s_solver = cons_s_dict[col]
-                            s_solver.solve(XwX_cat[col][X_order_cat[col], :][:, X_order_cat[col]], -XwS_cat[col][X_order_cat[col]], solver='quadprog')
+                            s_solver.solve(XwX_cat[col][X_order_cat[col], :][:, X_order_cat[col]], -XwS_cat[col][X_order_cat[col]], solver='osqp')
                             del XwS_cat[col]
                             if s_solver.res is None:
                                 # If estimation fails, keep S_cat the same
@@ -2714,7 +2714,7 @@ class DynamicBLMModel:
                     for col in cts_cols:
                         try:
                             s_solver = cons_s_dict[col]
-                            s_solver.solve(XwX_cts[col][X_order_cts[col], :][:, X_order_cts[col]], -XwS_cts[col][X_order_cts[col]], solver='quadprog')
+                            s_solver.solve(XwX_cts[col][X_order_cts[col], :][:, X_order_cts[col]], -XwS_cts[col][X_order_cts[col]], solver='osqp')
                             del XwS_cts[col]
                             if s_solver.res is None:
                                 # If estimation fails, keep S_cts the same
