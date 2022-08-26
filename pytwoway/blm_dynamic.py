@@ -259,6 +259,10 @@ _blm_dynamic_params_default = ParamsDict({
         '''
             (default=1 + 1e-7) Account for probabilities being too small by adding (d_prior - 1) to pk1.
         ''', '>= 1'),
+    'd_X_diag_movers': (1 + 1e-10, 'type_constrained', ((float, int), _gteq1),
+        '''
+            (default=1 + 1e-10) Account for numerical rounding causing X'X to not be positive definite by adding (d_X_diag_movers - 1) to the diagonal of X'X.
+        ''', '>= 1'),
     'd_mean_worker_effect': (1e-7, 'type', (float, int),
         '''
             (default=1e-7) When using categorical constraints, force the mean worker type effect over all firm types to increase by at least this amount as worker type increases. Can be set to negative values.
@@ -2327,6 +2331,9 @@ class DynamicBLMModel:
                         del Y_l, A_sum_l
                     del Xw_l
 
+                if params['d_X_diag_movers'] > 1:
+                    XwX += (params['d_X_diag_movers'] - 1) * np.eye(XwX.shape[0])
+
                 # print('A before:')
                 # print(A)
                 # print('S before:')
@@ -2346,7 +2353,7 @@ class DynamicBLMModel:
                         ## Constraints ##
                         cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type=min_firm_type, for_movers=True)
                     try:
-                        cons_a.solve(XwX[X_order, :][:, X_order], -XwY[X_order], solver='osqp')
+                        cons_a.solve(XwX[X_order, :][:, X_order], -XwY[X_order], solver='quadprog')
                         del XwY
                         if cons_a.res is None:
                             # If estimation fails, keep A the same
@@ -2455,11 +2462,14 @@ class DynamicBLMModel:
                             del Y_cat_l, A_sum_l
                         del Xw_cat_l
 
+                    if params['d_X_diag_movers'] > 1:
+                        XwX_cat[col] += (params['d_X_diag_movers'] - 1) * np.eye(XwX_cat[col].shape[0])
+
                     # We solve the system to get all the parameters (use dense solver)
                     if params['update_a']:
                         try:
                             a_solver = cons_a_dict[col]
-                            a_solver.solve(XwX_cat[col][X_order_cat[col], :][:, X_order_cat[col]], -XwY_cat[col][X_order_cat[col]], solver='osqp')
+                            a_solver.solve(XwX_cat[col][X_order_cat[col], :][:, X_order_cat[col]], -XwY_cat[col][X_order_cat[col]], solver='quadprog')
                             del XwY_cat[col]
                             if a_solver.res is None:
                                 # If estimation fails, keep A_cat the same
@@ -2571,11 +2581,14 @@ class DynamicBLMModel:
                             del Y_cts_l, A_sum_l
                         del Xw_cts_l
 
+                    if params['d_X_diag_movers'] > 1:
+                        XwX_cts[col] += (params['d_X_diag_movers'] - 1) * np.eye(XwX_cts[col].shape[0])
+
                     # We solve the system to get all the parameters (use dense solver)
                     if params['update_a']:
                         try:
                             a_solver = cons_a_dict[col]
-                            a_solver.solve(XwX_cts[col][X_order_cts[col], :][:, X_order_cts[col]], -XwY_cts[col][X_order_cts[col]], solver='osqp')
+                            a_solver.solve(XwX_cts[col][X_order_cts[col], :][:, X_order_cts[col]], -XwY_cts[col][X_order_cts[col]], solver='quadprog')
                             del XwY_cts[col]
                             if a_solver.res is None:
                                 # If estimation fails, keep A_cts the same
@@ -2670,7 +2683,7 @@ class DynamicBLMModel:
                         del eps_l_sq
 
                     try:
-                        cons_s.solve(XwX[X_order, :][:, X_order], -XwS[X_order], solver='osqp')
+                        cons_s.solve(XwX[X_order, :][:, X_order], -XwS[X_order], solver='quadprog')
                         del XwS
                         if cons_s.res is None:
                             # If estimation fails, keep S the same
@@ -2691,7 +2704,7 @@ class DynamicBLMModel:
                         try:
                             col_n = cat_dict[col]['n']
                             s_solver = cons_s_dict[col]
-                            s_solver.solve(XwX_cat[col][X_order_cat[col], :][:, X_order_cat[col]], -XwS_cat[col][X_order_cat[col]], solver='osqp')
+                            s_solver.solve(XwX_cat[col][X_order_cat[col], :][:, X_order_cat[col]], -XwS_cat[col][X_order_cat[col]], solver='quadprog')
                             del XwS_cat[col]
                             if s_solver.res is None:
                                 # If estimation fails, keep S_cat the same
@@ -2714,7 +2727,7 @@ class DynamicBLMModel:
                     for col in cts_cols:
                         try:
                             s_solver = cons_s_dict[col]
-                            s_solver.solve(XwX_cts[col][X_order_cts[col], :][:, X_order_cts[col]], -XwS_cts[col][X_order_cts[col]], solver='osqp')
+                            s_solver.solve(XwX_cts[col][X_order_cts[col], :][:, X_order_cts[col]], -XwS_cts[col][X_order_cts[col]], solver='quadprog')
                             del XwS_cts[col]
                             if s_solver.res is None:
                                 # If estimation fails, keep S_cts the same
