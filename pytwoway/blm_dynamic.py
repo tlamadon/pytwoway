@@ -1278,7 +1278,11 @@ class DynamicBLMModel:
                 if NNs is not None:
                     NNs = NNs[firm_type_order]
 
-        return (a for a in (A, S, A_cat, S_cat, A_cts, S_cts, pk1, pk0, NNm, NNs) if a is not None)
+        res = [a for a in (A, S, A_cat, S_cat, A_cts, S_cts, pk1, pk0, NNm, NNs) if a is not None]
+        if len(res) == 1:
+            res = res[0]
+
+        return res
 
     def _normalize(self, A1, A2, A1_cat, A2_cat):
         '''
@@ -3725,16 +3729,16 @@ class DynamicBLMModel:
             dpi (float or None): dpi for plot
         '''
         nl, nk = self.nl, self.nk
-        A1, A2 = self._sort_parameters(self.A1, self.A2, sort_firm_types=True)
+        A = self._sort_parameters(self.A, sort_firm_types=True)
 
         # Compute average log-earnings
         if period == 'first':
-            A_all = A1
+            A_all = A['12']
         elif period == 'second':
-            A_all = A2
+            A_all = A['43']
         elif period == 'all':
             # FIXME should the mean account for the log?
-            A_all = (A1 + A2) / 2 # np.log((np.exp(self.A1) + np.exp(self.A2)) / 2)
+            A_all = (A['12'] + A['43']) / 2 # np.log((np.exp(self.A1) + np.exp(self.A2)) / 2)
         else:
             raise ValueError(f"`period` must be one of 'first', 'second' or 'all', but input specifies {period!r}.")
 
