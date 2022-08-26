@@ -2281,7 +2281,7 @@ class DynamicBLMModel:
                                 - A_sum['43'] \
                                 - A_sum_l['43'])
 
-                        ## Compute XwY ##
+                        ## Compute XwY_l ##
                         XwY[l_index: r_index] = Xw_l @ Y_l
                         del Y_l, A_sum_l
                     del Xw_l
@@ -2306,6 +2306,7 @@ class DynamicBLMModel:
                         cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type=min_firm_type, for_movers=True)
                     try:
                         cons_a.solve(XwX, -XwY, solver='quadprog')
+                        del XwY
                         if cons_a.res is None:
                             # If estimation fails, keep A the same
                             if params['verbose'] in [2, 3]:
@@ -2328,10 +2329,12 @@ class DynamicBLMModel:
                     Xw_cat = {col: [] for col in cat_cols}
                 for col in cat_cols:
                     col_n = cat_dict[col]['n']
+
                     if not cat_dict[col]['worker_type_interaction']:
                         # Adjust A_sum
                         for period in periods:
                             A_sum[period] -= A_cat[col][period][C_dict[period][col]]
+
                     for l in range(nl):
                         l_index, r_index = l * col_n * len(periods), (l + 1) * col_n * len(periods)
 
@@ -2406,7 +2409,7 @@ class DynamicBLMModel:
                                     - A_sum['43'] \
                                     - A_sum_l['43']
 
-                            ## Compute XwY_cat ##
+                            ## Compute XwY_cat_l ##
                             XwY_cat[col][l_index: r_index] = Xw_cat_l @ Y_cat_l
                             del Y_cat_l, A_sum_l
                         del Xw_cat_l
@@ -2416,6 +2419,7 @@ class DynamicBLMModel:
                         try:
                             a_solver = cons_a_dict[col]
                             a_solver.solve(XwX_cat[col], -XwY_cat[col], solver='quadprog')
+                            del XwY_cat[col]
                             if a_solver.res is None:
                                 # If estimation fails, keep A_cat the same
                                 if params['verbose'] in [2, 3]:
@@ -2446,6 +2450,7 @@ class DynamicBLMModel:
                         # Adjust A_sum
                         for period in periods:
                             A_sum[period] -= A_cts[col][period] * C_dict[period][col]
+
                     for l in range(nl):
                         l_index, r_index = l * len(periods), (l + 1) * len(periods)
 
@@ -2520,7 +2525,7 @@ class DynamicBLMModel:
                                     - A_sum['43'] \
                                     - A_sum_l['43']
 
-                            ## Compute XwY_cts ##
+                            ## Compute XwY_cts_l ##
                             XwY_cts[col][l_index: r_index] = Xw_cts_l @ Y_cts_l
                             del Y_cts_l, A_sum_l
                         del Xw_cts_l
@@ -2530,6 +2535,7 @@ class DynamicBLMModel:
                         try:
                             a_solver = cons_a_dict[col]
                             a_solver.solve(XwX_cts[col], -XwY_cts[col], solver='quadprog')
+                            del XwY_cts[col]
                             if a_solver.res is None:
                                 # If estimation fails, keep A_cts the same
                                 if params['verbose'] in [2, 3]:
@@ -2606,6 +2612,7 @@ class DynamicBLMModel:
                         ## XwS terms ##
                         l_index, r_index = l * nk * len(periods), (l + 1) * nk * len(periods)
                         XwS[l_index: r_index] = Xw[l] @ eps_l_sq
+                        Xw[l] = 0
                         ## Categorical ##
                         for col in cat_cols:
                             col_n = cat_dict[col]['n']
@@ -2625,6 +2632,7 @@ class DynamicBLMModel:
 
                     try:
                         cons_s.solve(XwX, -XwS, solver='quadprog')
+                        del XwS
                         if cons_s.res is None:
                             # If estimation fails, keep S the same
                             if params['verbose'] in [2, 3]:
@@ -2645,6 +2653,7 @@ class DynamicBLMModel:
                             col_n = cat_dict[col]['n']
                             s_solver = cons_s_dict[col]
                             s_solver.solve(XwX_cat[col], -XwS_cat[col], solver='quadprog')
+                            del XwS_cat[col]
                             if s_solver.res is None:
                                 # If estimation fails, keep S_cat the same
                                 if params['verbose'] in [2, 3]:
@@ -2667,6 +2676,7 @@ class DynamicBLMModel:
                         try:
                             s_solver = cons_s_dict[col]
                             s_solver.solve(XwX_cts[col], -XwS_cts[col], solver='quadprog')
+                            del XwS_cts[col]
                             if s_solver.res is None:
                                 # If estimation fails, keep S_cts the same
                                 if params['verbose'] in [2, 3]:
@@ -2683,6 +2693,12 @@ class DynamicBLMModel:
                             # If constraints inconsistent, keep S_cts the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S_cts for column {col!r}: {e}')
+
+                    del XwX, Xw
+                    if len(cat_cols) > 0:
+                        del XwX_cat, Xw_cat
+                    if len(cts_cols) > 0:
+                        del XwX_cts, Xw_cts
 
                 # print('A after:')
                 # print(A)

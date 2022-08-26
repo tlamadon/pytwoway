@@ -1485,380 +1485,427 @@ class BLMModel:
                 if pd.isna(pk1).any():
                     raise ValueError('Estimated pk1 has NaN values. Please try a different set of starting values.')
 
-            # ---------- M-step ----------
-            # Constrained OLS (source: https://scaron.info/blog/quadratic-programming-in-python.html)
+            if params['update_a'] or params['update_s']:
+                # ---------- M-step ----------
+                # Constrained OLS (source: https://scaron.info/blog/quadratic-programming-in-python.html)
 
-            # The regression has 2 * nl * nk parameters and nl * ni rows
-            # We do not necessarily want to construct the duplicated data by nl
-            # Instead we will construct X'X and X'Y by looping over nl
-            # We also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
-            ## General ##
-            # Shift for period 2
-            ts = nl * nk
-            # Only store the diagonal
-            XwX = np.zeros(shape=2 * ts)
-            if params['update_a']:
-                XwY = np.zeros(shape=2 * ts)
-
-            ## Categorical ##
-            if len(cat_cols) > 0:
-                ts_cat = {col: nl * col_dict['n'] for col, col_dict in cat_dict.items()}
-                XwX_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
+                # The regression has 2 * nl * nk parameters and nl * ni rows
+                # We do not necessarily want to construct the duplicated data by nl
+                # Instead we will construct X'X and X'Y by looping over nl
+                # We also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
+                ## General ##
+                # Shift for period 2
+                ts = nl * nk
+                # Only store the diagonal
+                XwX = np.zeros(shape=2 * ts)
                 if params['update_a']:
-                    XwY_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
-            ### Continuous ###
-            if len(cts_cols) > 0:
-                XwX_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
+                    XwY = np.zeros(shape=2 * ts)
+
+                ## Categorical ##
+                if len(cat_cols) > 0:
+                    ts_cat = {col: nl * col_dict['n'] for col, col_dict in cat_dict.items()}
+                    XwX_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
+                    if params['update_a']:
+                        XwY_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
+                ### Continuous ###
+                if len(cts_cols) > 0:
+                    XwX_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
+                    if params['update_a']:
+                        XwY_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
+
+                if iter == 0:
+                    if any_non_worker_type_interactions:
+                        Y1_adj = Y1.copy()
+                        Y2_adj = Y2.copy()
+                        Y1_adj -= A1_sum
+                        Y2_adj -= A2_sum
+                    else:
+                        Y1_adj = Y1
+                        Y2_adj = Y2
+
+                ## Update A ##
+                if params['update_s']:
+                    Xw1 = []
+                    Xw2 = []
+                for l in range(nl):
+                    l_index, r_index = l * nk, (l + 1) * nk
+
+                    ## Compute Xw_l ##
+                    Xw1_l = DxSP(W1 * qi[:, l] / S1[l, G1], GG1).T
+                    Xw2_l = DxSP(W2 * qi[:, l] / S2[l, G2], GG2).T
+                    if params['update_s']:
+                        Xw1.append(Xw1_l)
+                        Xw2.append(Xw2_l)
+
+                    ## Compute XwX_l ##
+                    XwX[l_index: r_index] = diag_of_sp_prod(Xw1_l, GG1)
+                    XwX[l_index + ts: r_index + ts] = diag_of_sp_prod(Xw2_l, GG2)
+
+                    if params['update_a']:
+                        # Update A1_sum and A2_sum to account for worker-interaction terms
+                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
+
+                        ## Compute XwY_l ##
+                        XwY[l_index: r_index] = Xw1_l @ (Y1_adj - A1_sum_l)
+                        XwY[l_index + ts: r_index + ts] = Xw2_l @ (Y2_adj - A2_sum_l)
+                        del A1_sum_l, A2_sum_l
+
+                # print('A1 before:')
+                # print(A1)
+                # print('A2 before:')
+                # print(A2)
+                # print('S1 before:')
+                # print(S1)
+                # print('S2 before:')
+                # print(S2)
+                # print('A1_cat before:')
+                # print(A1_cat)
+                # print('A2_cat before:')
+                # print(A2_cat)
+                # print('S1_cat before:')
+                # print(S1_cat)
+                # print('S2_cat before:')
+                # print(S2_cat)
+                # print('A1_cts before:')
+                # print(A1_cts)
+                # print('A2_cts before:')
+                # print(A2_cts)
+                # print('S1_cts before:')
+                # print(S1_cts)
+                # print('S2_cts before:')
+                # print(S2_cts)
+
+                # We solve the system to get all the parameters (use dense solver)
+                XwX = np.diag(XwX)
                 if params['update_a']:
-                    XwY_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
+                    if iter > 0:
+                        ## Constraints ##
+                        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type)
+                    try:
+                        cons_a.solve(XwX, -XwY, solver='quadprog')
+                        del XwY
+                        if cons_a.res is None:
+                            # If constraints inconsistent, keep A1 and A2 the same
+                            if params['verbose'] in [2, 3]:
+                                print(f'Passing A1/A2: {e}')
+                        else:
+                            res_a1, res_a2 = np.split(cons_a.res, 2)
+                            # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
+                            #     raise ValueError('Estimated A1/A2 has NaN values')
+                            A1 = np.reshape(res_a1, self.dims)
+                            A2 = np.reshape(res_a2, self.dims)
 
-            if iter == 0:
-                if any_non_worker_type_interactions:
-                    Y1_adj = Y1.copy()
-                    Y2_adj = Y2.copy()
-                    Y1_adj -= A1_sum
-                    Y2_adj -= A2_sum
-                else:
-                    Y1_adj = Y1
-                    Y2_adj = Y2
-
-            ## Update A ##
-            GG1_weighted = []
-            GG2_weighted = []
-            for l in range(nl):
-                l_index, r_index = l * nk, (l + 1) * nk
-                ## Compute shared terms ##
-                GG1_weighted.append(DxSP(W1 * qi[:, l] / S1[l, G1], GG1).T)
-                GG2_weighted.append(DxSP(W2 * qi[:, l] / S2[l, G2], GG2).T)
-                ## Compute XwX terms ##
-                XwX[l_index: r_index] = diag_of_sp_prod(GG1_weighted[l], GG1)
-                XwX[ts + l_index: ts + r_index] = diag_of_sp_prod(GG2_weighted[l], GG2)
-                if params['update_a']:
-                    # Update A1_sum and A2_sum to account for worker-interaction terms
-                    A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
-                    ## Compute XwY terms ##
-                    XwY[l_index: r_index] = GG1_weighted[l] @ (Y1_adj - A1_sum_l)
-                    XwY[ts + l_index: ts + r_index] = GG2_weighted[l] @ (Y2_adj - A2_sum_l)
-                    del A1_sum_l, A2_sum_l
-            if not params['update_s']:
-                del GG1_weighted, GG2_weighted
-
-            # print('A1 before:')
-            # print(A1)
-            # print('A2 before:')
-            # print(A2)
-            # print('S1 before:')
-            # print(S1)
-            # print('S2 before:')
-            # print(S2)
-            # print('A1_cat before:')
-            # print(A1_cat)
-            # print('A2_cat before:')
-            # print(A2_cat)
-            # print('S1_cat before:')
-            # print(S1_cat)
-            # print('S2_cat before:')
-            # print(S2_cat)
-            # print('A1_cts before:')
-            # print(A1_cts)
-            # print('A2_cts before:')
-            # print(A2_cts)
-            # print('S1_cts before:')
-            # print(S1_cts)
-            # print('S2_cts before:')
-            # print(S2_cts)
-
-            # We solve the system to get all the parameters (use dense solver)
-            XwX = np.diag(XwX)
-            if params['update_a']:
-                if iter > 0:
-                    ## Constraints ##
-                    cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type)
-                try:
-                    cons_a.solve(XwX, -XwY, solver='quadprog')
-                    if cons_a.res is None:
+                    except ValueError as e:
                         # If constraints inconsistent, keep A1 and A2 the same
                         if params['verbose'] in [2, 3]:
                             print(f'Passing A1/A2: {e}')
-                    else:
-                        res_a1, res_a2 = cons_a.res[: len(cons_a.res) // 2], cons_a.res[len(cons_a.res) // 2:]
-                        # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
-                        #     raise ValueError('Estimated A1/A2 has NaN values')
-                        A1 = np.reshape(res_a1, self.dims)
-                        A2 = np.reshape(res_a2, self.dims)
 
-                except ValueError as e:
-                    # If constraints inconsistent, keep A1 and A2 the same
-                    if params['verbose'] in [2, 3]:
-                        print(f'Passing A1/A2: {e}')
+                ## Categorical ##
+                if params['update_s']:
+                    Xw1_cat = {col: [] for col in cat_cols}
+                    Xw2_cat = {col: [] for col in cat_cols}
+                for col in cat_cols:
+                    col_n = cat_dict[col]['n']
 
-            ## Categorical ##
-            CC1_cat_weighted = {col: [] for col in cat_cols}
-            CC2_cat_weighted = {col: [] for col in cat_cols}
-            for col in cat_cols:
-                col_n = cat_dict[col]['n']
-                if not cat_dict[col]['worker_type_interaction']:
-                    Y1_adj += A1_cat[col][C1[col]]
-                    Y2_adj += A2_cat[col][C2[col]]
-                for l in range(nl):
-                    l_index, r_index = l * col_n, (l + 1) * col_n
-                    ## Compute shared terms ##
-                    if cat_dict[col]['worker_type_interaction']:
-                        S1_cat_l = S1_cat[col][l, C1[col]]
-                        S2_cat_l = S2_cat[col][l, C2[col]]
-                    else:
-                        S1_cat_l = S1_cat[col][C1[col]]
-                        S2_cat_l = S2_cat[col][C2[col]]
-                    CC1_cat_weighted[col].append(DxSP(W1 * qi[:, l] / S1_cat_l, CC1[col]).T)
-                    CC2_cat_weighted[col].append(DxSP(W2 * qi[:, l] / S2_cat_l, CC2[col]).T)
-                    del S1_cat_l, S2_cat_l
-                    ## Compute XwX_cat terms ##
-                    XwX_cat[col][l_index: r_index] = diag_of_sp_prod(CC1_cat_weighted[col][l], CC1[col])
-                    XwX_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = diag_of_sp_prod(CC2_cat_weighted[col][l], CC2[col])
-                    if params['update_a']:
-                        # Update A1_sum and A2_sum to account for worker-interaction terms
-                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
+                    if not cat_dict[col]['worker_type_interaction']:
+                        Y1_adj += A1_cat[col][C1[col]]
+                        Y2_adj += A2_cat[col][C2[col]]
+
+                    for l in range(nl):
+                        l_index, r_index = l * col_n, (l + 1) * col_n
+
+                        ## Compute variances ##
                         if cat_dict[col]['worker_type_interaction']:
-                            A1_sum_l -= A1_cat[col][l, C1[col]]
-                            A2_sum_l -= A2_cat[col][l, C2[col]]
-                        ## Compute XwY_cat terms ##
-                        XwY_cat[col][l_index: r_index] = CC1_cat_weighted[col][l] @ (Y1_adj - A1_sum_l - A1[l, G1])
-                        XwY_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = CC2_cat_weighted[col][l] @ (Y2_adj - A2_sum_l - A2[l, G2])
-                        del A1_sum_l, A2_sum_l
-                if not params['update_s']:
-                    del CC1_cat_weighted[col], CC2_cat_weighted[col]
+                            S1_cat_l = S1_cat[col][l, C1[col]]
+                            S2_cat_l = S2_cat[col][l, C2[col]]
+                        else:
+                            S1_cat_l = S1_cat[col][C1[col]]
+                            S2_cat_l = S2_cat[col][C2[col]]
 
-                # We solve the system to get all the parameters (use dense solver)
-                XwX_cat[col] = np.diag(XwX_cat[col])
-                if params['update_a']:
-                    try:
-                        a_solver = cons_a_dict[col]
-                        a_solver.solve(XwX_cat[col], -XwY_cat[col], solver='quadprog')
-                        if a_solver.res is None:
+                        ## Compute Xw_cat_l ##
+                        Xw1_cat_l = DxSP(W1 * qi[:, l] / S1_cat_l, CC1[col]).T
+                        Xw2_cat_l = DxSP(W2 * qi[:, l] / S2_cat_l, CC2[col]).T
+                        del S1_cat_l, S2_cat_l
+                        if params['update_s']:
+                            Xw1_cat[col].append(Xw1_cat_l)
+                            Xw2_cat[col].append(Xw2_cat_l)
+
+                        ## Compute XwX_cat_l ##
+                        XwX_cat[col][l_index: r_index] = diag_of_sp_prod(Xw1_cat_l, CC1[col])
+                        XwX_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = diag_of_sp_prod(Xw2_cat_l, CC2[col])
+
+                        if params['update_a']:
+                            # Update A1_sum and A2_sum to account for worker-interaction terms
+                            A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
+
+                            if cat_dict[col]['worker_type_interaction']:
+                                A1_sum_l -= A1_cat[col][l, C1[col]]
+                                A2_sum_l -= A2_cat[col][l, C2[col]]
+
+                            ## Compute XwY_cat_l ##
+                            XwY_cat[col][l_index: r_index] = Xw1_cat_l @ (Y1_adj - A1_sum_l - A1[l, G1])
+                            XwY_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = Xw2_cat_l @ (Y2_adj - A2_sum_l - A2[l, G2])
+                            del A1_sum_l, A2_sum_l
+
+                    # We solve the system to get all the parameters (use dense solver)
+                    XwX_cat[col] = np.diag(XwX_cat[col])
+                    if params['update_a']:
+                        try:
+                            a_solver = cons_a_dict[col]
+                            a_solver.solve(XwX_cat[col], -XwY_cat[col], solver='quadprog')
+                            del XwY_cat[col]
+                            if a_solver.res is None:
+                                # If constraints inconsistent, keep A1_cat and A2_cat the same
+                                if params['verbose'] in [2, 3]:
+                                    print(f'Passing A1_cat/A2_cat for column {col!r}: {e}')
+                            else:
+                                res_a1, res_a2 = np.split(a_solver.res, 2)
+                                # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
+                                #     raise ValueError(f'Estimated A1_cat/A2_cat has NaN values for column {col!r}')
+                                if cat_dict[col]['worker_type_interaction']:
+                                    A1_cat[col] = np.reshape(res_a1, (nl, col_n))
+                                    A2_cat[col] = np.reshape(res_a2, (nl, col_n))
+                                else:
+                                    A1_cat[col] = res_a1[: col_n]
+                                    A2_cat[col] = res_a2[: col_n]
+
+                        except ValueError as e:
                             # If constraints inconsistent, keep A1_cat and A2_cat the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing A1_cat/A2_cat for column {col!r}: {e}')
-                        else:
-                            res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2], a_solver.res[len(a_solver.res) // 2:]
-                            # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
-                            #     raise ValueError(f'Estimated A1_cat/A2_cat has NaN values for column {col!r}')
-                            if cat_dict[col]['worker_type_interaction']:
-                                A1_cat[col] = np.reshape(res_a1, (nl, col_n))
-                                A2_cat[col] = np.reshape(res_a2, (nl, col_n))
-                            else:
-                                A1_cat[col] = res_a1[: col_n]
-                                A2_cat[col] = res_a2[: col_n]
 
-                    except ValueError as e:
-                        # If constraints inconsistent, keep A1_cat and A2_cat the same
-                        if params['verbose'] in [2, 3]:
-                            print(f'Passing A1_cat/A2_cat for column {col!r}: {e}')
+                    if not cat_dict[col]['worker_type_interaction']:
+                        Y1_adj -= A1_cat[col][C1[col]]
+                        Y2_adj -= A2_cat[col][C2[col]]
 
-                if not cat_dict[col]['worker_type_interaction']:
-                    Y1_adj -= A1_cat[col][C1[col]]
-                    Y2_adj -= A2_cat[col][C2[col]]
+                ## Continuous ##
+                if params['update_s']:
+                    Xw1_cts = {col: [] for col in cts_cols}
+                    Xw2_cts = {col: [] for col in cts_cols}
+                for col in cts_cols:
+                    if not cts_dict[col]['worker_type_interaction']:
+                        Y1_adj += A1_cts[col] * C1[col]
+                        Y2_adj += A2_cts[col] * C2[col]
 
-            ## Continuous ##
-            CC1_cts_weighted = {col: [] for col in cts_cols}
-            CC2_cts_weighted = {col: [] for col in cts_cols}
-            for col in cts_cols:
-                if not cts_dict[col]['worker_type_interaction']:
-                    Y1_adj += A1_cts[col] * C1[col]
-                    Y2_adj += A2_cts[col] * C2[col]
-                for l in range(nl):
-                    ## Compute shared terms ##
-                    if cts_dict[col]['worker_type_interaction']:
-                        S1_cts_l = S1_cts[col][l]
-                        S2_cts_l = S2_cts[col][l]
-                    else:
-                        S1_cts_l = S1_cts[col]
-                        S2_cts_l = S2_cts[col]
-                    CC1_cts_weighted[col].append(C1[col].T * (W1 * qi[:, l] / S1_cts_l))
-                    CC2_cts_weighted[col].append(C2[col].T * (W2 * qi[:, l] / S2_cts_l))
-                    del S1_cts_l, S2_cts_l
-                    ## Compute XwX_cts terms ##
-                    XwX_cts[col][l] = (CC1_cts_weighted[col][l] @ C1[col])
-                    XwX_cts[col][nl + l] = (CC2_cts_weighted[col][l] @ C2[col])
-                    if params['update_a']:
-                        # Update A1_sum and A2_sum to account for worker-interaction terms
-                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
+                    for l in range(nl):
+                        ## Compute variances ##
                         if cts_dict[col]['worker_type_interaction']:
-                            A1_sum_l -= A1_cts[col][l] * C1[col]
-                            A2_sum_l -= A2_cts[col][l] * C2[col]
-                        ## Compute XwY_cts terms ##
-                        XwY_cts[col][l] = CC1_cts_weighted[col][l] @ (Y1_adj - A1_sum_l - A1[l, G1])
-                        XwY_cts[col][nl + l] = CC2_cts_weighted[col][l] @ (Y2_adj - A2_sum_l - A2[l, G2])
-                        del A1_sum_l, A2_sum_l
-                if not params['update_s']:
-                    del CC1_cts_weighted[col], CC2_cts_weighted[col]
+                            S1_cts_l = S1_cts[col][l]
+                            S2_cts_l = S2_cts[col][l]
+                        else:
+                            S1_cts_l = S1_cts[col]
+                            S2_cts_l = S2_cts[col]
 
-                # We solve the system to get all the parameters (use dense solver)
-                XwX_cts[col] = np.diag(XwX_cts[col])
-                if params['update_a']:
-                    try:
-                        a_solver = cons_a_dict[col]
-                        a_solver.solve(XwX_cts[col], -XwY_cts[col], solver='quadprog')
-                        if a_solver.res is None:
+                        ## Compute Xw_cts_l ##
+                        Xw1_cts_l = C1[col].T * (W1 * qi[:, l] / S1_cts_l)
+                        Xw2_cts_l = C2[col].T * (W2 * qi[:, l] / S2_cts_l)
+                        del S1_cts_l, S2_cts_l
+                        if params['update_s']:
+                            Xw1_cts[col].append(Xw1_cts_l)
+                            Xw2_cts[col].append(Xw2_cts_l)
+
+                        ## Compute XwX_cts_l ##
+                        XwX_cts[col][l] = (Xw1_cts_l @ C1[col])
+                        XwX_cts[col][l + nl] = (Xw2_cts_l @ C2[col])
+
+                        if params['update_a']:
+                            # Update A1_sum and A2_sum to account for worker-interaction terms
+                            A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
+
+                            if cts_dict[col]['worker_type_interaction']:
+                                A1_sum_l -= A1_cts[col][l] * C1[col]
+                                A2_sum_l -= A2_cts[col][l] * C2[col]
+
+                            ## Compute XwY_cts_l ##
+                            XwY_cts[col][l] = Xw1_cts_l @ (Y1_adj - A1_sum_l - A1[l, G1])
+                            XwY_cts[col][l + nl] = Xw2_cts_l @ (Y2_adj - A2_sum_l - A2[l, G2])
+                            del A1_sum_l, A2_sum_l
+
+                    # We solve the system to get all the parameters (use dense solver)
+                    XwX_cts[col] = np.diag(XwX_cts[col])
+                    if params['update_a']:
+                        try:
+                            a_solver = cons_a_dict[col]
+                            a_solver.solve(XwX_cts[col], -XwY_cts[col], solver='quadprog')
+                            del XwY_cts[col]
+                            if a_solver.res is None:
+                                # If constraints inconsistent, keep A1_cts and A2_cts the same
+                                if params['verbose'] in [2, 3]:
+                                    print(f'Passing A1_cts/A2_cts for column {col!r}: {e}')
+                            else:
+                                res_a1, res_a2 = np.split(a_solver.res, 2)
+                                # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
+                                #     raise ValueError(f'Estimated A1_cts/A2_cts has NaN values for column {col!r}')
+                                if cts_dict[col]['worker_type_interaction']:
+                                    A1_cts[col] = res_a1
+                                    A2_cts[col] = res_a2
+                                else:
+                                    A1_cts[col] = res_a1[0]
+                                    A2_cts[col] = res_a2[0]
+
+                        except ValueError as e:
                             # If constraints inconsistent, keep A1_cts and A2_cts the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing A1_cts/A2_cts for column {col!r}: {e}')
+
+                    if not cts_dict[col]['worker_type_interaction']:
+                        Y1_adj -= A1_cts[col] * C1[col]
+                        Y2_adj -= A2_cts[col] * C2[col]
+
+                if any_non_worker_type_interactions:
+                    # Update A1_sum and A2_sum
+                    A1_sum = Y1 - Y1_adj
+                    A2_sum = Y2 - Y2_adj
+
+                if params['update_s']:
+                    # Next we extract the variances
+                    if iter == 0:
+                        XwS = np.zeros(shape=2 * ts)
+
+                        ## Categorical ##
+                        if len(cat_cols) > 0:
+                            XwS_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
+                        ## Continuous ##
+                        if len(cts_cols) > 0:
+                            XwS_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
+
+                    ## Update S ##
+                    for l in range(nl):
+                        # Update A1_sum and A2_sum to account for worker-interaction terms
+                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
+                        eps1_l_sq = (Y1_adj - A1_sum_l - A1[l, G1]) ** 2
+                        eps2_l_sq = (Y2_adj - A2_sum_l - A2[l, G2]) ** 2
+                        del A1_sum_l, A2_sum_l
+
+                        ## XwS_l ##
+                        l_index, r_index = l * nk, (l + 1) * nk
+                        XwS[l_index: r_index] = Xw1[l] @ eps1_l_sq
+                        XwS[l_index + ts: r_index + ts] = Xw2[l] @ eps2_l_sq
+                        Xw1[l] = 0
+                        Xw2[l] = 0
+
+                        ## Categorical ##
+                        for col in cat_cols:
+                            col_n = cat_dict[col]['n']
+                            l_index, r_index = l * col_n, (l + 1) * col_n
+
+                            ## XwS_cat_l ##
+                            XwS_cat[col][l_index: r_index] = Xw1_cat[col][l] @ eps1_l_sq
+                            XwS_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = Xw2_cat[col][l] @ eps2_l_sq
+                            Xw1_cat[col][l] = 0
+                            Xw2_cat[col][l] = 0
+                        ## Continuous ##
+                        for col in cts_cols:
+                            ## XwS_cts_l ##
+                            # NOTE: take absolute value
+                            XwS_cts[col][l] = np.abs(Xw1_cts[col][l] @ eps1_l_sq)
+                            XwS_cts[col][l + nl] = np.abs(Xw2_cts[col][l] @ eps2_l_sq)
+                            Xw1_cts[col][l] = 0
+                            Xw2_cts[col][l] = 0
+                        del eps1_l_sq, eps2_l_sq
+
+                    try:
+                        cons_s.solve(XwX, -XwS, solver='quadprog')
+                        del XwS
+                        if cons_s.res is None:
+                            # If constraints inconsistent, keep S1 and S2 the same
+                            if params['verbose'] in [2, 3]:
+                                print(f'Passing S1/S2: {e}')
                         else:
-                            res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2], a_solver.res[len(a_solver.res) // 2:]
-                            # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
-                            #     raise ValueError(f'Estimated A1_cts/A2_cts has NaN values for column {col!r}')
-                            if cts_dict[col]['worker_type_interaction']:
-                                A1_cts[col] = res_a1
-                                A2_cts[col] = res_a2
-                            else:
-                                A1_cts[col] = res_a1[0]
-                                A2_cts[col] = res_a2[0]
+                            res_s1, res_s2 = np.split(cons_s.res, 2)
+                            # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
+                            #     raise ValueError('Estimated S1/S2 has NaN values')
+                            S1 = np.sqrt(np.reshape(res_s1, self.dims))
+                            S2 = np.sqrt(np.reshape(res_s2, self.dims))
 
                     except ValueError as e:
-                        # If constraints inconsistent, keep A1_cts and A2_cts the same
-                        if params['verbose'] in [2, 3]:
-                            print(f'Passing A1_cts/A2_cts for column {col!r}: {e}')
-
-                if not cts_dict[col]['worker_type_interaction']:
-                    Y1_adj -= A1_cts[col] * C1[col]
-                    Y2_adj -= A2_cts[col] * C2[col]
-
-            if any_non_worker_type_interactions:
-                # Update A1_sum and A2_sum
-                A1_sum = Y1 - Y1_adj
-                A2_sum = Y2 - Y2_adj
-
-            if params['update_s']:
-                # Next we extract the variances
-                if iter == 0:
-                    XwS = np.zeros(shape=2 * ts)
-
-                    ## Categorical ##
-                    if len(cat_cols) > 0:
-                        XwS_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
-                    ## Continuous ##
-                    if len(cts_cols) > 0:
-                        XwS_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
-
-                ## Update S ##
-                for l in range(nl):
-                    # Update A1_sum and A2_sum to account for worker-interaction terms
-                    A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
-                    eps1_l_sq = (Y1_adj - A1_sum_l - A1[l, G1]) ** 2
-                    eps2_l_sq = (Y2_adj - A2_sum_l - A2[l, G2]) ** 2
-                    del A1_sum_l, A2_sum_l
-                    ## XwS terms ##
-                    l_index, r_index = l * nk, (l + 1) * nk
-                    XwS[l_index: r_index] = GG1_weighted[l] @ eps1_l_sq
-                    XwS[ts + l_index: ts + r_index] = GG2_weighted[l] @ eps2_l_sq
-                    ## Categorical ##
-                    for col in cat_cols:
-                        col_n = cat_dict[col]['n']
-                        l_index, r_index = l * col_n, (l + 1) * col_n
-                        ## XwS_cat terms ##
-                        XwS_cat[col][l_index: r_index] = CC1_cat_weighted[col][l] @ eps1_l_sq
-                        XwS_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = CC2_cat_weighted[col][l] @ eps2_l_sq
-                    ## Continuous ##
-                    for col in cts_cols:
-                        ## XwS_cts terms ##
-                        # NOTE: take absolute value
-                        XwS_cts[col][l] = np.abs(CC1_cts_weighted[col][l] @ eps1_l_sq)
-                        XwS_cts[col][nl + l] = np.abs(CC2_cts_weighted[col][l] @ eps2_l_sq)
-                    del eps1_l_sq, eps2_l_sq
-                del GG1_weighted, GG2_weighted, CC1_cat_weighted, CC2_cat_weighted, CC1_cts_weighted, CC2_cts_weighted
-
-                try:
-                    cons_s.solve(XwX, -XwS, solver='quadprog')
-                    if cons_s.res is None:
                         # If constraints inconsistent, keep S1 and S2 the same
                         if params['verbose'] in [2, 3]:
                             print(f'Passing S1/S2: {e}')
-                    else:
-                        res_s1, res_s2 = cons_s.res[: len(cons_s.res) // 2], cons_s.res[len(cons_s.res) // 2:]
-                        # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
-                        #     raise ValueError('Estimated S1/S2 has NaN values')
-                        S1 = np.sqrt(np.reshape(res_s1, self.dims))
-                        S2 = np.sqrt(np.reshape(res_s2, self.dims))
 
-                except ValueError as e:
-                    # If constraints inconsistent, keep S1 and S2 the same
-                    if params['verbose'] in [2, 3]:
-                        print(f'Passing S1/S2: {e}')
+                    ## Categorical ##
+                    for col in cat_cols:
+                        try:
+                            col_n = cat_dict[col]['n']
+                            s_solver = cons_s_dict[col]
+                            s_solver.solve(XwX_cat[col], -XwS_cat[col], solver='quadprog')
+                            del XwS_cts[col]
+                            if s_solver.res is None:
+                                # If constraints inconsistent, keep S1_cat and S2_cat the same
+                                if params['verbose'] in [2, 3]:
+                                    print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
+                            else:
+                                res_s1, res_s2 = np.split(s_solver.res, 2)
+                                # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
+                                #     raise ValueError(f'Estimated S1_cat/S2_cat has NaN values for column {col!r}')
+                                if cat_dict[col]['worker_type_interaction']:
+                                    S1_cat[col] = np.sqrt(np.reshape(res_s1, (nl, col_n)))
+                                    S2_cat[col] = np.sqrt(np.reshape(res_s2, (nl, col_n)))
+                                else:
+                                    S1_cat[col] = np.sqrt(res_s1[: col_n])
+                                    S2_cat[col] = np.sqrt(res_s2[: col_n])
 
-                ## Categorical ##
-                for col in cat_cols:
-                    try:
-                        col_n = cat_dict[col]['n']
-                        s_solver = cons_s_dict[col]
-                        s_solver.solve(XwX_cat[col], -XwS_cat[col], solver='quadprog')
-                        if s_solver.res is None:
+                        except ValueError as e:
                             # If constraints inconsistent, keep S1_cat and S2_cat the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
-                        else:
-                            res_s1, res_s2 = s_solver.res[: len(s_solver.res) // 2], s_solver.res[len(s_solver.res) // 2:]
-                            # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
-                            #     raise ValueError(f'Estimated S1_cat/S2_cat has NaN values for column {col!r}')
-                            if cat_dict[col]['worker_type_interaction']:
-                                S1_cat[col] = np.sqrt(np.reshape(res_s1, (nl, col_n)))
-                                S2_cat[col] = np.sqrt(np.reshape(res_s2, (nl, col_n)))
+
+                    ## Continuous ##
+                    for col in cts_cols:
+                        try:
+                            s_solver = cons_s_dict[col]
+                            s_solver.solve(XwX_cts[col], -XwS_cts[col], solver='quadprog')
+                            del XwS_cts[col]
+                            if s_solver.res is None:
+                                # If constraints inconsistent, keep S1_cts and S2_cts the same
+                                if params['verbose'] in [2, 3]:
+                                    print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
                             else:
-                                S1_cat[col] = np.sqrt(res_s1[: col_n])
-                                S2_cat[col] = np.sqrt(res_s2[: col_n])
+                                res_s1, res_s2 = np.split(s_solver.res, 2)
+                                # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
+                                #     raise ValueError(f'Estimated S1_cts/S2_cts has NaN values for column {col!r}')
+                                if cts_dict[col]['worker_type_interaction']:
+                                    S1_cts[col] = np.sqrt(res_s1)
+                                    S2_cts[col] = np.sqrt(res_s2)
+                                else:
+                                    S1_cts[col] = np.sqrt(res_s1[0])
+                                    S2_cts[col] = np.sqrt(res_s2[0])
 
-                    except ValueError as e:
-                        # If constraints inconsistent, keep S1_cat and S2_cat the same
-                        if params['verbose'] in [2, 3]:
-                            print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
-
-                ## Continuous ##
-                for col in cts_cols:
-                    try:
-                        s_solver = cons_s_dict[col]
-                        s_solver.solve(XwX_cts[col], -XwS_cts[col], solver='quadprog')
-                        if s_solver.res is None:
+                        except ValueError as e:
                             # If constraints inconsistent, keep S1_cts and S2_cts the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
-                        else:
-                            res_s1, res_s2 = s_solver.res[: len(s_solver.res) // 2], s_solver.res[len(s_solver.res) // 2:]
-                            # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
-                            #     raise ValueError(f'Estimated S1_cts/S2_cts has NaN values for column {col!r}')
-                            if cts_dict[col]['worker_type_interaction']:
-                                S1_cts[col] = np.sqrt(res_s1)
-                                S2_cts[col] = np.sqrt(res_s2)
-                            else:
-                                S1_cts[col] = np.sqrt(res_s1[0])
-                                S2_cts[col] = np.sqrt(res_s2[0])
 
-                    except ValueError as e:
-                        # If constraints inconsistent, keep S1_cts and S2_cts the same
-                        if params['verbose'] in [2, 3]:
-                            print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
+                del XwX, Xw1, Xw2
+                if len(cat_cols) > 0:
+                    del XwX_cat, Xw1_cat, Xw2_cat
+                if len(cts_cols) > 0:
+                    del XwX_cts, Xw1_cts, Xw2_cts
 
-            # print('A1 after:')
-            # print(A1)
-            # print('A2 after:')
-            # print(A2)
-            # print('S1 after:')
-            # print(S1)
-            # print('S2 after:')
-            # print(S2)
-            # print('A1_cat after:')
-            # print(A1_cat)
-            # print('A2_cat after:')
-            # print(A2_cat)
-            # print('S1_cat after:')
-            # print(S1_cat)
-            # print('S2_cat after:')
-            # print(S2_cat)
-            # print('A1_cts after:')
-            # print(A1_cts)
-            # print('A2_cts after:')
-            # print(A2_cts)
-            # print('S1_cts after:')
-            # print(S1_cts)
-            # print('S2_cts after:')
-            # print(S2_cts)
+                # print('A1 after:')
+                # print(A1)
+                # print('A2 after:')
+                # print(A2)
+                # print('S1 after:')
+                # print(S1)
+                # print('S2 after:')
+                # print(S2)
+                # print('A1_cat after:')
+                # print(A1_cat)
+                # print('A2_cat after:')
+                # print(A2_cat)
+                # print('S1_cat after:')
+                # print(S1_cat)
+                # print('S2_cat after:')
+                # print(S2_cat)
+                # print('A1_cts after:')
+                # print(A1_cts)
+                # print('A2_cts after:')
+                # print(A2_cts)
+                # print('S1_cts after:')
+                # print(S1_cts)
+                # print('S2_cts after:')
+                # print(S2_cts)
 
         if store_res:
             if len(cat_cols) > 0:
