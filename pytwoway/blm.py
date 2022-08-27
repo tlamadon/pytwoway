@@ -113,7 +113,7 @@ _blm_params_default = ParamsDict({
         '''
             (default=False) If True, return qi matrix after first loop.
         ''', None),
-    # fit_movers() parameters ##
+    ## fit_movers() parameters ##
     'n_iters_movers': (1000, 'type_constrained', (int, _gteq1),
         '''
             (default=1000) Maximum number of EM iterations for movers.
@@ -182,7 +182,7 @@ _blm_params_default = ParamsDict({
         '''
             (default=True) If 'force_min_firm_type'=True, add constraint to force minimum firm type to have the lowest average effect out of all firm types (the estimator may work better with this set to False, but the returned parameters may be inconsistent with the given constraints).
         ''', None),
-    # fit_stayers() parameters ##
+    ## fit_stayers() parameters ##
     'n_iters_stayers': (1000, 'type_constrained', (int, _gteq1),
         '''
             (default=1000) Maximum number of EM iterations for stayers.

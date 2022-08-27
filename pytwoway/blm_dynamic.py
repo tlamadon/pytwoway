@@ -198,7 +198,7 @@ _blm_dynamic_params_default = ParamsDict({
         '''
             (default=False) If True, return qi matrix after first loop.
         ''', None),
-    # fit_movers() parameters ##
+    ## fit_movers() parameters ##
     'n_iters_movers': (1000, 'type_constrained', (int, _gteq1),
         '''
             (default=1000) Maximum number of EM iterations for movers.
@@ -207,13 +207,13 @@ _blm_dynamic_params_default = ParamsDict({
         '''
             (default=1e-7) Threshold to break EM loop for movers.
         ''', '>= 0'),
-    'update_a': (True, 'type', bool,
+    'update_a_movers': (True, 'type', bool,
         '''
-            (default=True) If False, do not update A12/A43/A2ma/A2mb/A2s/A3ma/A3mb/A3s.
+            (default=True) If False, do not update A12/A43/A2ma/A2mb/A3ma/A3mb.
         ''', None),
-    'update_s': (True, 'type', bool,
+    'update_s_movers': (True, 'type', bool,
         '''
-            (default=True) If False, do not update S12/S43/S2m/S2s/S3m/S3s.
+            (default=True) If False, do not update S12/S43/S2ma/S2mb/S3ma/S3mb.
         ''', None),
     'update_pk1': (True, 'type', bool,
         '''
@@ -230,10 +230,6 @@ _blm_dynamic_params_default = ParamsDict({
     'update_rho32m': (True, 'type', bool,
         '''
             (default=True) If False, do not update rho32 for movers.
-        ''', None),
-    'update_rho32s': (True, 'type', bool,
-        '''
-            (default=True) If False, do not update rho32 for stayers.
         ''', None),
     'cons_a': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
@@ -287,7 +283,7 @@ _blm_dynamic_params_default = ParamsDict({
         '''
             (default=True) If 'force_min_firm_type'=True, add constraint to force minimum firm type to have the lowest average effect out of all firm types (the estimator may work better with this set to False, but the returned parameters may be inconsistent with the given constraints).
         ''', None),
-    # fit_stayers() parameters ##
+    ## fit_stayers() parameters ##
     'n_iters_stayers': (1000, 'type_constrained', (int, _gteq1),
         '''
             (default=1000) Maximum number of EM iterations for stayers.
@@ -296,13 +292,29 @@ _blm_dynamic_params_default = ParamsDict({
         '''
             (default=1e-7) Threshold to break EM loop for stayers.
         ''', '>= 0'),
+    'update_a_stayers': (True, 'type', bool,
+        '''
+            (default=True) If False, do not update A2s/A3s.
+        ''', None),
+    'update_s_stayers': (True, 'type', bool,
+        '''
+            (default=True) If False, do not update S2s/A3s.
+        ''', None),
+    'update_pk0': (True, 'type', bool,
+        '''
+            (default=True) If False, do not update pk0.
+        ''', None),
+    'update_rho32s': (True, 'type', bool,
+        '''
+            (default=True) If False, do not update rho32 for stayers.
+        ''', None),
     'd_prior_stayers': (1 + 1e-7, 'type_constrained', ((float, int), _gteq1),
         '''
             (default=1 + 1e-7) Account for probabilities being too small by adding (d_prior - 1) to pk0.
         ''', '>= 1'),
-    'd_X_diag_stayers': (1, 'type_constrained', ((float, int), _gteq1),
+    'd_X_diag_stayers': (1 + 1e-10, 'type_constrained', ((float, int), _gteq1),
         '''
-            (default=1) Account for numerical rounding causing X'X to not be positive definite by adding (d_X_diag_stayers - 1) to the diagonal of X'X.
+            (default=1 + 1e-10) Account for numerical rounding causing X'X to not be positive definite by adding (d_X_diag_stayers - 1) to the diagonal of X'X.
         ''', '>= 1')
 })
 
@@ -1077,7 +1089,7 @@ class DynamicBLMModel:
                         nnt_b.append(i)
                 constrain_b = (len(nnt_b) > 0)
         else:
-            nt = len(self.periods_stayers)
+            nt = len(self.periods_update_stayers)
 
         ## General ##
         cons_a = cons.QPConstrained(nl, nk)
@@ -2143,7 +2155,7 @@ class DynamicBLMModel:
                     XwY = np.sum(Xw * YY32m)
                     R32m = XwY / XwX
                 del Xw, XwX, XwY
-            elif params['update_a'] or params['update_s']:
+            elif params['update_a_movers'] or params['update_s_movers']:
                 # Constrained OLS (source: https://scaron.info/blog/quadratic-programming-in-python.html)
                 # The regression has 6 * nl * nk parameters and 4 * nl * ni rows
                 # To avoid duplicating the data 4 * nl times, we construct X'X and X'Y by looping over nl
@@ -2156,7 +2168,7 @@ class DynamicBLMModel:
                 X = lil_matrix((4 * ni, len(periods) * nk))
                 # X'X (weighted)
                 XwX = np.zeros((len(periods) * ts, len(periods) * ts))
-                if params['update_a']:
+                if params['update_a_movers']:
                     XwY = np.zeros(shape=len(periods) * ts)
 
                 ## Compute X terms ##
@@ -2207,7 +2219,7 @@ class DynamicBLMModel:
                     XwX_cat = {col: np.zeros((len(periods) * col_ts, len(periods) * col_ts)) for col, col_ts in ts_cat.items()}
                     # Re-order X to period-nl-n_col (this is so constraints are the same order as static BLM)
                     X_cat_order = {}
-                    if params['update_a']:
+                    if params['update_a_movers']:
                         XwY_cat = {col: np.zeros(shape=len(periods) * col_ts) for col, col_ts in ts_cat.items()}
 
                     for col in cat_cols:
@@ -2246,7 +2258,7 @@ class DynamicBLMModel:
                     XwX_cts = {col: np.zeros((len(periods) * nl, len(periods) * nl)) for col in cts_cols}
                     # Re-order X to period-nl
                     X_cts_order = {}
-                    if params['update_a']:
+                    if params['update_a_movers']:
                         XwY_cts = {col: np.zeros(shape=len(periods) * nl) for col in cts_cols}
 
                     for col in cts_cols:
@@ -2276,7 +2288,7 @@ class DynamicBLMModel:
                         del X_np_group, X_nl_group
 
                 ## Update A ##
-                if params['update_s']:
+                if params['update_s_movers']:
                     Xw = []
                 for l in range(nl):
                     l_index, r_index = l * nk * len(periods), (l + 1) * nk * len(periods)
@@ -2295,14 +2307,14 @@ class DynamicBLMModel:
 
                     ## Compute Xw_l ##
                     Xw_l = DxSP(weights_l, X).T
-                    if params['update_s']:
+                    if params['update_s_movers']:
                         Xw.append(Xw_l)
                     del weights_l
 
                     ## Compute XwX_l ##
                     XwX[l_index: r_index, l_index: r_index] = (Xw_l @ X).todense()
 
-                    if params['update_a']:
+                    if params['update_a_movers']:
                         Y_l = np.zeros(4 * ni)
 
                         # Update A_sum to account for worker-interaction terms
@@ -2358,7 +2370,7 @@ class DynamicBLMModel:
                 # print(S_cts)
 
                 # We solve the system to get all the parameters (use dense solver)
-                if params['update_a']:
+                if params['update_a_movers']:
                     if iter > 0:
                         ## Constraints ##
                         cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type=min_firm_type, for_movers=True)
@@ -2383,7 +2395,7 @@ class DynamicBLMModel:
                             print(f'Passing A: {e}')
 
                 ## Categorical ##
-                if params['update_s']:
+                if params['update_s_movers']:
                     Xw_cat = {col: [] for col in cat_cols}
                 for col in cat_cols:
                     col_n = cat_dict[col]['n']
@@ -2416,14 +2428,14 @@ class DynamicBLMModel:
 
                         ## Compute Xw_cat_l ##
                         Xw_cat_l = DxSP(weights_l, X_cat[col]).T
-                        if params['update_s']:
+                        if params['update_s_movers']:
                             Xw_cat[col].append(Xw_cat_l)
                         del weights_l
 
                         ## Compute XwX_cat_l ##
                         XwX_cat[col][l_index: r_index, l_index: r_index] = (Xw_cat_l @ X_cat[col]).todense()
 
-                        if params['update_a']:
+                        if params['update_a_movers']:
                             Y_cat_l = np.zeros(4 * ni)
 
                             # Update A_sum to account for worker-interaction terms
@@ -2476,7 +2488,7 @@ class DynamicBLMModel:
                         XwX_cat[col] += (params['d_X_diag_movers'] - 1) * np.eye(XwX_cat[col].shape[0])
 
                     # We solve the system to get all the parameters (use dense solver)
-                    if params['update_a']:
+                    if params['update_a_movers']:
                         try:
                             a_solver = cons_a_dict[col]
                             a_solver.solve(XwX_cat[col][X_cat_order[col], :][:, X_cat_order[col]], -XwY_cat[col][X_cat_order[col]], solver='quadprog')
@@ -2504,7 +2516,7 @@ class DynamicBLMModel:
                             A_sum[period] += A_cat[col][period][C_dict[period][col]]
 
                 ## Continuous ##
-                if params['update_s']:
+                if params['update_s_movers']:
                     Xw_cts = {col: [] for col in cts_cols}
                 for col in cts_cols:
                     if not cts_dict[col]['worker_type_interaction']:
@@ -2535,14 +2547,14 @@ class DynamicBLMModel:
 
                         ## Compute Xw_cts_l ##
                         Xw_cts_l = DxSP(weights_l, X_cts[col]).T
-                        if params['update_s']:
+                        if params['update_s_movers']:
                             Xw_cts[col].append(Xw_cts_l)
                         del weights_l
 
                         ## Compute XwX_cts_l ##
                         XwX_cts[col][l_index: r_index, l_index: r_index] = (Xw_cts_l @ X_cts[col]).todense()
 
-                        if params['update_a']:
+                        if params['update_a_movers']:
                             Y_cts_l = np.zeros(4 * ni)
 
                             # Update A_sum to account for worker-interaction terms
@@ -2595,7 +2607,7 @@ class DynamicBLMModel:
                         XwX_cts[col] += (params['d_X_diag_movers'] - 1) * np.eye(XwX_cts[col].shape[0])
 
                     # We solve the system to get all the parameters (use dense solver)
-                    if params['update_a']:
+                    if params['update_a_movers']:
                         try:
                             a_solver = cons_a_dict[col]
                             a_solver.solve(XwX_cts[col][X_cts_order[col], :][:, X_cts_order[col]], -XwY_cts[col][X_cts_order[col]], solver='quadprog')
@@ -2622,7 +2634,7 @@ class DynamicBLMModel:
                         for period in periods:
                             A_sum[period] += A_cts[col][period] * C_dict[period][col]
 
-                if params['update_s']:
+                if params['update_s_movers']:
                     ## Update the variances ##
                     XwS = np.zeros(shape=len(periods) * ts)
 
@@ -3033,7 +3045,7 @@ class DynamicBLMModel:
                 XwY = np.sum(Xw * YY32s)
                 R32s = XwY / XwX
                 del Xw, XwX, XwY
-            elif params['update_a'] or params['update_s']:
+            elif params['update_a_stayers'] or params['update_s_stayers']:
                 # Constrained OLS (source: https://scaron.info/blog/quadratic-programming-in-python.html)
 
                 # The regression has 2 * nl * nk parameters and 4 * nl * ni rows
@@ -3044,11 +3056,11 @@ class DynamicBLMModel:
                 # Shift between periods
                 ts = nl * nk
                 # X
-                X = lil_matrix((4 * ni, 2 * nk))
+                X = lil_matrix((2 * ni, len(periods_update) * nk))
                 # X'X (weighted)
-                XwX = np.zeros((2 * ts, 2 * ts))
-                if params['update_a']:
-                    XwY = np.zeros(shape=2 * ts)
+                XwX = np.zeros((len(periods_update) * ts, len(periods_update) * ts))
+                if params['update_a_stayers']:
+                    XwY = np.zeros(shape=len(periods_update) * ts)
 
                 ## Compute X terms ##
                 # X =
@@ -3071,9 +3083,9 @@ class DynamicBLMModel:
                 X[1 * ni: 2 * ni, 1 * nk: 2 * nk] = GG1
                 X = X.tocsc()
                 # Re-order X to period-nl-nk (this is so constraints are the same order as static BLM)
-                X_np_group = np.tile(np.repeat(np.arange(2), nk), nl)
-                X_nl_group = np.repeat(np.arange(nl), nk * 2)
-                X_nk_group = np.tile(np.arange(nk), nl * 2)
+                X_np_group = np.tile(np.repeat(np.arange(len(periods_update)), nk), nl)
+                X_nl_group = np.repeat(np.arange(nl), nk * len(periods_update))
+                X_nk_group = np.tile(np.arange(nk), nl * len(periods_update))
                 X_order = (X_nk_group + nk * X_nl_group + (nl * nk) * X_np_group).argsort()
                 del X_np_group, X_nl_group, X_nk_group
 
@@ -3081,13 +3093,13 @@ class DynamicBLMModel:
                 if len(cat_cols) > 0:
                     ts_cat = {col: nl * col_dict['n'] for col, col_dict in cat_dict.items()}
                     # X_cat
-                    X_cat = {col: lil_matrix((4 * ni, 2 * cat_dict[col]['n'])) for col in cat_cols}
+                    X_cat = {col: lil_matrix((2 * ni, len(periods_update) * cat_dict[col]['n'])) for col in cat_cols}
                     # X_cat'X_cat (weighted)
-                    XwX_cat = {col: np.zeros((2 * col_ts, 2 * col_ts)) for col, col_ts in ts_cat.items()}
+                    XwX_cat = {col: np.zeros((len(periods_update) * col_ts, len(periods_update) * col_ts)) for col, col_ts in ts_cat.items()}
                     # Re-order X to period-nl-n_col (this is so constraints are the same order as static BLM)
                     X_cat_order = {}
-                    if params['update_a']:
-                        XwY_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
+                    if params['update_a_stayers']:
+                        XwY_cat = {col: np.zeros(shape=len(periods_update) * col_ts) for col, col_ts in ts_cat.items()}
 
                     for col in cat_cols:
                         ## Compute X_cat terms ##
@@ -3099,22 +3111,22 @@ class DynamicBLMModel:
                         X_cat[col][1 * ni: 2 * ni, 1 * col_n: 2 * col_n] = CC1[col]
                         X_cat[col] = X_cat[col].tocsc()
                         # Re-order X to period-nl-n_col (this is so constraints are the same order as static BLM)
-                        X_np_group = np.tile(np.repeat(np.arange(2), col_n), nl)
-                        X_nl_group = np.repeat(np.arange(nl), nk * 2)
-                        X_col_n_group = np.tile(np.arange(col_n), nl * 2)
+                        X_np_group = np.tile(np.repeat(np.arange(len(periods_update)), col_n), nl)
+                        X_nl_group = np.repeat(np.arange(nl), nk * len(periods_update))
+                        X_col_n_group = np.tile(np.arange(col_n), nl * len(periods_update))
                         X_cat_order[col] = (X_col_n_group + col_n * X_nl_group + (nl * col_n) * X_np_group).argsort()
                         del X_np_group, X_nl_group, X_col_n_group
 
                 ### Continuous ###
                 if len(cts_cols) > 0:
                     # X_cts
-                    X_cts = {col: lil_matrix((4 * ni, 2)) for col in cts_cols}
+                    X_cts = {col: lil_matrix((2 * ni, len(periods_update))) for col in cts_cols}
                     # X_cts'X_cts (weighted)
-                    XwX_cts = {col: np.zeros((2 * nl, 2 * nl)) for col in cts_cols}
+                    XwX_cts = {col: np.zeros((len(periods_update) * nl, len(periods_update) * nl)) for col in cts_cols}
                     # Re-order X to period-nl
                     X_cts_order = {}
-                    if params['update_a']:
-                        XwY_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
+                    if params['update_a_stayers']:
+                        XwY_cts = {col: np.zeros(shape=len(periods_update) * nl) for col in cts_cols}
 
                     for col in cts_cols:
                         ## Compute X_cts terms ##
@@ -3125,16 +3137,16 @@ class DynamicBLMModel:
                         X_cts[col][1 * ni: 2 * ni, 1] = C1[col]
                         X_cts[col] = X_cts[col].tocsc()
                         # Re-order X to period-nl-n_col
-                        X_np_group = np.tile(np.repeat(np.arange(2), col_n), nl)
-                        X_nl_group = np.repeat(np.arange(nl), nk * 2)
+                        X_np_group = np.tile(np.repeat(np.arange(len(periods_update)), col_n), nl)
+                        X_nl_group = np.repeat(np.arange(nl), nk * len(periods_update))
                         X_cts_order[col] = (X_nl_group + nl * X_np_group).argsort()
                         del X_np_group, X_nl_group
 
                 ## Update A ##
-                if params['update_s']:
+                if params['update_s_stayers']:
                     Xw = []
                 for l in range(nl):
-                    l_index, r_index = l * nk * 2, (l + 1) * nk * 2
+                    l_index, r_index = l * nk * len(periods_update), (l + 1) * nk * len(periods_update)
 
                     ## Compute weights_l ##
                     sd_l = np.concatenate(
@@ -3148,14 +3160,14 @@ class DynamicBLMModel:
 
                     ## Compute Xw_l ##
                     Xw_l = DxSP(weights_l, X).T
-                    if params['update_s']:
+                    if params['update_s_stayers']:
                         Xw.append(Xw_l)
                     del weights_l
 
                     ## Compute XwX_l ##
                     XwX[l_index: r_index, l_index: r_index] = (Xw_l @ X).todense()
 
-                    if params['update_a']:
+                    if params['update_a_stayers']:
                         Y_l = np.zeros(2 * ni)
 
                         # Update A_sum to account for worker-interaction terms
@@ -3194,7 +3206,7 @@ class DynamicBLMModel:
                 # print(S_cts)
 
                 # We solve the system to get all the parameters (use dense solver)
-                if params['update_a']:
+                if params['update_a_stayers']:
                     if iter > 0:
                         ## Constraints ##
                         cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type=min_firm_type, for_movers=False)
@@ -3205,7 +3217,7 @@ class DynamicBLMModel:
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing A: estimates are None')
                         else:
-                            res_2s, res_3s = np.split(cons_a.res, 2)
+                            res_2s, res_3s = np.split(cons_a.res, len(periods_update))
                             A['2s'] = np.reshape(res_2s, self.dims)
                             A['3s'] = np.reshape(res_3s, self.dims)
 
@@ -3215,7 +3227,7 @@ class DynamicBLMModel:
                             print(f'Passing A: {e}')
 
                 ## Categorical ##
-                if params['update_s']:
+                if params['update_s_stayers']:
                     Xw_cat = {col: [] for col in cat_cols}
                 for col in cat_cols:
                     col_n = cat_dict[col]['n']
@@ -3226,7 +3238,7 @@ class DynamicBLMModel:
                             A_sum[period] -= A_cat[col][period][C_dict[period][col]]
 
                     for l in range(nl):
-                        l_index, r_index = l * col_n * 2, (l + 1) * col_n * 2
+                        l_index, r_index = l * col_n * len(periods_update), (l + 1) * col_n * len(periods_update)
 
                         ## Compute weights_l ##
                         if cat_dict[col]['worker_type_interaction']:
@@ -3246,14 +3258,14 @@ class DynamicBLMModel:
 
                         ## Compute Xw_cat_l ##
                         Xw_cat_l = DxSP(weights_l, X_cat[col]).T
-                        if params['update_s']:
+                        if params['update_s_stayers']:
                             Xw_cat[col].append(Xw_cat_l)
                         del weights_l
 
                         ## Compute XwX_cat_l ##
                         XwX_cat[col][l_index: r_index, l_index: r_index] = (Xw_cat_l @ X_cat[col]).todense()
 
-                        if params['update_a']:
+                        if params['update_a_stayers']:
                             Y_cat_l = np.zeros(2 * ni)
 
                             # Update A_sum to account for worker-interaction terms
@@ -3286,7 +3298,7 @@ class DynamicBLMModel:
                         XwX_cat[col] += (params['d_X_diag_stayers'] - 1) * np.eye(XwX_cat[col].shape[0])
 
                     # We solve the system to get all the parameters (use dense solver)
-                    if params['update_a']:
+                    if params['update_a_stayers']:
                         try:
                             a_solver = cons_a_dict[col]
                             a_solver.solve(XwX_cat[col][X_cat_order[col], :][:, X_cat_order[col]], -XwY_cat[col][X_cat_order[col]], solver='quadprog')
@@ -3295,7 +3307,7 @@ class DynamicBLMModel:
                                 if params['verbose'] in [2, 3]:
                                     print(f'Passing A_cat for column {col!r}: estimates are None')
                             else:
-                                res_2s, res_3s = np.split(cons_a.res, 2)
+                                res_2s, res_3s = np.split(cons_a.res, len(periods_update))
                                 if cat_dict[col]['worker_type_interaction']:
                                     A_cat[col]['2s'] = np.reshape(res_2s, (nl, col_n))
                                     A_cat[col]['3s'] = np.reshape(res_3s, (nl, col_n))
@@ -3314,7 +3326,7 @@ class DynamicBLMModel:
                             A_sum[period] += A_cat[col][period][C_dict[period][col]]
 
                 ## Continuous ##
-                if params['update_s']:
+                if params['update_s_stayers']:
                     Xw_cts = {col: [] for col in cts_cols}
                 for col in cts_cols:
                     if not cts_dict[col]['worker_type_interaction']:
@@ -3323,7 +3335,7 @@ class DynamicBLMModel:
                             A_sum[period] -= A_cts[col][period] * C_dict[period][col]
 
                     for l in range(nl):
-                        l_index, r_index = l * 2, (l + 1) * 2
+                        l_index, r_index = l * len(periods_update), (l + 1) * len(periods_update)
 
                         ## Compute weights_l ##
                         if cts_dict[col]['worker_type_interaction']:
@@ -3343,14 +3355,14 @@ class DynamicBLMModel:
 
                         ## Compute Xw_cts_l ##
                         Xw_cts_l = DxSP(weights_l, X_cts[col]).T
-                        if params['update_s']:
+                        if params['update_s_stayers']:
                             Xw_cts[col].append(Xw_cts_l)
                         del weights_l
 
                         ## Compute XwX_cts_l ##
                         XwX_cts[col][l_index: r_index, l_index: r_index] = (Xw_cts_l @ X_cts[col]).todense()
 
-                        if params['update_a']:
+                        if params['update_a_stayers']:
                             Y_cts_l = np.zeros(2 * ni)
 
                             # Update A_sum to account for worker-interaction terms
@@ -3383,7 +3395,7 @@ class DynamicBLMModel:
                         XwX_cts[col] += (params['d_X_diag_stayers'] - 1) * np.eye(XwX_cts[col].shape[0])
 
                     # We solve the system to get all the parameters (use dense solver)
-                    if params['update_a']:
+                    if params['update_a_stayers']:
                         try:
                             a_solver = cons_a_dict[col]
                             a_solver.solve(XwX_cts[col][X_cts_order[col], :][:, X_cts_order[col]], -XwY_cts[col][X_cts_order[col]], solver='quadprog')
@@ -3392,7 +3404,7 @@ class DynamicBLMModel:
                                 if params['verbose'] in [2, 3]:
                                     print(f'Passing A_cts for column {col!r}: estimates are None')
                             else:
-                                res_2s, res_3s = np.split(cons_a.res, 2)
+                                res_2s, res_3s = np.split(cons_a.res, len(periods_update))
                                 if cts_dict[col]['worker_type_interaction']:
                                     A_cts[col]['2s'] = res_2s
                                     A_cts[col]['3s'] = res_3s
@@ -3410,17 +3422,17 @@ class DynamicBLMModel:
                         for period in periods_update:
                             A_sum[period] += A_cts[col][period] * C_dict[period][col]
 
-                if params['update_s']:
+                if params['update_s_stayers']:
                     # Next we extract the variances
                     if iter == 0:
-                        XwS = np.zeros(shape=2 * ts)
+                        XwS = np.zeros(shape=len(periods_update) * ts)
 
                         ## Categorical ##
                         if len(cat_cols) > 0:
-                            XwS_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
+                            XwS_cat = {col: np.zeros(shape=len(periods_update) * col_ts) for col, col_ts in ts_cat.items()}
                         ## Continuous ##
                         if len(cts_cols) > 0:
-                            XwS_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
+                            XwS_cts = {col: np.zeros(shape=len(periods_update) * nl) for col in cts_cols}
 
                     ## Update S ##
                     for l in range(nl):
@@ -3443,21 +3455,21 @@ class DynamicBLMModel:
                         del A_sum_l
 
                         ## XwS terms ##
-                        l_index, r_index = l * nk * 2, (l + 1) * nk * 2
+                        l_index, r_index = l * nk * len(periods_update), (l + 1) * nk * len(periods_update)
                         XwS[l_index: r_index] = Xw[l] @ eps_l_sq
                         Xw[l] = 0
 
                         ## Categorical ##
                         for col in cat_cols:
                             col_n = cat_dict[col]['n']
-                            l_index, r_index = l * col_n * 2, (l + 1) * col_n * 2
+                            l_index, r_index = l * col_n * len(periods_update), (l + 1) * col_n * len(periods_update)
                             ## XwS_cat terms ##
                             XwS_cat[col][l_index: r_index] = Xw_cat[col][l] @ eps_l_sq
                             Xw_cat[col][l] = 0
 
                         ## Continuous ##
                         for col in cts_cols:
-                            l_index, r_index = l * 2, (l + 1) * 2
+                            l_index, r_index = l * len(periods_update), (l + 1) * len(periods_update)
                             ## XwS_cts terms ##
                             # NOTE: take absolute value
                             XwS_cts[col][l_index: r_index] = np.abs(Xw_cts[col][l] @ eps_l_sq)
@@ -3471,7 +3483,7 @@ class DynamicBLMModel:
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S: estimates are None')
                         else:
-                            res_2s, res_3s = np.split(cons_s.res, 2)
+                            res_2s, res_3s = np.split(cons_s.res, len(periods_update))
                             S['2s'] = np.sqrt(np.reshape(res_2s, self.dims))
                             S['3s'] = np.sqrt(np.reshape(res_3s, self.dims))
 
@@ -3491,7 +3503,7 @@ class DynamicBLMModel:
                                 if params['verbose'] in [2, 3]:
                                     print(f'Passing S_cat for column {col!r}: estimates are None')
                             else:
-                                res_2s, res_3s = np.split(s_solver.res, 2)
+                                res_2s, res_3s = np.split(s_solver.res, len(periods_update))
                                 if cat_dict[col]['worker_type_interaction']:
                                     S_cat[col]['2s'] = np.sqrt(np.reshape(res_2s, (nl, col_n)))
                                     S_cat[col]['3s'] = np.sqrt(np.reshape(res_3s, (nl, col_n)))
@@ -3514,7 +3526,7 @@ class DynamicBLMModel:
                                 if params['verbose'] in [2, 3]:
                                     print(f'Passing S_cts for column {col!r}: estimates are None')
                             else:
-                                res_2s, res_3s = np.split(s_solver.res, 2)
+                                res_2s, res_3s = np.split(s_solver.res, len(periods_update))
                                 if cts_dict[col]['worker_type_interaction']:
                                     S_cts[col]['2s'] = np.sqrt(res_2s)
                                     S_cts[col]['3s'] = np.sqrt(res_3s)
@@ -3573,15 +3585,15 @@ class DynamicBLMModel:
         user_params = self.params.copy()
         ##### Loop 1 #####
         # First fix A but update S and pk
-        self.params['update_a'] = False
-        self.params['update_s'] = True
+        self.params['update_a_movers'] = False
+        self.params['update_s_movers'] = True
         self.params['update_pk1'] = True
         if self.params['verbose'] in [1, 2, 3]:
             print('Fitting movers with A fixed')
         self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 2 #####
         # Now update A with Linear Additive constraint
-        self.params['update_a'] = True
+        self.params['update_a_movers'] = True
         if self.nl > 1:
             # Set constraints
             if user_params['cons_a_all'] is None:
@@ -3627,8 +3639,8 @@ class DynamicBLMModel:
         # Save original parameters
         user_params = self.params.copy()
         # Update parameters
-        self.params['update_a'] = True
-        self.params['update_s'] = False
+        self.params['update_a_movers'] = True
+        self.params['update_s_movers'] = False
         self.params['update_pk1'] = False
         # Estimate
         if self.params['verbose'] in [1, 2, 3]:
@@ -3648,8 +3660,8 @@ class DynamicBLMModel:
         # Save original parameters
         user_params = self.params.copy()
         # Update parameters
-        self.params['update_a'] = False
-        self.params['update_s'] = True
+        self.params['update_a_movers'] = False
+        self.params['update_s_movers'] = True
         self.params['update_pk1'] = False
         # Estimate
         if self.params['verbose'] in [1, 2, 3]:
@@ -3669,8 +3681,8 @@ class DynamicBLMModel:
         # Save original parameters
         user_params = self.params.copy()
         # Update parameters
-        self.params['update_a'] = False
-        self.params['update_s'] = False
+        self.params['update_a_movers'] = False
+        self.params['update_s_movers'] = False
         self.params['update_pk1'] = True
         # Estimate
         if self.params['verbose'] in [1, 2, 3]:
