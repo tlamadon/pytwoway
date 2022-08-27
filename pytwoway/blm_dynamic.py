@@ -149,21 +149,37 @@ _blm_dynamic_params_default = ParamsDict({
         '''
             (default=0.5) Maximum value of simulated S43 (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2m_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2ma_low': (0.3, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.3) Minimum value of simulated S2 for movers (standard deviation of fixed effects).
+            (default=0.3) Minimum value of simulated S2a for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2m_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2ma_high': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.5) Maximum value of simulated S2 for movers (standard deviation of fixed effects).
+            (default=0.5) Maximum value of simulated S2a for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3m_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2mb_low': (0.3, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.3) Minimum value of simulated S3 for movers (standard deviation of fixed effects).
+            (default=0.3) Minimum value of simulated S2b for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3m_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2mb_high': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.5) Maximum value of simulated S3 for movers (standard deviation of fixed effects).
+            (default=0.5) Maximum value of simulated S2b for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3ma_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S3a for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3ma_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S3a for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3mb_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of simulated S3b for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3mb_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of simulated S3b for movers (standard deviation of fixed effects).
         ''', '>= 0'),
     's2s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
         '''
@@ -418,13 +434,21 @@ _categorical_control_dynamic_params_default = ParamsDict({
         '''
             (default=0.5) Maximum value of starting values for S43_cat (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2m_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2ma_low': (0.3, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.3) Minimum value of starting values for S2_cat for movers (standard deviation of fixed effects).
+            (default=0.3) Minimum value of starting values for S2a_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2m_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2ma_high': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.5) Maximum value of starting values for S2_cat for movers (standard deviation of fixed effects).
+            (default=0.5) Maximum value of starting values for S2a_cat for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2mb_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S2b_cat for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2mb_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S2b_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
     's2s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
         '''
@@ -434,13 +458,21 @@ _categorical_control_dynamic_params_default = ParamsDict({
         '''
             (default=0.5) Maximum value of starting values for S2_cat for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3m_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's3ma_low': (0.3, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.3) Minimum value of starting values for S3_cat for movers (standard deviation of fixed effects).
+            (default=0.3) Minimum value of starting values for S3a_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3m_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's3ma_high': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.5) Maximum value of starting values for S3_cat for movers (standard deviation of fixed effects).
+            (default=0.5) Maximum value of starting values for S3a_cat for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3mb_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S3b_cat for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's3mb_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S3b_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
     's3s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
         '''
@@ -560,13 +592,21 @@ _continuous_control_dynamic_params_default = ParamsDict({
         '''
             (default=0.5) Maximum value of starting values for S43_cts (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2m_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2ma_low': (0.3, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.3) Minimum value of starting values for S2_cts for movers (standard deviation of fixed effects).
+            (default=0.3) Minimum value of starting values for S2a_cts for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2m_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2ma_high': (0.5, 'type_constrained', ((float, int), _gteq0),
         '''
-            (default=0.5) Maximum value of starting values for S2_cts for movers (standard deviation of fixed effects).
+            (default=0.5) Maximum value of starting values for S2a_cts for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2mb_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.3) Minimum value of starting values for S2b_cts for movers (standard deviation of fixed effects).
+        ''', '>= 0'),
+    's2mb_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+        '''
+            (default=0.5) Maximum value of starting values for S2b_cts for movers (standard deviation of fixed effects).
         ''', '>= 0'),
     's2s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
         '''
@@ -953,7 +993,7 @@ class DynamicBLMModel:
         }
         self.S = {
             period:
-                rng.uniform(low=max(params[f"s{period.strip('ab')}_low"], s_lb), high=params[f"s{period.strip('ab')}_high"], size=dims)
+                rng.uniform(low=max(params[f"s{period}_low"], s_lb), high=params[f"s{period}_high"], size=dims)
             for period in all_periods
         }
         # Model for p(K | l, l') for movers
@@ -983,9 +1023,9 @@ class DynamicBLMModel:
         self.S_cat = {
             col: {
                 period:
-                    rng.uniform(low=max(controls_dict[col][f"s{period.strip('ab')}_low"], s_lb), high=controls_dict[col][f"s{period.strip('ab')}_high"], size=(nl, controls_dict[col]['n']))
+                    rng.uniform(low=max(controls_dict[col][f"s{period}_low"], s_lb), high=controls_dict[col][f"s{period}_high"], size=(nl, controls_dict[col]['n']))
                         if controls_dict[col]['worker_type_interaction'] else
-                    rng.uniform(low=max(controls_dict[col][f"s{period.strip('ab')}_low"], s_lb), high=controls_dict[col][f"s{period.strip('ab')}_high"], size=controls_dict[col]['n'])
+                    rng.uniform(low=max(controls_dict[col][f"s{period}_low"], s_lb), high=controls_dict[col][f"s{period}_high"], size=controls_dict[col]['n'])
                 for period in all_periods
             }
             for col in cat_cols
@@ -1004,9 +1044,9 @@ class DynamicBLMModel:
         self.S_cts = {
             col: {
                 period:
-                    rng.uniform(low=max(controls_dict[col][f"s{period.strip('ab')}_low"], s_lb), high=controls_dict[col][f"s{period.strip('ab')}_high"], size=nl)
+                    rng.uniform(low=max(controls_dict[col][f"s{period}_low"], s_lb), high=controls_dict[col][f"s{period}_high"], size=nl)
                         if controls_dict[col]['worker_type_interaction'] else
-                    rng.uniform(low=max(controls_dict[col][f"s{period.strip('ab')}_low"], s_lb), high=controls_dict[col][f"s{period.strip('ab')}_high"], size=1)
+                    rng.uniform(low=max(controls_dict[col][f"s{period}_low"], s_lb), high=controls_dict[col][f"s{period}_high"], size=1)
                 for period in all_periods
             }
             for col in cts_cols
