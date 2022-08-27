@@ -301,6 +301,8 @@ class FEEstimator:
         if rng is None:
             rng = np.random.default_rng(None)
 
+        params = self.params
+
         self.logger.info('----- STARTING FE ESTIMATION -----')
         start_time = time.time()
 
@@ -312,7 +314,7 @@ class FEEstimator:
         # Compute basic statistics
         self._compute_early_stats()
 
-        if self.params['statsonly']:
+        if params['statsonly']:
             ## Compute basic statistics ##
             self.logger.info('statsonly=True, so we skip the full estimation')
 
@@ -320,11 +322,11 @@ class FEEstimator:
             ## Estimate full model ##
             # Estimate fixed effects using OLS
             self._estimate_ols()
-            if self.params['attach_fe_estimates']:
+            if params['attach_fe_estimates']:
                 # Attach fixed effect columns
                 self._attach_fe_estimates()
 
-            if not self.params['feonly']:
+            if not params['feonly']:
                 ## Full estimation ##
                 # Keep track of whether (A.T @ A)^{-1} has been computed
                 aainv = False
@@ -340,7 +342,7 @@ class FEEstimator:
                     ## HO correction ##
                     if self.weighted:
                         # Estimate trace for sigma^2 (variance of residuals) for HO correction
-                        if self.params['exact_trace_sigma_2']:
+                        if params['exact_trace_sigma_2']:
                             # Analytical trace
                             if not aainv:
                                 self._construct_AAinv_components_full()
@@ -352,7 +354,7 @@ class FEEstimator:
                     # Estimate sigma^2 (variance of residuals) for HO correction
                     self._estimate_sigma_2_ho()
                     # Estimate trace for HO correction
-                    if self.params['exact_trace_ho']:
+                    if params['exact_trace_ho']:
                         # Analytical trace
                         if not aainv:
                             self._construct_AAinv_components_full()
@@ -364,14 +366,14 @@ class FEEstimator:
 
                 if self.compute_he:
                     ## HE correction ##
-                    if (self.params['exact_lev_he'] or self.params['exact_trace_he']) and not aainv:
+                    if (params['exact_lev_he'] or params['exact_trace_he']) and not aainv:
                         self._construct_AAinv_components_full()
                         aainv = True
                     # Estimate leverages for HE correction
-                    if len(self.params['levfile']) > 0:
+                    if len(params['levfile']) > 0:
                         # Precomputed leverages
                         Pii, jla_factor = self._extract_precomputed_leverages()
-                    elif self.params['exact_lev_he']:
+                    elif params['exact_lev_he']:
                         # Analytical leverages
                         Pii, jla_factor = self._estimate_exact_leverages()
                     else:
@@ -381,14 +383,14 @@ class FEEstimator:
                     Sii = self._estimate_Sii_he(Pii, jla_factor)
                     del Pii
                     # Estimate trace for HE correction
-                    if self.params['exact_trace_he']:
+                    if params['exact_trace_he']:
                         # Analytical trace
                         self._estimate_exact_trace_he(Q_params, Sii)
                     else:
                         # Approximate trace
                         self._estimate_approximate_trace_he(Q_params, Sii, rng)
                     del Sii
-                    if not self.params['levfile']:
+                    if not params['levfile']:
                         del self.sqrt_DpJ, self.sqrt_DpW
 
                 del self.Q_var, self.Q_cov
@@ -400,8 +402,8 @@ class FEEstimator:
 
         # Clear attributes
         del self.worker_m, self.Y, self.J, self.DpJ, self.W, self.DpW, self.Dp, self.Dwinv, self.DwinvWtDpJ, self.Minv
-        if not self.params['statsonly']:
-            if self.params['solver'] == 'amg':
+        if not params['statsonly']:
+            if params['solver'] == 'amg':
                 del self.Minv_solver
             else:
                 del self.preconditioner
@@ -644,9 +646,9 @@ class FEEstimator:
 
         ## Estimate variance of residuals (DON'T DEMEAN) ##
         # NOTE: multiply by Dp, because each observation's variance is divided by Dp and we need to undo that
-        self.sigma_2_pi = weighted_mean(Dp * (self.E ** 2), Dp)
+        self.sigma_2_fe = weighted_mean(Dp * (self.E ** 2), Dp)
 
-        self.logger.info(f'[fe] variance of residuals {self.sigma_2_pi:2.4f}')
+        self.logger.info(f'[fe] variance of residuals {self.sigma_2_fe:2.4f}')
 
     def _construct_Q(self):
         '''
@@ -800,7 +802,7 @@ class FEEstimator:
             trace_approximation = np.mean(self.tr_sigma_ho_all)
             self.sigma_2_ho = (self.nn * sigma_2_unweighted) / (np.sum(1 / self.Dp) - trace_approximation)
         else:
-            self.sigma_2_ho = (self.nn * self.sigma_2_pi) / (self.nn - (self.nw + self.nf - 1))
+            self.sigma_2_ho = (self.nn * self.sigma_2_fe) / (self.nn - (self.nw + self.nf - 1))
 
         self.logger.info(f'[ho] variance of residuals {self.sigma_2_ho:2.4f}')
 
@@ -1155,7 +1157,7 @@ class FEEstimator:
 
         ## FE results ##
         # Plug-in sigma^2
-        self.res['var(eps)_fe'] = self.sigma_2_pi
+        self.res['var(eps)_fe'] = self.sigma_2_fe
         # Plug-in variances
         self.logger.info('[fe] VARIANCES')
         for var_name in var_names:
