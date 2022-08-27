@@ -1241,12 +1241,12 @@ class DynamicBLMModel:
                             # Normalize primary period
                             cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp, nt=nt))
                             if any_tv_nwi:
-                                # Normalize lowest type pair from secondary period
-                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=sp, nt=nt))
+                                # Normalize lowest type pair in each period
+                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(nt), nt=nt))
                         else:
                             if any_tv_nwi:
-                                # Normalize lowest type pair in both periods
-                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(2), nt=nt))
+                                # Normalize lowest type pair in each period
+                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(nt), nt=nt))
                             elif any_tnv_nwi:
                                 # Normalize lowest type pair in primary period
                                 cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp, nt=nt))
