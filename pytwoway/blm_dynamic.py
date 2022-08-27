@@ -1262,12 +1262,12 @@ class DynamicBLMModel:
             S (dict of NumPy Arrays or None): dictionary linking periods to the standard deviation of fixed effects in that period; if None, S is not sorted or returned
             A_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the mean of fixed effects in that period; if None, A_cat is not sorted or returned
             S_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; if None, S_cat is not sorted or returned
-            A_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the mean of fixed effects in that period; if None, A_cat is not sorted or returned
-            S_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; if None, S_cat is not sorted or returned
+            A_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the mean of fixed effects in that period; if None, A_cts is not sorted or returned
+            S_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; if None, S_cts is not sorted or returned
             pk1 (NumPy Array or None): probability of being at each combination of firm types for movers; if None, pk1 is not sorted or returned
             pk0 (NumPy Array or None): probability of being at each firm type for stayers; if None, pk0 is not sorted or returned
-            NNm (NumPy Array or None): the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
-            NNs (NumPy Array or None): the number of stayers at each firm type (e.g. entry (1) gives the number of stayers at firm type 1)
+            NNm (NumPy Array or None): the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3); if None, NNm is not sorted or returned
+            NNs (NumPy Array or None): the number of stayers at each firm type (e.g. entry (1) gives the number of stayers at firm type 1); if None, NNs is not sorted or returned
             sort_firm_types (bool): if True, also sort by firm type order
             reverse (bool): if True, sort in reverse order
 
@@ -1349,28 +1349,26 @@ class DynamicBLMModel:
 
         return res
 
-    def _normalize(self, A1, A2, A1_cat, A2_cat):
+    def _normalize(self, A, A_cat):
         '''
         Normalize means given categorical controls.
 
         Arguments:
-            A1 (NumPy Array): mean of fixed effects in the first period
-            A2 (NumPy Array): mean of fixed effects in the second period
-            A1_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the first period for categorical control variables
-            A2_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the second period for categorical control variables
+            A (dict of NumPy Arrays): dictionary linking periods to the mean of fixed effects in that period
+            A_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the mean of fixed effects in that period
 
         Returns:
-            (tuple): tuple of normalized parameters (A1, A2, A1_cat, A2_cat)
+            (tuple): tuple of normalized parameters (A, A_cat)
         '''
         # Unpack parameters
         params = self.params
         nl, nk = self.nl, self.nk
         cat_cols, cat_dict = self.cat_cols, self.cat_dict
-        A1, A2, A1_cat, A2_cat = A1.copy(), A2.copy(), A1_cat.copy(), A2_cat.copy()
+        A, A_cat = A.copy(), A_cat.copy()
 
         if len(cat_cols) > 0:
             # Compute minimum firm type
-            min_firm_type = self._min_firm_type(A1, A2)
+            min_firm_type = self._min_firm_type(A)
             # Check if any columns interact with worker type and/or are stationary (tv stands for time-varying, which is equivalent to non-stationary; and wi stands for worker-interaction)
             any_tv_nwi = False
             any_tnv_nwi = False
@@ -1404,15 +1402,20 @@ class DynamicBLMModel:
 
             ## Normalize parameters ##
             if any_tv_wi:
-                for l in range(nl):
-                    # First period
-                    adj_val_1 = A1[l, min_firm_type]
-                    A1[l, :] -= adj_val_1
-                    A1_cat[tv_wi_col][l, :] += adj_val_1
-                    # Second period
-                    adj_val_2 = A2[l, min_firm_type]
-                    A2[l, :] -= adj_val_2
-                    A2_cat[tv_wi_col][l, :] += adj_val_2
+                for period in self.all_periods:
+                    ## Iterate over periods ##
+                    if period[-1] != 'b':
+                        for l in range(nl):
+                            ## Iterate over worker types ##
+                            # Normalize each worker type-period pair
+                            adj_val_tl = A[period][l, min_firm_type]
+                            A[period][l, :] -= adj_val_tl
+                            A_cat[tv_wi_col][period][l, :] += adj_val_tl
+                    else:
+                        # Normalize each worker type-period pair
+                        adj_val_tl = A[period][min_firm_type]
+                        A[period] -= adj_val_tl
+                        A_cat[tv_wi_col][period] += adj_val_tl
             else:
                 primary_period_dict = {
                     'first': 0,
@@ -1425,41 +1428,54 @@ class DynamicBLMModel:
                     'all': range(2)
                 }
                 params_dict = {
-                    0: [A1, A1_cat],
-                    1: [A2, A2_cat]
+                    0: [A['12'], A_cat['12']],
+                    1: [A['43'], A_cat['43']]
                 }
                 Ap = [params_dict[pp] for pp in to_list(primary_period_dict[params['primary_period']])]
                 As = [params_dict[sp] for sp in to_list(secondary_period_dict[params['primary_period']])]
                 if any_tnv_wi:
                     ## Normalize primary period ##
                     for l in range(nl):
+                        ## Iterate over worker types ##
                         # Compute normalization
                         adj_val_1 = Ap[0][0][l, min_firm_type]
                         for Ap_sub in Ap[1:]:
                             adj_val_1 += Ap_sub[0][l, min_firm_type]
                         adj_val_1 /= len(Ap)
-                        # Normalize
-                        A1[l, :] -= adj_val_1
-                        A1_cat[tnv_wi_col][l, :] += adj_val_1
-                        A2[l, :] -= adj_val_1
-                        A2_cat[tnv_wi_col][l, :] += adj_val_1
+
+                        for period in self.all_periods:
+                            ## Iterate over periods ##
+                            # Normalize each worker type-period pair
+                            if period[-1] != 'b':
+                                A[period][l, :] -= adj_val_1
+                                A_cat[tnv_wi_col][period][l, :] += adj_val_1
+                            elif l == 0:
+                                A[period] -= adj_val_1
+                                A_cat[tnv_wi_col][period] += adj_val_1
+
                     if any_tv_nwi:
-                        ## Normalize lowest type pair from secondary period ##
-                        for As_sub in As:
-                            adj_val_2 = As_sub[0][0, min_firm_type]
-                            As_sub[0] -= adj_val_2
-                            As_sub[1][tv_nwi_col] += adj_val_2
+                        ## Normalize lowest type pair from each period ##
+                        for period in self.all_periods:
+                            ## Iterate over periods ##
+                            # Normalize each period
+                            if period[-1] != 'b':
+                                adj_val_t = A[period][0, min_firm_type]
+                            else:
+                                adj_val_t = A[period][min_firm_type]
+                            A[period] -= adj_val_t
+                            A_cat[tv_nwi_col][period] += adj_val_t
                 else:
                     if any_tv_nwi:
-                        ## Normalize lowest type pair in both periods ##
-                        # First period
-                        adj_val_1 = A1[0, min_firm_type]
-                        A1 -= adj_val_1
-                        A1_cat[tv_nwi_col] += adj_val_1
-                        # Second period
-                        adj_val_2 = A2[0, min_firm_type]
-                        A2 -= adj_val_2
-                        A2_cat[tv_nwi_col] += adj_val_2
+                        ## Normalize lowest type pair from each period ##
+                        for period in self.all_periods:
+                            ## Iterate over periods ##
+                            # Normalize each period
+                            if period[-1] != 'b':
+                                adj_val_t = A[period][0, min_firm_type]
+                            else:
+                                adj_val_t = A[period][min_firm_type]
+                            A[period] -= adj_val_t
+                            A_cat[tv_nwi_col][period] += adj_val_t
                     elif any_tnv_nwi:
                         ## Normalize lowest type pair in primary period ##
                         # Compute normalization
@@ -1467,13 +1483,14 @@ class DynamicBLMModel:
                         for Ap_sub in Ap[1:]:
                             adj_val_1 += Ap_sub[0][0, min_firm_type]
                         adj_val_1 /= len(Ap)
-                        # Normalize
-                        A1 -= adj_val_1
-                        A1_cat[tnv_nwi_col] += adj_val_1
-                        A2 -= adj_val_1
-                        A2_cat[tnv_nwi_col] += adj_val_1
 
-        return (A1, A2, A1_cat, A2_cat)
+                        for period in self.all_periods:
+                            ## Iterate over periods ##
+                            # Normalize each period
+                            A[period] -= adj_val_1
+                            A_cat[tnv_nwi_col][period] += adj_val_1
+
+        return (A, A_cat)
 
     def _sum_by_non_nl(self, ni, C_dict, A_cat, S_cat, A_cts, S_cts, compute_A=True, compute_S=True, periods=None):
         '''
@@ -2834,14 +2851,14 @@ class DynamicBLMModel:
             if len(cat_cols) > 0:
                 ## Normalize ##
                 # NOTE: normalize here because constraints don't normalize unless categorical controls are using constraints, and even when used, constraints don't always normalize to exactly 0
-                A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat)
+                A, A_cat = self._normalize(A, A_cat)
 
             ## Sort parameters ##
             A, S, A_cat, S_cat, A_cts, S_cts, pk1, self.pk0 = self._sort_parameters(A, S, A_cat, S_cat, A_cts, S_cts, pk1, self.pk0)
 
             if len(cat_cols) > 0:
                 ## Normalize again ##
-                A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat)
+                A, A_cat = self._normalize(A, A_cat)
 
             # Store parameters
             self.A, self.A_cat, self.A_cts = A, A_cat, A_cts
@@ -3595,7 +3612,7 @@ class DynamicBLMModel:
         if len(cat_cols) > 0:
             ## Normalize ##
             # NOTE: normalize here because constraints don't normalize unless categorical controls are using constraints, and even when used, constraints don't always normalize to exactly 0
-            A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat)
+            A, A_cat = self._normalize(A, A_cat)
 
         # Store parameters
         self.A, self.A_cat, self.A_cts = A, A_cat, A_cts
