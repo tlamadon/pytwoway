@@ -724,6 +724,10 @@ class BLMModel:
         # if self.stationary:
         #     self.A2 = self.A1
 
+        ## NNm and NNs ##
+        self.NNm = None
+        self.NNs = None
+
     def _min_firm_type(self, A1, A2):
         '''
         Find the lowest firm type.
@@ -1928,8 +1932,8 @@ class BLMModel:
             self.A1, self.A2, self.S1, self.S2 = A1, A2, S1, S2
             self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat = A1_cat, A2_cat, S1_cat, S2_cat
             self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts = A1_cts, A2_cts, S1_cts, S2_cts
-            self.pk1, self.lik1 = pk1, lik1
-            self.liks1 = liks1 # np.concatenate([self.liks1, liks1])
+            self.pk1 = pk1
+            self.lik1, self.liks1 = lik1, liks1 # np.concatenate([self.liks1, liks1])
 
             # Update NNm
             if compute_NNm:
@@ -2057,8 +2061,8 @@ class BLMModel:
             # Normalize rows to sum to 1
             pk0 = DxM(1 / np.sum(pk0, axis=1), pk0)
 
-        self.pk0, self.lik0 = pk0, lik0
-        self.liks0 = liks0 # np.concatenate([self.liks0, liks0])
+        self.pk0 = pk0
+        self.lik0, self.liks0 = lik0, liks0 # np.concatenate([self.liks0, liks0])
 
         # Update NNs
         if compute_NNs:
