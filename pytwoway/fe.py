@@ -28,7 +28,8 @@ solver_dict = {
     'qmr': qmr
 }
 from pyamg import ruge_stuben_solver as rss
-from bipartitepandas.util import ParamsDict, to_list, logger_init
+from paramsdict import ParamsDict
+from bipartitepandas.util import to_list, logger_init
 from pytwoway import Q
 from pytwoway import preconditioners as pcd
 from pytwoway.util import weighted_mean, weighted_var, weighted_cov, weighted_quantile, DxSP, SPxD, DxM, MxD, diag_of_sp_prod, diag_of_prod
@@ -45,7 +46,7 @@ def _gteq0(a):
     return a >= 0
 
 # Define default parameter dictionary
-_fe_params_default = ParamsDict({
+fe_params = ParamsDict({
     'weighted': (True, 'type', bool,
         '''
             (default=True) If True, use weighted estimators.
@@ -167,21 +168,6 @@ _fe_params_default = ParamsDict({
             (default=True) If True, print warnings during HE estimation.
         ''', None)
 })
-
-def fe_params(update_dict=None):
-    '''
-    Dictionary of default fe_params. Run tw.fe_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict or None): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of fe_params
-    '''
-    new_dict = _fe_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
 
 class FEEstimator:
     '''

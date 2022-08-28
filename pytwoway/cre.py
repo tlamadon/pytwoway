@@ -9,7 +9,8 @@ import numpy as np
 import pandas as pd
 from scipy.sparse import csc_matrix, coo_matrix, diags, linalg, eye
 from pyamg import ruge_stuben_solver as rss
-from bipartitepandas.util import ParamsDict, logger_init
+from paramsdict import ParamsDict
+from bipartitepandas.util import logger_init
 # import pyreadr
 # import os
 # from multiprocessing import Pool, TimeoutError
@@ -22,7 +23,7 @@ def _gteq1(a):
     return a >= 1
 
 # Define default parameter dictionary
-_cre_params_default = ParamsDict({
+cre_params = ParamsDict({
     'ncore': (1, 'type_constrained', (int, _gteq1),
         '''
             (default=1) Number of cores to use.
@@ -48,21 +49,6 @@ _cre_params_default = ParamsDict({
     #         (default=50) Number of draws to use in approximation of leverages.
     #     ''', '>= 1')
 })
-
-def cre_params(update_dict=None):
-    '''
-    Dictionary of default cre_params. Run tw.cre_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict or None): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of cre_params
-    '''
-    new_dict = _cre_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
 
 def _pipe_qcov(df, e1, e2):
     v1 = df.eval(e1)

@@ -2,8 +2,9 @@
 Class for simulating from the Borovickova-Shimer dgp.
 '''
 import numpy as np
+from paramsdict import ParamsDict
 from bipartitepandas import BipartiteDataFrame, clean_params
-from bipartitepandas.util import ParamsDict, _sort_cols
+from bipartitepandas.util import _sort_cols
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq2(a):
@@ -16,7 +17,7 @@ def _in_minus_1_1(a):
     return -1 <= a <= 1
 
 # Define default parameter dictionaries
-_sim_bs_params_default = ParamsDict({
+sim_bs_params = ParamsDict({
     'n_workers': (1000, 'type_constrained', (int, _gteq1),
         '''
             (default=1000) Number of workers.
@@ -50,21 +51,6 @@ _sim_bs_params_default = ParamsDict({
             (default=0.25) Correlation between lambda_i and mu_j.
         ''', 'in [-1, 1]')
 })
-
-def sim_bs_params(update_dict=None):
-    '''
-    Dictionary of default sim_bs_params. Run tw.sim_bs_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of sim_bs_params
-    '''
-    new_dict = _sim_bs_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
 
 class SimBS:
     '''

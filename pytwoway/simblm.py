@@ -3,8 +3,9 @@ Class for simulating bipartite BLM networks.
 '''
 import numpy as np
 from pandas import DataFrame
+from paramsdict import ParamsDict, ParamsDictBase
 from bipartitepandas import BipartiteDataFrame
-from bipartitepandas.util import ParamsDict, _sort_cols
+from bipartitepandas.util import _sort_cols
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq2(a):
@@ -19,7 +20,7 @@ def _min_gt0(a):
     return np.min(a) > 0
 
 # Define default parameter dictionaries
-_sim_blm_params_default = ParamsDict({
+sim_blm_params = ParamsDict({
     'nl': (6, 'type_constrained', (int, _gteq1),
         '''
             (default=6) Number of worker types.
@@ -32,11 +33,11 @@ _sim_blm_params_default = ParamsDict({
         '''
             (default=10) Average number of stayers per firm.
         ''', '> 0'),
-    'categorical_controls': (None, 'dict_of_type_none', ParamsDict,
+    'categorical_controls': (None, 'dict_of_type_none', ParamsDictBase,
         '''
             (default=None) Dictionary linking column names to instances of tw.sim_categorical_control_params(). Each instance specifies a new categorical control variable. Run tw.sim_categorical_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
-    'continuous_controls': (None, 'dict_of_type_none', ParamsDict,
+    'continuous_controls': (None, 'dict_of_type_none', ParamsDictBase,
         '''
             (default=None) Dictionary linking column names to instances of tw.sim_continuous_control_params(). Each instance specifies a new continuous control variable. Run tw.sim_continuous_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
@@ -118,22 +119,7 @@ _sim_blm_params_default = ParamsDict({
         ''', None)
 })
 
-def sim_blm_params(update_dict=None):
-    '''
-    Dictionary of default sim_blm_params. Run tw.sim_blm_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of sim_blm_params
-    '''
-    new_dict = _sim_blm_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
-
-_sim_categorical_control_params_default = ParamsDict({
+sim_categorical_control_params = ParamsDict({
     'n': (6, 'type_constrained', (int, _gteq2),
         '''
             (default=6) Number of types for the parameter.
@@ -188,22 +174,7 @@ _sim_categorical_control_params_default = ParamsDict({
         ''', None)
 })
 
-def sim_categorical_control_params(update_dict=None):
-    '''
-    Dictionary of default sim_categorical_control_params. Run tw.sim_categorical_control_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of sim_categorical_control_params
-    '''
-    new_dict = _sim_categorical_control_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
-
-_sim_continuous_control_params_default = ParamsDict({
+sim_continuous_control_params = ParamsDict({
     'a1_mu': (1, 'type', (float, int),
         '''
             (default=1) Mean of simulated A1_cts (mean of coefficient in first period).
@@ -253,21 +224,6 @@ _sim_continuous_control_params_default = ParamsDict({
             (default=False) If True, effect can differ by worker type.
         ''', None)
 })
-
-def sim_continuous_control_params(update_dict=None):
-    '''
-    Dictionary of default sim_continuous_control_params. Run tw.sim_continuous_control_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of sim_continuous_control_params
-    '''
-    new_dict = _sim_continuous_control_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
 
 class SimBLM:
     '''

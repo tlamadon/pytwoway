@@ -14,8 +14,9 @@ import pandas as pd
 # from scipy.special import logsumexp
 from scipy.sparse import csc_matrix
 from matplotlib import pyplot as plt
+from paramsdict import ParamsDict, ParamsDictBase
 import bipartitepandas as bpd
-from bipartitepandas.util import ParamsDict, to_list, HiddenPrints # , _is_subtype
+from bipartitepandas.util import to_list, HiddenPrints # , _is_subtype
 import pytwoway as tw
 from pytwoway import constraints as cons
 from pytwoway.util import DxSP, DxM, diag_of_sp_prod, jitter_scatter, logsumexp, lognormpdf, fast_lognormpdf
@@ -33,7 +34,7 @@ def _min_gt0(a):
     return np.min(a) > 0
 
 # Define default parameter dictionaries
-_blm_params_default = ParamsDict({
+blm_params = ParamsDict({
     ## Class parameters ##
     'nl': (6, 'type_constrained', (int, _gteq1),
         '''
@@ -43,11 +44,11 @@ _blm_params_default = ParamsDict({
         '''
             (default=None) Number of firm types. None will raise an error when running the estimator.
         ''', '>= 1'),
-    'categorical_controls': (None, 'dict_of_type_none', ParamsDict,
+    'categorical_controls': (None, 'dict_of_type_none', ParamsDictBase,
         '''
             (default=None) Dictionary linking column names to instances of tw.categorical_control_params(). Each instance specifies a new categorical control variable and how its starting values should be generated. Run tw.categorical_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
-    'continuous_controls': (None, 'dict_of_type_none', ParamsDict,
+    'continuous_controls': (None, 'dict_of_type_none', ParamsDictBase,
         '''
             (default=None) Dictionary linking column names to instances of tw.continuous_control_params(). Each instance specifies a new continuous control variable and how its starting values should be generated. Run tw.continuous_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
@@ -197,22 +198,7 @@ _blm_params_default = ParamsDict({
         ''', '>= 1')
 })
 
-def blm_params(update_dict=None):
-    '''
-    Dictionary of default blm_params. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict or None): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of blm_params
-    '''
-    new_dict = _blm_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
-
-_categorical_control_params_default = ParamsDict({
+categorical_control_params = ParamsDict({
     'n': (None, 'type_constrained_none', (int, _gteq2),
         '''
             (default=6) Number of types for the parameter. None will raise an error when running the estimator.
@@ -263,22 +249,7 @@ _categorical_control_params_default = ParamsDict({
         ''', None)
 })
 
-def categorical_control_params(update_dict=None):
-    '''
-    Dictionary of default categorical_control_params. Run tw.categorical_control_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict or None): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of categorical_control_params
-    '''
-    new_dict = _categorical_control_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
-
-_continuous_control_params_default = ParamsDict({
+continuous_control_params = ParamsDict({
     'a1_mu': (1, 'type', (float, int),
         '''
             (default=1) Mean of starting values for A1_cts (mean of coefficient in first period).
@@ -324,21 +295,6 @@ _continuous_control_params_default = ParamsDict({
             (default=None) Constraint object or list of constraint objects that define constraints on S1 and S2. None is equivalent to [].
         ''', None)
 })
-
-def continuous_control_params(update_dict=None):
-    '''
-    Dictionary of default continuous_control_params. Run tw.continuous_control_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict or None): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of continuous_control_params
-    '''
-    new_dict = _continuous_control_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
 
 def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, reallocate_jointly=True, reallocate_period='first', wj=None, ws=None, rng=None):
     '''

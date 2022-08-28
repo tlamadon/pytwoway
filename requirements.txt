@@ -1,7 +1,8 @@
 numpy
 pandas
 numba
-bipartitepandas >= 1.0.35
+paramsdict >= 0.03
+bipartitepandas >= 1.0.37
 scipy
 statsmodels
 pyamg

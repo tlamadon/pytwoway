@@ -15,8 +15,9 @@ import pandas as pd
 from scipy.sparse import csc_matrix, lil_matrix, hstack, vstack
 from scipy.optimize import minimize as opt
 from matplotlib import pyplot as plt
+from paramsdict import ParamsDict, ParamsDictBase
 import bipartitepandas as bpd
-from bipartitepandas.util import ParamsDict, to_list, HiddenPrints # , _is_subtype
+from bipartitepandas.util import to_list, HiddenPrints # , _is_subtype
 import pytwoway as tw
 from pytwoway import constraints as cons
 from pytwoway.util import DxSP, DxM, diag_of_sp_prod, jitter_scatter, logsumexp, lognormpdf, fast_lognormpdf
@@ -34,7 +35,7 @@ def _min_gt0(a):
     return np.min(a) > 0
 
 # Define default parameter dictionaries
-_blm_dynamic_params_default = ParamsDict({
+blm_dynamic_params = ParamsDict({
     ## Class parameters ##
     'nl': (6, 'type_constrained', (int, _gteq1),
         '''
@@ -52,11 +53,11 @@ _blm_dynamic_params_default = ParamsDict({
         '''
             (default=True) If True, estimate model with state dependence (i.e. the firm type before a move can affect earnings after the move).
         ''', None),
-    'categorical_controls': (None, 'dict_of_type_none', ParamsDict,
+    'categorical_controls': (None, 'dict_of_type_none', ParamsDictBase,
         '''
             (default=None) Dictionary linking column names to instances of tw.categorical_control_dynamic_params(). Each instance specifies a new categorical control variable and how its starting values should be generated. Run tw.categorical_control_dynamic_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
-    'continuous_controls': (None, 'dict_of_type_none', ParamsDict,
+    'continuous_controls': (None, 'dict_of_type_none', ParamsDictBase,
         '''
             (default=None) Dictionary linking column names to instances of tw.continuous_control_dynamic_params(). Each instance specifies a new continuous control variable and how its starting values should be generated. Run tw.continuous_control_dynamic_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
@@ -334,22 +335,7 @@ _blm_dynamic_params_default = ParamsDict({
         ''', '>= 1')
 })
 
-def blm_dynamic_params(update_dict=None):
-    '''
-    Dictionary of default blm_dynamic_params. Run tw.blm_dynamic_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict or None): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of blm_params
-    '''
-    new_dict = _blm_dynamic_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
-
-_categorical_control_dynamic_params_default = ParamsDict({
+categorical_control_dynamic_params = ParamsDict({
     'n': (None, 'type_constrained_none', (int, _gteq2),
         '''
             (default=6) Number of types for the parameter. None will raise an error when running the estimator.
@@ -496,22 +482,7 @@ _categorical_control_dynamic_params_default = ParamsDict({
         ''', None)
 })
 
-def categorical_control_dynamic_params(update_dict=None):
-    '''
-    Dictionary of default categorical_control_dynamic_params. Run tw.categorical_control_dynamic_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict or None): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of categorical_control_dynamic_params
-    '''
-    new_dict = _categorical_control_dynamic_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
-
-_continuous_control_dynamic_params_default = ParamsDict({
+continuous_control_dynamic_params = ParamsDict({
     'a12_mu': (1, 'type', (float, int),
         '''
             (default=1) Mean of starting values for A12_cts (mean of fixed effects).
@@ -645,21 +616,6 @@ _continuous_control_dynamic_params_default = ParamsDict({
             (default=None) Constraint object or list of constraint objects that define constraints on S12_cts/S43_cts/S2m_cts/S2s_cts/S3m_cts/S3s_cts. None is equivalent to [].
         ''', None)
 })
-
-def continuous_control_dynamic_params(update_dict=None):
-    '''
-    Dictionary of default continuous_control_dynamic_params. Run tw.continuous_control_dynamic_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict or None): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of continuous_control_dynamic_params
-    '''
-    new_dict = _continuous_control_dynamic_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
 
 def _var_stayers(sdata, rho_1, rho_4, rho_t, weights=None, diff=False):
     '''

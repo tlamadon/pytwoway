@@ -7,8 +7,9 @@ from scipy.sparse import csc_matrix, eye, hstack, tril
 from scipy.sparse.linalg import eigs, inv
 from qpsolvers import solve_qp
 from pyamg import ruge_stuben_solver as rss
+from paramsdict import ParamsDict
 import bipartitepandas as bpd
-from bipartitepandas.util import ParamsDict, ChainedAssignment
+from bipartitepandas.util import ChainedAssignment
 from pytwoway.util import weighted_mean, DxSP, SPxD, diag_of_sp_prod
 
 # NOTE: multiprocessing isn't compatible with lambda functions
@@ -18,7 +19,7 @@ def _gteq0(a):
 #     return a >= 1
 
 # Define default parameter dictionary
-_iblm_params_default = ParamsDict({
+iblm_params = ParamsDict({
     ## All ##
     'estimator': ('linear', 'set', ['linear', 'fixed_point'],
         '''
@@ -91,21 +92,6 @@ _iblm_params_default = ParamsDict({
     #         (default=1e-5) (For fixed-point estimator) Threshold maximum absolute percent change between iterations to break fixed-point iterations (used when `alternative_estimator`=True).
     #     ''', '>= 0')
 })
-
-def iblm_params(update_dict=None):
-    '''
-    Dictionary of default iblm_params. Run tw.iblm_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict or None): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of iblm_params
-    '''
-    new_dict = _iblm_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
 
 class InteractedBLMEstimator():
     '''

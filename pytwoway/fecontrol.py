@@ -29,7 +29,8 @@ solver_dict = {
 }
 from pyamg import ruge_stuben_solver as rss
 # from qpsolvers import solve_qp
-from bipartitepandas.util import ParamsDict, to_list, logger_init
+from paramsdict import ParamsDict
+from bipartitepandas.util import to_list, logger_init
 from pytwoway import Q
 from pytwoway import preconditioners as pcd
 from pytwoway.util import weighted_mean, weighted_var, weighted_cov, weighted_quantile, DxSP, SPxD, diag_of_sp_prod, diag_of_prod
@@ -46,7 +47,7 @@ def _gteq0(a):
     return a >= 0
 
 # Define default parameter dictionary
-_fecontrol_params_default = ParamsDict({
+fecontrol_params = ParamsDict({
     'categorical_controls': (None, 'list_of_type_none', (str, float, int, tuple),
         '''
             (default=None) List of columns to use as categorical controls. None is equivalent to [].
@@ -71,9 +72,9 @@ _fecontrol_params_default = ParamsDict({
         '''
             (default=False) If True, attach the estimated psi_hat and alpha_hat as columns to the input dataframe; if 'all', attach all estimated parameters as columns to the input dataframe.
         ''', None),
-    'ho': (True, 'type', bool,
+    'ho': ('agsu', 'set', ('', 'agsu', 'boot', 'all'),
         '''
-            (default=True) If True, estimate homoskedastic correction.
+            (default='agsu') If 'agsu', estimate homoskedastic correction using method from Andrews et al. (2008). If 'boot' estimate correction using method from Azkarate-Askasua and Zerecero (2020). If 'all', estimate both corrections. If '', do not estimate homoskedastic correction.
         ''', None),
     'he': (False, 'type', bool,
         '''
@@ -184,21 +185,6 @@ _fecontrol_params_default = ParamsDict({
             (default=True) If True, print warnings during HE estimation.
         ''', None)
 })
-
-def fecontrol_params(update_dict=None):
-    '''
-    Dictionary of default fecontrol_params. Run tw.fecontrol_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict or None): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of fecontrol_params
-    '''
-    new_dict = _fecontrol_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
 
 class FEControlEstimator:
     '''
