@@ -2354,7 +2354,7 @@ class BLMEstimator:
 
     def fit(self, jdata, sdata, n_init=20, n_best=5, ncore=1, rng=None):
         '''
-        EM model for movers and stayers.
+        Estimate BLM using multiple sets of starting values.
 
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers

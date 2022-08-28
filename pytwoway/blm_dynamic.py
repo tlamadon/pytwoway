@@ -3873,12 +3873,12 @@ class DynamicBLMModel:
         ax.set_title('Proportions of worker types')
         plt.show()
 
-class BLMEstimator:
+class DynamicBLMEstimator:
     '''
-    Class for estimating BLM using multiple sets of starting values.
+    Class for estimating dynamic BLM using multiple sets of starting values.
 
     Arguments:
-        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
+        params (ParamsDict): dictionary of parameters for dynamic BLM estimation. Run tw.blm_dynamic_params().describe_all() for descriptions of all valid parameters.
     '''
 
     def __init__(self, params):
@@ -3905,13 +3905,13 @@ class BLMEstimator:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        model = BLMModel(self.params, rng)
+        model = DynamicBLMModel(self.params, rng)
         model.fit_movers_cstr_uncstr(jdata)
         return model
 
     def fit(self, jdata, sdata, n_init=20, n_best=5, ncore=1, rng=None):
         '''
-        EM model for movers and stayers.
+        Estimate dynamic BLM using multiple sets of starting values.
 
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
@@ -4031,12 +4031,12 @@ class BLMEstimator:
         else:
             warnings.warn('Estimation has not yet been run.')
 
-class BLMBootstrap:
+class DynamicBLMBootstrap:
     '''
-    Class for estimating BLM using bootstrapping.
+    Class for estimating dynamic BLM using bootstrapping.
 
     Arguments:
-        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
+        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_dynamic_params().describe_all() for descriptions of all valid parameters.
     '''
 
     def __init__(self, params):
@@ -4092,7 +4092,7 @@ class BLMBootstrap:
 
             if blm_model is None:
                 # Run initial BLM estimator
-                blm_fit_init = BLMEstimator(self.params)
+                blm_fit_init = DynamicBLMEstimator(self.params)
                 blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
                 blm_model = blm_fit_init.model
 
@@ -4114,8 +4114,8 @@ class BLMBootstrap:
                     jdata.loc[:, 'g2'] = jdata.loc[:, 'j2'].map(clusters_dict)
                     sdata.loc[:, 'g1'] = sdata.loc[:, 'j1'].map(clusters_dict)
                     sdata.loc[:, 'g2'] = sdata.loc[:, 'g1']
-                # Run BLM estimator
-                blm_fit_i = BLMEstimator(self.params)
+                # Run dynamic BLM estimator
+                blm_fit_i = DynamicBLMEstimator(self.params)
                 blm_fit_i.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
                 models.append(blm_fit_i.model)
                 del blm_fit_i
@@ -4147,8 +4147,8 @@ class BLMBootstrap:
                 jdata_i.loc[:, 'g2'] = jdata_i.loc[:, 'j2'].map(clusters_dict)
                 sdata_i.loc[:, 'g1'] = sdata_i.loc[:, 'j1'].map(clusters_dict)
                 sdata_i.loc[:, 'g2'] = sdata_i.loc[:, 'g1']
-                # Run BLM estimator
-                blm_fit_i = BLMEstimator(self.params)
+                # Run dynamic BLM estimator
+                blm_fit_i = DynamicBLMEstimator(self.params)
                 blm_fit_i.fit(jdata=jdata_i, sdata=sdata_i, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
                 models.append(blm_fit_i.model)
                 del jdata_i, sdata_i, blm_fit_i
@@ -4276,9 +4276,9 @@ class BLMBootstrap:
             ax.set_title('Proportions of worker types')
             plt.show()
 
-class BLMVarianceDecomposition:
+class DynamicBLMVarianceDecomposition:
     '''
-    Class for estimating BLM variance decomposition using bootstrapping.
+    Class for estimating dynamic BLM variance decomposition using bootstrapping.
 
     Arguments:
         params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
@@ -4366,7 +4366,7 @@ class BLMVarianceDecomposition:
 
         if blm_model is None:
             # Run initial BLM estimator
-            blm_fit_init = BLMEstimator(self.params)
+            blm_fit_init = DynamicBLMEstimator(self.params)
             blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
             blm_model = blm_fit_init.model
 
