@@ -2267,7 +2267,18 @@ class BLMModel:
             dpi (float or None): dpi for plot
         '''
         nl, nk = self.nl, self.nk
-        A1, A2, pk1, pk0, NNm, NNs = self._sort_parameters(self.A1, self.A2, pk1=self.pk1, pk0=self.pk0, NNm=self.NNm, NNs=self.NNs, sort_firm_types=True)
+        if subset == 'movers':
+            if pk1 is None:
+                raise ValueError('The dynamic BLM estimation must be run on movers before plotting type proportions for movers.')
+            A1, A2, pk1, NNm = self._sort_parameters(self.A1, self.A2, pk1=self.pk1, NNm=self.NNm, sort_firm_types=True)
+        elif subset == 'stayers':
+            if pk0 is None:
+                raise ValueError('The dynamic BLM estimation must be run on stayers before plotting type proportions for stayers.')
+            A1, A2, pk0, NNs = self._sort_parameters(self.A1, self.A2, pk0=self.pk0, NNs=self.NNs, sort_firm_types=True)
+        elif subset == 'all':
+            if (pk1 is None) or (pk0 is None):
+                raise ValueError('The dynamic BLM estimation must be run on both movers and stayers before plotting type proportions for all.')
+            A1, A2, pk1, pk0, NNm, NNs = self._sort_parameters(self.A1, self.A2, pk1=self.pk1, pk0=self.pk0, NNm=self.NNm, NNs=self.NNs, sort_firm_types=True)
 
         ## Extract subset(s) ##
         if subset == 'movers':
