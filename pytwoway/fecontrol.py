@@ -819,10 +819,9 @@ class FEControlEstimator:
 
                 ## SE[col] ##
                 if self.weighted:
-                    # NOTE: must use unweighted sigma^2 for numerator (weighting will make the estimator biased)
+                    # NOTE: must use unweighted sigma^2 (weighting will make the estimator biased)
                     sigma_2_unweighted = np.mean(self.E ** 2)
-                    self.se_res[f'se({col})_std'] = np.sqrt(sigma_2_unweighted) * (self.A @ self._mult_AAinv(v))[col_idx]
-
+                    self.se_res[f'se({col})_std'] = np.sqrt(sigma_2_unweighted * np.sum((self.A @ self._mult_AAinv(v)) ** 2))
                 else:
                     self.se_res[f'se({col})_std'] = np.sqrt(self.sigma_2_fe * self._mult_AAinv(v)[col_idx])
         else:
