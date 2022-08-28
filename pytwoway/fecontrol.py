@@ -93,7 +93,7 @@ _fecontrol_params_default = ParamsDict({
         ''', None),
     'se_clusters': (None, 'list_of_type_none', (str, float, int, tuple),
         '''
-            (default=None) List of categorical variables to use as clusters when estimating clustered standard errors. If specified as [], will estimate the standard SE estimate sigma^2 (A'A)^{-1}. None is equivalent to ['psi', 'alpha']. Results are stored in the class attribute dictionary .se_res, which links column names to estimated standard errors.
+            (default=None) List of categorical variables to use as clusters when estimating clustered standard errors. If specified as [], will estimate the standard SE estimate sigma^2 (A'A)^{-1}. None is equivalent to ['i', 'j']. Results are stored in the class attribute dictionary .se_res, which links column names to estimated standard errors.
         ''', None),
     'Sii_stayers': ('firm_mean', 'set', ['firm_mean', 'upper_bound'],
         '''
@@ -800,7 +800,13 @@ class FEControlEstimator:
             # Default clusters
             clusters = ['psi', 'alpha']
         else:
-            clusters = to_list(clusters)
+            clusters = to_list(clusters).copy()
+            for i, cluster in enumerate(clusters):
+                # Replace 'i' and 'j' with 'alpha' and 'psi', respectively
+                if cluster == 'i':
+                    clusters[i] = 'alpha'
+                elif cluster == 'j':
+                    clusters[i] = 'psi'
 
         if len(clusters) == 0:
             ## Standard SE: sigma^2 * (A'A)^{-1} ##
@@ -812,9 +818,15 @@ class FEControlEstimator:
                 v[col_idx] = 1
 
                 ## SE[col] ##
-                self.se_res[f'se({col})_std'] = np.sqrt(self.sigma_2_fe * self._mult_AAinv(v)[col_idx])
+                if self.weighted:
+                    # NOTE: must use unweighted sigma^2 for numerator (weighting will make the estimator biased)
+                    sigma_2_unweighted = np.mean(self.E ** 2)
+                    self.se_res[f'se({col})_std'] = np.sqrt(sigma_2_unweighted) * (self.A @ self._mult_AAinv(v))[col_idx]
+
+                else:
+                    self.se_res[f'se({col})_std'] = np.sqrt(self.sigma_2_fe * self._mult_AAinv(v)[col_idx])
         else:
-            ### Clustered SE: (A'A)^{-1} @ A' @ diag(eps) @ S @ diag(eps) @ A' @ (A'A)^{-1} ###
+            ### Clustered SE: (A'DpA)^{-1} @ A' @ diag(eps) @ S @ diag(eps) @ A @ (A'DpA)^{-1} ###
             ## Construct S ##
             idx_start, idx_end = cov_indices[clusters[0]]
             S_indices = np.arange(idx_start, idx_end)
@@ -1011,7 +1023,7 @@ class FEControlEstimator:
         Estimate sigma^2 (variance of residuals) for HO-corrected model.
         '''
         if self.weighted:
-            # Must use unweighted sigma^2 for numerator (weighting will make the estimator biased)
+            # NOTE: ust use unweighted sigma^2 for numerator (weighting will make the estimator biased)
             sigma_2_unweighted = np.mean(self.E ** 2)
             trace_approximation = np.mean(self.tr_sigma_ho_all)
             self.sigma_2_ho = (self.nn * sigma_2_unweighted) / (np.sum(1 / self.Dp) - trace_approximation)

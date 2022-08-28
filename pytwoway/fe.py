@@ -797,7 +797,7 @@ class FEEstimator:
         Estimate sigma^2 (variance of residuals) for HO-corrected model.
         '''
         if self.weighted:
-            # Must use unweighted sigma^2 for numerator (weighting will make the estimator biased)
+            # NOTE: must use unweighted sigma^2 for numerator (weighting will make the estimator biased)
             sigma_2_unweighted = np.mean(self.E ** 2)
             trace_approximation = np.mean(self.tr_sigma_ho_all)
             self.sigma_2_ho = (self.nn * sigma_2_unweighted) / (np.sum(1 / self.Dp) - trace_approximation)
