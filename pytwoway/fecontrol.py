@@ -72,10 +72,14 @@ fecontrol_params = ParamsDict({
         '''
             (default=False) If True, attach the estimated psi_hat and alpha_hat as columns to the input dataframe; if 'all', attach all estimated parameters as columns to the input dataframe.
         ''', None),
-    'ho': ('agsu', 'set', ('', 'agsu', 'boot', 'all'),
+    'ho': (True, 'type', bool,
         '''
-            (default='agsu') If 'agsu', estimate homoskedastic correction using method from Andrews et al. (2008). If 'boot' estimate correction using method from Azkarate-Askasua and Zerecero (2020). If 'all', estimate both corrections. If '', do not estimate homoskedastic correction.
+            (default=True) If True, estimate homoskedastic correction.
         ''', None),
+    # 'ho': ('agsu', 'set', ('', 'agsu', 'boot', 'all'),
+    #     '''
+    #         (default='agsu') If 'agsu', estimate homoskedastic correction using method from Andrews et al. (2008). If 'boot' estimate correction using method from Azkarate-Askasua and Zerecero (2020). If 'all', estimate both corrections. If '', do not estimate homoskedastic correction.
+    #     ''', None),
     'he': (False, 'type', bool,
         '''
             (default=False) If True, estimate heteroskedastic correction.
