@@ -803,23 +803,32 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
         sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
         gj (NumPy Array): mover firm types for both periods
         gs (NumPy Array): stayer firm types for the first period
-        blm_model (BLMModel): BLM model with estimated parameters
+        blm_model (DynamicBLMModel): dynamic BLM model with estimated parameters
         reallocate (bool): if True, draw worker type proportions independently of firm type; if False, uses worker type proportions that are conditional on firm type
         reallocate_jointly (bool): if True, worker type proportions take the average over movers and stayers (i.e. all workers use the same type proportions); if False, consider movers and stayers separately
         reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
-        wj (NumPy Array or None): mover weights for both periods; if None, don't weight
-        ws (NumPy Array or None): stayer weights for the first period; if None, don't weight
+        wj (NumPy Array or None): mover weights for all periods; if None, don't weight
+        ws (NumPy Array or None): stayer weights for all periods; if None, don't weight
         rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
     Returns:
-        (tuple of NumPy Arrays): (yj --> tuple of wages for movers, where first element in first period wages and second element is second period wages; ys --> wages for stayers; Lm --> vector of mover types; Ls --> vector of stayer types)
+        (tuple of NumPy Arrays): (yj --> tuple of wages for movers, where element gives that period's wages; ys --> tuple of wages for movers, where element gives that period's wages; Lm --> vector of mover types; Ls --> vector of stayer types)
     '''
     if rng is None:
         rng = np.random.default_rng(None)
 
     nl, nk, nmi, nsi = blm_model.nl, blm_model.nk, len(jdata), len(sdata)
-    A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0 = blm_model.A1, blm_model.A2, blm_model.S1, blm_model.S2, blm_model.A1_cat, blm_model.A2_cat, blm_model.S1_cat, blm_model.S2_cat, blm_model.A1_cts, blm_model.A2_cts, blm_model.S1_cts, blm_model.S2_cts, blm_model.pk1, blm_model.pk0
+    A, A_cat, A_cts = blm_model.A, blm_model.A_cat, blm_model.A_cts
+    S, S_cat, S_cts = blm_model.S, blm_model.S_cat, blm_model.S_cts
+    R12, R43, R32m, R32s = blm_model.R12, blm_model.R43, blm_model.R32m, blm_model.R32s
+    pk1, pk0 = blm_model.pk1, blm_model.pk0
     controls_dict, cat_cols, cts_cols = blm_model.controls_dict, blm_model.cat_cols, blm_model.cts_cols
+    periods_movers = ['12', '43', '2ma', '3ma', '2mb', '3mb']
+    periods_stayers = ['12', '43', '2ma', '3ma', '2s', '3s']
+    first_periods = ['12', '2ma', '3mb', '2s']
+    second_periods = ['43', '2mb', '3ma', '3s']
+    periods_movers_dict = {period: 0 if period in first_periods else 1 for period in periods_movers}
+    periods_stayers_dict = {period: 0 if period in first_periods else 1 for period in periods_stayers}
 
     # Correct datatype for gj and gs
     gj = gj.astype(int, copy=False)
@@ -827,9 +836,9 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
 
     # Unpack weights
     if wj is None:
-        wj = np.array([[1, 1]])
+        wj = np.array([[1, 1, 1, 1]])
     if ws is None:
-        ws = 1
+        ws = np.array([[1, 1, 1, 1]])
 
     # Worker types
     worker_types = np.arange(nl)
@@ -905,67 +914,87 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
             # Draw worker types
             Lm[rows_kk] = rng.choice(worker_types, size=ni, replace=True, p=pk1[jj, :])
 
-    A1_sum = A1[Lm, gj[:, 0]]
-    A2_sum = A2[Lm, gj[:, 1]]
-    S1_sum = S1[Lm, gj[:, 0]]
-    S2_sum = S2[Lm, gj[:, 1]]
+    A_sum = {period:
+                A[period][Lm, gj[:, periods_movers_dict[period]]]
+                    if period[-1] != 'b' else
+                A[period][gj[:, periods_movers_dict[period]]]
+            for period in periods_movers}
+    S_sum_sq = {period:
+                    S[period][Lm, gj[:, periods_movers_dict[period]]] ** 2
+                for period in periods_movers}
 
     if len(controls_dict) > 0:
         #### Simulate control variable wages ####
-        S1_sum_sq = S1_sum ** 2
-        S2_sum_sq = S2_sum ** 2
         for i, col in enumerate(cat_cols + cts_cols):
             # Get subcolumns associated with col
             subcols = to_list(jdata.col_reference_dict[col])
             n_subcols = len(subcols)
             if n_subcols == 1:
                 # If column is constant over time
-                subcol_1 = subcols[0]
-                subcol_2 = subcols[0]
-            elif n_subcols == 2:
+                subcols = [subcols[0], subcols[0]]
+            elif n_subcols == 4:
                 # If column can change over time
-                subcol_1 = subcols[0]
-                subcol_2 = subcols[1]
+                subcols = [subcols[0], subcols[3]]
             else:
-                raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
+                raise NotImplementedError(f'Column names must have either one or four associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
             if i < len(cat_cols):
                 ### Categorical ###
                 if controls_dict[col]['worker_type_interaction']:
                     ## Worker-interaction ##
-                    A1_sum += A1_cat[col][Lm, jdata.loc[:, subcol_1]]
-                    A2_sum += A2_cat[col][Lm, jdata.loc[:, subcol_2]]
-                    S1_sum_sq += S1_cat[col][Lm, jdata.loc[:, subcol_1]] ** 2
-                    S2_sum_sq += S2_cat[col][Lm, jdata.loc[:, subcol_2]] ** 2
+                    for period in periods_movers:
+                        subcol = periods_movers_dict[period]
+                        if period[-1] != 'b':
+                            A_sum[period] += A_cat[col][period][Lm, jdata.loc[:, subcol]]
+                            S_sum_sq[period] += S_cat[col][period][Lm, jdata.loc[:, subcol]] ** 2
+                        else:
+                            A_sum[period] += A_cat[col][period][jdata.loc[:, subcol]]
+                            S_sum_sq[period] += S_cat[col][period][jdata.loc[:, subcol]] ** 2
                 else:
                     ## Non-worker-interaction ##
-                    A1_sum += A1_cat[col][jdata.loc[:, subcol_1]]
-                    A2_sum += A2_cat[col][jdata.loc[:, subcol_2]]
-                    S1_sum_sq += S1_cat[col][jdata.loc[:, subcol_1]] ** 2
-                    S2_sum_sq += S2_cat[col][jdata.loc[:, subcol_2]] ** 2
+                    for period in periods_movers:
+                        subcol = periods_movers_dict[period]
+                        A_sum[period] += A_cat[col][period][jdata.loc[:, subcol]]
+                        S_sum_sq[period] += S_cat[col][period][jdata.loc[:, subcol]] ** 2
             else:
                 ### Continuous ###
                 if controls_dict[col]['worker_type_interaction']:
                     ## Worker-interaction ##
-                    A1_sum += A1_cts[col][Lm] * jdata.loc[:, subcol_1]
-                    A2_sum += A2_cts[col][Lm] * jdata.loc[:, subcol_2]
-                    S1_sum_sq += S1_cts[col][Lm] ** 2
-                    S2_sum_sq += S2_cts[col][Lm] ** 2
+                    for period in periods_movers:
+                        subcol = periods_movers_dict[period]
+                        if period[-1] != 'b':
+                            A_sum[period] += A_cts[col][period][Lm] * jdata.loc[:, subcol]
+                            S_sum_sq[period] += S_cts[col][period][Lm] ** 2
+                        else:
+                            A_sum[period] += A_cts[col][period] * jdata.loc[:, subcol]
+                            S_sum_sq[period] += S_cts[col][period] ** 2
                 else:
                     ## Non-worker-interaction ##
-                    A1_sum += A1_cts[col] * jdata.loc[:, subcol_1]
-                    A2_sum += A2_cts[col] * jdata.loc[:, subcol_2]
-                    S1_sum_sq += S1_cts[col] ** 2
-                    S2_sum_sq += S2_cts[col] ** 2
+                    for period in periods_movers:
+                        subcol = periods_movers_dict[period]
+                        A_sum[period] += A_cts[col][period] * jdata.loc[:, subcol]
+                        S_sum_sq[period] += S_cts[col][period] ** 2
 
-        Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq) / wj[:, 0], size=nmi)
-        Y2 = rng.normal(loc=A2_sum, scale=np.sqrt(S2_sum_sq) / wj[:, 1], size=nmi)
-        del S1_sum_sq, S2_sum_sq
-    else:
-        #### No control variables ####
-        Y1 = rng.normal(loc=A1_sum, scale=S1_sum / wj[:, 0], size=nmi)
-        Y2 = rng.normal(loc=A2_sum, scale=S2_sum / wj[:, 1], size=nmi)
-    yj = (Y1, Y2)
-    del A1_sum, A2_sum, S1_sum, S2_sum, Y1, Y2
+    Y1 = rng.normal( \
+        loc=A_sum['12'] - R12 * A_sum['2ma'], \
+        scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']) / wj[:, 0], \
+        size=nmi)
+    Y2 = rng.normal( \
+        loc=A_sum['2ma'] + A_sum['2mb'], \
+        scale=np.sqrt(S_sum_sq['2ma'] + S_sum_sq['2mb']) / wj[:, 1], \
+        size=nmi)
+    Y1 += R12 * Y2
+    Y3 = rng.normal( \
+        loc=A_sum['3ma'] + A_sum['3mb'] - R32m * (A_sum['2ma'] + A_sum['2mb']), \
+        scale=np.sqrt(S_sum_sq['3ma'] + S_sum_sq['3mb'] + (R32m ** 2) * (S_sum_sq['2ma'] + S_sum_sq['2mb'])) / wj[:, 2], \
+        size=nmi)
+    Y3 += R32m * Y2
+    Y4 = rng.normal( \
+        loc=A_sum['43'] - R43 * A_sum['3ma'], \
+        scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']) / wj[:, 3], \
+        size=nmi)
+    Y4 += R43 * Y3
+    yj = (Y1, Y2, Y3, Y4)
+    del A_sum, S_sum_sq, Y1, Y2, Y3, Y4
 
     ## Stayers ##
     Ls = np.zeros(shape=len(sdata), dtype=int)
@@ -978,41 +1007,78 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
         # Draw worker types
         Ls[rows_k] = rng.choice(worker_types, size=ni, replace=True, p=pk0[k, :])
 
-    A1_sum = A1[Ls, gs]
-    S1_sum = S1[Ls, gs]
+    A_sum = {period:
+                A[period][Ls, gs]
+                    if period[-1] != 'b' else
+                A[period][gs]
+            for period in periods_stayers}
+    S_sum_sq = {period:
+                    S[period][Ls, gs] ** 2
+                for period in periods_stayers}
 
     if len(controls_dict) > 0:
         #### Simulate control variable wages ####
-        S1_sum_sq = S1_sum ** 2
         for i, col in enumerate(cat_cols + cts_cols):
             # Get subcolumns associated with col
-            subcol_1 = to_list(sdata.col_reference_dict[col])[0]
+            subcols = to_list(jdata.col_reference_dict[col])
+            n_subcols = len(subcols)
+            if n_subcols == 1:
+                # If column is constant over time
+                subcols = [subcols[0], subcols[0]]
+            elif n_subcols == 4:
+                # If column can change over time
+                subcols = [subcols[0], subcols[3]]
+            else:
+                raise NotImplementedError(f'Column names must have either one or four associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
             if i < len(cat_cols):
                 ### Categorical ###
                 if controls_dict[col]['worker_type_interaction']:
                     ## Worker-interaction ##
-                    A1_sum += A1_cat[col][Ls, sdata.loc[:, subcol_1]]
-                    S1_sum_sq += S1_cat[col][Ls, sdata.loc[:, subcol_1]] ** 2
+                    for period in periods_stayers:
+                        subcol = periods_stayers_dict[period]
+                        A_sum[period] += A_cat[col][period][Ls, sdata.loc[:, subcol]]
+                        S_sum_sq[period] += S_cat[col][period][Ls, sdata.loc[:, subcol]] ** 2
                 else:
                     ## Non-worker-interaction ##
-                    A1_sum += A1_cat[col][sdata.loc[:, subcol_1]]
-                    S1_sum_sq += S1_cat[col][sdata.loc[:, subcol_1]] ** 2
+                    for period in periods_stayers:
+                        subcol = periods_stayers_dict[period]
+                        A_sum[period] += A_cat[col][period][sdata.loc[:, subcol]]
+                        S_sum_sq[period] += S_cat[col][period][sdata.loc[:, subcol]] ** 2
             else:
                 ### Continuous ###
                 if controls_dict[col]['worker_type_interaction']:
                     ## Worker-interaction ##
-                    A1_sum += A1_cts[col][Ls] * sdata.loc[:, subcol_1]
-                    S1_sum_sq += S1_cts[col][Ls] ** 2
+                    for period in periods_stayers:
+                        subcol = periods_stayers_dict[period]
+                        A_sum[period] += A_cts[col][period][Ls] * sdata.loc[:, subcol]
+                        S_sum_sq[period] += S_cts[col][period][Ls] ** 2
                 else:
                     ## Non-worker-interaction ##
-                    A1_sum += A1_cts[col] * sdata.loc[:, subcol_1]
-                    S1_sum_sq += S1_cts[col] ** 2
+                    for period in periods_stayers:
+                        subcol = periods_stayers_dict[period]
+                        A_sum[period] += A_cts[col][period] * sdata.loc[:, subcol]
+                        S_sum_sq[period] += S_cts[col][period] ** 2
 
-        Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq) / ws, size=nsi)
-    else:
-        #### No control variables ####
-        Y1 = rng.normal(loc=A1_sum, scale=S1_sum / ws, size=nsi)
-    ys = Y1
+    Y1 = rng.normal( \
+        loc=A_sum['12'] - R12 * A_sum['2ma'], \
+        scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']) / ws[:, 0], \
+        size=nsi)
+    Y2 = rng.normal( \
+        loc=A_sum['2s'], \
+        scale=np.sqrt(S_sum_sq['2s']) / ws[:, 1], \
+        size=nsi)
+    Y1 += R12 * Y2
+    Y3 = rng.normal( \
+        loc=A_sum['3s'] - R32s * A_sum['2s'], \
+        scale=np.sqrt(S_sum_sq['3s'] + (R32s ** 2) * S_sum_sq['2s']) / ws[:, 2], \
+        size=nsi)
+    Y3 += R32s * Y2
+    Y4 = rng.normal( \
+        loc=A_sum['43'] - R43 * A_sum['3ma'], \
+        scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']) / ws[:, 3], \
+        size=nsi)
+    Y4 += R43 * Y3
+    ys = (Y1, Y2, Y3, Y4)
 
     return (yj, ys, Lm, Ls)
 
@@ -4254,7 +4320,7 @@ class DynamicBLMVarianceDecomposition:
     Class for estimating dynamic BLM variance decomposition using bootstrapping.
 
     Arguments:
-        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
+        params (ParamsDict): dictionary of parameters for dynamic BLM estimation. Run tw.blm_dynamic_params().describe_all() for descriptions of all valid parameters.
     '''
 
     def __init__(self, params):
@@ -4269,7 +4335,7 @@ class DynamicBLMVarianceDecomposition:
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
-            blm_model (BLMModel or None): BLM model estimated using true data; if None, estimate model inside the method
+            blm_model (DynamicBLMModel or None): dynamic BLM model estimated using true data; if None, estimate model inside the method
             n_samples (int): number of bootstrap samples to estimate
             n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
@@ -4307,16 +4373,16 @@ class DynamicBLMVarianceDecomposition:
             fe_params['Q_cov'] = Q_cov
 
         # Copy original wages, firm types, and optionally ids
-        yj = jdata.loc[:, ['y1', 'y2']].to_numpy().copy()
-        ys = sdata.loc[:, ['y1', 'y2']].to_numpy().copy()
-        gj = jdata.loc[:, ['g1', 'g2']].to_numpy()
+        yj = jdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
+        ys = sdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
+        gj = jdata.loc[:, ['g1', 'g4']].to_numpy()
         gs = sdata.loc[:, 'g1'].to_numpy()
         if firm_clusters_as_ids:
-            jj = jdata.loc[:, ['j1', 'j2']].to_numpy().copy()
+            jj = jdata.loc[:, ['j1', 'j4']].to_numpy().copy()
             js = sdata.loc[:, 'j1'].to_numpy().copy()
             with bpd.util.ChainedAssignment():
-                jdata.loc[:, ['j1', 'j2']] = gj
-                sdata.loc[:, 'j1'], sdata.loc[:, 'j2'] = (gs, gs)
+                jdata.loc[:, ['j1', 'j4']] = gj
+                sdata.loc[:, 'j1'], sdata.loc[:, 'j4'] = (gs, gs)
         if worker_types_as_ids:
             ij = jdata.loc[:, 'i'].to_numpy().copy()
             is_ = sdata.loc[:, 'i'].to_numpy().copy()
@@ -4333,9 +4399,9 @@ class DynamicBLMVarianceDecomposition:
         wj = None
         ws = None
         if jdata._col_included('w'):
-            wj = jdata.loc[:, ['w1', 'w2']].to_numpy()
+            wj = jdata.loc[:, ['w1', 'w2', 'w3', 'w4']].to_numpy()
         if sdata._col_included('w'):
-            ws = sdata.loc[:, 'w1'].to_numpy()
+            ws = sdata.loc[:, ['w1', 'w2', 'w3', 'w4']].to_numpy()
 
         if blm_model is None:
             # Run initial BLM estimator
@@ -4352,13 +4418,24 @@ class DynamicBLMVarianceDecomposition:
                 if worker_types_as_ids:
                     jdata.loc[:, 'i'] = Lm_i
                     sdata.loc[:, 'i'] = Ls_i
-                jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
-                sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
-            # Convert to BipartitePandas DataFrame
-            bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
-            # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
-            bdf._set_attributes(jdata)
-            bdf = bdf.to_long(is_sorted=True, copy=False)
+                jdata.loc[:, 'y1'], jdata.loc[:, 'y2'], jdata.loc[:, 'y3'], jdata.loc[:, 'y4'] = (yj_i[0], yj_i[1], yj_i[2], yj_i[3])
+                sdata.loc[:, 'y1'], sdata.loc[:, 'y2'], sdata.loc[:, 'y3'], sdata.loc[:, 'y4'] = (ys_i[0], ys_i[1], ys_i[2], ys_i[3])
+            jdata_i = np.tile(jdata['i'], 4)
+            jdata_j = np.concatenate([jdata['j1'], jdata['j2'], jdata['j3'], jdata['j4']])
+            jdata_y = np.concatenate([jdata['y1'], jdata['y2'], jdata['y3'], jdata['y4']])
+            sdata_i = np.tile(sdata['i'], 4)
+            sdata_j = np.concatenate([sdata['j1'], sdata['j2'], sdata['j3'], sdata['j4']])
+            sdata_y = np.concatenate([sdata['y1'], sdata['y2'], sdata['y3'], sdata['y4']])
+            i_i = np.concatenate([jdata_i, sdata_i])
+            j_i = np.concatenate([jdata_j, sdata_j])
+            y_i = np.concatenate([jdata_y, sdata_y])
+            del jdata_i, jdata_j, jdata_y, sdata_i, sdata_j, sdata_y
+            bdf = bpd.BipartiteDataFrame(i=i_i, j=j_i, y=y_i).clean(bpd.clean_params({'verbose': False}))
+            # # Convert to BipartitePandas DataFrame
+            # bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
+            # # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
+            # bdf._set_attributes(jdata)
+            # bdf = bdf.to_long(is_sorted=True, copy=False)
             # Estimate OLS
             if no_controls:
                 fe_estimator = tw.FEEstimator(bdf, fe_params)
@@ -4369,11 +4446,11 @@ class DynamicBLMVarianceDecomposition:
 
         with bpd.util.ChainedAssignment():
             # Restore original wages and optionally ids
-            jdata.loc[:, ['y1', 'y2']] = yj
-            sdata.loc[:, ['y1', 'y2']] = ys
+            jdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = yj
+            sdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = ys
             if firm_clusters_as_ids:
-                jdata.loc[:, ['j1', 'j2']] = jj
-                sdata.loc[:, 'j1'], sdata.loc[:, 'j2'] = (js, js)
+                jdata.loc[:, ['j1', 'j4']] = jj
+                sdata.loc[:, 'j4'], sdata.loc[:, 'j4'] = (js, js)
             if worker_types_as_ids:
                 jdata.loc[:, 'i'] = ij
                 sdata.loc[:, 'i'] = is_
