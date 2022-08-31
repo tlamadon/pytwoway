@@ -781,7 +781,7 @@ def _var_stayers(sdata, rho_1, rho_4, rho_t, weights=None, diff=False):
         'YY': YY
     }
 
-def rho_init(sdata, rho_0=(0.5, 0.5, 0.5), weights=None, diff=False):
+def rho_init(sdata, rho_0=(0.6, 0.6, 0.6), weights=None, diff=False):
     '''
     Generate starting value for rho using stayers.
 
@@ -2932,10 +2932,10 @@ class DynamicBLMModel:
         any_controls = self.any_controls
 
         # Store wage outcomes and groups
-        # Y1 = sdata['y1'].to_numpy()
+        Y1 = sdata['y1'].to_numpy()
         Y2 = sdata['y2'].to_numpy()
         Y3 = sdata['y3'].to_numpy()
-        # Y4 = sdata['y4'].to_numpy()
+        Y4 = sdata['y4'].to_numpy()
         G1 = sdata['g1'].to_numpy().astype(int, copy=False)
         # G2 = sdata['g4'].to_numpy().astype(int, copy=False)
 
@@ -2978,6 +2978,7 @@ class DynamicBLMModel:
         # Matrix of posterior probabilities
         qi = np.ones(shape=(ni, nl))
         # Log pdfs
+        lp_stable = np.zeros(shape=(ni, nl))
         lp = np.zeros(shape=(ni, nl))
         # Log likelihood for stayers
         lik0 = None
@@ -2986,6 +2987,67 @@ class DynamicBLMModel:
         prev_lik = np.inf
         # Fix error from bad initial guesses causing probabilities to be too low
         d_prior = params['d_prior_stayers']
+
+        if any_controls:
+            ## Account for control variables ##
+            A_sum, S_sum_sq = self._sum_by_non_nl(ni=ni, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, periods=periods)
+
+            for l in range(nl):
+                # Update A_sum/S_sum_sq to account for worker-interaction terms
+                A_sum_l, S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, periods=periods)
+
+                lp1 = lognormpdf(
+                    Y1 - R12 \
+                        * (Y2 \
+                            - A['2ma'][l, G1] \
+                            - A_sum['2ma'] \
+                            - A_sum_l['2ma']),
+                    A['12'][l, G1] + A_sum['12'] + A_sum_l['12'],
+                    var=\
+                        S['12'][l, G1] ** 2 \
+                        + S_sum_sq['12'] + S_sum_sq_l['12'] \
+                        + (R12 ** 2) \
+                            * (S['2ma'][l, G1] ** 2 \
+                                + S_sum_sq['2ma'] \
+                                + S_sum_sq_l['2ma'])
+                )
+                lp4 = lognormpdf(
+                    Y4 - R43 \
+                        * (Y3 \
+                            - A['3ma'][l, G1] \
+                            - A_sum['3ma'] \
+                            - A_sum_l['3ma']),
+                    A['43'][l, G1] + A_sum['43'] + A_sum_l['43'],
+                    var=\
+                        S['43'][l, G1] ** 2 \
+                        + S_sum_sq['43'] + S_sum_sq_l['43'] \
+                        + (R43 ** 2) \
+                            * (S['3ma'][l, G1] ** 2 \
+                                + S_sum_sq['3ma'] \
+                                + S_sum_sq_l['3ma'])
+                )
+
+                lp_stable[:, l] = lp1 + lp4
+        else:
+            A_sum = {period: 0 for period in self.all_periods}
+            S_sum_sq = {period: 0 for period in self.all_periods}
+            # Loop over firm classes so means/variances are single values rather than vectors (computing log/square is faster this way)
+            for g1 in range(nk):
+                I = (G1 == g1)
+                for l in range(nl):
+                    lp1 = lognormpdf(
+                        Y1[I] - R12 * (Y2[I] - A['2ma'][l, g1]),
+                        A['12'][l, g1],
+                        var=S['12'][l, g1] ** 2 + (R12 * S['2ma'][l, g1]) ** 2
+                    )
+                    lp4 = lognormpdf(
+                        Y4[I] - R43 * (Y3[I] - A['3ma'][l, g1]),
+                        A['43'][l, g1],
+                        var=S['43'][l, g1] ** 2 + (R43 * S['3ma'][l, g1]) ** 2
+                    )
+
+                    lp_stable[I, l] = lp1 + lp4
+        del lp1, lp4
 
         ## Constraints ##
         min_firm_type = self._min_firm_type(A)
@@ -3005,19 +3067,6 @@ class DynamicBLMModel:
                     # Update A_sum/S_sum_sq to account for worker-interaction terms
                     A_sum_l, S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, periods=periods)
 
-                    # lp1 = lognormpdf(
-                    #     Y1 - R12 \
-                    #         * (Y2 \
-                    #             - A['2ma'][l, G1] \
-                    #             - A_sum['2ma'] - A_sum_l['2ma']),
-                    #     A['12'][l, G1] + A_sum['12'] + A_sum_l['12'],
-                    #     var=\
-                    #         S['12'][l, G1] ** 2 \
-                    #         + S_sum_sq['12'] + S_sum_sq_l['12'] \
-                    #         + (R12 ** 2) \
-                    #             * (S['2ma'][l, G1] ** 2 \
-                    #                 + S_sum_sq['2ma'] + S_sum_sq_l['2ma'])
-                    # )
                     lp2 = lognormpdf(
                         Y2,
                         A['2s'][l, G1] \
@@ -3040,21 +3089,8 @@ class DynamicBLMModel:
                                 * (S['2s'][l, G1] ** 2 \
                                     + S_sum_sq['2s'] + S_sum_sq_l['2s'])
                     )
-                    # lp4 = lognormpdf(
-                    #     Y4 - R43 \
-                    #         * (Y3 \
-                    #             - A['3ma'][l, G1] \
-                    #             - A_sum['3ma'] - A_sum_l['3ma']),
-                    #     A['43'][l, G1] + A_sum['43'] + A_sum_l['43'],
-                    #     var=\
-                    #         S['43'][l, G1] ** 2 \
-                    #         + S_sum_sq['43'] + S_sum_sq_l['43'] \
-                    #         + (R43 ** 2) \
-                    #             * (S['3ma'][l, G1] ** 2 \
-                    #                 + S_sum_sq['3ma'] + S_sum_sq_l['3ma'])
-                    # )
 
-                    lp[:, l] = log_pk0[G1, l] + lp2 + lp3 # + lp1 + lp4
+                    lp[:, l] = log_pk0[G1, l] + lp2 + lp3
             else:
                 A_sum = {period: 0 for period in self.all_periods}
                 S_sum_sq = {period: 0 for period in self.all_periods}
@@ -3062,11 +3098,6 @@ class DynamicBLMModel:
                 for g1 in range(nk):
                     I = (G1 == g1)
                     for l in range(nl):
-                        # lp1 = lognormpdf(
-                        #     Y1[I] - R12 * (Y2[I] - A['2ma'][l, g1]),
-                        #     A['12'][l, g1],
-                        #     var=S['12'][l, g1] ** 2 + (R12 * S['2ma'][l, g1]) ** 2
-                        # )
                         lp2 = lognormpdf(
                             Y2[I],
                             A['2s'][l, g1],
@@ -3077,16 +3108,12 @@ class DynamicBLMModel:
                             A['3s'][l, g1],
                             var=S['3s'][l, g1] ** 2 + (R32s * S['2s'][l, g1]) ** 2
                         )
-                        # lp4 = lognormpdf(
-                        #     Y4[I] - R43 * (Y3[I] - A['3ma'][l, g1]),
-                        #     A['43'][l, g1],
-                        #     var=S['43'][l, g1] ** 2 + (R43 * S['3ma'][l, g1]) ** 2
-                        # )
 
-                        lp[I, l] = log_pk0[G1[I], l] + lp2 + lp3 # + lp1 + lp4
-            del log_pk0, lp2, lp3 # , lp1, lp4
+                        lp[I, l] = log_pk0[G1[I], l] + lp2 + lp3
+            del log_pk0, lp2, lp3
 
             # We compute log sum exp to get likelihoods and probabilities
+            lp += lp_stable
             lse_lp = logsumexp(lp, axis=1)
             qi = np.exp(lp.T - lse_lp).T
             if params['return_qi']:

@@ -1909,8 +1909,6 @@ class BLMModel:
         A1, A2, S1, S2 = self.A1, self.A2, self.S1, self.S2
         cat_cols, cts_cols = self.cat_cols, self.cts_cols
         any_controls = self.any_controls
-        # Fix error from bad initial guesses causing probabilities to be too low
-        d_prior = params['d_prior_stayers']
 
         # Store wage outcomes and groups
         Y1 = sdata['y1'].to_numpy()
@@ -1965,6 +1963,8 @@ class BLMModel:
         # Path of log likelihoods for stayers
         liks0 = []
         prev_lik = np.inf
+        # Fix error from bad initial guesses causing probabilities to be too low
+        d_prior = params['d_prior_stayers']
 
         if any_controls:
             ## Account for control variables ##
