@@ -3694,19 +3694,44 @@ class DynamicBLMModel:
             NNs.sort_index(inplace=True)
             self.NNs = NNs.to_numpy()
 
-    def fit_movers_cstr_uncstr(self, jdata, compute_NNm=True):
+    def fit_movers_cstr_uncstr(self, jdata, compute_NNm=True, blm_model=None):
         '''
         Run fit_movers(), first constrained, then using results as starting values, run unconstrained.
 
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
+            blm_model (BLMModel or None): already-estimated non-dynamic BLM model. Estimates from this model will be used as a baseline in half the starting values (the other half will be random). If None, all starting values will be random.
         '''
         ## First, simulate parameters but keep A fixed ##
         ## Second, use estimated parameters as starting point to run with A constrained to be linear ##
         ## Finally use estimated parameters as starting point to run without constraints ##
         # Save original parameters
         user_params = self.params.copy()
+        ## Update parameters with blm_model ##
+        if blm_model is not None:
+            self.pk1 = copy.deepcopy(blm_model.pk1)
+            self.pk0 = copy.deepcopy(blm_model.pk0)
+            self.A['12'] = copy.deepcopy(blm_model.A1)
+            self.A['43'] = copy.deepcopy(blm_model.A2)
+            self.A['2ma'] = copy.deepcopy(blm_model.A1)
+            self.A['3ma'] = copy.deepcopy(blm_model.A2)
+            self.A['2s'] = copy.deepcopy(blm_model.A1)
+            self.A['3s'] = copy.deepcopy(blm_model.A2)
+            self.A['2mb'][:] = 0
+            self.A['3mb'][:] = 0
+            self.R12 = 0.1
+            self.R43 = 0.1
+            self.R32m = 0.1
+            self.R32s = 0.1
+            ##### Loop 0 #####
+            # First fix pk but update A and S
+            self.params['update_a_movers'] = True
+            self.params['update_s_movers'] = True
+            self.params['update_pk1'] = False
+            if self.params['verbose'] in [1, 2, 3]:
+                print('Fitting movers with pk1 fixed')
+            self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 1 #####
         # First fix A but update S and pk
         self.params['update_a_movers'] = False
@@ -3972,22 +3997,27 @@ class DynamicBLMEstimator:
         self.connectedness_high = None
         self.connectedness_low = None
 
-    def _fit_model(self, jdata, rng=None):
+    def _fit_model(self, jdata, iter, blm_model=None, rng=None):
         '''
         Generate model and run fit_movers_cstr_uncstr() given parameters.
 
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
+            iter (int): iteration
+            blm_model (BLMModel or None): already-estimated non-dynamic BLM model. Estimates from this model will be used as a baseline in half the starting values (the other half will be random). If None, all starting values will be random.
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
         if rng is None:
             rng = np.random.default_rng(None)
 
         model = DynamicBLMModel(self.params, self.rho_0, rng)
-        model.fit_movers_cstr_uncstr(jdata)
+        if iter % 2 == 0:
+            model.fit_movers_cstr_uncstr(jdata, blm_model=blm_model)
+        else:
+            model.fit_movers_cstr_uncstr(jdata, blm_model=None)
         return model
 
-    def fit(self, jdata, sdata, n_init=20, n_best=5, rho_0=(0.5, 0.5, 0.5), weights=None, diff=False, ncore=1, rng=None):
+    def fit(self, jdata, sdata, n_init=20, n_best=5, blm_model=None, rho_0=(0.6, 0.6, 0.6), weights=None, diff=False, ncore=1, rng=None):
         '''
         Estimate dynamic BLM using multiple sets of starting values.
 
@@ -3996,6 +4026,7 @@ class DynamicBLMEstimator:
             sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
             n_init (int): number of starting values
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness
+            blm_model (BLMModel or None): already-estimated non-dynamic BLM model. Estimates from this model will be used as a baseline in half the starting values (the other half will be random). If None, all starting values will be random.
             rho_0 (tuple): initial guess for rho
             weights (tuple or None): weights for rho; if None, all elements of rho have equal weight
             diff (bool): if True, estimate rho in differences rather than levels
@@ -4014,10 +4045,10 @@ class DynamicBLMEstimator:
         if ncore > 1:
             # Multiprocessing
             with Pool(processes=ncore) as pool:
-                sim_model_lst = pool.starmap(self._fit_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
+                sim_model_lst = pool.starmap(self._fit_model, tqdm([(jdata, i, blm_model, np.random.default_rng(seed)) for i, seed in enumerate(seeds)], total=n_init))
         else:
             # No multiprocessing
-            sim_model_lst = itertools.starmap(self._fit_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
+            sim_model_lst = itertools.starmap(self._fit_model, tqdm([(jdata, i, blm_model, np.random.default_rng(seed)) for i, seed in enumerate(seeds)], total=n_init))
 
         # Sort by likelihoods FIXME better handling if connectedness is None
         sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst if model.connectedness is not None], reverse=True, key=lambda a: a[0])
@@ -4380,7 +4411,7 @@ class DynamicBLMVarianceDecomposition:
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
-            blm_model (DynamicBLMModel or None): dynamic BLM model estimated using true data; if None, estimate model inside the method
+            blm_model (DynamicBLMModel or None): already-estimated dynamic BLM model; if None, estimate model inside the method
             n_samples (int): number of bootstrap samples to estimate
             n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
