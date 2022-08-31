@@ -298,8 +298,8 @@ class SimBLM:
         if strictly_monotone_a:
             ## Make A1 and A2 monotone by worker type ##
             for l in range(nl):
-                A1[l] = np.sort(A1[l], axis=0)
-                A2[l] = np.sort(A2[l], axis=0)
+                A1[l, :] = np.sort(A1[l, :], axis=0)
+                A2[l, :] = np.sort(A2[l, :], axis=0)
 
         # A_sum = A1 + A2
 
@@ -366,22 +366,22 @@ class SimBLM:
         ## Categorical ##
         A1_cat = {col:
                 rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
+                    if controls_dict[col]['worker_type_interaction'] else
                 rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=controls_dict[col]['n'])
             for col in cat_cols}
         A2_cat = {col:
                 rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
+                    if controls_dict[col]['worker_type_interaction'] else
                 rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=controls_dict[col]['n'])
             for col in cat_cols}
         S1_cat = {col:
                 rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
+                    if controls_dict[col]['worker_type_interaction'] else
                 rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=controls_dict[col]['n'])
             for col in cat_cols}
         S2_cat = {col:
                 rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=(nl, controls_dict[col]['n']))
-                if controls_dict[col]['worker_type_interaction'] else
+                    if controls_dict[col]['worker_type_interaction'] else
                 rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=controls_dict[col]['n'])
             for col in cat_cols}
         # Stationary #
@@ -400,22 +400,22 @@ class SimBLM:
         ## Continuous ##
         A1_cts = {col:
                 rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
+                    if controls_dict[col]['worker_type_interaction'] else
                 rng.normal(loc=controls_dict[col]['a1_mu'], scale=controls_dict[col]['a1_sig'], size=1)
             for col in cts_cols}
         A2_cts = {col:
                 rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
+                    if controls_dict[col]['worker_type_interaction'] else
                 rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=1)
             for col in cts_cols}
         S1_cts = {col:
                 rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
+                    if controls_dict[col]['worker_type_interaction'] else
                 rng.uniform(low=controls_dict[col]['s1_low'], high=controls_dict[col]['s1_high'], size=1)
             for col in cts_cols}
         S2_cts = {col:
                 rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=nl)
-                if controls_dict[col]['worker_type_interaction'] else
+                    if controls_dict[col]['worker_type_interaction'] else
                 rng.uniform(low=controls_dict[col]['s2_low'], high=controls_dict[col]['s2_high'], size=1)
             for col in cts_cols}
         # Stationary #
@@ -432,14 +432,14 @@ class SimBLM:
         ## Sort parameters ##
         A1, A2 = self._sort_A(A1, A2)
 
-        if stationary_firm_type_variation:
-            A2 = np.mean(A2, axis=1) + A1 - np.mean(A1, axis=1)
-
         if stationary_A:
             A2 = A1
 
         if stationary_S:
             S2 = S1
+
+        if stationary_firm_type_variation:
+            A2 = np.mean(A2, axis=1) + A1 - np.mean(A1, axis=1)
 
         return {'A1': A1, 'A2': A2, 'S1': S1, 'S2': S2, 'pk1': pk1, 'pk0': pk0, 'A1_cat': A1_cat, 'A2_cat': A2_cat, 'S1_cat': S1_cat, 'S2_cat': S2_cat, 'A1_cts': A1_cts, 'A2_cts': A2_cts, 'S1_cts': S1_cts, 'S2_cts': S2_cts}
 

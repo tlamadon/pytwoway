@@ -35,8 +35,8 @@ def _min_gt0(a):
     return np.min(a) > 0
 
 # Define default parameter dictionaries
-blm_dynamic_params = ParamsDict({
-    ## Class parameters ##
+dynamic_blm_params = ParamsDict({
+    ### Class parameters ###
     'nl': (6, 'type_constrained', (int, _gteq1),
         '''
             (default=6) Number of worker types.
@@ -55,11 +55,11 @@ blm_dynamic_params = ParamsDict({
         ''', None),
     'categorical_controls': (None, 'dict_of_type_none', ParamsDictBase,
         '''
-            (default=None) Dictionary linking column names to instances of tw.categorical_control_dynamic_params(). Each instance specifies a new categorical control variable and how its starting values should be generated. Run tw.categorical_control_dynamic_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.dynamic_categorical_control_params(). Each instance specifies a new categorical control variable and how its starting values should be generated. Run tw.dynamic_categorical_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
     'continuous_controls': (None, 'dict_of_type_none', ParamsDictBase,
         '''
-            (default=None) Dictionary linking column names to instances of tw.continuous_control_dynamic_params(). Each instance specifies a new continuous control variable and how its starting values should be generated. Run tw.continuous_control_dynamic_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
+            (default=None) Dictionary linking column names to instances of tw.dynamic_continuous_control_params(). Each instance specifies a new continuous control variable and how its starting values should be generated. Run tw.dynamic_continuous_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
     'primary_period': ('first', 'set', ['first', 'second', 'all'],
         '''
@@ -69,7 +69,8 @@ blm_dynamic_params = ParamsDict({
         '''
             (default=1) If 0, print no output; if 1, print each major step in estimation; if 2, print warnings during estimation; if 3, print likelihoods at each iteration.
         ''', None),
-    ## Starting values ##
+    ### Starting values ###
+    ## A ##
     'a12_mu': (1, 'type', (float, int),
         '''
             (default=1) Mean of simulated A12 (mean of fixed effects).
@@ -134,6 +135,7 @@ blm_dynamic_params = ParamsDict({
         '''
             (default=0.5) Standard error of simulated A3 for stayers (mean of fixed effects).
         ''', '>= 0'),
+    ## S ##
     's12_low': (0.3, 'type_constrained', ((float, int), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S12 (standard deviation of fixed effects).
@@ -198,6 +200,7 @@ blm_dynamic_params = ParamsDict({
         '''
             (default=0.5) Maximum value of simulated S3 for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
+    ## Other ##
     'pk1_prior': (None, 'array_of_type_constrained_none', (('float', 'int'), _min_gt0),
         '''
             (default=None) Dirichlet prior for pk1 (probability of being at each combination of firm types for movers). Must have length nl. None is equivalent to np.ones(nl).
@@ -215,7 +218,7 @@ blm_dynamic_params = ParamsDict({
         '''
             (default=False) If True, return qi matrix after first loop.
         ''', None),
-    ## fit_movers() parameters ##
+    ### fit_movers() parameters ###
     'n_iters_movers': (1000, 'type_constrained', (int, _gteq1),
         '''
             (default=1000) Maximum number of EM iterations for movers.
@@ -300,7 +303,7 @@ blm_dynamic_params = ParamsDict({
         '''
             (default=True) If 'force_min_firm_type'=True, add constraint to force minimum firm type to have the lowest average effect out of all firm types (the estimator may work better with this set to False, but the returned parameters may be inconsistent with the given constraints).
         ''', None),
-    ## fit_stayers() parameters ##
+    ### fit_stayers() parameters ###
     'n_iters_stayers': (1000, 'type_constrained', (int, _gteq1),
         '''
             (default=1000) Maximum number of EM iterations for stayers.
@@ -335,11 +338,12 @@ blm_dynamic_params = ParamsDict({
         ''', '>= 1')
 })
 
-categorical_control_dynamic_params = ParamsDict({
+dynamic_categorical_control_params = ParamsDict({
     'n': (None, 'type_constrained_none', (int, _gteq2),
         '''
             (default=6) Number of types for the parameter. None will raise an error when running the estimator.
         ''', '>= 2'),
+    ## A ##
     'a12_mu': (1, 'type', (float, int),
         '''
             (default=1) Mean of starting values for A12_cat (mean of fixed effects).
@@ -404,6 +408,7 @@ categorical_control_dynamic_params = ParamsDict({
         '''
             (default=0.5) Standard error of starting values for A3_cat for stayers (mean of fixed effects).
         ''', '>= 0'),
+    ## S ##
     's12_low': (0.3, 'type_constrained', ((float, int), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S12_cat (standard deviation of fixed effects).
@@ -468,6 +473,7 @@ categorical_control_dynamic_params = ParamsDict({
         '''
             (default=0.5) Maximum value of starting values for S3_cat for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
+    ## Other ##
     'worker_type_interaction': (False, 'type', bool,
         '''
             (default=False) If True, effect can differ by worker type.
@@ -482,7 +488,8 @@ categorical_control_dynamic_params = ParamsDict({
         ''', None)
 })
 
-continuous_control_dynamic_params = ParamsDict({
+dynamic_continuous_control_params = ParamsDict({
+    ## A ##
     'a12_mu': (1, 'type', (float, int),
         '''
             (default=1) Mean of starting values for A12_cts (mean of fixed effects).
@@ -547,6 +554,7 @@ continuous_control_dynamic_params = ParamsDict({
         '''
             (default=0.5) Standard error of starting values for A3_cts for stayers (mean of fixed effects).
         ''', '>= 0'),
+    ## S ##
     's12_low': (0.3, 'type_constrained', ((float, int), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S12_cts (standard deviation of fixed effects).
@@ -603,6 +611,7 @@ continuous_control_dynamic_params = ParamsDict({
         '''
             (default=0.5) Maximum value of starting values for S3_cts for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
+    ## Other ##
     'worker_type_interaction': (False, 'type', bool,
         '''
             (default=False) If True, effect can differ by worker type.
@@ -921,58 +930,59 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
             for period in periods_movers}
     S_sum_sq = {period:
                     S[period][Lm, gj[:, periods_movers_dict[period]]] ** 2
+                        if period[-1] != 'b' else
+                    S[period][gj[:, periods_movers_dict[period]]] ** 2
                 for period in periods_movers}
 
-    if len(controls_dict) > 0:
-        #### Simulate control variable wages ####
-        for i, col in enumerate(cat_cols + cts_cols):
-            # Get subcolumns associated with col
-            subcols = to_list(jdata.col_reference_dict[col])
-            n_subcols = len(subcols)
-            if n_subcols == 1:
-                # If column is constant over time
-                subcols = [subcols[0], subcols[0]]
-            elif n_subcols == 4:
-                # If column can change over time
-                subcols = [subcols[0], subcols[3]]
-            else:
-                raise NotImplementedError(f'Column names must have either one or four associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
-            if i < len(cat_cols):
-                ### Categorical ###
-                if controls_dict[col]['worker_type_interaction']:
-                    ## Worker-interaction ##
-                    for period in periods_movers:
-                        subcol = periods_movers_dict[period]
-                        if period[-1] != 'b':
-                            A_sum[period] += A_cat[col][period][Lm, jdata.loc[:, subcol]]
-                            S_sum_sq[period] += S_cat[col][period][Lm, jdata.loc[:, subcol]] ** 2
-                        else:
-                            A_sum[period] += A_cat[col][period][jdata.loc[:, subcol]]
-                            S_sum_sq[period] += S_cat[col][period][jdata.loc[:, subcol]] ** 2
-                else:
-                    ## Non-worker-interaction ##
-                    for period in periods_movers:
-                        subcol = periods_movers_dict[period]
+    #### Simulate control variable wages ####
+    for i, col in enumerate(cat_cols + cts_cols):
+        # Get subcolumns associated with col
+        subcols = to_list(jdata.col_reference_dict[col])
+        n_subcols = len(subcols)
+        if n_subcols == 1:
+            # If column is constant over time
+            subcols = [subcols[0], subcols[0]]
+        elif n_subcols == 4:
+            # If column can change over time
+            subcols = [subcols[0], subcols[3]]
+        else:
+            raise NotImplementedError(f'Column names must have either one or four associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
+        if i < len(cat_cols):
+            ### Categorical ###
+            if controls_dict[col]['worker_type_interaction']:
+                ## Worker-interaction ##
+                for period in periods_movers:
+                    subcol = periods_movers_dict[period]
+                    if period[-1] != 'b':
+                        A_sum[period] += A_cat[col][period][Lm, jdata.loc[:, subcol]]
+                        S_sum_sq[period] += S_cat[col][period][Lm, jdata.loc[:, subcol]] ** 2
+                    else:
                         A_sum[period] += A_cat[col][period][jdata.loc[:, subcol]]
                         S_sum_sq[period] += S_cat[col][period][jdata.loc[:, subcol]] ** 2
             else:
-                ### Continuous ###
-                if controls_dict[col]['worker_type_interaction']:
-                    ## Worker-interaction ##
-                    for period in periods_movers:
-                        subcol = periods_movers_dict[period]
-                        if period[-1] != 'b':
-                            A_sum[period] += A_cts[col][period][Lm] * jdata.loc[:, subcol]
-                            S_sum_sq[period] += S_cts[col][period][Lm] ** 2
-                        else:
-                            A_sum[period] += A_cts[col][period] * jdata.loc[:, subcol]
-                            S_sum_sq[period] += S_cts[col][period] ** 2
-                else:
-                    ## Non-worker-interaction ##
-                    for period in periods_movers:
-                        subcol = periods_movers_dict[period]
+                ## Non-worker-interaction ##
+                for period in periods_movers:
+                    subcol = periods_movers_dict[period]
+                    A_sum[period] += A_cat[col][period][jdata.loc[:, subcol]]
+                    S_sum_sq[period] += S_cat[col][period][jdata.loc[:, subcol]] ** 2
+        else:
+            ### Continuous ###
+            if controls_dict[col]['worker_type_interaction']:
+                ## Worker-interaction ##
+                for period in periods_movers:
+                    subcol = periods_movers_dict[period]
+                    if period[-1] != 'b':
+                        A_sum[period] += A_cts[col][period][Lm] * jdata.loc[:, subcol]
+                        S_sum_sq[period] += S_cts[col][period][Lm] ** 2
+                    else:
                         A_sum[period] += A_cts[col][period] * jdata.loc[:, subcol]
                         S_sum_sq[period] += S_cts[col][period] ** 2
+            else:
+                ## Non-worker-interaction ##
+                for period in periods_movers:
+                    subcol = periods_movers_dict[period]
+                    A_sum[period] += A_cts[col][period] * jdata.loc[:, subcol]
+                    S_sum_sq[period] += S_cts[col][period] ** 2
 
     Y1 = rng.normal( \
         loc=A_sum['12'] - R12 * A_sum['2ma'], \
@@ -1014,6 +1024,8 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
             for period in periods_stayers}
     S_sum_sq = {period:
                     S[period][Ls, gs] ** 2
+                        if period[-1] != 'b' else
+                    S[period][gs] ** 2
                 for period in periods_stayers}
 
     if len(controls_dict) > 0:
@@ -1192,7 +1204,9 @@ class DynamicBLMModel:
         }
         self.S = {
             period:
-                rng.uniform(low=max(params[f"s{period}_low"], s_lb), high=params[f"s{period}_high"], size=dims)
+                rng.uniform(low=max(params[f's{period}_low'], s_lb), high=params[f's{period}_high'], size=dims)
+                    if (period[-1] != 'b') else
+                rng.uniform(low=max(params[f's{period}_low'], s_lb), high=params[f's{period}_high'], size=nk)
             for period in all_periods
         }
         # Model for p(K | l, l') for movers
@@ -1222,9 +1236,9 @@ class DynamicBLMModel:
         self.S_cat = {
             col: {
                 period:
-                    rng.uniform(low=max(controls_dict[col][f"s{period}_low"], s_lb), high=controls_dict[col][f"s{period}_high"], size=(nl, controls_dict[col]['n']))
-                        if controls_dict[col]['worker_type_interaction'] else
-                    rng.uniform(low=max(controls_dict[col][f"s{period}_low"], s_lb), high=controls_dict[col][f"s{period}_high"], size=controls_dict[col]['n'])
+                    rng.uniform(low=max(controls_dict[col][f's{period}_low'], s_lb), high=controls_dict[col][f's{period}_high'], size=(nl, controls_dict[col]['n']))
+                        if (controls_dict[col]['worker_type_interaction'] and (period[-1] != 'b')) else
+                    rng.uniform(low=max(controls_dict[col][f's{period}_low'], s_lb), high=controls_dict[col][f's{period}_high'], size=controls_dict[col]['n'])
                 for period in all_periods
             }
             for col in cat_cols
@@ -1243,9 +1257,9 @@ class DynamicBLMModel:
         self.S_cts = {
             col: {
                 period:
-                    rng.uniform(low=max(controls_dict[col][f"s{period}_low"], s_lb), high=controls_dict[col][f"s{period}_high"], size=nl)
-                        if controls_dict[col]['worker_type_interaction'] else
-                    rng.uniform(low=max(controls_dict[col][f"s{period}_low"], s_lb), high=controls_dict[col][f"s{period}_high"], size=1)
+                    rng.uniform(low=max(controls_dict[col][f's{period}_low'], s_lb), high=controls_dict[col][f's{period}_high'], size=nl)
+                        if (controls_dict[col]['worker_type_interaction'] and (period[-1] != 'b')) else
+                    rng.uniform(low=max(controls_dict[col][f's{period}_low'], s_lb), high=controls_dict[col][f's{period}_high'], size=1)
                 for period in all_periods
             }
             for col in cts_cols
@@ -1260,7 +1274,7 @@ class DynamicBLMModel:
                 self.S_cat['2mb'][:] = 0
             for col in cts_cols:
                 self.A_cts['2mb'] = 0
-                self.S_cts['2mb'][:] = 0
+                self.S_cts['2mb'] = 0
         if not params['state_dependence']:
             self.A['3mb'][:] = 0
             self.S['3mb'][:] = 0
@@ -1269,7 +1283,7 @@ class DynamicBLMModel:
                 self.S_cat['3mb'][:] = 0
             for col in cts_cols:
                 self.A_cts['3mb'] = 0
-                self.S_cts['3mb'][:] = 0
+                self.S_cts['3mb'] = 0
 
         ## NNm and NNs ##
         self.NNm = None
@@ -1332,10 +1346,11 @@ class DynamicBLMModel:
 
         ## General ##
         cons_a = cons.QPConstrained(nl, nk)
-        if constrain_b:
-            cons_a.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt))
         cons_s = cons.QPConstrained(nl, nk)
         cons_s.add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=nt))
+        if constrain_b:
+            cons_a.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt))
+            cons_s.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt))
 
         if params['cons_a'] is not None:
             cons_a.add_constraints(params['cons_a'])
@@ -1502,16 +1517,16 @@ class DynamicBLMModel:
             # Sort control variables #
             if A_cat is not None:
                 for col in A_cat.keys():
-                    A_cat[col] = {k: v[worker_type_order, :] if controls_dict[col]['worker_type_interaction'] else v for k, v in A_cat[col].items()}
+                    A_cat[col] = {k: v[worker_type_order, :] if (controls_dict[col]['worker_type_interaction'] and (k[-1] != 'b')) else v for k, v in A_cat[col].items()}
             if S_cat is not None:
                 for col in S_cat.keys():
-                    S_cat[col] = {k: v[worker_type_order, :] if controls_dict[col]['worker_type_interaction'] else v for k, v in S_cat[col].items()}
+                    S_cat[col] = {k: v[worker_type_order, :] if (controls_dict[col]['worker_type_interaction'] and (k[-1] != 'b')) else v for k, v in S_cat[col].items()}
             if A_cts is not None:
                 for col in A_cts.keys():
-                    A_cts[col] = {k: v[worker_type_order] if controls_dict[col]['worker_type_interaction'] else v for k, v in A_cts[col].items()}
+                    A_cts[col] = {k: v[worker_type_order] if (controls_dict[col]['worker_type_interaction'] and (k[-1] != 'b')) else v for k, v in A_cts[col].items()}
             if S_cts is not None:
                 for col in S_cts.keys():
-                    S_cts[col] = {k: v[worker_type_order] if controls_dict[col]['worker_type_interaction'] else v for k, v in S_cts[col].items()}
+                    S_cts[col] = {k: v[worker_type_order] if (controls_dict[col]['worker_type_interaction'] and (k[-1] != 'b')) else v for k, v in S_cts[col].items()}
 
         if sort_firm_types:
             ## Sort firm types ##
@@ -2043,7 +2058,7 @@ class DynamicBLMModel:
                             + (A_sum['2ma'] + A_sum['2mb']) \
                             + (A_sum_l['2ma'] + A_sum_l['2mb']),
                         var=\
-                            (S['2ma'][l, G1] ** 2 + S['2mb'][l, G2] ** 2) \
+                            (S['2ma'][l, G1] ** 2 + S['2mb'][G2] ** 2) \
                             + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
                             + (S_sum_sq_l['2ma'] +  S_sum_sq_l['2mb'])
                     )
@@ -2057,11 +2072,11 @@ class DynamicBLMModel:
                             + (A_sum['3ma'] + A_sum['3mb']) \
                             + (A_sum_l['3ma'] + A_sum_l['3mb']),
                         var=\
-                            (S['3ma'][l, G2] ** 2 + S['3mb'][l, G1] ** 2) \
+                            (S['3ma'][l, G2] ** 2 + S['3mb'][G1] ** 2) \
                             + (S_sum_sq['3ma'] + S_sum_sq['3mb']) \
                             + (S_sum_sq_l['3ma'] + S_sum_sq_l['3mb']) \
                             + (R32m ** 2) \
-                                * (S['2ma'][l, G1] ** 2 + S['2mb'][l, G2] ** 2 \
+                                * (S['2ma'][l, G1] ** 2 + S['2mb'][G2] ** 2 \
                                     + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
                                     + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb']))
                     )
@@ -2098,12 +2113,12 @@ class DynamicBLMModel:
                             lp2 = lognormpdf(
                                 Y2[I],
                                 A['2ma'][l, g1] + A['2mb'][g2],
-                                var=S['2ma'][l, g1] ** 2 + S['2mb'][l, g2] ** 2
+                                var=S['2ma'][l, g1] ** 2 + S['2mb'][g2] ** 2
                             )
                             lp3 = lognormpdf(
                                 Y3[I] - R32m * (Y2[I] - A['2ma'][l, g1] - A['2mb'][g2]),
                                 A['3ma'][l, g2] + A['3mb'][g1],
-                                var=S['3ma'][l, g2] ** 2 + S['3mb'][l, g1] ** 2 + (R32m ** 2) * (S['2ma'][l, g1] ** 2 + S['2mb'][l, g2] ** 2)
+                                var=S['3ma'][l, g2] ** 2 + S['3mb'][g1] ** 2 + (R32m ** 2) * (S['2ma'][l, g1] ** 2 + S['2mb'][g2] ** 2)
                             )
                             lp4 = lognormpdf(
                                 Y4[I] - R43 * (Y3[I] - A['3ma'][l, g2]),
@@ -2208,11 +2223,11 @@ class DynamicBLMModel:
                         XX32m[l * ni: (l + 1) * ni] = Y2 - (A['2ma'][l, G1] + A['2mb'][G2]) - (A_sum['2ma'] + A_sum['2mb']) - (A_sum_l['2ma'] + A_sum_l['2mb'])
                         YY32m[l * ni: (l + 1) * ni] = Y3 - (A['3ma'][l, G2] + A['3mb'][G1]) - (A_sum['3ma'] + A_sum['3mb']) - (A_sum_l['3ma'] + A_sum_l['3mb'])
                         SS32m = np.sqrt( \
-                            (S['3ma'][l, G2] ** 2 + S['3mb'][l, G1] ** 2) \
+                            (S['3ma'][l, G2] ** 2 + S['3mb'][G1] ** 2) \
                             + (S_sum_sq['3ma'] + S_sum_sq['3mb']) \
                             + (S_sum_sq_l['3ma'] + S_sum_sq_l['3mb']) \
                             + (R32m ** 2) \
-                                * ((S['2ma'][l, G1] ** 2 + S['2mb'][l, G2] ** 2) \
+                                * ((S['2ma'][l, G1] ** 2 + S['2mb'][G2] ** 2) \
                                     + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
                                     + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])))
                         WW32m[l * ni: (l + 1) * ni] = qi[:, l] / SS32m
@@ -2376,8 +2391,8 @@ class DynamicBLMModel:
                     var_l = np.concatenate(
                         [
                             S['12'][l, G1] ** 2 + (R12 * S['2ma'][l, G1]) ** 2,
-                            S['2ma'][l, G1] ** 2 + S['2mb'][l, G2] ** 2,
-                            S['3ma'][l, G2] ** 2 + S['3mb'][l, G1] ** 2 + (R32m ** 2) * (S['2ma'][l, G1] ** 2 + S['2mb'][l, G2] ** 2),
+                            S['2ma'][l, G1] ** 2 + S['2mb'][G2] ** 2,
+                            S['3ma'][l, G2] ** 2 + S['3mb'][G1] ** 2 + (R32m ** 2) * (S['2ma'][l, G1] ** 2 + S['2mb'][G2] ** 2),
                             S['43'][l, G2] ** 2 + (R43 * S['3ma'][l, G2]) ** 2
                         ]
                     )
@@ -2796,7 +2811,10 @@ class DynamicBLMModel:
                         else:
                             split_res = np.split(cons_s.res, len(periods))
                             for i, period in enumerate(periods):
-                                S[period] = np.sqrt(np.reshape(split_res[i], self.dims))
+                                if period[-1] != 'b':
+                                    S[period] = np.sqrt(np.reshape(split_res[i], self.dims))
+                                else:
+                                    S[period] = np.sqrt(split_res[i][: nk])
 
                     except ValueError as e:
                         # If constraints inconsistent, keep S the same
@@ -2817,7 +2835,7 @@ class DynamicBLMModel:
                             else:
                                 split_res = np.split(s_solver.res, len(periods))
                                 for i, period in enumerate(periods):
-                                    if cat_dict[col]['worker_type_interaction']:
+                                    if cat_dict[col]['worker_type_interaction'] and (period[-1] != 'b'):
                                         S_cat[col][period] = np.sqrt(np.reshape(split_res[i], (nl, col_n)))
                                     else:
                                         S_cat[col][period] = np.sqrt(split_res[i][: col_n])
@@ -2840,7 +2858,7 @@ class DynamicBLMModel:
                             else:
                                 split_res = np.split(s_solver.res, len(periods))
                                 for i, period in enumerate(periods):
-                                    if cat_dict[col]['worker_type_interaction']:
+                                    if cat_dict[col]['worker_type_interaction'] and (period[-1] != 'b'):
                                         S_cts[col][period] = np.sqrt(split_res[i])
                                     else:
                                         S_cts[col][period] = np.sqrt(split_res[i][0])
@@ -3911,7 +3929,7 @@ class DynamicBLMEstimator:
     Class for estimating dynamic BLM using multiple sets of starting values.
 
     Arguments:
-        params (ParamsDict): dictionary of parameters for dynamic BLM estimation. Run tw.blm_dynamic_params().describe_all() for descriptions of all valid parameters.
+        params (ParamsDict): dictionary of parameters for dynamic BLM estimation. Run tw.dynamic_blm_params().describe_all() for descriptions of all valid parameters.
     '''
 
     def __init__(self, params):
@@ -4075,7 +4093,7 @@ class DynamicBLMBootstrap:
     Class for estimating dynamic BLM using bootstrapping.
 
     Arguments:
-        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_dynamic_params().describe_all() for descriptions of all valid parameters.
+        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.dynamic_blm_params().describe_all() for descriptions of all valid parameters.
     '''
 
     def __init__(self, params):
@@ -4320,7 +4338,7 @@ class DynamicBLMVarianceDecomposition:
     Class for estimating dynamic BLM variance decomposition using bootstrapping.
 
     Arguments:
-        params (ParamsDict): dictionary of parameters for dynamic BLM estimation. Run tw.blm_dynamic_params().describe_all() for descriptions of all valid parameters.
+        params (ParamsDict): dictionary of parameters for dynamic BLM estimation. Run tw.dynamic_blm_params().describe_all() for descriptions of all valid parameters.
     '''
 
     def __init__(self, params):
