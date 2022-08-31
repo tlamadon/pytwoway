@@ -3722,10 +3722,10 @@ class DynamicBLMModel:
                 self.A['3s'] = copy.deepcopy(blm_model.A2)
                 self.A['2mb'][:] = 0
                 self.A['3mb'][:] = 0
-                self.R12 = 0.1
-                self.R43 = 0.1
-                self.R32m = 0.1
-                self.R32s = 0.1
+                self.R12 = 0
+                self.R43 = 0
+                self.R32m = 0
+                self.R32s = 0
             ##### Loop 0 #####
             # First fix pk but update A and S
             self.params['update_a_movers'] = True
