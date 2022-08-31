@@ -1100,7 +1100,7 @@ class DynamicBLMModel:
 
     Arguments:
         params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
-        rhos (tuple of floats): rho values estimated using stayers
+        rhos (dict of floats): rho values (persistance parameters) estimated using stayers; must contain keys 'rho_1' and 'rho_4'
         rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
     '''
     def __init__(self, params, rhos, rng=None):

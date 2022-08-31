@@ -652,7 +652,7 @@ class SimDynamicBLM:
             rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            (dict of dicts of NumPy Arrays): keys are 'A', 'S', 'pk1', 'pk0', 'A_cat', 'S_cat', 'A_cts' and 'S_cts'. 'A' includes means and 'S' includes standard deviations. 'cat' indicates a categorical control variable and 'cts' indicates a continuous control variable. Each of A/A_cat/A_cts/S/S_cat/S_cts has each period as keys, and each period links to the parameter values for that period. 'pk1' gives the probability of being at each combination of firm types for movers and 'pk0' gives the probability of being at each firm type for stayers.
+            (dict of dicts of NumPy Arrays): keys are 'A', 'S', 'pk1', 'pk0', 'A_cat', 'S_cat', 'A_cts', and 'S_cts'. 'A' includes means and 'S' includes standard deviations. 'cat' indicates a categorical control variable and 'cts' indicates a continuous control variable. Each of A/A_cat/A_cts/S/S_cat/S_cts has each period as keys, and each period links to the parameter values for that period. 'pk1' gives the probability of being at each combination of firm types for movers and 'pk0' gives the probability of being at each firm type for stayers.
         '''
         if rng is None:
             rng = np.random.default_rng(None)
@@ -1107,7 +1107,7 @@ class SimDynamicBLM:
             rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            (dict or tuple of dicts): sim_data gives {'jdata': movers BipartiteDataFrame, 'sdata': stayers BipartiteDataFrame}, while sim_params gives keys 'A', 'S', 'pk1', 'pk0', 'A_cat', 'S_cat', 'A_cts', and 'S_cts' ('A' gives mean; 'S' gives standard deviation; 'cat' gives categorical controls; 'cts' gives continuous controls; 'pk1' gives the probability of being at each combination of firm types for movers; and 'pk0' gives the probability of being at each firm type for stayers). If return_parameters=True, returns (sim_data, sim_params); if return_parameters=False, returns sim_data.
+            (dict or tuple of dicts): sim_data gives {'jdata': movers BipartiteDataFrame, 'sdata': stayers BipartiteDataFrame}, while sim_params gives keys 'A', 'S', 'pk1', 'pk0', 'R12', 'R43', 'R32m', 'R32s', 'A_cat', 'S_cat', 'A_cts', and 'S_cts' ('A' gives mean; 'S' gives standard deviation; 'cat' gives categorical controls; 'cts' gives continuous controls; 'pk1' gives the probability of being at each combination of firm types for movers; 'pk0' gives the probability of being at each firm type for stayers; and the 'R' terms are the persistance parameters). If return_parameters=True, returns (sim_data, sim_params); if return_parameters=False, returns sim_data.
 
         '''
         if rng is None:
@@ -1175,5 +1175,9 @@ class SimDynamicBLM:
         sim_data = {'jdata': jdata, 'sdata': sdata}
 
         if return_parameters:
+            sim_params['R12'] = self.R12
+            sim_params['R43'] = self.R43
+            sim_params['R32m'] = self.R32m
+            sim_params['R32s'] = self.R32s
             return sim_data, sim_params
         return sim_data
