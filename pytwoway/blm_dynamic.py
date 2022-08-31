@@ -3694,7 +3694,7 @@ class DynamicBLMModel:
             NNs.sort_index(inplace=True)
             self.NNs = NNs.to_numpy()
 
-    def fit_movers_cstr_uncstr(self, jdata, compute_NNm=True, blm_model=None):
+    def fit_movers_cstr_uncstr(self, jdata, compute_NNm=True, blm_model=None, initialize_all=False):
         '''
         Run fit_movers(), first constrained, then using results as starting values, run unconstrained.
 
@@ -3702,6 +3702,7 @@ class DynamicBLMModel:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
             blm_model (BLMModel or None): already-estimated non-dynamic BLM model. Estimates from this model will be used as a baseline in half the starting values (the other half will be random). If None, all starting values will be random.
+            initialize_all (bool): if True, initialize all parameters from blm_model (if blm_model is not None)
         '''
         ## First, simulate parameters but keep A fixed ##
         ## Second, use estimated parameters as starting point to run with A constrained to be linear ##
@@ -3714,16 +3715,17 @@ class DynamicBLMModel:
             self.pk0 = copy.deepcopy(blm_model.pk0)
             self.A['12'] = copy.deepcopy(blm_model.A1)
             self.A['43'] = copy.deepcopy(blm_model.A2)
-            self.A['2ma'] = copy.deepcopy(blm_model.A1)
-            self.A['3ma'] = copy.deepcopy(blm_model.A2)
-            self.A['2s'] = copy.deepcopy(blm_model.A1)
-            self.A['3s'] = copy.deepcopy(blm_model.A2)
-            self.A['2mb'][:] = 0
-            self.A['3mb'][:] = 0
-            self.R12 = 0.1
-            self.R43 = 0.1
-            self.R32m = 0.1
-            self.R32s = 0.1
+            if initialize_all:
+                self.A['2ma'] = copy.deepcopy(blm_model.A1)
+                self.A['3ma'] = copy.deepcopy(blm_model.A2)
+                self.A['2s'] = copy.deepcopy(blm_model.A1)
+                self.A['3s'] = copy.deepcopy(blm_model.A2)
+                self.A['2mb'][:] = 0
+                self.A['3mb'][:] = 0
+                self.R12 = 0.1
+                self.R43 = 0.1
+                self.R32m = 0.1
+                self.R32s = 0.1
             ##### Loop 0 #####
             # First fix pk but update A and S
             self.params['update_a_movers'] = True
@@ -4012,9 +4014,9 @@ class DynamicBLMEstimator:
 
         model = DynamicBLMModel(self.params, self.rho_0, rng)
         if iter % 2 == 0:
-            model.fit_movers_cstr_uncstr(jdata, blm_model=blm_model)
+            model.fit_movers_cstr_uncstr(jdata, blm_model=blm_model, initialize_all=(iter == 0))
         else:
-            model.fit_movers_cstr_uncstr(jdata, blm_model=None)
+            model.fit_movers_cstr_uncstr(jdata, blm_model=None, initialize_all=False)
         return model
 
     def fit(self, jdata, sdata, n_init=20, n_best=5, blm_model=None, rho_0=(0.6, 0.6, 0.6), weights=None, diff=False, ncore=1, rng=None):
