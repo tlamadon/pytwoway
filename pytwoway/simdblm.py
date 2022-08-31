@@ -1078,21 +1078,21 @@ class SimDynamicBLM:
 
         Y1 = rng.normal( \
             loc=A_sum['12'] - R12 * A_sum['2ma'], \
-            scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']) / ws[:, 0], \
+            scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']), \
             size=nsi)
         Y2 = rng.normal( \
             loc=A_sum['2s'], \
-            scale=np.sqrt(S_sum_sq['2s']) / ws[:, 1], \
+            scale=np.sqrt(S_sum_sq['2s']), \
             size=nsi)
         Y1 += R12 * Y2
         Y3 = rng.normal( \
             loc=A_sum['3s'] - R32s * A_sum['2s'], \
-            scale=np.sqrt(S_sum_sq['3s'] + (R32s ** 2) * S_sum_sq['2s']) / ws[:, 2], \
+            scale=np.sqrt(S_sum_sq['3s'] + (R32s ** 2) * S_sum_sq['2s']), \
             size=nsi)
         Y3 += R32s * Y2
         Y4 = rng.normal( \
             loc=A_sum['43'] - R43 * A_sum['3ma'], \
-            scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']) / ws[:, 3], \
+            scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']), \
             size=nsi)
         Y4 += R43 * Y3
 
