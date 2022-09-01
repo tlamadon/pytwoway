@@ -3726,22 +3726,24 @@ class DynamicBLMModel:
                 self.R43 = 0
                 self.R32m = 0
                 self.R32s = 0
-            ##### Loop 0 #####
-            # First fix pk but update A and S
-            self.params['update_a_movers'] = True
+            ##### Loop 1 #####
+            # First fix pk and A but update S
+            self.params['update_a_movers'] = False
             self.params['update_s_movers'] = True
             self.params['update_pk1'] = False
             if self.params['verbose'] in [1, 2, 3]:
-                print('Fitting movers with pk1 fixed')
+                print('Fitting movers with pk1 and A fixed')
             self.fit_movers(jdata, compute_NNm=False)
-        ##### Loop 1 #####
-        # First fix A but update S and pk
-        self.params['update_a_movers'] = False
-        self.params['update_s_movers'] = True
-        self.params['update_pk1'] = True
-        if self.params['verbose'] in [1, 2, 3]:
-            print('Fitting movers with A fixed')
-        self.fit_movers(jdata, compute_NNm=False)
+            self.params['update_pk1'] = True
+        else:
+            ##### Loop 1 #####
+            # First fix A but update S and pk
+            self.params['update_a_movers'] = False
+            self.params['update_s_movers'] = True
+            self.params['update_pk1'] = True
+            if self.params['verbose'] in [1, 2, 3]:
+                print('Fitting movers with A fixed')
+            self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 2 #####
         # Now update A with Linear Additive constraint
         self.params['update_a_movers'] = True
@@ -3759,15 +3761,17 @@ class DynamicBLMModel:
         # if self.nl > 1:
         #     # Set constraints
         #     if user_params['cons_a_all'] is None:
-        #         self.params['cons_a_all'] = cons.StationaryFirmTypeVariation(nt=len(self.periods_movers))
+        #         self.params['cons_a_all'] = cons.StationaryFirmTypeVariation(nnt=range(1, 4), nt=len(self.periods_movers))
         #     else:
-        #         self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation(nt=len(self.periods_movers))]
+        #         self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation(nnt=range(1, 4), nt=len(self.periods_movers))]
         #     if self.params['verbose'] in [1, 2, 3]:
         #         print('Fitting movers with Stationary Firm Type Variation constraint on A')
         #     self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 4 #####
         # Restore user constraints
         self.params['cons_a_all'] = user_params['cons_a_all']
+        # Update d_X_diag_movers to be closer to 1
+        self.params['d_X_diag_movers'] = 1 + (self.params['d_X_diag_movers'] - 1) / 2
         if self.params['verbose'] in [1, 2, 3]:
             print('Fitting unconstrained movers')
         self.fit_movers(jdata, compute_NNm=compute_NNm)

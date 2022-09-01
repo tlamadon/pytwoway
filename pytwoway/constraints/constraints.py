@@ -661,10 +661,15 @@ class StationaryFirmTypeVariation():
     Generate BLM constraints so that the firm type induced variation of worker-firm pair effects is the same in all periods. In particular, this is equivalent to setting A2 = (np.mean(A2, axis=1) + A1.T - np.mean(A1, axis=1)).T.
 
     Arguments:
+        nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(1, nt)
         nt (int): number of time periods
     '''
 
-    def __init__(self, nt=2):
+    def __init__(self, nnt=None, nt=2):
+        if nnt is None:
+            self.nnt = range(1, nt)
+        else:
+            self.nnt = to_list(nnt)
         self.nt = nt
 
     def _get_constraints(self, nl, nk):
@@ -678,11 +683,11 @@ class StationaryFirmTypeVariation():
         Returns:
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        nt = self.nt
+        nnt, nt = self.nnt, self.nt
         A = np.zeros(shape=((nt - 1) * nl * nk, nt * nl * nk))
-        for period in range(nt - 1):
-            row_shift = period * nl * nk
-            col_shift = period * nl * nk
+        for i, period in enumerate(nnt):
+            row_shift = i * nl * nk
+            col_shift = (period - 1) * nl * nk
             for l in range(nl):
                 for k1 in range(nk):
                     for k2 in range(nk):
