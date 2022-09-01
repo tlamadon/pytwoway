@@ -3726,13 +3726,21 @@ class DynamicBLMModel:
                 self.R43 = 0
                 self.R32m = 0
                 self.R32s = 0
-            ##### Loop 1 #####
+            ##### Loop 1.1 #####
             # First fix pk and A but update S
             self.params['update_a_movers'] = False
             self.params['update_s_movers'] = True
             self.params['update_pk1'] = False
             if self.params['verbose'] in [1, 2, 3]:
                 print('Fitting movers with pk1 and A fixed')
+            self.fit_movers(jdata, compute_NNm=False)
+            ##### Loop 1.2 #####
+            # Second fix pk but update A and S
+            self.params['update_a_movers'] = True
+            self.params['update_s_movers'] = True
+            self.params['update_pk1'] = False
+            if self.params['verbose'] in [1, 2, 3]:
+                print('Fitting movers with pk1 fixed')
             self.fit_movers(jdata, compute_NNm=False)
             self.params['update_pk1'] = True
         else:
@@ -3772,6 +3780,9 @@ class DynamicBLMModel:
         self.params['cons_a_all'] = user_params['cons_a_all']
         # Update d_X_diag_movers to be closer to 1
         self.params['d_X_diag_movers'] = 1 + (self.params['d_X_diag_movers'] - 1) / 2
+        if blm_model is not None:
+            # If using baseline model, use baseline pk1 for last iteration
+            self.pk1 = copy.deepcopy(blm_model.pk1)
         if self.params['verbose'] in [1, 2, 3]:
             print('Fitting unconstrained movers')
         self.fit_movers(jdata, compute_NNm=compute_NNm)
