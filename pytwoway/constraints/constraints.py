@@ -684,7 +684,7 @@ class StationaryFirmTypeVariation():
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
         nnt, nt = self.nnt, self.nt
-        A = np.zeros(shape=((nt - 1) * nl * nk, nt * nl * nk))
+        A = np.zeros(shape=(len(nnt) * nl * nk, nt * nl * nk))
         for i, period in enumerate(nnt):
             row_shift = i * nl * nk
             col_shift = (period - 1) * nl * nk
