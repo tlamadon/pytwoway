@@ -571,7 +571,7 @@ class SimDynamicBLM:
         self.periods_stayers = ['12', '43', '2ma', '3ma', '2s', '3s']
         first_periods = ['12', '2ma', '3mb', '2s']
         second_periods = ['43', '2mb', '3ma', '3s']
-        self.periods_dict = {period: 0 if period in first_periods else 1 for period in self.periods_movers}
+        self.periods_dict = {period: 0 if period in first_periods else 1 for period in self.all_periods}
 
         ## Unpack control variable parameters ##
         cat_dict = sim_params['categorical_controls']
@@ -939,13 +939,13 @@ class SimDynamicBLM:
                     S_sum_sq[period] += S_cts[col][period]
 
         A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
-        A2_cat_draws = {k + '2': v for k, v in A1_cat_draws.items()}
         A3_cat_draws = {k + '3': v for k, v in A2_cat_draws.items()}
-        A4_cat_draws = {k + '4': v for k, v in A2_cat_draws.items()}
+        A2_cat_draws = {k[: -1] + '2': v for k, v in A1_cat_draws.items()}
+        A4_cat_draws = {k[: -1] + '4': v for k, v in A3_cat_draws.items()}
         A1_cts_draws = {k + '1': v for k, v in A1_cts_draws.items()}
-        A2_cts_draws = {k + '2': v for k, v in A1_cts_draws.items()}
         A3_cts_draws = {k + '3': v for k, v in A2_cts_draws.items()}
-        A4_cts_draws = {k + '4': v for k, v in A2_cts_draws.items()}
+        A2_cts_draws = {k[: -1] + '2': v for k, v in A1_cts_draws.items()}
+        A4_cts_draws = {k[: -1] + '4': v for k, v in A3_cts_draws.items()}
 
         Y1 = rng.normal( \
             loc=A_sum['12'] - R12 * A_sum['2ma'], \
@@ -1068,13 +1068,13 @@ class SimDynamicBLM:
                     S_sum_sq[period] += S_cts[col][period]
 
         A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
-        A2_cat_draws = {k + '2': v for k, v in A1_cat_draws.items()}
         A3_cat_draws = {k + '3': v for k, v in A2_cat_draws.items()}
-        A4_cat_draws = {k + '4': v for k, v in A2_cat_draws.items()}
+        A2_cat_draws = {k[: -1] + '2': v for k, v in A1_cat_draws.items()}
+        A4_cat_draws = {k[: -1] + '4': v for k, v in A3_cat_draws.items()}
         A1_cts_draws = {k + '1': v for k, v in A1_cts_draws.items()}
-        A2_cts_draws = {k + '2': v for k, v in A1_cts_draws.items()}
         A3_cts_draws = {k + '3': v for k, v in A2_cts_draws.items()}
-        A4_cts_draws = {k + '4': v for k, v in A2_cts_draws.items()}
+        A2_cts_draws = {k[: -1] + '2': v for k, v in A1_cts_draws.items()}
+        A4_cts_draws = {k[: -1] + '4': v for k, v in A3_cts_draws.items()}
 
         Y1 = rng.normal( \
             loc=A_sum['12'] - R12 * A_sum['2ma'], \
@@ -1167,9 +1167,9 @@ class SimDynamicBLM:
         jdata = jdata.reindex(sorted_cols, axis=1, copy=False)
         sdata = sdata.reindex(sorted_cols, axis=1, copy=False)
 
-        # # Convert into BipartiteDataFrame
-        # jdata = BipartiteDataFrame(jdata, custom_dtype_dict={col: 'categorical' for col in self.cat_cols + ['l']}, custom_how_collapse_dict={col: 'first' for col in self.cat_cols + ['l']}, custom_long_es_split_dict={'l': False})
-        # sdata = BipartiteDataFrame(sdata, custom_dtype_dict={col: 'categorical' for col in self.cat_cols + ['l']}, custom_how_collapse_dict={col: 'first' for col in self.cat_cols + ['l']}, custom_long_es_split_dict={'l': False})
+        # Convert into BipartiteDataFrame
+        jdata = BipartiteDataFrame(jdata, custom_dtype_dict={col: 'categorical' for col in self.cat_cols + ['l']}, custom_how_collapse_dict={col: 'first' for col in self.cat_cols + ['l']}, custom_long_es_split_dict={'l': False})
+        sdata = BipartiteDataFrame(sdata, custom_dtype_dict={col: 'categorical' for col in self.cat_cols + ['l']}, custom_how_collapse_dict={col: 'first' for col in self.cat_cols + ['l']}, custom_long_es_split_dict={'l': False})
 
         # Combine into dictionary
         sim_data = {'jdata': jdata, 'sdata': sdata}

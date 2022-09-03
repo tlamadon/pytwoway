@@ -4502,22 +4502,11 @@ class DynamicBLMVarianceDecomposition:
                     sdata.loc[:, 'i'] = Ls_i
                 jdata.loc[:, 'y1'], jdata.loc[:, 'y2'], jdata.loc[:, 'y3'], jdata.loc[:, 'y4'] = (yj_i[0], yj_i[1], yj_i[2], yj_i[3])
                 sdata.loc[:, 'y1'], sdata.loc[:, 'y2'], sdata.loc[:, 'y3'], sdata.loc[:, 'y4'] = (ys_i[0], ys_i[1], ys_i[2], ys_i[3])
-            jdata_i = np.tile(jdata['i'], 4)
-            jdata_j = np.concatenate([jdata['j1'], jdata['j2'], jdata['j3'], jdata['j4']])
-            jdata_y = np.concatenate([jdata['y1'], jdata['y2'], jdata['y3'], jdata['y4']])
-            sdata_i = np.tile(sdata['i'], 4)
-            sdata_j = np.concatenate([sdata['j1'], sdata['j2'], sdata['j3'], sdata['j4']])
-            sdata_y = np.concatenate([sdata['y1'], sdata['y2'], sdata['y3'], sdata['y4']])
-            i_i = np.concatenate([jdata_i, sdata_i])
-            j_i = np.concatenate([jdata_j, sdata_j])
-            y_i = np.concatenate([jdata_y, sdata_y])
-            del jdata_i, jdata_j, jdata_y, sdata_i, sdata_j, sdata_y
-            bdf = bpd.BipartiteDataFrame(i=i_i, j=j_i, y=y_i).clean(bpd.clean_params({'verbose': False}))
-            # # Convert to BipartitePandas DataFrame
-            # bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
-            # # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
-            # bdf._set_attributes(jdata)
-            # bdf = bdf.to_long(is_sorted=True, copy=False)
+            # Convert to BipartitePandas DataFrame
+            bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
+            # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
+            bdf._set_attributes(jdata)
+            bdf = bdf.to_long(is_sorted=True, copy=False)
             # Estimate OLS
             if no_controls:
                 fe_estimator = tw.FEEstimator(bdf, fe_params)
