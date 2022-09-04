@@ -2515,7 +2515,11 @@ class BLMBootstrap:
                     jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
                     sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
                 # Cluster
-                bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False)).to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng)
+                bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
+                # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
+                bdf._set_attributes(jdata)
+                # Cluster
+                bdf = bdf.to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng)
                 clusters_dict = bdf.loc[:, ['j', 'g']].groupby('j', sort=False)['g'].first().to_dict()
                 del bdf
                 with bpd.util.ChainedAssignment():
@@ -2523,7 +2527,6 @@ class BLMBootstrap:
                     jdata.loc[:, 'g1'] = jdata.loc[:, 'j1'].map(clusters_dict)
                     jdata.loc[:, 'g2'] = jdata.loc[:, 'j2'].map(clusters_dict)
                     sdata.loc[:, 'g1'] = sdata.loc[:, 'j1'].map(clusters_dict)
-                    sdata.loc[:, 'g2'] = sdata.loc[:, 'g1']
                 # Run BLM estimator
                 blm_fit_i = BLMEstimator(self.params)
                 blm_fit_i.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
@@ -2535,7 +2538,7 @@ class BLMBootstrap:
                 jdata.loc[:, ['y1', 'y2']] = yj
                 sdata.loc[:, ['y1', 'y2']] = ys
                 jdata.loc[:, ['g1', 'g2']] = gj
-                sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
+                sdata.loc[:, 'g1'] = gs
         elif method == 'standard':
             wj = None
             if self.params['weighted'] and jdata._col_included('w'):
@@ -2549,14 +2552,17 @@ class BLMBootstrap:
                 jdata_i = jdata.sample(frac=frac_movers, replace=True, weights=wj, random_state=rng)
                 sdata_i = sdata.sample(frac=frac_stayers, replace=True, weights=ws, random_state=rng)
                 # Cluster
-                bdf = bpd.BipartiteDataFrame(pd.concat([jdata_i, sdata_i], axis=0, copy=True)).clean(bpd.clean_params({'is_sorted': True, 'copy': False, 'verbose': verbose})).to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng)
+                bdf = bpd.BipartiteDataFrame(pd.concat([jdata_i, sdata_i], axis=0, copy=True))
+                # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
+                bdf._set_attributes(jdata)
+                # Clean and cluster
+                bdf = bdf.clean(bpd.clean_params({'is_sorted': True, 'copy': False, 'verbose': verbose})).to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng)
                 clusters_dict = bdf.loc[:, ['j', 'g']].groupby('j', sort=False)['g'].first().to_dict()
                 del bdf
                 # Update clusters in jdata_i and sdata_i
                 jdata_i.loc[:, 'g1'] = jdata_i.loc[:, 'j1'].map(clusters_dict)
                 jdata_i.loc[:, 'g2'] = jdata_i.loc[:, 'j2'].map(clusters_dict)
                 sdata_i.loc[:, 'g1'] = sdata_i.loc[:, 'j1'].map(clusters_dict)
-                sdata_i.loc[:, 'g2'] = sdata_i.loc[:, 'g1']
                 # Run BLM estimator
                 blm_fit_i = BLMEstimator(self.params)
                 blm_fit_i.fit(jdata=jdata_i, sdata=sdata_i, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)

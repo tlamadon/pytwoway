@@ -805,7 +805,7 @@ def rho_init(sdata, rho_0=(0.6, 0.6, 0.6), weights=None, diff=False):
 
 def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, reallocate_jointly=True, reallocate_period='first', wj=None, ws=None, rng=None):
     '''
-    Using data and estimated BLM parameters, simulate worker types and wages.
+    Using data and estimated dynamic BLM parameters, simulate worker types and wages.
 
     Arguments:
         jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
@@ -1099,7 +1099,7 @@ class DynamicBLMModel:
     Class for estimating dynamic BLM using a single set of starting values.
 
     Arguments:
-        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
+        params (ParamsDict): dictionary of parameters for dynamic BLM estimation. Run tw.dynamic_blm_params().describe_all() for descriptions of all valid parameters.
         rhos (dict of floats): rho values (persistance parameters) estimated using stayers; must contain keys 'rho_1' and 'rho_4'
         rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
     '''
@@ -1114,7 +1114,7 @@ class DynamicBLMModel:
         nl, nk = params.get_multiple(('nl', 'nk'))
         # Make sure that nk is specified
         if nk is None:
-            raise ValueError(f"tw.blm_params() key 'nk' must be changed from the default value of None.")
+            raise ValueError(f"tw.dynamic_blm_params() key 'nk' must be changed from the default value of None.")
         self.nl, self.nk = nl, nk
 
         # Log likelihood for movers
@@ -3868,7 +3868,7 @@ class DynamicBLMModel:
             try:
                 evals, evecs = np.linalg.eig(L)
             except np.linalg.LinAlgError as e:
-                warnings.warn("Linear algebra error encountered when computing connectedness measure. This can likely be corrected by increasing the value of 'd_prior_movers' in tw.blm_params().")
+                warnings.warn("Linear algebra error encountered when computing connectedness measure. This can likely be corrected by increasing the value of 'd_prior_movers' in tw.dynamic_blm_params().")
                 raise np.linalg.LinAlgError(e)
             EV[kk] = sorted(evals)[1]
 
@@ -3895,7 +3895,7 @@ class DynamicBLMModel:
             A_all = A['43']
         elif period == 'all':
             # FIXME should the mean account for the log?
-            A_all = (A['12'] + A['43']) / 2 # np.log((np.exp(self.A1) + np.exp(self.A2)) / 2)
+            A_all = (A['12'] + A['43']) / 2 # np.log((np.exp(self.A['12']) + np.exp(self.A['43'])) / 2)
         else:
             raise ValueError(f"`period` must be one of 'first', 'second' or 'all', but input specifies {period!r}.")
 
@@ -4157,7 +4157,7 @@ class DynamicBLMBootstrap:
     Class for estimating dynamic BLM using bootstrapping.
 
     Arguments:
-        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.dynamic_blm_params().describe_all() for descriptions of all valid parameters.
+        params (ParamsDict): dictionary of parameters for dynamic BLM estimation. Run tw.dynamic_blm_params().describe_all() for descriptions of all valid parameters.
     '''
 
     def __init__(self, params):
@@ -4165,20 +4165,21 @@ class DynamicBLMBootstrap:
         # No initial models
         self.models = None
 
-    def fit(self, jdata, sdata, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, frac_movers=0.1, frac_stayers=0.1, method='parametric', cluster_params=None, reallocate=False, reallocate_jointly=True, reallocate_period='first', ncore=1, verbose=True, rng=None):
+    def fit(self, jdata, sdata, static_blm_model=None, dynamic_blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, frac_movers=0.1, frac_stayers=0.1, method='parametric', cluster_params=None, reallocate=False, reallocate_jointly=True, reallocate_period='first', ncore=1, verbose=True, rng=None):
         '''
         Estimate bootstrap.
 
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
-            blm_model (BLMModel or None): BLM model estimated using true data; if None, estimate model inside the method. For use with parametric bootstrap.
+            static_blm_model (BLMModel or None): already-estimated non-dynamic BLM model. Estimates from this model will be used as a baseline in half the starting values (the other half will be random). If None, all starting values will be random.
+            dynamic_blm_model (DynamicBLMModel or None): dynamic BLM model estimated using true data; if None, estimate model inside the method. For use with parametric bootstrap.
             n_samples (int): number of bootstrap samples to estimate
             n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
             frac_movers (float): fraction of movers to draw (with replacement) for each bootstrap sample. For use with standard bootstrap.
             frac_stayers (float): fraction of stayers to draw (with replacement) for each bootstrap sample. For use with standard bootstrap.
-            method (str): if 'parametric', estimate BLM model on full data, simulate worker types and wages using estimated parameters, estimate BLM model on each set of simulated data, and construct bootstrapped errors; if 'standard', estimate standard bootstrap by sampling from original data, estimating BLM model on each sample, and constructing bootstrapped errors
+            method (str): if 'parametric', estimate dynamic BLM model on full data, simulate worker types and wages using estimated parameters, estimate dynamic BLM model on each set of simulated data, and construct bootstrapped errors; if 'standard', estimate standard bootstrap by sampling from original data, estimating dynamic BLM model on each sample, and constructing bootstrapped errors
             cluster_params (ParamsDict or None): dictionary of parameters for clustering firms. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.cluster_params().
             reallocate (bool): if True and `method` is 'parametric', draw worker type proportions independently of firm type; if False, uses worker type proportions that are conditional on firm type
             reallocate_jointly (bool): if True, worker type proportions take the average over movers and stayers (i.e. all workers use the same type proportions); if False, consider movers and stayers separately
@@ -4199,54 +4200,58 @@ class DynamicBLMBootstrap:
 
         if method == 'parametric':
             # Copy original wages and firm types
-            yj = jdata.loc[:, ['y1', 'y2']].to_numpy().copy()
-            ys = sdata.loc[:, ['y1', 'y2']].to_numpy().copy()
-            gj = jdata.loc[:, ['g1', 'g2']].to_numpy().copy()
+            yj = jdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
+            ys = sdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
+            gj = jdata.loc[:, ['g1', 'g4']].to_numpy().copy()
             gs = sdata.loc[:, 'g1'].to_numpy().copy()
             ## Weights ##
             wj = None
             ws = None
             if jdata._col_included('w'):
-                wj = jdata.loc[:, ['w1', 'w2']].to_numpy()
+                wj = jdata.loc[:, ['w1', 'w2', 'w3', 'w4']].to_numpy()
             if sdata._col_included('w'):
-                ws = sdata.loc[:, 'w1'].to_numpy()
+                ws = sdata.loc[:, ['w1', 'w2', 'w3', 'w4']].to_numpy()
 
-            if blm_model is None:
+            if dynamic_blm_model is None:
                 # Run initial BLM estimator
                 blm_fit_init = DynamicBLMEstimator(self.params)
-                blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
-                blm_model = blm_fit_init.model
+                blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, blm_model=static_blm_model, ncore=ncore, rng=rng)
+                dynamic_blm_model = blm_fit_init.model
 
             # Run parametric bootstrap
             models = []
             for _ in trange(n_samples):
                 # Simulate worker types then draw wages
-                yj_i, ys_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=reallocate, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, wj=wj, ws=ws, rng=rng)[:2]
+                yj_i, ys_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=dynamic_blm_model, reallocate=reallocate, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, wj=wj, ws=ws, rng=rng)[:2]
                 with bpd.util.ChainedAssignment():
-                    jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
-                    sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
+                    jdata.loc[:, 'y1'], jdata.loc[:, 'y2'], jdata.loc[:, 'y3'], jdata.loc[:, 'y4'] = (yj_i[0], yj_i[1], yj_i[2], yj_i[3])
+                    sdata.loc[:, 'y1'], sdata.loc[:, 'y2'], sdata.loc[:, 'y3'], sdata.loc[:, 'y4'] = (ys_i[0], ys_i[1], ys_i[2], ys_i[3])
                 # Cluster
-                bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False)).to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng)
+                bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
+                # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
+                bdf._set_attributes(jdata)
+                bdf = bdf.to_long(is_sorted=True, copy=False)
+                # Cluster
+                bdf = bdf.cluster(cluster_params, rng=rng)
                 clusters_dict = bdf.loc[:, ['j', 'g']].groupby('j', sort=False)['g'].first().to_dict()
                 del bdf
                 with bpd.util.ChainedAssignment():
                     # Update clusters in jdata and sdata
                     jdata.loc[:, 'g1'] = jdata.loc[:, 'j1'].map(clusters_dict)
-                    jdata.loc[:, 'g2'] = jdata.loc[:, 'j2'].map(clusters_dict)
+                    jdata.loc[:, 'g4'] = jdata.loc[:, 'j4'].map(clusters_dict)
                     sdata.loc[:, 'g1'] = sdata.loc[:, 'j1'].map(clusters_dict)
-                    sdata.loc[:, 'g2'] = sdata.loc[:, 'g1']
                 # Run dynamic BLM estimator
                 blm_fit_i = DynamicBLMEstimator(self.params)
-                blm_fit_i.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
+                blm_fit_i.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, blm_model=static_blm_model, ncore=ncore, rng=rng)
                 models.append(blm_fit_i.model)
                 del blm_fit_i
 
             with bpd.util.ChainedAssignment():
                 # Re-assign original wages and firm types
-                jdata.loc[:, ['y1', 'y2']] = yj
-                sdata.loc[:, ['y1', 'y2']] = ys
-                jdata.loc[:, ['g1', 'g2']] = gj
-                sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
+                jdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = yj
+                sdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = ys
+                jdata.loc[:, ['g1', 'g4']] = gj
+                sdata.loc[:, 'g1'] = gs
         elif method == 'standard':
             wj = None
             if self.params['weighted'] and jdata._col_included('w'):
@@ -4260,17 +4265,20 @@ class DynamicBLMBootstrap:
                 jdata_i = jdata.sample(frac=frac_movers, replace=True, weights=wj, random_state=rng)
                 sdata_i = sdata.sample(frac=frac_stayers, replace=True, weights=ws, random_state=rng)
                 # Cluster
-                bdf = bpd.BipartiteDataFrame(pd.concat([jdata_i, sdata_i], axis=0, copy=True)).clean(bpd.clean_params({'is_sorted': True, 'copy': False, 'verbose': verbose})).to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng)
+                bdf = bpd.BipartiteDataFrame(pd.concat([jdata_i, sdata_i], axis=0, copy=True))
+                # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
+                bdf._set_attributes(jdata)
+                # Clean and cluster
+                bdf = bdf.to_long(is_sorted=True, copy=False).clean(bpd.clean_params({'is_sorted': True, 'copy': False, 'verbose': verbose})).cluster(cluster_params, rng=rng)
                 clusters_dict = bdf.loc[:, ['j', 'g']].groupby('j', sort=False)['g'].first().to_dict()
                 del bdf
                 # Update clusters in jdata_i and sdata_i
                 jdata_i.loc[:, 'g1'] = jdata_i.loc[:, 'j1'].map(clusters_dict)
-                jdata_i.loc[:, 'g2'] = jdata_i.loc[:, 'j2'].map(clusters_dict)
+                jdata_i.loc[:, 'g4'] = jdata_i.loc[:, 'j4'].map(clusters_dict)
                 sdata_i.loc[:, 'g1'] = sdata_i.loc[:, 'j1'].map(clusters_dict)
-                sdata_i.loc[:, 'g2'] = sdata_i.loc[:, 'g1']
                 # Run dynamic BLM estimator
                 blm_fit_i = DynamicBLMEstimator(self.params)
-                blm_fit_i.fit(jdata=jdata_i, sdata=sdata_i, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
+                blm_fit_i.fit(jdata=jdata_i, sdata=sdata_i, n_init=n_init_estimator, n_best=n_best, blm_model=static_blm_model, ncore=ncore, rng=rng)
                 models.append(blm_fit_i.model)
                 del jdata_i, sdata_i, blm_fit_i
         else:
@@ -4296,15 +4304,15 @@ class DynamicBLMBootstrap:
             A_all = np.zeros((len(self.models), nl, nk))
             for i, model in enumerate(self.models):
                 # Sort by firm effects
-                A1, A2 = model._sort_parameters(model.A1, model.A2, sort_firm_types=True)
+                A = model._sort_parameters(model.A, sort_firm_types=True)
                 # Extract average log-earnings for each model
                 if period == 'first':
-                    A_all[i, :, :] = A1
+                    A_all[i, :, :] = A['12']
                 elif period == 'second':
-                    A_all[i, :, :] = A2
+                    A_all[i, :, :] = A['43']
                 elif period == 'all':
                     # FIXME should the mean account for the log?
-                    A_all[i, :, :] = (A1 + A2) / 2 # np.log((np.exp(A1) + np.exp(A2)) / 2)
+                    A_all[i, :, :] = (A['12'] + A['43']) / 2 # np.log((np.exp(A['12']) + np.exp(A['43'])) / 2)
                 else:
                     raise ValueError(f"`period` must be one of 'first', 'second' or 'all', but input specifies {period!r}.")
 
@@ -4345,7 +4353,7 @@ class DynamicBLMBootstrap:
             pk_mean = np.zeros((nk, nl))
             for model in self.models:
                 # Sort by firm effects
-                A1, A2, pk1, pk0, NNm, NNs = model._sort_parameters(model.A1, model.A2, pk1=model.pk1, pk0=model.pk0, NNm=model.NNm, NNs=model.NNs, sort_firm_types=True)
+                A, pk1, pk0, NNm, NNs = model._sort_parameters(model.A, pk1=model.pk1, pk0=model.pk0, NNm=model.NNm, NNs=model.NNs, sort_firm_types=True)
 
                 ## Extract subset(s) ##
                 if subset == 'movers':
