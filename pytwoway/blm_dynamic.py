@@ -914,7 +914,7 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
 
             # Draw worker types
             Lm[rows_kk] = rng.choice(worker_types, size=ni, replace=True, p=pk1[jj, :])
-
+    
     A_sum = {period:
                 A[period][Lm, gj[:, periods_movers_dict[period]]]
                     if period[-1] != 'b' else
@@ -4183,7 +4183,8 @@ class DynamicBLMBootstrap:
         if rng is None:
             rng = np.random.default_rng(None)
         if cluster_params is None:
-            cluster_params = bpd.cluster_params()
+            grouping = bpd.grouping.KMeans(n_clusters=jdata.n_clusters())
+            cluster_params = bpd.cluster_params({'grouping': grouping})
 
         # Update clustering parameters
         cluster_params = cluster_params.copy()
@@ -4223,8 +4224,13 @@ class DynamicBLMBootstrap:
                 with bpd.util.ChainedAssignment():
                     # Update clusters in jdata and sdata
                     jdata.loc[:, 'g1'] = jdata.loc[:, 'j1'].map(clusters_dict)
+                    jdata.loc[:, 'g2'] = jdata.loc[:, 'g1']
                     jdata.loc[:, 'g4'] = jdata.loc[:, 'j4'].map(clusters_dict)
+                    jdata.loc[:, 'g3'] = jdata.loc[:, 'g4']
                     sdata.loc[:, 'g1'] = sdata.loc[:, 'j1'].map(clusters_dict)
+                    sdata.loc[:, 'g2'] = sdata.loc[:, 'g1']
+                    sdata.loc[:, 'g3'] = sdata.loc[:, 'g1']
+                    sdata.loc[:, 'g4'] = sdata.loc[:, 'g1']
                 # Run dynamic BLM estimator
                 blm_fit_i = DynamicBLMEstimator(self.params)
                 blm_fit_i.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, blm_model=static_blm_model, ncore=ncore, rng=rng)
@@ -4235,8 +4241,8 @@ class DynamicBLMBootstrap:
                 # Re-assign original wages and firm types
                 jdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = yj
                 sdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = ys
-                jdata.loc[:, ['g1', 'g4']] = gj
-                sdata.loc[:, 'g1'] = gs
+                jdata.loc[:, ['g1', 'g4']], jdata.loc[:, ['g2', 'g3']] = (gj, gj)
+                sdata.loc[:, 'g1'], sdata.loc[:, 'g2'], sdata.loc[:, 'g3'], sdata.loc[:, 'g4'] = (gs, gs, gs, gs)
         elif method == 'standard':
             models = []
             for _ in trange(n_samples):
@@ -4252,8 +4258,13 @@ class DynamicBLMBootstrap:
                 del bdf
                 # Update clusters in jdata_i and sdata_i
                 jdata_i.loc[:, 'g1'] = jdata_i.loc[:, 'j1'].map(clusters_dict)
+                jdata_i.loc[:, 'g2'] = jdata_i.loc[:, 'g1']
                 jdata_i.loc[:, 'g4'] = jdata_i.loc[:, 'j4'].map(clusters_dict)
+                jdata_i.loc[:, 'g3'] = jdata_i.loc[:, 'g4']
                 sdata_i.loc[:, 'g1'] = sdata_i.loc[:, 'j1'].map(clusters_dict)
+                sdata_i.loc[:, 'g2'] = sdata_i.loc[:, 'g1']
+                sdata_i.loc[:, 'g3'] = sdata_i.loc[:, 'g1']
+                sdata_i.loc[:, 'g4'] = sdata_i.loc[:, 'g1']
                 # Run dynamic BLM estimator
                 blm_fit_i = DynamicBLMEstimator(self.params)
                 blm_fit_i.fit(jdata=jdata_i, sdata=sdata_i, n_init=n_init_estimator, n_best=n_best, blm_model=static_blm_model, ncore=ncore, rng=rng)

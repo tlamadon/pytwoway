@@ -2479,7 +2479,8 @@ class BLMBootstrap:
         if rng is None:
             rng = np.random.default_rng(None)
         if cluster_params is None:
-            cluster_params = bpd.cluster_params()
+            grouping = bpd.grouping.KMeans(n_clusters=jdata.n_clusters())
+            cluster_params = bpd.cluster_params({'grouping': grouping})
 
         # Update clustering parameters
         cluster_params = cluster_params.copy()
@@ -2527,6 +2528,7 @@ class BLMBootstrap:
                     jdata.loc[:, 'g1'] = jdata.loc[:, 'j1'].map(clusters_dict)
                     jdata.loc[:, 'g2'] = jdata.loc[:, 'j2'].map(clusters_dict)
                     sdata.loc[:, 'g1'] = sdata.loc[:, 'j1'].map(clusters_dict)
+                    sdata.loc[:, 'g2'] = sdata.loc[:, 'g1']
                 # Run BLM estimator
                 blm_fit_i = BLMEstimator(self.params)
                 blm_fit_i.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
@@ -2538,7 +2540,7 @@ class BLMBootstrap:
                 jdata.loc[:, ['y1', 'y2']] = yj
                 sdata.loc[:, ['y1', 'y2']] = ys
                 jdata.loc[:, ['g1', 'g2']] = gj
-                sdata.loc[:, 'g1'] = gs
+                sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
         elif method == 'standard':
             wj = None
             if self.params['weighted'] and jdata._col_included('w'):
@@ -2563,6 +2565,7 @@ class BLMBootstrap:
                 jdata_i.loc[:, 'g1'] = jdata_i.loc[:, 'j1'].map(clusters_dict)
                 jdata_i.loc[:, 'g2'] = jdata_i.loc[:, 'j2'].map(clusters_dict)
                 sdata_i.loc[:, 'g1'] = sdata_i.loc[:, 'j1'].map(clusters_dict)
+                sdata_i.loc[:, 'g2'] = sdata_i.loc[:, 'g1']
                 # Run BLM estimator
                 blm_fit_i = BLMEstimator(self.params)
                 blm_fit_i.fit(jdata=jdata_i, sdata=sdata_i, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
