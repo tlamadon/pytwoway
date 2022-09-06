@@ -17,6 +17,7 @@
   Sorkin <notebooks/sorkin_example>
   Borovickova-Shimer <notebooks/borovickovashimer_example>
   Attrition <notebooks/attrition_example>
+  CHK Event Study <notebooks/chk_example>
   Monte Carlo <notebooks/monte_carlo_example>
 
 .. toctree::
