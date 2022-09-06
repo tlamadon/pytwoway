@@ -2,7 +2,7 @@
 from .Q import Q
 from .constraints import constraints
 from .attrition_utils import attrition_utils
-from .diagnostics import plot_extendedeventstudy_params, plot_extendedeventstudy
+import pytwoway.diagnostics
 import pytwoway.preconditioners
 from .fe import fe_params, FEEstimator
 from .fecontrol import fecontrol_params, FEControlEstimator

@@ -1,7 +1,7 @@
 Diagnostics module
 ==================
 
-.. automodule:: pytwoway.diagnostics
+.. automodule:: pytwoway.diagnostics.plot_extendedeventstudy
    :members:
    :undoc-members:
    :show-inheritance:
