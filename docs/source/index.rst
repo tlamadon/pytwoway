@@ -39,3 +39,4 @@
   Q <module-Q>
   Constraints <module-constraints>
   Attrition Utilities <module-attrition_utils>
+  Diagnostics <module-diagnostics>

@@ -5,7 +5,7 @@ Python API
 Overview
 ---------
 
-The main PyTwoWay API is split into multiple classes for estimating models and two for simulating data according to the BLM and Borovickova-Shimer dgps. It also has three modules: one for constructing the variance-covariance matrix for AKM and its bias corrections; one for generating constraints for BLM; and one for generating attrition plots using increasing (building up from a fixed set of firms) or decreasing (with varying sets of firms) fractions of movers. PyTwoWay is canonically imported using
+The main PyTwoWay API is split into multiple classes for estimating models and two for simulating data according to the BLM and Borovickova-Shimer dgps. It also has four modules: one for constructing the variance-covariance matrix for AKM and its bias corrections; one for generating constraints for BLM; one for generating attrition plots using increasing (building up from a fixed set of firms) or decreasing (with varying sets of firms) fractions of movers; and one for generating diagnostics for bipartite labor data. PyTwoWay is canonically imported using
 
   .. code-block:: python
 
@@ -50,6 +50,8 @@ Modules
 * ``pytwoway.constraints``: Module for generating constraints for BLM
 
 * ``pytwoway.attrition_utils``: Module for estimating attrition using increasing (building up from a fixed set of firms) or decreasing (with varying sets of firms) fractions of movers
+
+* ``pytwoway.diagnostics``: Module for generating diagnostics for bipartite labor data
 
 Classes and Methods
 -------------------
@@ -219,3 +221,10 @@ Modules and Methods
 
    ~pytwoway.attrition_utils.AttritionIncreasing
    ~pytwoway.attrition_utils.AttritionDecreasing
+
+``pytwoway.diagnostics``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autosummary::
+
+   ~pytwoway.diagnostics.plot_extendedeventstudy
