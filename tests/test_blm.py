@@ -253,7 +253,7 @@ def test_blm_monotonic_1():
 #     # Initialize BLM estimator
 #     blm_fit = tw.BLMEstimator(blm_params)
 #     # Fit BLM estimator
-#     blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
+#     blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=8, rng=rng)
 
 #     assert np.min(np.diff(blm_fit.model.liks1)[:83]) > 0
 #     assert np.min(np.diff(blm_fit.model.liks0)) > 0
@@ -356,7 +356,7 @@ def test_blm_full_estimation_no_controls():
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
-    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
+    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=8, rng=rng)
     blm_fit = blm_fit.model
 
     assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-4
@@ -507,7 +507,7 @@ def test_blm_full_estimation_cat_tv_wi():
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
-    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
+    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=8, rng=rng)
     blm_fit = blm_fit.model
 
     A1_sum_0_sim = (sim_params['A1'].T + sim_params['A1_cat']['cat_tv_wi_control'][:, 0])
@@ -663,7 +663,7 @@ def test_blm_full_estimation_cat_tnv_wi():
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
-    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
+    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=8, rng=rng)
     blm_fit = blm_fit.model
 
     A1_sum_0_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_tnv_wi_control'][:, 0]
@@ -833,7 +833,7 @@ def test_blm_full_estimation_cat_tv():
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
-    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
+    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=8, rng=rng)
     blm_fit = blm_fit.model
 
     A1_sum_0_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_tv_control'][0]
@@ -954,6 +954,7 @@ def test_blm_start_at_truth_cat_tnv():
 
 def test_blm_full_estimation_cat_tnv():
     # Test whether BLM estimator works for full estimation for categorical, time non-varying control variables.
+    # NOTE: n_init increased to 25
     rng = np.random.default_rng(1243)
     nl = 2 # Number of worker types
     nk = 3 # Number of firm types
@@ -993,7 +994,7 @@ def test_blm_full_estimation_cat_tnv():
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
-    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
+    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=25, n_best=5, ncore=8, rng=rng)
     blm_fit = blm_fit.model
 
     A1_sum_0_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_tnv_control'][0]
@@ -1125,7 +1126,7 @@ def test_blm_full_estimation_cts_tv_wi():
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
-    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
+    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=8, rng=rng)
     blm_fit = blm_fit.model
 
     assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-3
@@ -1238,7 +1239,7 @@ def test_blm_full_estimation_cts_tnv_wi():
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
-    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
+    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=8, rng=rng)
     blm_fit = blm_fit.model
 
     assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-3
@@ -1351,7 +1352,7 @@ def test_blm_full_estimation_cts_tv():
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
-    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
+    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=8, rng=rng)
     blm_fit = blm_fit.model
 
     assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-3
@@ -1464,7 +1465,7 @@ def test_blm_full_estimation_cts_tnv():
     # Initialize BLM estimator
     blm_fit = tw.BLMEstimator(blm_params)
     # Fit BLM estimator
-    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
+    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=8, rng=rng)
     blm_fit = blm_fit.model
 
     assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-4
