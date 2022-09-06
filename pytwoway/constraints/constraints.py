@@ -687,18 +687,18 @@ class StationaryFirmTypeVariation():
         A = np.zeros(shape=(len(nnt) * nl * nk, nt * nl * nk))
         for i, period in enumerate(nnt):
             row_shift = i * nl * nk
-            col_shift = (period - 1) * nl * nk
+            col_shift = period * nl * nk
             for l in range(nl):
                 for k1 in range(nk):
                     for k2 in range(nk):
                         # Baseline is period 1
-                        A[row_shift + k1, k2] = -(1 / nk)
+                        A[row_shift + k1, (col_shift - period * nl * nk) + k2] = -(1 / nk)
                         # Comparison is period > 1
-                        A[row_shift + k1, col_shift + nl * nk + k2] = (1 / nk)
+                        A[row_shift + k1, col_shift + k2] = (1 / nk)
                     # Baseline is period 1
-                    A[row_shift + k1, k1] += 1
+                    A[row_shift + k1, (col_shift - period * nl * nk) + k1] += 1
                     # Comparison is period > 1
-                    A[row_shift + k1, col_shift + nl * nk + k1] -= 1
+                    A[row_shift + k1, col_shift + k1] -= 1
                 row_shift += nk
                 col_shift += nk
 
