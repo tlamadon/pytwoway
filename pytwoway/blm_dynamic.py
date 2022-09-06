@@ -914,7 +914,7 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
 
             # Draw worker types
             Lm[rows_kk] = rng.choice(worker_types, size=ni, replace=True, p=pk1[jj, :])
-    
+
     A_sum = {period:
                 A[period][Lm, gj[:, periods_movers_dict[period]]]
                     if period[-1] != 'b' else
