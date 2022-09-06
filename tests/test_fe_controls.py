@@ -56,7 +56,7 @@ def test_fe_estimator_full_novar():
 
     # Estimated parameters
     ## Plug-in ##
-    est_pi_sigma_2 = fe_solver.sigma_2_pi
+    est_pi_sigma_2 = fe_solver.sigma_2_fe
     est_pi_var_psi = fe_solver.var_fe['var(psi)']
     est_pi_cov_psi_alpha = fe_solver.cov_fe['cov(psi, alpha)']
     ## HO ##
@@ -102,7 +102,7 @@ def test_fe_estimator_full_var_uncollapsed():
 
     # Estimated parameters
     ## Plug-in ##
-    est_pi_sigma_2 = fe_solver.sigma_2_pi
+    est_pi_sigma_2 = fe_solver.sigma_2_fe
     est_pi_var_psi = fe_solver.var_fe['var(psi)']
     est_pi_cov_psi_alpha = fe_solver.cov_fe['cov(psi, alpha)']
     ## HO ##
@@ -148,7 +148,7 @@ def test_fe_estimator_full_var_collapsed():
 
     # Estimated parameters
     ## Plug-in ##
-    est_pi_sigma_2 = fe_solver.sigma_2_pi
+    est_pi_sigma_2 = fe_solver.sigma_2_fe
     est_pi_var_psi = fe_solver.var_fe['var(psi)']
     est_pi_cov_psi_alpha = fe_solver.cov_fe['cov(psi, alpha)']
     ## HO ##
@@ -263,7 +263,7 @@ def test_fe_weights():
     # Estimated parameters
     ### Unweighted ###
     ## Plug-in ##
-    est_pi_sigma_2_a = fe_solver_a.sigma_2_pi
+    est_pi_sigma_2_a = fe_solver_a.sigma_2_fe
     est_pi_var_psi_a = fe_solver_a.var_fe['var(psi)']
     est_pi_cov_psi_alpha_a = fe_solver_a.cov_fe['cov(psi, alpha)']
     ## HO ##
@@ -276,7 +276,7 @@ def test_fe_weights():
     est_he_cov_psi_alpha_a = fe_solver_a.res['cov(psi, alpha)_he']
     ### Weighted ###
     ## Plug-in ##
-    est_pi_sigma_2_b = fe_solver_b.sigma_2_pi
+    est_pi_sigma_2_b = fe_solver_b.sigma_2_fe
     est_pi_var_psi_b = fe_solver_b.var_fe['var(psi)']
     est_pi_cov_psi_alpha_b = fe_solver_b.cov_fe['cov(psi, alpha)']
     ## HO ##
@@ -369,7 +369,7 @@ def test_fe_controls_novar():
 
     ### Estimated parameters ###
     ## Plug-in ##
-    est_pi_sigma_2 = fe_solver.sigma_2_pi
+    est_pi_sigma_2 = fe_solver.sigma_2_fe
     est_pi_var_psi_alpha = fe_solver.res['var(psi + alpha)_fe']
     est_pi_var_cat = fe_solver.res['var(cat_tnv_control)_fe']
     est_pi_var_cts = fe_solver.res['var(cts_tnv_control)_fe']
@@ -507,7 +507,7 @@ def test_fe_controls_var():
 
     ### Estimated parameters ###
     ## Plug-in ##
-    est_pi_sigma_2 = fe_solver.sigma_2_pi
+    est_pi_sigma_2 = fe_solver.sigma_2_fe
     est_pi_var_psi_alpha = fe_solver.res['var(psi + alpha)_fe']
     est_pi_var_cat = fe_solver.res['var(cat_tnv_control)_fe']
     est_pi_var_cts = fe_solver.res['var(cts_tnv_control)_fe']
