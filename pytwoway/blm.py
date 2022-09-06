@@ -1,5 +1,5 @@
 '''
-Implement the non-linear estimator from Bonhomme, Lamadon, & Manresa.
+Implement the static, 2-period non-linear estimator from Bonhomme, Lamadon, & Manresa.
 '''
 from tqdm.auto import tqdm, trange
 import copy
@@ -14,11 +14,12 @@ import pandas as pd
 # from scipy.special import logsumexp
 from scipy.sparse import csc_matrix
 from matplotlib import pyplot as plt
+from paramsdict import ParamsDict, ParamsDictBase
 import bipartitepandas as bpd
-from bipartitepandas.util import ParamsDict, to_list, HiddenPrints # , _is_subtype
+from bipartitepandas.util import to_list, HiddenPrints # , _is_subtype
 import pytwoway as tw
 from pytwoway import constraints as cons
-from pytwoway.util import DxSP, DxM, diag_of_sp_prod, jitter_scatter
+from pytwoway.util import DxSP, DxM, diag_of_sp_prod, jitter_scatter, logsumexp, lognormpdf, fast_lognormpdf
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq2(a):
@@ -33,7 +34,7 @@ def _min_gt0(a):
     return np.min(a) > 0
 
 # Define default parameter dictionaries
-_blm_params_default = ParamsDict({
+blm_params = ParamsDict({
     ## Class parameters ##
     'nl': (6, 'type_constrained', (int, _gteq1),
         '''
@@ -43,11 +44,11 @@ _blm_params_default = ParamsDict({
         '''
             (default=None) Number of firm types. None will raise an error when running the estimator.
         ''', '>= 1'),
-    'categorical_controls': (None, 'dict_of_type_none', ParamsDict,
+    'categorical_controls': (None, 'dict_of_type_none', ParamsDictBase,
         '''
             (default=None) Dictionary linking column names to instances of tw.categorical_control_params(). Each instance specifies a new categorical control variable and how its starting values should be generated. Run tw.categorical_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
-    'continuous_controls': (None, 'dict_of_type_none', ParamsDict,
+    'continuous_controls': (None, 'dict_of_type_none', ParamsDictBase,
         '''
             (default=None) Dictionary linking column names to instances of tw.continuous_control_params(). Each instance specifies a new continuous control variable and how its starting values should be generated. Run tw.continuous_control_params().describe_all() for descriptions of all valid parameters for simulating each control variable. None is equivalent to {}.
         ''', None),
@@ -113,7 +114,7 @@ _blm_params_default = ParamsDict({
         '''
             (default=False) If True, return qi matrix after first loop.
         ''', None),
-    # fit_movers() parameters ##
+    ## fit_movers() parameters ##
     'n_iters_movers': (1000, 'type_constrained', (int, _gteq1),
         '''
             (default=1000) Maximum number of EM iterations for movers.
@@ -182,7 +183,7 @@ _blm_params_default = ParamsDict({
         '''
             (default=True) If 'force_min_firm_type'=True, add constraint to force minimum firm type to have the lowest average effect out of all firm types (the estimator may work better with this set to False, but the returned parameters may be inconsistent with the given constraints).
         ''', None),
-    # fit_stayers() parameters ##
+    ## fit_stayers() parameters ##
     'n_iters_stayers': (1000, 'type_constrained', (int, _gteq1),
         '''
             (default=1000) Maximum number of EM iterations for stayers.
@@ -197,22 +198,7 @@ _blm_params_default = ParamsDict({
         ''', '>= 1')
 })
 
-def blm_params(update_dict=None):
-    '''
-    Dictionary of default blm_params. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict or None): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of blm_params
-    '''
-    new_dict = _blm_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
-
-_categorical_control_params_default = ParamsDict({
+categorical_control_params = ParamsDict({
     'n': (None, 'type_constrained_none', (int, _gteq2),
         '''
             (default=6) Number of types for the parameter. None will raise an error when running the estimator.
@@ -263,22 +249,7 @@ _categorical_control_params_default = ParamsDict({
         ''', None)
 })
 
-def categorical_control_params(update_dict=None):
-    '''
-    Dictionary of default categorical_control_params. Run tw.categorical_control_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict or None): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of categorical_control_params
-    '''
-    new_dict = _categorical_control_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
-
-_continuous_control_params_default = ParamsDict({
+continuous_control_params = ParamsDict({
     'a1_mu': (1, 'type', (float, int),
         '''
             (default=1) Mean of starting values for A1_cts (mean of coefficient in first period).
@@ -324,61 +295,6 @@ _continuous_control_params_default = ParamsDict({
             (default=None) Constraint object or list of constraint objects that define constraints on S1 and S2. None is equivalent to [].
         ''', None)
 })
-
-def continuous_control_params(update_dict=None):
-    '''
-    Dictionary of default continuous_control_params. Run tw.continuous_control_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict or None): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of continuous_control_params
-    '''
-    new_dict = _continuous_control_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
-
-def _logsumexp(a, axis=None):
-    '''
-    Compute the log of the sum of exponentials of input elements. A simplified version of https://github.com/scipy/scipy/blob/v1.8.1/scipy/special/_logsumexp.py#L7-L127.
-
-    Arguments:
-        a (NumPy Array): array to compute logsumexp on
-        axis (int or None): axis over which logsumexp is taken; if None, compute over all axes
-
-    Returns:
-        (NumPy Array): logsumexp of a
-    '''
-    a_max = np.amax(a, axis=axis, keepdims=True)
-
-    tmp = np.exp(a - a_max)
-
-    s = np.sum(tmp, axis=axis, keepdims=False)
-    out = np.log(s)
-
-    a_max = np.squeeze(a_max, axis=axis)
-    out += a_max
-
-    return out
-
-logpi = - 0.5 * np.log(2 * np.pi)
-
-def _lognormpdf(x, mu, sd):
-    # Faster to split into multiple lines
-    res = logpi - np.log(sd)
-    res -= (x - mu) ** 2 / (2 * sd ** 2)
-    return res
-
-
-def _fast_lognormpdf(x, mu, sd, G):
-    # Faster to split into multiple lines
-    log_sd = np.log(sd)
-    sd_sq = sd ** 2
-    res = logpi - log_sd[G]
-    res -= (x - mu[G]) ** 2 / (2 * sd_sq[G])
-    return res
 
 def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, reallocate_jointly=True, reallocate_period='first', wj=None, ws=None, rng=None):
     '''
@@ -673,7 +589,7 @@ class BLMModel:
                 raise ValueError(f"Categorical control variables must specify 'n', but column {col!r} does not.")
 
         # Check if there are any control variables
-        self.any_controls = len(control_cols) > 0
+        self.any_controls = (len(control_cols) > 0)
         # Check if any control variables interact with worker type
         self.any_worker_type_interactions = any([col_dict['worker_type_interaction'] for col_dict in controls_dict.values()])
         # Check if any control variables don't interact with worker type
@@ -763,6 +679,10 @@ class BLMModel:
 
         # if self.stationary:
         #     self.A2 = self.A1
+
+        ## NNm and NNs ##
+        self.NNm = None
+        self.NNs = None
 
     def _min_firm_type(self, A1, A2):
         '''
@@ -1028,7 +948,12 @@ class BLMModel:
                 if NNs is not None:
                     NNs = NNs[firm_type_order]
 
-        return (a for a in (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0, NNm, NNs) if a is not None)
+        res = [a for a in (A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0, NNm, NNs) if a is not None]
+
+        if len(res) == 1:
+            res = res[0]
+
+        return res
 
     def _normalize(self, A1, A2, A1_cat, A2_cat):
         '''
@@ -1455,7 +1380,7 @@ class BLMModel:
             # We compute the posterior probabilities for each row
             # We iterate over the worker types, should not be be too costly since the vector is quite large within each iteration
             log_pk1 = np.log(pk1)
-            if any_controls > 0:
+            if any_controls:
                 ## Account for control variables ##
                 if iter == 0:
                     A1_sum, A2_sum, S1_sum_sq, S2_sum_sq = self._sum_by_non_nl(ni=ni, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts)
@@ -1465,18 +1390,18 @@ class BLMModel:
                 for l in range(nl):
                     # Update A1_sum/A2_sum/S1_sum_sq/S2_sum_sq to account for worker-interaction terms
                     A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts)
-                    lp1 = _lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
-                    lp2 = _lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
+                    lp1 = lognormpdf(Y1, A1[l, G1] + A1_sum + A1_sum_l, var=S1[l, G1] ** 2 + S1_sum_sq + S1_sum_sq_l)
+                    lp2 = lognormpdf(Y2, A2[l, G2] + A2_sum + A2_sum_l, var=S2[l, G2] ** 2 + S2_sum_sq + S2_sum_sq_l)
                     lp[:, l] = log_pk1[KK, l] + W1 * lp1 + W2 * lp2
             else:
                 for l in range(nl):
-                    lp1 = _fast_lognormpdf(Y1, A1[l, :], S1[l, :], G1)
-                    lp2 = _fast_lognormpdf(Y2, A2[l, :], S2[l, :], G2)
+                    lp1 = fast_lognormpdf(Y1, A1[l, :], S1[l, :], G1)
+                    lp2 = fast_lognormpdf(Y2, A2[l, :], S2[l, :], G2)
                     lp[:, l] = log_pk1[KK, l] + W1 * lp1 + W2 * lp2
             del log_pk1, lp1, lp2
 
             # We compute log sum exp to get likelihoods and probabilities
-            lse_lp = _logsumexp(lp, axis=1)
+            lse_lp = logsumexp(lp, axis=1)
             qi = np.exp(lp.T - lse_lp).T
             if params['return_qi']:
                 return qi
@@ -1515,361 +1440,7 @@ class BLMModel:
                         store_res = False
                         break
 
-            # ---------- M-step ----------
-            # Constrained OLS (source: https://scaron.info/blog/quadratic-programming-in-python.html)
-
-            # The regression has 2 * nl * nk parameters and nl * ni rows
-            # We do not necessarily want to construct the duplicated data by nl
-            # Instead we will construct X'X and X'Y by looping over nl
-            # We also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
-            ## General ##
-            # Shift for period 2
-            ts = nl * nk
-            # Only store the diagonal
-            XwX = np.zeros(shape=2 * ts)
-            if params['update_a']:
-                XwY = np.zeros(shape=2 * ts)
-
-            ## Categorical ##
-            if len(cat_cols) > 0:
-                ts_cat = {col: nl * col_dict['n'] for col, col_dict in cat_dict.items()}
-                XwX_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
-                if params['update_a']:
-                    XwY_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
-            ### Continuous ###
-            if len(cts_cols) > 0:
-                XwX_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
-                if params['update_a']:
-                    XwY_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
-
-            if iter == 0:
-                if any_non_worker_type_interactions:
-                    Y1_adj = Y1.copy()
-                    Y2_adj = Y2.copy()
-                    Y1_adj -= A1_sum
-                    Y2_adj -= A2_sum
-                else:
-                    Y1_adj = Y1
-                    Y2_adj = Y2
-
-            ## Update A ##
-            GG1_weighted = []
-            GG2_weighted = []
-            for l in range(nl):
-                # (We might be better off trying this within numba or something)
-                l_index, r_index = l * nk, (l + 1) * nk
-                # Shared weighted terms
-                GG1_weighted.append(DxSP(W1 * qi[:, l] / S1[l, G1], GG1).T)
-                GG2_weighted.append(DxSP(W2 * qi[:, l] / S2[l, G2], GG2).T)
-                ## Compute XwX terms ##
-                XwX[l_index: r_index] = diag_of_sp_prod(GG1_weighted[l], GG1)
-                XwX[ts + l_index: ts + r_index] = np.asarray(GG2_weighted[l].multiply(GG2.T).sum(axis=1))[:, 0]
-                if params['update_a']:
-                    # Update A1_sum and A2_sum to account for worker-interaction terms
-                    A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
-                    ## Compute XwY terms ##
-                    XwY[l_index: r_index] = GG1_weighted[l] @ (Y1_adj - A1_sum_l)
-                    XwY[ts + l_index: ts + r_index] = GG2_weighted[l] @ (Y2_adj - A2_sum_l)
-                    del A1_sum_l, A2_sum_l
-            if not params['update_s']:
-                del GG1_weighted, GG2_weighted
-
-            # print('A1 before:')
-            # print(A1)
-            # print('A2 before:')
-            # print(A2)
-            # print('S1 before:')
-            # print(S1)
-            # print('S2 before:')
-            # print(S2)
-            # print('A1_cat before:')
-            # print(A1_cat)
-            # print('A2_cat before:')
-            # print(A2_cat)
-            # print('S1_cat before:')
-            # print(S1_cat)
-            # print('S2_cat before:')
-            # print(S2_cat)
-            # print('A1_cts before:')
-            # print(A1_cts)
-            # print('A2_cts before:')
-            # print(A2_cts)
-            # print('S1_cts before:')
-            # print(S1_cts)
-            # print('S2_cts before:')
-            # print(S2_cts)
-
-            # We solve the system to get all the parameters (use dense solver)
-            XwX = np.diag(XwX)
-            if params['update_a']:
-                if iter > 0:
-                    ## Constraints ##
-                    cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type)
-                try:
-                    cons_a.solve(XwX, -XwY, solver='quadprog')
-                    if cons_a.res is None:
-                        # If constraints inconsistent, keep A1 and A2 the same
-                        if params['verbose'] in [2, 3]:
-                            print(f'Passing A1/A2: {e}')
-                    else:
-                        res_a1, res_a2 = cons_a.res[: len(cons_a.res) // 2], cons_a.res[len(cons_a.res) // 2:]
-                        # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
-                        #     raise ValueError('Estimated A1/A2 has NaN values')
-                        A1 = np.reshape(res_a1, self.dims)
-                        A2 = np.reshape(res_a2, self.dims)
-
-                except ValueError as e:
-                    # If constraints inconsistent, keep A1 and A2 the same
-                    if params['verbose'] in [2, 3]:
-                        print(f'Passing A1/A2: {e}')
-
-            ## Categorical ##
-            CC1_cat_weighted = {}
-            CC2_cat_weighted = {}
-            for col in cat_cols:
-                CC1_cat_weighted[col] = []
-                CC2_cat_weighted[col] = []
-                col_n = cat_dict[col]['n']
-                if not cat_dict[col]['worker_type_interaction']:
-                    Y1_adj += A1_cat[col][C1[col]]
-                    Y2_adj += A2_cat[col][C2[col]]
-                for l in range(nl):
-                    l_index, r_index = l * col_n, (l + 1) * col_n
-                    ## Compute shared terms ##
-                    if cat_dict[col]['worker_type_interaction']:
-                        S1_cat_l = S1_cat[col][l, C1[col]]
-                        S2_cat_l = S2_cat[col][l, C2[col]]
-                    else:
-                        S1_cat_l = S1_cat[col][C1[col]]
-                        S2_cat_l = S2_cat[col][C2[col]]
-                    CC1_cat_weighted[col].append(DxSP(W1 * qi[:, l] / S1_cat_l, CC1[col]).T)
-                    CC2_cat_weighted[col].append(DxSP(W2 * qi[:, l] / S2_cat_l, CC2[col]).T)
-                    del S1_cat_l, S2_cat_l
-                    ## Compute XwX_cat terms ##
-                    XwX_cat[col][l_index: r_index] = diag_of_sp_prod(CC1_cat_weighted[col][l], CC1[col])
-                    XwX_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = np.asarray(CC2_cat_weighted[col][l].multiply(CC2[col].T).sum(axis=1))[:, 0]
-                    if params['update_a']:
-                        # Update A1_sum and A2_sum to account for worker-interaction terms
-                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
-                        if cat_dict[col]['worker_type_interaction']:
-                            A1_sum_l -= A1_cat[col][l, C1[col]]
-                            A2_sum_l -= A2_cat[col][l, C2[col]]
-                        ## Compute XwY_cat terms ##
-                        XwY_cat[col][l_index: r_index] = CC1_cat_weighted[col][l] @ (Y1_adj - A1_sum_l - A1[l, G1])
-                        XwY_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = CC2_cat_weighted[col][l] @ (Y2_adj - A2_sum_l - A2[l, G2])
-                        del A1_sum_l, A2_sum_l
-                if not params['update_s']:
-                    del CC1_cat_weighted[col], CC2_cat_weighted[col]
-
-                # We solve the system to get all the parameters (use dense solver)
-                XwX_cat[col] = np.diag(XwX_cat[col])
-                if params['update_a']:
-                    try:
-                        a_solver = cons_a_dict[col]
-                        a_solver.solve(XwX_cat[col], -XwY_cat[col], solver='quadprog')
-                        if a_solver.res is None:
-                            # If constraints inconsistent, keep A1_cat and A2_cat the same
-                            if params['verbose'] in [2, 3]:
-                                print(f'Passing A1_cat/A2_cat for column {col!r}: {e}')
-                        else:
-                            res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2], a_solver.res[len(a_solver.res) // 2:]
-                            # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
-                            #     raise ValueError(f'Estimated A1_cat/A2_cat has NaN values for column {col!r}')
-                            if cat_dict[col]['worker_type_interaction']:
-                                A1_cat[col] = np.reshape(res_a1, (nl, col_n))
-                                A2_cat[col] = np.reshape(res_a2, (nl, col_n))
-                            else:
-                                A1_cat[col] = res_a1[: col_n]
-                                A2_cat[col] = res_a2[: col_n]
-
-                    except ValueError as e:
-                        # If constraints inconsistent, keep A1_cat and A2_cat the same
-                        if params['verbose'] in [2, 3]:
-                            print(f'Passing A1_cat/A2_cat for column {col!r}: {e}')
-
-                if not cat_dict[col]['worker_type_interaction']:
-                    Y1_adj -= A1_cat[col][C1[col]]
-                    Y2_adj -= A2_cat[col][C2[col]]
-
-            ## Continuous ##
-            CC1_cts_weighted = {}
-            CC2_cts_weighted = {}
-            for col in cts_cols:
-                CC1_cts_weighted[col] = []
-                CC2_cts_weighted[col] = []
-                if not cts_dict[col]['worker_type_interaction']:
-                    Y1_adj += A1_cts[col] * C1[col]
-                    Y2_adj += A2_cts[col] * C2[col]
-                for l in range(nl):
-                    ## Compute shared terms ##
-                    if cts_dict[col]['worker_type_interaction']:
-                        S1_cts_l = S1_cts[col][l]
-                        S2_cts_l = S2_cts[col][l]
-                    else:
-                        S1_cts_l = S1_cts[col]
-                        S2_cts_l = S2_cts[col]
-                    CC1_cts_weighted[col].append(C1[col].T * (W1 * qi[:, l] / S1_cts_l))
-                    CC2_cts_weighted[col].append(C2[col].T * (W2 * qi[:, l] / S2_cts_l))
-                    del S1_cts_l, S2_cts_l
-                    ## Compute XwX_cts terms ##
-                    XwX_cts[col][l] = (CC1_cts_weighted[col][l] @ C1[col])
-                    XwX_cts[col][nl + l] = (CC2_cts_weighted[col][l] @ C2[col])
-                    if params['update_a']:
-                        # Update A1_sum and A2_sum to account for worker-interaction terms
-                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
-                        if cts_dict[col]['worker_type_interaction']:
-                            A1_sum_l -= A1_cts[col][l] * C1[col]
-                            A2_sum_l -= A2_cts[col][l] * C2[col]
-                        ## Compute XwY_cts terms ##
-                        XwY_cts[col][l] = CC1_cts_weighted[col][l] @ (Y1_adj - A1_sum_l - A1[l, G1])
-                        XwY_cts[col][nl + l] = CC2_cts_weighted[col][l] @ (Y2_adj - A2_sum_l - A2[l, G2])
-                        del A1_sum_l, A2_sum_l
-                if not params['update_s']:
-                    del CC1_cts_weighted[col], CC2_cts_weighted[col]
-
-                # We solve the system to get all the parameters (use dense solver)
-                XwX_cts[col] = np.diag(XwX_cts[col])
-                if params['update_a']:
-                    try:
-                        a_solver = cons_a_dict[col]
-                        a_solver.solve(XwX_cts[col], -XwY_cts[col], solver='quadprog')
-                        if a_solver.res is None:
-                            # If constraints inconsistent, keep A1_cts and A2_cts the same
-                            if params['verbose'] in [2, 3]:
-                                print(f'Passing A1_cts/A2_cts for column {col!r}: {e}')
-                        else:
-                            res_a1, res_a2 = a_solver.res[: len(a_solver.res) // 2], a_solver.res[len(a_solver.res) // 2:]
-                            # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
-                            #     raise ValueError(f'Estimated A1_cts/A2_cts has NaN values for column {col!r}')
-                            if cts_dict[col]['worker_type_interaction']:
-                                A1_cts[col] = res_a1
-                                A2_cts[col] = res_a2
-                            else:
-                                A1_cts[col] = res_a1[0]
-                                A2_cts[col] = res_a2[0]
-
-                    except ValueError as e:
-                        # If constraints inconsistent, keep A1_cts and A2_cts the same
-                        if params['verbose'] in [2, 3]:
-                            print(f'Passing A1_cts/A2_cts for column {col!r}: {e}')
-
-                if not cts_dict[col]['worker_type_interaction']:
-                    Y1_adj -= A1_cts[col] * C1[col]
-                    Y2_adj -= A2_cts[col] * C2[col]
-
-            if any_non_worker_type_interactions:
-                # Update A1_sum and A2_sum
-                A1_sum = Y1 - Y1_adj
-                A2_sum = Y2 - Y2_adj
-
-            if params['update_s']:
-                # Next we extract the variances
-                if iter == 0:
-                    XwS = np.zeros(shape=2 * ts)
-
-                    ## Categorical ##
-                    if len(cat_cols) > 0:
-                        XwS_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
-                    ## Continuous ##
-                    if len(cts_cols) > 0:
-                        XwS_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
-
-                ## Update S ##
-                for l in range(nl):
-                    # Update A1_sum and A2_sum to account for worker-interaction terms
-                    A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
-                    eps1_l_sq = (Y1_adj - A1_sum_l - A1[l, G1]) ** 2
-                    eps2_l_sq = (Y2_adj - A2_sum_l - A2[l, G2]) ** 2
-                    del A1_sum_l, A2_sum_l
-                    ## XwS terms ##
-                    l_index, r_index = l * nk, (l + 1) * nk
-                    XwS[l_index: r_index] = GG1_weighted[l] @ eps1_l_sq
-                    XwS[ts + l_index: ts + r_index] = GG2_weighted[l] @ eps2_l_sq
-                    ## Categorical ##
-                    for col in cat_cols:
-                        col_n = cat_dict[col]['n']
-                        l_index, r_index = l * col_n, (l + 1) * col_n
-                        ## XwS_cat terms ##
-                        XwS_cat[col][l_index: r_index] = CC1_cat_weighted[col][l] @ eps1_l_sq
-                        XwS_cat[col][ts_cat[col] + l_index: ts_cat[col] + r_index] = CC2_cat_weighted[col][l] @ eps2_l_sq
-                    ## Continuous ##
-                    for col in cts_cols:
-                        ## XwS_cts terms ##
-                        # NOTE: take absolute value
-                        XwS_cts[col][l] = np.abs(CC1_cts_weighted[col][l] @ eps1_l_sq)
-                        XwS_cts[col][nl + l] = np.abs(CC2_cts_weighted[col][l] @ eps2_l_sq)
-                    del eps1_l_sq, eps2_l_sq
-                del GG1_weighted, GG2_weighted, CC1_cat_weighted, CC2_cat_weighted
-
-                try:
-                    cons_s.solve(XwX, -XwS, solver='quadprog')
-                    if cons_s.res is None:
-                        # If constraints inconsistent, keep S1 and S2 the same
-                        if params['verbose'] in [2, 3]:
-                            print(f'Passing S1/S2: {e}')
-                    else:
-                        res_s1, res_s2 = cons_s.res[: len(cons_s.res) // 2], cons_s.res[len(cons_s.res) // 2:]
-                        # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
-                        #     raise ValueError('Estimated S1/S2 has NaN values')
-                        S1 = np.sqrt(np.reshape(res_s1, self.dims))
-                        S2 = np.sqrt(np.reshape(res_s2, self.dims))
-
-                except ValueError as e:
-                    # If constraints inconsistent, keep S1 and S2 the same
-                    if params['verbose'] in [2, 3]:
-                        print(f'Passing S1/S2: {e}')
-
-                ## Categorical ##
-                for col in cat_cols:
-                    try:
-                        col_n = cat_dict[col]['n']
-                        s_solver = cons_s_dict[col]
-                        s_solver.solve(XwX_cat[col], -XwS_cat[col], solver='quadprog')
-                        if s_solver.res is None:
-                            # If constraints inconsistent, keep S1_cat and S2_cat the same
-                            if params['verbose'] in [2, 3]:
-                                print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
-                        else:
-                            res_s1, res_s2 = s_solver.res[: len(s_solver.res) // 2], s_solver.res[len(s_solver.res) // 2:]
-                            # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
-                            #     raise ValueError(f'Estimated S1_cat/S2_cat has NaN values for column {col!r}')
-                            if cat_dict[col]['worker_type_interaction']:
-                                S1_cat[col] = np.sqrt(np.reshape(res_s1, (nl, col_n)))
-                                S2_cat[col] = np.sqrt(np.reshape(res_s2, (nl, col_n)))
-                            else:
-                                S1_cat[col] = np.sqrt(res_s1[: col_n])
-                                S2_cat[col] = np.sqrt(res_s2[: col_n])
-
-                    except ValueError as e:
-                        # If constraints inconsistent, keep S1_cat and S2_cat the same
-                        if params['verbose'] in [2, 3]:
-                            print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
-
-                ## Continuous ##
-                for col in cts_cols:
-                    try:
-                        s_solver = cons_s_dict[col]
-                        s_solver.solve(XwX_cts[col], -XwS_cts[col], solver='quadprog')
-                        if s_solver.res is None:
-                            # If constraints inconsistent, keep S1_cts and S2_cts the same
-                            if params['verbose'] in [2, 3]:
-                                print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
-                        else:
-                            res_s1, res_s2 = s_solver.res[: len(s_solver.res) // 2], s_solver.res[len(s_solver.res) // 2:]
-                            # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
-                            #     raise ValueError(f'Estimated S1_cts/S2_cts has NaN values for column {col!r}')
-                            if cts_dict[col]['worker_type_interaction']:
-                                S1_cts[col] = np.sqrt(res_s1)
-                                S2_cts[col] = np.sqrt(res_s2)
-                            else:
-                                S1_cts[col] = np.sqrt(res_s1[0])
-                                S2_cts[col] = np.sqrt(res_s2[0])
-
-                    except ValueError as e:
-                        # If constraints inconsistent, keep S1_cts and S2_cts the same
-                        if params['verbose'] in [2, 3]:
-                            print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
-
+            # ---------- Update pk1 ----------
             if params['update_pk1']:
                 # NOTE: add dirichlet prior
                 pk1 = GG12.T @ (W * (qi.T + d_prior - 1)).T
@@ -1879,30 +1450,426 @@ class BLMModel:
                 if pd.isna(pk1).any():
                     raise ValueError('Estimated pk1 has NaN values. Please try a different set of starting values.')
 
-            # print('A1 after:')
-            # print(A1)
-            # print('A2 after:')
-            # print(A2)
-            # print('S1 after:')
-            # print(S1)
-            # print('S2 after:')
-            # print(S2)
-            # print('A1_cat after:')
-            # print(A1_cat)
-            # print('A2_cat after:')
-            # print(A2_cat)
-            # print('S1_cat after:')
-            # print(S1_cat)
-            # print('S2_cat after:')
-            # print(S2_cat)
-            # print('A1_cts after:')
-            # print(A1_cts)
-            # print('A2_cts after:')
-            # print(A2_cts)
-            # print('S1_cts after:')
-            # print(S1_cts)
-            # print('S2_cts after:')
-            # print(S2_cts)
+            if params['update_a'] or params['update_s']:
+                # ---------- M-step ----------
+                # Constrained OLS (source: https://scaron.info/blog/quadratic-programming-in-python.html)
+
+                # The regression has 2 * nl * nk parameters and nl * ni rows
+                # We do not necessarily want to construct the duplicated data by nl
+                # Instead we will construct X'X and X'Y by looping over nl
+                # We also note that X'X is block diagonal with 2*nl matrices of dimensions nk^2
+                ## General ##
+                # Shift for period 2
+                ts = nl * nk
+                # Only store the diagonal
+                XwX = np.zeros(shape=2 * ts)
+                if params['update_a']:
+                    XwY = np.zeros(shape=2 * ts)
+
+                ## Categorical ##
+                if len(cat_cols) > 0:
+                    ts_cat = {col: nl * col_dict['n'] for col, col_dict in cat_dict.items()}
+                    XwX_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
+                    if params['update_a']:
+                        XwY_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
+                ### Continuous ###
+                if len(cts_cols) > 0:
+                    XwX_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
+                    if params['update_a']:
+                        XwY_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
+
+                if iter == 0:
+                    if any_non_worker_type_interactions:
+                        Y1_adj = Y1.copy()
+                        Y2_adj = Y2.copy()
+                        Y1_adj -= A1_sum
+                        Y2_adj -= A2_sum
+                    else:
+                        Y1_adj = Y1
+                        Y2_adj = Y2
+
+                ## Update A ##
+                if params['update_s']:
+                    Xw1 = []
+                    Xw2 = []
+                for l in range(nl):
+                    l_index, r_index = l * nk, (l + 1) * nk
+
+                    ## Compute Xw_l ##
+                    Xw1_l = DxSP(W1 * qi[:, l] / S1[l, G1], GG1).T
+                    Xw2_l = DxSP(W2 * qi[:, l] / S2[l, G2], GG2).T
+                    if params['update_s']:
+                        Xw1.append(Xw1_l)
+                        Xw2.append(Xw2_l)
+
+                    ## Compute XwX_l ##
+                    XwX[l_index: r_index] = diag_of_sp_prod(Xw1_l, GG1)
+                    XwX[l_index + ts: r_index + ts] = diag_of_sp_prod(Xw2_l, GG2)
+
+                    if params['update_a']:
+                        # Update A1_sum and A2_sum to account for worker-interaction terms
+                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
+
+                        ## Compute XwY_l ##
+                        XwY[l_index: r_index] = Xw1_l @ (Y1_adj - A1_sum_l)
+                        XwY[l_index + ts: r_index + ts] = Xw2_l @ (Y2_adj - A2_sum_l)
+                        del A1_sum_l, A2_sum_l
+
+                # print('A1 before:')
+                # print(A1)
+                # print('A2 before:')
+                # print(A2)
+                # print('S1 before:')
+                # print(S1)
+                # print('S2 before:')
+                # print(S2)
+                # print('A1_cat before:')
+                # print(A1_cat)
+                # print('A2_cat before:')
+                # print(A2_cat)
+                # print('S1_cat before:')
+                # print(S1_cat)
+                # print('S2_cat before:')
+                # print(S2_cat)
+                # print('A1_cts before:')
+                # print(A1_cts)
+                # print('A2_cts before:')
+                # print(A2_cts)
+                # print('S1_cts before:')
+                # print(S1_cts)
+                # print('S2_cts before:')
+                # print(S2_cts)
+
+                # We solve the system to get all the parameters (use dense solver)
+                XwX = np.diag(XwX)
+                if params['update_a']:
+                    if iter > 0:
+                        ## Constraints ##
+                        cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type)
+                    try:
+                        cons_a.solve(XwX, -XwY, solver='quadprog')
+                        del XwY
+                        if cons_a.res is None:
+                            # If constraints inconsistent, keep A1 and A2 the same
+                            if params['verbose'] in [2, 3]:
+                                print(f'Passing A1/A2: {e}')
+                        else:
+                            res_a1, res_a2 = np.split(cons_a.res, 2)
+                            # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
+                            #     raise ValueError('Estimated A1/A2 has NaN values')
+                            A1 = np.reshape(res_a1, self.dims)
+                            A2 = np.reshape(res_a2, self.dims)
+
+                    except ValueError as e:
+                        # If constraints inconsistent, keep A1 and A2 the same
+                        if params['verbose'] in [2, 3]:
+                            print(f'Passing A1/A2: {e}')
+
+                ## Categorical ##
+                if params['update_s']:
+                    Xw1_cat = {col: [] for col in cat_cols}
+                    Xw2_cat = {col: [] for col in cat_cols}
+                for col in cat_cols:
+                    col_n = cat_dict[col]['n']
+
+                    if not cat_dict[col]['worker_type_interaction']:
+                        Y1_adj += A1_cat[col][C1[col]]
+                        Y2_adj += A2_cat[col][C2[col]]
+
+                    for l in range(nl):
+                        l_index, r_index = l * col_n, (l + 1) * col_n
+
+                        ## Compute variances ##
+                        if cat_dict[col]['worker_type_interaction']:
+                            S1_cat_l = S1_cat[col][l, C1[col]]
+                            S2_cat_l = S2_cat[col][l, C2[col]]
+                        else:
+                            S1_cat_l = S1_cat[col][C1[col]]
+                            S2_cat_l = S2_cat[col][C2[col]]
+
+                        ## Compute Xw_cat_l ##
+                        Xw1_cat_l = DxSP(W1 * qi[:, l] / S1_cat_l, CC1[col]).T
+                        Xw2_cat_l = DxSP(W2 * qi[:, l] / S2_cat_l, CC2[col]).T
+                        del S1_cat_l, S2_cat_l
+                        if params['update_s']:
+                            Xw1_cat[col].append(Xw1_cat_l)
+                            Xw2_cat[col].append(Xw2_cat_l)
+
+                        ## Compute XwX_cat_l ##
+                        XwX_cat[col][l_index: r_index] = diag_of_sp_prod(Xw1_cat_l, CC1[col])
+                        XwX_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = diag_of_sp_prod(Xw2_cat_l, CC2[col])
+
+                        if params['update_a']:
+                            # Update A1_sum and A2_sum to account for worker-interaction terms
+                            A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
+
+                            if cat_dict[col]['worker_type_interaction']:
+                                A1_sum_l -= A1_cat[col][l, C1[col]]
+                                A2_sum_l -= A2_cat[col][l, C2[col]]
+
+                            ## Compute XwY_cat_l ##
+                            XwY_cat[col][l_index: r_index] = Xw1_cat_l @ (Y1_adj - A1_sum_l - A1[l, G1])
+                            XwY_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = Xw2_cat_l @ (Y2_adj - A2_sum_l - A2[l, G2])
+                            del A1_sum_l, A2_sum_l
+
+                    # We solve the system to get all the parameters (use dense solver)
+                    XwX_cat[col] = np.diag(XwX_cat[col])
+                    if params['update_a']:
+                        try:
+                            a_solver = cons_a_dict[col]
+                            a_solver.solve(XwX_cat[col], -XwY_cat[col], solver='quadprog')
+                            del XwY_cat[col]
+                            if a_solver.res is None:
+                                # If constraints inconsistent, keep A1_cat and A2_cat the same
+                                if params['verbose'] in [2, 3]:
+                                    print(f'Passing A1_cat/A2_cat for column {col!r}: {e}')
+                            else:
+                                res_a1, res_a2 = np.split(a_solver.res, 2)
+                                # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
+                                #     raise ValueError(f'Estimated A1_cat/A2_cat has NaN values for column {col!r}')
+                                if cat_dict[col]['worker_type_interaction']:
+                                    A1_cat[col] = np.reshape(res_a1, (nl, col_n))
+                                    A2_cat[col] = np.reshape(res_a2, (nl, col_n))
+                                else:
+                                    A1_cat[col] = res_a1[: col_n]
+                                    A2_cat[col] = res_a2[: col_n]
+
+                        except ValueError as e:
+                            # If constraints inconsistent, keep A1_cat and A2_cat the same
+                            if params['verbose'] in [2, 3]:
+                                print(f'Passing A1_cat/A2_cat for column {col!r}: {e}')
+
+                    if not cat_dict[col]['worker_type_interaction']:
+                        Y1_adj -= A1_cat[col][C1[col]]
+                        Y2_adj -= A2_cat[col][C2[col]]
+
+                ## Continuous ##
+                if params['update_s']:
+                    Xw1_cts = {col: [] for col in cts_cols}
+                    Xw2_cts = {col: [] for col in cts_cols}
+                for col in cts_cols:
+                    if not cts_dict[col]['worker_type_interaction']:
+                        Y1_adj += A1_cts[col] * C1[col]
+                        Y2_adj += A2_cts[col] * C2[col]
+
+                    for l in range(nl):
+                        ## Compute variances ##
+                        if cts_dict[col]['worker_type_interaction']:
+                            S1_cts_l = S1_cts[col][l]
+                            S2_cts_l = S2_cts[col][l]
+                        else:
+                            S1_cts_l = S1_cts[col]
+                            S2_cts_l = S2_cts[col]
+
+                        ## Compute Xw_cts_l ##
+                        Xw1_cts_l = C1[col].T * (W1 * qi[:, l] / S1_cts_l)
+                        Xw2_cts_l = C2[col].T * (W2 * qi[:, l] / S2_cts_l)
+                        del S1_cts_l, S2_cts_l
+                        if params['update_s']:
+                            Xw1_cts[col].append(Xw1_cts_l)
+                            Xw2_cts[col].append(Xw2_cts_l)
+
+                        ## Compute XwX_cts_l ##
+                        XwX_cts[col][l] = (Xw1_cts_l @ C1[col])
+                        XwX_cts[col][l + nl] = (Xw2_cts_l @ C2[col])
+
+                        if params['update_a']:
+                            # Update A1_sum and A2_sum to account for worker-interaction terms
+                            A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
+
+                            if cts_dict[col]['worker_type_interaction']:
+                                A1_sum_l -= A1_cts[col][l] * C1[col]
+                                A2_sum_l -= A2_cts[col][l] * C2[col]
+
+                            ## Compute XwY_cts_l ##
+                            XwY_cts[col][l] = Xw1_cts_l @ (Y1_adj - A1_sum_l - A1[l, G1])
+                            XwY_cts[col][l + nl] = Xw2_cts_l @ (Y2_adj - A2_sum_l - A2[l, G2])
+                            del A1_sum_l, A2_sum_l
+
+                    # We solve the system to get all the parameters (use dense solver)
+                    XwX_cts[col] = np.diag(XwX_cts[col])
+                    if params['update_a']:
+                        try:
+                            a_solver = cons_a_dict[col]
+                            a_solver.solve(XwX_cts[col], -XwY_cts[col], solver='quadprog')
+                            del XwY_cts[col]
+                            if a_solver.res is None:
+                                # If constraints inconsistent, keep A1_cts and A2_cts the same
+                                if params['verbose'] in [2, 3]:
+                                    print(f'Passing A1_cts/A2_cts for column {col!r}: {e}')
+                            else:
+                                res_a1, res_a2 = np.split(a_solver.res, 2)
+                                # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
+                                #     raise ValueError(f'Estimated A1_cts/A2_cts has NaN values for column {col!r}')
+                                if cts_dict[col]['worker_type_interaction']:
+                                    A1_cts[col] = res_a1
+                                    A2_cts[col] = res_a2
+                                else:
+                                    A1_cts[col] = res_a1[0]
+                                    A2_cts[col] = res_a2[0]
+
+                        except ValueError as e:
+                            # If constraints inconsistent, keep A1_cts and A2_cts the same
+                            if params['verbose'] in [2, 3]:
+                                print(f'Passing A1_cts/A2_cts for column {col!r}: {e}')
+
+                    if not cts_dict[col]['worker_type_interaction']:
+                        Y1_adj -= A1_cts[col] * C1[col]
+                        Y2_adj -= A2_cts[col] * C2[col]
+
+                if any_non_worker_type_interactions:
+                    # Update A1_sum and A2_sum
+                    A1_sum = Y1 - Y1_adj
+                    A2_sum = Y2 - Y2_adj
+
+                if params['update_s']:
+                    ## Update the variances ##
+                    XwS = np.zeros(shape=2 * ts)
+
+                    ## Categorical ##
+                    if len(cat_cols) > 0:
+                        XwS_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
+                    ## Continuous ##
+                    if len(cts_cols) > 0:
+                        XwS_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
+
+                    ## Update S ##
+                    for l in range(nl):
+                        # Update A1_sum and A2_sum to account for worker-interaction terms
+                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
+                        eps1_l_sq = (Y1_adj - A1_sum_l - A1[l, G1]) ** 2
+                        eps2_l_sq = (Y2_adj - A2_sum_l - A2[l, G2]) ** 2
+                        del A1_sum_l, A2_sum_l
+
+                        ## XwS_l ##
+                        l_index, r_index = l * nk, (l + 1) * nk
+                        XwS[l_index: r_index] = Xw1[l] @ eps1_l_sq
+                        XwS[l_index + ts: r_index + ts] = Xw2[l] @ eps2_l_sq
+                        Xw1[l] = 0
+                        Xw2[l] = 0
+
+                        ## Categorical ##
+                        for col in cat_cols:
+                            col_n = cat_dict[col]['n']
+                            l_index, r_index = l * col_n, (l + 1) * col_n
+
+                            ## XwS_cat_l ##
+                            XwS_cat[col][l_index: r_index] = Xw1_cat[col][l] @ eps1_l_sq
+                            XwS_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = Xw2_cat[col][l] @ eps2_l_sq
+                            Xw1_cat[col][l] = 0
+                            Xw2_cat[col][l] = 0
+                        ## Continuous ##
+                        for col in cts_cols:
+                            ## XwS_cts_l ##
+                            # NOTE: take absolute value
+                            XwS_cts[col][l] = np.abs(Xw1_cts[col][l] @ eps1_l_sq)
+                            XwS_cts[col][l + nl] = np.abs(Xw2_cts[col][l] @ eps2_l_sq)
+                            Xw1_cts[col][l] = 0
+                            Xw2_cts[col][l] = 0
+                        del eps1_l_sq, eps2_l_sq
+
+                    try:
+                        cons_s.solve(XwX, -XwS, solver='quadprog')
+                        del XwS
+                        if cons_s.res is None:
+                            # If constraints inconsistent, keep S1 and S2 the same
+                            if params['verbose'] in [2, 3]:
+                                print(f'Passing S1/S2: {e}')
+                        else:
+                            res_s1, res_s2 = np.split(cons_s.res, 2)
+                            # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
+                            #     raise ValueError('Estimated S1/S2 has NaN values')
+                            S1 = np.sqrt(np.reshape(res_s1, self.dims))
+                            S2 = np.sqrt(np.reshape(res_s2, self.dims))
+
+                    except ValueError as e:
+                        # If constraints inconsistent, keep S1 and S2 the same
+                        if params['verbose'] in [2, 3]:
+                            print(f'Passing S1/S2: {e}')
+
+                    ## Categorical ##
+                    for col in cat_cols:
+                        try:
+                            col_n = cat_dict[col]['n']
+                            s_solver = cons_s_dict[col]
+                            s_solver.solve(XwX_cat[col], -XwS_cat[col], solver='quadprog')
+                            del XwS_cat[col]
+                            if s_solver.res is None:
+                                # If constraints inconsistent, keep S1_cat and S2_cat the same
+                                if params['verbose'] in [2, 3]:
+                                    print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
+                            else:
+                                res_s1, res_s2 = np.split(s_solver.res, 2)
+                                # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
+                                #     raise ValueError(f'Estimated S1_cat/S2_cat has NaN values for column {col!r}')
+                                if cat_dict[col]['worker_type_interaction']:
+                                    S1_cat[col] = np.sqrt(np.reshape(res_s1, (nl, col_n)))
+                                    S2_cat[col] = np.sqrt(np.reshape(res_s2, (nl, col_n)))
+                                else:
+                                    S1_cat[col] = np.sqrt(res_s1[: col_n])
+                                    S2_cat[col] = np.sqrt(res_s2[: col_n])
+
+                        except ValueError as e:
+                            # If constraints inconsistent, keep S1_cat and S2_cat the same
+                            if params['verbose'] in [2, 3]:
+                                print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
+
+                    ## Continuous ##
+                    for col in cts_cols:
+                        try:
+                            s_solver = cons_s_dict[col]
+                            s_solver.solve(XwX_cts[col], -XwS_cts[col], solver='quadprog')
+                            del XwS_cts[col]
+                            if s_solver.res is None:
+                                # If constraints inconsistent, keep S1_cts and S2_cts the same
+                                if params['verbose'] in [2, 3]:
+                                    print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
+                            else:
+                                res_s1, res_s2 = np.split(s_solver.res, 2)
+                                # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
+                                #     raise ValueError(f'Estimated S1_cts/S2_cts has NaN values for column {col!r}')
+                                if cts_dict[col]['worker_type_interaction']:
+                                    S1_cts[col] = np.sqrt(res_s1)
+                                    S2_cts[col] = np.sqrt(res_s2)
+                                else:
+                                    S1_cts[col] = np.sqrt(res_s1[0])
+                                    S2_cts[col] = np.sqrt(res_s2[0])
+
+                        except ValueError as e:
+                            # If constraints inconsistent, keep S1_cts and S2_cts the same
+                            if params['verbose'] in [2, 3]:
+                                print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
+
+                del XwX, Xw1, Xw2
+                if len(cat_cols) > 0:
+                    del XwX_cat, Xw1_cat, Xw2_cat
+                if len(cts_cols) > 0:
+                    del XwX_cts, Xw1_cts, Xw2_cts
+
+                # print('A1 after:')
+                # print(A1)
+                # print('A2 after:')
+                # print(A2)
+                # print('S1 after:')
+                # print(S1)
+                # print('S2 after:')
+                # print(S2)
+                # print('A1_cat after:')
+                # print(A1_cat)
+                # print('A2_cat after:')
+                # print(A2_cat)
+                # print('S1_cat after:')
+                # print(S1_cat)
+                # print('S2_cat after:')
+                # print(S2_cat)
+                # print('A1_cts after:')
+                # print(A1_cts)
+                # print('A2_cts after:')
+                # print(A2_cts)
+                # print('S1_cts after:')
+                # print(S1_cts)
+                # print('S2_cts after:')
+                # print(S2_cts)
 
         if store_res:
             if len(cat_cols) > 0:
@@ -1921,8 +1888,8 @@ class BLMModel:
             self.A1, self.A2, self.S1, self.S2 = A1, A2, S1, S2
             self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat = A1_cat, A2_cat, S1_cat, S2_cat
             self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts = A1_cts, A2_cts, S1_cts, S2_cts
-            self.pk1, self.lik1 = pk1, lik1
-            self.liks1 = liks1 # np.concatenate([self.liks1, liks1])
+            self.pk1 = pk1
+            self.lik1, self.liks1 = lik1, liks1 # np.concatenate([self.liks1, liks1])
 
             # Update NNm
             if compute_NNm:
@@ -1942,8 +1909,6 @@ class BLMModel:
         A1, A2, S1, S2 = self.A1, self.A2, self.S1, self.S2
         cat_cols, cts_cols = self.cat_cols, self.cts_cols
         any_controls = self.any_controls
-        # Fix error from bad initial guesses causing probabilities to be too low
-        d_prior = params['d_prior_stayers']
 
         # Store wage outcomes and groups
         Y1 = sdata['y1'].to_numpy()
@@ -1998,6 +1963,8 @@ class BLMModel:
         # Path of log likelihoods for stayers
         liks0 = []
         prev_lik = np.inf
+        # Fix error from bad initial guesses causing probabilities to be too low
+        d_prior = params['d_prior_stayers']
 
         if any_controls:
             ## Account for control variables ##
@@ -2006,13 +1973,13 @@ class BLMModel:
             for l in range(nl):
                 # Update A1_sum/S1_sum_sq to account for worker-interaction terms
                 A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=self.A1_cat, A2_cat=self.A2_cat, S1_cat=self.S1_cat, S2_cat=self.S2_cat, A1_cts=self.A1_cts, A2_cts=self.A2_cts, S1_cts=self.S1_cts, S2_cts=self.S2_cts)
-                lp1 = _lognormpdf(Y1, A1_sum + A1_sum_l + A1[l, G1], np.sqrt(S1_sum_sq + S1_sum_sq_l + S1[l, G1] ** 2))
-                # lp2 = _lognormpdf(Y2, A2_sum + A2_sum_l + A2[l, G2], np.sqrt(S2_sum_sq + S2_sum_sq_l + S2[l, G2] ** 2))
+                lp1 = lognormpdf(Y1, A1[l, G1] + A1_sum + A1_sum_l, var=S1[l, G1] ** 2 + S1_sum_sq + S1_sum_sq_l)
+                # lp2 = lognormpdf(Y2, A2[l, G2] + A2_sum + A2_sum_l, var=S2[l, G2] ** 2 + S2_sum_sq + S2_sum_sq_l)
                 lp_stable[:, l] = W1 * lp1 # + W2 * lp2
         else:
             for l in range(nl):
-                lp1 = _lognormpdf(Y1, A1[l, G1], S1[l, G1])
-                # lp2 = _lognormpdf(Y2, A2[l, G2], S2[l, G2])
+                lp1 = fast_lognormpdf(Y1, A1[l, :], S1[l, :], G1)
+                # lp2 = fast_lognormpdf(Y2, A2[l, :], S2[l, :], G2)
                 lp_stable[:, l] = W1 * lp1 # + W2 * lp2
         del lp1 #, lp2
 
@@ -2026,7 +1993,7 @@ class BLMModel:
                 lp[:, l] = lp_stable[:, l] + np.log(pk0[G1, l])
 
             # We compute log sum exp to get likelihoods and probabilities
-            lse_lp = _logsumexp(lp, axis=1)
+            lse_lp = logsumexp(lp, axis=1)
             qi = np.exp(lp.T - lse_lp).T
             if params['return_qi']:
                 return qi
@@ -2050,8 +2017,8 @@ class BLMModel:
             # Normalize rows to sum to 1
             pk0 = DxM(1 / np.sum(pk0, axis=1), pk0)
 
-        self.pk0, self.lik0 = pk0, lik0
-        self.liks0 = liks0 # np.concatenate([self.liks0, liks0])
+        self.pk0 = pk0
+        self.lik0, self.liks0 = lik0, liks0 # np.concatenate([self.liks0, liks0])
 
         # Update NNs
         if compute_NNs:
@@ -2256,7 +2223,18 @@ class BLMModel:
             dpi (float or None): dpi for plot
         '''
         nl, nk = self.nl, self.nk
-        A1, A2, pk1, pk0, NNm, NNs = self._sort_parameters(self.A1, self.A2, pk1=self.pk1, pk0=self.pk0, NNm=self.NNm, NNs=self.NNs, sort_firm_types=True)
+        if subset == 'movers':
+            if self.NNm is None:
+                raise ValueError('The dynamic BLM estimation must be run on movers (and NNm must be computed) before plotting type proportions for movers.')
+            A1, A2, pk1, NNm = self._sort_parameters(self.A1, self.A2, pk1=self.pk1, NNm=self.NNm, sort_firm_types=True)
+        elif subset == 'stayers':
+            if self.NNs is None:
+                raise ValueError('The dynamic BLM estimation must be run on stayers (and NNs must be computed) before plotting type proportions for stayers.')
+            A1, A2, pk0, NNs = self._sort_parameters(self.A1, self.A2, pk0=self.pk0, NNs=self.NNs, sort_firm_types=True)
+        elif subset == 'all':
+            if (self.NNm is None) or (self.NNs is None):
+                raise ValueError('The dynamic BLM estimation must be run on both movers and stayers (and both NNm and NNs must be computed) before plotting type proportions for all.')
+            A1, A2, pk1, pk0, NNm, NNs = self._sort_parameters(self.A1, self.A2, pk1=self.pk1, pk0=self.pk0, NNm=self.NNm, NNs=self.NNs, sort_firm_types=True)
 
         ## Extract subset(s) ##
         if subset == 'movers':
@@ -2343,7 +2321,7 @@ class BLMEstimator:
 
     def fit(self, jdata, sdata, n_init=20, n_best=5, ncore=1, rng=None):
         '''
-        EM model for movers and stayers.
+        Estimate BLM using multiple sets of starting values.
 
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
@@ -2501,7 +2479,8 @@ class BLMBootstrap:
         if rng is None:
             rng = np.random.default_rng(None)
         if cluster_params is None:
-            cluster_params = bpd.cluster_params()
+            grouping = bpd.grouping.KMeans(n_clusters=jdata.n_clusters())
+            cluster_params = bpd.cluster_params({'grouping': grouping})
 
         # Update clustering parameters
         cluster_params = cluster_params.copy()
@@ -2537,7 +2516,11 @@ class BLMBootstrap:
                     jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
                     sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
                 # Cluster
-                bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False)).to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng)
+                bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
+                # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
+                bdf._set_attributes(jdata)
+                # Cluster
+                bdf = bdf.to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng)
                 clusters_dict = bdf.loc[:, ['j', 'g']].groupby('j', sort=False)['g'].first().to_dict()
                 del bdf
                 with bpd.util.ChainedAssignment():
@@ -2571,7 +2554,11 @@ class BLMBootstrap:
                 jdata_i = jdata.sample(frac=frac_movers, replace=True, weights=wj, random_state=rng)
                 sdata_i = sdata.sample(frac=frac_stayers, replace=True, weights=ws, random_state=rng)
                 # Cluster
-                bdf = bpd.BipartiteDataFrame(pd.concat([jdata_i, sdata_i], axis=0, copy=True)).clean(bpd.clean_params({'is_sorted': True, 'copy': False, 'verbose': verbose})).to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng)
+                bdf = bpd.BipartiteDataFrame(pd.concat([jdata_i, sdata_i], axis=0, copy=True))
+                # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
+                bdf._set_attributes(jdata)
+                # Clean and cluster
+                bdf = bdf.clean(bpd.clean_params({'is_sorted': True, 'copy': False, 'verbose': verbose})).to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng)
                 clusters_dict = bdf.loc[:, ['j', 'g']].groupby('j', sort=False)['g'].first().to_dict()
                 del bdf
                 # Update clusters in jdata_i and sdata_i

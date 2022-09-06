@@ -1,3 +1,5 @@
+from numpy import isclose
+
 class jacobi():
     """
     Compute the Jacobi preconditioner function for the matrix A.
@@ -25,6 +27,8 @@ class jacobi():
     def __init__(self, A):
         diagonal = A.diagonal()
         inverse_diagonal = 1.0 / diagonal
+        # Rather than invert values close to 0, set them to 1
+        inverse_diagonal[isclose(diagonal, 0)] = 1
         self.inverse_diagonal = inverse_diagonal
 
     def precondition(self, x):

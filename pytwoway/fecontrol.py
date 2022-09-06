@@ -29,7 +29,8 @@ solver_dict = {
 }
 from pyamg import ruge_stuben_solver as rss
 # from qpsolvers import solve_qp
-from bipartitepandas.util import ParamsDict, to_list, logger_init
+from paramsdict import ParamsDict
+from bipartitepandas.util import to_list, logger_init
 from pytwoway import Q
 from pytwoway import preconditioners as pcd
 from pytwoway.util import weighted_mean, weighted_var, weighted_cov, weighted_quantile, DxSP, SPxD, diag_of_sp_prod, diag_of_prod
@@ -46,7 +47,7 @@ def _gteq0(a):
     return a >= 0
 
 # Define default parameter dictionary
-_fecontrol_params_default = ParamsDict({
+fecontrol_params = ParamsDict({
     'categorical_controls': (None, 'list_of_type_none', (str, float, int, tuple),
         '''
             (default=None) List of columns to use as categorical controls. None is equivalent to [].
@@ -75,6 +76,10 @@ _fecontrol_params_default = ParamsDict({
         '''
             (default=True) If True, estimate homoskedastic correction.
         ''', None),
+    # 'ho': ('agsu', 'set', ('', 'agsu', 'boot', 'all'),
+    #     '''
+    #         (default='agsu') If 'agsu', estimate homoskedastic correction using method from Andrews et al. (2008). If 'boot' estimate correction using method from Azkarate-Askasua and Zerecero (2020). If 'all', estimate both corrections. If '', do not estimate homoskedastic correction.
+    #     ''', None),
     'he': (False, 'type', bool,
         '''
             (default=False) If True, estimate heteroskedastic correction.
@@ -86,6 +91,14 @@ _fecontrol_params_default = ParamsDict({
     'Q_cov': (None, 'list_of_type_none', Q.CovCovariate,
         '''
             (default=None) List of Q matrices to use when estimating covariance term; None is equivalent to tw.Q.CovCovariate('psi', 'alpha').
+        ''', None),
+    'se_cols': (None, 'list_of_type_none', (str, float, int, tuple),
+        '''
+            (default=None) List of continuous controls to estimate clustered standard errors for. If None, standard errors are not computed. Results are stored in the class attribute dictionary .se_res, which links column names to estimated standard errors.
+        ''', None),
+    'se_clusters': (None, 'list_of_type_none', (str, float, int, tuple),
+        '''
+            (default=None) List of categorical variables to use as clusters when estimating clustered standard errors. If specified as [], will estimate the standard SE estimate sigma^2 (A'A)^{-1}. None is equivalent to ['i', 'j']. Results are stored in the class attribute dictionary .se_res, which links column names to estimated standard errors.
         ''', None),
     'Sii_stayers': ('firm_mean', 'set', ['firm_mean', 'upper_bound'],
         '''
@@ -177,21 +190,6 @@ _fecontrol_params_default = ParamsDict({
         ''', None)
 })
 
-def fecontrol_params(update_dict=None):
-    '''
-    Dictionary of default fecontrol_params. Run tw.fecontrol_params().describe_all() for descriptions of all valid parameters.
-
-    Arguments:
-        update_dict (dict or None): user parameter values; None is equivalent to {}
-
-    Returns:
-        (ParamsDict) dictionary of fecontrol_params
-    '''
-    new_dict = _fecontrol_params_default.copy()
-    if update_dict is not None:
-        new_dict.update(update_dict)
-    return new_dict
-
 class FEControlEstimator:
     '''
     Solve two way fixed effect models with control variables. This includes AKM, the Andrews et al. homoskedastic correction, and the Kline et al. heteroskedastic correction.
@@ -216,6 +214,8 @@ class FEControlEstimator:
         self.res = {}
         # Summary results dictionary
         self.summary = {}
+        # Standard error results dictionary
+        self.se_res = {}
 
         ### Save some commonly used parameters as attributes ###
         ## All ##
@@ -238,6 +238,24 @@ class FEControlEstimator:
             self.cts_cols = []
         else:
             self.cts_cols = to_list(params['continuous_controls'])
+        ## Clustered SE ##
+        if params['se_cols'] is not None:
+            # Run checks
+            if len(params['se_cols']) == 0:
+                raise ValueError("Parameter 'se_cols' must specify at least one column if it is not None.")
+            for col in to_list(params['se_cols']):
+                # Check that SE is estimated on continuous columns
+                if col not in self.cts_cols:
+                    raise NotImplementedError(f"Columns specified for estimating standard errors must be continuous, but {col!r} is not.")
+                elif len(to_list(data.col_reference_dict[col])) != 1:
+                    raise NotImplementedError(f"Columns specified for estimating standard errors must have 1 associated subcolumn, but {col!r} does not.")
+            if params['se_clusters'] is not None:
+                # Check that clusters are categorical
+                for col in to_list(params['se_clusters']):
+                    if col not in ['i', 'j'] + self.cat_cols:
+                        raise NotImplementedError(f"Columns specified as clusters for estimating standard errors must be categorical, but {col!r} is not.")
+                    elif len(to_list(data.col_reference_dict[col])) != 1:
+                        raise NotImplementedError(f"Columns specified as clusters for estimating standard errors must have 1 associated subcolumn, but {col!r} does not.")
         ## HO/HE ##
         # Whether to compute homoskedastic correction
         self.compute_ho = params['ho']
@@ -321,7 +339,9 @@ class FEControlEstimator:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        if self.params['exact_trace_ho'] or self.params['exact_lev_he'] or self.params['exact_trace_he']:
+        params = self.params
+
+        if params['exact_trace_ho'] or params['exact_lev_he'] or params['exact_trace_he']:
             raise NotImplementedError('Exact estimates for the HO trace, HE leverages, and HE trace are not yet implemented.')
 
         self.logger.info('----- STARTING FE ESTIMATION -----')
@@ -335,7 +355,7 @@ class FEControlEstimator:
         # Compute basic statistics
         self._compute_early_stats()
 
-        if self.params['statsonly']:
+        if params['statsonly']:
             ## Compute basic statistics ##
             self.logger.info('statsonly=True, so we skip the full estimation')
 
@@ -343,11 +363,11 @@ class FEControlEstimator:
             ## Estimate full model ##
             # Estimate fixed effects using OLS
             self._estimate_ols()
-            if self.params['attach_fe_estimates']:
+            if params['attach_fe_estimates']:
                 # Attach fixed effect columns
                 self._attach_fe_estimates()
 
-            if not self.params['feonly']:
+            if not params['feonly']:
                 ## Full estimation ##
                 # Keep track of whether (A.T @ A)^{-1} has been computed
                 aainv = False
@@ -358,12 +378,16 @@ class FEControlEstimator:
                 # Estimate plug-in (biased) FE model
                 self._estimate_fe(Q_params)
 
+                if params['se_cols'] is not None:
+                    # Estimate clustered standard errors
+                    self._estimate_clustered_se()
+
                 ## HO/HE corrections ##
                 if self.compute_ho:
                     ## HO correction ##
                     if self.weighted:
                         # Estimate trace for sigma^2 (variance of residuals) for HO correction
-                        if self.params['exact_trace_sigma_2']:
+                        if params['exact_trace_sigma_2']:
                             # Analytical trace
                             if not aainv:
                                 self._compute_AAinv()
@@ -375,7 +399,7 @@ class FEControlEstimator:
                     # Estimate sigma^2 (variance of residuals) for HO correction
                     self._estimate_sigma_2_ho()
                     # Estimate trace for HO correction
-                    if self.params['exact_trace_ho']:
+                    if params['exact_trace_ho']:
                         # Analytical trace
                         if not aainv:
                             self._compute_AAinv()
@@ -387,14 +411,14 @@ class FEControlEstimator:
 
                 if self.compute_he:
                     ## HE correction ##
-                    if (self.params['exact_lev_he'] or self.params['exact_trace_he']) and not aainv:
+                    if (params['exact_lev_he'] or params['exact_trace_he']) and not aainv:
                         self._compute_AAinv()
                         aainv = True
                     # Estimate leverages for HE correction
-                    if len(self.params['levfile']) > 0:
+                    if len(params['levfile']) > 0:
                         # Precomputed leverages
                         Pii, jla_factor = self._extract_precomputed_leverages()
-                    elif self.params['exact_lev_he']:
+                    elif params['exact_lev_he']:
                         # Analytical leverages
                         Pii, jla_factor = self._estimate_exact_leverages()
                     else:
@@ -404,14 +428,14 @@ class FEControlEstimator:
                     Sii = self._estimate_Sii_he(Pii, jla_factor)
                     del Pii
                     # Estimate trace for HE correction
-                    if self.params['exact_trace_he']:
+                    if params['exact_trace_he']:
                         # Analytical trace
                         self._estimate_exact_trace_he(Q_params, Sii)
                     else:
                         # Approximate trace
                         self._estimate_approximate_trace_he(Q_params, Sii, rng)
                     del Sii
-                    if not self.params['levfile']:
+                    if not params['levfile']:
                         del self.sqrt_DpA
 
                 del self.Q_var, self.Q_cov, self.Q_covariates
@@ -423,8 +447,8 @@ class FEControlEstimator:
 
         # Clear attributes
         del self.worker_m, self.Y, self.A, self.DpA, self.AtDpA, self.Dp
-        if not self.params['statsonly']:
-            if self.params['solver'] == 'amg':
+        if not params['statsonly']:
+            if params['solver'] == 'amg':
                 del self.AAinv_solver
             else:
                 del self.preconditioner
@@ -753,6 +777,70 @@ class FEControlEstimator:
                 for cts_subcol in cts_subcols:
                     self.adata.loc[:, f'{cts_subcol}_hat'] = gh[cts_subcol] * self.adata.loc[:, cts_subcol]
 
+    def _estimate_clustered_se(self):
+        '''
+        Estimate clustered standard errors according to Cameron, Gelbach, and Miller (2011).
+        '''
+        params = self.params
+        cov_indices = self.cov_indices
+        cols = to_list(params['se_cols'])
+        clusters = params['se_clusters']
+
+        if clusters is None:
+            # Default clusters
+            clusters = ['psi', 'alpha']
+        else:
+            clusters = to_list(clusters).copy()
+            for i, cluster in enumerate(clusters):
+                # Replace 'i' and 'j' with 'alpha' and 'psi', respectively
+                if cluster == 'i':
+                    clusters[i] = 'alpha'
+                elif cluster == 'j':
+                    clusters[i] = 'psi'
+
+        if len(clusters) == 0:
+            ## Standard SE: sigma^2 * (A'A)^{-1} ##
+            for col in cols:
+                ## Estimate SE for each column ##
+                # Only take the index related to the column of interest
+                col_idx = cov_indices[col][0]
+                v = np.zeros(self.n_cov)
+                v[col_idx] = 1
+
+                ## SE[col] ##
+                if self.weighted:
+                    # NOTE: must use unweighted sigma^2 (weighting will make the estimator biased)
+                    sigma_2_unweighted = np.mean(self.E ** 2)
+                    self.se_res[f'se({col})_std'] = np.sqrt(sigma_2_unweighted * np.sum((self.A @ self._mult_AAinv(v)) ** 2))
+                else:
+                    self.se_res[f'se({col})_std'] = np.sqrt(self.sigma_2_fe * self._mult_AAinv(v)[col_idx])
+        else:
+            ### Clustered SE: (A'DpA)^{-1} @ A' @ diag(eps) @ S @ diag(eps) @ A @ (A'DpA)^{-1} ###
+            ## Construct S ##
+            idx_start, idx_end = cov_indices[clusters[0]]
+            S_indices = np.arange(idx_start, idx_end)
+
+            for cluster in clusters[1:]:
+                idx_start, idx_end = cov_indices[cluster]
+                S_indices_2 = np.arange(idx_start, idx_end)
+                S_indices = np.concatenate([S_indices, S_indices_2])
+            S = self.A[:, S_indices] @ self.A[:, S_indices].T
+            # Set all non-zero values of S to 1
+            S.data[:] = 1
+
+            for col in cols:
+                ## Estimate SE for each column ##
+                # Only take the index related to the column of interest
+                col_idx = self.cov_indices[col][0]
+                v = np.zeros(self.n_cov)
+                v[col_idx] = 1
+
+                ## eps * (A @ (A'A)^{-1} @ v) ##
+                eps_A_AAinv = self.E * (self.A @ self._mult_AAinv(v))
+
+                ## SE[col] ##
+                self.se_res[f'se({col})_cgm'] = np.sqrt(eps_A_AAinv.T @ S @ eps_A_AAinv)
+
     def _estimate_sigma_2_fe(self):
         '''
         Estimate residuals and sigma^2 (variance of residuals) for plug-in (biased) FE model.
@@ -768,9 +856,9 @@ class FEControlEstimator:
 
         ## Estimate variance of residuals (DON'T DEMEAN) ##
         # NOTE: multiply by Dp, because each observation's variance is divided by Dp and we need to undo that
-        self.sigma_2_pi = weighted_mean(Dp * (self.E ** 2), Dp)
+        self.sigma_2_fe = weighted_mean(Dp * (self.E ** 2), Dp)
 
-        self.logger.info(f'[fe] variance of residuals {self.sigma_2_pi:2.4f}')
+        self.logger.info(f'[fe] variance of residuals {self.sigma_2_fe:2.4f}')
 
     def _construct_Q(self):
         '''
@@ -924,12 +1012,12 @@ class FEControlEstimator:
         Estimate sigma^2 (variance of residuals) for HO-corrected model.
         '''
         if self.weighted:
-            # Must use unweighted sigma^2 for numerator (weighting will make the estimator biased)
+            # NOTE: ust use unweighted sigma^2 for numerator (weighting will make the estimator biased)
             sigma_2_unweighted = np.mean(self.E ** 2)
             trace_approximation = np.mean(self.tr_sigma_ho_all)
             self.sigma_2_ho = (self.nn * sigma_2_unweighted) / (np.sum(1 / self.Dp) - trace_approximation)
         else:
-            self.sigma_2_ho = (self.nn * self.sigma_2_pi) / (self.nn - self.n_cov)
+            self.sigma_2_ho = (self.nn * self.sigma_2_fe) / (self.nn - self.n_cov)
 
         self.logger.info(f'[ho] variance of residuals {self.sigma_2_ho:2.4f}')
 
@@ -1083,7 +1171,7 @@ class FEControlEstimator:
 
         ## FE results ##
         # Plug-in sigma^2
-        self.res['var(eps)_fe'] = self.sigma_2_pi
+        self.res['var(eps)_fe'] = self.sigma_2_fe
         # Plug-in variances
         self.logger.info('[fe] VARIANCES')
         for var_name in var_names:

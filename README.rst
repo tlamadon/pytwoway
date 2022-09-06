@@ -147,6 +147,8 @@ Constrained optimization is handled by `QPSolvers <https://github.com/stephane-c
 
 Progress bars are generated with `tqdm <https://github.com/tqdm/tqdm/>`_.
 
+Parameter dictionaries are constructed using `ParamsDict <https://github.com/adamoppenheimer/paramsdict/>`_.
+
 Data cleaning is handled by `BipartitePandas <https://github.com/tlamadon/bipartitepandas/>`_.
 
 We also rely on a number of standard libraries, such as `NumPy`, `Pandas`, `matplotlib`, etc.

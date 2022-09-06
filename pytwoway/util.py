@@ -204,6 +204,52 @@ def diag_of_prod(m1, m2):
         return diag_of_prod(m2.T, m1.T)
     return np.multiply(m1[:, : m2.shape[0]], m2.T).sum(axis=1)
 
+def logsumexp(a, axis=None):
+    '''
+    Compute the log of the sum of exponentials of input elements. A simplified version of https://github.com/scipy/scipy/blob/v1.8.1/scipy/special/_logsumexp.py#L7-L127.
+
+    Arguments:
+        a (NumPy Array): array to compute logsumexp on
+        axis (int or None): axis over which logsumexp is taken; if None, compute over all axes
+
+    Returns:
+        (NumPy Array): logsumexp of a
+    '''
+    a_max = np.amax(a, axis=axis, keepdims=True)
+
+    tmp = np.exp(a - a_max)
+
+    s = np.sum(tmp, axis=axis, keepdims=False)
+    out = np.log(s)
+
+    a_max = np.squeeze(a_max, axis=axis)
+    out += a_max
+
+    return out
+
+logpi = - 0.5 * np.log(2 * np.pi)
+
+def lognormpdf(x, mu, sd=None, var=None):
+    if ((sd is None) and (var is None)) or ((sd is not None) and (var is not None)):
+        raise ValueError('One of `sd` and `var` must be None, and the other must not be None.')
+    if sd is not None:
+        # Faster to split into multiple lines
+        res = logpi - np.log(sd)
+        res -= (x - mu) ** 2 / (2 * sd ** 2)
+    elif var is not None:
+        # Faster to split into multiple lines
+        res = logpi - (1 / 2) * np.log(var)
+        res -= (x - mu) ** 2 / (2 * var)
+    return res
+
+def fast_lognormpdf(x, mu, sd, G):
+    # Faster to split into multiple lines
+    log_sd = np.log(sd)
+    sd_sq = sd ** 2
+    res = logpi - log_sd[G]
+    res -= (x - mu[G]) ** 2 / (2 * sd_sq[G])
+    return res
+
 def scramble(lst):
     '''
     Reorder a list from [a, b, c, d, e] to [a, e, b, d, c]. This is used for attrition with multiprocessing, to ensure memory usage stays relatively constant, by mixing together large and small draws. Scrambled lists can be unscrambled with _unscramble().
