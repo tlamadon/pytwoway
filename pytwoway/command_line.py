@@ -6,6 +6,7 @@ pytw --my-config config.txt --fe --cre
 '''
 import configargparse
 import ast
+from numpy.random import default_rng
 import pandas as pd
 import bipartitepandas as bpd
 from pytwoway import TwoWay as tw
@@ -55,14 +56,26 @@ def main():
 
     ##### TwoWay start #####
     p.add('--data', required=False, help='path to labor data file')
-    p.add('--format', required=False, help="labor data format ('long' for long; 'long_collapsed' for collapsed long; 'es' for event study; or 'es_collapsed' for collapsed event study)")
-    p.add('--col_dict', required=False, help='dictionary to correct column names')
-    p.add('--collapsed', type=str2bool, required=False, help='if True, run estimators on collapsed data', default=True)
+    p.add('--collapse', type=str2bool, required=False, help='if True, run estimators on data collapsed at the worker-firm spell level', default=True)
+    p.add('--seed', required=False, help='seed for rng')
     ##### TwoWay end #####
 
     ##### Stata start #####
     p.add('--stata', action='store_true', required=False, help='if True, running estimators on Stata')
     ##### Stata end #####
+
+    ##### FE start #####
+    p.add('--ho', type=str2bool, required=False, help='if True, compute the homoskedastic correction when estimating fe')
+    p.add('--he', type=str2bool, required=False, help='if True, compute the heteroskedastic correction when estimating fe')
+    p.add('--ndraw_trace_sigma_2', required=False, help='number of draws to use in trace approximation for sigma^2 when estimating fe')
+    p.add('--ndraw_trace_ho', required=False, help='number of draws to use in trace approximation for homoskedastic correction when estimating fe')
+    p.add('--ndraw_trace_he', required=False, help='number of draws to use in trace approximation for heteroskedastic correction when estimating fe')
+    p.add('--ndraw_lev_he', required=False, help='number of draw to use in leverage approximation for heteroskedastic correction when estimating fe')
+    p.add('--outputfile_fe', required=False, help='outputfile where fe results are saved')
+    p.add('--ncore_fe', required=False, help='number of cores to use when estimating fe')
+    p.add('--solver', required=False, help="solver to use when estimating fe; options are 'bicg', 'bicgstab', 'cg', 'cgs', 'gmres', 'minres', 'qmr', and 'amg'. 'minres' is recommended for small datasets and 'amg' is recommended for large datasets (100 million observations+).")
+    p.add('--preconditioner', required=False, help="preconditioner to use when estimating fe; options are None, 'jacobi', 'vcycle', 'ichol', and 'ilu'. 'ichol' is recommended for small datasets and 'jacobi' is recommended if 'ichol' raises an error.")
+    ##### FE end #####
 
     ##### Cluster start #####
     #### General start ####
@@ -120,44 +133,22 @@ def main():
     #### Grouping end ####
     ##### Cluster end #####
 
-    ##### FE start #####
-    p.add('--ncore_fe', required=False, help='number of cores to use when computing fe')
-    p.add('--batch', required=False, help='batch size to send in parallel when computing fe')
-    p.add('--ndraw_pii', required=False, help='number of draw to use in approximation for leverages when computing fe')
-    p.add('--levfile', required=False, help='file to load precomputed leverages when computing fe')
-    p.add('--ndraw_tr_fe', required=False, help='number of draws to use in approximation for traces when computing fe')
-    p.add('--he', type=str2bool, required=False, help='if True, compute the heteroskedastic correction when computing fe')
-    p.add('--out_fe', required=False, help='outputfile where fe results are saved')
-    p.add('--statsonly', type=str2bool, required=False, help='save data statistics only when computing fe')
-    p.add('--Q', required=False, help="which Q matrix to consider when computing fe. Options include 'cov(alpha, psi)' and 'cov(psi_t, psi_{t+1})'")
-    # p.add('--con', required=False, help='computes the smallest eigen values when computing fe, this is the filepath where these results are saved')
-    # p.add('--logfile', required=False, help='log output to a logfile when computing fe')
-    # p.add('--check', type=str2bool, required=False, help='whether to compute the non-approximated estimates as well when computing fe')
-    ##### FE end #####
-
     ##### CRE start #####
-    p.add('--ncore_cre', required=False, help='number of cores to use when computing cre')
-    p.add('--ndraw_tr_cre', required=False, help='number of draws to use in approximation for traces when computing cre')
-    p.add('--ndp', required=False, help=' number of draw to use in approximation for leverages when computing cre')
-    p.add('--out_cre', required=False, help='outputfile where cre results are saved')
-    p.add('--posterior', type=str2bool, required=False, help='whether to compute the posterior variance when computing cre')
-    p.add('--wo_btw', required=False, help='sets between variation to 0, pure RE when computing cre')
+    p.add('--ncore_cre', required=False, help='number of cores to use when estimating cre')
+    p.add('--ndraw_trace_cre', required=False, help='number of draws to use in approximation for traces when estimating cre')
+    p.add('--ndp', required=False, help=' number of draw to use in approximation for leverages when estimating cre')
+    p.add('--outputfile_cre', required=False, help='outputfile where cre results are saved')
+    p.add('--posterior', type=str2bool, required=False, help='whether to compute the posterior variance when estimating cre')
+    p.add('--wo_btw', required=False, help='sets between variation to 0, pure RE when estimating cre')
     ##### CRE end #####
 
     ##### Clean start #####
-    p.add('--connectedness', required=False, help="for data cleaning, if 'connected', keep observations in the largest connected set of firms; if 'biconnected', keep observations in the largest biconnected set of firms; if None, keep all observations")
-    p.add('--i_t_how', required=False, help="for data cleaning, if 'max', keep max paying job; if 'sum', sum over duplicate worker-firm-year observations, then take the highest paying worker-firm sum; if 'mean', average over duplicate worker-firm-year observations, then take the highest paying worker-firm average. Note that if multiple time and/or firm columns are included (as in event study format), then duplicates are cleaned in order of earlier time columns to later time columns, and earlier firm ids to later firm ids")
-    p.add('--copy_clean', required=False, help='for data cleaning, if False, avoid copy')
+    p.add('--connectedness', required=False, help="for data cleaning, when computing largest connected set of firms: if 'connected', keep observations in the largest connected set of firms; if 'strongly_connected', keep observations in the largest strongly connected set of firms; if 'leave_out_observation', keep observations in the largest leave-one-observation-out connected set; if 'leave_out_spell', keep observations in the largest leave-one-spell-out connected set; if 'leave_out_match', keep observations in the largest leave-one-match-out connected set; if 'leave_out_worker', keep observations in the largest leave-one-worker-out connected set; if 'leave_out_firm', keep observations in the largest leave-one-firm-out connected set; if None, keep all observations.")
+    p.add('--i_t_how', required=False, help="for data cleaning, when dropping i-t duplicates: if 'max', keep max paying job; otherwise, take `i_t_how` over duplicate worker-firm-year observations, then take the highest paying worker-firm observation. `i_t_how` can take any input valid for a Pandas transform. Note that if multiple time and/or firm columns are included (as in collapsed long and event study formats), then data is converted to long, cleaned, then converted back to its original format.")
+    p.add('--drop_returns', required=False, help="for data cleaning, if 'returns', drop observations where workers leave a firm then return to it; if 'returners', drop workers who ever leave then return to a firm; if 'keep_first_returns', keep first spell where a worker leaves a firm then returns to it; if 'keep_last_returns', keep last spell where a worker leaves a firm then returns to it; if False, keep all observations.")
     ##### Clean end #####
 
     params = p.parse_args()
-
-    ##### TwoWay start #####
-    if params.col_dict is not None:
-        # Have to do ast.literal_eval twice for it to work properly
-        col_dict = ast.literal_eval(ast.literal_eval(params.col_dict))
-    else:
-        col_dict = params.col_dict
 
     ##### Stata start #####
     if params.stata:
@@ -165,22 +156,12 @@ def main():
         params.filetype = 'dta'
     ##### Stata end #####
 
-    # Generate TwoWay dictionary
-    pd_from_filetype = {
-        'csv': pd.read_csv,
-        'json': pd.read_json,
-        'ftr': pd.read_feather,
-        'feather': pd.read_feather,
-        'dta': pd.read_stata,
-        'stata': pd.read_stata,
-        'parquet': pd.read_parquet,
-        'excel': pd.read_excel,
-        'xlsx': pd.read_excel,
-        'sql': pd.read_sql
-    }
-    tw_params = {'data': pd_from_filetype[params.filetype.lower()](params.data), 'formatting': params.format, 'col_dict': col_dict}
-    tw_params = clear_dict(tw_params)
-    ##### TwoWay end #####
+    ##### FE start #####
+    fe_params = {'ho': params.ho, 'he': params.he, 'ndraw_trace_sigma_2': params.ndraw_trace_sigma_2, 'ndraw_trace_ho': params.ndraw_trace_ho, 'ndraw_trace_he': params.ndraw_trace_he, 'ndraw_lev_he': params.ndraw_lev_he, 'outputfile': params.outputfile_fe, 'ncore': params.ncore_fe, 'solver': params.solver, 'preconditioner': params.preconditioner}
+    if params.stata:
+        fe_params['outputfile'] = 'res_fe.json'
+    fe_params = tw.fe_params(clear_dict(fe_params))
+    ##### FE end #####
 
     ##### Cluster start #####
     #### Measures start ####
@@ -198,16 +179,21 @@ def main():
     moments_params = clear_dict(moments_params)
     ### Moments end ###
     #### Measures end ####
-    #### Grouping start ####
-    ### KMeans start ###
-    KMeans_params = {'n_clusters': params.n_clusters, 'init': params.init, 'n_init': params.n_init, 'max_iter': params.max_iter, 'tol': params.tol, 'precompute_distances': params.precompute_distances, 'verbose': params.verbose, 'random_state': params.random_state, 'copy_x': params.copy_x, 'n_jobs': params.n_jobs, 'algorithm': params.algorithm}
-    KMeans_params = clear_dict(KMeans_params)
-    ### KMeans end ###
-    ### Quantiles start ###
-    quantiles_params = {'n_quantiles': params.n_quantiles}
-    quantiles_params = clear_dict(quantiles_params)
-    ### Quantiles end ###
-    #### Grouping end ####
+    if params.grouping is not None:
+        #### Grouping start ####
+        if params.grouping.lower() == 'kmeans':
+            ### KMeans start ###
+            KMeans_params = {'n_clusters': params.n_clusters, 'init': params.init, 'n_init': params.n_init, 'max_iter': params.max_iter, 'tol': params.tol, 'precompute_distances': params.precompute_distances, 'verbose': params.verbose, 'random_state': params.random_state, 'copy_x': params.copy_x, 'n_jobs': params.n_jobs, 'algorithm': params.algorithm}
+            KMeans_params = clear_dict(KMeans_params)
+            params.grouping = bpd.grouping.KMeans(**KMeans_params)
+            ### KMeans end ###
+        elif params.grouping.lower() == 'quantiles':
+            ### Quantiles start ###
+            quantiles_params = {'n_quantiles': params.n_quantiles}
+            quantiles_params = clear_dict(quantiles_params)
+            params.grouping = bpd.grouping.Quantiles(**quantiles_params)
+            ### Quantiles end ###
+        #### Grouping end ####
     #### General start ####
     if params.measures is not None:
         # Have to do ast.literal_eval twice for it to work properly
@@ -216,9 +202,9 @@ def main():
         measures = []
         for measure in measures_raw:
             if measure.lower() == 'cdfs':
-                measure_fn = bpd.measures.cdfs(**cdf_params)
+                measure_fn = bpd.measures.CDFs(**cdf_params)
             elif measure.lower() == 'moments':
-                measure_fn = bpd.measures.moments(**moments_params)
+                measure_fn = bpd.measures.Moments(**moments_params)
             measures.append(measure_fn)
     else:
         measures = params.measures
@@ -227,30 +213,44 @@ def main():
     #### General end ####
     ##### Cluster end #####
 
-    ##### FE start #####
-    fe_params = {'ncore': params.ncore_fe, 'batch': params.batch, 'ndraw_pii': params.ndraw_pii, 'levfile': params.levfile, 'ndraw_tr': params.ndraw_tr_fe, 'he': params.he, 'out': params.out_fe, 'statsonly': params.statsonly, 'Q': params.Q} # 'con': params.con, 'logfile': params.logfile, 'check': params.check
-    fe_params = clear_dict(fe_params)
-    ##### FE end #####
-
     ##### CRE start #####
-    cre_params = {'ncore': params.ncore_cre, 'ndraw_tr': params.ndraw_tr_cre, 'ndp': params.ndp, 'out': params.out_cre, 'posterior': params.posterior, 'wo_btw': params.wo_btw}
-    cre_params = clear_dict(cre_params)
+    cre_params = {'ncore': params.ncore_cre, 'ndraw_trace': params.ndraw_trace_cre, 'ndp': params.ndp, 'outputfile': params.outputfile_cre, 'posterior': params.posterior, 'wo_btw': params.wo_btw}
+    if params.stata:
+        cre_params['outputfile'] = 'res_cre.json'
+    cre_params = tw.cre_params(clear_dict(cre_params))
     ##### CRE end #####
 
-    ##### Clean start #####
-    clean_params = {'connectedness': params.connectedness, 'i_t_how': params.i_t_how, 'copy': params.copy_clean}
-    clean_params = clear_dict(clean_params)
-    ##### Clean end #####
+    ##### Prepare data start #####
+    # Generate data
+    pd_from_filetype = {
+        'csv': pd.read_csv,
+        'json': pd.read_json,
+        'ftr': pd.read_feather,
+        'feather': pd.read_feather,
+        'dta': pd.read_stata,
+        'stata': pd.read_stata,
+        'parquet': pd.read_parquet,
+        'excel': pd.read_excel,
+        'xlsx': pd.read_excel,
+        'sql': pd.read_sql
+    }
+    df = pd_from_filetype[params.filetype.lower()](params.data)
+
+    # Clean data
+    clean_params = {'connectedness': params.connectedness, 'collapse_at_connectedness_measure': True, 'i_t_how': params.i_t_how, 'drop_returns': params.drop_returns}
+    clean_params = bpd.clean_params(clear_dict(clean_params))
+
+    bdf = bpd.BipartiteDataFrame(df).clean(clean_params)
+    if (params.collapse is not None) and params.collapse and (not type(bdf) == bpd.BipartiteLongCollapsed):
+        bdf = bdf.collapse(is_sorted=True, copy=False)
+    ##### Prepare data end #####
 
     # Run estimation
-    if params.fe or params.cre:
-        tw_net = tw(**tw_params)
-
-        if params.fe:
-            tw_net.prep_data(collapsed=params.collapsed, user_clean=clean_params)
-            tw_net.fit_fe(user_fe=fe_params)
-
-        if params.cre:
-            tw_net.prep_data(collapsed=params.collapsed, user_clean=clean_params, he=params.he) # Note that if params.he is None the code still works
-            tw_net.cluster(**cluster_params)
-            tw_net.fit_cre(user_cre=cre_params)
+    rng = default_rng(params.seed)
+    if params.fe:
+        fe_estimator = tw.FEEstimator(bdf, fe_params)
+        fe_estimator.fit(rng=rng)
+    if params.cre:
+        bdf = bdf.cluster(cluster_params, rng=rng)
+        cre_estimator = tw.CREEstimator(bdf.to_eventstudy(is_sorted=True, copy=False).get_cs(is_sorted=True, copy=False), cre_params)
+        cre_estimator.fit(rng=rng)
