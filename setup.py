@@ -24,7 +24,7 @@ setuptools.setup(
         'pyamg',
         'qpsolvers',
         'quadprog',
-        # 'ConfigArgParse',
+        'ConfigArgParse',
         'matplotlib',
         'tqdm'
       ],

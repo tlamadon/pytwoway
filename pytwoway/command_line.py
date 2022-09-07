@@ -9,7 +9,7 @@ import ast
 from numpy.random import default_rng
 import pandas as pd
 import bipartitepandas as bpd
-from pytwoway import TwoWay as tw
+import pytwoway as tw
 
 def clear_dict(d):
     '''
@@ -48,7 +48,7 @@ def main():
     p.add('-c', '--my-config', required=False, is_config_file=True, help='config file path')
 
     # Options to select filetype
-    p.add('--filetype', required=False, help='file format of data')
+    p.add('--filetype', required=False, help="file format of data; default is 'csv'")
 
     # Options to run FE or CRE
     p.add('--fe', action='store_true', help='run FE estimation') # This option can be set in a config file because it starts with '--'
@@ -234,6 +234,8 @@ def main():
         'xlsx': pd.read_excel,
         'sql': pd.read_sql
     }
+    if params.filetype is None:
+        params.filetype = 'csv'
     df = pd_from_filetype[params.filetype.lower()](params.data)
 
     # Clean data
