@@ -254,5 +254,5 @@ def main():
         fe_estimator.fit(rng=rng)
     if params.cre:
         bdf = bdf.cluster(cluster_params, rng=rng)
-        cre_estimator = tw.CREEstimator(bdf.to_eventstudy(is_sorted=True, copy=False).get_cs(is_sorted=True, copy=False), cre_params)
+        cre_estimator = tw.CREEstimator(bdf.to_eventstudy(is_sorted=True, copy=False).get_cs(copy=False), cre_params)
         cre_estimator.fit(rng=rng)
