@@ -209,7 +209,7 @@ def main():
     else:
         measures = params.measures
     cluster_params = {'measures': measures, 'grouping': params.grouping, 'stayers_movers': params.stayers_movers, 't': params.t, 'weighted': params.weighted, 'dropna': params.dropna}
-    cluster_params = clear_dict(cluster_params)
+    cluster_params = bpd.cluster_params(clear_dict(cluster_params))
     #### General end ####
     ##### Cluster end #####
 
