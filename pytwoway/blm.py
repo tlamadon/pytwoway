@@ -1333,8 +1333,8 @@ class BLMModel:
                 C1[col] = jdata.loc[:, subcol_1].to_numpy()
                 C2[col] = jdata.loc[:, subcol_2].to_numpy()
         ## Sparse matrix representations ##
-        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
-        GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
+        # GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
+        # GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
         CC1 = {col: csc_matrix((np.ones(ni), (range(ni), C1[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
         CC2 = {col: csc_matrix((np.ones(ni), (range(ni), C2[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
 
@@ -1489,31 +1489,41 @@ class BLMModel:
                         Y2_adj = Y2
 
                 ## Update A ##
-                if params['update_s']:
-                    Xw1 = []
-                    Xw2 = []
+                # if params['update_s']:
+                #     Xw1 = []
+                #     Xw2 = []
                 for l in range(nl):
                     l_index, r_index = l * nk, (l + 1) * nk
 
                     ## Compute Xw_l ##
-                    Xw1_l = DxSP(W1 * qi[:, l] / S1[l, G1], GG1).T
-                    Xw2_l = DxSP(W2 * qi[:, l] / S2[l, G2], GG2).T
-                    if params['update_s']:
-                        Xw1.append(Xw1_l)
-                        Xw2.append(Xw2_l)
+                    # Xw1_l = DxSP(W1 * qi[:, l] / S1[l, G1], GG1).T
+                    # Xw2_l = DxSP(W2 * qi[:, l] / S2[l, G2], GG2).T
+                    # if params['update_s']:
+                    #     Xw1.append(Xw1_l)
+                    #     Xw2.append(Xw2_l)
+
+                    ## Update GG_df ##
+                    weights_1 = W1 * qi[:, l] / S1[l, G1]
+                    weights_2 = W2 * qi[:, l] / S2[l, G2]
 
                     ## Compute XwX_l ##
-                    XwX[l_index: r_index] = diag_of_sp_prod(Xw1_l, GG1)
-                    XwX[l_index + ts: r_index + ts] = diag_of_sp_prod(Xw2_l, GG2)
+                    # Use np.bincount to perform groupby-sum (source: https://stackoverflow.com/a/7089540/17333120)
+                    XwX[l_index: r_index] = np.bincount(G1, weights=weights_1) # GG_df.loc[GG_df_j1_idx, :].groupby('j1', sort=False)['w1'].sum() # diag_of_sp_prod(Xw1_l, GG1)
+                    XwX[l_index + ts: r_index + ts] = np.bincount(G2, weights=weights_2) # GG_df.loc[GG_df_j2_idx, :].groupby('j2', sort=False)['w2'].sum() # diag_of_sp_prod(Xw2_l, GG2)
 
                     if params['update_a']:
                         # Update A1_sum and A2_sum to account for worker-interaction terms
                         A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
 
+                        ## Update GG_df ##
+                        weights_1 *= (Y1_adj - A1_sum_l)
+                        weights_2 *= (Y2_adj - A2_sum_l)
+
                         ## Compute XwY_l ##
-                        XwY[l_index: r_index] = Xw1_l @ (Y1_adj - A1_sum_l)
-                        XwY[l_index + ts: r_index + ts] = Xw2_l @ (Y2_adj - A2_sum_l)
+                        XwY[l_index: r_index] = np.bincount(G1, weights=weights_1) # GG_df.groupby('j1')['w1'].sum() # Xw1_l @ (Y1_adj - A1_sum_l)
+                        XwY[l_index + ts: r_index + ts] = np.bincount(G2, weights=weights_2) # GG_df.groupby('j2')['w2'].sum() # Xw2_l @ (Y2_adj - A2_sum_l)
                         del A1_sum_l, A2_sum_l
+                del weights_1, weights_2
 
                 # print('A1 before:')
                 # print(A1)
@@ -1743,10 +1753,14 @@ class BLMModel:
 
                         ## XwS_l ##
                         l_index, r_index = l * nk, (l + 1) * nk
-                        XwS[l_index: r_index] = Xw1[l] @ eps1_l_sq
-                        XwS[l_index + ts: r_index + ts] = Xw2[l] @ eps2_l_sq
-                        Xw1[l] = 0
-                        Xw2[l] = 0
+                        ## Update GG_df ##
+                        weights_1 = W1 * qi[:, l] / S1[l, G1] * eps1_l_sq
+                        weights_2 = W2 * qi[:, l] / S2[l, G2] * eps2_l_sq
+                        XwS[l_index: r_index] = np.bincount(G1, weights=weights_1) # GG_df.loc[GG_df_j1_idx, :].groupby('j1', sort=False)['w1'].sum() # Xw1[l] @ eps1_l_sq
+                        XwS[l_index + ts: r_index + ts] = np.bincount(G2, weights=weights_2) # GG_df.loc[GG_df_j2_idx, :].groupby('j2', sort=False)['w2'].sum() # Xw2[l] @ eps2_l_sq
+                        # Xw1[l] = 0
+                        # Xw2[l] = 0
+                        del weights_1, weights_2
 
                         ## Categorical ##
                         for col in cat_cols:
@@ -1840,7 +1854,7 @@ class BLMModel:
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
 
-                del XwX, Xw1, Xw2
+                del XwX # , Xw1, Xw2
                 if len(cat_cols) > 0:
                     del XwX_cat, Xw1_cat, Xw2_cat
                 if len(cts_cols) > 0:

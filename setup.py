@@ -18,7 +18,7 @@ setuptools.setup(
         'pandas',
         'numba',
         'paramsdict>=0.0.3',
-        'bipartitepandas>=1.1.2',
+        'bipartitepandas>=1.1.3',
         'scipy',
         'statsmodels',
         'pyamg',
