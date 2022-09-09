@@ -204,28 +204,118 @@ def diag_of_prod(m1, m2):
         return diag_of_prod(m2.T, m1.T)
     return np.multiply(m1[:, : m2.shape[0]], m2.T).sum(axis=1)
 
-def logsumexp(a, axis=None):
-    '''
-    Compute the log of the sum of exponentials of input elements. A simplified version of https://github.com/scipy/scipy/blob/v1.8.1/scipy/special/_logsumexp.py#L7-L127.
+try:
+    import torch
+    def exp_(a):
+        '''
+        Compute exp(a).
 
-    Arguments:
-        a (NumPy Array): array to compute logsumexp on
-        axis (int or None): axis over which logsumexp is taken; if None, compute over all axes
+        Arguments:
+            a (NumPy Array): array to compute exp of
 
-    Returns:
-        (NumPy Array): logsumexp of a
-    '''
-    a_max = np.amax(a, axis=axis, keepdims=True)
+        Returns:
+            (NumPy Array): exp of a
+        '''
+        return torch.exp(torch.from_numpy(a)).numpy()
 
-    tmp = np.exp(a - a_max)
+    def log_(a):
+        '''
+        Compute log(a).
 
-    s = np.sum(tmp, axis=axis, keepdims=False)
-    out = np.log(s)
+        Arguments:
+            a (NumPy Array): array to compute log of
 
-    a_max = np.squeeze(a_max, axis=axis)
-    out += a_max
+        Returns:
+            (NumPy Array): log of a
+        '''
+        return torch.log(torch.from_numpy(a)).numpy()
 
-    return out
+    def square_(a):
+        '''
+        Compute a ** 2.
+
+        Arguments:
+            a (NumPy Array): array to compute log of
+
+        Returns:
+            (NumPy Array): square of a
+        '''
+        return torch.square(torch.from_numpy(a)).numpy()
+
+    def logsumexp(a, axis=None):
+        '''
+        Compute the log of the sum of exponentials of input elements.
+
+        Arguments:
+            a (NumPy Array): array to compute logsumexp on
+            axis (int or None): axis over which logsumexp is taken; if None, compute over all axes
+
+        Returns:
+            (NumPy Array): logsumexp of a
+        '''
+        if axis is None:
+            axis = range(a.shape)
+        return torch.logsumexp(torch.from_numpy(a), dim=axis).numpy()
+
+except ImportError:
+    def exp_(a):
+        '''
+        Compute exp(a).
+
+        Arguments:
+            a (NumPy Array): array to compute exp of
+
+        Returns:
+            (NumPy Array): exp of a
+        '''
+        return np.exp(a)
+
+    def log_(a):
+        '''
+        Compute log(a).
+
+        Arguments:
+            a (NumPy Array): array to compute log of
+
+        Returns:
+            (NumPy Array): log of a
+        '''
+        return np.log(a)
+
+    def square_(a):
+        '''
+        Compute a ** 2.
+
+        Arguments:
+            a (NumPy Array): array to compute log of
+
+        Returns:
+            (NumPy Array): square of a
+        '''
+        return a ** 2
+
+    def logsumexp(a, axis=None):
+        '''
+        Compute the log of the sum of exponentials of input elements. A simplified version of https://github.com/scipy/scipy/blob/v1.8.1/scipy/special/_logsumexp.py#L7-L127.
+
+        Arguments:
+            a (NumPy Array): array to compute logsumexp on
+            axis (int or None): axis over which logsumexp is taken; if None, compute over all axes
+
+        Returns:
+            (NumPy Array): logsumexp of a
+        '''
+        a_max = np.amax(a, axis=axis, keepdims=True)
+
+        tmp = np.exp(a - a_max)
+
+        s = np.sum(tmp, axis=axis, keepdims=False)
+        out = np.log(s)
+
+        a_max = np.squeeze(a_max, axis=axis)
+        out += a_max
+
+        return out
 
 logpi = - 0.5 * np.log(2 * np.pi)
 
@@ -234,20 +324,20 @@ def lognormpdf(x, mu, sd=None, var=None):
         raise ValueError('One of `sd` and `var` must be None, and the other must not be None.')
     if sd is not None:
         # Faster to split into multiple lines
-        res = logpi - np.log(sd)
-        res -= (x - mu) ** 2 / (2 * sd ** 2)
+        res = logpi - log_(sd)
+        res -= square_(x - mu) / (2 * square_(sd))
     elif var is not None:
         # Faster to split into multiple lines
-        res = logpi - (1 / 2) * np.log(var)
-        res -= (x - mu) ** 2 / (2 * var)
+        res = logpi - (1 / 2) * log_(var)
+        res -= square_(x - mu) / (2 * var)
     return res
 
 def fast_lognormpdf(x, mu, sd, G):
     # Faster to split into multiple lines
-    log_sd = np.log(sd)
-    sd_sq = sd ** 2
+    log_sd = log_(sd)
+    sd_sq = square_(sd)
     res = logpi - log_sd[G]
-    res -= (x - mu[G]) ** 2 / (2 * sd_sq[G])
+    res -= square_(x - mu[G]) / (2 * sd_sq[G])
     return res
 
 def scramble(lst):
