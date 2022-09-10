@@ -30,7 +30,7 @@ program define statatwoway, rclass
             qui gen str240 var_ho = ""
             qui gen str240 cov_ho = ""
             /* insheetjson using "res_fe.json", showresponse */
-            insheetjson var_fe cov_fe var_ho cov_ho using "res_fe.json", col("var_fe" "cov_fe" "var_ho" "cov_ho")
+            insheetjson var_fe cov_fe var_ho cov_ho using "res_fe.json", col("var(psi)_fe" "cov(psi, alpha)_fe" "var(psi)_ho" "cov(psi, alpha)_ho")
             foreach var in var_fe cov_fe var_ho cov_ho {
                 qui destring `var', replace
                 qui scalar `var' = `var'[0]

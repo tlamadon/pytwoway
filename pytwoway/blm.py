@@ -19,7 +19,7 @@ import bipartitepandas as bpd
 from bipartitepandas.util import to_list, HiddenPrints # , _is_subtype
 import pytwoway as tw
 from pytwoway import constraints as cons
-from pytwoway.util import DxSP, DxM, diag_of_sp_prod, jitter_scatter, logsumexp, lognormpdf, fast_lognormpdf
+from pytwoway.util import DxSP, DxM, diag_of_sp_prod, jitter_scatter, exp_, log_, logsumexp, lognormpdf, fast_lognormpdf
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq2(a):
@@ -55,6 +55,10 @@ blm_params = ParamsDict({
     'primary_period': ('first', 'set', ['first', 'second', 'all'],
         '''
             (default='first') Period to normalize and sort over. 'first' uses first period parameters; 'second' uses second period parameters; 'all' uses the average over first and second period parameters.
+        ''', None),
+    'gpu': (False, 'type', bool,
+        '''
+            (default=False) If True, utilize the GPU for certain operations. This will only work for CUDA-compatible GPUs, and requires that the package PyTorch is installed.
         ''', None),
     'verbose': (1, 'set', [0, 1, 2, 3],
         '''
@@ -538,6 +542,9 @@ class BLMModel:
         if nk is None:
             raise ValueError(f"tw.blm_params() key 'nk' must be changed from the default value of None.")
         self.nl, self.nk = nl, nk
+
+        # GPU
+        self.gpu = params['gpu']
 
         # Log likelihood for movers
         self.lik1 = None
@@ -1333,8 +1340,8 @@ class BLMModel:
                 C1[col] = jdata.loc[:, subcol_1].to_numpy()
                 C2[col] = jdata.loc[:, subcol_2].to_numpy()
         ## Sparse matrix representations ##
-        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
-        GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
+        # GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
+        # GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
         CC1 = {col: csc_matrix((np.ones(ni), (range(ni), C1[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
         CC2 = {col: csc_matrix((np.ones(ni), (range(ni), C2[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
 
@@ -1390,19 +1397,19 @@ class BLMModel:
                 for l in range(nl):
                     # Update A1_sum/A2_sum/S1_sum_sq/S2_sum_sq to account for worker-interaction terms
                     A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts)
-                    lp1 = lognormpdf(Y1, A1[l, G1] + A1_sum + A1_sum_l, var=S1[l, G1] ** 2 + S1_sum_sq + S1_sum_sq_l)
-                    lp2 = lognormpdf(Y2, A2[l, G2] + A2_sum + A2_sum_l, var=S2[l, G2] ** 2 + S2_sum_sq + S2_sum_sq_l)
+                    lp1 = lognormpdf(Y1, A1[l, G1] + A1_sum + A1_sum_l, var=S1[l, G1] ** 2 + S1_sum_sq + S1_sum_sq_l, gpu=self.gpu)
+                    lp2 = lognormpdf(Y2, A2[l, G2] + A2_sum + A2_sum_l, var=S2[l, G2] ** 2 + S2_sum_sq + S2_sum_sq_l, gpu=self.gpu)
                     lp[:, l] = log_pk1[KK, l] + W1 * lp1 + W2 * lp2
             else:
                 for l in range(nl):
-                    lp1 = fast_lognormpdf(Y1, A1[l, :], S1[l, :], G1)
-                    lp2 = fast_lognormpdf(Y2, A2[l, :], S2[l, :], G2)
+                    lp1 = fast_lognormpdf(Y1, A1[l, :], S1[l, :], G1, gpu=self.gpu)
+                    lp2 = fast_lognormpdf(Y2, A2[l, :], S2[l, :], G2, gpu=self.gpu)
                     lp[:, l] = log_pk1[KK, l] + W1 * lp1 + W2 * lp2
             del log_pk1, lp1, lp2
 
             # We compute log sum exp to get likelihoods and probabilities
-            lse_lp = logsumexp(lp, axis=1)
-            qi = np.exp(lp.T - lse_lp).T
+            lse_lp = logsumexp(lp, axis=1, gpu=self.gpu)
+            qi = exp_(lp.T - lse_lp, gpu=self.gpu).T
             if params['return_qi']:
                 return qi
             lik1 = lse_lp.mean()
@@ -1490,30 +1497,41 @@ class BLMModel:
 
                 ## Update A ##
                 if params['update_s']:
-                    Xw1 = []
-                    Xw2 = []
+                    # Store weights computed for A for use when computing S
+                    weights1 = []
+                    weights2 = []
                 for l in range(nl):
                     l_index, r_index = l * nk, (l + 1) * nk
 
-                    ## Compute Xw_l ##
-                    Xw1_l = DxSP(W1 * qi[:, l] / S1[l, G1], GG1).T
-                    Xw2_l = DxSP(W2 * qi[:, l] / S2[l, G2], GG2).T
+                    ## Compute weights ##
+                    weights_1 = W1 * qi[:, l] / S1[l, G1]
+                    weights_2 = W2 * qi[:, l] / S2[l, G2]
                     if params['update_s']:
-                        Xw1.append(Xw1_l)
-                        Xw2.append(Xw2_l)
+                        weights1.append(weights_1)
+                        weights2.append(weights_2)
 
-                    ## Compute XwX_l ##
-                    XwX[l_index: r_index] = diag_of_sp_prod(Xw1_l, GG1)
-                    XwX[l_index + ts: r_index + ts] = diag_of_sp_prod(Xw2_l, GG2)
+                    ## Compute XwX_l (equivalent to GG1.T @ weights @ GG1) ##
+                    # Use np.bincount to perform groupby-sum (source: https://stackoverflow.com/a/7089540/17333120)
+                    XwX[l_index: r_index] = np.bincount(G1, weights=weights_1)
+                    XwX[l_index + ts: r_index + ts] = np.bincount(G2, weights=weights_2)
 
                     if params['update_a']:
                         # Update A1_sum and A2_sum to account for worker-interaction terms
                         A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
 
-                        ## Compute XwY_l ##
-                        XwY[l_index: r_index] = Xw1_l @ (Y1_adj - A1_sum_l)
-                        XwY[l_index + ts: r_index + ts] = Xw2_l @ (Y2_adj - A2_sum_l)
+                        ## Update weights ##
+                        if params['update_s']:
+                            weights_1 = weights_1 * (Y1_adj - A1_sum_l)
+                            weights_2 = weights_2 * (Y2_adj - A2_sum_l)
+                        else:
+                            weights_1 *= (Y1_adj - A1_sum_l)
+                            weights_2 *= (Y2_adj - A2_sum_l)
+
+                        ## Compute XwY_l (equivalent to GG1.T @ weights @ Y) ##
+                        XwY[l_index: r_index] = np.bincount(G1, weights=weights_1)
+                        XwY[l_index + ts: r_index + ts] = np.bincount(G2, weights=weights_2)
                         del A1_sum_l, A2_sum_l
+                del weights_1, weights_2
 
                 # print('A1 before:')
                 # print(A1)
@@ -1567,8 +1585,9 @@ class BLMModel:
 
                 ## Categorical ##
                 if params['update_s']:
-                    Xw1_cat = {col: [] for col in cat_cols}
-                    Xw2_cat = {col: [] for col in cat_cols}
+                    # Store weights computed for A_cat for use when computing S_cat
+                    weights1_cat = {col: [] for col in cat_cols}
+                    weights2_cat = {col: [] for col in cat_cols}
                 for col in cat_cols:
                     col_n = cat_dict[col]['n']
 
@@ -1587,17 +1606,17 @@ class BLMModel:
                             S1_cat_l = S1_cat[col][C1[col]]
                             S2_cat_l = S2_cat[col][C2[col]]
 
-                        ## Compute Xw_cat_l ##
-                        Xw1_cat_l = DxSP(W1 * qi[:, l] / S1_cat_l, CC1[col]).T
-                        Xw2_cat_l = DxSP(W2 * qi[:, l] / S2_cat_l, CC2[col]).T
+                        ## Compute weights ##
+                        weights_1 = W1 * qi[:, l] / S1_cat_l
+                        weights_2 = W2 * qi[:, l] / S2_cat_l
                         del S1_cat_l, S2_cat_l
                         if params['update_s']:
-                            Xw1_cat[col].append(Xw1_cat_l)
-                            Xw2_cat[col].append(Xw2_cat_l)
+                            weights1_cat[col].append(weights_1)
+                            weights2_cat[col].append(weights_2)
 
-                        ## Compute XwX_cat_l ##
-                        XwX_cat[col][l_index: r_index] = diag_of_sp_prod(Xw1_cat_l, CC1[col])
-                        XwX_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = diag_of_sp_prod(Xw2_cat_l, CC2[col])
+                        ## Compute XwX_cat_l (equivalent to CC1_cat.T @ weights @ CC1_cat) ##
+                        XwX_cat[col][l_index: r_index] = np.bincount(C1[col], weights=weights_1)
+                        XwX_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = np.bincount(C2[col], weights=weights_2)
 
                         if params['update_a']:
                             # Update A1_sum and A2_sum to account for worker-interaction terms
@@ -1607,10 +1626,19 @@ class BLMModel:
                                 A1_sum_l -= A1_cat[col][l, C1[col]]
                                 A2_sum_l -= A2_cat[col][l, C2[col]]
 
-                            ## Compute XwY_cat_l ##
-                            XwY_cat[col][l_index: r_index] = Xw1_cat_l @ (Y1_adj - A1_sum_l - A1[l, G1])
-                            XwY_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = Xw2_cat_l @ (Y2_adj - A2_sum_l - A2[l, G2])
+                            ## Update weights ##
+                            if params['update_s']:
+                                weights_1 = weights_1 * (Y1_adj - A1_sum_l - A1[l, G1])
+                                weights_2 = weights_2 * (Y2_adj - A2_sum_l - A2[l, G2])
+                            else:
+                                weights_1 *= (Y1_adj - A1_sum_l - A1[l, G1])
+                                weights_2 *= (Y2_adj - A2_sum_l - A2[l, G2])
+
+                            ## Compute XwY_cat_l (equivalent to CC1_cat.T @ weights @ Y) ##
+                            XwY_cat[col][l_index: r_index] = np.bincount(C1[col], weights=weights_1)
+                            XwY_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = np.bincount(C2[col], weights=weights_2)
                             del A1_sum_l, A2_sum_l
+                    del weights_1, weights_2
 
                     # We solve the system to get all the parameters (use dense solver)
                     XwX_cat[col] = np.diag(XwX_cat[col])
@@ -1645,6 +1673,7 @@ class BLMModel:
 
                 ## Continuous ##
                 if params['update_s']:
+                    # Store weights computed for A_cts for use when computing S_cts
                     Xw1_cts = {col: [] for col in cts_cols}
                     Xw2_cts = {col: [] for col in cts_cols}
                 for col in cts_cols:
@@ -1685,6 +1714,7 @@ class BLMModel:
                             XwY_cts[col][l] = Xw1_cts_l @ (Y1_adj - A1_sum_l - A1[l, G1])
                             XwY_cts[col][l + nl] = Xw2_cts_l @ (Y2_adj - A2_sum_l - A2[l, G2])
                             del A1_sum_l, A2_sum_l
+                    del Xw1_cts_l, Xw2_cts_l
 
                     # We solve the system to get all the parameters (use dense solver)
                     XwX_cts[col] = np.diag(XwX_cts[col])
@@ -1743,30 +1773,47 @@ class BLMModel:
 
                         ## XwS_l ##
                         l_index, r_index = l * nk, (l + 1) * nk
-                        XwS[l_index: r_index] = Xw1[l] @ eps1_l_sq
-                        XwS[l_index + ts: r_index + ts] = Xw2[l] @ eps2_l_sq
-                        Xw1[l] = 0
-                        Xw2[l] = 0
+
+                        ## Update weights ##
+                        weights1[l] *= eps1_l_sq
+                        weights2[l] *= eps2_l_sq
+
+                        ## Compute wS_l ##
+                        XwS[l_index: r_index] = np.bincount(G1, weights=weights1[l])
+                        XwS[l_index + ts: r_index + ts] = np.bincount(G2, weights=weights2[l])
+
+                        ## Clear weights[l] ##
+                        weights1[l] = 0
+                        weights2[l] = 0
 
                         ## Categorical ##
                         for col in cat_cols:
                             col_n = cat_dict[col]['n']
                             l_index, r_index = l * col_n, (l + 1) * col_n
 
+                            ## Update weights ##
+                            weights1_cat[col][l] *= eps1_l_sq
+                            weights2_cat[col][l] *= eps2_l_sq
+
                             ## XwS_cat_l ##
-                            XwS_cat[col][l_index: r_index] = Xw1_cat[col][l] @ eps1_l_sq
-                            XwS_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = Xw2_cat[col][l] @ eps2_l_sq
-                            Xw1_cat[col][l] = 0
-                            Xw2_cat[col][l] = 0
+                            XwS_cat[col][l_index: r_index] = np.bincount(C1[col], weights=weights1_cat[col][l])
+                            XwS_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = np.bincount(C2[col], weights=weights2_cat[col][l])
+
+                            ## Clear weights_cat[col][l] ##
+                            weights1_cat[col][l] = 0
+                            weights2_cat[col][l] = 0
+
                         ## Continuous ##
                         for col in cts_cols:
                             ## XwS_cts_l ##
                             # NOTE: take absolute value
                             XwS_cts[col][l] = np.abs(Xw1_cts[col][l] @ eps1_l_sq)
                             XwS_cts[col][l + nl] = np.abs(Xw2_cts[col][l] @ eps2_l_sq)
+
+                            ## Clear Xw_cts[col][l] ##
                             Xw1_cts[col][l] = 0
                             Xw2_cts[col][l] = 0
-                        del eps1_l_sq, eps2_l_sq
+                    del eps1_l_sq, eps2_l_sq
 
                     try:
                         cons_s.solve(XwX, -XwS, solver='quadprog')
@@ -1840,9 +1887,9 @@ class BLMModel:
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
 
-                del XwX, Xw1, Xw2
+                del XwX, weights1, weights2
                 if len(cat_cols) > 0:
-                    del XwX_cat, Xw1_cat, Xw2_cat
+                    del XwX_cat, weights1_cat, weights2_cat
                 if len(cts_cols) > 0:
                     del XwX_cts, Xw1_cts, Xw2_cts
 
@@ -1973,13 +2020,13 @@ class BLMModel:
             for l in range(nl):
                 # Update A1_sum/S1_sum_sq to account for worker-interaction terms
                 A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=self.A1_cat, A2_cat=self.A2_cat, S1_cat=self.S1_cat, S2_cat=self.S2_cat, A1_cts=self.A1_cts, A2_cts=self.A2_cts, S1_cts=self.S1_cts, S2_cts=self.S2_cts)
-                lp1 = lognormpdf(Y1, A1[l, G1] + A1_sum + A1_sum_l, var=S1[l, G1] ** 2 + S1_sum_sq + S1_sum_sq_l)
-                # lp2 = lognormpdf(Y2, A2[l, G2] + A2_sum + A2_sum_l, var=S2[l, G2] ** 2 + S2_sum_sq + S2_sum_sq_l)
+                lp1 = lognormpdf(Y1, A1[l, G1] + A1_sum + A1_sum_l, var=S1[l, G1] ** 2 + S1_sum_sq + S1_sum_sq_l, gpu=self.gpu)
+                # lp2 = lognormpdf(Y2, A2[l, G2] + A2_sum + A2_sum_l, var=S2[l, G2] ** 2 + S2_sum_sq + S2_sum_sq_l, gpu=self.gpu)
                 lp_stable[:, l] = W1 * lp1 # + W2 * lp2
         else:
             for l in range(nl):
-                lp1 = fast_lognormpdf(Y1, A1[l, :], S1[l, :], G1)
-                # lp2 = fast_lognormpdf(Y2, A2[l, :], S2[l, :], G2)
+                lp1 = fast_lognormpdf(Y1, A1[l, :], S1[l, :], G1, gpu=self.gpu)
+                # lp2 = fast_lognormpdf(Y2, A2[l, :], S2[l, :], G2, gpu=self.gpu)
                 lp_stable[:, l] = W1 * lp1 # + W2 * lp2
         del lp1 #, lp2
 
@@ -1990,11 +2037,11 @@ class BLMModel:
             # We iterate over the worker types, should not be be
             # too costly since the vector is quite large within each iteration
             for l in range(nl):
-                lp[:, l] = lp_stable[:, l] + np.log(pk0[G1, l])
+                lp[:, l] = lp_stable[:, l] + np.log(pk0)[G1, l]
 
             # We compute log sum exp to get likelihoods and probabilities
-            lse_lp = logsumexp(lp, axis=1)
-            qi = np.exp(lp.T - lse_lp).T
+            lse_lp = logsumexp(lp, axis=1, gpu=self.gpu)
+            qi = exp_(lp.T - lse_lp, gpu=self.gpu).T
             if params['return_qi']:
                 return qi
             lik0 = lse_lp.mean()

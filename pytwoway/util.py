@@ -3,6 +3,7 @@ Utility functions
 '''
 import numpy as np
 import pandas as pd
+from bipartitepandas.util import to_list
 from scipy.sparse import csc_matrix
 from matplotlib import pyplot as plt
 
@@ -204,50 +205,195 @@ def diag_of_prod(m1, m2):
         return diag_of_prod(m2.T, m1.T)
     return np.multiply(m1[:, : m2.shape[0]], m2.T).sum(axis=1)
 
-def logsumexp(a, axis=None):
-    '''
-    Compute the log of the sum of exponentials of input elements. A simplified version of https://github.com/scipy/scipy/blob/v1.8.1/scipy/special/_logsumexp.py#L7-L127.
+try:
+    import torch
+    def _to_numpy(a):
+        '''
+        Convert a to be a NumPy array.
 
-    Arguments:
-        a (NumPy Array): array to compute logsumexp on
-        axis (int or None): axis over which logsumexp is taken; if None, compute over all axes
+        Arguments:
+            a (NumPy Array, list, int, or float): object to convert to a NumPy Array
+        '''
+        if isinstance(a, np.ndarray):
+            return a
+        return np.array(to_list(a))
 
-    Returns:
-        (NumPy Array): logsumexp of a
-    '''
-    a_max = np.amax(a, axis=axis, keepdims=True)
+    def exp_(a, gpu=False):
+        '''
+        Compute exp(a).
 
-    tmp = np.exp(a - a_max)
+        Arguments:
+            a (NumPy Array): array to compute exp of
+            gpu (bool): if True, estimate using GPU
 
-    s = np.sum(tmp, axis=axis, keepdims=False)
-    out = np.log(s)
+        Returns:
+            (NumPy Array or float): exp of a (returns single value if len(a) == 1)
+        '''
+        a = _to_numpy(a)
+        if gpu:
+            a = torch.from_numpy(a)
+            a.to(torch.device('cuda'))
+            a = torch.exp(a).numpy()
+        else:
+            a = torch.exp(torch.from_numpy(a)).numpy()
+        if len(a) == 1:
+            return a[0]
+        return a
 
-    a_max = np.squeeze(a_max, axis=axis)
-    out += a_max
+    def log_(a, gpu=False):
+        '''
+        Compute log(a).
 
-    return out
+        Arguments:
+            a (NumPy Array): array to compute log of
+            gpu (bool): if True, estimate using GPU
+
+        Returns:
+            (NumPy Array or float): log of a (returns single value if len(a) == 1)
+        '''
+        a = _to_numpy(a)
+        if gpu:
+            a = torch.from_numpy(a)
+            a.to(torch.device('cuda'))
+            a = torch.log(a).numpy()
+        else:
+            a = torch.log(torch.from_numpy(a)).numpy()
+        if len(a) == 1:
+            return a[0]
+        return a
+
+    def square_(a, gpu=False):
+        '''
+        Compute a ** 2.
+
+        Arguments:
+            a (NumPy Array): array to compute log of
+            gpu (bool): if True, estimate using GPU
+
+        Returns:
+            (NumPy Array or float): square of a (returns single value if len(a) == 1)
+        '''
+        a = _to_numpy(a)
+        if gpu:
+            a = torch.from_numpy(a)
+            a.to(torch.device('cuda'))
+            a = torch.square(a).numpy()
+        else:
+            a = torch.square(torch.from_numpy(a)).numpy()
+        if len(a) == 1:
+            return a[0]
+        return a
+
+    def logsumexp(a, axis=None, gpu=False):
+        '''
+        Compute the log of the sum of exponentials of input elements.
+
+        Arguments:
+            a (NumPy Array): array to compute logsumexp on
+            axis (int or None): axis over which logsumexp is taken; if None, compute over all axes
+            gpu (bool): if True, estimate using GPU
+
+        Returns:
+            (NumPy Array or float): logsumexp of a (returns single value if len(a) == 1)
+        '''
+        a = _to_numpy(a)
+        if axis is None:
+            axis = range(a.shape)
+        if gpu:
+            a = torch.from_numpy(a)
+            a.to(torch.device('cuda'))
+            a = torch.logsumexp(a, dim=axis).numpy()
+        else:
+            a = torch.logsumexp(torch.from_numpy(a), dim=axis).numpy()
+        if len(a) == 1:
+            return a[0]
+        return a
+
+except ImportError:
+    def exp_(a, gpu=False):
+        '''
+        Compute exp(a).
+
+        Arguments:
+            a (NumPy Array): array to compute exp of
+            gpu (bool): not used if `import torch` fails
+
+        Returns:
+            (NumPy Array): exp of a
+        '''
+        return np.exp(a)
+
+    def log_(a, gpu=False):
+        '''
+        Compute log(a).
+
+        Arguments:
+            a (NumPy Array): array to compute log of
+            gpu (bool): not used if `import torch` fails
+
+        Returns:
+            (NumPy Array): log of a
+        '''
+        return np.log(a)
+
+    def square_(a, gpu=False):
+        '''
+        Compute a ** 2.
+
+        Arguments:
+            a (NumPy Array): array to compute log of
+            gpu (bool): not used if `import torch` fails
+
+        Returns:
+            (NumPy Array): square of a
+        '''
+        return a ** 2
+
+    def logsumexp(a, axis=None, gpu=False):
+        '''
+        Compute the log of the sum of exponentials of input elements. A simplified version of https://github.com/scipy/scipy/blob/v1.8.1/scipy/special/_logsumexp.py#L7-L127.
+
+        Arguments:
+            a (NumPy Array): array to compute logsumexp on
+            axis (int or None): axis over which logsumexp is taken; if None, compute over all axes
+            gpu (bool): not used if `import torch` fails
+
+        Returns:
+            (NumPy Array): logsumexp of a
+        '''
+        a_max = np.amax(a, axis=axis, keepdims=True)
+
+        tmp = np.exp(a - a_max)
+
+        s = np.sum(tmp, axis=axis, keepdims=False)
+        out = np.log(s)
+
+        a_max = np.squeeze(a_max, axis=axis)
+        out += a_max
+
+        return out
 
 logpi = - 0.5 * np.log(2 * np.pi)
 
-def lognormpdf(x, mu, sd=None, var=None):
+def lognormpdf(x, mu, sd=None, var=None, gpu=False):
     if ((sd is None) and (var is None)) or ((sd is not None) and (var is not None)):
         raise ValueError('One of `sd` and `var` must be None, and the other must not be None.')
     if sd is not None:
         # Faster to split into multiple lines
-        res = logpi - np.log(sd)
-        res -= (x - mu) ** 2 / (2 * sd ** 2)
+        res = logpi - log_(sd, gpu=gpu)
+        res -= square_(x - mu, gpu=gpu) / (2 * square_(sd, gpu=gpu))
     elif var is not None:
         # Faster to split into multiple lines
-        res = logpi - (1 / 2) * np.log(var)
-        res -= (x - mu) ** 2 / (2 * var)
+        res = logpi - (1 / 2) * log_(var, gpu=gpu)
+        res -= square_(x - mu, gpu=gpu) / (2 * var)
     return res
 
-def fast_lognormpdf(x, mu, sd, G):
+def fast_lognormpdf(x, mu, sd, G, gpu=False):
     # Faster to split into multiple lines
     log_sd = np.log(sd)
     sd_sq = sd ** 2
     res = logpi - log_sd[G]
-    res -= (x - mu[G]) ** 2 / (2 * sd_sq[G])
+    res -= square_(x - mu[G], gpu=gpu) / (2 * sd_sq[G])
     return res
 
 def scramble(lst):
