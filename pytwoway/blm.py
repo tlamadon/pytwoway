@@ -1347,9 +1347,13 @@ class BLMModel:
 
         # Joint firm indicator
         KK = G1 + nk * G2
+        KK2 = np.tile(KK, (nl, 1)).T
+        KK3 = KK2 + nk ** 2 * np.arange(nl)
+        KK2 = KK3.flatten()
+        del KK3
 
-        # Transition probability matrix
-        GG12 = csc_matrix((np.ones(ni), (range(ni), KK)), shape=(ni, nk ** 2))
+        # # Transition probability matrix
+        # GG12 = csc_matrix((np.ones(ni), (range(ni), KK)), shape=(ni, nk ** 2))
 
         # Matrix of prior probabilities
         pk1 = self.pk1
@@ -1450,7 +1454,8 @@ class BLMModel:
             # ---------- Update pk1 ----------
             if params['update_pk1']:
                 # NOTE: add dirichlet prior
-                pk1 = GG12.T @ (W * (qi.T + d_prior - 1)).T
+                # NOTE: this is equivalent to pk1 = GG12.T @ (W * (qi.T + d_prior - 1)).T
+                pk1 = np.bincount(KK2, (W * (qi.T + d_prior - 1)).T.flatten()).reshape(nl, nk ** 2).T
                 # Normalize rows to sum to 1
                 pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
 
@@ -1962,7 +1967,7 @@ class BLMModel:
         # Y2 = sdata['y2'].to_numpy()
         G1 = sdata['g1'].to_numpy().astype(int, copy=False)
         # G2 = sdata['g2'].to_numpy().astype(int, copy=False)
-        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
+
         # Weights
         if params['weighted'] and sdata._col_included('w'):
             W1 = sdata.loc[:, 'w1'].to_numpy()
@@ -1997,6 +2002,16 @@ class BLMModel:
                     # Continuous
                     C1[col] = sdata.loc[:, subcol_1].to_numpy()
                     C2[col] = sdata.loc[:, subcol_2].to_numpy()
+
+        # Joint firm indicator
+        KK = G1
+        KK2 = np.tile(KK, (nl, 1)).T
+        KK3 = KK2 + nk * np.arange(nl)
+        KK = KK3.flatten()
+        del KK2, KK3
+
+        # # Transition probability matrix
+        # GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
 
         # Matrix of prior probabilities
         pk0 = self.pk0
@@ -2060,7 +2075,8 @@ class BLMModel:
 
             # ---------- M-step ----------
             # NOTE: add dirichlet prior
-            pk0 = GG1.T @ (W * (qi.T + d_prior - 1)).T
+            # NOTE: this is equivalent to pk0 = GG1.T @ (W * (qi.T + d_prior - 1)).T
+            pk0 = np.bincount(KK, (W * (qi.T + d_prior - 1)).T.flatten()).reshape(nl, nk).T
             # Normalize rows to sum to 1
             pk0 = DxM(1 / np.sum(pk0, axis=1), pk0)
 
