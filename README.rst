@@ -153,7 +153,9 @@ Data cleaning is handled by `BipartitePandas <https://github.com/tlamadon/bipart
 
 We also rely on a number of standard libraries, such as `NumPy`, `Pandas`, `matplotlib`, etc.
 
-Optionally, the code is compatible with `multiprocess <https://github.com/uqfoundation/multiprocess/>`_. Installing this may help if multiprocessing is raising errors related to pickling objects.
+Optionally, the code is compatible with:
+- `multiprocess <https://github.com/uqfoundation/multiprocess/>`_. Installing this may help if multiprocessing is raising errors related to pickling objects.
+- `PyTorch <https://github.com/pytorch/pytorch/>`_. This may speed up BLM estimation, and adds the option to compute some operations using the GPU.
 
 Citation
 --------

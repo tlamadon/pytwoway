@@ -24,7 +24,11 @@ copyright = '2021, Thibaut Lamadon'
 author = 'Thibaut Lamadon'
 
 # The full version, including alpha/beta/rc tags
+<<<<<<< HEAD
 release = '0.3.17'
+=======
+release = '0.3.18'
+>>>>>>> origin/master
 
 
 # -- General configuration ---------------------------------------------------
