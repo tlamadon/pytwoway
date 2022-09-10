@@ -4,7 +4,7 @@ Implement the static, 2-period non-linear estimator from Bonhomme, Lamadon, & Ma
 from tqdm.auto import tqdm, trange
 import copy
 import warnings
-import itertools
+# import itertools
 try:
     from multiprocess import Pool
 except ImportError:
@@ -1136,8 +1136,8 @@ class BLMModel:
                     A1_sum += A1_cat[col][C1[col]]
                     A2_sum += A2_cat[col][C2[col]]
                 if compute_S:
-                    S1_sum_sq += S1_cat[col][C1[col]] ** 2
-                    S2_sum_sq += S2_cat[col][C2[col]] ** 2
+                    S1_sum_sq += (S1_cat[col] ** 2)[C1[col]]
+                    S2_sum_sq += (S2_cat[col] ** 2)[C2[col]]
         ## Continuous ##
         for col in cts_cols:
             if not controls_dict[col]['worker_type_interaction']:
@@ -1204,8 +1204,8 @@ class BLMModel:
                     A1_sum_l += A1_cat[col][l, C1[col]]
                     A2_sum_l += A2_cat[col][l, C2[col]]
                 if compute_S:
-                    S1_sum_sq_l += S1_cat[col][l, C1[col]] ** 2
-                    S2_sum_sq_l += S2_cat[col][l, C2[col]] ** 2
+                    S1_sum_sq_l += (S1_cat[col][l, :] ** 2)[C1[col]]
+                    S2_sum_sq_l += (S2_cat[col][l, :] ** 2)[C2[col]]
         ## Continuous ##
         for col in cts_cols:
             if controls_dict[col]['worker_type_interaction']:
@@ -1347,9 +1347,13 @@ class BLMModel:
 
         # Joint firm indicator
         KK = G1 + nk * G2
+        KK2 = np.tile(KK, (nl, 1)).T
+        KK3 = KK2 + nk ** 2 * np.arange(nl)
+        KK2 = KK3.flatten()
+        del KK3
 
-        # Transition probability matrix
-        GG12 = csc_matrix((np.ones(ni), (range(ni), KK)), shape=(ni, nk ** 2))
+        # # Transition probability matrix
+        # GG12 = csc_matrix((np.ones(ni), (range(ni), KK)), shape=(ni, nk ** 2))
 
         # Matrix of prior probabilities
         pk1 = self.pk1
@@ -1450,7 +1454,8 @@ class BLMModel:
             # ---------- Update pk1 ----------
             if params['update_pk1']:
                 # NOTE: add dirichlet prior
-                pk1 = GG12.T @ (W * (qi.T + d_prior - 1)).T
+                # NOTE: this is equivalent to pk1 = GG12.T @ (W * (qi.T + d_prior - 1)).T
+                pk1 = np.bincount(KK2, (W * (qi.T + d_prior - 1)).T.flatten()).reshape(nl, nk ** 2).T
                 # Normalize rows to sum to 1
                 pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
 
@@ -1504,8 +1509,8 @@ class BLMModel:
                     l_index, r_index = l * nk, (l + 1) * nk
 
                     ## Compute weights ##
-                    weights_1 = W1 * qi[:, l] / S1[l, G1]
-                    weights_2 = W2 * qi[:, l] / S2[l, G2]
+                    weights_1 = W1 * qi[:, l] / (S1[l, :] ** 2)[G1]
+                    weights_2 = W2 * qi[:, l] / (S2[l, :] ** 2)[G2]
                     if params['update_s']:
                         weights1.append(weights_1)
                         weights2.append(weights_2)
@@ -1570,7 +1575,7 @@ class BLMModel:
                         if cons_a.res is None:
                             # If constraints inconsistent, keep A1 and A2 the same
                             if params['verbose'] in [2, 3]:
-                                print(f'Passing A1/A2: {e}')
+                                print(f'Passing A1/A2: estimates are None')
                         else:
                             res_a1, res_a2 = np.split(cons_a.res, 2)
                             # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
@@ -1600,11 +1605,11 @@ class BLMModel:
 
                         ## Compute variances ##
                         if cat_dict[col]['worker_type_interaction']:
-                            S1_cat_l = S1_cat[col][l, C1[col]]
-                            S2_cat_l = S2_cat[col][l, C2[col]]
+                            S1_cat_l = (S1_cat[col][l, :] ** 2)[C1[col]]
+                            S2_cat_l = (S2_cat[col][l, :] ** 2)[C2[col]]
                         else:
-                            S1_cat_l = S1_cat[col][C1[col]]
-                            S2_cat_l = S2_cat[col][C2[col]]
+                            S1_cat_l = (S1_cat[col] ** 2)[C1[col]]
+                            S2_cat_l = (S2_cat[col] ** 2)[C2[col]]
 
                         ## Compute weights ##
                         weights_1 = W1 * qi[:, l] / S1_cat_l
@@ -1650,7 +1655,7 @@ class BLMModel:
                             if a_solver.res is None:
                                 # If constraints inconsistent, keep A1_cat and A2_cat the same
                                 if params['verbose'] in [2, 3]:
-                                    print(f'Passing A1_cat/A2_cat for column {col!r}: {e}')
+                                    print(f'Passing A1_cat/A2_cat for column {col!r}: estimates are None')
                             else:
                                 res_a1, res_a2 = np.split(a_solver.res, 2)
                                 # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
@@ -1684,11 +1689,11 @@ class BLMModel:
                     for l in range(nl):
                         ## Compute variances ##
                         if cts_dict[col]['worker_type_interaction']:
-                            S1_cts_l = S1_cts[col][l]
-                            S2_cts_l = S2_cts[col][l]
+                            S1_cts_l = S1_cts[col][l] ** 2
+                            S2_cts_l = S2_cts[col][l] ** 2
                         else:
-                            S1_cts_l = S1_cts[col]
-                            S2_cts_l = S2_cts[col]
+                            S1_cts_l = S1_cts[col] ** 2
+                            S2_cts_l = S2_cts[col] ** 2
 
                         ## Compute Xw_cts_l ##
                         Xw1_cts_l = C1[col].T * (W1 * qi[:, l] / S1_cts_l)
@@ -1726,7 +1731,7 @@ class BLMModel:
                             if a_solver.res is None:
                                 # If constraints inconsistent, keep A1_cts and A2_cts the same
                                 if params['verbose'] in [2, 3]:
-                                    print(f'Passing A1_cts/A2_cts for column {col!r}: {e}')
+                                    print(f'Passing A1_cts/A2_cts for column {col!r}: estimates are None')
                             else:
                                 res_a1, res_a2 = np.split(a_solver.res, 2)
                                 # if pd.isna(res_a1).any() or pd.isna(res_a2).any():
@@ -1821,7 +1826,7 @@ class BLMModel:
                         if cons_s.res is None:
                             # If constraints inconsistent, keep S1 and S2 the same
                             if params['verbose'] in [2, 3]:
-                                print(f'Passing S1/S2: {e}')
+                                print(f'Passing S1/S2: estimates are None')
                         else:
                             res_s1, res_s2 = np.split(cons_s.res, 2)
                             # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
@@ -1844,7 +1849,7 @@ class BLMModel:
                             if s_solver.res is None:
                                 # If constraints inconsistent, keep S1_cat and S2_cat the same
                                 if params['verbose'] in [2, 3]:
-                                    print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
+                                    print(f'Passing S1_cat/S2_cat for column {col!r}: estimates are None')
                             else:
                                 res_s1, res_s2 = np.split(s_solver.res, 2)
                                 # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
@@ -1870,7 +1875,7 @@ class BLMModel:
                             if s_solver.res is None:
                                 # If constraints inconsistent, keep S1_cts and S2_cts the same
                                 if params['verbose'] in [2, 3]:
-                                    print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
+                                    print(f'Passing S1_cts/S2_cts for column {col!r}: estimates are None')
                             else:
                                 res_s1, res_s2 = np.split(s_solver.res, 2)
                                 # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
@@ -1962,7 +1967,7 @@ class BLMModel:
         # Y2 = sdata['y2'].to_numpy()
         G1 = sdata['g1'].to_numpy().astype(int, copy=False)
         # G2 = sdata['g2'].to_numpy().astype(int, copy=False)
-        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
+
         # Weights
         if params['weighted'] and sdata._col_included('w'):
             W1 = sdata.loc[:, 'w1'].to_numpy()
@@ -1997,6 +2002,16 @@ class BLMModel:
                     # Continuous
                     C1[col] = sdata.loc[:, subcol_1].to_numpy()
                     C2[col] = sdata.loc[:, subcol_2].to_numpy()
+
+        # Joint firm indicator
+        KK = G1
+        KK2 = np.tile(KK, (nl, 1)).T
+        KK3 = KK2 + nk * np.arange(nl)
+        KK = KK3.flatten()
+        del KK2, KK3
+
+        # # Transition probability matrix
+        # GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
 
         # Matrix of prior probabilities
         pk0 = self.pk0
@@ -2060,7 +2075,8 @@ class BLMModel:
 
             # ---------- M-step ----------
             # NOTE: add dirichlet prior
-            pk0 = GG1.T @ (W * (qi.T + d_prior - 1)).T
+            # NOTE: this is equivalent to pk0 = GG1.T @ (W * (qi.T + d_prior - 1)).T
+            pk0 = np.bincount(KK, (W * (qi.T + d_prior - 1)).T.flatten()).reshape(nl, nk).T
             # Normalize rows to sum to 1
             pk0 = DxM(1 / np.sum(pk0, axis=1), pk0)
 
@@ -2387,21 +2403,28 @@ class BLMEstimator:
         if ncore > 1:
             # Multiprocessing
             with Pool(processes=ncore) as pool:
-                sim_model_lst = pool.starmap(self._fit_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
+                sim_model_lst = list(tqdm(pool.imap(tw.util.f_star, [(self._fit_model, (jdata, np.random.default_rng(seed))) for seed in seeds]), total=n_init))
+                # sim_model_lst = pool.starmap(self._fit_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
         else:
             # No multiprocessing
-            sim_model_lst = itertools.starmap(self._fit_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
+            sim_model_lst = list(tqdm(map(tw.util.f_star, [(self._fit_model, (jdata, np.random.default_rng(seed))) for seed in seeds]), total=n_init))
+            # sim_model_lst = itertools.starmap(self._fit_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
 
         # Sort by likelihoods FIXME better handling if connectedness is None
         sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst if model.connectedness is not None], reverse=True, key=lambda a: a[0])
         sorted_lik_models = [model for _, model in sorted_zipped_models]
 
-        # Save likelihood vs. connectedness for all models
-        liks_high = np.zeros(shape=n_best) # Save likelihoods for n_best
-        connectedness_high = np.zeros(shape=n_best) # Save connectedness for n_best
-        liks_low = np.zeros(shape=n_init - n_best) # Save likelihoods for not n_best
-        connectedness_low = np.zeros(shape=n_init - n_best) # Save connectedness for not n_best
-        liks_all = [] # Save paths of likelihoods
+        ## Save likelihood vs. connectedness for all models ##
+        # Save likelihoods for n_best
+        liks_high = np.zeros(shape=n_best)
+        # Save connectedness for n_best
+        connectedness_high = np.zeros(shape=n_best)
+        # Save likelihoods for not n_best
+        liks_low = np.zeros(shape=n_init - n_best)
+        # Save connectedness for not n_best
+        connectedness_low = np.zeros(shape=n_init - n_best)
+        # Save paths of likelihoods
+        liks_all = []
         for i, model in enumerate(sorted_lik_models):
             liks_all.append(model.liks1)
             if i < n_best:
