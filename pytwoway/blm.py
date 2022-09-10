@@ -2030,18 +2030,18 @@ class BLMModel:
             # We iterate over the worker types, should not be be
             # too costly since the vector is quite large within each iteration
             for l in range(nl):
-                lp[:, l] = lp_stable[:, l] + np.log(pk0[G1, l])
+                lp[:, l] = lp_stable[:, l] + log_(pk0[G1, l])
 
             # We compute log sum exp to get likelihoods and probabilities
             lse_lp = logsumexp(lp, axis=1)
-            qi = np.exp(lp.T - lse_lp).T
+            qi = exp_(lp.T - lse_lp).T
             if params['return_qi']:
                 return qi
             lik0 = lse_lp.mean()
             del lse_lp
             if iter > 0:
                 # Account for Dirichlet prior
-                lik_prior = (d_prior - 1) * np.sum(np.log(pk0))
+                lik_prior = (d_prior - 1) * np.sum(log_(pk0))
                 lik0 += lik_prior
             liks0.append(lik0)
             if params['verbose'] == 3:
