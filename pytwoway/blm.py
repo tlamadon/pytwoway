@@ -56,6 +56,10 @@ blm_params = ParamsDict({
         '''
             (default='first') Period to normalize and sort over. 'first' uses first period parameters; 'second' uses second period parameters; 'all' uses the average over first and second period parameters.
         ''', None),
+    'gpu': (False, 'type', bool,
+        '''
+            (default=False) If True, utilize the GPU for certain operations. This will only work for CUDA-compatible GPUs, and requires that the package PyTorch is installed.
+        ''', None),
     'verbose': (1, 'set', [0, 1, 2, 3],
         '''
             (default=1) If 0, print no output; if 1, print each major step in estimation; if 2, print warnings during estimation; if 3, print likelihoods at each iteration.
@@ -538,6 +542,9 @@ class BLMModel:
         if nk is None:
             raise ValueError(f"tw.blm_params() key 'nk' must be changed from the default value of None.")
         self.nl, self.nk = nl, nk
+
+        # GPU
+        self.gpu = params['gpu']
 
         # Log likelihood for movers
         self.lik1 = None
@@ -1390,26 +1397,26 @@ class BLMModel:
                 for l in range(nl):
                     # Update A1_sum/A2_sum/S1_sum_sq/S2_sum_sq to account for worker-interaction terms
                     A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts)
-                    lp1 = lognormpdf(Y1, A1[l, G1] + A1_sum + A1_sum_l, var=S1[l, G1] ** 2 + S1_sum_sq + S1_sum_sq_l)
-                    lp2 = lognormpdf(Y2, A2[l, G2] + A2_sum + A2_sum_l, var=S2[l, G2] ** 2 + S2_sum_sq + S2_sum_sq_l)
+                    lp1 = lognormpdf(Y1, A1[l, G1] + A1_sum + A1_sum_l, var=S1[l, G1] ** 2 + S1_sum_sq + S1_sum_sq_l, gpu=self.gpu)
+                    lp2 = lognormpdf(Y2, A2[l, G2] + A2_sum + A2_sum_l, var=S2[l, G2] ** 2 + S2_sum_sq + S2_sum_sq_l, gpu=self.gpu)
                     lp[:, l] = log_pk1[KK, l] + W1 * lp1 + W2 * lp2
             else:
                 for l in range(nl):
-                    lp1 = fast_lognormpdf(Y1, A1[l, :], S1[l, :], G1)
-                    lp2 = fast_lognormpdf(Y2, A2[l, :], S2[l, :], G2)
+                    lp1 = fast_lognormpdf(Y1, A1[l, :], S1[l, :], G1, gpu=self.gpu)
+                    lp2 = fast_lognormpdf(Y2, A2[l, :], S2[l, :], G2, gpu=self.gpu)
                     lp[:, l] = log_pk1[KK, l] + W1 * lp1 + W2 * lp2
             del log_pk1, lp1, lp2
 
             # We compute log sum exp to get likelihoods and probabilities
-            lse_lp = logsumexp(lp, axis=1)
-            qi = exp_(lp.T - lse_lp).T
+            lse_lp = logsumexp(lp, axis=1, gpu=self.gpu)
+            qi = exp_(lp.T - lse_lp, gpu=self.gpu).T
             if params['return_qi']:
                 return qi
             lik1 = lse_lp.mean()
             del lse_lp
             if (iter > 0) and params['update_pk1']:
                 # Account for Dirichlet prior
-                lik_prior = (d_prior - 1) * np.sum(log_(pk1))
+                lik_prior = (d_prior - 1) * np.sum(np.log(pk1))
                 lik1 += lik_prior
             liks1.append(lik1)
             if params['verbose'] == 3:
@@ -2013,13 +2020,13 @@ class BLMModel:
             for l in range(nl):
                 # Update A1_sum/S1_sum_sq to account for worker-interaction terms
                 A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=self.A1_cat, A2_cat=self.A2_cat, S1_cat=self.S1_cat, S2_cat=self.S2_cat, A1_cts=self.A1_cts, A2_cts=self.A2_cts, S1_cts=self.S1_cts, S2_cts=self.S2_cts)
-                lp1 = lognormpdf(Y1, A1[l, G1] + A1_sum + A1_sum_l, var=S1[l, G1] ** 2 + S1_sum_sq + S1_sum_sq_l)
-                # lp2 = lognormpdf(Y2, A2[l, G2] + A2_sum + A2_sum_l, var=S2[l, G2] ** 2 + S2_sum_sq + S2_sum_sq_l)
+                lp1 = lognormpdf(Y1, A1[l, G1] + A1_sum + A1_sum_l, var=S1[l, G1] ** 2 + S1_sum_sq + S1_sum_sq_l, gpu=self.gpu)
+                # lp2 = lognormpdf(Y2, A2[l, G2] + A2_sum + A2_sum_l, var=S2[l, G2] ** 2 + S2_sum_sq + S2_sum_sq_l, gpu=self.gpu)
                 lp_stable[:, l] = W1 * lp1 # + W2 * lp2
         else:
             for l in range(nl):
-                lp1 = fast_lognormpdf(Y1, A1[l, :], S1[l, :], G1)
-                # lp2 = fast_lognormpdf(Y2, A2[l, :], S2[l, :], G2)
+                lp1 = fast_lognormpdf(Y1, A1[l, :], S1[l, :], G1, gpu=self.gpu)
+                # lp2 = fast_lognormpdf(Y2, A2[l, :], S2[l, :], G2, gpu=self.gpu)
                 lp_stable[:, l] = W1 * lp1 # + W2 * lp2
         del lp1 #, lp2
 
@@ -2030,18 +2037,18 @@ class BLMModel:
             # We iterate over the worker types, should not be be
             # too costly since the vector is quite large within each iteration
             for l in range(nl):
-                lp[:, l] = lp_stable[:, l] + log_(pk0[G1, l])
+                lp[:, l] = lp_stable[:, l] + np.log(pk0)[G1, l]
 
             # We compute log sum exp to get likelihoods and probabilities
-            lse_lp = logsumexp(lp, axis=1)
-            qi = exp_(lp.T - lse_lp).T
+            lse_lp = logsumexp(lp, axis=1, gpu=self.gpu)
+            qi = exp_(lp.T - lse_lp, gpu=self.gpu).T
             if params['return_qi']:
                 return qi
             lik0 = lse_lp.mean()
             del lse_lp
             if iter > 0:
                 # Account for Dirichlet prior
-                lik_prior = (d_prior - 1) * np.sum(log_(pk0))
+                lik_prior = (d_prior - 1) * np.sum(np.log(pk0))
                 lik0 += lik_prior
             liks0.append(lik0)
             if params['verbose'] == 3:
