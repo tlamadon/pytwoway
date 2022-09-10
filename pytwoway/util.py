@@ -392,6 +392,18 @@ def fast_lognormpdf(x, mu, sd, G, gpu=False):
     res -= square_(x - mu[G], gpu=gpu) / (2 * sd_sq[G])
     return res
 
+def f_star(f_args):
+    '''
+    Inspire by https://stackoverflow.com/a/67845088/17333120, this allows tqdm to effectively work with starmap.
+
+    Arguments:
+        f_args (tuple of function and list): tuple where first entry gives the function to map and the second gives the arguments for the function
+
+    Returns:
+        (object): returns f(*args)
+    '''
+    return f_args[0](*f_args[1])
+
 def scramble(lst):
     '''
     Reorder a list from [a, b, c, d, e] to [a, e, b, d, c]. This is used for attrition with multiprocessing, to ensure memory usage stays relatively constant, by mixing together large and small draws. Scrambled lists can be unscrambled with _unscramble().

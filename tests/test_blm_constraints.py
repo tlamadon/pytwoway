@@ -23,13 +23,13 @@ def test_blm_control_constraints_linear():
         'stationary_A': False, 'stationary_S': False,
         'worker_type_interaction': True,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'categorical_controls': {'cat_tv_wi_control': sim_cat_tv_wi_params}
     })
     cat_tv_wi_params = tw.categorical_control_params({
@@ -37,12 +37,12 @@ def test_blm_control_constraints_linear():
         'cons_a': cons.Linear(),
         'worker_type_interaction': True,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_params = tw.blm_params({
         'nl': nl, 'nk': nk,
         'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
-        's1_low': 0, 's1_high': 0.05, 's2_low': 0, 's2_high': 0.05,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'categorical_controls': {'cat_tv_wi_control': cat_tv_wi_params},
         'd_mean_worker_effect': 0.025
     })
@@ -87,13 +87,13 @@ def test_blm_control_constraints_linear_additive():
         'stationary_A': False, 'stationary_S': False,
         'worker_type_interaction': True,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'categorical_controls': {'cat_tv_wi_control': sim_cat_tv_wi_params}
     })
     cat_tv_wi_params = tw.categorical_control_params({
@@ -101,12 +101,12 @@ def test_blm_control_constraints_linear_additive():
         'cons_a': cons.LinearAdditive(),
         'worker_type_interaction': True,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_params = tw.blm_params({
         'nl': nl, 'nk': nk,
         'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
-        's1_low': 0, 's1_high': 0.05, 's2_low': 0, 's2_high': 0.05,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'categorical_controls': {'cat_tv_wi_control': cat_tv_wi_params},
         'd_mean_worker_effect': 0.025
     })
@@ -214,13 +214,13 @@ def test_blm_control_constraints_stationary_firm_type_variation():
         'stationary_A': False, 'stationary_S': False,
         'worker_type_interaction': True,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'categorical_controls': {'cat_tv_control': sim_cat_tv_params}
     })
     cat_tv_params = tw.categorical_control_params({
@@ -228,12 +228,12 @@ def test_blm_control_constraints_stationary_firm_type_variation():
         'cons_a': cons.StationaryFirmTypeVariation(),
         'worker_type_interaction': True,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_params = tw.blm_params({
         'nl': nl, 'nk': nk,
         'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
-        's1_low': 0, 's1_high': 0.05, 's2_low': 0, 's2_high': 0.05,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'categorical_controls': {'cat_tv_control': cat_tv_params},
         'force_min_firm_type': True
     })
@@ -273,26 +273,26 @@ def test_blm_control_constraints_lb_ub():
         'stationary_A': False, 'stationary_S': False,
         'worker_type_interaction': False,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': -0.5, 'a2_sig': 2.5,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.005, 's1_high': 0.5, 's2_low': 0.005, 's2_high': 0.5
     })
     blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'categorical_controls': {'cat_tv_control': sim_cat_tv_params}
     })
     cat_tv_params = tw.categorical_control_params({
         'n': n_control,
-        'cons_s': [cons.BoundedBelow(lb=3e-5), cons.BoundedAbove(ub=4e-5)],
+        'cons_s': [cons.BoundedBelow(lb=0.08), cons.BoundedAbove(ub=0.09)],
         'worker_type_interaction': False,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': -0.5, 'a2_sig': 2.5,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.1, 's2_high': 0.1
     })
     blm_params = tw.blm_params({
         'nl': nl, 'nk': nk,
         'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
-        's1_low': 0, 's1_high': 0.05, 's2_low': 0, 's2_high': 0.05,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'categorical_controls': {'cat_tv_control': cat_tv_params}
     })
     # Simulate data
@@ -314,16 +314,16 @@ def test_blm_control_constraints_lb_ub():
     blm_fit.fit_movers(jdata=jdata)
     # blm_fit.fit_stayers(sdata=sdata)
 
-    assert np.min(blm_fit.S1_cat['cat_tv_control'] ** 2) >= 3e-5
-    assert np.min(blm_fit.S2_cat['cat_tv_control'] ** 2) >= 3e-5
-    assert np.max(blm_fit.S1_cat['cat_tv_control'] ** 2) <= 4e-5 + 1e-20
-    assert np.max(blm_fit.S2_cat['cat_tv_control'] ** 2) <= 4e-5
+    assert np.min(blm_fit.S1_cat['cat_tv_control'] ** 2) >= 0.08
+    assert np.min(blm_fit.S2_cat['cat_tv_control'] ** 2) >= 0.08
+    assert np.max(blm_fit.S1_cat['cat_tv_control'] ** 2) <= 0.09
+    assert np.max(blm_fit.S2_cat['cat_tv_control'] ** 2) <= 0.09
 
     # Make sure simulated parameters fall outside range
-    assert np.min(sim_params['S1_cat']['cat_tv_control'] ** 2) <= 3e-5
-    assert np.min(sim_params['S2_cat']['cat_tv_control'] ** 2) <= 3e-5
-    assert np.max(sim_params['S1_cat']['cat_tv_control'] ** 2) >= 4e-5
-    assert np.max(sim_params['S2_cat']['cat_tv_control'] ** 2) >= 4e-5
+    assert np.min(sim_params['S1_cat']['cat_tv_control'] ** 2) <= 0.08
+    assert np.min(sim_params['S2_cat']['cat_tv_control'] ** 2) <= 0.08
+    assert np.max(sim_params['S1_cat']['cat_tv_control'] ** 2) >= 0.09
+    assert np.max(sim_params['S2_cat']['cat_tv_control'] ** 2) >= 0.09
 
 def test_blm_control_normalization():
     # Test whether normalization for categorical control variables works for BLM estimator.
@@ -337,26 +337,26 @@ def test_blm_control_normalization():
         'stationary_A': False, 'stationary_S': False,
         'worker_type_interaction': False,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     sim_cat_params_two = tw.sim_categorical_control_params({
         'n': n_control,
         'stationary_A': True, 'stationary_S': True,
         'worker_type_interaction': True,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     sim_cts_params = tw.sim_continuous_control_params({
         'stationary_A': True, 'stationary_S': True,
         'worker_type_interaction': True,
         'a1_mu': -0.15, 'a1_sig': 0.05, 'a2_mu': 0.15, 'a2_sig': 0.05,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'categorical_controls': {'cat_control_one': sim_cat_params_one, 'cat_control_two': sim_cat_params_two},
         'continuous_controls': {'cts_control': sim_cts_params}
     })
@@ -365,20 +365,20 @@ def test_blm_control_normalization():
         'cons_a': None, 'cons_s': None,
         'worker_type_interaction': False,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     cat_params_two = tw.categorical_control_params({
         'n': n_control,
         'cons_a': cons.Stationary(), 'cons_s': cons.Stationary(),
         'worker_type_interaction': True,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     cts_params = tw.continuous_control_params({
         'worker_type_interaction': True,
         'cons_a': cons.Stationary(), 'cons_s': cons.Stationary(),
         'a1_mu': -0.15, 'a1_sig': 0.05, 'a2_mu': 0.15, 'a2_sig': 0.05,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_params = tw.blm_params({
         'nl': nl, 'nk': nk,
@@ -430,7 +430,7 @@ def test_blm_control_normalization():
     assert np.max(np.abs((A1_sum_0_0_fit - A1_sum_0_0_sim) / A1_sum_0_0_sim)) < 1e-2
     assert np.max(np.abs((A1_sum_0_1_fit - A1_sum_0_1_sim) / A1_sum_0_1_sim)) < 1e-3
     assert np.max(np.abs((A1_sum_1_0_fit - A1_sum_1_0_sim) / A1_sum_1_0_sim)) < 1e-2
-    assert np.max(np.abs((A1_sum_1_1_fit - A1_sum_1_1_sim) / A1_sum_1_1_sim)) < 1e-3
+    assert np.max(np.abs((A1_sum_1_1_fit - A1_sum_1_1_sim) / A1_sum_1_1_sim)) < 1e-2
     assert np.max(np.abs((A2_sum_0_0_fit - A2_sum_0_0_sim) / A2_sum_0_0_sim)) < 1e-3
     assert np.max(np.abs((A2_sum_0_1_fit - A2_sum_0_1_sim) / A2_sum_0_1_sim)) < 1e-3
     assert np.max(np.abs((A2_sum_1_0_fit - A2_sum_1_0_sim) / A2_sum_1_0_sim)) < 1e-3
@@ -452,26 +452,26 @@ def test_blm_control_normalization_primary_period_second():
         'stationary_A': False, 'stationary_S': False,
         'worker_type_interaction': False,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     sim_cat_params_two = tw.sim_categorical_control_params({
         'n': n_control,
         'stationary_A': True, 'stationary_S': True,
         'worker_type_interaction': True,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     sim_cts_params = tw.sim_continuous_control_params({
         'stationary_A': True, 'stationary_S': True,
         'worker_type_interaction': True,
         'a1_mu': -0.15, 'a1_sig': 0.05, 'a2_mu': 0.15, 'a2_sig': 0.05,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'categorical_controls': {'cat_control_one': sim_cat_params_one, 'cat_control_two': sim_cat_params_two},
         'continuous_controls': {'cts_control': sim_cts_params}
     })
@@ -480,25 +480,25 @@ def test_blm_control_normalization_primary_period_second():
         'cons_a': None, 'cons_s': None,
         'worker_type_interaction': False,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     cat_params_two = tw.categorical_control_params({
         'n': n_control,
         'cons_a': cons.Stationary(), 'cons_s': cons.Stationary(),
         'worker_type_interaction': True,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     cts_params = tw.continuous_control_params({
         'worker_type_interaction': True,
         'cons_a': cons.Stationary(), 'cons_s': cons.Stationary(),
         'a1_mu': -0.15, 'a1_sig': 0.05, 'a2_mu': 0.15, 'a2_sig': 0.05,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_params = tw.blm_params({
         'nl': nl, 'nk': nk,
         'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
-        's1_low': 0, 's1_high': 0.05, 's2_low': 0, 's2_high': 0.05,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'categorical_controls': {'cat_control_one': cat_params_one, 'cat_control_two': cat_params_two},
         'continuous_controls': {'cts_control': cts_params},
         'primary_period': 'second'
@@ -544,13 +544,13 @@ def test_blm_control_normalization_primary_period_second():
     A2_sum_1_1_fit = blm_fit.A2.T + blm_fit.A2_cat['cat_control_one'][1] + blm_fit.A2_cat['cat_control_two'][:, 1]
 
     assert np.max(np.abs((A1_sum_0_0_fit - A1_sum_0_0_sim) / A1_sum_0_0_sim)) < 1e-2
-    assert np.max(np.abs((A1_sum_0_1_fit - A1_sum_0_1_sim) / A1_sum_0_1_sim)) < 1e-3
+    assert np.max(np.abs((A1_sum_0_1_fit - A1_sum_0_1_sim) / A1_sum_0_1_sim)) < 1e-2
     assert np.max(np.abs((A1_sum_1_0_fit - A1_sum_1_0_sim) / A1_sum_1_0_sim)) < 1e-2
-    assert np.max(np.abs((A1_sum_1_1_fit - A1_sum_1_1_sim) / A1_sum_1_1_sim)) < 1e-3
+    assert np.max(np.abs((A1_sum_1_1_fit - A1_sum_1_1_sim) / A1_sum_1_1_sim)) < 1e-2
     assert np.max(np.abs((A2_sum_0_0_fit - A2_sum_0_0_sim) / A2_sum_0_0_sim)) < 1e-2
-    assert np.max(np.abs((A2_sum_0_1_fit - A2_sum_0_1_sim) / A2_sum_0_1_sim)) < 1e-2
+    assert np.max(np.abs((A2_sum_0_1_fit - A2_sum_0_1_sim) / A2_sum_0_1_sim)) < 0.015
     assert np.max(np.abs((A2_sum_1_0_fit - A2_sum_1_0_sim) / A2_sum_1_0_sim)) < 1e-2
-    assert np.max(np.abs((A2_sum_1_1_fit - A2_sum_1_1_sim) / A2_sum_1_1_sim)) < 1e-2
+    assert np.max(np.abs((A2_sum_1_1_fit - A2_sum_1_1_sim) / A2_sum_1_1_sim)) < 0.015
     assert np.all(blm_fit.A2[:, 2] == 0)
     assert blm_fit.A1[0, 2] == 0
     assert np.all(blm_fit.A1_cat['cat_control_two'] == blm_fit.A2_cat['cat_control_two'])

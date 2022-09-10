@@ -1752,7 +1752,7 @@ class DynamicBLMModel:
                     if compute_A:
                         A_sum[period] += A_cat_t[C_t]
                     if compute_S:
-                        S_sum_sq[period] += S_cat_t[C_t] ** 2
+                        S_sum_sq[period] += (S_cat_t ** 2)[C_t]
 
         ## Continuous ##
         for col in cts_cols:
@@ -1830,7 +1830,7 @@ class DynamicBLMModel:
                     if compute_A:
                         A_sum_l[period] += A_cat_t[l, C_t]
                     if compute_S:
-                        S_sum_sq_l[period] += S_cat_t[l, C_t] ** 2
+                        S_sum_sq_l[period] += (S_cat_t[l, :] ** 2)[C_t]
 
         ## Continuous ##
         for col in cts_cols:
@@ -2037,10 +2037,10 @@ class DynamicBLMModel:
                                 - A_sum_l['2ma']),
                         A['12'][l, G1] + A_sum['12'] + A_sum_l['12'],
                         var=\
-                            S['12'][l, G1] ** 2 \
+                            (S['12'][l, :] ** 2)[G1] \
                             + S_sum_sq['12'] + S_sum_sq_l['12'] \
                             + (R12 ** 2) \
-                                * (S['2ma'][l, G1] ** 2 \
+                                * ((S['2ma'][l, :] ** 2)[G1] \
                                     + S_sum_sq['2ma'] \
                                     + S_sum_sq_l['2ma'])
                     )
@@ -2050,7 +2050,7 @@ class DynamicBLMModel:
                             + (A_sum['2ma'] + A_sum['2mb']) \
                             + (A_sum_l['2ma'] + A_sum_l['2mb']),
                         var=\
-                            (S['2ma'][l, G1] ** 2 + S['2mb'][G2] ** 2) \
+                            ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]) \
                             + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
                             + (S_sum_sq_l['2ma'] +  S_sum_sq_l['2mb'])
                     )
@@ -2064,11 +2064,11 @@ class DynamicBLMModel:
                             + (A_sum['3ma'] + A_sum['3mb']) \
                             + (A_sum_l['3ma'] + A_sum_l['3mb']),
                         var=\
-                            (S['3ma'][l, G2] ** 2 + S['3mb'][G1] ** 2) \
+                            ((S['3ma'][l, :] ** 2)[G2] + (S['3mb'] ** 2)[G1]) \
                             + (S_sum_sq['3ma'] + S_sum_sq['3mb']) \
                             + (S_sum_sq_l['3ma'] + S_sum_sq_l['3mb']) \
                             + (R32m ** 2) \
-                                * (S['2ma'][l, G1] ** 2 + S['2mb'][G2] ** 2 \
+                                * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
                                     + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
                                     + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb']))
                     )
@@ -2080,10 +2080,10 @@ class DynamicBLMModel:
                                 - A_sum_l['3ma']),
                         A['43'][l, G2] + A_sum['43'] + A_sum_l['43'],
                         var=\
-                            S['43'][l, G2] ** 2 \
+                            (S['43'][l, :] ** 2)[G2] \
                             + S_sum_sq['43'] + S_sum_sq_l['43'] \
                             + (R43 ** 2) \
-                                * (S['3ma'][l, G2] ** 2 \
+                                * ((S['3ma'][l, :] ** 2)[G2] \
                                     + S_sum_sq['3ma'] \
                                     + S_sum_sq_l['3ma'])
                     )
@@ -2192,34 +2192,34 @@ class DynamicBLMModel:
                     if params['update_rho12']:
                         XX12[l * ni: (l + 1) * ni] = Y2 - A['2ma'][l, G1] - A_sum['2ma'] - A_sum_l['2ma']
                         YY12[l * ni: (l + 1) * ni] = Y1 - A['12'][l, G1] - A_sum['12'] - A_sum_l['12']
-                        SS12 = np.sqrt( \
-                            S['12'][l, G1] ** 2 \
+                        SS12 = ( \
+                            (S['12'][l, :] ** 2)[G1] \
                             + S_sum_sq['12'] + S_sum_sq_l['12'] \
                             + (R12 ** 2) \
-                                * (S['2ma'][l, G1] ** 2 \
+                                * ((S['2ma'][l, :] ** 2)[G1] \
                                     + S_sum_sq['2ma'] \
                                     + S_sum_sq_l['2ma']))
                         WW12[l * ni: (l + 1) * ni] = qi[:, l] / SS12
                     if params['update_rho43']:
                         XX43[l * ni: (l + 1) * ni] = Y3 - A['3ma'][l, G2] - A_sum['3ma'] - A_sum_l['3ma']
                         YY43[l * ni: (l + 1) * ni] = Y4 - A['43'][l, G2] - A_sum['43'] - A_sum_l['43']
-                        SS43 = np.sqrt( \
-                            S['43'][l, G2] ** 2 \
+                        SS43 = ( \
+                            (S['43'][l, :] ** 2)[G2] \
                             + S_sum_sq['43'] + S_sum_sq_l['43'] \
                             + (R43 ** 2) * (\
-                                S['3ma'][l, G2] ** 2 \
+                                (S['3ma'][l, :] ** 2)[G2] \
                                 + S_sum_sq['3ma'] \
                                 + S_sum_sq_l['3ma']))
                         WW43[l * ni: (l + 1) * ni] = qi[:, l] / SS43
                     if params['update_rho32m']:
                         XX32m[l * ni: (l + 1) * ni] = Y2 - (A['2ma'][l, G1] + A['2mb'][G2]) - (A_sum['2ma'] + A_sum['2mb']) - (A_sum_l['2ma'] + A_sum_l['2mb'])
                         YY32m[l * ni: (l + 1) * ni] = Y3 - (A['3ma'][l, G2] + A['3mb'][G1]) - (A_sum['3ma'] + A_sum['3mb']) - (A_sum_l['3ma'] + A_sum_l['3mb'])
-                        SS32m = np.sqrt( \
-                            (S['3ma'][l, G2] ** 2 + S['3mb'][G1] ** 2) \
+                        SS32m = ( \
+                            ((S['3ma'][l, :] ** 2)[G2] + (S['3mb'] ** 2)[G1]) \
                             + (S_sum_sq['3ma'] + S_sum_sq['3mb']) \
                             + (S_sum_sq_l['3ma'] + S_sum_sq_l['3mb']) \
                             + (R32m ** 2) \
-                                * ((S['2ma'][l, G1] ** 2 + S['2mb'][G2] ** 2) \
+                                * (((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]) \
                                     + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
                                     + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])))
                         WW32m[l * ni: (l + 1) * ni] = qi[:, l] / SS32m
@@ -2382,10 +2382,10 @@ class DynamicBLMModel:
                     ## Compute weights_l ##
                     var_l = np.concatenate(
                         [
-                            S['12'][l, G1] ** 2 + (R12 * S['2ma'][l, G1]) ** 2,
-                            S['2ma'][l, G1] ** 2 + S['2mb'][G2] ** 2,
-                            S['3ma'][l, G2] ** 2 + S['3mb'][G1] ** 2 + (R32m ** 2) * (S['2ma'][l, G1] ** 2 + S['2mb'][G2] ** 2),
-                            S['43'][l, G2] ** 2 + (R43 * S['3ma'][l, G2]) ** 2
+                            (S['12'][l, :] ** 2 + (R12 * S['2ma'][l, :]) ** 2)[G1],
+                            (S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2],
+                            (S['3ma'][l, :] ** 2)[G2] + (S['3mb'] ** 2)[G1] + (R32m ** 2) * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]),
+                            (S['43'][l, :] ** 2 + (R43 * S['3ma'][l, :]) ** 2)[G2]
                         ]
                     )
                     weights_l = np.tile(qi[:, l], 4) / np.sqrt(var_l)
@@ -2496,16 +2496,16 @@ class DynamicBLMModel:
 
                         ## Compute weights_l ##
                         if cat_dict[col]['worker_type_interaction']:
-                            S_l_dict = {period: S_cat[col][period][l, C_dict[period][col]] for period in periods}
+                            S_l_dict = {period: (S_cat[col][period][l, :] ** 2)[C_dict[period][col]] for period in periods}
                         else:
-                            S_l_dict = {period: S_cat[col][period][C_dict[period][col]] for period in periods}
+                            S_l_dict = {period: (S_cat[col][period] ** 2)[C_dict[period][col]] for period in periods}
 
                         var_l = np.concatenate(
                             [
-                                S_l_dict['12'] ** 2 + (R12 * S_l_dict['2ma']) ** 2,
-                                S_l_dict['2ma'] ** 2 + S_l_dict['2mb'] ** 2,
-                                S_l_dict['3ma'] ** 2 + S_l_dict['3mb'] ** 2 + (R32m ** 2) * (S_l_dict['2ma'] ** 2 + S_l_dict['2mb'] ** 2),
-                                S_l_dict['43'] ** 2 + (R43 * S_l_dict['3ma']) ** 2
+                                S_l_dict['12'] + (R12 ** 2) * S_l_dict['2ma'],
+                                S_l_dict['2ma'] + S_l_dict['2mb'],
+                                S_l_dict['3ma'] + S_l_dict['3mb'] + (R32m ** 2) * (S_l_dict['2ma'] + S_l_dict['2mb']),
+                                S_l_dict['43'] + (R43 ** 2) * S_l_dict['3ma']
                             ]
                         )
                         del S_l_dict
@@ -2615,16 +2615,16 @@ class DynamicBLMModel:
 
                         ## Compute weights_l ##
                         if cts_dict[col]['worker_type_interaction']:
-                            S_l_dict = {period: S_cts[col][period][l] for period in periods}
+                            S_l_dict = {period: S_cts[col][period][l] ** 2 for period in periods}
                         else:
-                            S_l_dict = {period: S_cts[col][period] for period in periods}
+                            S_l_dict = {period: S_cts[col][period] ** 2 for period in periods}
 
                         var_l = np.concatenate(
                             [
-                                S_l_dict['12'] ** 2 + (R12 * S_l_dict['2ma']) ** 2,
-                                S_l_dict['2ma'] ** 2 + S_l_dict['2mb'] ** 2,
-                                S_l_dict['3ma'] ** 2 + S_l_dict['3mb'] ** 2 + (R32m ** 2) * (S_l_dict['2ma'] ** 2 + S_l_dict['2mb'] ** 2),
-                                S_l_dict['43'] ** 2 + (R43 * S_l_dict['3ma']) ** 2
+                                S_l_dict['12'] + (R12 ** 2) * S_l_dict['2ma'],
+                                S_l_dict['2ma'] + S_l_dict['2mb'],
+                                S_l_dict['3ma'] + S_l_dict['3mb'] + (R32m ** 2) * (S_l_dict['2ma'] + S_l_dict['2mb']),
+                                S_l_dict['43'] + (R43 ** 2) * S_l_dict['3ma']
                             ]
                         )
                         del S_l_dict
@@ -2996,10 +2996,10 @@ class DynamicBLMModel:
                             - A_sum_l['2ma']),
                     A['12'][l, G1] + A_sum['12'] + A_sum_l['12'],
                     var=\
-                        S['12'][l, G1] ** 2 \
+                        (S['12'][l, :] ** 2)[G1] \
                         + S_sum_sq['12'] + S_sum_sq_l['12'] \
                         + (R12 ** 2) \
-                            * (S['2ma'][l, G1] ** 2 \
+                            * ((S['2ma'][l, :] ** 2)[G1] \
                                 + S_sum_sq['2ma'] \
                                 + S_sum_sq_l['2ma'])
                 )
@@ -3011,10 +3011,10 @@ class DynamicBLMModel:
                             - A_sum_l['3ma']),
                     A['43'][l, G1] + A_sum['43'] + A_sum_l['43'],
                     var=\
-                        S['43'][l, G1] ** 2 \
+                        (S['43'][l, :] ** 2)[G1] \
                         + S_sum_sq['43'] + S_sum_sq_l['43'] \
                         + (R43 ** 2) \
-                            * (S['3ma'][l, G1] ** 2 \
+                            * ((S['3ma'][l, :] ** 2)[G1] \
                                 + S_sum_sq['3ma'] \
                                 + S_sum_sq_l['3ma'])
                 )
@@ -3064,7 +3064,7 @@ class DynamicBLMModel:
                         A['2s'][l, G1] \
                             + A_sum['2s'] + A_sum_l['2s'],
                         var=\
-                            S['2s'][l, G1] ** 2 \
+                            (S['2s'][l, :] ** 2)[G1] \
                             + S_sum_sq['2s'] + S_sum_sq_l['2s']
                     )
                     lp3 = lognormpdf(
@@ -3075,10 +3075,10 @@ class DynamicBLMModel:
                         A['3s'][l, G1] \
                             + A_sum['3s'] + A_sum_l['3s'],
                         var=\
-                            S['3s'][l, G1] ** 2 \
+                            (S['3s'][l, :] ** 2)[G1] \
                             + S_sum_sq['3s'] + S_sum_sq_l['3s'] \
                             + (R32s ** 2) \
-                                * (S['2s'][l, G1] ** 2 \
+                                * ((S['2s'][l, :] ** 2)[G1] \
                                     + S_sum_sq['2s'] + S_sum_sq_l['2s'])
                     )
 
@@ -3147,11 +3147,11 @@ class DynamicBLMModel:
 
                     XX32s[l * ni: (l + 1) * ni] = Y2 - A['2s'][l, G1] - A_sum['2s'] - A_sum_l['2s']
                     YY32s[l * ni: (l + 1) * ni] = Y3 - A['3s'][l, G1] - A_sum['3s'] - A_sum_l['3s']
-                    SS32s = np.sqrt( \
-                        S['3s'][l, G1] ** 2 \
+                    SS32s = ( \
+                        (S['3s'][l, :] ** 2)[G1] \
                         + S_sum_sq['3s'] + S_sum_sq_l['3s'] \
                         + (R32s ** 2) \
-                            * (S['2s'][l, G1] ** 2 \
+                            * ((S['2s'][l, :] ** 2)[G1] \
                                 + S_sum_sq['2s'] + S_sum_sq_l['2s']))
                     WW32s[l * ni: (l + 1) * ni] = qi[:, l] / SS32s
 
@@ -3265,14 +3265,14 @@ class DynamicBLMModel:
                     l_index, r_index = l * nk * len(periods_update), (l + 1) * nk * len(periods_update)
 
                     ## Compute weights_l ##
-                    sd_l = np.concatenate(
+                    var_l = np.concatenate(
                         [
-                            S['2s'][l, G1],
-                            np.sqrt(S['3s'][l, G1] ** 2 + (R32s * S['2s'][l, G1]) ** 2)
+                            (S['2s'][l, :] ** 2)[G1],
+                            (S['3s'][l, :] ** 2 + (R32s * S['2s'][l, :]) ** 2)[G1]
                         ]
                     )
-                    weights_l = np.tile(qi[:, l], 2) / sd_l
-                    del sd_l
+                    weights_l = np.tile(qi[:, l], 2) / np.sqrt(var_l)
+                    del var_l
 
                     ## Compute Xw_l ##
                     Xw_l = DxSP(weights_l, X).T
@@ -3358,19 +3358,19 @@ class DynamicBLMModel:
 
                         ## Compute weights_l ##
                         if cat_dict[col]['worker_type_interaction']:
-                            S_l_dict = {period: S_cat[col][period][l, C_dict[period][col]] for period in periods_update}
+                            S_l_dict = {period: (S_cat[col][period][l, :] ** 2)[C_dict[period][col]] for period in periods_update}
                         else:
-                            S_l_dict = {period: S_cat[col][period][C_dict[period][col]] for period in periods_update}
+                            S_l_dict = {period: (S_cat[col][period] ** 2)[C_dict[period][col]] for period in periods_update}
 
-                        sd_l = np.concatenate(
+                        var_l = np.concatenate(
                             [
                                 S_l_dict['2s'],
-                                np.sqrt(S_l_dict['3s'] ** 2 + (R32s * S_l_dict['2s']) ** 2)
+                                S_l_dict['3s'] + (R32s ** 2) * S_l_dict['2s']
                             ]
                         )
                         del S_l_dict
-                        weights_l = np.tile(qi[:, l], 2) / sd_l
-                        del sd_l
+                        weights_l = np.tile(qi[:, l], 2) / np.sqrt(var_l)
+                        del var_l
 
                         ## Compute Xw_cat_l ##
                         Xw_cat_l = DxSP(weights_l, X_cat[col]).T
@@ -3455,19 +3455,19 @@ class DynamicBLMModel:
 
                         ## Compute weights_l ##
                         if cts_dict[col]['worker_type_interaction']:
-                            S_l_dict = {period: S_cts[col][period][l] for period in periods_update}
+                            S_l_dict = {period: S_cts[col][period][l] ** 2 for period in periods_update}
                         else:
-                            S_l_dict = {period: S_cts[col][period] for period in periods_update}
+                            S_l_dict = {period: S_cts[col][period] ** 2 for period in periods_update}
 
-                        sd_l = np.concatenate(
+                        var_l = np.concatenate(
                             [
                                 S_l_dict['2s'],
-                                np.sqrt(S_l_dict['3s'] ** 2 + (R32s * S_l_dict['2s']) ** 2)
+                                S_l_dict['3s'] + (R32s ** 2) * S_l_dict['2s']
                             ]
                         )
                         del S_l_dict
-                        weights_l = np.tile(qi[:, l], 2) / np.repeat(sd_l, ni)
-                        del sd_l
+                        weights_l = np.tile(qi[:, l], 2) / np.repeat(np.sqrt(var_l), ni)
+                        del var_l
 
                         ## Compute Xw_cts_l ##
                         Xw_cts_l = DxSP(weights_l, X_cts[col]).T
@@ -3599,6 +3599,7 @@ class DynamicBLMModel:
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S: estimates are None')
                         else:
+                            print('updating S')
                             res_2s, res_3s = np.split(cons_s.res, len(periods_update))
                             S['2s'] = np.sqrt(np.reshape(res_2s, self.dims))
                             S['3s'] = np.sqrt(np.reshape(res_3s, self.dims))

@@ -608,6 +608,19 @@ def test_blm_start_at_truth_cat_tnv_wi():
     S2_sum_0_fit = np.sqrt(blm_fit.S2.T ** 2 + blm_fit.S2_cat['cat_tnv_wi_control'][:, 0] ** 2)
     S2_sum_1_fit = np.sqrt(blm_fit.S2.T ** 2 + blm_fit.S2_cat['cat_tnv_wi_control'][:, 1] ** 2)
 
+    # Normalization alters worker type order - adjust estimates to make comparable to simulated parameters
+    adj_order = [1, 0]
+    A1_sum_0_fit = A1_sum_0_fit[:, adj_order]
+    A1_sum_1_fit = A1_sum_1_fit[:, adj_order]
+    A2_sum_0_fit = A2_sum_0_fit[:, adj_order]
+    A2_sum_1_fit = A2_sum_1_fit[:, adj_order]
+    S1_sum_0_fit = S1_sum_0_fit[:, adj_order]
+    S1_sum_1_fit = S1_sum_1_fit[:, adj_order]
+    S2_sum_0_fit = S2_sum_0_fit[:, adj_order]
+    S2_sum_1_fit = S2_sum_1_fit[:, adj_order]
+    sorted_pk1 = blm_fit.pk1[:, adj_order]
+    sorted_pk0 = blm_fit.pk0[:, adj_order]
+
     # NOTE: these numbers are larger because of cons.MonotonicMean(), disable it for better results
     assert np.max(np.abs((A1_sum_0_fit - A1_sum_0_sim) / A1_sum_0_sim)) < 0.02
     assert np.max(np.abs((A1_sum_1_fit - A1_sum_1_sim) / A1_sum_1_sim)) < 1e-2
@@ -617,8 +630,8 @@ def test_blm_start_at_truth_cat_tnv_wi():
     assert np.prod(np.abs((S1_sum_1_fit - S1_sum_1_sim) / S1_sum_1_sim)) ** (1 / S1_sum_1_sim.size) < 1.8
     assert np.prod(np.abs((S2_sum_0_fit - S2_sum_0_sim) / S2_sum_0_sim)) ** (1 / S2_sum_0_sim.size) < 1.7
     assert np.prod(np.abs((S2_sum_1_fit - S2_sum_1_sim) / S2_sum_1_sim)) ** (1 / S2_sum_1_sim.size) < 0.85
-    assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.02
-    assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.04
+    assert np.prod(np.abs((sorted_pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.02
+    assert np.prod(np.abs((sorted_pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.04
     assert np.all(np.isclose(blm_fit.A1_cat['cat_tnv_wi_control'], blm_fit.A2_cat['cat_tnv_wi_control']))
     assert np.all(np.isclose(blm_fit.S1_cat['cat_tnv_wi_control'], blm_fit.S2_cat['cat_tnv_wi_control']))
 
@@ -634,13 +647,13 @@ def test_blm_full_estimation_cat_tnv_wi():
         'stationary_A': True, 'stationary_S': True,
         'worker_type_interaction': True,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'categorical_controls': {'cat_tnv_wi_control': sim_cat_tnv_wi_params}
     })
     cat_tnv_wi_params = tw.categorical_control_params({
@@ -648,12 +661,12 @@ def test_blm_full_estimation_cat_tnv_wi():
         'worker_type_interaction': True,
         'cons_a': cons.Stationary(), 'cons_s': cons.Stationary(),
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_params = tw.blm_params({
         'nl': nl, 'nk': nk,
         'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
-        's1_low': 0, 's1_high': 0.05, 's2_low': 0, 's2_high': 0.05,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'categorical_controls': {'cat_tnv_wi_control': cat_tnv_wi_params}
     })
     # Simulate data
@@ -693,17 +706,17 @@ def test_blm_full_estimation_cat_tnv_wi():
     S1_sum_1_fit = S1_sum_1_fit[:, adj_order]
     S2_sum_0_fit = S2_sum_0_fit[:, adj_order]
     S2_sum_1_fit = S2_sum_1_fit[:, adj_order]
-    sorted_pk1 = np.reshape(np.reshape(blm_fit.pk1, (nk, nk, nl))[:, :, adj_order], (nk * nk, nl))
+    sorted_pk1 = blm_fit.pk1[:, adj_order]
     sorted_pk0 = blm_fit.pk0[:, adj_order]
 
-    assert np.max(np.abs((A1_sum_0_fit - A1_sum_0_sim) / A1_sum_0_sim)) < 1e-3
-    assert np.max(np.abs((A1_sum_1_fit - A1_sum_1_sim) / A1_sum_1_sim)) < 1e-3
+    assert np.max(np.abs((A1_sum_0_fit - A1_sum_0_sim) / A1_sum_0_sim)) < 1e-2
+    assert np.max(np.abs((A1_sum_1_fit - A1_sum_1_sim) / A1_sum_1_sim)) < 1e-2
     assert np.max(np.abs((A2_sum_0_fit - A2_sum_0_sim) / A2_sum_0_sim)) < 1e-3
     assert np.max(np.abs((A2_sum_1_fit - A2_sum_1_sim) / A2_sum_1_sim)) < 1e-2
-    assert np.prod(np.abs((S1_sum_0_fit - S1_sum_0_sim) / S1_sum_0_sim)) ** (1 / S1_sum_0_sim.size) < 1.05
-    assert np.prod(np.abs((S1_sum_1_fit - S1_sum_1_sim) / S1_sum_1_sim)) ** (1 / S1_sum_1_sim.size) < 0.4
-    assert np.prod(np.abs((S2_sum_0_fit - S2_sum_0_sim) / S2_sum_0_sim)) ** (1 / S2_sum_0_sim.size) < 0.55
-    assert np.prod(np.abs((S2_sum_1_fit - S2_sum_1_sim) / S2_sum_1_sim)) ** (1 / S2_sum_1_sim.size) < 0.3
+    assert np.prod(np.abs((S1_sum_0_fit - S1_sum_0_sim) / S1_sum_0_sim)) ** (1 / S1_sum_0_sim.size) < 0.45
+    assert np.prod(np.abs((S1_sum_1_fit - S1_sum_1_sim) / S1_sum_1_sim)) ** (1 / S1_sum_1_sim.size) < 0.45
+    assert np.prod(np.abs((S2_sum_0_fit - S2_sum_0_sim) / S2_sum_0_sim)) ** (1 / S2_sum_0_sim.size) < 0.45
+    assert np.prod(np.abs((S2_sum_1_fit - S2_sum_1_sim) / S2_sum_1_sim)) ** (1 / S2_sum_1_sim.size) < 0.45
     assert np.prod(np.abs((sorted_pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.025
     assert np.prod(np.abs((sorted_pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.02
     assert np.all(np.isclose(blm_fit.A1_cat['cat_tnv_wi_control'], blm_fit.A2_cat['cat_tnv_wi_control']))
@@ -804,13 +817,13 @@ def test_blm_full_estimation_cat_tv():
         'stationary_A': False, 'stationary_S': False,
         'worker_type_interaction': False,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.01, 's1_high': 0.01, 's2_low': 0.01, 's2_high': 0.01
     })
     blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01,
+        's1_low': 0.01, 's1_high': 0.01, 's2_low': 0.01, 's2_high': 0.01,
         'categorical_controls': {'cat_tv_control': sim_cat_tv_params}
     })
     cat_tv_params = tw.categorical_control_params({
@@ -818,12 +831,12 @@ def test_blm_full_estimation_cat_tv():
         'worker_type_interaction': False,
         'cons_a': None, 'cons_s': None,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.01, 's1_high': 0.01, 's2_low': 0.01, 's2_high': 0.01
     })
     blm_params = tw.blm_params({
         'nl': nl, 'nk': nk,
         'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
-        's1_low': 0, 's1_high': 0.05, 's2_low': 0, 's2_high': 0.05,
+        's1_low': 0.01, 's1_high': 0.01, 's2_low': 0.01, 's2_high': 0.01,
         'categorical_controls': {'cat_tv_control': cat_tv_params}
     })
     # Simulate data
@@ -853,14 +866,14 @@ def test_blm_full_estimation_cat_tv():
     S2_sum_0_fit = np.sqrt(blm_fit.S2.T ** 2 + blm_fit.S2_cat['cat_tv_control'][0] ** 2)
     S2_sum_1_fit = np.sqrt(blm_fit.S2.T ** 2 + blm_fit.S2_cat['cat_tv_control'][1] ** 2)
 
-    assert np.max(np.abs((A1_sum_0_fit - A1_sum_0_sim) / A1_sum_0_sim)) < 1e-2
+    assert np.max(np.abs((A1_sum_0_fit - A1_sum_0_sim) / A1_sum_0_sim)) < 0.05
     assert np.max(np.abs((A1_sum_1_fit - A1_sum_1_sim) / A1_sum_1_sim)) < 1e-3
     assert np.max(np.abs((A2_sum_0_fit - A2_sum_0_sim) / A2_sum_0_sim)) < 1e-3
     assert np.max(np.abs((A2_sum_1_fit - A2_sum_1_sim) / A2_sum_1_sim)) < 1e-3
-    assert np.prod(np.abs((S1_sum_0_fit - S1_sum_0_sim) / S1_sum_0_sim)) ** (1 / S1_sum_0_sim.size) < 1.15
-    assert np.prod(np.abs((S1_sum_1_fit - S1_sum_1_sim) / S1_sum_1_sim)) ** (1 / S1_sum_1_sim.size) < 0.4
-    assert np.prod(np.abs((S2_sum_0_fit - S2_sum_0_sim) / S2_sum_0_sim)) ** (1 / S2_sum_0_sim.size) < 0.65
-    assert np.prod(np.abs((S2_sum_1_fit - S2_sum_1_sim) / S2_sum_1_sim)) ** (1 / S2_sum_1_sim.size) < 0.4
+    assert np.prod(np.abs((S1_sum_0_fit - S1_sum_0_sim) / S1_sum_0_sim)) ** (1 / S1_sum_0_sim.size) < 0.45
+    assert np.prod(np.abs((S1_sum_1_fit - S1_sum_1_sim) / S1_sum_1_sim)) ** (1 / S1_sum_1_sim.size) < 0.45
+    assert np.prod(np.abs((S2_sum_0_fit - S2_sum_0_sim) / S2_sum_0_sim)) ** (1 / S2_sum_0_sim.size) < 0.45
+    assert np.prod(np.abs((S2_sum_1_fit - S2_sum_1_sim) / S2_sum_1_sim)) ** (1 / S2_sum_1_sim.size) < 0.45
     assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.025
     assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.015
 
@@ -965,13 +978,13 @@ def test_blm_full_estimation_cat_tnv():
         'stationary_A': True, 'stationary_S': True,
         'worker_type_interaction': False,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'categorical_controls': {'cat_tnv_control': sim_cat_tnv_params}
     })
     cat_tnv_params = tw.categorical_control_params({
@@ -979,12 +992,12 @@ def test_blm_full_estimation_cat_tnv():
         'worker_type_interaction': False,
         'cons_a': cons.Stationary(), 'cons_s': cons.Stationary(),
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_params = tw.blm_params({
         'nl': nl, 'nk': nk,
         'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
-        's1_low': 0, 's1_high': 0.05, 's2_low': 0, 's2_high': 0.05,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'categorical_controls': {'cat_tnv_control': cat_tnv_params}
     })
     # Simulate data
@@ -1016,16 +1029,16 @@ def test_blm_full_estimation_cat_tnv():
 
     assert np.max(np.abs((A1_sum_0_fit - A1_sum_0_sim) / A1_sum_0_sim)) < 0.05
     assert np.max(np.abs((A1_sum_1_fit - A1_sum_1_sim) / A1_sum_1_sim)) < 1e-3
-    assert np.max(np.abs((A2_sum_0_fit - A2_sum_0_sim) / A2_sum_0_sim)) < 1e-4
-    assert np.max(np.abs((A2_sum_1_fit - A2_sum_1_sim) / A2_sum_1_sim)) < 1e-3
-    assert np.prod(np.abs((S1_sum_0_fit - S1_sum_0_sim) / S1_sum_0_sim)) ** (1 / S1_sum_0_sim.size) < 0.5
-    assert np.prod(np.abs((S1_sum_1_fit - S1_sum_1_sim) / S1_sum_1_sim)) ** (1 / S1_sum_1_sim.size) < 0.4
-    assert np.prod(np.abs((S2_sum_0_fit - S2_sum_0_sim) / S2_sum_0_sim)) ** (1 / S2_sum_0_sim.size) < 0.5
-    assert np.prod(np.abs((S2_sum_1_fit - S2_sum_1_sim) / S2_sum_1_sim)) ** (1 / S2_sum_1_sim.size) < 0.4
-    assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.015
-    assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 1e-2
-    assert np.all(np.isclose(blm_fit.A1_cat['cat_tnv_control'], blm_fit.A2_cat['cat_tnv_control'], atol=1e-4))
-    assert np.all(np.isclose(blm_fit.S1_cat['cat_tnv_control'], blm_fit.S2_cat['cat_tnv_control'], atol=1e-3))
+    assert np.max(np.abs((A2_sum_0_fit - A2_sum_0_sim) / A2_sum_0_sim)) < 1e-3
+    assert np.max(np.abs((A2_sum_1_fit - A2_sum_1_sim) / A2_sum_1_sim)) < 1e-2
+    assert np.prod(np.abs((S1_sum_0_fit - S1_sum_0_sim) / S1_sum_0_sim)) ** (1 / S1_sum_0_sim.size) < 0.45
+    assert np.prod(np.abs((S1_sum_1_fit - S1_sum_1_sim) / S1_sum_1_sim)) ** (1 / S1_sum_1_sim.size) < 0.45
+    assert np.prod(np.abs((S2_sum_0_fit - S2_sum_0_sim) / S2_sum_0_sim)) ** (1 / S2_sum_0_sim.size) < 0.45
+    assert np.prod(np.abs((S2_sum_1_fit - S2_sum_1_sim) / S2_sum_1_sim)) ** (1 / S2_sum_1_sim.size) < 0.45
+    assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.02
+    assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.035
+    assert np.all(np.isclose(blm_fit.A1_cat['cat_tnv_control'], blm_fit.A2_cat['cat_tnv_control']))
+    assert np.all(np.isclose(blm_fit.S1_cat['cat_tnv_control'], blm_fit.S2_cat['cat_tnv_control']))
 
 def test_blm_start_at_truth_cts_tv_wi():
     # Test whether BLM estimator works when starting at truth for continuous, time-varying, worker-interaction control variables.
@@ -1211,25 +1224,25 @@ def test_blm_full_estimation_cts_tnv_wi():
         'stationary_A': True, 'stationary_S': True,
         'worker_type_interaction': True,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'continuous_controls': {'cts_tnv_wi_control': sim_cts_tnv_wi_params}
     })
     cts_tnv_wi_params = tw.continuous_control_params({
         'worker_type_interaction': True,
         'cons_a': cons.Stationary(), 'cons_s': cons.Stationary(),
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_params = tw.blm_params({
         'nl': nl, 'nk': nk,
         'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
-        's1_low': 0, 's1_high': 0.05, 's2_low': 0, 's2_high': 0.05,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'continuous_controls': {'cts_tnv_wi_control': cts_tnv_wi_params}
     })
     # Simulate data
@@ -1242,14 +1255,14 @@ def test_blm_full_estimation_cts_tnv_wi():
     blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=8, rng=rng)
     blm_fit = blm_fit.model
 
-    assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-3
+    assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-2
     assert np.max(np.abs((blm_fit.A2 - sim_params['A2']) / sim_params['A2'])) < 1e-3
-    assert np.prod(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) ** (1 / sim_params['S1'].size) < 1.15
-    assert np.prod(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) ** (1 / sim_params['S2'].size) < 0.95
-    assert np.max(np.abs((blm_fit.A1_cts['cts_tnv_wi_control'] - sim_params['A1_cts']['cts_tnv_wi_control']) / sim_params['A1_cts']['cts_tnv_wi_control'])) < 1e-4
-    assert np.prod(np.abs((blm_fit.S1_cts['cts_tnv_wi_control'] - sim_params['S1_cts']['cts_tnv_wi_control']) / sim_params['S1_cts']['cts_tnv_wi_control'])) ** (1 / sim_params['S1_cts']['cts_tnv_wi_control'].size) < 0.85
+    assert np.prod(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) ** (1 / sim_params['S1'].size) < 0.45
+    assert np.prod(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) ** (1 / sim_params['S2'].size) < 0.45
+    assert np.max(np.abs((blm_fit.A1_cts['cts_tnv_wi_control'] - sim_params['A1_cts']['cts_tnv_wi_control']) / sim_params['A1_cts']['cts_tnv_wi_control'])) < 1e-2
+    assert np.prod(np.abs((blm_fit.S1_cts['cts_tnv_wi_control'] - sim_params['S1_cts']['cts_tnv_wi_control']) / sim_params['S1_cts']['cts_tnv_wi_control'])) ** (1 / sim_params['S1_cts']['cts_tnv_wi_control'].size) < 0.75
     assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.015
-    assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.02
+    assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.025
     assert np.all(np.isclose(blm_fit.A1_cts['cts_tnv_wi_control'], blm_fit.A2_cts['cts_tnv_wi_control']))
     assert np.all(np.isclose(blm_fit.S1_cts['cts_tnv_wi_control'], blm_fit.S2_cts['cts_tnv_wi_control']))
 
@@ -1324,25 +1337,25 @@ def test_blm_full_estimation_cts_tv():
         'stationary_A': False, 'stationary_S': False,
         'worker_type_interaction': False,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'continuous_controls': {'cts_tv_control': sim_cts_tv_params}
     })
     cts_tv_params = tw.continuous_control_params({
         'worker_type_interaction': False,
         'cons_a': None, 'cons_s': None,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_params = tw.blm_params({
         'nl': nl, 'nk': nk,
         'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
-        's1_low': 0, 's1_high': 0.05, 's2_low': 0, 's2_high': 0.05,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'continuous_controls': {'cts_tv_control': cts_tv_params}
     })
     # Simulate data
@@ -1356,13 +1369,13 @@ def test_blm_full_estimation_cts_tv():
     blm_fit = blm_fit.model
 
     assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-3
-    assert np.max(np.abs((blm_fit.A2 - sim_params['A2']) / sim_params['A2'])) < 1e-3
-    assert np.prod(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) ** (1 / sim_params['S1'].size) < 1.6
-    assert np.prod(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) ** (1 / sim_params['S2'].size) < 0.8
-    assert np.max(np.abs((blm_fit.A1_cts['cts_tv_control'] - sim_params['A1_cts']['cts_tv_control']) / sim_params['A1_cts']['cts_tv_control'])) < 1e-4
-    assert np.max(np.abs((blm_fit.A2_cts['cts_tv_control'] - sim_params['A2_cts']['cts_tv_control']) / sim_params['A2_cts']['cts_tv_control'])) < 1e-5
-    assert np.prod(np.abs((blm_fit.S1_cts['cts_tv_control'] - sim_params['S1_cts']['cts_tv_control']) / sim_params['S1_cts']['cts_tv_control'])) ** (1 / sim_params['S1_cts']['cts_tv_control'].size) < 0.9
-    assert np.prod(np.abs((blm_fit.S2_cts['cts_tv_control'] - sim_params['S2_cts']['cts_tv_control']) / sim_params['S2_cts']['cts_tv_control'])) ** (1 / sim_params['S2_cts']['cts_tv_control'].size) < 0.85
+    assert np.max(np.abs((blm_fit.A2 - sim_params['A2']) / sim_params['A2'])) < 1e-2
+    assert np.prod(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) ** (1 / sim_params['S1'].size) < 0.45
+    assert np.prod(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) ** (1 / sim_params['S2'].size) < 0.45
+    assert np.max(np.abs((blm_fit.A1_cts['cts_tv_control'] - sim_params['A1_cts']['cts_tv_control']) / sim_params['A1_cts']['cts_tv_control'])) < 1e-3
+    assert np.max(np.abs((blm_fit.A2_cts['cts_tv_control'] - sim_params['A2_cts']['cts_tv_control']) / sim_params['A2_cts']['cts_tv_control'])) < 1e-3
+    assert np.prod(np.abs((blm_fit.S1_cts['cts_tv_control'] - sim_params['S1_cts']['cts_tv_control']) / sim_params['S1_cts']['cts_tv_control'])) ** (1 / sim_params['S1_cts']['cts_tv_control'].size) < 0.65
+    assert np.prod(np.abs((blm_fit.S2_cts['cts_tv_control'] - sim_params['S2_cts']['cts_tv_control']) / sim_params['S2_cts']['cts_tv_control'])) ** (1 / sim_params['S2_cts']['cts_tv_control'].size) < 0.75
     assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.015
     assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.015
 
@@ -1437,25 +1450,25 @@ def test_blm_full_estimation_cts_tnv():
         'stationary_A': True, 'stationary_S': True,
         'worker_type_interaction': False,
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_sim_params = tw.sim_blm_params({
         'nl': nl, 'nk': nk,
         'mmult': 100, 'smult': 100,
         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'continuous_controls': {'cts_tnv_control': sim_cts_tnv_params}
     })
     cts_tnv_params = tw.continuous_control_params({
         'worker_type_interaction': False,
         'cons_a': cons.Stationary(), 'cons_s': cons.Stationary(),
         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
-        's1_low': 0, 's1_high': 0.01, 's2_low': 0, 's2_high': 0.01
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
     })
     blm_params = tw.blm_params({
         'nl': nl, 'nk': nk,
         'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
-        's1_low': 0, 's1_high': 0.05, 's2_low': 0, 's2_high': 0.05,
+        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'continuous_controls': {'cts_tnv_control': cts_tnv_params}
     })
     # Simulate data
@@ -1468,13 +1481,13 @@ def test_blm_full_estimation_cts_tnv():
     blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=8, rng=rng)
     blm_fit = blm_fit.model
 
-    assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-4
+    assert np.max(np.abs((blm_fit.A1 - sim_params['A1']) / sim_params['A1'])) < 1e-3
     assert np.max(np.abs((blm_fit.A2 - sim_params['A2']) / sim_params['A2'])) < 1e-3
-    assert np.prod(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) ** (1 / sim_params['S1'].size) < 1.25
-    assert np.prod(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) ** (1 / sim_params['S2'].size) < 1.35
-    assert np.max(np.abs((blm_fit.A1_cts['cts_tnv_control'] - sim_params['A1_cts']['cts_tnv_control']) / sim_params['A1_cts']['cts_tnv_control'])) < 1e-4
-    assert np.prod(np.abs((blm_fit.S1_cts['cts_tnv_control'] - sim_params['S1_cts']['cts_tnv_control']) / sim_params['S1_cts']['cts_tnv_control'])) ** (1 / sim_params['S1_cts']['cts_tnv_control'].size) < 0.8
+    assert np.prod(np.abs((blm_fit.S1 - sim_params['S1']) / sim_params['S1'])) ** (1 / sim_params['S1'].size) < 0.45
+    assert np.prod(np.abs((blm_fit.S2 - sim_params['S2']) / sim_params['S2'])) ** (1 / sim_params['S2'].size) < 0.45
+    assert np.max(np.abs((blm_fit.A1_cts['cts_tnv_control'] - sim_params['A1_cts']['cts_tnv_control']) / sim_params['A1_cts']['cts_tnv_control'])) < 1e-3
+    assert np.prod(np.abs((blm_fit.S1_cts['cts_tnv_control'] - sim_params['S1_cts']['cts_tnv_control']) / sim_params['S1_cts']['cts_tnv_control'])) ** (1 / sim_params['S1_cts']['cts_tnv_control'].size) < 0.65
     assert np.prod(np.abs((blm_fit.pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.025
-    assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 1e-2
+    assert np.prod(np.abs((blm_fit.pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.02
     assert np.all(np.isclose(blm_fit.A1_cts['cts_tnv_control'], blm_fit.A2_cts['cts_tnv_control']))
     assert np.all(np.isclose(blm_fit.S1_cts['cts_tnv_control'], blm_fit.S2_cts['cts_tnv_control']))
