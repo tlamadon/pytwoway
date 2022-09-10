@@ -231,9 +231,8 @@ try:
         '''
         a = _to_numpy(a)
         if gpu:
-            a = torch.from_numpy(a)
-            a.to(torch.device('cuda'))
-            a = torch.exp(a).numpy()
+            a = torch.from_numpy(a).to(torch.device('cuda'))
+            a = torch.exp(a).to(torch.device('cpu')).numpy()
         else:
             a = torch.exp(torch.from_numpy(a)).numpy()
         if len(a) == 1:
@@ -253,9 +252,8 @@ try:
         '''
         a = _to_numpy(a)
         if gpu:
-            a = torch.from_numpy(a)
-            a.to(torch.device('cuda'))
-            a = torch.log(a).numpy()
+            a = torch.from_numpy(a).to(torch.device('cuda'))
+            a = torch.log(a).to(torch.device('cpu')).numpy()
         else:
             a = torch.log(torch.from_numpy(a)).numpy()
         if len(a) == 1:
@@ -275,9 +273,8 @@ try:
         '''
         a = _to_numpy(a)
         if gpu:
-            a = torch.from_numpy(a)
-            a.to(torch.device('cuda'))
-            a = torch.square(a).numpy()
+            a = torch.from_numpy(a).to(torch.device('cuda'))
+            a = torch.square(a).to(torch.device('cpu')).numpy()
         else:
             a = torch.square(torch.from_numpy(a)).numpy()
         if len(a) == 1:
@@ -300,9 +297,8 @@ try:
         if axis is None:
             axis = range(a.shape)
         if gpu:
-            a = torch.from_numpy(a)
-            a.to(torch.device('cuda'))
-            a = torch.logsumexp(a, dim=axis).numpy()
+            a = torch.from_numpy(a).to(torch.device('cuda'))
+            a = torch.logsumexp(a, dim=axis).to(torch.device('cpu')).numpy()
         else:
             a = torch.logsumexp(torch.from_numpy(a), dim=axis).numpy()
         if len(a) == 1:
