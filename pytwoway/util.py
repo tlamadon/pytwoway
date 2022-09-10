@@ -3,6 +3,7 @@ Utility functions
 '''
 import numpy as np
 import pandas as pd
+from bipartitepandas.util import to_list
 from scipy.sparse import csc_matrix
 from matplotlib import pyplot as plt
 
@@ -206,6 +207,17 @@ def diag_of_prod(m1, m2):
 
 try:
     import torch
+    def _to_numpy(a):
+        '''
+        Convert a to be a NumPy array.
+
+        Arguments:
+            a (NumPy Array, list, int, or float): object to convert to a NumPy Array
+        '''
+        if isinstance(a, np.ndarray):
+            return a
+        return np.array(to_list(a))
+
     def exp_(a, gpu=False):
         '''
         Compute exp(a).
@@ -215,13 +227,18 @@ try:
             gpu (bool): if True, estimate using GPU
 
         Returns:
-            (NumPy Array): exp of a
+            (NumPy Array or float): exp of a (returns single value if len(a) == 1)
         '''
+        a = _to_numpy(a)
         if gpu:
             a = torch.from_numpy(a)
             a.to(torch.device('cuda'))
-            return torch.exp(a).numpy()
-        return torch.exp(torch.from_numpy(a)).numpy()
+            a = torch.exp(a).numpy()
+        else:
+            a = torch.exp(torch.from_numpy(a)).numpy()
+        if len(a) == 1:
+            return a[0]
+        return a
 
     def log_(a, gpu=False):
         '''
@@ -232,13 +249,18 @@ try:
             gpu (bool): if True, estimate using GPU
 
         Returns:
-            (NumPy Array): log of a
+            (NumPy Array or float): log of a (returns single value if len(a) == 1)
         '''
+        a = _to_numpy(a)
         if gpu:
             a = torch.from_numpy(a)
             a.to(torch.device('cuda'))
-            return torch.log(a).numpy()
-        return torch.log(torch.from_numpy(a)).numpy()
+            a = torch.log(a).numpy()
+        else:
+            a = torch.log(torch.from_numpy(a)).numpy()
+        if len(a) == 1:
+            return a[0]
+        return a
 
     def square_(a, gpu=False):
         '''
@@ -249,13 +271,18 @@ try:
             gpu (bool): if True, estimate using GPU
 
         Returns:
-            (NumPy Array): square of a
+            (NumPy Array or float): square of a (returns single value if len(a) == 1)
         '''
+        a = _to_numpy(a)
         if gpu:
             a = torch.from_numpy(a)
             a.to(torch.device('cuda'))
-            return torch.square(a).numpy()
-        return torch.square(torch.from_numpy(a)).numpy()
+            a = torch.square(a).numpy()
+        else:
+            a = torch.square(torch.from_numpy(a)).numpy()
+        if len(a) == 1:
+            return a[0]
+        return a
 
     def logsumexp(a, axis=None, gpu=False):
         '''
@@ -267,15 +294,20 @@ try:
             gpu (bool): if True, estimate using GPU
 
         Returns:
-            (NumPy Array): logsumexp of a
+            (NumPy Array or float): logsumexp of a (returns single value if len(a) == 1)
         '''
+        a = _to_numpy(a)
         if axis is None:
             axis = range(a.shape)
         if gpu:
             a = torch.from_numpy(a)
             a.to(torch.device('cuda'))
-            return torch.logsumexp(a, dim=axis).numpy()
-        return torch.logsumexp(torch.from_numpy(a), dim=axis).numpy()
+            a = torch.logsumexp(a, dim=axis).numpy()
+        else:
+            a = torch.logsumexp(torch.from_numpy(a), dim=axis).numpy()
+        if len(a) == 1:
+            return a[0]
+        return a
 
 except ImportError:
     def exp_(a, gpu=False):
@@ -358,8 +390,8 @@ def lognormpdf(x, mu, sd=None, var=None, gpu=False):
 
 def fast_lognormpdf(x, mu, sd, G, gpu=False):
     # Faster to split into multiple lines
-    log_sd = log_(sd, gpu=gpu)
-    sd_sq = square_(sd, gpu=gpu)
+    log_sd = np.log(sd)
+    sd_sq = sd ** 2
     res = logpi - log_sd[G]
     res -= square_(x - mu[G], gpu=gpu) / (2 * sd_sq[G])
     return res
