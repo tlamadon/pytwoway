@@ -20,7 +20,7 @@ jobs:
     parallelism: 4
 
     # Allocate more memory (source: https://circleci.com/docs/configuration-reference#resourceclass)
-    resource_class: large
+    resource_class: xlarge
 
     # The steps for our build-and-test
     steps:
