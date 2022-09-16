@@ -1,0 +1,2917 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BLM example &mdash; PyTwoWay 0.3.21 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+        <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Sorkin example" href="sorkin_example.html" />
+    <link rel="prev" title="CRE example" href="cre_example.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> PyTwoWay
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../doc-python.html">From Python</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Notebook examples</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="fe_example.html">FE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cre_example.html">CRE</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">BLM</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#Import-the-PyTwoWay-package">Import the PyTwoWay package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#First,-check-out-parameter-options">First, check out parameter options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Second,-set-parameter-choices">Second, set parameter choices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Extract-data-(we-simulate-for-the-example)">Extract data (we simulate for the example)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Prepare-data">Prepare data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Separate-observed-and-unobserved-data">Separate observed and unobserved data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Separate-movers-and-stayers-data">Separate movers and stayers data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Check-the-data">Check the data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Initialize-and-run-BLMEstimator">Initialize and run BLMEstimator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Check-that-log-likelihoods-are-monotonic">Check that log-likelihoods are monotonic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Now-we-can-investigate-the-results">Now we can investigate the results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Finally,-we-can-compare-estimates-to-the-truth">Finally, we can compare estimates to the truth</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Bootstrapped-errors">Bootstrapped errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id1">Now we can investigate the results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Control-variables">Control variables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Simulating-data-with-controls">Simulating data with controls</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Check-out-simulation-parameter-options">Check out simulation parameter options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Set-simulation-parameter-choices">Set simulation parameter choices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Estimating-control-variables">Estimating control variables</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Categorical">Categorical</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Continuous">Continuous</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Constraints">Constraints</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#Check-out-estimation-parameter-options">Check out estimation parameter options</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Set-estimation-parameter-choices">Set estimation parameter choices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Simulate-data">Simulate data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id2">Initialize and run BLMEstimator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id3">Check that log-likelihoods are monotonic</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id4">Now we can investigate the results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id5">Finally, we can compare estimates to the truth</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#Variance-decomposition">Variance decomposition</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Investigate-the-results">Investigate the results</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sorkin_example.html">Sorkin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="borovickovashimer_example.html">Borovickova-Shimer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="attrition_example.html">Attrition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chk_example.html">CHK Event Study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="monte_carlo_example.html">Monte Carlo</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Under the hood</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../internal.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-feestimator.html">FEEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-fecontrolestimator.html">FEControlEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-creestimator.html">CREEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-attrition.html">Attrition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-blmmodel.html">BLMModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-blmestimator.html">BLMEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-blmbootstrap.html">BLMBootstrap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-blmvariancedecomposition.html">BLMVarianceDecomposition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-interactedblmmodel.html">InteractedBLMModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-sorkinestimator.html">SorkinEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-bsestimator.html">BSEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../class-montecarlo.html">MonteCarlo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../module-Q.html">Q</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../module-constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../module-attrition_utils.html">Attrition Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../module-diagnostics.html">Diagnostics</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PyTwoWay</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>BLM example</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/notebooks/blm_example.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt *,
+div.nbinput.container div.input_area pre,
+div.nboutput.container div.output_area pre,
+div.nbinput.container div.input_area .highlight,
+div.nboutput.container div.output_area .highlight {
+    border: none;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+div.nbinput.container > div[class*=highlight],
+div.nboutput.container > div[class*=highlight] {
+    margin: 0;
+}
+
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt * {
+    background: none;
+}
+
+div.nboutput.container div.output_area .highlight,
+div.nboutput.container div.output_area pre {
+    background: unset;
+}
+
+div.nboutput.container div.output_area div.highlight {
+    color: unset;  /* override Pygments text color */
+}
+
+/* avoid gaps between output lines */
+div.nboutput.container div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput.container,
+div.nboutput.container {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput.container,
+    div.nboutput.container {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput.container {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast.container {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput.container div.prompt pre {
+    color: #307FC1;
+}
+
+/* output prompt */
+div.nboutput.container div.prompt pre {
+    color: #BF5B3D;
+}
+
+/* all prompts */
+div.nbinput.container div.prompt,
+div.nboutput.container div.prompt {
+    width: 4.5ex;
+    padding-top: 5px;
+    position: relative;
+    user-select: none;
+}
+
+div.nbinput.container div.prompt > div,
+div.nboutput.container div.prompt > div {
+    position: absolute;
+    right: 0;
+    margin-right: 0.3ex;
+}
+
+@media (max-width: 540px) {
+    div.nbinput.container div.prompt,
+    div.nboutput.container div.prompt {
+        width: unset;
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput.container div.prompt.empty {
+        padding: 0;
+    }
+
+    div.nbinput.container div.prompt > div,
+    div.nboutput.container div.prompt > div {
+        position: unset;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput.container div.prompt pre,
+div.nboutput.container div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput.container div.input_area,
+div.nboutput.container div.output_area {
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput.container div.input_area,
+    div.nboutput.container div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput.container div.input_area {
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+    /*background: #f5f5f5;*/
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput.container div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.imgmath center alignment in output cells */
+div.nboutput.container div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput.container div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+
+div.nbinput.container div.input_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight].math,
+div.nboutput.container div.output_area.rendered_html,
+div.nboutput.container div.output_area > div.output_javascript,
+div.nboutput.container div.output_area:not(.rendered_html) > img{
+    padding: 5px;
+    margin: 0;
+}
+
+/* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
+div.nbinput.container div.input_area > div[class^='highlight'],
+div.nboutput.container div.output_area > div[class^='highlight']{
+    overflow-y: hidden;
+}
+
+/* hide copybtn icon on prompts (needed for 'sphinx_copybutton') */
+.prompt .copybtn {
+    display: none;
+}
+
+/* Some additional styling taken form the Jupyter notebook CSS */
+.jp-RenderedHTMLCommon table,
+div.rendered_html table {
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+.jp-RenderedHTMLCommon thead,
+div.rendered_html thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+.jp-RenderedHTMLCommon tr,
+.jp-RenderedHTMLCommon th,
+.jp-RenderedHTMLCommon td,
+div.rendered_html tr,
+div.rendered_html th,
+div.rendered_html td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: normal;
+  white-space: normal;
+  max-width: none;
+  border: none;
+}
+.jp-RenderedHTMLCommon th,
+div.rendered_html th {
+  font-weight: bold;
+}
+.jp-RenderedHTMLCommon tbody tr:nth-child(odd),
+div.rendered_html tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+.jp-RenderedHTMLCommon tbody tr:hover,
+div.rendered_html tbody tr:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="BLM-example">
+<h1>BLM example<a class="headerlink" href="#BLM-example" title="Permalink to this heading"></a></h1>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Add PyTwoWay to system path (do not run this)</span>
+<span class="c1"># import sys</span>
+<span class="c1"># sys.path.append(&#39;../../..&#39;)</span>
+</pre></div>
+</div>
+</div>
+<section id="Import-the-PyTwoWay-package">
+<h2>Import the PyTwoWay package<a class="headerlink" href="#Import-the-PyTwoWay-package" title="Permalink to this heading"></a></h2>
+<p>Make sure to install it using <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">pytwoway</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">bipartitepandas</span> <span class="k">as</span> <span class="nn">bpd</span>
+<span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
+<span class="kn">from</span> <span class="nn">pytwoway</span> <span class="kn">import</span> <span class="n">constraints</span> <span class="k">as</span> <span class="n">cons</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="First,-check-out-parameter-options">
+<h2>First, check out parameter options<a class="headerlink" href="#First,-check-out-parameter-options" title="Permalink to this heading"></a></h2>
+<p>Do this by running:</p>
+<ul class="simple">
+<li><p>BLM - <code class="docutils literal notranslate"><span class="pre">tw.blm_params().describe_all()</span></code></p></li>
+<li><p>Clustering - <code class="docutils literal notranslate"><span class="pre">bpd.cluster_params().describe_all()</span></code></p></li>
+<li><p>Cleaning - <code class="docutils literal notranslate"><span class="pre">bpd.clean_params().describe_all()</span></code></p></li>
+<li><p>Simulating - <code class="docutils literal notranslate"><span class="pre">bpd.sim_params().describe_all()</span></code></p></li>
+</ul>
+<p>Alternatively, run <code class="docutils literal notranslate"><span class="pre">x_params().keys()</span></code> to view all the keys for a parameter dictionary, then <code class="docutils literal notranslate"><span class="pre">x_params().describe(key)</span></code> to get a description for a single key.</p>
+</section>
+<section id="Second,-set-parameter-choices">
+<h2>Second, set parameter choices<a class="headerlink" href="#Second,-set-parameter-choices" title="Permalink to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">nl</span> <span class="o">=</span> <span class="mi">3</span> <span class="c1"># Number of worker types</span>
+<span class="n">nk</span> <span class="o">=</span> <span class="mi">4</span> <span class="c1"># Number of firm types</span>
+<span class="n">blm_params</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">blm_params</span><span class="p">({</span>
+    <span class="s1">&#39;nl&#39;</span><span class="p">:</span> <span class="n">nl</span><span class="p">,</span> <span class="s1">&#39;nk&#39;</span><span class="p">:</span> <span class="n">nk</span><span class="p">,</span>
+    <span class="s1">&#39;a1_mu&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;a1_sig&#39;</span><span class="p">:</span> <span class="mf">1.5</span><span class="p">,</span> <span class="s1">&#39;a2_mu&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;a2_sig&#39;</span><span class="p">:</span> <span class="mf">1.5</span><span class="p">,</span>
+    <span class="s1">&#39;s1_low&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;s1_high&#39;</span><span class="p">:</span> <span class="mf">1.5</span><span class="p">,</span> <span class="s1">&#39;s2_low&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;s2_high&#39;</span><span class="p">:</span> <span class="mf">1.5</span>
+<span class="p">})</span>
+<span class="n">cluster_params</span> <span class="o">=</span> <span class="n">bpd</span><span class="o">.</span><span class="n">cluster_params</span><span class="p">({</span>
+    <span class="s1">&#39;measures&#39;</span><span class="p">:</span> <span class="n">bpd</span><span class="o">.</span><span class="n">measures</span><span class="o">.</span><span class="n">CDFs</span><span class="p">(),</span>
+    <span class="s1">&#39;grouping&#39;</span><span class="p">:</span> <span class="n">bpd</span><span class="o">.</span><span class="n">grouping</span><span class="o">.</span><span class="n">KMeans</span><span class="p">(</span><span class="n">n_clusters</span><span class="o">=</span><span class="n">nk</span><span class="p">),</span>
+    <span class="s1">&#39;is_sorted&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;copy&#39;</span><span class="p">:</span> <span class="kc">False</span>
+<span class="p">})</span>
+<span class="n">clean_params</span> <span class="o">=</span> <span class="n">bpd</span><span class="o">.</span><span class="n">clean_params</span><span class="p">({</span>
+    <span class="s1">&#39;drop_returns&#39;</span><span class="p">:</span> <span class="s1">&#39;returners&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;copy&#39;</span><span class="p">:</span> <span class="kc">False</span>
+<span class="p">})</span>
+<span class="n">sim_params</span> <span class="o">=</span> <span class="n">bpd</span><span class="o">.</span><span class="n">sim_params</span><span class="p">({</span>
+    <span class="s1">&#39;nl&#39;</span><span class="p">:</span> <span class="n">nl</span><span class="p">,</span> <span class="s1">&#39;nk&#39;</span><span class="p">:</span> <span class="n">nk</span><span class="p">,</span>
+    <span class="s1">&#39;alpha_sig&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;psi_sig&#39;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;w_sig&#39;</span><span class="p">:</span> <span class="mf">0.6</span><span class="p">,</span>
+    <span class="s1">&#39;c_sort&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;c_netw&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;c_sig&#39;</span><span class="p">:</span> <span class="mi">1</span>
+<span class="p">})</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Extract-data-(we-simulate-for-the-example)">
+<h2>Extract data (we simulate for the example)<a class="headerlink" href="#Extract-data-(we-simulate-for-the-example)" title="Permalink to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">BipartitePandas</span></code> contains the class <code class="docutils literal notranslate"><span class="pre">SimBipartite</span></code> which we use here to simulate a bipartite network. If you have your own data, you can import it during this step. Load it as a <code class="docutils literal notranslate"><span class="pre">Pandas</span> <span class="pre">DataFrame</span></code> and then convert it into a <code class="docutils literal notranslate"><span class="pre">BipartitePandas</span> <span class="pre">DataFrame</span></code> in the next step.</p>
+<p>Note that <code class="docutils literal notranslate"><span class="pre">l</span></code> gives the true worker type and <code class="docutils literal notranslate"><span class="pre">k</span></code> gives the true firm type, while <code class="docutils literal notranslate"><span class="pre">alpha</span></code> gives the true worker effect and <code class="docutils literal notranslate"><span class="pre">psi</span></code> gives the true firm effect. We will save these columns separately.</p>
+<p>The BLM estimator uses the firm types computed via clustering, which are saved in columns <code class="docutils literal notranslate"><span class="pre">g1</span></code> and <code class="docutils literal notranslate"><span class="pre">g2</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim_data</span> <span class="o">=</span> <span class="n">bpd</span><span class="o">.</span><span class="n">SimBipartite</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span><span class="o">.</span><span class="n">simulate</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Prepare-data">
+<h2>Prepare data<a class="headerlink" href="#Prepare-data" title="Permalink to this heading"></a></h2>
+<p>This is exactly how you should prepare real data prior to running the BLM estimator.</p>
+<ul class="simple">
+<li><p>First, we convert the data into a <code class="docutils literal notranslate"><span class="pre">BipartitePandas</span> <span class="pre">DataFrame</span></code></p></li>
+<li><p>Second, we clean the data (e.g. drop NaN observations, make sure firm and worker ids are contiguous, etc.)</p></li>
+<li><p>Third, we cluster firms by their wage distributions, to generate firm classes (columns <code class="docutils literal notranslate"><span class="pre">g1</span></code> and <code class="docutils literal notranslate"><span class="pre">g2</span></code>). Alternatively, manually set the columns <code class="docutils literal notranslate"><span class="pre">g1</span></code> and <code class="docutils literal notranslate"><span class="pre">g2</span></code> to pre-estimated clusters (but make sure to <a class="reference external" href="https://tlamadon.github.io/bipartitepandas/notebooks/custom_columns.html#Adding-custom-columns-to-an-instantiated-DataFrame">add them correctly!</a>).</p></li>
+<li><p>Fourth, we collapse the data at the worker-firm spell level (taking mean wage over the spell)</p></li>
+<li><p>Fifth, we convert the data into event study format</p></li>
+</ul>
+<p>Further details on <code class="docutils literal notranslate"><span class="pre">BipartitePandas</span></code> can be found in the package documentation, available <a class="reference external" href="https://tlamadon.github.io/bipartitepandas/">here</a>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Convert into BipartitePandas DataFrame</span>
+<span class="n">sim_data</span> <span class="o">=</span> <span class="n">bpd</span><span class="o">.</span><span class="n">BipartiteDataFrame</span><span class="p">(</span><span class="n">sim_data</span><span class="p">)</span>
+<span class="c1"># Clean and collapse</span>
+<span class="n">sim_data</span> <span class="o">=</span> <span class="n">sim_data</span><span class="o">.</span><span class="n">clean</span><span class="p">(</span><span class="n">clean_params</span><span class="p">)</span><span class="o">.</span><span class="n">collapse</span><span class="p">(</span><span class="n">is_sorted</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="c1"># Cluster</span>
+<span class="n">sim_data</span> <span class="o">=</span> <span class="n">sim_data</span><span class="o">.</span><span class="n">cluster</span><span class="p">(</span><span class="n">cluster_params</span><span class="p">)</span>
+<span class="c1"># Convert to event study format</span>
+<span class="n">sim_data</span> <span class="o">=</span> <span class="n">sim_data</span><span class="o">.</span><span class="n">to_eventstudy</span><span class="p">(</span><span class="n">is_sorted</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+checking required columns and datatypes
+sorting rows
+dropping NaN observations
+generating &#39;m&#39; column
+keeping highest paying job for i-t (worker-year) duplicates (how=&#39;max&#39;)
+dropping workers who leave a firm then return to it (how=&#39;returners&#39;)
+making &#39;i&#39; ids contiguous
+making &#39;j&#39; ids contiguous
+computing largest connected set (how=None)
+sorting columns
+resetting index
+</pre></div></div>
+</div>
+</section>
+<section id="Separate-observed-and-unobserved-data">
+<h2>Separate observed and unobserved data<a class="headerlink" href="#Separate-observed-and-unobserved-data" title="Permalink to this heading"></a></h2>
+<p>Some of the simulated data is not observed, so we separate out that data during estimation.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">sim_data_observed</span> <span class="o">=</span> <span class="n">sim_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="s1">&#39;i&#39;</span><span class="p">,</span> <span class="s1">&#39;j1&#39;</span><span class="p">,</span> <span class="s1">&#39;j2&#39;</span><span class="p">,</span> <span class="s1">&#39;y1&#39;</span><span class="p">,</span> <span class="s1">&#39;y2&#39;</span><span class="p">,</span> <span class="s1">&#39;t11&#39;</span><span class="p">,</span> <span class="s1">&#39;t12&#39;</span><span class="p">,</span> <span class="s1">&#39;t21&#39;</span><span class="p">,</span> <span class="s1">&#39;t22&#39;</span><span class="p">,</span> <span class="s1">&#39;g1&#39;</span><span class="p">,</span> <span class="s1">&#39;g2&#39;</span><span class="p">,</span> <span class="s1">&#39;w1&#39;</span><span class="p">,</span> <span class="s1">&#39;w2&#39;</span><span class="p">,</span> <span class="s1">&#39;m&#39;</span><span class="p">]]</span>
+<span class="n">sim_data_unobserved</span> <span class="o">=</span> <span class="n">sim_data</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="p">[</span><span class="s1">&#39;alpha1&#39;</span><span class="p">,</span> <span class="s1">&#39;alpha2&#39;</span><span class="p">,</span> <span class="s1">&#39;k1&#39;</span><span class="p">,</span> <span class="s1">&#39;k2&#39;</span><span class="p">,</span> <span class="s1">&#39;l1&#39;</span><span class="p">,</span> <span class="s1">&#39;l2&#39;</span><span class="p">,</span> <span class="s1">&#39;psi1&#39;</span><span class="p">,</span> <span class="s1">&#39;psi2&#39;</span><span class="p">]]</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Separate-movers-and-stayers-data">
+<h2>Separate movers and stayers data<a class="headerlink" href="#Separate-movers-and-stayers-data" title="Permalink to this heading"></a></h2>
+<p>We need to distinguish movers and stayers for the estimator.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">movers</span> <span class="o">=</span> <span class="n">sim_data_observed</span><span class="o">.</span><span class="n">get_worker_m</span><span class="p">(</span><span class="n">is_sorted</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">jdata</span> <span class="o">=</span> <span class="n">sim_data_observed</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">movers</span><span class="p">,</span> <span class="p">:]</span>
+<span class="n">sdata</span> <span class="o">=</span> <span class="n">sim_data_observed</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">~</span><span class="n">movers</span><span class="p">,</span> <span class="p">:]</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Check-the-data">
+<h2>Check the data<a class="headerlink" href="#Check-the-data" title="Permalink to this heading"></a></h2>
+<p>Let’s check the cleaned data.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Movers data&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">jdata</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Stayers data&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">sdata</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Movers data
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>i</th>
+      <th>j1</th>
+      <th>j2</th>
+      <th>y1</th>
+      <th>y2</th>
+      <th>t11</th>
+      <th>t12</th>
+      <th>t21</th>
+      <th>t22</th>
+      <th>g1</th>
+      <th>g2</th>
+      <th>w1</th>
+      <th>w2</th>
+      <th>m</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>189</td>
+      <td>141</td>
+      <td>0.658481</td>
+      <td>-0.302737</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>3</td>
+      <td>0</td>
+      <td>3</td>
+      <td>1</td>
+      <td>3</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>0</td>
+      <td>141</td>
+      <td>179</td>
+      <td>-0.302737</td>
+      <td>-0.070679</td>
+      <td>1</td>
+      <td>3</td>
+      <td>4</td>
+      <td>4</td>
+      <td>3</td>
+      <td>0</td>
+      <td>3</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1</td>
+      <td>3</td>
+      <td>178</td>
+      <td>-0.977635</td>
+      <td>-0.138164</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>4</td>
+      <td>1</td>
+      <td>0</td>
+      <td>1</td>
+      <td>4</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2</td>
+      <td>179</td>
+      <td>9</td>
+      <td>0.273751</td>
+      <td>-2.872666</td>
+      <td>0</td>
+      <td>2</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>1</td>
+      <td>3</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>2</td>
+      <td>9</td>
+      <td>113</td>
+      <td>-2.872666</td>
+      <td>-1.395046</td>
+      <td>3</td>
+      <td>3</td>
+      <td>4</td>
+      <td>4</td>
+      <td>1</td>
+      <td>3</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>20331</th>
+      <td>9923</td>
+      <td>5</td>
+      <td>18</td>
+      <td>-2.439280</td>
+      <td>-2.086203</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>20332</th>
+      <td>9923</td>
+      <td>18</td>
+      <td>186</td>
+      <td>-2.086203</td>
+      <td>0.518828</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2</td>
+      <td>2</td>
+      <td>1</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>20333</th>
+      <td>9923</td>
+      <td>186</td>
+      <td>92</td>
+      <td>0.518828</td>
+      <td>0.440968</td>
+      <td>2</td>
+      <td>2</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>2</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>20334</th>
+      <td>9923</td>
+      <td>92</td>
+      <td>14</td>
+      <td>0.440968</td>
+      <td>-1.070705</td>
+      <td>3</td>
+      <td>3</td>
+      <td>4</td>
+      <td>4</td>
+      <td>2</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>20335</th>
+      <td>9924</td>
+      <td>167</td>
+      <td>42</td>
+      <td>1.730241</td>
+      <td>-0.256907</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>4</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1</td>
+      <td>4</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+<p>19695 rows × 14 columns</p>
+</div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Stayers data
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>i</th>
+      <th>j1</th>
+      <th>j2</th>
+      <th>y1</th>
+      <th>y2</th>
+      <th>t11</th>
+      <th>t12</th>
+      <th>t21</th>
+      <th>t22</th>
+      <th>g1</th>
+      <th>g2</th>
+      <th>w1</th>
+      <th>w2</th>
+      <th>m</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>16</th>
+      <td>9</td>
+      <td>183</td>
+      <td>183</td>
+      <td>1.775003</td>
+      <td>1.775003</td>
+      <td>0</td>
+      <td>4</td>
+      <td>0</td>
+      <td>4</td>
+      <td>0</td>
+      <td>0</td>
+      <td>5</td>
+      <td>5</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>101</th>
+      <td>55</td>
+      <td>36</td>
+      <td>36</td>
+      <td>-0.154698</td>
+      <td>-0.154698</td>
+      <td>0</td>
+      <td>4</td>
+      <td>0</td>
+      <td>4</td>
+      <td>1</td>
+      <td>1</td>
+      <td>5</td>
+      <td>5</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>127</th>
+      <td>65</td>
+      <td>192</td>
+      <td>192</td>
+      <td>0.476397</td>
+      <td>0.476397</td>
+      <td>0</td>
+      <td>4</td>
+      <td>0</td>
+      <td>4</td>
+      <td>0</td>
+      <td>0</td>
+      <td>5</td>
+      <td>5</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>131</th>
+      <td>67</td>
+      <td>123</td>
+      <td>123</td>
+      <td>-0.268389</td>
+      <td>-0.268389</td>
+      <td>0</td>
+      <td>4</td>
+      <td>0</td>
+      <td>4</td>
+      <td>3</td>
+      <td>3</td>
+      <td>5</td>
+      <td>5</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>152</th>
+      <td>78</td>
+      <td>15</td>
+      <td>15</td>
+      <td>-0.318783</td>
+      <td>-0.318783</td>
+      <td>0</td>
+      <td>4</td>
+      <td>0</td>
+      <td>4</td>
+      <td>1</td>
+      <td>1</td>
+      <td>5</td>
+      <td>5</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>20111</th>
+      <td>9820</td>
+      <td>177</td>
+      <td>177</td>
+      <td>0.865980</td>
+      <td>0.865980</td>
+      <td>0</td>
+      <td>4</td>
+      <td>0</td>
+      <td>4</td>
+      <td>0</td>
+      <td>0</td>
+      <td>5</td>
+      <td>5</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>20155</th>
+      <td>9840</td>
+      <td>111</td>
+      <td>111</td>
+      <td>1.149045</td>
+      <td>1.149045</td>
+      <td>0</td>
+      <td>4</td>
+      <td>0</td>
+      <td>4</td>
+      <td>3</td>
+      <td>3</td>
+      <td>5</td>
+      <td>5</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>20213</th>
+      <td>9866</td>
+      <td>187</td>
+      <td>187</td>
+      <td>1.390672</td>
+      <td>1.390672</td>
+      <td>0</td>
+      <td>4</td>
+      <td>0</td>
+      <td>4</td>
+      <td>0</td>
+      <td>0</td>
+      <td>5</td>
+      <td>5</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>20259</th>
+      <td>9885</td>
+      <td>17</td>
+      <td>17</td>
+      <td>-1.266577</td>
+      <td>-1.266577</td>
+      <td>0</td>
+      <td>4</td>
+      <td>0</td>
+      <td>4</td>
+      <td>1</td>
+      <td>1</td>
+      <td>5</td>
+      <td>5</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>20272</th>
+      <td>9892</td>
+      <td>47</td>
+      <td>47</td>
+      <td>0.795123</td>
+      <td>0.795123</td>
+      <td>0</td>
+      <td>4</td>
+      <td>0</td>
+      <td>4</td>
+      <td>2</td>
+      <td>2</td>
+      <td>5</td>
+      <td>5</td>
+      <td>0</td>
+    </tr>
+  </tbody>
+</table>
+<p>641 rows × 14 columns</p>
+</div></div>
+</div>
+</section>
+<section id="Initialize-and-run-BLMEstimator">
+<h2>Initialize and run BLMEstimator<a class="headerlink" href="#Initialize-and-run-BLMEstimator" title="Permalink to this heading"></a></h2>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Note</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">BLMEstimator</span></code> class requires data to be formatted as a BipartitePandas DataFrame.</p>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Initialize BLM estimator</span>
+<span class="n">blm_fit</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BLMEstimator</span><span class="p">(</span><span class="n">blm_params</span><span class="p">)</span>
+<span class="c1"># Fit BLM estimator</span>
+<span class="n">blm_fit</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">jdata</span><span class="o">=</span><span class="n">jdata</span><span class="p">,</span> <span class="n">sdata</span><span class="o">=</span><span class="n">sdata</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">40</span><span class="p">,</span> <span class="n">n_best</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">ncore</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<span class="c1"># Store best model</span>
+<span class="n">blm_model</span> <span class="o">=</span> <span class="n">blm_fit</span><span class="o">.</span><span class="n">model</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Check-that-log-likelihoods-are-monotonic">
+<h2>Check that log-likelihoods are monotonic<a class="headerlink" href="#Check-that-log-likelihoods-are-monotonic" title="Permalink to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">liks1</span> <span class="o">=</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">liks1</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Log-likelihoods monotonic (movers):&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">liks1</span><span class="p">))</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="n">x_axis</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">liks1</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_axis</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">liks1</span><span class="p">),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;liks1&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_axis</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">liks1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Iteration&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Change in log-likelihood&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Log-likelihoods monotonic (movers): True
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Text(0, 0.5, &#39;Change in log-likelihood&#39;)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_20_2.png" src="../_images/notebooks_blm_example_20_2.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">liks0</span> <span class="o">=</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">liks0</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Log-likelihoods monotonic (stayers):&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">liks0</span><span class="p">))</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="n">x_axis</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">liks0</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_axis</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">liks0</span><span class="p">),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;liks0&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_axis</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">liks0</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Iteration&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Change in log-likelihood&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Log-likelihoods monotonic (stayers): True
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Text(0, 0.5, &#39;Change in log-likelihood&#39;)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_21_2.png" src="../_images/notebooks_blm_example_21_2.png" />
+</div>
+</div>
+</section>
+<section id="Now-we-can-investigate-the-results">
+<h2>Now we can investigate the results<a class="headerlink" href="#Now-we-can-investigate-the-results" title="Permalink to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Plot likelihood vs. connectedness</span>
+<span class="n">blm_fit</span><span class="o">.</span><span class="n">plot_liks_connectedness</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_23_0.png" src="../_images/notebooks_blm_example_23_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">blm_fit</span><span class="o">.</span><span class="n">plot_log_earnings</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_24_0.png" src="../_images/notebooks_blm_example_24_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">blm_fit</span><span class="o">.</span><span class="n">plot_type_proportions</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_25_0.png" src="../_images/notebooks_blm_example_25_0.png" />
+</div>
+</div>
+</section>
+<section id="Finally,-we-can-compare-estimates-to-the-truth">
+<h2>Finally, we can compare estimates to the truth<a class="headerlink" href="#Finally,-we-can-compare-estimates-to-the-truth" title="Permalink to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Compute true parameters</span>
+<span class="n">true_A1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">sim_data_unobserved</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;l1&#39;</span><span class="p">)[</span><span class="s1">&#39;alpha1&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">sim_data_unobserved</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;k1&#39;</span><span class="p">)[</span><span class="s1">&#39;psi1&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="p">(</span><span class="n">nl</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+<span class="n">true_A2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">sim_data_unobserved</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;l2&#39;</span><span class="p">)[</span><span class="s1">&#39;alpha2&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">sim_data_unobserved</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;k2&#39;</span><span class="p">)[</span><span class="s1">&#39;psi2&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">(),</span> <span class="p">(</span><span class="n">nl</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+
+<span class="c1"># Sort estimated parameters (this is because the firm type order generated by clustering is random - this is automatically handled in the built-in plotting functions)</span>
+<span class="n">A1</span><span class="p">,</span> <span class="n">A2</span> <span class="o">=</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">_sort_parameters</span><span class="p">(</span><span class="n">blm_model</span><span class="o">.</span><span class="n">A1</span><span class="p">,</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">A2</span><span class="p">,</span> <span class="n">sort_firm_types</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">true_A1</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">A1</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;A1&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">true_A2</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">A2</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;A2&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_28_0.png" src="../_images/notebooks_blm_example_28_0.png" />
+</div>
+</div>
+</section>
+<section id="Bootstrapped-errors">
+<h2>Bootstrapped errors<a class="headerlink" href="#Bootstrapped-errors" title="Permalink to this heading"></a></h2>
+<p>The package contains the class <code class="docutils literal notranslate"><span class="pre">BLMBootstrap</span></code>, which allows for the construction of bootstrapped error bars.</p>
+<p>In this example, we use the same simulated data and estimation parameters as in the previous example.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Initialize BLM bootstrap estimator</span>
+<span class="n">blm_fit</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BLMBootstrap</span><span class="p">(</span><span class="n">blm_params</span><span class="p">)</span>
+<span class="c1"># Fit BLM estimator</span>
+<span class="n">blm_fit</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+    <span class="n">jdata</span><span class="o">=</span><span class="n">jdata</span><span class="p">,</span> <span class="n">sdata</span><span class="o">=</span><span class="n">sdata</span><span class="p">,</span>
+    <span class="n">blm_model</span><span class="o">=</span><span class="n">blm_model</span><span class="p">,</span>
+    <span class="n">n_samples</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+    <span class="n">cluster_params</span><span class="o">=</span><span class="n">cluster_params</span><span class="p">,</span>
+    <span class="n">ncore</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="id1">
+<h2>Now we can investigate the results<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">blm_fit</span><span class="o">.</span><span class="n">plot_log_earnings</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_32_0.png" src="../_images/notebooks_blm_example_32_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">blm_fit</span><span class="o">.</span><span class="n">plot_type_proportions</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_33_0.png" src="../_images/notebooks_blm_example_33_0.png" />
+</div>
+</div>
+</section>
+<section id="Control-variables">
+<h2>Control variables<a class="headerlink" href="#Control-variables" title="Permalink to this heading"></a></h2>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Hint</p>
+<p>Check out how to add custom columns to your BipartitePandas DataFrame <a class="reference external" href="https://tlamadon.github.io/bipartitepandas/notebooks/custom_columns.html#">here</a>! If you don’t add custom columns properly, they may not be handled during data cleaning and estimation how you want and/or expect!</p>
+</div>
+</section>
+<section id="Simulating-data-with-controls">
+<h2>Simulating data with controls<a class="headerlink" href="#Simulating-data-with-controls" title="Permalink to this heading"></a></h2>
+<p>The package contains functions to simulate data from the BLM dgp. We use this here to see how to use control variables.</p>
+<p>In this example, we simulate a categorical, non-stationary, non-worker-type-interaction control variable. We use a low variance to ensure stability of the estimator.</p>
+</section>
+<section id="Check-out-simulation-parameter-options">
+<h2>Check out simulation parameter options<a class="headerlink" href="#Check-out-simulation-parameter-options" title="Permalink to this heading"></a></h2>
+<p>Do this by running:</p>
+<ul class="simple">
+<li><p>Simulating Categorical Controls - <code class="docutils literal notranslate"><span class="pre">tw.sim_categorical_control_params().describe_all()</span></code></p></li>
+<li><p>Simulating Continuous Controls - <code class="docutils literal notranslate"><span class="pre">tw.sim_continuous_control_params().describe_all()</span></code></p></li>
+</ul>
+<p>Alternatively, run <code class="docutils literal notranslate"><span class="pre">x_params().keys()</span></code> to view all the keys for a parameter dictionary, then <code class="docutils literal notranslate"><span class="pre">x_params().describe(key)</span></code> to get a description for a single key.</p>
+</section>
+<section id="Set-simulation-parameter-choices">
+<h2>Set simulation parameter choices<a class="headerlink" href="#Set-simulation-parameter-choices" title="Permalink to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">n_control</span> <span class="o">=</span> <span class="mi">2</span> <span class="c1"># Number of types for control variable</span>
+
+<span class="n">sim_cat_params</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">sim_categorical_control_params</span><span class="p">({</span>
+    <span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="n">n_control</span><span class="p">,</span>
+    <span class="s1">&#39;stationary_A&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;stationary_S&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s1">&#39;worker_type_interaction&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s1">&#39;a1_mu&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;a1_sig&#39;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span> <span class="s1">&#39;a2_mu&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;a2_sig&#39;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span>
+    <span class="s1">&#39;s1_low&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;s1_high&#39;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span> <span class="s1">&#39;s2_low&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;s2_high&#39;</span><span class="p">:</span> <span class="mf">0.01</span>
+<span class="p">})</span>
+<span class="n">sim_cts_params</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">sim_continuous_control_params</span><span class="p">({</span>
+    <span class="s1">&#39;stationary_A&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;stationary_S&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;worker_type_interaction&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;a1_mu&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mf">0.15</span><span class="p">,</span> <span class="s1">&#39;a1_sig&#39;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span> <span class="s1">&#39;a2_mu&#39;</span><span class="p">:</span> <span class="mf">0.15</span><span class="p">,</span> <span class="s1">&#39;a2_sig&#39;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+    <span class="s1">&#39;s1_low&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;s1_high&#39;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span> <span class="s1">&#39;s2_low&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;s2_high&#39;</span><span class="p">:</span> <span class="mf">0.01</span>
+<span class="p">})</span>
+<span class="n">sim_blm_params</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">sim_blm_params</span><span class="p">({</span>
+    <span class="s1">&#39;nl&#39;</span><span class="p">:</span> <span class="n">nl</span><span class="p">,</span> <span class="s1">&#39;nk&#39;</span><span class="p">:</span> <span class="n">nk</span><span class="p">,</span>
+    <span class="s1">&#39;a1_mu&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;a1_sig&#39;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span> <span class="s1">&#39;a2_mu&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;a2_sig&#39;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span>
+    <span class="s1">&#39;s1_low&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;s1_high&#39;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span> <span class="s1">&#39;s2_low&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;s2_high&#39;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>
+    <span class="s1">&#39;categorical_controls&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;cat_control&#39;</span><span class="p">:</span> <span class="n">sim_cat_params</span><span class="p">},</span>
+    <span class="s1">&#39;continuous_controls&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;cts_control&#39;</span><span class="p">:</span> <span class="n">sim_cts_params</span><span class="p">}</span>
+<span class="p">})</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Estimating-control-variables">
+<h2>Estimating control variables<a class="headerlink" href="#Estimating-control-variables" title="Permalink to this heading"></a></h2>
+<p>PyTwoWay allows for categorical and continuous control variables.</p>
+<section id="Categorical">
+<h3>Categorical<a class="headerlink" href="#Categorical" title="Permalink to this heading"></a></h3>
+<p>To define a categorical control variable, construct an instance of the parameter dictionary <code class="docutils literal notranslate"><span class="pre">tw.categorical_control_params()</span></code>.</p>
+<p>Then, inside an instance of <code class="docutils literal notranslate"><span class="pre">blm_params()</span></code>, link the key <code class="docutils literal notranslate"><span class="pre">'categorical_controls'</span></code> to a dictionary linking column names to their associated parameter dictionaries.</p>
+</section>
+<section id="Continuous">
+<h3>Continuous<a class="headerlink" href="#Continuous" title="Permalink to this heading"></a></h3>
+<p>To define a continuous control variable, construct an instance of the parameter dictionary <code class="docutils literal notranslate"><span class="pre">tw.continuous_control_params()</span></code>.</p>
+<p>Then, inside an instance of <code class="docutils literal notranslate"><span class="pre">blm_params()</span></code>, link the key <code class="docutils literal notranslate"><span class="pre">'continuous_controls'</span></code> to a dictionary linking column names to their associated parameter dictionaries.</p>
+</section>
+<section id="Constraints">
+<h3>Constraints<a class="headerlink" href="#Constraints" title="Permalink to this heading"></a></h3>
+<p>Constraints can be specified for control variables. They are set through the <code class="docutils literal notranslate"><span class="pre">cons_a</span></code> and <code class="docutils literal notranslate"><span class="pre">cons_s</span></code> keys for a given control variable’s parameter dictionary, except for <code class="docutils literal notranslate"><span class="pre">NoWorkerTypeInteraction()</span></code>. Constraint options are: - <code class="docutils literal notranslate"><span class="pre">Linear()</span></code> - for a fixed firm type, worker types effects must change linearly - <code class="docutils literal notranslate"><span class="pre">Monotonic()</span></code> - for a fixed firm type, worker types effects must increase (or decrease) monotonically - <code class="docutils literal notranslate"><span class="pre">NoWorkerTypeInteraction()</span></code> - for a fixed firm type, worker types effects must
+all be the same - <code class="docutils literal notranslate"><span class="pre">Stationary()</span></code> - worker-firm pair effects are the same in all periods - <code class="docutils literal notranslate"><span class="pre">StationaryFirmTypeVariation()</span></code> - firm type induced variation of worker-firm pair effects is the same in all periods. In particular, this is equivalent to setting <code class="docutils literal notranslate"><span class="pre">A2</span> <span class="pre">=</span> <span class="pre">(np.mean(A2,</span> <span class="pre">axis=1)</span> <span class="pre">+</span> <span class="pre">A1.T</span> <span class="pre">-</span> <span class="pre">np.mean(A1,</span> <span class="pre">axis=1)).T</span></code>. - <code class="docutils literal notranslate"><span class="pre">BoundedBelow()</span></code> - worker-firm pair effects are bounded below - <code class="docutils literal notranslate"><span class="pre">BoundedAbove()</span></code> - worker-firm pair effects are bounded above</p>
+<p><code class="docutils literal notranslate"><span class="pre">NoWorkerTypeInteraction()</span></code> is not specified through the <code class="docutils literal notranslate"><span class="pre">cons_a</span></code> and <code class="docutils literal notranslate"><span class="pre">cons_s</span></code> keys. Instead, if you want a control variable to interact with the unobserved worker types, this can be specified by setting <code class="docutils literal notranslate"><span class="pre">worker_type_interaction=True</span></code> in the control variable’s parameter dictionary.</p>
+<div class="admonition warning">
+<p class="admonition-title fa fa-exclamation-circle">Warning</p>
+<p>Be careful when adding constraints to categorical control variables (note that not interacting with worker types requires constraints). Because categorical control variables require normalization, the choice of how to normalize can alter parameter estimates. This may raise a warning if the normalization gets stuck in a cycle of changing how to normalize every loop and the estimator is not converging. The estimator will work if you set <code class="docutils literal notranslate"><span class="pre">force_min_firm_type=True</span></code> in your BLM parameter dictionary
+- the warning will also provide a reminder of this option.</p>
+</div>
+</section>
+</section>
+<section id="Check-out-estimation-parameter-options">
+<h2>Check out estimation parameter options<a class="headerlink" href="#Check-out-estimation-parameter-options" title="Permalink to this heading"></a></h2>
+<p>Do this by running:</p>
+<ul class="simple">
+<li><p>Estimating Categorical Controls - <code class="docutils literal notranslate"><span class="pre">tw.categorical_control_params().describe_all()</span></code></p></li>
+<li><p>Estimating Continuous Controls - <code class="docutils literal notranslate"><span class="pre">tw.continuous_control_params().describe_all()</span></code></p></li>
+</ul>
+<p>Alternatively, run <code class="docutils literal notranslate"><span class="pre">x_params().keys()</span></code> to view all the keys for a parameter dictionary, then <code class="docutils literal notranslate"><span class="pre">x_params().describe(key)</span></code> to get a description for a single key.</p>
+</section>
+<section id="Set-estimation-parameter-choices">
+<h2>Set estimation parameter choices<a class="headerlink" href="#Set-estimation-parameter-choices" title="Permalink to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">cat_params</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">categorical_control_params</span><span class="p">({</span>
+    <span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="n">n_control</span><span class="p">,</span>
+    <span class="s1">&#39;worker_type_interaction&#39;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="s1">&#39;cons_a&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;cons_s&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="s1">&#39;a1_mu&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;a1_sig&#39;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span> <span class="s1">&#39;a2_mu&#39;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;a2_sig&#39;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span>
+    <span class="s1">&#39;s1_low&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;s1_high&#39;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span> <span class="s1">&#39;s2_low&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;s2_high&#39;</span><span class="p">:</span> <span class="mf">0.01</span>
+<span class="p">})</span>
+<span class="n">cts_params</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">continuous_control_params</span><span class="p">({</span>
+    <span class="s1">&#39;worker_type_interaction&#39;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="s1">&#39;cons_a&#39;</span><span class="p">:</span> <span class="n">cons</span><span class="o">.</span><span class="n">Stationary</span><span class="p">(),</span> <span class="s1">&#39;cons_s&#39;</span><span class="p">:</span> <span class="n">cons</span><span class="o">.</span><span class="n">Stationary</span><span class="p">(),</span>
+    <span class="s1">&#39;a1_mu&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mf">0.15</span><span class="p">,</span> <span class="s1">&#39;a1_sig&#39;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span> <span class="s1">&#39;a2_mu&#39;</span><span class="p">:</span> <span class="mf">0.15</span><span class="p">,</span> <span class="s1">&#39;a2_sig&#39;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
+    <span class="s1">&#39;s1_low&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;s1_high&#39;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span> <span class="s1">&#39;s2_low&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;s2_high&#39;</span><span class="p">:</span> <span class="mf">0.01</span>
+<span class="p">})</span>
+<span class="n">blm_params</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">blm_params</span><span class="p">({</span>
+    <span class="s1">&#39;nl&#39;</span><span class="p">:</span> <span class="n">nl</span><span class="p">,</span> <span class="s1">&#39;nk&#39;</span><span class="p">:</span> <span class="n">nk</span><span class="p">,</span>
+    <span class="s1">&#39;a1_mu&#39;</span><span class="p">:</span> <span class="o">-</span><span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;a1_sig&#39;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span> <span class="s1">&#39;a2_mu&#39;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="s1">&#39;a2_sig&#39;</span><span class="p">:</span> <span class="mf">0.25</span><span class="p">,</span>
+    <span class="s1">&#39;s1_low&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;s1_high&#39;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span> <span class="s1">&#39;s2_low&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;s2_high&#39;</span><span class="p">:</span> <span class="mf">0.01</span><span class="p">,</span>
+    <span class="s1">&#39;categorical_controls&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;cat_control&#39;</span><span class="p">:</span> <span class="n">cat_params</span><span class="p">},</span>
+    <span class="s1">&#39;continuous_controls&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;cts_control&#39;</span><span class="p">:</span> <span class="n">cts_params</span><span class="p">},</span>
+    <span class="s1">&#39;force_min_firm_type&#39;</span><span class="p">:</span> <span class="kc">True</span>
+<span class="p">})</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="Simulate-data">
+<h2>Simulate data<a class="headerlink" href="#Simulate-data" title="Permalink to this heading"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">sim_data</span></code> gives a dictionary where the key <code class="docutils literal notranslate"><span class="pre">'jdata'</span></code> gives simulated mover data and the key <code class="docutils literal notranslate"><span class="pre">'sdata'</span></code> gives simulated stayer data.</p>
+<p><code class="docutils literal notranslate"><span class="pre">sim_params</span></code> gives a dictionary that links each type of control variable to the simulated parameter values for that type.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">blm_true</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">SimBLM</span><span class="p">(</span><span class="n">sim_blm_params</span><span class="p">)</span>
+<span class="n">sim_data</span><span class="p">,</span> <span class="n">sim_params</span> <span class="o">=</span> <span class="n">blm_true</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="n">return_parameters</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">jdata</span><span class="p">,</span> <span class="n">sdata</span> <span class="o">=</span> <span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;jdata&#39;</span><span class="p">],</span> <span class="n">sim_data</span><span class="p">[</span><span class="s1">&#39;sdata&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Movers data&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">jdata</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Stayers data&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">sdata</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Simulated parameter values&#39;</span><span class="p">)</span>
+<span class="n">display</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Movers data
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>i</th>
+      <th>j1</th>
+      <th>j2</th>
+      <th>y1</th>
+      <th>y2</th>
+      <th>g1</th>
+      <th>g2</th>
+      <th>m</th>
+      <th>cat_control1</th>
+      <th>cat_control2</th>
+      <th>cts_control1</th>
+      <th>cts_control2</th>
+      <th>l</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-1.405170</td>
+      <td>2.884550</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-1.597127</td>
+      <td>-0.863375</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-2.944559</td>
+      <td>2.699658</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0.418682</td>
+      <td>0.439516</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2</td>
+      <td>1</td>
+      <td>0</td>
+      <td>-1.283777</td>
+      <td>2.810403</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-2.397280</td>
+      <td>-0.507434</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>3</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-2.674142</td>
+      <td>2.781658</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>-1.445132</td>
+      <td>-0.133028</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>4</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-2.810683</td>
+      <td>2.110046</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>-0.464561</td>
+      <td>1.254681</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>155</th>
+      <td>155</td>
+      <td>7</td>
+      <td>6</td>
+      <td>-1.076676</td>
+      <td>1.609433</td>
+      <td>3</td>
+      <td>3</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>-0.801424</td>
+      <td>1.277516</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>156</th>
+      <td>156</td>
+      <td>6</td>
+      <td>7</td>
+      <td>-2.718684</td>
+      <td>1.932711</td>
+      <td>3</td>
+      <td>3</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0.094787</td>
+      <td>-0.568200</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>157</th>
+      <td>157</td>
+      <td>6</td>
+      <td>7</td>
+      <td>-2.753058</td>
+      <td>1.655190</td>
+      <td>3</td>
+      <td>3</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0.292111</td>
+      <td>1.155452</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>158</th>
+      <td>158</td>
+      <td>6</td>
+      <td>7</td>
+      <td>-2.889319</td>
+      <td>2.357755</td>
+      <td>3</td>
+      <td>3</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1.194183</td>
+      <td>-0.255207</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>159</th>
+      <td>159</td>
+      <td>7</td>
+      <td>6</td>
+      <td>-1.292902</td>
+      <td>2.245363</td>
+      <td>3</td>
+      <td>3</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.035616</td>
+      <td>1.193493</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+<p>160 rows × 13 columns</p>
+</div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Stayers data
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>i</th>
+      <th>j1</th>
+      <th>j2</th>
+      <th>y1</th>
+      <th>y2</th>
+      <th>g1</th>
+      <th>g2</th>
+      <th>m</th>
+      <th>cat_control1</th>
+      <th>cat_control2</th>
+      <th>cts_control1</th>
+      <th>cts_control2</th>
+      <th>l</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>160</td>
+      <td>0</td>
+      <td>0</td>
+      <td>-3.065299</td>
+      <td>2.939253</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1</td>
+      <td>1.280102</td>
+      <td>-1.276638</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>161</td>
+      <td>1</td>
+      <td>1</td>
+      <td>-3.308012</td>
+      <td>1.882332</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0.673731</td>
+      <td>0.978745</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>162</td>
+      <td>1</td>
+      <td>1</td>
+      <td>-2.048957</td>
+      <td>2.500295</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0.188291</td>
+      <td>-0.354548</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>163</td>
+      <td>1</td>
+      <td>1</td>
+      <td>-1.647712</td>
+      <td>3.035064</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0.224408</td>
+      <td>-1.773956</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>164</td>
+      <td>0</td>
+      <td>0</td>
+      <td>-1.753908</td>
+      <td>2.028478</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>-0.307819</td>
+      <td>0.595909</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>165</td>
+      <td>1</td>
+      <td>1</td>
+      <td>-1.838391</td>
+      <td>3.205352</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-0.034964</td>
+      <td>-1.680496</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>166</td>
+      <td>0</td>
+      <td>0</td>
+      <td>-1.825758</td>
+      <td>2.394916</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-0.045699</td>
+      <td>0.869568</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>167</td>
+      <td>0</td>
+      <td>0</td>
+      <td>-3.162265</td>
+      <td>3.055979</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0.174373</td>
+      <td>-1.324212</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>168</td>
+      <td>0</td>
+      <td>0</td>
+      <td>-2.035432</td>
+      <td>2.368199</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0.227607</td>
+      <td>0.600801</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>169</td>
+      <td>0</td>
+      <td>0</td>
+      <td>-2.933966</td>
+      <td>2.556052</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0.343777</td>
+      <td>1.315978</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>170</td>
+      <td>2</td>
+      <td>2</td>
+      <td>-1.441650</td>
+      <td>2.437222</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-0.352137</td>
+      <td>-0.029504</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>171</td>
+      <td>3</td>
+      <td>3</td>
+      <td>-1.681946</td>
+      <td>2.603666</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0.797169</td>
+      <td>-0.100233</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>172</td>
+      <td>3</td>
+      <td>3</td>
+      <td>-1.446450</td>
+      <td>2.115750</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>-0.856424</td>
+      <td>-0.023039</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>173</td>
+      <td>3</td>
+      <td>3</td>
+      <td>-3.140376</td>
+      <td>2.507038</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1</td>
+      <td>2.209182</td>
+      <td>0.660209</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>174</td>
+      <td>2</td>
+      <td>2</td>
+      <td>-2.743617</td>
+      <td>2.046139</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0.038795</td>
+      <td>-0.846242</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>175</td>
+      <td>3</td>
+      <td>3</td>
+      <td>-1.253390</td>
+      <td>1.997722</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>-1.620871</td>
+      <td>-0.369944</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>176</td>
+      <td>3</td>
+      <td>3</td>
+      <td>-2.042038</td>
+      <td>1.745926</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>-1.510300</td>
+      <td>0.903805</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>177</td>
+      <td>3</td>
+      <td>3</td>
+      <td>-1.678088</td>
+      <td>2.148858</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.876064</td>
+      <td>-0.305209</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>178</td>
+      <td>2</td>
+      <td>2</td>
+      <td>-1.539851</td>
+      <td>2.806150</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-0.193820</td>
+      <td>-1.547240</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>179</td>
+      <td>2</td>
+      <td>2</td>
+      <td>-1.484411</td>
+      <td>2.540243</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0.029680</td>
+      <td>-0.694832</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>20</th>
+      <td>180</td>
+      <td>5</td>
+      <td>5</td>
+      <td>-1.145073</td>
+      <td>1.938436</td>
+      <td>2</td>
+      <td>2</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0.448419</td>
+      <td>1.062856</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>21</th>
+      <td>181</td>
+      <td>5</td>
+      <td>5</td>
+      <td>-1.976578</td>
+      <td>2.167116</td>
+      <td>2</td>
+      <td>2</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.051553</td>
+      <td>0.623657</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>22</th>
+      <td>182</td>
+      <td>5</td>
+      <td>5</td>
+      <td>-2.248826</td>
+      <td>2.782804</td>
+      <td>2</td>
+      <td>2</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1</td>
+      <td>-0.069256</td>
+      <td>-1.654039</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>23</th>
+      <td>183</td>
+      <td>4</td>
+      <td>4</td>
+      <td>-3.381418</td>
+      <td>2.342920</td>
+      <td>2</td>
+      <td>2</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0.835689</td>
+      <td>-0.528370</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>24</th>
+      <td>184</td>
+      <td>5</td>
+      <td>5</td>
+      <td>-2.414065</td>
+      <td>1.897629</td>
+      <td>2</td>
+      <td>2</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>-0.123666</td>
+      <td>0.956612</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>25</th>
+      <td>185</td>
+      <td>4</td>
+      <td>4</td>
+      <td>-3.131777</td>
+      <td>2.884738</td>
+      <td>2</td>
+      <td>2</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1</td>
+      <td>-0.767185</td>
+      <td>-0.904343</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>26</th>
+      <td>186</td>
+      <td>4</td>
+      <td>4</td>
+      <td>-3.342341</td>
+      <td>2.693796</td>
+      <td>2</td>
+      <td>2</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1</td>
+      <td>0.726720</td>
+      <td>0.368079</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>27</th>
+      <td>187</td>
+      <td>5</td>
+      <td>5</td>
+      <td>-2.140324</td>
+      <td>2.530651</td>
+      <td>2</td>
+      <td>2</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1.183305</td>
+      <td>-1.663274</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>28</th>
+      <td>188</td>
+      <td>4</td>
+      <td>4</td>
+      <td>-3.219936</td>
+      <td>2.662715</td>
+      <td>2</td>
+      <td>2</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1</td>
+      <td>-0.267946</td>
+      <td>0.635036</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>29</th>
+      <td>189</td>
+      <td>4</td>
+      <td>4</td>
+      <td>-2.813351</td>
+      <td>2.204771</td>
+      <td>2</td>
+      <td>2</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>1.858780</td>
+      <td>-1.423794</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>30</th>
+      <td>190</td>
+      <td>6</td>
+      <td>6</td>
+      <td>-2.627046</td>
+      <td>2.341005</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1</td>
+      <td>-0.732658</td>
+      <td>-0.174954</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>31</th>
+      <td>191</td>
+      <td>7</td>
+      <td>7</td>
+      <td>-1.475745</td>
+      <td>1.854227</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.085931</td>
+      <td>-0.259650</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>32</th>
+      <td>192</td>
+      <td>7</td>
+      <td>7</td>
+      <td>-1.372760</td>
+      <td>1.618090</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.247395</td>
+      <td>1.038758</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>33</th>
+      <td>193</td>
+      <td>6</td>
+      <td>6</td>
+      <td>-1.396256</td>
+      <td>1.879039</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>-0.298457</td>
+      <td>-0.415220</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>34</th>
+      <td>194</td>
+      <td>6</td>
+      <td>6</td>
+      <td>-1.349778</td>
+      <td>2.194202</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>0</td>
+      <td>1</td>
+      <td>-0.641476</td>
+      <td>0.840362</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>35</th>
+      <td>195</td>
+      <td>7</td>
+      <td>7</td>
+      <td>-1.435867</td>
+      <td>1.505834</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0.455100</td>
+      <td>1.541480</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>36</th>
+      <td>196</td>
+      <td>6</td>
+      <td>6</td>
+      <td>-2.786497</td>
+      <td>1.745557</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>0.631748</td>
+      <td>0.769990</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>37</th>
+      <td>197</td>
+      <td>7</td>
+      <td>7</td>
+      <td>-1.450763</td>
+      <td>1.851792</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>0</td>
+      <td>0</td>
+      <td>-0.047915</td>
+      <td>-0.048053</td>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>38</th>
+      <td>198</td>
+      <td>6</td>
+      <td>6</td>
+      <td>-2.567547</td>
+      <td>1.749243</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>1</td>
+      <td>0</td>
+      <td>-0.018666</td>
+      <td>0.676466</td>
+      <td>2</td>
+    </tr>
+    <tr>
+      <th>39</th>
+      <td>199</td>
+      <td>7</td>
+      <td>7</td>
+      <td>-2.342840</td>
+      <td>2.728105</td>
+      <td>3</td>
+      <td>3</td>
+      <td>0</td>
+      <td>1</td>
+      <td>1</td>
+      <td>-1.548878</td>
+      <td>1.056820</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Simulated parameter values
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;A1&#39;: array([[-2.40434291, -1.93230882, -2.3641309 , -1.81931006],
+        [-1.99649895, -1.8539811 , -1.54271365, -1.67049293],
+        [-2.21882556, -1.59916272, -1.37328134, -1.69013257]]),
+ &#39;A2&#39;: array([[1.85490342, 1.97296398, 2.15268324, 1.7112059 ],
+        [2.15476764, 1.81388297, 1.90973225, 2.26752212],
+        [2.0604013 , 1.90970787, 1.65698835, 1.84848259]]),
+ &#39;S1&#39;: array([[6.24733520e-03, 3.25013934e-04, 9.95248435e-03, 7.88841644e-03],
+        [5.06607130e-04, 5.60070089e-05, 5.12086700e-03, 8.94274499e-03],
+        [1.15689335e-03, 3.52890499e-03, 3.17502080e-03, 9.56078356e-03]]),
+ &#39;S2&#39;: array([[0.00106304, 0.00627278, 0.0096796 , 0.00626775],
+        [0.00905057, 0.00542163, 0.00412828, 0.00967574],
+        [0.00684023, 0.00786226, 0.00925993, 0.00867167]]),
+ &#39;pk1&#39;: array([[0.22439344, 0.64001715, 0.13558941],
+        [0.30791439, 0.16101403, 0.53107158],
+        [0.13470115, 0.14758551, 0.71771334],
+        [0.15657995, 0.31968694, 0.5237331 ],
+        [0.08722402, 0.82393394, 0.08884205],
+        [0.81811766, 0.03811832, 0.14376401],
+        [0.13887305, 0.03062248, 0.83050447],
+        [0.44799947, 0.31514629, 0.23685424],
+        [0.42634457, 0.25005179, 0.32360364],
+        [0.41872874, 0.15005459, 0.43121667],
+        [0.36605   , 0.26067997, 0.37327004],
+        [0.38861717, 0.46752657, 0.14385626],
+        [0.81362141, 0.10810991, 0.07826868],
+        [0.66945685, 0.10447555, 0.2260676 ],
+        [0.29082898, 0.26732746, 0.44184356],
+        [0.28325089, 0.55597618, 0.16077293]]),
+ &#39;pk0&#39;: array([[0.14716973, 0.33066942, 0.52216085],
+        [0.6236124 , 0.33471458, 0.04167301],
+        [0.34365961, 0.23123918, 0.42510121],
+        [0.71334724, 0.06543533, 0.22121742]]),
+ &#39;A1_cat&#39;: {&#39;cat_control&#39;: array([ 0.37500106, -0.88596277])},
+ &#39;A2_cat&#39;: {&#39;cat_control&#39;: array([0.12246111, 0.60852562])},
+ &#39;S1_cat&#39;: {&#39;cat_control&#39;: array([0.00785542, 0.00410917])},
+ &#39;S2_cat&#39;: {&#39;cat_control&#39;: array([0.00749964, 0.00787043])},
+ &#39;A1_cts&#39;: {&#39;cts_control&#39;: array([-0.14213511, -0.14125649, -0.30366185])},
+ &#39;A2_cts&#39;: {&#39;cts_control&#39;: array([-0.14213511, -0.14125649, -0.30366185])},
+ &#39;S1_cts&#39;: {&#39;cts_control&#39;: array([0.00774112, 0.00157575, 0.00477038])},
+ &#39;S2_cts&#39;: {&#39;cts_control&#39;: array([0.00774112, 0.00157575, 0.00477038])}}
+</pre></div></div>
+</div>
+</section>
+<section id="id2">
+<h2>Initialize and run BLMEstimator<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h2>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Initialize BLM estimator</span>
+<span class="n">blm_fit</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BLMEstimator</span><span class="p">(</span><span class="n">blm_params</span><span class="p">)</span>
+<span class="c1"># Fit BLM estimator</span>
+<span class="n">blm_fit</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">jdata</span><span class="o">=</span><span class="n">jdata</span><span class="p">,</span> <span class="n">sdata</span><span class="o">=</span><span class="n">sdata</span><span class="p">,</span> <span class="n">n_init</span><span class="o">=</span><span class="mi">80</span><span class="p">,</span> <span class="n">n_best</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">ncore</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<span class="c1"># Store best model</span>
+<span class="n">blm_model</span> <span class="o">=</span> <span class="n">blm_fit</span><span class="o">.</span><span class="n">model</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="id3">
+<h2>Check that log-likelihoods are monotonic<a class="headerlink" href="#id3" title="Permalink to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">liks1</span> <span class="o">=</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">liks1</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Log-likelihoods monotonic (movers):&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">liks1</span><span class="p">))</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="n">x_axis</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">liks1</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_axis</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">liks1</span><span class="p">),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;liks1&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_axis</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">liks1</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Iteration&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Change in log-likelihood&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Log-likelihoods monotonic (movers): True
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Text(0, 0.5, &#39;Change in log-likelihood&#39;)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_46_2.png" src="../_images/notebooks_blm_example_46_2.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">liks0</span> <span class="o">=</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">liks0</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Log-likelihoods monotonic (stayers):&#39;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">liks0</span><span class="p">))</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+
+<span class="n">x_axis</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">liks0</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_axis</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">liks0</span><span class="p">),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;liks0&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_axis</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">liks0</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Iteration&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Change in log-likelihood&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Log-likelihoods monotonic (stayers): True
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Text(0, 0.5, &#39;Change in log-likelihood&#39;)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_47_2.png" src="../_images/notebooks_blm_example_47_2.png" />
+</div>
+</div>
+</section>
+<section id="id4">
+<h2>Now we can investigate the results<a class="headerlink" href="#id4" title="Permalink to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Plot likelihood vs. connectedness</span>
+<span class="n">blm_fit</span><span class="o">.</span><span class="n">plot_liks_connectedness</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_49_0.png" src="../_images/notebooks_blm_example_49_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">blm_fit</span><span class="o">.</span><span class="n">plot_log_earnings</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_50_0.png" src="../_images/notebooks_blm_example_50_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[29]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">blm_fit</span><span class="o">.</span><span class="n">plot_type_proportions</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_51_0.png" src="../_images/notebooks_blm_example_51_0.png" />
+</div>
+</div>
+</section>
+<section id="id5">
+<h2>Finally, we can compare estimates to the truth<a class="headerlink" href="#id5" title="Permalink to this heading"></a></h2>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;A1&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">A1</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;A1&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;A2&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">A2</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;A2&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;S1&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">S1</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;S1&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;S2&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">S2</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;S2&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;A1_cat&#39;</span><span class="p">][</span><span class="s1">&#39;cat_control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">A1_cat</span><span class="p">[</span><span class="s1">&#39;cat_control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;A1_cat&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;A2_cat&#39;</span><span class="p">][</span><span class="s1">&#39;cat_control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">A2_cat</span><span class="p">[</span><span class="s1">&#39;cat_control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;A2_cat&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;S1_cat&#39;</span><span class="p">][</span><span class="s1">&#39;cat_control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">S1_cat</span><span class="p">[</span><span class="s1">&#39;cat_control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;S1_cat&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;S2_cat&#39;</span><span class="p">][</span><span class="s1">&#39;cat_control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">S2_cat</span><span class="p">[</span><span class="s1">&#39;cat_control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;S2_cat&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;A1_cts&#39;</span><span class="p">][</span><span class="s1">&#39;cts_control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">A1_cts</span><span class="p">[</span><span class="s1">&#39;cts_control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;A1_cts&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;A2_cts&#39;</span><span class="p">][</span><span class="s1">&#39;cts_control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">A2_cts</span><span class="p">[</span><span class="s1">&#39;cts_control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;A2_cts&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;S1_cts&#39;</span><span class="p">][</span><span class="s1">&#39;cts_control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">S1_cts</span><span class="p">[</span><span class="s1">&#39;cts_control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;S1_cts&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;S2_cts&#39;</span><span class="p">][</span><span class="s1">&#39;cts_control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">S2_cts</span><span class="p">[</span><span class="s1">&#39;cts_control&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;S2_cts&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;pk1&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">pk1</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;pk1&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;pk0&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">pk0</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;pk0&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_53_0.png" src="../_images/notebooks_blm_example_53_0.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_53_1.png" src="../_images/notebooks_blm_example_53_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_53_2.png" src="../_images/notebooks_blm_example_53_2.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_53_3.png" src="../_images/notebooks_blm_example_53_3.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_53_4.png" src="../_images/notebooks_blm_example_53_4.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_53_5.png" src="../_images/notebooks_blm_example_53_5.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_53_6.png" src="../_images/notebooks_blm_example_53_6.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_53_7.png" src="../_images/notebooks_blm_example_53_7.png" />
+</div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title fa fa-exclamation-circle">Warning</p>
+<p>The parameters are identified only up to a constant intercept.</p>
+<p>Because of this, to maintain consistency between estimations, PyTwoWay automatically normalizes worker-firm types to have effect 0, depending on the control variables used (normalization only occurs with categorical control variables - for a stationary control variable, only the first period is normalized (if it is non-stationary, both periods are normalized); for a control variable that does not interact with worker types, only the lowest worker type is normalized (if it does interact with
+worker types, all worker types are normalized)).</p>
+<p>If we take the sum over the estimators we see the model performs well.</p>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[31]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1">## First period ##</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;A1&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;A1_cat&#39;</span><span class="p">][</span><span class="s1">&#39;cat_control&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+    <span class="p">(</span><span class="n">blm_model</span><span class="o">.</span><span class="n">A1</span> <span class="o">+</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">A1_cat</span><span class="p">[</span><span class="s1">&#39;cat_control&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+    <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;A1 + A1_cat[0]&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;A1&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;A1_cat&#39;</span><span class="p">][</span><span class="s1">&#39;cat_control&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+    <span class="p">(</span><span class="n">blm_model</span><span class="o">.</span><span class="n">A1</span> <span class="o">+</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">A1_cat</span><span class="p">[</span><span class="s1">&#39;cat_control&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+    <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;A1 + A1_cat[1]&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;S1&#39;</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;S1_cat&#39;</span><span class="p">][</span><span class="s1">&#39;cat_control&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()),</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">blm_model</span><span class="o">.</span><span class="n">S1</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">S1_cat</span><span class="p">[</span><span class="s1">&#39;cat_control&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()),</span>
+    <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;sqrt(S1^2 + S1_cat[0]^2)&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;S1&#39;</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;S1_cat&#39;</span><span class="p">][</span><span class="s1">&#39;cat_control&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()),</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">blm_model</span><span class="o">.</span><span class="n">S1</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">S1_cat</span><span class="p">[</span><span class="s1">&#39;cat_control&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()),</span>
+    <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;sqrt(S1^2 + S1_cat[1]^2)&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="c1">## Second period ##</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;A2&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;A2_cat&#39;</span><span class="p">][</span><span class="s1">&#39;cat_control&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+    <span class="p">(</span><span class="n">blm_model</span><span class="o">.</span><span class="n">A2</span> <span class="o">+</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">A2_cat</span><span class="p">[</span><span class="s1">&#39;cat_control&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+    <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;A2 + A2_cat[0]&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="p">(</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;A2&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;A2_cat&#39;</span><span class="p">][</span><span class="s1">&#39;cat_control&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+    <span class="p">(</span><span class="n">blm_model</span><span class="o">.</span><span class="n">A2</span> <span class="o">+</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">A2_cat</span><span class="p">[</span><span class="s1">&#39;cat_control&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span>
+    <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;A2 + A2_cat[1]&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;S2&#39;</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;S2_cat&#39;</span><span class="p">][</span><span class="s1">&#39;cat_control&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()),</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">blm_model</span><span class="o">.</span><span class="n">S2</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">S2_cat</span><span class="p">[</span><span class="s1">&#39;cat_control&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()),</span>
+    <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;sqrt(S2^2 + S2_cat[0]^2)&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;S2&#39;</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">sim_params</span><span class="p">[</span><span class="s1">&#39;S2_cat&#39;</span><span class="p">][</span><span class="s1">&#39;cat_control&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()),</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="n">blm_model</span><span class="o">.</span><span class="n">S2</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">blm_model</span><span class="o">.</span><span class="n">S2_cat</span><span class="p">[</span><span class="s1">&#39;cat_control&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()),</span>
+    <span class="s1">&#39;.&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;sqrt(S2^2 + S2_cat[1]^2)&#39;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;green&#39;</span>
+<span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Truth&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;Estimate&#39;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_55_0.png" src="../_images/notebooks_blm_example_55_0.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_55_1.png" src="../_images/notebooks_blm_example_55_1.png" />
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_55_2.png" src="../_images/notebooks_blm_example_55_2.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_blm_example_55_3.png" src="../_images/notebooks_blm_example_55_3.png" />
+</div>
+</div>
+</section>
+<section id="Variance-decomposition">
+<h2>Variance decomposition<a class="headerlink" href="#Variance-decomposition" title="Permalink to this heading"></a></h2>
+<p>The package contains the class <code class="docutils literal notranslate"><span class="pre">BLMVarianceDecomposition</span></code>, which allows for the estimation of the decomposition of the variance components of the BLM estimator.</p>
+<p>In this example, we use the same simulated data and estimation parameters as in the previous example.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Initialize BLM variance decomposition estimator</span>
+<span class="n">blm_fit</span> <span class="o">=</span> <span class="n">tw</span><span class="o">.</span><span class="n">BLMVarianceDecomposition</span><span class="p">(</span><span class="n">blm_params</span><span class="p">)</span>
+<span class="c1"># Fit BLM estimator</span>
+<span class="n">blm_fit</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+    <span class="n">jdata</span><span class="o">=</span><span class="n">jdata</span><span class="p">,</span> <span class="n">sdata</span><span class="o">=</span><span class="n">sdata</span><span class="p">,</span>
+    <span class="n">blm_model</span><span class="o">=</span><span class="n">blm_model</span><span class="p">,</span>
+    <span class="n">n_samples</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+    <span class="n">Q_var</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">tw</span><span class="o">.</span><span class="n">Q</span><span class="o">.</span><span class="n">VarCovariate</span><span class="p">(</span><span class="s1">&#39;psi&#39;</span><span class="p">),</span>
+        <span class="n">tw</span><span class="o">.</span><span class="n">Q</span><span class="o">.</span><span class="n">VarCovariate</span><span class="p">(</span><span class="s1">&#39;cat_control&#39;</span><span class="p">),</span>
+        <span class="n">tw</span><span class="o">.</span><span class="n">Q</span><span class="o">.</span><span class="n">VarCovariate</span><span class="p">(</span><span class="s1">&#39;cts_control&#39;</span><span class="p">)</span>
+    <span class="p">],</span>
+    <span class="n">ncore</span><span class="o">=</span><span class="mi">1</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<section id="Investigate-the-results">
+<h3>Investigate the results<a class="headerlink" href="#Investigate-the-results" title="Permalink to this heading"></a></h3>
+<p>Results correspond to:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">y</span></code>: income (outcome) column</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">eps</span></code>: residual</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">psi</span></code>: firm effects</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">alpha</span></code>: worker effects</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Note</p>
+<p>Results from all estimations are stored in the class attribute dictionary <code class="docutils literal notranslate"><span class="pre">.res</span></code>. We take the mean, but storing all results gives the option to estimate different sample statistics.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title fa fa-exclamation-circle">Note</p>
+<p>The particular variance that is estimated is controlled through the parameter <code class="docutils literal notranslate"><span class="pre">'Q_var'</span></code> and the covariance that is estimated is controlled through the parameter <code class="docutils literal notranslate"><span class="pre">'Q_cov'</span></code>.</p>
+<p>By default, the variance is <code class="docutils literal notranslate"><span class="pre">var(psi)</span></code> and the covariance is <code class="docutils literal notranslate"><span class="pre">cov(psi,</span> <span class="pre">alpha)</span></code>. The default estimates don’t include <code class="docutils literal notranslate"><span class="pre">var(alpha)</span></code>, but if you don’t include controls, <code class="docutils literal notranslate"><span class="pre">var(alpha)</span></code> can be computed as the residual from <code class="docutils literal notranslate"><span class="pre">var(y)</span> <span class="pre">=</span> <span class="pre">var(psi)</span> <span class="pre">+</span> <span class="pre">var(alpha)</span> <span class="pre">+</span> <span class="pre">2</span> <span class="pre">*</span> <span class="pre">cov(psi,</span> <span class="pre">alpha)</span> <span class="pre">+</span> <span class="pre">var(eps)</span></code>.</p>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">blm_fit</span><span class="o">.</span><span class="n">res</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">k</span><span class="si">!r}</span><span class="s1">: </span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&#39;var(y)&#39;: 4.1784778224072054
+&#39;var(eps)&#39;: 3.862767039874967
+&#39;var(cat_control)&#39;: 0.17504851379038694
+&#39;var(cts_control)&#39;: 0.03529768004099764
+&#39;var(psi)&#39;: 0.052474105201016495
+&#39;cov(psi, alpha)&#39;: -0.0014679055738114212
+</pre></div></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="cre_example.html" class="btn btn-neutral float-left" title="CRE example" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="sorkin_example.html" class="btn btn-neutral float-right" title="Sorkin example" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Thibaut Lamadon.
+      <span class="lastupdated">Last updated on Sep 15, 2022.
+      </span></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

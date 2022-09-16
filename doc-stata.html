@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Using from Stata &mdash; PyTwoWay 0.3.21 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> PyTwoWay
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-python.html">From Python</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Notebook examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/fe_example.html">FE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/cre_example.html">CRE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/blm_example.html">BLM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/sorkin_example.html">Sorkin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/borovickovashimer_example.html">Borovickova-Shimer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/attrition_example.html">Attrition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/chk_example.html">CHK Event Study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Under the hood</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="internal.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-feestimator.html">FEEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-fecontrolestimator.html">FEControlEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-attrition.html">Attrition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmmodel.html">BLMModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmestimator.html">BLMEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmbootstrap.html">BLMBootstrap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmvariancedecomposition.html">BLMVarianceDecomposition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-interactedblmmodel.html">InteractedBLMModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-sorkinestimator.html">SorkinEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-bsestimator.html">BSEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-montecarlo.html">MonteCarlo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-Q.html">Q</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-attrition_utils.html">Attrition Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-diagnostics.html">Diagnostics</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PyTwoWay</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Using from Stata</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/doc-stata.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="using-from-stata">
+<h1>Using from Stata<a class="headerlink" href="#using-from-stata" title="Permalink to this heading"></a></h1>
+<p>To install via Stata, from the Stata command line run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ssc</span> <span class="n">install</span> <span class="n">statatwoway</span>
+</pre></div>
+</div>
+<p>The most efficient way to run StataTwoWay is through Python. Please read <a class="reference internal" href="doc-python.html"><span class="doc">From Python</span></a> on how to install PyTwoWay for Python. A version that does not depend on Python is currently in development.</p>
+<p>Sample data: <a class="reference download internal" download="" href="_downloads/8585cbc63df53436d69d3cb66b5ad2c6/twoway_sample_data.csv"><code class="xref download docutils literal notranslate"><span class="pre">download</span></code></a></p>
+<p>To run in Stata:</p>
+<div class="highlight-stata notranslate"><div class="highlight"><pre><span></span>statatwoway fe cre, config(<span class="s">&quot;config.txt&quot;</span>) env(<span class="s">&quot;stata-env&quot;</span>)
+</pre></div>
+</div>
+<p>To see all available results, type:</p>
+<div class="highlight-stata notranslate"><div class="highlight"><pre><span></span><span class="k">return list</span>
+</pre></div>
+</div>
+<p>The estimators you can run are FE, CRE, or both. Additionally, while a config file is required, an environment is not. However, setting up an environment is recommended. Read about setting up environments in Anaconda <a class="reference external" href="https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html">here</a>.</p>
+<p>Use the following example config file as a template. There is no need to include <cite>data</cite> or <cite>filetype</cite> options. StataTwoWay generates a temporary datafile and automatically inputs the name of the generated dataset and filetype <cite>dta</cite>. For help about all the options that can be included in your config file, from the command line run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pytw</span> <span class="o">-</span><span class="n">h</span>
+</pre></div>
+</div>
+<p>Example config.txt:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">col_dict</span> <span class="o">=</span> <span class="s2">&quot;{&#39;i&#39;: &#39;your_workerid_col&#39;, &#39;j&#39;: &#39;your_firmid_col&#39;, &#39;y&#39;: &#39;your_compensation_col&#39;, &#39;t&#39;: &#39;your_year_col&#39;}&quot;</span>
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<dl class="simple">
+<dt>Your data must include the following columns:</dt><dd><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">i</span></code>: the worker identifier</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">j</span></code>: the firm identifier</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">y</span></code>: the compensation variable</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">t</span></code>: the time</p></li>
+</ul>
+</dd>
+</dl>
+<table class="colwidths-given docutils align-center" id="id1">
+<caption><span class="caption-text">Example data</span><a class="headerlink" href="#id1" title="Permalink to this table"></a></caption>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>i</p></th>
+<th class="head"><p>j</p></th>
+<th class="head"><p>y</p></th>
+<th class="head"><p>t</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1</p></td>
+<td><p>1</p></td>
+<td><p>1000</p></td>
+<td><p>2019</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>2</p></td>
+<td><p>1500</p></td>
+<td><p>2020</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>3</p></td>
+<td><p>500</p></td>
+<td><p>2019</p></td>
+</tr>
+<tr class="row-odd"><td><p>2</p></td>
+<td><p>3</p></td>
+<td><p>550</p></td>
+<td><p>2020</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Thibaut Lamadon.
+      <span class="lastupdated">Last updated on Sep 15, 2022.
+      </span></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

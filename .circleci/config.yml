@@ -1,0 +1,71 @@
+# Source: https://circleci.com/developer/orbs/orb/circleci/python
+# Check out the sections work-with-poetry and work-with-pip
+
+version: 2.1
+
+orbs:
+  python: circleci/python@2.0.3
+
+jobs:
+  # Building and testing the project (this can be any name you choose)
+  build-and-test:
+    # # Our environment, Python 3.10.6
+    # docker:
+    #   - image: cimg/python:3.10.6
+
+    # Run with Python (instead of using docker)
+    executor: python/default
+
+    # Allow multiple tests to run in parallel (max 4 for free plans)
+    parallelism: 4
+
+    # Allocate more memory (source: https://circleci.com/docs/configuration-reference#resourceclass)
+    resource_class: medium
+
+    # The steps for our build-and-test
+    steps:
+      # Get the code
+      - checkout
+
+      # Install dependencies and cache them for future tests
+      ## Poetry (way too slow) ##
+      # - python/install-packages:
+      #     pkg-manager: poetry
+      ## Pip ##
+      - python/install-packages:
+          pkg-manager: pip
+      # Uncomment the following lines if development requires additional packages
+      # - python/install-packages:
+      #     pip-dependency-file: dev-requirements.txt
+      #     pkg-manager: pip
+      - python/install-packages:
+          args: pytest
+          pkg-manager: pip
+          pypi-cache: false
+
+      # Run tests
+      - run:
+          name: Run PyTest
+          no_output_timeout: 20m
+          # command: |
+          #   poetry run python -m pytest
+          # First line is to split tests by timing, then stores test-files for each parallel run in /tmp/tests-to-run (source: https://www.browserstack.com/guide/parallel-testing-with-circleci)
+          command: |
+            circleci tests glob "tests/*.py" | circleci tests split --split-by=timings > /tmp/tests-to-run
+            python -m pytest $(cat /tmp/tests-to-run)
+
+      # Store test timing results so parallelism splits tests more efficiently
+      - store_test_results:
+          path: test-results
+
+# In the workflows section, we specify when we want to run the jobs defined
+workflows:
+  version: 2
+
+  # The build-and-test we will run EVERYTIME a piece of code changes
+  build-and-test-workflow:
+    jobs:
+        - build-and-test:
+            filters:
+              branches:
+                only: master

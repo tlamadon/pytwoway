@@ -1,0 +1,748 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# FE example\n",
+    "\n",
+    "<div class=\"alert alert-info\">\n",
+    "\n",
+    "Note\n",
+    "\n",
+    "`PyTwoWay` includes two classes for estimating the AKM model and its bias corrections: `FEEstimator` to estimate without controls, and `FEControlEstimator` to estimate with controls.\n",
+    "\n",
+    "`FEEstimator` takes advantage of the structure of the AKM model without controls to optimize estimation speed, and is considerably faster than `FEControlEstimator` for this. However, the cost of this optimiziation is that the `FEEstimator` class is unable to estimate the model with control variables.\n",
+    "\n",
+    "</div>\n",
+    "\n",
+    "<div class=\"alert alert-info\">\n",
+    "\n",
+    "Hint\n",
+    "\n",
+    "If you want to estimate a one-way fixed effect model, you can fill in the `i` column with all `1`s, and the estimated `alpha_i` will be the intercept.\n",
+    "\n",
+    "</div>\n",
+    "\n",
+    "<div class=\"alert alert-warning\">\n",
+    "\n",
+    "Warning\n",
+    "\n",
+    "If you are using a large dataset (100 million observations+), it is recommended to switch your solver to `AMG` or switch to either the `Jacobi` or `V-Cycle` preconditioner. However, regardless of the size of your dataset, it is a good idea to try out the different solvers and preconditioners to see which works best for your particular data.\n",
+    "\n",
+    "</div>"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Add PyTwoWay to system path (do not run this)\n",
+    "# import sys\n",
+    "# sys.path.append('../../..')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Import the PyTwoWay package\n",
+    "\n",
+    "Make sure to install it using `pip install pytwoway`."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2021-01-15T23:38:19.123052Z",
+     "start_time": "2021-01-15T23:38:18.565950Z"
+    }
+   },
+   "outputs": [],
+   "source": [
+    "import pandas as pd\n",
+    "import pytwoway as tw\n",
+    "import bipartitepandas as bpd"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## FE WITHOUT CONTROLS\n",
+    "\n",
+    "## First, check out parameter options\n",
+    "\n",
+    "Do this by running:\n",
+    "\n",
+    "- FE - `tw.fe_params().describe_all()`\n",
+    "\n",
+    "- Cleaning - `bpd.clean_params().describe_all()`\n",
+    "\n",
+    "- Simulating - `bpd.sim_params().describe_all()`\n",
+    "\n",
+    "Alternatively, run `x_params().keys()` to view all the keys for a parameter dictionary, then `x_params().describe(key)` to get a description for a single key."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Second, set parameter choices\n",
+    "\n",
+    "<div class=\"alert alert-info\">\n",
+    "\n",
+    "Hint\n",
+    "\n",
+    "If you just want to retrieve the firm and worker effects from the OLS estimation, set `'feonly': True` and `'attach_fe_estimates': True` in your FE parameters dictionary.\n",
+    "\n",
+    "If you want the OLS estimates to be linked to the original firm and worker ids, when initializing your BipartitePandas DataFrame set `track_id_changes=True`, then run `df = bdf.original_ids()` after fitting the estimator to extract a Pandas DataFrame with the original ids attached.\n",
+    "\n",
+    "</div>\n",
+    "\n",
+    "<div class=\"alert alert-info\">\n",
+    "\n",
+    "Hint\n",
+    "\n",
+    "If you want to retrieve the vectors of the firm and worker effects from the OLS estimation, the estimated `psi` vector (firm effects) can be accessed via the class attribute `.psi_hat`, and the estimated `alpha` vector (worker effects) can be accessed via the class attribute `.alpha_hat`. Because the first firm is normalized to `0`, you will need to append a `0` to the beginning of the `psi` vector for it to include all firm effects.\n",
+    "\n",
+    "</div>\n",
+    "\n",
+    "<div class=\"alert alert-info\">\n",
+    "\n",
+    "Note\n",
+    "\n",
+    "We set `copy=False` in `clean_params` to avoid unnecessary copies (although this may modify the original dataframe).\n",
+    "\n",
+    "</div>"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# FE\n",
+    "fe_params = tw.fe_params(\n",
+    "    {\n",
+    "        'he': True,\n",
+    "        'ncore': 8\n",
+    "    }\n",
+    ")\n",
+    "# Cleaning\n",
+    "clean_params = bpd.clean_params(\n",
+    "    {\n",
+    "        'connectedness': 'leave_out_spell',\n",
+    "        'collapse_at_connectedness_measure': True,\n",
+    "        'drop_single_stayers': True,\n",
+    "        'drop_returns': 'returners',\n",
+    "        'copy': False\n",
+    "    }\n",
+    ")\n",
+    "# Simulating\n",
+    "sim_params = bpd.sim_params(\n",
+    "    {\n",
+    "        'n_workers': 1000,\n",
+    "        'firm_size': 5,\n",
+    "        'alpha_sig': 2, 'w_sig': 2,\n",
+    "        'c_sort': 1.5, 'c_netw': 1.5,\n",
+    "        'p_move': 0.1\n",
+    "    }\n",
+    ")"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Third, extract data (we simulate for the example)\n",
+    "\n",
+    "`BipartitePandas` contains the class `SimBipartite` which we use here to simulate a bipartite network. If you have your own data, you can import it during this step. Load it as a `Pandas DataFrame` and then convert it into a `BipartitePandas DataFrame` in the next step."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "sim_data = bpd.SimBipartite(sim_params).simulate()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Fourth, prepare data\n",
+    "\n",
+    "This is exactly how you should prepare real data prior to running the FE estimator.\n",
+    "\n",
+    "- First, we convert the data into a `BipartitePandas DataFrame`\n",
+    "\n",
+    "- Second, we clean the data (e.g. drop NaN observations, make sure firm and worker ids are contiguous, construct the leave-one-out connected set, etc.). This also collapses the data at the worker-firm spell level (taking mean wage over the spell), because we set `collapse_at_connectedness_measure=True`.\n",
+    "\n",
+    "Further details on `BipartitePandas` can be found in the package documentation, available [here](https://tlamadon.github.io/bipartitepandas/).\n",
+    "\n",
+    "<div class=\"alert alert-info\">\n",
+    "\n",
+    "Note\n",
+    "\n",
+    "Since leave-one-out connectedness is not maintained after data is collapsed at the spell/match level, if you set `collapse_at_connectedness_measure=False`, then data must be cleaned WITHOUT taking the leave-one-out set, collapsed at the spell/match level, and then finally the largest leave-one-out connected set can be computed.\n",
+    "\n",
+    "</div>"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "checking required columns and datatypes\n",
+      "sorting rows\n",
+      "dropping NaN observations\n",
+      "generating 'm' column\n",
+      "keeping highest paying job for i-t (worker-year) duplicates (how='max')\n",
+      "dropping workers who leave a firm then return to it (how='returners')\n",
+      "making 'i' ids contiguous\n",
+      "making 'j' ids contiguous\n",
+      "computing largest connected set (how=None)\n",
+      "sorting columns\n",
+      "resetting index\n",
+      "checking required columns and datatypes\n",
+      "sorting rows\n",
+      "generating 'm' column\n",
+      "computing largest connected set (how='leave_out_observation')\n",
+      "making 'i' ids contiguous\n",
+      "making 'j' ids contiguous\n",
+      "sorting columns\n",
+      "resetting index\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Convert into BipartitePandas DataFrame\n",
+    "bdf = bpd.BipartiteDataFrame(sim_data)\n",
+    "# Clean and collapse\n",
+    "bdf = bdf.clean(clean_params)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Fifth, initialize and run the estimator"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Initialize FE estimator\n",
+    "fe_estimator = tw.FEEstimator(bdf, fe_params)\n",
+    "# Fit FE estimator\n",
+    "fe_estimator.fit()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Finally, investigate the results\n",
+    "\n",
+    "Results correspond to:\n",
+    "\n",
+    "- `y`: income (outcome) column\n",
+    "- `eps`: residual\n",
+    "- `psi`: firm effects\n",
+    "- `alpha`: worker effects\n",
+    "- `fe`: plug-in (biased) estimate\n",
+    "- `ho`: homoskedastic-corrected estimate\n",
+    "- `he`: heteroskedastic-corrected estimate\n",
+    "\n",
+    "<div class=\"alert alert-warning\">\n",
+    "\n",
+    "Warning\n",
+    "\n",
+    "If you notice variability between estimations for the HO- and HE-corrected results, this is because there are approximations in the estimation that depend on randomization. Increasing the number of draws for the approximations (`ndraw_trace_sigma_2` and `ndraw_trace_ho` for the HO correction, and `ndraw_trace_he`, and `ndraw_lev_he` for the HE correction) will increase the stability of the results between estimations.\n",
+    "\n",
+    "</div>\n",
+    "\n",
+    "<div class=\"alert alert-info\">\n",
+    "\n",
+    "Note\n",
+    "\n",
+    "The particular variance that is estimated is controlled through the parameter `'Q_var'` and the covariance that is estimated is controlled through the parameter `'Q_cov'`.\n",
+    "\n",
+    "By default, the variance is `var(psi)` and the covariance is `cov(psi, alpha)`. The default estimates don't include `var(alpha)`, but if you don't include controls, `var(alpha)` can be computed as the residual from `var(y) = var(psi) + var(alpha) + 2 * cov(psi, alpha) + var(eps)`.\n",
+    "\n",
+    "</div>"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {
+    "ExecuteTime": {
+     "end_time": "2020-12-22T21:42:51.498849Z",
+     "start_time": "2020-12-22T21:42:51.489723Z"
+    },
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "{'var(y)': 6.52609861225365,\n",
+       " 'var(eps)_fe': 0.29744517651253743,\n",
+       " 'var(eps)_ho': 3.606426490650048,\n",
+       " 'var(eps)_he': 3.494319592157181,\n",
+       " 'var(psi)_fe': 2.3121637422731225,\n",
+       " 'var(psi)_ho': 0.6031785843717348,\n",
+       " 'var(psi)_he': 0.8520073462916467,\n",
+       " 'cov(psi, alpha)_fe': -0.24878106304549624,\n",
+       " 'cov(psi, alpha)_ho': 1.3194284319766338,\n",
+       " 'cov(psi, alpha)_he': 0.9519246905053926}"
+      ]
+     },
+     "execution_count": 7,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "fe_estimator.summary"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## FE WITH CONTROLS\n",
+    "\n",
+    "<div class=\"alert alert-info\">\n",
+    "\n",
+    "Hint\n",
+    "\n",
+    "Check out how to add custom columns to your BipartitePandas DataFrame [here](https://tlamadon.github.io/bipartitepandas/notebooks/custom_columns.html#)! If you don't add custom columns properly, they may not be handled during data cleaning and estimation how you want and/or expect!\n",
+    "\n",
+    "</div>\n",
+    "\n",
+    "## First, check out parameter options\n",
+    "\n",
+    "Do this by running:\n",
+    "\n",
+    "- FE with controls - `tw.fecontrol_params().describe_all()`\n",
+    "\n",
+    "- Cleaning - `bpd.clean_params().describe_all()`\n",
+    "\n",
+    "- Simulating - `tw.sim_blm_params().describe_all()`, `tw.sim_categorical_control_params().describe_all()`, and `tw.sim_continuous_control_params().describe_all()`\n",
+    "\n",
+    "Alternatively, run `x_params().keys()` to view all the keys for a parameter dictionary, then `x_params().describe(key)` to get a description for a single key."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Second, set parameter choices\n",
+    "\n",
+    "<div class=\"alert alert-info\">\n",
+    "\n",
+    "Hint\n",
+    "\n",
+    "If you just want to retrieve the firm and worker effects from the OLS estimation, set `'feonly': True` and `'attach_fe_estimates': True` in your FE parameters dictionary.\n",
+    "\n",
+    "If you want the OLS estimates to be linked to the original firm and worker ids, when initializing your BipartitePandas DataFrame set `track_id_changes=True`, then run `df = bdf.original_ids()` after fitting the estimator to extract a Pandas DataFrame with the original ids attached.\n",
+    "\n",
+    "</div>\n",
+    "\n",
+    "<div class=\"alert alert-info\">\n",
+    "\n",
+    "Hint\n",
+    "\n",
+    "If you want to retrieve the estimated parameter vectors from the OLS estimation, each covariate's parameter vector can be accessed via the class attribute `.gamma_hat_dict`. For categorical variables, the normalized type will automatically be included in this vector (with value 0).\n",
+    "\n",
+    "</div>\n",
+    "\n",
+    "<div class=\"alert alert-info\">\n",
+    "\n",
+    "Note\n",
+    "\n",
+    "We control which variances and covariances to estimate through the parameters `Q_var` and `Q_cov`. Multiple variances/covariances can be estimated by setting `Q_var` and/or `Q_cov` to be a list of variances/covariances, and the variances/covariances of sums of covariates can be estimated by inputting a list of the covariates to sum.\n",
+    "\n",
+    "</div>\n",
+    "\n",
+    "<div class=\"alert alert-info\">\n",
+    "\n",
+    "Note\n",
+    "\n",
+    "We set `copy=False` in `clean_params` to avoid unnecessary copies (although this may modify the original dataframe).\n",
+    "\n",
+    "</div>"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# FE\n",
+    "fecontrol_params = tw.fecontrol_params(\n",
+    "    {\n",
+    "        'he': True,\n",
+    "        'categorical_controls': 'cat_control',\n",
+    "        'continuous_controls': 'cts_control',\n",
+    "        'Q_var': [\n",
+    "            tw.Q.VarCovariate('psi'),\n",
+    "            tw.Q.VarCovariate('alpha'),\n",
+    "            tw.Q.VarCovariate('cat_control'),\n",
+    "            tw.Q.VarCovariate('cts_control'),\n",
+    "            tw.Q.VarCovariate(['psi', 'alpha']),\n",
+    "            tw.Q.VarCovariate(['cat_control', 'cts_control'])\n",
+    "                 ],\n",
+    "        'Q_cov': [\n",
+    "            tw.Q.CovCovariate('psi', 'alpha'),\n",
+    "            tw.Q.CovCovariate('cat_control', 'cts_control'),\n",
+    "            tw.Q.CovCovariate(['psi', 'alpha'], ['cat_control', 'cts_control'])\n",
+    "        ],\n",
+    "        'ncore': 8\n",
+    "    }\n",
+    ")\n",
+    "# Cleaning\n",
+    "clean_params = bpd.clean_params(\n",
+    "    {\n",
+    "        'connectedness': 'leave_out_spell',\n",
+    "        'collapse_at_connectedness_measure': True,\n",
+    "        'drop_single_stayers': True,\n",
+    "        'drop_returns': 'returners',\n",
+    "        'copy': False\n",
+    "    }\n",
+    ")\n",
+    "# Simulating\n",
+    "nl = 3\n",
+    "nk = 4\n",
+    "n_control = 2\n",
+    "sim_cat_params = tw.sim_categorical_control_params({\n",
+    "    'n': n_control,\n",
+    "    'worker_type_interaction': False,\n",
+    "    'stationary_A': True, 'stationary_S': True\n",
+    "})\n",
+    "sim_cts_params = tw.sim_continuous_control_params({\n",
+    "    'worker_type_interaction': False,\n",
+    "    'stationary_A': True, 'stationary_S': True\n",
+    "})\n",
+    "sim_blm_params = tw.sim_blm_params({\n",
+    "    'nl': nl,\n",
+    "    'nk': nk,\n",
+    "    'categorical_controls': {\n",
+    "        'cat_control': sim_cat_params\n",
+    "    },\n",
+    "    'continuous_controls': {\n",
+    "        'cts_control': sim_cts_params\n",
+    "    },\n",
+    "    'stationary_A': True, 'stationary_S': True,\n",
+    "    'linear_additive': True\n",
+    "})"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Third, extract data (we simulate for the example)\n",
+    "\n",
+    "`PyTwoWay` contains the class `SimBLM` which we use here to simulate a bipartite network with controls. If you have your own data, you can import it during this step. Load it as a `Pandas DataFrame` and then convert it into a `BipartitePandas DataFrame` in the next step."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "blm_true = tw.SimBLM(sim_blm_params)\n",
+    "sim_data = blm_true.simulate(return_parameters=False)\n",
+    "jdata, sdata = sim_data['jdata'], sim_data['sdata']\n",
+    "sim_data = pd.concat([jdata, sdata]).rename({'g': 'j', 'j': 'g'}, axis=1, allow_optional=True, allow_required=True)[['i', 'j1', 'j2', 'y1', 'y2', 'cat_control1', 'cat_control2', 'cts_control1', 'cts_control2']].construct_artificial_time(is_sorted=True, copy=False)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Fourth, prepare data\n",
+    "\n",
+    "This is exactly how you should prepare real data prior to running the FE estimator.\n",
+    "\n",
+    "- First, we convert the data into a `BipartitePandas DataFrame`\n",
+    "\n",
+    "- Second, we clean the data (e.g. drop NaN observations, make sure firm and worker ids are contiguous, construct the leave-one-out connected set, etc.). This also collapses the data at the worker-firm spell level (taking mean wage over the spell), because we set `collapse_at_connectedness_measure=True`.\n",
+    "\n",
+    "- Third, we convert the data to long format, since the simulated data is in event study format\n",
+    "\n",
+    "Further details on `BipartitePandas` can be found in the package documentation, available [here](https://tlamadon.github.io/bipartitepandas/).\n",
+    "\n",
+    "<div class=\"alert alert-info\">\n",
+    "\n",
+    "Note\n",
+    "\n",
+    "Since leave-one-out connectedness is not maintained after data is collapsed at the spell/match level, if you set `collapse_at_connectedness_measure=False`, then data must be cleaned WITHOUT taking the leave-one-out set, collapsed at the spell/match level, and then finally the largest leave-one-out connected set can be computed.\n",
+    "\n",
+    "</div>"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "checking required columns and datatypes\n",
+      "converting data to long format\n",
+      "checking required columns and datatypes\n",
+      "sorting rows\n",
+      "dropping NaN observations\n",
+      "generating 'm' column\n",
+      "keeping highest paying job for i-t (worker-year) duplicates (how='max')\n",
+      "dropping workers who leave a firm then return to it (how='returners')\n",
+      "making 'i' ids contiguous\n",
+      "making 'j' ids contiguous\n",
+      "computing largest connected set (how=None)\n",
+      "sorting columns\n",
+      "resetting index\n",
+      "checking required columns and datatypes\n",
+      "sorting rows\n",
+      "generating 'm' column\n",
+      "computing largest connected set (how='leave_out_observation')\n",
+      "making 'i' ids contiguous\n",
+      "sorting columns\n",
+      "resetting index\n",
+      "converting data back to event study format\n"
+     ]
+    }
+   ],
+   "source": [
+    "# Convert into BipartitePandas DataFrame\n",
+    "bdf = bpd.BipartiteDataFrame(sim_data)\n",
+    "# Clean and collapse\n",
+    "bdf = bdf.clean(clean_params)\n",
+    "# Convert to long format\n",
+    "bdf = bdf.to_long(is_sorted=True, copy=False)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Fifth, initialize and run the estimator"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Initialize FE estimator\n",
+    "fe_estimator = tw.FEControlEstimator(bdf, fecontrol_params)\n",
+    "# Fit FE estimator\n",
+    "fe_estimator.fit()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## Finally, investigate the results\n",
+    "\n",
+    "Results correspond to:\n",
+    "\n",
+    "- `y`: income (outcome) column\n",
+    "- `eps`: residual\n",
+    "- `psi`: firm effects\n",
+    "- `alpha`: worker effects\n",
+    "- `cat_control`: categorical control\n",
+    "- `cts_control`: continuous control\n",
+    "- `fe`: plug-in (biased) estimate\n",
+    "- `ho`: homoskedastic-corrected estimate\n",
+    "- `he`: heteroskedastic-corrected estimate\n",
+    "\n",
+    "<div class=\"alert alert-warning\">\n",
+    "\n",
+    "Warning\n",
+    "\n",
+    "If you notice variability between estimations for the HO- and HE-corrected results, this is because there are approximations in the estimation that depend on randomization. Increasing the number of draws for the approximations (`ndraw_trace_sigma_2` and `ndraw_trace_ho` for the HO correction, and `ndraw_trace_he`, and `ndraw_lev_he` for the HE correction) will increase the stability of the results between estimations.\n",
+    "\n",
+    "</div>\n",
+    "\n",
+    "<div class=\"alert alert-info\">\n",
+    "\n",
+    "Note\n",
+    "\n",
+    "The particular variance that is estimated is controlled through the parameter `'Q_var'` and the covariance that is estimated is controlled through the parameter `'Q_cov'`.\n",
+    "\n",
+    "By default, the variance is `var(psi)` and the covariance is `cov(psi, alpha)`. The default estimates don't include `var(alpha)`, but if you don't include controls, `var(alpha)` can be computed as the residual from `var(y) = var(psi) + var(alpha) + 2 * cov(psi, alpha) + var(eps)`.\n",
+    "\n",
+    "</div>"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "{'var(y)': 0.680298596161059,\n",
+       " 'var(eps)_fe': 0.2156307297689422,\n",
+       " 'var(eps)_ho': 0.44231944567988146,\n",
+       " 'var(eps)_he': 0.43588153776248767,\n",
+       " 'var(alpha)_fe': 0.20701243646676126,\n",
+       " 'var(alpha)_ho': -0.018774697829931963,\n",
+       " 'var(alpha)_he': -0.023690618333218116,\n",
+       " 'var(cat_control + cts_control)_fe': 0.32694285092523184,\n",
+       " 'var(cat_control + cts_control)_ho': 0.311843602331667,\n",
+       " 'var(cat_control + cts_control)_he': 0.3265315176982076,\n",
+       " 'var(cat_control)_fe': 0.149689434536445,\n",
+       " 'var(cat_control)_ho': 0.1650575130340637,\n",
+       " 'var(cat_control)_he': 0.11870237720576068,\n",
+       " 'var(cts_control)_fe': 0.19348330565838853,\n",
+       " 'var(cts_control)_ho': 0.1624089944895367,\n",
+       " 'var(cts_control)_he': 0.22477306005469888,\n",
+       " 'var(psi + alpha)_fe': 0.22607769787400603,\n",
+       " 'var(psi + alpha)_ho': -0.005739238232576577,\n",
+       " 'var(psi + alpha)_he': 0.002075155760591446,\n",
+       " 'var(psi)_fe': 0.04872564142089923,\n",
+       " 'var(psi)_ho': 0.04919870321819487,\n",
+       " 'var(psi)_he': 0.045543836373029785,\n",
+       " 'cov(cat_control, cts_control)_fe': -0.00811494463480081,\n",
+       " 'cov(cat_control, cts_control)_ho': -0.00875862700372186,\n",
+       " 'cov(cat_control, cts_control)_he': -0.008041963642879787,\n",
+       " 'cov(psi + alpha, cat_control + cts_control)_fe': -0.04417634129890746,\n",
+       " 'cov(psi + alpha, cat_control + cts_control)_ho': -0.03797455238506746,\n",
+       " 'cov(psi + alpha, cat_control + cts_control)_he': -0.03803269383182242,\n",
+       " 'cov(psi, alpha)_fe': -0.01483019000682723,\n",
+       " 'cov(psi, alpha)_ho': -0.021436896763781826,\n",
+       " 'cov(psi, alpha)_he': -0.009319726497861622}"
+      ]
+     },
+     "execution_count": 12,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "fe_estimator.summary"
+   ]
+  }
+ ],
+ "metadata": {
+  "celltoolbar": "Tags",
+  "hide_input": false,
+  "kernelspec": {
+   "display_name": "Python 3.8.9 64-bit",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.8.9"
+  },
+  "latex_envs": {
+   "LaTeX_envs_menu_present": true,
+   "autoclose": false,
+   "autocomplete": true,
+   "bibliofile": "biblio.bib",
+   "cite_by": "apalike",
+   "current_citInitial": 1,
+   "eqLabelWithNumbers": true,
+   "eqNumInitial": 1,
+   "hotkeys": {
+    "equation": "Ctrl-E",
+    "itemize": "Ctrl-I"
+   },
+   "labels_anchors": false,
+   "latex_user_defs": false,
+   "report_style_numbering": false,
+   "user_envs_cfg": false
+  },
+  "nbsphinx-toctree": {
+   "hidden": true,
+   "maxdepth": 1,
+   "titlesonly": true
+  },
+  "toc": {
+   "base_numbering": 1,
+   "nav_menu": {},
+   "number_sections": true,
+   "sideBar": true,
+   "skip_h1_title": false,
+   "title_cell": "Table of Contents",
+   "title_sidebar": "Contents",
+   "toc_cell": false,
+   "toc_position": {},
+   "toc_section_display": true,
+   "toc_window_display": false
+  },
+  "varInspector": {
+   "cols": {
+    "lenName": 16,
+    "lenType": 16,
+    "lenVar": 40
+   },
+   "kernels_config": {
+    "python": {
+     "delete_cmd_postfix": "",
+     "delete_cmd_prefix": "del ",
+     "library": "var_list.py",
+     "varRefreshCmd": "print(var_dic_list())"
+    },
+    "r": {
+     "delete_cmd_postfix": ") ",
+     "delete_cmd_prefix": "rm(",
+     "library": "var_list.r",
+     "varRefreshCmd": "cat(var_dic_list()) "
+    }
+   },
+   "types_to_exclude": [
+    "module",
+    "function",
+    "builtin_function_or_method",
+    "instance",
+    "_Feature"
+   ],
+   "window_display": false
+  },
+  "vscode": {
+   "interpreter": {
+    "hash": "31f2aee4e71d21fbe5cf8b01ff0e069b9275f58929596ceb00d14d90e3e16cd6"
+   }
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}

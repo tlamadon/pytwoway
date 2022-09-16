@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MonteCarlo class &mdash; PyTwoWay 0.3.21 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Q module" href="module-Q.html" />
+    <link rel="prev" title="BorovickovaShimerEstimator class" href="class-bsestimator.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> PyTwoWay
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-python.html">From Python</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Notebook examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/fe_example.html">FE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/cre_example.html">CRE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/blm_example.html">BLM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/sorkin_example.html">Sorkin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/borovickovashimer_example.html">Borovickova-Shimer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/attrition_example.html">Attrition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/chk_example.html">CHK Event Study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Under the hood</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="internal.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-feestimator.html">FEEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-fecontrolestimator.html">FEControlEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-attrition.html">Attrition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmmodel.html">BLMModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmestimator.html">BLMEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmbootstrap.html">BLMBootstrap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmvariancedecomposition.html">BLMVarianceDecomposition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-interactedblmmodel.html">InteractedBLMModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-sorkinestimator.html">SorkinEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-bsestimator.html">BSEstimator</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">MonteCarlo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-Q.html">Q</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-attrition_utils.html">Attrition Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-diagnostics.html">Diagnostics</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PyTwoWay</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>MonteCarlo class</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/class-montecarlo.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="montecarlo-class">
+<h1>MonteCarlo class<a class="headerlink" href="#montecarlo-class" title="Permalink to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="pytwoway.montecarlo.MonteCarlo">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytwoway.montecarlo.</span></span><span class="sig-name descname"><span class="pre">MonteCarlo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sim_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fe_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cre_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">estimate_bs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cluster_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">clean_params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collapse</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">move_to_worker</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">log</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.montecarlo.MonteCarlo" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class of MonteCarlo, where MonteCarlo runs a Monte Carlo estimation by simulating bipartite networks of firms and workers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sim_params</strong> (<em>ParamsDict</em><em> or </em><em>None</em>) – dictionary of parameters for simulating data. Run bpd.sim_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.sim_params().</p></li>
+<li><p><strong>fe_params</strong> (<em>ParamsDict</em><em> or </em><em>None</em>) – dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.fe_params().</p></li>
+<li><p><strong>cre_params</strong> (<em>ParamsDict</em><em> or </em><em>None</em>) – dictionary of parameters for CRE estimation. Run tw.cre_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.cre_params().</p></li>
+<li><p><strong>estimate_bs</strong> (<em>bool</em>) – if True, estimate Borovickova-Shimer model</p></li>
+<li><p><strong>cluster_params</strong> (<em>ParamsDict</em><em> or </em><em>None</em>) – dictionary of parameters for clustering in CRE estimation. Run bpd.cluster_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.cluster_params().</p></li>
+<li><p><strong>clean_params</strong> (<em>ParamsDict</em><em> or </em><em>None</em>) – dictionary of parameters for cleaning. Run bpd.clean_params().describe_all() for descriptions of all valid parameters. None is equivalent to bpd.clean_params().</p></li>
+<li><p><strong>collapse</strong> (<em>str</em><em> or </em><em>None</em>) – if None, run estimators on full dataset; if ‘spell’, run estimators on data collapsed at the worker-firm spell level; if ‘spell’, run estimators on data collapsed at the worker-firm match level</p></li>
+<li><p><strong>move_to_worker</strong> (<em>bool</em>) – if True, each move is treated as a new worker</p></li>
+<li><p><strong>log</strong> (<em>bool</em>) – if True, will create log file(s)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pytwoway.montecarlo.MonteCarlo.hist">
+<span class="sig-name descname"><span class="pre">hist</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fe</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ho</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">he</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cre</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bs1</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bs2</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">density</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.montecarlo.MonteCarlo.hist" title="Permalink to this definition"></a></dt>
+<dd><p>Plot histogram of how Monte Carlo simulation results differ from truth.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fe</strong> (<em>bool</em>) – if True, plot FE results</p></li>
+<li><p><strong>ho</strong> (<em>bool</em>) – if True, plot FE-HO results</p></li>
+<li><p><strong>he</strong> (<em>bool</em>) – if True, plot FE-HE results</p></li>
+<li><p><strong>cre</strong> (<em>bool</em>) – if True, plot CRE results</p></li>
+<li><p><strong>bs1</strong> (<em>bool</em>) – if True, plot Borovickova-Shimer results for the standard estimator</p></li>
+<li><p><strong>bs2</strong> (<em>bool</em>) – if True, plot Borovickova-Shimer results for the alternative estimator</p></li>
+<li><p><strong>density</strong> (<em>bool</em>) – if True, plot density; if False, plot count</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytwoway.montecarlo.MonteCarlo.monte_carlo">
+<span class="sig-name descname"><span class="pre">monte_carlo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">N</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncore</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rng</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.montecarlo.MonteCarlo.monte_carlo" title="Permalink to this definition"></a></dt>
+<dd><p>Run Monte Carlo simulations of two way fixed effect models to see the distribution of the true vs. estimated variance of psi and covariance between psi and alpha. Saves the following results in the dictionary self.res: true, plug-in FE, FE-HO, FE-HE, CRE, and Borovickova-Shimer estimates for var(psi) and cov(psi, alpha), where psi gives firm effects and alpha gives worker effects.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>N</strong> (<em>int</em>) – number of simulations</p></li>
+<li><p><strong>ncore</strong> (<em>int</em>) – number of cores to use</p></li>
+<li><p><strong>rng</strong> (<em>np.random.Generator</em><em> or </em><em>None</em>) – NumPy random number generator. This overrides the random number generators for simulating, FE, and CRE. None is equivalent to np.random.default_rng(None).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="class-bsestimator.html" class="btn btn-neutral float-left" title="BorovickovaShimerEstimator class" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="module-Q.html" class="btn btn-neutral float-right" title="Q module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Thibaut Lamadon.
+      <span class="lastupdated">Last updated on Sep 15, 2022.
+      </span></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

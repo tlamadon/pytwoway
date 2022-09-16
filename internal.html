@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Python API &mdash; PyTwoWay 0.3.21 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="FEEstimator class" href="class-feestimator.html" />
+    <link rel="prev" title="Monte Carlo example" href="notebooks/monte_carlo_example.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> PyTwoWay
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-python.html">From Python</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Notebook examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/fe_example.html">FE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/cre_example.html">CRE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/blm_example.html">BLM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/sorkin_example.html">Sorkin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/borovickovashimer_example.html">Borovickova-Shimer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/attrition_example.html">Attrition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/chk_example.html">CHK Event Study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Under the hood</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Python API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#classes">Classes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#modules">Modules</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#classes-and-methods">Classes and Methods</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-feestimator"><code class="docutils literal notranslate"><span class="pre">pytwoway.FEEstimator</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-fecontrolestimator"><code class="docutils literal notranslate"><span class="pre">pytwoway.FEControlEstimator</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-creestimator"><code class="docutils literal notranslate"><span class="pre">pytwoway.CREEstimator</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-blmmodel"><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMModel</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-blmestimator"><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMEstimator</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-blmbootstrap"><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMBootstrap</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-blmvariancedecomposition"><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMVarianceDecomposition</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-interactedblmmodel"><code class="docutils literal notranslate"><span class="pre">pytwoway.InteractedBLMModel</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-sorkinestimator"><code class="docutils literal notranslate"><span class="pre">pytwoway.SorkinEstimator</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-bsestimator"><code class="docutils literal notranslate"><span class="pre">pytwoway.BSEstimator</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-attrition"><code class="docutils literal notranslate"><span class="pre">pytwoway.Attrition</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-montecarlo"><code class="docutils literal notranslate"><span class="pre">pytwoway.MonteCarlo</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-simblm"><code class="docutils literal notranslate"><span class="pre">pytwoway.SimBLM</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-simbs"><code class="docutils literal notranslate"><span class="pre">pytwoway.SimBS</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#modules-and-methods">Modules and Methods</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-q"><code class="docutils literal notranslate"><span class="pre">pytwoway.Q</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-constraints"><code class="docutils literal notranslate"><span class="pre">pytwoway.constraints</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-attrition-utils"><code class="docutils literal notranslate"><span class="pre">pytwoway.attrition_utils</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pytwoway-diagnostics"><code class="docutils literal notranslate"><span class="pre">pytwoway.diagnostics</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="class-feestimator.html">FEEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-fecontrolestimator.html">FEControlEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-attrition.html">Attrition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmmodel.html">BLMModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmestimator.html">BLMEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmbootstrap.html">BLMBootstrap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmvariancedecomposition.html">BLMVarianceDecomposition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-interactedblmmodel.html">InteractedBLMModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-sorkinestimator.html">SorkinEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-bsestimator.html">BSEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-montecarlo.html">MonteCarlo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-Q.html">Q</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-attrition_utils.html">Attrition Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-diagnostics.html">Diagnostics</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PyTwoWay</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Python API</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/internal.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="python-api">
+<h1>Python API<a class="headerlink" href="#python-api" title="Permalink to this heading"></a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Permalink to this heading"></a></h2>
+<p>The main PyTwoWay API is split into multiple classes for estimating models and two for simulating data according to the BLM and Borovickova-Shimer dgps. It also has four modules: one for constructing the variance-covariance matrix for AKM and its bias corrections; one for generating constraints for BLM; one for generating attrition plots using increasing (building up from a fixed set of firms) or decreasing (with varying sets of firms) fractions of movers; and one for generating diagnostics for bipartite labor data. PyTwoWay is canonically imported using</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pytwoway</span> <span class="k">as</span> <span class="nn">tw</span>
+</pre></div>
+</div>
+</div></blockquote>
+<section id="classes">
+<h3>Classes<a class="headerlink" href="#classes" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.FEEstimator</span></code>: Class for estimating AKM and its bias corrections without controls</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.FEControlEstimator</span></code>: Class for estimating AKM and its bias corrections with controls</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.CREEstimator</span></code>: Class for estimating the CRE model</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMModel</span></code>: Class for estimating the BLM model with one set of starting values</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMEstimator</span></code>: Class for estimating the BLM model with multiple sets of starting values</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMBootstrap</span></code>: Class for estimating the BLM model with bootstrapped confidence intervals</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMVarianceDecomposition</span></code>: Class for estimating the variance decomposition of the BLM model with bootstrapped confidence intervals</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.InteractedBLMModel</span></code>: Class for estimating the interacted BLM model</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.SorkinEstimator</span></code>: Class for estimating the fixed-point revealed preference model from Sorkin</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.BSEstimator</span></code>: Class for estimating the non-parametric sorting model from Borovickova and Shimer</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.Attrition</span></code>: Class for generating attrition plots</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.MonteCarlo</span></code>: Class for running Monte Carlo estimations</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.SimBLM</span></code>: Class for simulating BLM data</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.SimBS</span></code>: Class for simulating Borovickova-Shimer data</p></li>
+</ul>
+</section>
+<section id="modules">
+<h3>Modules<a class="headerlink" href="#modules" title="Permalink to this heading"></a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.Q</span></code>: Module for constructing the variance-covariance matrix for AKM and its bias corrections</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.constraints</span></code>: Module for generating constraints for BLM</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.attrition_utils</span></code>: Module for estimating attrition using increasing (building up from a fixed set of firms) or decreasing (with varying sets of firms) fractions of movers</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pytwoway.diagnostics</span></code>: Module for generating diagnostics for bipartite labor data</p></li>
+</ul>
+</section>
+</section>
+<section id="classes-and-methods">
+<h2>Classes and Methods<a class="headerlink" href="#classes-and-methods" title="Permalink to this heading"></a></h2>
+<section id="pytwoway-feestimator">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.FEEstimator</span></code><a class="headerlink" href="#pytwoway-feestimator" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">FEEstimator</span></code>(adata[, params])</p></td>
+<td><p>Uses multigrid and partialing out to solve two way fixed effect models.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>([rng])</p></td>
+<td><p>Estimate FE model.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pytwoway-fecontrolestimator">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.FEControlEstimator</span></code><a class="headerlink" href="#pytwoway-fecontrolestimator" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">FEControlEstimator</span></code>(data[, params])</p></td>
+<td><p>Solve two way fixed effect models with control variables.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>([rng])</p></td>
+<td><p>Estimate FE model.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pytwoway-creestimator">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.CREEstimator</span></code><a class="headerlink" href="#pytwoway-creestimator" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CREEstimator</span></code>(data[, params])</p></td>
+<td><p>Uses multigrid and partialing out to solve two way Fixed Effect model.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>([rng])</p></td>
+<td><p>Run CRE solver.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pytwoway-blmmodel">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMModel</span></code><a class="headerlink" href="#pytwoway-blmmodel" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BLMModel</span></code>(params[, rng])</p></td>
+<td><p>Class for estimating BLM using a single set of starting values.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">compute_connectedness_measure</span></code>([all])</p></td>
+<td><p>Computes graph connectedness measure among the movers within each type and updates self.connectedness to be the smallest value.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_movers</span></code>(jdata[, compute_NNm])</p></td>
+<td><p>EM algorithm for movers.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_movers_cstr_uncstr</span></code>(jdata[, compute_NNm])</p></td>
+<td><p>Run fit_movers(), first constrained, then using results as starting values, run unconstrained.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_stayers</span></code>(sdata[, compute_NNs])</p></td>
+<td><p>EM algorithm for stayers.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_log_earnings</span></code>([period, grid, dpi])</p></td>
+<td><p>Plot log-earnings by worker-firm type pairs.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_type_proportions</span></code>([period, subset, dpi])</p></td>
+<td><p>Plot proportions of worker types at each firm class.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pytwoway-blmestimator">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMEstimator</span></code><a class="headerlink" href="#pytwoway-blmestimator" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BLMEstimator</span></code>(params)</p></td>
+<td><p>Class for estimating BLM using multiple sets of starting values.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>(jdata, sdata[, n_init, n_best, ncore, rng])</p></td>
+<td><p>Estimate BLM using multiple sets of starting values.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_liks_connectedness</span></code>([jitter, dpi])</p></td>
+<td><p>Plot likelihoods vs connectedness for the estimations run.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_log_earnings</span></code>([period, grid, dpi])</p></td>
+<td><p>Plot log-earnings by worker-firm type pairs.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_type_proportions</span></code>([period, subset, dpi])</p></td>
+<td><p>Plot proportions of worker types at each firm class.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pytwoway-blmbootstrap">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMBootstrap</span></code><a class="headerlink" href="#pytwoway-blmbootstrap" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BLMBootstrap</span></code>(params)</p></td>
+<td><p>Class for estimating BLM using bootstrapping.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>(jdata, sdata[, blm_model, n_samples, ...])</p></td>
+<td><p>Estimate bootstrap.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_log_earnings</span></code>([period, grid, dpi])</p></td>
+<td><p>Plot log-earnings by worker-firm type pairs.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_type_proportions</span></code>([period, subset, dpi])</p></td>
+<td><p>Plot proportions of worker types at each firm class.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pytwoway-blmvariancedecomposition">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.BLMVarianceDecomposition</span></code><a class="headerlink" href="#pytwoway-blmvariancedecomposition" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BLMVarianceDecomposition</span></code>(params)</p></td>
+<td><p>Class for estimating BLM variance decomposition using bootstrapping.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>(jdata, sdata[, blm_model, n_samples, ...])</p></td>
+<td><p>Estimate variance decomposition.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pytwoway-interactedblmmodel">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.InteractedBLMModel</span></code><a class="headerlink" href="#pytwoway-interactedblmmodel" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+</tbody>
+</table>
+</section>
+<section id="pytwoway-sorkinestimator">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.SorkinEstimator</span></code><a class="headerlink" href="#pytwoway-sorkinestimator" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SorkinEstimator</span></code>()</p></td>
+<td><p>Class for estimating the fixed-point revealed preference model from Sorkin (2018).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>(adata[, max_iters, threshold])</p></td>
+<td><p>Estimate the fixed-point revealed preference model from Sorkin (2018).</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pytwoway-bsestimator">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.BSEstimator</span></code><a class="headerlink" href="#pytwoway-bsestimator" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BSEstimator</span></code>()</p></td>
+<td><p>Class for estimating the non-parametric sorting model from Borovickova and Shimer.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code>(adata[, alternative_estimator, weighted])</p></td>
+<td><p>Estimate the non-parametric sorting model from Borovickova and Shimer.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pytwoway-attrition">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.Attrition</span></code><a class="headerlink" href="#pytwoway-attrition" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">Attrition</span></code>([min_movers_threshold, ...])</p></td>
+<td><p>Class of Attrition, which generates attrition plots using bipartite labor data.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">attrition</span></code>(bdf[, N, ncore, copy, rng])</p></td>
+<td><p>Run Monte Carlo on attrition estimations of TwoWay to estimate variance of parameter estimates given fraction of movers remaining.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">boxplots</span></code>([fe, ho, he, cre, bs1, bs2, ...])</p></td>
+<td><p>Generate attrition result boxplots.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">plots</span></code>([fe, ho, he, cre, bs1, bs2, ...])</p></td>
+<td><p>Generate attrition result plots.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pytwoway-montecarlo">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.MonteCarlo</span></code><a class="headerlink" href="#pytwoway-montecarlo" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">MonteCarlo</span></code>([sim_params, fe_params, ...])</p></td>
+<td><p>Class of MonteCarlo, where MonteCarlo runs a Monte Carlo estimation by simulating bipartite networks of firms and workers.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">hist</span></code>([fe, ho, he, cre, bs1, bs2, density])</p></td>
+<td><p>Plot histogram of how Monte Carlo simulation results differ from truth.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">monte_carlo</span></code>([N, ncore, rng])</p></td>
+<td><p>Run Monte Carlo simulations of two way fixed effect models to see the distribution of the true vs.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pytwoway-simblm">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.SimBLM</span></code><a class="headerlink" href="#pytwoway-simblm" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SimBLM</span></code>([sim_params])</p></td>
+<td><p>Class of SimBLM, where SimBLM simulates a bipartite BLM network of firms and workers.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">simulate</span></code>([return_parameters, rng])</p></td>
+<td><p>Simulate data (movers and stayers).</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pytwoway-simbs">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.SimBS</span></code><a class="headerlink" href="#pytwoway-simbs" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">SimBS</span></code>([sim_params])</p></td>
+<td><p>Class of SimBS, where SimBS simulates a bipartite Borovickova-Shimer network of firms and workers.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">simulate</span></code>([rng])</p></td>
+<td><p>Simulate data.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="modules-and-methods">
+<h2>Modules and Methods<a class="headerlink" href="#modules-and-methods" title="Permalink to this heading"></a></h2>
+<section id="pytwoway-q">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.Q</span></code><a class="headerlink" href="#pytwoway-q" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CovCovariate</span></code>(cov_names_1, cov_names_2)</p></td>
+<td><p>Generate Q to estimate cov(covariate 1, covariate 2).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CovPsiAlpha</span></code>()</p></td>
+<td><p>Generate Q to estimate cov(psi, alpha).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CovPsiPrevPsiNext</span></code>()</p></td>
+<td><p>Generate Q to estimate cov(psi_t, psi_{t+1}).</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VarAlpha</span></code>()</p></td>
+<td><p>Generate Q to estimate var(alpha).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VarCovariate</span></code>(cov_names)</p></td>
+<td><p>Generate Q to estimate var(covariate) or var(sum(covariates)) if multiple covariates are listed.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VarPsi</span></code>()</p></td>
+<td><p>Generate Q to estimate var(psi).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">VarPsiPlusAlpha</span></code>()</p></td>
+<td><p>Generate Q to estimate var(psi + alpha).</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pytwoway-constraints">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.constraints</span></code><a class="headerlink" href="#pytwoway-constraints" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BoundedAbove</span></code>([ub, nt])</p></td>
+<td><p>Generate BLM constraints so that worker-firm pair effects are bounded above.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">BoundedBelow</span></code>([lb, nt])</p></td>
+<td><p>Generate BLM constraints so that worker-firm pair effects are bounded below.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">Linear</span></code>([nnt, nt])</p></td>
+<td><p>Generate BLM constraints so that for a fixed firm type, worker types effects must change linearly.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">Monotonic</span></code>([md, increasing, nt])</p></td>
+<td><p>Generate BLM constraints so that for a fixed firm type, worker types effects must increase (or decrease) monotonically.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">NoWorkerTypeInteraction</span></code>([nnt, nt])</p></td>
+<td><p>Generate BLM constraints so that for a fixed firm type, worker types effects must all be the same.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">QPConstrained</span></code>(nl, nk)</p></td>
+<td><p>Solve a quadratic programming model of the following form:</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">Stationary</span></code>([nwt, nt])</p></td>
+<td><p>Generate BLM constraints so that worker-firm pair effects are the same in all periods.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">StationaryFirmTypeVariation</span></code>([nnt, nt])</p></td>
+<td><p>Generate BLM constraints so that the firm type induced variation of worker-firm pair effects is the same in all periods.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pytwoway-attrition-utils">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.attrition_utils</span></code><a class="headerlink" href="#pytwoway-attrition-utils" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">AttritionIncreasing</span></code>([subset_fractions, ...])</p></td>
+<td><p>Generate increasing subsets of a dataset to estimate the effects of attrition.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">AttritionDecreasing</span></code>([subset_fractions])</p></td>
+<td><p>Generate decreasing subsets of a dataset to estimate the effects of attrition.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="pytwoway-diagnostics">
+<h3><code class="docutils literal notranslate"><span class="pre">pytwoway.diagnostics</span></code><a class="headerlink" href="#pytwoway-diagnostics" title="Permalink to this heading"></a></h3>
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="module-diagnostics.html#module-pytwoway.diagnostics.plot_extendedeventstudy" title="pytwoway.diagnostics.plot_extendedeventstudy"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_extendedeventstudy</span></code></a>(adata[, ...])</p></td>
+<td><p>Generate event study plots.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="notebooks/monte_carlo_example.html" class="btn btn-neutral float-left" title="Monte Carlo example" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="class-feestimator.html" class="btn btn-neutral float-right" title="FEEstimator class" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Thibaut Lamadon.
+      <span class="lastupdated">Last updated on Sep 15, 2022.
+      </span></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

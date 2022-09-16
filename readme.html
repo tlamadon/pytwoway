@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PyTwoWay &mdash; PyTwoWay 0.3.21 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> PyTwoWay
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-python.html">From Python</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Notebook examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/fe_example.html">FE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/cre_example.html">CRE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/blm_example.html">BLM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/sorkin_example.html">Sorkin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/borovickovashimer_example.html">Borovickova-Shimer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/attrition_example.html">Attrition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/chk_example.html">CHK Event Study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Under the hood</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="internal.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-feestimator.html">FEEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-fecontrolestimator.html">FEControlEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-attrition.html">Attrition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmmodel.html">BLMModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmestimator.html">BLMEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmbootstrap.html">BLMBootstrap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmvariancedecomposition.html">BLMVarianceDecomposition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-interactedblmmodel.html">InteractedBLMModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-sorkinestimator.html">SorkinEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-bsestimator.html">BSEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-montecarlo.html">MonteCarlo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-Q.html">Q</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-constraints.html">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-attrition_utils.html">Attrition Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-diagnostics.html">Diagnostics</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PyTwoWay</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>PyTwoWay</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/readme.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="pytwoway">
+<h1>PyTwoWay<a class="headerlink" href="#pytwoway" title="Permalink to this heading"></a></h1>
+<a class="reference external image-reference" href="https://badge.fury.io/py/pytwoway"><img alt="https://badge.fury.io/py/pytwoway.svg" src="https://badge.fury.io/py/pytwoway.svg" /></a>
+<a class="reference external image-reference" href="https://anaconda.org/tlamadon/pytwoway"><img alt="https://anaconda.org/tlamadon/pytwoway/badges/version.svg" src="https://anaconda.org/tlamadon/pytwoway/badges/version.svg" /></a>
+<a class="reference external image-reference" href="https://anaconda.org/tlamadon/pytwoway"><img alt="https://anaconda.org/tlamadon/pytwoway/badges/platforms.svg" src="https://anaconda.org/tlamadon/pytwoway/badges/platforms.svg" /></a>
+<a class="reference external image-reference" href="https://circleci.com/gh/tlamadon/pytwoway/tree/master"><img alt="https://circleci.com/gh/tlamadon/pytwoway/tree/master.svg?style=shield" src="https://circleci.com/gh/tlamadon/pytwoway/tree/master.svg?style=shield" /></a>
+<a class="reference external image-reference" href="https://tlamadon.github.io/pytwoway/"><img alt="https://img.shields.io/badge/doc-latest-blue" src="https://img.shields.io/badge/doc-latest-blue" /></a>
+<a class="reference external image-reference" href="https://github.com/tlamadon/pytwoway"><img alt="https://badgen.net/badge//gh/pytwoway?icon=github" src="https://badgen.net/badge//gh/pytwoway?icon=github" /></a>
+<p><cite>PyTwoWay</cite> is the Python package associated with the following paper:</p>
+<p>“<a class="reference external" href="https://www.nber.org/system/files/working_papers/w27368/w27368.pdf">How Much Should we Trust Estimates of Firm Effects and Worker Sorting?</a>”
+by Stéphane Bonhomme, Kerstin Holzheu, Thibaut Lamadon, Elena Manresa, Magne Mogstad, and Bradley Setzler.
+No. w27368. National Bureau of Economic Research, 2020.</p>
+<p>The package provides implementations for a series of estimators for models with two sided heterogeneity:</p>
+<ol class="arabic simple">
+<li><p>two way fixed effect estimator as proposed by <a class="reference external" href="https://doi.org/10.1111/1468-0262.00020">Abowd, Kramarz, and Margolis</a></p></li>
+<li><p>homoskedastic bias correction as in <a class="reference external" href="https://doi.org/10.1111/j.1467-985X.2007.00533.x">Andrews, et al.</a></p></li>
+<li><p>heteroskedastic bias correction as in <a class="reference external" href="https://doi.org/10.3982/ECTA16410">Kline, Saggio, and Sølvsten</a></p></li>
+<li><p>group fixed estimator as in <a class="reference external" href="https://doi.org/10.3982/ECTA15722">Bonhomme, Lamadon, and Manresa</a></p></li>
+<li><p>group correlated random effect as presented in the main paper</p></li>
+<li><p>fixed-point revealed preference estimator as in <a class="reference external" href="https://doi.org/10.1093/qje/qjy001">Sorkin</a></p></li>
+<li><p>estimator as in <a class="reference external" href="https://drive.google.com/file/d/1KW0sZ4nV9bIdVhcs-UW8yW_dzUr782v5/view">Borovičková and Shimer</a> for a modified definition of sorting</p></li>
+</ol>
+<p>If you want to give it a try, you can start an example notebook for the FE estimator here: <a class="reference external" href="https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fsource%2Fnotebooks%2Ffe_example.ipynb"><img alt="binder_fe" src="https://mybinder.org/badge_logo.svg" /></a> for the CRE estimator here: <a class="reference external" href="https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fsource%2Fnotebooks%2Fcre_example.ipynb"><img alt="binder_cre" src="https://mybinder.org/badge_logo.svg" /></a> for the BLM estimator here: <a class="reference external" href="https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fsource%2Fnotebooks%2Fblm_example.ipynb"><img alt="binder_blm" src="https://mybinder.org/badge_logo.svg" /></a> for the Sorkin estimator here: <a class="reference external" href="https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fsource%2Fnotebooks%2Fsorkin_example.ipynb"><img alt="binder_sorkin" src="https://mybinder.org/badge_logo.svg" /></a> and for the Borovickova-Shimer estimator here: <a class="reference external" href="https://mybinder.org/v2/gh/tlamadon/pytwoway/HEAD?filepath=docs%2Fsource%2Fnotebooks%2Fborovickovashimer_example.ipynb"><img alt="binder_bs" src="https://mybinder.org/badge_logo.svg" /></a>. These start fully interactive notebooks with simple examples that simulate data and run the estimators.</p>
+<p>The package provides a Python interface. Installation is handled by <cite>pip</cite> or <cite>Conda</cite> (TBD). The source of the package is available on GitHub at <a class="reference external" href="https://github.com/tlamadon/pytwoway">PyTwoWay</a>. The online documentation is hosted <a class="reference external" href="https://tlamadon.github.io/pytwoway/">here</a>.</p>
+<p>The code is relatively efficient. A benchmark below compares <cite>PyTwoWay</cite>’s speed with that of <a class="reference external" href="https://github.com/rsaggio87/LeaveOutTwoWay/">LeaveOutTwoWay</a>, a MATLAB package for estimating AKM and its bias corrections.</p>
+</section>
+<section id="quick-start">
+<h1>Quick Start<a class="headerlink" href="#quick-start" title="Permalink to this heading"></a></h1>
+<p>To install via pip, from the command line run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">pytwoway</span>
+</pre></div>
+</div>
+<p>To make sure you are running the most up-to-date version of <cite>PyTwoWay</cite>, from the command line run:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">--</span><span class="n">upgrade</span> <span class="n">pytwoway</span>
+</pre></div>
+</div>
+<p>Please DO NOT download the Conda version of the package, as it is outdated!</p>
+</section>
+<section id="help-with-running-the-package">
+<h1>Help with Running the Package<a class="headerlink" href="#help-with-running-the-package" title="Permalink to this heading"></a></h1>
+<p>Please check out the <a class="reference external" href="https://tlamadon.github.io/pytwoway/">documentation</a> for detailed examples of how to use <cite>PyTwoWay</cite>. If you have a question that the documentation doesn’t answer, please also check the <a class="reference external" href="https://github.com/tlamadon/pytwoway/issues?q=is%3Aissue+is%3Aclosed/">past Issues</a> to see if someone else has already asked this question and an answer has been provided. If you still can’t find an answer, please open a <a class="reference external" href="https://github.com/tlamadon/pytwoway/issues/">new Issue</a> and we will try to answer as quickly as possible.</p>
+</section>
+<section id="benchmarking">
+<h1>Benchmarking<a class="headerlink" href="#benchmarking" title="Permalink to this heading"></a></h1>
+<p>Data is simulated from <a class="reference external" href="https://github.com/tlamadon/bipartitepandas/">BipartitePandas</a> using the following code:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">bipartitepandas</span> <span class="k">as</span> <span class="nn">bpd</span>
+
+<span class="n">sim_params</span> <span class="o">=</span> <span class="n">bpd</span><span class="o">.</span><span class="n">sim_params</span><span class="p">({</span><span class="s1">&#39;n_workers&#39;</span><span class="p">:</span> <span class="mi">500000</span><span class="p">,</span> <span class="s1">&#39;firm_size&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;p_move&#39;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">})</span>
+<span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="mi">1234</span><span class="p">)</span>
+
+<span class="n">sim_data</span> <span class="o">=</span> <span class="n">bpd</span><span class="o">.</span><span class="n">SimBipartite</span><span class="p">(</span><span class="n">sim_params</span><span class="p">)</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="n">rng</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>This data is then estimated using the <cite>PyTwoWay</cite> class <cite>FEEstimator</cite> and using the MATLAB package <a class="reference external" href="https://github.com/rsaggio87/LeaveOutTwoWay/">LeaveOutTwoWay</a>. For estimation using <cite>PyTwoWay</cite>, all estimators other than AMG use the incomplete Cholesky decomposition as a preconditioner.</p>
+<p>Results are estimated on a 2021 MacBook Pro 14” with 16 GB Ram and an Apple M1 Pro processor with 8 cores.</p>
+<p>Some summary statistics about the largest leave-one-match-out set:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 29%" />
+<col style="width: 21%" />
+<col style="width: 24%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Package</p></th>
+<th class="head"><p>#obs</p></th>
+<th class="head"><p>#firms</p></th>
+<th class="head"><p>#movers</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>KSS</p></td>
+<td><p>2,255,370</p></td>
+<td><p>44,510</p></td>
+<td><p>88,542</p></td>
+</tr>
+<tr class="row-odd"><td><p>PyTwoWay</p></td>
+<td><p>2,269,665</p></td>
+<td><p>44,601</p></td>
+<td><p>89,098</p></td>
+</tr>
+</tbody>
+</table>
+<p>Run time:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 22%" />
+<col style="width: 27%" />
+<col style="width: 18%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Solver</p></th>
+<th class="head"><p>Cleaning</p></th>
+<th class="head"><p>Estimation</p></th>
+<th class="head"><p>Total</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>KSS</p></td>
+<td><p>N/A</p></td>
+<td><p>N/A</p></td>
+<td><p>55.2s</p></td>
+</tr>
+<tr class="row-odd"><td><p>PYTW-AMG</p></td>
+<td><p>4.0s</p></td>
+<td><p>3m2s</p></td>
+<td><p>3m6s</p></td>
+</tr>
+<tr class="row-even"><td><p>PYTW-BICG</p></td>
+<td><p>4.0s</p></td>
+<td><p>20.4s</p></td>
+<td><p>24.4s</p></td>
+</tr>
+<tr class="row-odd"><td><p>PYTW-BICGSTAB</p></td>
+<td><p>4.0s</p></td>
+<td><p>21.9s</p></td>
+<td><p>25.9s</p></td>
+</tr>
+<tr class="row-even"><td><p>PYTW-CG</p></td>
+<td><p>4.0s</p></td>
+<td><p>19.6s</p></td>
+<td><p>23.6s</p></td>
+</tr>
+<tr class="row-odd"><td><p>PYTW-CGS</p></td>
+<td><p>4.0s</p></td>
+<td><p>20.6s</p></td>
+<td><p>24.6s</p></td>
+</tr>
+<tr class="row-even"><td><p>PYTW-GMRES</p></td>
+<td><p>4.0s</p></td>
+<td><p>32.9s</p></td>
+<td><p>36.9s</p></td>
+</tr>
+<tr class="row-odd"><td><p>PYTW-MINRES</p></td>
+<td><p>4.0s</p></td>
+<td><p>10.7s</p></td>
+<td><p>14.7s</p></td>
+</tr>
+<tr class="row-even"><td><p>PYTW-QMR</p></td>
+<td><p>4.0s</p></td>
+<td><p>3m53s</p></td>
+<td><p>3m57s</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="contributing-to-the-package">
+<h1>Contributing to the Package<a class="headerlink" href="#contributing-to-the-package" title="Permalink to this heading"></a></h1>
+<p>If you want to contribute to the package, the easiest way is to test that it’s working properly! If you notice a part of the package is giving incorrect results, please add a new post in <a class="reference external" href="https://github.com/tlamadon/pytwoway/issues/">Issues</a> and we will do our best to fix it as soon as possible.</p>
+<p>We are also happy to consider any suggestions to improve the package and documentation, whether to add a new feature, make a feature more user-friendly, or make the documentation clearer. Please also post suggestions in <a class="reference external" href="https://github.com/tlamadon/pytwoway/issues/">Issues</a>.</p>
+<p>Finally, if you would like to help with developing the package, please make a fork of the repository and submit pull requests with any changes you make! These will be promptly reviewed, and hopefully accepted!</p>
+<p>We are extremely grateful for all contributions made by the community!</p>
+</section>
+<section id="dependencies">
+<h1>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this heading"></a></h1>
+<p>Solving large sparse linear models relies on a combination of <a class="reference external" href="https://github.com/pyamg/pyamg/">PyAMG</a> (this is the package we use to estimate the different decompositions on US data) and <cite>SciPy</cite>’s <a class="reference external" href="https://scipy-lectures.org/advanced/scipy_sparse/solvers.html/">iterative sparse linear solvers</a>.</p>
+<p>Many tools for handling sparse matrices come from <a class="reference external" href="https://scipy.org/">SciPy</a>.</p>
+<p>Additional preconditioners for linear solvers come from <a class="reference external" href="https://github.com/pymatting/pymatting/">PyMatting</a> (installing the package is not required, as the necessary files have been copied into the submodule <cite>preconditioners</cite>). The incomplete Cholesky preconditioner in turn relies on <a class="reference external" href="http://numba.pydata.org/">Numba</a>.</p>
+<p>Constrained optimization is handled by <a class="reference external" href="https://github.com/stephane-caron/qpsolvers/">QPSolvers</a>.</p>
+<p>Progress bars are generated with <a class="reference external" href="https://github.com/tqdm/tqdm/">tqdm</a>.</p>
+<p>Parameter dictionaries are constructed using <a class="reference external" href="https://github.com/adamoppenheimer/paramsdict/">ParamsDict</a>.</p>
+<p>Data cleaning is handled by <a class="reference external" href="https://github.com/tlamadon/bipartitepandas/">BipartitePandas</a>.</p>
+<p>We also rely on a number of standard libraries, such as <cite>NumPy</cite>, <cite>Pandas</cite>, <cite>matplotlib</cite>, etc.</p>
+<p>Optionally, the code is compatible with:
+- <a class="reference external" href="https://github.com/uqfoundation/multiprocess/">multiprocess</a>. Installing this may help if multiprocessing is raising errors related to pickling objects.
+- <a class="reference external" href="https://github.com/pytorch/pytorch/">PyTorch</a>. This may speed up BLM estimation, and adds the option to compute some operations using the GPU.</p>
+</section>
+<section id="citation">
+<h1>Citation<a class="headerlink" href="#citation" title="Permalink to this heading"></a></h1>
+<p>Please use following citation to cite PyTwoWay in academic publications:</p>
+<p>Bibtex entry:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>@techreport{bhlmms2020,
+  title={How Much Should We Trust Estimates of Firm Effects and Worker Sorting?},
+  author={Bonhomme, St{\&#39;e}phane and Holzheu, Kerstin and Lamadon, Thibaut and Manresa, Elena and Mogstad, Magne and Setzler, Bradley},
+  year={2020},
+  institution={National Bureau of Economic Research}
+}
+</pre></div>
+</div>
+</section>
+<section id="authors">
+<h1>Authors<a class="headerlink" href="#authors" title="Permalink to this heading"></a></h1>
+<p>Thibaut Lamadon,
+Assistant Professor in Economics, University of Chicago,
+<a class="reference external" href="mailto:lamadon&#37;&#52;&#48;uchicago&#46;edu">lamadon<span>&#64;</span>uchicago<span>&#46;</span>edu</a></p>
+<p>Adam A. Oppenheimer,
+Research Professional, University of Chicago,
+<a class="reference external" href="mailto:oppenheimer&#37;&#52;&#48;uchicago&#46;edu">oppenheimer<span>&#64;</span>uchicago<span>&#46;</span>edu</a></p>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Thibaut Lamadon.
+      <span class="lastupdated">Last updated on Sep 15, 2022.
+      </span></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

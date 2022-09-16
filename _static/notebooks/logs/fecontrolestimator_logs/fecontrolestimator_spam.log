@@ -1,0 +1,1500 @@
+2022-09-10 17:36:47,902 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:47,902 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:47,903 - fecontrolestimator - INFO - data firms=4 workers=3 observations=303
+2022-09-10 17:36:47,903 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:47,906 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:47,911 - fecontrolestimator - INFO - total variance: 5.0114
+2022-09-10 17:36:47,911 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:47,911 - fecontrolestimator - INFO - solver time: 0.0004 seconds
+2022-09-10 17:36:47,911 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:47,912 - fecontrolestimator - INFO - fixed effect R-square 0.2771
+2022-09-10 17:36:47,912 - fecontrolestimator - INFO - [fe] variance of residuals 4.8511
+2022-09-10 17:36:47,912 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:47,912 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:47,912 - fecontrolestimator - INFO - var(psi)_fe=0.0230
+2022-09-10 17:36:47,912 - fecontrolestimator - INFO - var(cat_control)_fe=0.0328
+2022-09-10 17:36:47,912 - fecontrolestimator - INFO - var(cts_control)_fe=0.0458
+2022-09-10 17:36:47,912 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0015
+2022-09-10 17:36:47,912 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:47,912 - fecontrolestimator - INFO - var(cat_control)_fe=0.0328
+2022-09-10 17:36:47,912 - fecontrolestimator - INFO - var(cts_control)_fe=0.0458
+2022-09-10 17:36:47,912 - fecontrolestimator - INFO - var(psi)_fe=0.0230
+2022-09-10 17:36:47,912 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:47,912 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0015
+2022-09-10 17:36:47,913 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:47,913 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:47,923 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:47,923 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:47,923 - fecontrolestimator - INFO - data firms=4 workers=3 observations=314
+2022-09-10 17:36:47,924 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:47,926 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:47,928 - fecontrolestimator - INFO - total variance: 5.1474
+2022-09-10 17:36:47,928 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:47,928 - fecontrolestimator - INFO - solver time: 0.0003 seconds
+2022-09-10 17:36:47,928 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:47,928 - fecontrolestimator - INFO - fixed effect R-square 0.2714
+2022-09-10 17:36:47,928 - fecontrolestimator - INFO - [fe] variance of residuals 4.9057
+2022-09-10 17:36:47,929 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:47,929 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:47,929 - fecontrolestimator - INFO - var(psi)_fe=0.0749
+2022-09-10 17:36:47,929 - fecontrolestimator - INFO - var(cat_control)_fe=0.0185
+2022-09-10 17:36:47,929 - fecontrolestimator - INFO - var(cts_control)_fe=0.1209
+2022-09-10 17:36:47,929 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0154
+2022-09-10 17:36:47,929 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:47,929 - fecontrolestimator - INFO - var(cat_control)_fe=0.0185
+2022-09-10 17:36:47,929 - fecontrolestimator - INFO - var(cts_control)_fe=0.1209
+2022-09-10 17:36:47,929 - fecontrolestimator - INFO - var(psi)_fe=0.0749
+2022-09-10 17:36:47,929 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:47,929 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0154
+2022-09-10 17:36:47,929 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:47,929 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:47,939 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:47,939 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:47,940 - fecontrolestimator - INFO - data firms=4 workers=3 observations=302
+2022-09-10 17:36:47,940 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:47,942 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:47,944 - fecontrolestimator - INFO - total variance: 5.0540
+2022-09-10 17:36:47,944 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:47,945 - fecontrolestimator - INFO - solver time: 0.0003 seconds
+2022-09-10 17:36:47,945 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:47,945 - fecontrolestimator - INFO - fixed effect R-square 0.2886
+2022-09-10 17:36:47,945 - fecontrolestimator - INFO - [fe] variance of residuals 4.7532
+2022-09-10 17:36:47,945 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:47,945 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:47,945 - fecontrolestimator - INFO - var(psi)_fe=0.0862
+2022-09-10 17:36:47,945 - fecontrolestimator - INFO - var(cat_control)_fe=0.0028
+2022-09-10 17:36:47,946 - fecontrolestimator - INFO - var(cts_control)_fe=0.1092
+2022-09-10 17:36:47,946 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0069
+2022-09-10 17:36:47,946 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:47,946 - fecontrolestimator - INFO - var(cat_control)_fe=0.0028
+2022-09-10 17:36:47,946 - fecontrolestimator - INFO - var(cts_control)_fe=0.1092
+2022-09-10 17:36:47,946 - fecontrolestimator - INFO - var(psi)_fe=0.0862
+2022-09-10 17:36:47,946 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:47,946 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0069
+2022-09-10 17:36:47,946 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:47,946 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:47,956 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:47,956 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:47,956 - fecontrolestimator - INFO - data firms=4 workers=3 observations=295
+2022-09-10 17:36:47,956 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:47,958 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:47,960 - fecontrolestimator - INFO - total variance: 4.8230
+2022-09-10 17:36:47,960 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:47,960 - fecontrolestimator - INFO - solver time: 0.0002 seconds
+2022-09-10 17:36:47,960 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:47,960 - fecontrolestimator - INFO - fixed effect R-square 0.3317
+2022-09-10 17:36:47,960 - fecontrolestimator - INFO - [fe] variance of residuals 4.5370
+2022-09-10 17:36:47,961 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:47,961 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:47,961 - fecontrolestimator - INFO - var(psi)_fe=0.1379
+2022-09-10 17:36:47,961 - fecontrolestimator - INFO - var(cat_control)_fe=0.0152
+2022-09-10 17:36:47,961 - fecontrolestimator - INFO - var(cts_control)_fe=0.0722
+2022-09-10 17:36:47,961 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0093
+2022-09-10 17:36:47,961 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:47,961 - fecontrolestimator - INFO - var(cat_control)_fe=0.0152
+2022-09-10 17:36:47,961 - fecontrolestimator - INFO - var(cts_control)_fe=0.0722
+2022-09-10 17:36:47,961 - fecontrolestimator - INFO - var(psi)_fe=0.1379
+2022-09-10 17:36:47,961 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:47,961 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0093
+2022-09-10 17:36:47,961 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:47,961 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:47,971 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:47,971 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:47,971 - fecontrolestimator - INFO - data firms=4 workers=3 observations=290
+2022-09-10 17:36:47,972 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:47,973 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:47,975 - fecontrolestimator - INFO - total variance: 4.8571
+2022-09-10 17:36:47,975 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:47,975 - fecontrolestimator - INFO - solver time: 0.0002 seconds
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - fixed effect R-square 0.3134
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - [fe] variance of residuals 4.6263
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - var(psi)_fe=0.0426
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - var(cat_control)_fe=0.0048
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - var(cts_control)_fe=0.1479
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0007
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - var(cat_control)_fe=0.0048
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - var(cts_control)_fe=0.1479
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - var(psi)_fe=0.0426
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0007
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:47,976 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:47,989 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:47,989 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:47,989 - fecontrolestimator - INFO - data firms=4 workers=3 observations=300
+2022-09-10 17:36:47,989 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:47,992 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:47,994 - fecontrolestimator - INFO - total variance: 4.7643
+2022-09-10 17:36:47,994 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:47,995 - fecontrolestimator - INFO - solver time: 0.0003 seconds
+2022-09-10 17:36:47,995 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:47,995 - fecontrolestimator - INFO - fixed effect R-square 0.3069
+2022-09-10 17:36:47,995 - fecontrolestimator - INFO - [fe] variance of residuals 4.5795
+2022-09-10 17:36:47,995 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:47,995 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:47,995 - fecontrolestimator - INFO - var(psi)_fe=0.0467
+2022-09-10 17:36:47,995 - fecontrolestimator - INFO - var(cat_control)_fe=0.0026
+2022-09-10 17:36:47,995 - fecontrolestimator - INFO - var(cts_control)_fe=0.1028
+2022-09-10 17:36:47,995 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0034
+2022-09-10 17:36:47,995 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:47,995 - fecontrolestimator - INFO - var(cat_control)_fe=0.0026
+2022-09-10 17:36:47,995 - fecontrolestimator - INFO - var(cts_control)_fe=0.1028
+2022-09-10 17:36:47,995 - fecontrolestimator - INFO - var(psi)_fe=0.0467
+2022-09-10 17:36:47,995 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:47,995 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0034
+2022-09-10 17:36:47,996 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:47,996 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:48,005 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:48,005 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:48,006 - fecontrolestimator - INFO - data firms=4 workers=3 observations=308
+2022-09-10 17:36:48,006 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:48,007 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:48,009 - fecontrolestimator - INFO - total variance: 5.1766
+2022-09-10 17:36:48,009 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:48,010 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:36:48,010 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:48,010 - fecontrolestimator - INFO - fixed effect R-square 0.2343
+2022-09-10 17:36:48,010 - fecontrolestimator - INFO - [fe] variance of residuals 5.0394
+2022-09-10 17:36:48,010 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:48,010 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:48,010 - fecontrolestimator - INFO - var(psi)_fe=0.0696
+2022-09-10 17:36:48,010 - fecontrolestimator - INFO - var(cat_control)_fe=0.0016
+2022-09-10 17:36:48,010 - fecontrolestimator - INFO - var(cts_control)_fe=0.0146
+2022-09-10 17:36:48,011 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0015
+2022-09-10 17:36:48,011 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:48,011 - fecontrolestimator - INFO - var(cat_control)_fe=0.0016
+2022-09-10 17:36:48,011 - fecontrolestimator - INFO - var(cts_control)_fe=0.0146
+2022-09-10 17:36:48,011 - fecontrolestimator - INFO - var(psi)_fe=0.0696
+2022-09-10 17:36:48,011 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:48,011 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0015
+2022-09-10 17:36:48,011 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:48,011 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:48,020 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:48,020 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:48,021 - fecontrolestimator - INFO - data firms=4 workers=3 observations=303
+2022-09-10 17:36:48,021 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:48,022 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:48,024 - fecontrolestimator - INFO - total variance: 4.8487
+2022-09-10 17:36:48,024 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:48,025 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:36:48,025 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:48,025 - fecontrolestimator - INFO - fixed effect R-square 0.3154
+2022-09-10 17:36:48,025 - fecontrolestimator - INFO - [fe] variance of residuals 4.5589
+2022-09-10 17:36:48,025 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:48,025 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:48,025 - fecontrolestimator - INFO - var(psi)_fe=0.0724
+2022-09-10 17:36:48,025 - fecontrolestimator - INFO - var(cat_control)_fe=0.0584
+2022-09-10 17:36:48,025 - fecontrolestimator - INFO - var(cts_control)_fe=0.1582
+2022-09-10 17:36:48,025 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0027
+2022-09-10 17:36:48,025 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:48,025 - fecontrolestimator - INFO - var(cat_control)_fe=0.0584
+2022-09-10 17:36:48,025 - fecontrolestimator - INFO - var(cts_control)_fe=0.1582
+2022-09-10 17:36:48,025 - fecontrolestimator - INFO - var(psi)_fe=0.0724
+2022-09-10 17:36:48,025 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:48,026 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0027
+2022-09-10 17:36:48,026 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:48,026 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:48,035 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:48,035 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:48,035 - fecontrolestimator - INFO - data firms=4 workers=3 observations=299
+2022-09-10 17:36:48,036 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:48,037 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:48,039 - fecontrolestimator - INFO - total variance: 4.6978
+2022-09-10 17:36:48,039 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:48,039 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:36:48,039 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:48,040 - fecontrolestimator - INFO - fixed effect R-square 0.3226
+2022-09-10 17:36:48,040 - fecontrolestimator - INFO - [fe] variance of residuals 4.5508
+2022-09-10 17:36:48,040 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:48,040 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:48,040 - fecontrolestimator - INFO - var(psi)_fe=0.0119
+2022-09-10 17:36:48,040 - fecontrolestimator - INFO - var(cat_control)_fe=0.0022
+2022-09-10 17:36:48,040 - fecontrolestimator - INFO - var(cts_control)_fe=0.0907
+2022-09-10 17:36:48,040 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0006
+2022-09-10 17:36:48,040 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:48,040 - fecontrolestimator - INFO - var(cat_control)_fe=0.0022
+2022-09-10 17:36:48,040 - fecontrolestimator - INFO - var(cts_control)_fe=0.0907
+2022-09-10 17:36:48,040 - fecontrolestimator - INFO - var(psi)_fe=0.0119
+2022-09-10 17:36:48,040 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:48,040 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0006
+2022-09-10 17:36:48,040 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:48,040 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:48,050 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:48,050 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:48,050 - fecontrolestimator - INFO - data firms=4 workers=3 observations=309
+2022-09-10 17:36:48,051 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:48,052 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:48,054 - fecontrolestimator - INFO - total variance: 4.9062
+2022-09-10 17:36:48,054 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:48,055 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:36:48,055 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:48,055 - fecontrolestimator - INFO - fixed effect R-square 0.2815
+2022-09-10 17:36:48,055 - fecontrolestimator - INFO - [fe] variance of residuals 4.7930
+2022-09-10 17:36:48,055 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:48,055 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:48,055 - fecontrolestimator - INFO - var(psi)_fe=0.0044
+2022-09-10 17:36:48,055 - fecontrolestimator - INFO - var(cat_control)_fe=0.0116
+2022-09-10 17:36:48,055 - fecontrolestimator - INFO - var(cts_control)_fe=0.0691
+2022-09-10 17:36:48,055 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0003
+2022-09-10 17:36:48,055 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:48,055 - fecontrolestimator - INFO - var(cat_control)_fe=0.0116
+2022-09-10 17:36:48,055 - fecontrolestimator - INFO - var(cts_control)_fe=0.0691
+2022-09-10 17:36:48,055 - fecontrolestimator - INFO - var(psi)_fe=0.0044
+2022-09-10 17:36:48,055 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:48,055 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0003
+2022-09-10 17:36:48,056 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:48,056 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:48,065 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:48,065 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:48,065 - fecontrolestimator - INFO - data firms=4 workers=3 observations=292
+2022-09-10 17:36:48,066 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:48,067 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:48,069 - fecontrolestimator - INFO - total variance: 4.8408
+2022-09-10 17:36:48,069 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:48,069 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - fixed effect R-square 0.3139
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - [fe] variance of residuals 4.6278
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - var(psi)_fe=0.0855
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - var(cat_control)_fe=0.0544
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - var(cts_control)_fe=0.0208
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0058
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - var(cat_control)_fe=0.0544
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - var(cts_control)_fe=0.0208
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - var(psi)_fe=0.0855
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0058
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:48,070 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:48,080 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:48,080 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:48,080 - fecontrolestimator - INFO - data firms=4 workers=3 observations=295
+2022-09-10 17:36:48,080 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:48,082 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:48,084 - fecontrolestimator - INFO - total variance: 4.9586
+2022-09-10 17:36:48,084 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:48,084 - fecontrolestimator - INFO - solver time: 0.0002 seconds
+2022-09-10 17:36:48,084 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:48,084 - fecontrolestimator - INFO - fixed effect R-square 0.2900
+2022-09-10 17:36:48,084 - fecontrolestimator - INFO - [fe] variance of residuals 4.7712
+2022-09-10 17:36:48,085 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:48,085 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:48,085 - fecontrolestimator - INFO - var(psi)_fe=0.0240
+2022-09-10 17:36:48,085 - fecontrolestimator - INFO - var(cat_control)_fe=0.0161
+2022-09-10 17:36:48,085 - fecontrolestimator - INFO - var(cts_control)_fe=0.0545
+2022-09-10 17:36:48,085 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0080
+2022-09-10 17:36:48,085 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:48,085 - fecontrolestimator - INFO - var(cat_control)_fe=0.0161
+2022-09-10 17:36:48,085 - fecontrolestimator - INFO - var(cts_control)_fe=0.0545
+2022-09-10 17:36:48,085 - fecontrolestimator - INFO - var(psi)_fe=0.0240
+2022-09-10 17:36:48,085 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:48,085 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0080
+2022-09-10 17:36:48,085 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:48,085 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:48,098 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:48,098 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:48,098 - fecontrolestimator - INFO - data firms=4 workers=3 observations=306
+2022-09-10 17:36:48,098 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:48,100 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:48,102 - fecontrolestimator - INFO - total variance: 5.1659
+2022-09-10 17:36:48,102 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:48,102 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:36:48,102 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:48,102 - fecontrolestimator - INFO - fixed effect R-square 0.2537
+2022-09-10 17:36:48,103 - fecontrolestimator - INFO - [fe] variance of residuals 4.9053
+2022-09-10 17:36:48,103 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:48,103 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:48,103 - fecontrolestimator - INFO - var(psi)_fe=0.0732
+2022-09-10 17:36:48,103 - fecontrolestimator - INFO - var(cat_control)_fe=0.0054
+2022-09-10 17:36:48,103 - fecontrolestimator - INFO - var(cts_control)_fe=0.1058
+2022-09-10 17:36:48,103 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0015
+2022-09-10 17:36:48,103 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:48,103 - fecontrolestimator - INFO - var(cat_control)_fe=0.0054
+2022-09-10 17:36:48,103 - fecontrolestimator - INFO - var(cts_control)_fe=0.1058
+2022-09-10 17:36:48,103 - fecontrolestimator - INFO - var(psi)_fe=0.0732
+2022-09-10 17:36:48,103 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:48,103 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0015
+2022-09-10 17:36:48,103 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:48,103 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:48,113 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:48,113 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:48,113 - fecontrolestimator - INFO - data firms=4 workers=3 observations=300
+2022-09-10 17:36:48,113 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:48,115 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:48,117 - fecontrolestimator - INFO - total variance: 4.9393
+2022-09-10 17:36:48,117 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:48,117 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:36:48,117 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:48,117 - fecontrolestimator - INFO - fixed effect R-square 0.3007
+2022-09-10 17:36:48,117 - fecontrolestimator - INFO - [fe] variance of residuals 4.7743
+2022-09-10 17:36:48,118 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:48,118 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:48,118 - fecontrolestimator - INFO - var(psi)_fe=0.0304
+2022-09-10 17:36:48,118 - fecontrolestimator - INFO - var(cat_control)_fe=0.0191
+2022-09-10 17:36:48,118 - fecontrolestimator - INFO - var(cts_control)_fe=0.0728
+2022-09-10 17:36:48,118 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0066
+2022-09-10 17:36:48,118 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:48,118 - fecontrolestimator - INFO - var(cat_control)_fe=0.0191
+2022-09-10 17:36:48,118 - fecontrolestimator - INFO - var(cts_control)_fe=0.0728
+2022-09-10 17:36:48,118 - fecontrolestimator - INFO - var(psi)_fe=0.0304
+2022-09-10 17:36:48,118 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:48,118 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0066
+2022-09-10 17:36:48,118 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:48,118 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:48,128 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:48,128 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:48,128 - fecontrolestimator - INFO - data firms=4 workers=3 observations=299
+2022-09-10 17:36:48,128 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:48,130 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:48,132 - fecontrolestimator - INFO - total variance: 4.9015
+2022-09-10 17:36:48,132 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:48,132 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:36:48,132 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:48,132 - fecontrolestimator - INFO - fixed effect R-square 0.3088
+2022-09-10 17:36:48,132 - fecontrolestimator - INFO - [fe] variance of residuals 4.7033
+2022-09-10 17:36:48,133 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:48,133 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:48,133 - fecontrolestimator - INFO - var(psi)_fe=0.0615
+2022-09-10 17:36:48,133 - fecontrolestimator - INFO - var(cat_control)_fe=0.0527
+2022-09-10 17:36:48,133 - fecontrolestimator - INFO - var(cts_control)_fe=0.0305
+2022-09-10 17:36:48,133 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0064
+2022-09-10 17:36:48,133 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:48,133 - fecontrolestimator - INFO - var(cat_control)_fe=0.0527
+2022-09-10 17:36:48,133 - fecontrolestimator - INFO - var(cts_control)_fe=0.0305
+2022-09-10 17:36:48,133 - fecontrolestimator - INFO - var(psi)_fe=0.0615
+2022-09-10 17:36:48,133 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:48,133 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0064
+2022-09-10 17:36:48,133 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:48,133 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:48,143 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:48,143 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:48,143 - fecontrolestimator - INFO - data firms=4 workers=3 observations=288
+2022-09-10 17:36:48,143 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:48,145 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:48,147 - fecontrolestimator - INFO - total variance: 4.4714
+2022-09-10 17:36:48,147 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:48,147 - fecontrolestimator - INFO - solver time: 0.0002 seconds
+2022-09-10 17:36:48,147 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:48,147 - fecontrolestimator - INFO - fixed effect R-square 0.3618
+2022-09-10 17:36:48,147 - fecontrolestimator - INFO - [fe] variance of residuals 4.2637
+2022-09-10 17:36:48,148 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:48,148 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:48,148 - fecontrolestimator - INFO - var(psi)_fe=0.0555
+2022-09-10 17:36:48,148 - fecontrolestimator - INFO - var(cat_control)_fe=0.0224
+2022-09-10 17:36:48,148 - fecontrolestimator - INFO - var(cts_control)_fe=0.0794
+2022-09-10 17:36:48,148 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0003
+2022-09-10 17:36:48,148 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:48,148 - fecontrolestimator - INFO - var(cat_control)_fe=0.0224
+2022-09-10 17:36:48,148 - fecontrolestimator - INFO - var(cts_control)_fe=0.0794
+2022-09-10 17:36:48,148 - fecontrolestimator - INFO - var(psi)_fe=0.0555
+2022-09-10 17:36:48,148 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:48,148 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0003
+2022-09-10 17:36:48,148 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:48,148 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:48,158 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:48,158 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:48,158 - fecontrolestimator - INFO - data firms=4 workers=3 observations=317
+2022-09-10 17:36:48,158 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:48,160 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:48,162 - fecontrolestimator - INFO - total variance: 5.2154
+2022-09-10 17:36:48,162 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:48,162 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:36:48,162 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:48,162 - fecontrolestimator - INFO - fixed effect R-square 0.2592
+2022-09-10 17:36:48,162 - fecontrolestimator - INFO - [fe] variance of residuals 5.0402
+2022-09-10 17:36:48,162 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:48,163 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:48,163 - fecontrolestimator - INFO - var(psi)_fe=0.0676
+2022-09-10 17:36:48,163 - fecontrolestimator - INFO - var(cat_control)_fe=0.0046
+2022-09-10 17:36:48,163 - fecontrolestimator - INFO - var(cts_control)_fe=0.0362
+2022-09-10 17:36:48,163 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0107
+2022-09-10 17:36:48,163 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:48,163 - fecontrolestimator - INFO - var(cat_control)_fe=0.0046
+2022-09-10 17:36:48,163 - fecontrolestimator - INFO - var(cts_control)_fe=0.0362
+2022-09-10 17:36:48,163 - fecontrolestimator - INFO - var(psi)_fe=0.0676
+2022-09-10 17:36:48,163 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:48,163 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0107
+2022-09-10 17:36:48,163 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:48,163 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:48,172 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:48,173 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:48,173 - fecontrolestimator - INFO - data firms=4 workers=3 observations=308
+2022-09-10 17:36:48,173 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:48,175 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:48,177 - fecontrolestimator - INFO - total variance: 5.2657
+2022-09-10 17:36:48,177 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:48,177 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:36:48,177 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:48,177 - fecontrolestimator - INFO - fixed effect R-square 0.2530
+2022-09-10 17:36:48,177 - fecontrolestimator - INFO - [fe] variance of residuals 5.0574
+2022-09-10 17:36:48,177 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:48,177 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:48,177 - fecontrolestimator - INFO - var(psi)_fe=0.0689
+2022-09-10 17:36:48,178 - fecontrolestimator - INFO - var(cat_control)_fe=0.0322
+2022-09-10 17:36:48,178 - fecontrolestimator - INFO - var(cts_control)_fe=0.1017
+2022-09-10 17:36:48,178 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0063
+2022-09-10 17:36:48,178 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:48,178 - fecontrolestimator - INFO - var(cat_control)_fe=0.0322
+2022-09-10 17:36:48,178 - fecontrolestimator - INFO - var(cts_control)_fe=0.1017
+2022-09-10 17:36:48,178 - fecontrolestimator - INFO - var(psi)_fe=0.0689
+2022-09-10 17:36:48,178 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:48,178 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0063
+2022-09-10 17:36:48,178 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:48,178 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:48,187 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:48,187 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:48,188 - fecontrolestimator - INFO - data firms=4 workers=3 observations=296
+2022-09-10 17:36:48,188 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:48,189 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:48,191 - fecontrolestimator - INFO - total variance: 4.8940
+2022-09-10 17:36:48,191 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:48,191 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - fixed effect R-square 0.2854
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - [fe] variance of residuals 4.6744
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - var(psi)_fe=0.0406
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - var(cat_control)_fe=0.0326
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - var(cts_control)_fe=0.1380
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0026
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - var(cat_control)_fe=0.0326
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - var(cts_control)_fe=0.1380
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - var(psi)_fe=0.0406
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0026
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:48,192 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:36:48,204 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:36:48,204 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:36:48,204 - fecontrolestimator - INFO - data firms=4 workers=3 observations=296
+2022-09-10 17:36:48,205 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:36:48,207 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:36:48,210 - fecontrolestimator - INFO - total variance: 4.8714
+2022-09-10 17:36:48,210 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:36:48,210 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:36:48,210 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:36:48,210 - fecontrolestimator - INFO - fixed effect R-square 0.2842
+2022-09-10 17:36:48,210 - fecontrolestimator - INFO - [fe] variance of residuals 4.7400
+2022-09-10 17:36:48,210 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:36:48,210 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:36:48,210 - fecontrolestimator - INFO - var(psi)_fe=0.0124
+2022-09-10 17:36:48,211 - fecontrolestimator - INFO - var(cat_control)_fe=0.0225
+2022-09-10 17:36:48,211 - fecontrolestimator - INFO - var(cts_control)_fe=0.0373
+2022-09-10 17:36:48,211 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0029
+2022-09-10 17:36:48,211 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:36:48,211 - fecontrolestimator - INFO - var(cat_control)_fe=0.0225
+2022-09-10 17:36:48,211 - fecontrolestimator - INFO - var(cts_control)_fe=0.0373
+2022-09-10 17:36:48,211 - fecontrolestimator - INFO - var(psi)_fe=0.0124
+2022-09-10 17:36:48,211 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:36:48,211 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0029
+2022-09-10 17:36:48,211 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:36:48,211 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:33,864 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:33,864 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:33,864 - fecontrolestimator - INFO - data firms=4 workers=3 observations=273
+2022-09-10 17:42:33,865 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:33,868 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:33,871 - fecontrolestimator - INFO - total variance: 4.0056
+2022-09-10 17:42:33,871 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:33,872 - fecontrolestimator - INFO - solver time: 0.0004 seconds
+2022-09-10 17:42:33,872 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:33,872 - fecontrolestimator - INFO - fixed effect R-square 0.3605
+2022-09-10 17:42:33,872 - fecontrolestimator - INFO - [fe] variance of residuals 3.7044
+2022-09-10 17:42:33,873 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:33,873 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:33,873 - fecontrolestimator - INFO - var(psi)_fe=0.1089
+2022-09-10 17:42:33,873 - fecontrolestimator - INFO - var(cat_control)_fe=0.1073
+2022-09-10 17:42:33,873 - fecontrolestimator - INFO - var(cts_control)_fe=0.0294
+2022-09-10 17:42:33,873 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0008
+2022-09-10 17:42:33,873 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:33,873 - fecontrolestimator - INFO - var(cat_control)_fe=0.1073
+2022-09-10 17:42:33,873 - fecontrolestimator - INFO - var(cts_control)_fe=0.0294
+2022-09-10 17:42:33,874 - fecontrolestimator - INFO - var(psi)_fe=0.1089
+2022-09-10 17:42:33,874 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:33,874 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0008
+2022-09-10 17:42:33,874 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:33,874 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:33,886 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:33,886 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:33,886 - fecontrolestimator - INFO - data firms=4 workers=3 observations=288
+2022-09-10 17:42:33,886 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:33,889 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:33,891 - fecontrolestimator - INFO - total variance: 4.2933
+2022-09-10 17:42:33,891 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:33,891 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:42:33,891 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:33,892 - fecontrolestimator - INFO - fixed effect R-square 0.3216
+2022-09-10 17:42:33,892 - fecontrolestimator - INFO - [fe] variance of residuals 3.9313
+2022-09-10 17:42:33,892 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:33,892 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:33,892 - fecontrolestimator - INFO - var(psi)_fe=0.1204
+2022-09-10 17:42:33,892 - fecontrolestimator - INFO - var(cat_control)_fe=0.1334
+2022-09-10 17:42:33,892 - fecontrolestimator - INFO - var(cts_control)_fe=0.0134
+2022-09-10 17:42:33,892 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0077
+2022-09-10 17:42:33,892 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:33,892 - fecontrolestimator - INFO - var(cat_control)_fe=0.1334
+2022-09-10 17:42:33,892 - fecontrolestimator - INFO - var(cts_control)_fe=0.0134
+2022-09-10 17:42:33,892 - fecontrolestimator - INFO - var(psi)_fe=0.1204
+2022-09-10 17:42:33,892 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:33,892 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0077
+2022-09-10 17:42:33,892 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:33,892 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:33,902 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:33,902 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:33,903 - fecontrolestimator - INFO - data firms=4 workers=3 observations=304
+2022-09-10 17:42:33,903 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:33,905 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:33,907 - fecontrolestimator - INFO - total variance: 4.5818
+2022-09-10 17:42:33,907 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:33,907 - fecontrolestimator - INFO - solver time: 0.0003 seconds
+2022-09-10 17:42:33,907 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:33,908 - fecontrolestimator - INFO - fixed effect R-square 0.2796
+2022-09-10 17:42:33,908 - fecontrolestimator - INFO - [fe] variance of residuals 4.1827
+2022-09-10 17:42:33,908 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:33,908 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:33,908 - fecontrolestimator - INFO - var(psi)_fe=0.1201
+2022-09-10 17:42:33,908 - fecontrolestimator - INFO - var(cat_control)_fe=0.2000
+2022-09-10 17:42:33,908 - fecontrolestimator - INFO - var(cts_control)_fe=0.0778
+2022-09-10 17:42:33,908 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0038
+2022-09-10 17:42:33,908 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:33,908 - fecontrolestimator - INFO - var(cat_control)_fe=0.2000
+2022-09-10 17:42:33,909 - fecontrolestimator - INFO - var(cts_control)_fe=0.0778
+2022-09-10 17:42:33,909 - fecontrolestimator - INFO - var(psi)_fe=0.1201
+2022-09-10 17:42:33,909 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:33,909 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0038
+2022-09-10 17:42:33,909 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:33,909 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:33,919 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:33,919 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:33,920 - fecontrolestimator - INFO - data firms=4 workers=3 observations=292
+2022-09-10 17:42:33,920 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:33,922 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:33,924 - fecontrolestimator - INFO - total variance: 4.3810
+2022-09-10 17:42:33,924 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:33,924 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:42:33,925 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:33,925 - fecontrolestimator - INFO - fixed effect R-square 0.3007
+2022-09-10 17:42:33,925 - fecontrolestimator - INFO - [fe] variance of residuals 4.0472
+2022-09-10 17:42:33,925 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:33,925 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:33,925 - fecontrolestimator - INFO - var(psi)_fe=0.0957
+2022-09-10 17:42:33,925 - fecontrolestimator - INFO - var(cat_control)_fe=0.1436
+2022-09-10 17:42:33,925 - fecontrolestimator - INFO - var(cts_control)_fe=0.0254
+2022-09-10 17:42:33,925 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0062
+2022-09-10 17:42:33,925 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:33,925 - fecontrolestimator - INFO - var(cat_control)_fe=0.1436
+2022-09-10 17:42:33,925 - fecontrolestimator - INFO - var(cts_control)_fe=0.0254
+2022-09-10 17:42:33,925 - fecontrolestimator - INFO - var(psi)_fe=0.0957
+2022-09-10 17:42:33,925 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:33,925 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0062
+2022-09-10 17:42:33,925 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:33,926 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:33,936 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:33,936 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:33,936 - fecontrolestimator - INFO - data firms=4 workers=3 observations=293
+2022-09-10 17:42:33,936 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:33,938 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:33,940 - fecontrolestimator - INFO - total variance: 4.3941
+2022-09-10 17:42:33,940 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:33,941 - fecontrolestimator - INFO - solver time: 0.0002 seconds
+2022-09-10 17:42:33,941 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:33,941 - fecontrolestimator - INFO - fixed effect R-square 0.3008
+2022-09-10 17:42:33,941 - fecontrolestimator - INFO - [fe] variance of residuals 4.0003
+2022-09-10 17:42:33,941 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:33,941 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:33,941 - fecontrolestimator - INFO - var(psi)_fe=0.1130
+2022-09-10 17:42:33,941 - fecontrolestimator - INFO - var(cat_control)_fe=0.1552
+2022-09-10 17:42:33,941 - fecontrolestimator - INFO - var(cts_control)_fe=0.0214
+2022-09-10 17:42:33,941 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0043
+2022-09-10 17:42:33,942 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:33,942 - fecontrolestimator - INFO - var(cat_control)_fe=0.1552
+2022-09-10 17:42:33,942 - fecontrolestimator - INFO - var(cts_control)_fe=0.0214
+2022-09-10 17:42:33,942 - fecontrolestimator - INFO - var(psi)_fe=0.1130
+2022-09-10 17:42:33,942 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:33,942 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0043
+2022-09-10 17:42:33,942 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:33,942 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:33,955 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:33,955 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:33,956 - fecontrolestimator - INFO - data firms=4 workers=3 observations=290
+2022-09-10 17:42:33,956 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:33,958 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:33,960 - fecontrolestimator - INFO - total variance: 4.2510
+2022-09-10 17:42:33,960 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:33,961 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:42:33,961 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:33,961 - fecontrolestimator - INFO - fixed effect R-square 0.3356
+2022-09-10 17:42:33,961 - fecontrolestimator - INFO - [fe] variance of residuals 3.9055
+2022-09-10 17:42:33,961 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:33,961 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:33,961 - fecontrolestimator - INFO - var(psi)_fe=0.1331
+2022-09-10 17:42:33,961 - fecontrolestimator - INFO - var(cat_control)_fe=0.0609
+2022-09-10 17:42:33,961 - fecontrolestimator - INFO - var(cts_control)_fe=0.0156
+2022-09-10 17:42:33,961 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0042
+2022-09-10 17:42:33,961 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:33,961 - fecontrolestimator - INFO - var(cat_control)_fe=0.0609
+2022-09-10 17:42:33,961 - fecontrolestimator - INFO - var(cts_control)_fe=0.0156
+2022-09-10 17:42:33,961 - fecontrolestimator - INFO - var(psi)_fe=0.1331
+2022-09-10 17:42:33,962 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:33,962 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0042
+2022-09-10 17:42:33,962 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:33,962 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:33,972 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:33,972 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:33,972 - fecontrolestimator - INFO - data firms=4 workers=3 observations=289
+2022-09-10 17:42:33,973 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:33,974 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:33,976 - fecontrolestimator - INFO - total variance: 4.4028
+2022-09-10 17:42:33,977 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:33,977 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:42:33,977 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:33,977 - fecontrolestimator - INFO - fixed effect R-square 0.3059
+2022-09-10 17:42:33,977 - fecontrolestimator - INFO - [fe] variance of residuals 4.0041
+2022-09-10 17:42:33,977 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:33,977 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:33,977 - fecontrolestimator - INFO - var(psi)_fe=0.1518
+2022-09-10 17:42:33,977 - fecontrolestimator - INFO - var(cat_control)_fe=0.1342
+2022-09-10 17:42:33,978 - fecontrolestimator - INFO - var(cts_control)_fe=0.0402
+2022-09-10 17:42:33,978 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0106
+2022-09-10 17:42:33,978 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:33,978 - fecontrolestimator - INFO - var(cat_control)_fe=0.1342
+2022-09-10 17:42:33,978 - fecontrolestimator - INFO - var(cts_control)_fe=0.0402
+2022-09-10 17:42:33,978 - fecontrolestimator - INFO - var(psi)_fe=0.1518
+2022-09-10 17:42:33,978 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:33,978 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0106
+2022-09-10 17:42:33,978 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:33,978 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:33,987 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:33,987 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:33,988 - fecontrolestimator - INFO - data firms=4 workers=3 observations=297
+2022-09-10 17:42:33,988 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:33,990 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:33,992 - fecontrolestimator - INFO - total variance: 4.3866
+2022-09-10 17:42:33,992 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:33,992 - fecontrolestimator - INFO - solver time: 0.0002 seconds
+2022-09-10 17:42:33,992 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:33,992 - fecontrolestimator - INFO - fixed effect R-square 0.3179
+2022-09-10 17:42:33,992 - fecontrolestimator - INFO - [fe] variance of residuals 4.0116
+2022-09-10 17:42:33,993 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:33,993 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:33,993 - fecontrolestimator - INFO - var(psi)_fe=0.0379
+2022-09-10 17:42:33,993 - fecontrolestimator - INFO - var(cat_control)_fe=0.2044
+2022-09-10 17:42:33,993 - fecontrolestimator - INFO - var(cts_control)_fe=0.0031
+2022-09-10 17:42:33,993 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0032
+2022-09-10 17:42:33,993 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:33,993 - fecontrolestimator - INFO - var(cat_control)_fe=0.2044
+2022-09-10 17:42:33,993 - fecontrolestimator - INFO - var(cts_control)_fe=0.0031
+2022-09-10 17:42:33,993 - fecontrolestimator - INFO - var(psi)_fe=0.0379
+2022-09-10 17:42:33,993 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:33,993 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0032
+2022-09-10 17:42:33,993 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:33,993 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:34,004 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:34,004 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:34,004 - fecontrolestimator - INFO - data firms=4 workers=3 observations=297
+2022-09-10 17:42:34,004 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:34,006 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:34,008 - fecontrolestimator - INFO - total variance: 4.2609
+2022-09-10 17:42:34,008 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - fixed effect R-square 0.3474
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - [fe] variance of residuals 3.7631
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - var(psi)_fe=0.1530
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - var(cat_control)_fe=0.2134
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - var(cts_control)_fe=0.0358
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0144
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - var(cat_control)_fe=0.2134
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - var(cts_control)_fe=0.0358
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - var(psi)_fe=0.1530
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0144
+2022-09-10 17:42:34,009 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:34,010 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:34,020 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:34,020 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:34,020 - fecontrolestimator - INFO - data firms=4 workers=3 observations=294
+2022-09-10 17:42:34,020 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:34,022 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:34,024 - fecontrolestimator - INFO - total variance: 4.4272
+2022-09-10 17:42:34,024 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:34,024 - fecontrolestimator - INFO - solver time: 0.0002 seconds
+2022-09-10 17:42:34,024 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:34,024 - fecontrolestimator - INFO - fixed effect R-square 0.2910
+2022-09-10 17:42:34,024 - fecontrolestimator - INFO - [fe] variance of residuals 4.1073
+2022-09-10 17:42:34,025 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:34,025 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:34,025 - fecontrolestimator - INFO - var(psi)_fe=0.0867
+2022-09-10 17:42:34,025 - fecontrolestimator - INFO - var(cat_control)_fe=0.1252
+2022-09-10 17:42:34,025 - fecontrolestimator - INFO - var(cts_control)_fe=0.0230
+2022-09-10 17:42:34,025 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0128
+2022-09-10 17:42:34,025 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:34,025 - fecontrolestimator - INFO - var(cat_control)_fe=0.1252
+2022-09-10 17:42:34,025 - fecontrolestimator - INFO - var(cts_control)_fe=0.0230
+2022-09-10 17:42:34,025 - fecontrolestimator - INFO - var(psi)_fe=0.0867
+2022-09-10 17:42:34,025 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:34,025 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0128
+2022-09-10 17:42:34,025 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:34,025 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:34,035 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:34,035 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:34,035 - fecontrolestimator - INFO - data firms=4 workers=3 observations=315
+2022-09-10 17:42:34,035 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:34,037 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:34,039 - fecontrolestimator - INFO - total variance: 4.7839
+2022-09-10 17:42:34,039 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:34,039 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:42:34,039 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:34,039 - fecontrolestimator - INFO - fixed effect R-square 0.2400
+2022-09-10 17:42:34,039 - fecontrolestimator - INFO - [fe] variance of residuals 4.3640
+2022-09-10 17:42:34,040 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:34,040 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:34,040 - fecontrolestimator - INFO - var(psi)_fe=0.1242
+2022-09-10 17:42:34,040 - fecontrolestimator - INFO - var(cat_control)_fe=0.1399
+2022-09-10 17:42:34,040 - fecontrolestimator - INFO - var(cts_control)_fe=0.0722
+2022-09-10 17:42:34,040 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0130
+2022-09-10 17:42:34,040 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:34,040 - fecontrolestimator - INFO - var(cat_control)_fe=0.1399
+2022-09-10 17:42:34,040 - fecontrolestimator - INFO - var(cts_control)_fe=0.0722
+2022-09-10 17:42:34,040 - fecontrolestimator - INFO - var(psi)_fe=0.1242
+2022-09-10 17:42:34,040 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:34,040 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0130
+2022-09-10 17:42:34,040 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:34,040 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:34,050 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:34,050 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:34,050 - fecontrolestimator - INFO - data firms=4 workers=3 observations=290
+2022-09-10 17:42:34,050 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:34,052 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:34,054 - fecontrolestimator - INFO - total variance: 4.1628
+2022-09-10 17:42:34,054 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:34,054 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:42:34,054 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:34,054 - fecontrolestimator - INFO - fixed effect R-square 0.3251
+2022-09-10 17:42:34,054 - fecontrolestimator - INFO - [fe] variance of residuals 3.9020
+2022-09-10 17:42:34,055 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:34,055 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:34,055 - fecontrolestimator - INFO - var(psi)_fe=0.0727
+2022-09-10 17:42:34,055 - fecontrolestimator - INFO - var(cat_control)_fe=0.0770
+2022-09-10 17:42:34,055 - fecontrolestimator - INFO - var(cts_control)_fe=0.0517
+2022-09-10 17:42:34,055 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0024
+2022-09-10 17:42:34,055 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:34,055 - fecontrolestimator - INFO - var(cat_control)_fe=0.0770
+2022-09-10 17:42:34,055 - fecontrolestimator - INFO - var(cts_control)_fe=0.0517
+2022-09-10 17:42:34,055 - fecontrolestimator - INFO - var(psi)_fe=0.0727
+2022-09-10 17:42:34,055 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:34,055 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0024
+2022-09-10 17:42:34,055 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:34,055 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:34,066 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:34,066 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:34,067 - fecontrolestimator - INFO - data firms=4 workers=3 observations=304
+2022-09-10 17:42:34,067 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:34,069 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:34,072 - fecontrolestimator - INFO - total variance: 4.4641
+2022-09-10 17:42:34,072 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:34,073 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:42:34,073 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:34,073 - fecontrolestimator - INFO - fixed effect R-square 0.2804
+2022-09-10 17:42:34,073 - fecontrolestimator - INFO - [fe] variance of residuals 4.1233
+2022-09-10 17:42:34,073 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:34,073 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:34,073 - fecontrolestimator - INFO - var(psi)_fe=0.0733
+2022-09-10 17:42:34,073 - fecontrolestimator - INFO - var(cat_control)_fe=0.1596
+2022-09-10 17:42:34,073 - fecontrolestimator - INFO - var(cts_control)_fe=0.0449
+2022-09-10 17:42:34,073 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0052
+2022-09-10 17:42:34,073 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:34,073 - fecontrolestimator - INFO - var(cat_control)_fe=0.1596
+2022-09-10 17:42:34,073 - fecontrolestimator - INFO - var(cts_control)_fe=0.0449
+2022-09-10 17:42:34,074 - fecontrolestimator - INFO - var(psi)_fe=0.0733
+2022-09-10 17:42:34,074 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:34,074 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0052
+2022-09-10 17:42:34,074 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:34,074 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:34,084 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:34,084 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:34,084 - fecontrolestimator - INFO - data firms=4 workers=3 observations=293
+2022-09-10 17:42:34,085 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:34,087 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:34,089 - fecontrolestimator - INFO - total variance: 4.2392
+2022-09-10 17:42:34,089 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:34,089 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:42:34,089 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:34,089 - fecontrolestimator - INFO - fixed effect R-square 0.3441
+2022-09-10 17:42:34,089 - fecontrolestimator - INFO - [fe] variance of residuals 3.8270
+2022-09-10 17:42:34,090 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:34,090 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:34,090 - fecontrolestimator - INFO - var(psi)_fe=0.1292
+2022-09-10 17:42:34,090 - fecontrolestimator - INFO - var(cat_control)_fe=0.1846
+2022-09-10 17:42:34,090 - fecontrolestimator - INFO - var(cts_control)_fe=0.0206
+2022-09-10 17:42:34,090 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0026
+2022-09-10 17:42:34,090 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:34,090 - fecontrolestimator - INFO - var(cat_control)_fe=0.1846
+2022-09-10 17:42:34,090 - fecontrolestimator - INFO - var(cts_control)_fe=0.0206
+2022-09-10 17:42:34,090 - fecontrolestimator - INFO - var(psi)_fe=0.1292
+2022-09-10 17:42:34,090 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:34,090 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0026
+2022-09-10 17:42:34,090 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:34,090 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:34,100 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:34,100 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:34,100 - fecontrolestimator - INFO - data firms=4 workers=3 observations=297
+2022-09-10 17:42:34,101 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:34,102 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:34,104 - fecontrolestimator - INFO - total variance: 4.5692
+2022-09-10 17:42:34,104 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:34,105 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:42:34,105 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:34,105 - fecontrolestimator - INFO - fixed effect R-square 0.2606
+2022-09-10 17:42:34,105 - fecontrolestimator - INFO - [fe] variance of residuals 4.2320
+2022-09-10 17:42:34,105 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:34,105 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:34,105 - fecontrolestimator - INFO - var(psi)_fe=0.0637
+2022-09-10 17:42:34,105 - fecontrolestimator - INFO - var(cat_control)_fe=0.1559
+2022-09-10 17:42:34,105 - fecontrolestimator - INFO - var(cts_control)_fe=0.0554
+2022-09-10 17:42:34,105 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0033
+2022-09-10 17:42:34,105 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:34,105 - fecontrolestimator - INFO - var(cat_control)_fe=0.1559
+2022-09-10 17:42:34,105 - fecontrolestimator - INFO - var(cts_control)_fe=0.0554
+2022-09-10 17:42:34,105 - fecontrolestimator - INFO - var(psi)_fe=0.0637
+2022-09-10 17:42:34,106 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:34,106 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0033
+2022-09-10 17:42:34,106 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:34,106 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:34,115 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:34,115 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:34,115 - fecontrolestimator - INFO - data firms=4 workers=3 observations=303
+2022-09-10 17:42:34,116 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:34,117 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:34,119 - fecontrolestimator - INFO - total variance: 4.5104
+2022-09-10 17:42:34,119 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:34,119 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:42:34,119 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:34,120 - fecontrolestimator - INFO - fixed effect R-square 0.2904
+2022-09-10 17:42:34,120 - fecontrolestimator - INFO - [fe] variance of residuals 4.1064
+2022-09-10 17:42:34,120 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:34,120 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:34,120 - fecontrolestimator - INFO - var(psi)_fe=0.1201
+2022-09-10 17:42:34,120 - fecontrolestimator - INFO - var(cat_control)_fe=0.1228
+2022-09-10 17:42:34,120 - fecontrolestimator - INFO - var(cts_control)_fe=0.0526
+2022-09-10 17:42:34,120 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0057
+2022-09-10 17:42:34,120 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:34,120 - fecontrolestimator - INFO - var(cat_control)_fe=0.1228
+2022-09-10 17:42:34,120 - fecontrolestimator - INFO - var(cts_control)_fe=0.0526
+2022-09-10 17:42:34,120 - fecontrolestimator - INFO - var(psi)_fe=0.1201
+2022-09-10 17:42:34,120 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:34,120 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0057
+2022-09-10 17:42:34,120 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:34,120 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:34,130 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:34,130 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:34,131 - fecontrolestimator - INFO - data firms=4 workers=3 observations=301
+2022-09-10 17:42:34,131 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:34,132 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:34,134 - fecontrolestimator - INFO - total variance: 4.7090
+2022-09-10 17:42:34,134 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - fixed effect R-square 0.2359
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - [fe] variance of residuals 4.3681
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - var(psi)_fe=0.0558
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - var(cat_control)_fe=0.2270
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - var(cts_control)_fe=0.0517
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0035
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - var(cat_control)_fe=0.2270
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - var(cts_control)_fe=0.0517
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - var(psi)_fe=0.0558
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0035
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:34,135 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:34,145 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:34,145 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:34,145 - fecontrolestimator - INFO - data firms=4 workers=3 observations=290
+2022-09-10 17:42:34,146 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:34,147 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:34,149 - fecontrolestimator - INFO - total variance: 4.4441
+2022-09-10 17:42:34,149 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:34,150 - fecontrolestimator - INFO - solver time: 0.0002 seconds
+2022-09-10 17:42:34,150 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:34,150 - fecontrolestimator - INFO - fixed effect R-square 0.3044
+2022-09-10 17:42:34,150 - fecontrolestimator - INFO - [fe] variance of residuals 4.0585
+2022-09-10 17:42:34,150 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:34,150 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:34,150 - fecontrolestimator - INFO - var(psi)_fe=0.1009
+2022-09-10 17:42:34,150 - fecontrolestimator - INFO - var(cat_control)_fe=0.1872
+2022-09-10 17:42:34,150 - fecontrolestimator - INFO - var(cts_control)_fe=0.0744
+2022-09-10 17:42:34,150 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0017
+2022-09-10 17:42:34,150 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:34,150 - fecontrolestimator - INFO - var(cat_control)_fe=0.1872
+2022-09-10 17:42:34,150 - fecontrolestimator - INFO - var(cts_control)_fe=0.0744
+2022-09-10 17:42:34,150 - fecontrolestimator - INFO - var(psi)_fe=0.1009
+2022-09-10 17:42:34,151 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:34,151 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0017
+2022-09-10 17:42:34,151 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:34,151 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:34,160 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:34,160 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:34,160 - fecontrolestimator - INFO - data firms=4 workers=3 observations=295
+2022-09-10 17:42:34,161 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:34,162 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:34,164 - fecontrolestimator - INFO - total variance: 4.4722
+2022-09-10 17:42:34,164 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - fixed effect R-square 0.3040
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - [fe] variance of residuals 4.0156
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - var(psi)_fe=0.1727
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - var(cat_control)_fe=0.1595
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - var(cts_control)_fe=0.0523
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0062
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - var(cat_control)_fe=0.1595
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - var(cts_control)_fe=0.0523
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - var(psi)_fe=0.1727
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0062
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:34,165 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:42:34,176 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:42:34,176 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:42:34,177 - fecontrolestimator - INFO - data firms=4 workers=3 observations=287
+2022-09-10 17:42:34,177 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:42:34,180 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:42:34,182 - fecontrolestimator - INFO - total variance: 4.2623
+2022-09-10 17:42:34,182 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:42:34,183 - fecontrolestimator - INFO - solver time: 0.0003 seconds
+2022-09-10 17:42:34,183 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:42:34,183 - fecontrolestimator - INFO - fixed effect R-square 0.3439
+2022-09-10 17:42:34,183 - fecontrolestimator - INFO - [fe] variance of residuals 3.9058
+2022-09-10 17:42:34,183 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:42:34,183 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:42:34,183 - fecontrolestimator - INFO - var(psi)_fe=0.1618
+2022-09-10 17:42:34,183 - fecontrolestimator - INFO - var(cat_control)_fe=0.0978
+2022-09-10 17:42:34,184 - fecontrolestimator - INFO - var(cts_control)_fe=0.0369
+2022-09-10 17:42:34,184 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0035
+2022-09-10 17:42:34,184 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:42:34,184 - fecontrolestimator - INFO - var(cat_control)_fe=0.0978
+2022-09-10 17:42:34,184 - fecontrolestimator - INFO - var(cts_control)_fe=0.0369
+2022-09-10 17:42:34,184 - fecontrolestimator - INFO - var(psi)_fe=0.1618
+2022-09-10 17:42:34,184 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:42:34,184 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0035
+2022-09-10 17:42:34,184 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:42:34,184 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:59:59,799 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:59:59,799 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:59:59,800 - fecontrolestimator - INFO - data firms=4 workers=3 observations=303
+2022-09-10 17:59:59,800 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:59:59,804 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:59:59,808 - fecontrolestimator - INFO - total variance: 4.0651
+2022-09-10 17:59:59,808 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:59:59,808 - fecontrolestimator - INFO - solver time: 0.0003 seconds
+2022-09-10 17:59:59,808 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:59:59,808 - fecontrolestimator - INFO - fixed effect R-square 0.2754
+2022-09-10 17:59:59,808 - fecontrolestimator - INFO - [fe] variance of residuals 3.7204
+2022-09-10 17:59:59,809 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:59:59,809 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:59:59,809 - fecontrolestimator - INFO - var(psi)_fe=0.0960
+2022-09-10 17:59:59,809 - fecontrolestimator - INFO - var(cat_control)_fe=0.2078
+2022-09-10 17:59:59,809 - fecontrolestimator - INFO - var(cts_control)_fe=0.0231
+2022-09-10 17:59:59,809 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0006
+2022-09-10 17:59:59,809 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:59:59,809 - fecontrolestimator - INFO - var(cat_control)_fe=0.2078
+2022-09-10 17:59:59,809 - fecontrolestimator - INFO - var(cts_control)_fe=0.0231
+2022-09-10 17:59:59,809 - fecontrolestimator - INFO - var(psi)_fe=0.0960
+2022-09-10 17:59:59,809 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:59:59,809 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0006
+2022-09-10 17:59:59,809 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:59:59,809 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:59:59,820 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:59:59,820 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:59:59,820 - fecontrolestimator - INFO - data firms=4 workers=3 observations=299
+2022-09-10 17:59:59,820 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:59:59,822 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:59:59,824 - fecontrolestimator - INFO - total variance: 4.0379
+2022-09-10 17:59:59,824 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:59:59,824 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:59:59,824 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:59:59,825 - fecontrolestimator - INFO - fixed effect R-square 0.2868
+2022-09-10 17:59:59,825 - fecontrolestimator - INFO - [fe] variance of residuals 3.6581
+2022-09-10 17:59:59,825 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:59:59,825 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:59:59,825 - fecontrolestimator - INFO - var(psi)_fe=0.0693
+2022-09-10 17:59:59,825 - fecontrolestimator - INFO - var(cat_control)_fe=0.2378
+2022-09-10 17:59:59,825 - fecontrolestimator - INFO - var(cts_control)_fe=0.0458
+2022-09-10 17:59:59,825 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0018
+2022-09-10 17:59:59,825 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:59:59,825 - fecontrolestimator - INFO - var(cat_control)_fe=0.2378
+2022-09-10 17:59:59,825 - fecontrolestimator - INFO - var(cts_control)_fe=0.0458
+2022-09-10 17:59:59,825 - fecontrolestimator - INFO - var(psi)_fe=0.0693
+2022-09-10 17:59:59,825 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:59:59,825 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0018
+2022-09-10 17:59:59,825 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:59:59,826 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:59:59,836 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:59:59,836 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:59:59,837 - fecontrolestimator - INFO - data firms=4 workers=3 observations=302
+2022-09-10 17:59:59,837 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:59:59,839 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:59:59,841 - fecontrolestimator - INFO - total variance: 4.2921
+2022-09-10 17:59:59,841 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:59:59,842 - fecontrolestimator - INFO - solver time: 0.0002 seconds
+2022-09-10 17:59:59,842 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:59:59,842 - fecontrolestimator - INFO - fixed effect R-square 0.2202
+2022-09-10 17:59:59,842 - fecontrolestimator - INFO - [fe] variance of residuals 4.0778
+2022-09-10 17:59:59,842 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:59:59,842 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:59:59,842 - fecontrolestimator - INFO - var(psi)_fe=0.0392
+2022-09-10 17:59:59,842 - fecontrolestimator - INFO - var(cat_control)_fe=0.0907
+2022-09-10 17:59:59,842 - fecontrolestimator - INFO - var(cts_control)_fe=0.0320
+2022-09-10 17:59:59,842 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0043
+2022-09-10 17:59:59,842 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:59:59,842 - fecontrolestimator - INFO - var(cat_control)_fe=0.0907
+2022-09-10 17:59:59,842 - fecontrolestimator - INFO - var(cts_control)_fe=0.0320
+2022-09-10 17:59:59,842 - fecontrolestimator - INFO - var(psi)_fe=0.0392
+2022-09-10 17:59:59,842 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:59:59,842 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0043
+2022-09-10 17:59:59,843 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:59:59,843 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:59:59,853 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:59:59,853 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:59:59,853 - fecontrolestimator - INFO - data firms=4 workers=3 observations=300
+2022-09-10 17:59:59,853 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:59:59,855 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:59:59,857 - fecontrolestimator - INFO - total variance: 4.0794
+2022-09-10 17:59:59,857 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:59:59,857 - fecontrolestimator - INFO - solver time: 0.0002 seconds
+2022-09-10 17:59:59,857 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:59:59,857 - fecontrolestimator - INFO - fixed effect R-square 0.2711
+2022-09-10 17:59:59,857 - fecontrolestimator - INFO - [fe] variance of residuals 3.7017
+2022-09-10 17:59:59,858 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:59:59,858 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:59:59,858 - fecontrolestimator - INFO - var(psi)_fe=0.0530
+2022-09-10 17:59:59,858 - fecontrolestimator - INFO - var(cat_control)_fe=0.2846
+2022-09-10 17:59:59,858 - fecontrolestimator - INFO - var(cts_control)_fe=0.0164
+2022-09-10 17:59:59,858 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0024
+2022-09-10 17:59:59,858 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:59:59,858 - fecontrolestimator - INFO - var(cat_control)_fe=0.2846
+2022-09-10 17:59:59,858 - fecontrolestimator - INFO - var(cts_control)_fe=0.0164
+2022-09-10 17:59:59,858 - fecontrolestimator - INFO - var(psi)_fe=0.0530
+2022-09-10 17:59:59,858 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:59:59,858 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0024
+2022-09-10 17:59:59,858 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:59:59,858 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:59:59,868 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:59:59,868 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:59:59,869 - fecontrolestimator - INFO - data firms=4 workers=3 observations=296
+2022-09-10 17:59:59,869 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:59:59,871 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:59:59,873 - fecontrolestimator - INFO - total variance: 4.2920
+2022-09-10 17:59:59,873 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:59:59,873 - fecontrolestimator - INFO - solver time: 0.0003 seconds
+2022-09-10 17:59:59,873 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:59:59,873 - fecontrolestimator - INFO - fixed effect R-square 0.2468
+2022-09-10 17:59:59,873 - fecontrolestimator - INFO - [fe] variance of residuals 3.9789
+2022-09-10 17:59:59,874 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:59:59,874 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:59:59,874 - fecontrolestimator - INFO - var(psi)_fe=0.0564
+2022-09-10 17:59:59,874 - fecontrolestimator - INFO - var(cat_control)_fe=0.0760
+2022-09-10 17:59:59,874 - fecontrolestimator - INFO - var(cts_control)_fe=0.0542
+2022-09-10 17:59:59,874 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0165
+2022-09-10 17:59:59,874 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:59:59,874 - fecontrolestimator - INFO - var(cat_control)_fe=0.0760
+2022-09-10 17:59:59,874 - fecontrolestimator - INFO - var(cts_control)_fe=0.0542
+2022-09-10 17:59:59,874 - fecontrolestimator - INFO - var(psi)_fe=0.0564
+2022-09-10 17:59:59,874 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:59:59,874 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0165
+2022-09-10 17:59:59,874 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:59:59,874 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:59:59,887 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:59:59,887 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:59:59,887 - fecontrolestimator - INFO - data firms=4 workers=3 observations=295
+2022-09-10 17:59:59,888 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:59:59,889 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:59:59,891 - fecontrolestimator - INFO - total variance: 4.1056
+2022-09-10 17:59:59,891 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:59:59,892 - fecontrolestimator - INFO - solver time: 0.0002 seconds
+2022-09-10 17:59:59,892 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:59:59,892 - fecontrolestimator - INFO - fixed effect R-square 0.2886
+2022-09-10 17:59:59,892 - fecontrolestimator - INFO - [fe] variance of residuals 3.7563
+2022-09-10 17:59:59,892 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:59:59,892 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:59:59,892 - fecontrolestimator - INFO - var(psi)_fe=0.0658
+2022-09-10 17:59:59,892 - fecontrolestimator - INFO - var(cat_control)_fe=0.2191
+2022-09-10 17:59:59,892 - fecontrolestimator - INFO - var(cts_control)_fe=0.0518
+2022-09-10 17:59:59,892 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0020
+2022-09-10 17:59:59,892 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:59:59,893 - fecontrolestimator - INFO - var(cat_control)_fe=0.2191
+2022-09-10 17:59:59,893 - fecontrolestimator - INFO - var(cts_control)_fe=0.0518
+2022-09-10 17:59:59,893 - fecontrolestimator - INFO - var(psi)_fe=0.0658
+2022-09-10 17:59:59,893 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:59:59,893 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0020
+2022-09-10 17:59:59,893 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:59:59,893 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:59:59,902 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:59:59,902 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:59:59,903 - fecontrolestimator - INFO - data firms=4 workers=3 observations=309
+2022-09-10 17:59:59,903 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:59:59,905 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:59:59,906 - fecontrolestimator - INFO - total variance: 4.4972
+2022-09-10 17:59:59,907 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:59:59,907 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:59:59,907 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:59:59,907 - fecontrolestimator - INFO - fixed effect R-square 0.2023
+2022-09-10 17:59:59,907 - fecontrolestimator - INFO - [fe] variance of residuals 4.2582
+2022-09-10 17:59:59,907 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:59:59,907 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:59:59,907 - fecontrolestimator - INFO - var(psi)_fe=0.0154
+2022-09-10 17:59:59,907 - fecontrolestimator - INFO - var(cat_control)_fe=0.1040
+2022-09-10 17:59:59,907 - fecontrolestimator - INFO - var(cts_control)_fe=0.0325
+2022-09-10 17:59:59,908 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0015
+2022-09-10 17:59:59,908 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:59:59,908 - fecontrolestimator - INFO - var(cat_control)_fe=0.1040
+2022-09-10 17:59:59,908 - fecontrolestimator - INFO - var(cts_control)_fe=0.0325
+2022-09-10 17:59:59,908 - fecontrolestimator - INFO - var(psi)_fe=0.0154
+2022-09-10 17:59:59,908 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:59:59,908 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0015
+2022-09-10 17:59:59,908 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:59:59,908 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:59:59,917 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:59:59,917 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:59:59,918 - fecontrolestimator - INFO - data firms=4 workers=3 observations=289
+2022-09-10 17:59:59,918 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:59:59,920 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:59:59,921 - fecontrolestimator - INFO - total variance: 3.8646
+2022-09-10 17:59:59,921 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:59:59,922 - fecontrolestimator - INFO - solver time: 0.0003 seconds
+2022-09-10 17:59:59,922 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:59:59,922 - fecontrolestimator - INFO - fixed effect R-square 0.2951
+2022-09-10 17:59:59,922 - fecontrolestimator - INFO - [fe] variance of residuals 3.5693
+2022-09-10 17:59:59,922 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:59:59,922 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:59:59,922 - fecontrolestimator - INFO - var(psi)_fe=0.0763
+2022-09-10 17:59:59,923 - fecontrolestimator - INFO - var(cat_control)_fe=0.1704
+2022-09-10 17:59:59,923 - fecontrolestimator - INFO - var(cts_control)_fe=0.0291
+2022-09-10 17:59:59,923 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0034
+2022-09-10 17:59:59,923 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:59:59,923 - fecontrolestimator - INFO - var(cat_control)_fe=0.1704
+2022-09-10 17:59:59,923 - fecontrolestimator - INFO - var(cts_control)_fe=0.0291
+2022-09-10 17:59:59,923 - fecontrolestimator - INFO - var(psi)_fe=0.0763
+2022-09-10 17:59:59,923 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:59:59,923 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0034
+2022-09-10 17:59:59,923 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:59:59,923 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:59:59,933 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:59:59,933 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:59:59,933 - fecontrolestimator - INFO - data firms=4 workers=3 observations=309
+2022-09-10 17:59:59,933 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:59:59,935 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:59:59,937 - fecontrolestimator - INFO - total variance: 4.5266
+2022-09-10 17:59:59,937 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:59:59,938 - fecontrolestimator - INFO - solver time: 0.0003 seconds
+2022-09-10 17:59:59,938 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:59:59,938 - fecontrolestimator - INFO - fixed effect R-square 0.1777
+2022-09-10 17:59:59,938 - fecontrolestimator - INFO - [fe] variance of residuals 4.3169
+2022-09-10 17:59:59,938 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:59:59,938 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:59:59,938 - fecontrolestimator - INFO - var(psi)_fe=0.0281
+2022-09-10 17:59:59,939 - fecontrolestimator - INFO - var(cat_control)_fe=0.0372
+2022-09-10 17:59:59,939 - fecontrolestimator - INFO - var(cts_control)_fe=0.0902
+2022-09-10 17:59:59,939 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0035
+2022-09-10 17:59:59,939 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:59:59,939 - fecontrolestimator - INFO - var(cat_control)_fe=0.0372
+2022-09-10 17:59:59,939 - fecontrolestimator - INFO - var(cts_control)_fe=0.0902
+2022-09-10 17:59:59,939 - fecontrolestimator - INFO - var(psi)_fe=0.0281
+2022-09-10 17:59:59,939 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:59:59,939 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0035
+2022-09-10 17:59:59,939 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:59:59,939 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:59:59,949 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:59:59,949 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:59:59,949 - fecontrolestimator - INFO - data firms=4 workers=3 observations=296
+2022-09-10 17:59:59,950 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:59:59,951 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:59:59,953 - fecontrolestimator - INFO - total variance: 3.9628
+2022-09-10 17:59:59,953 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:59:59,953 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:59:59,953 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:59:59,953 - fecontrolestimator - INFO - fixed effect R-square 0.3020
+2022-09-10 17:59:59,953 - fecontrolestimator - INFO - [fe] variance of residuals 3.6284
+2022-09-10 17:59:59,954 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:59:59,954 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:59:59,954 - fecontrolestimator - INFO - var(psi)_fe=0.0640
+2022-09-10 17:59:59,954 - fecontrolestimator - INFO - var(cat_control)_fe=0.1854
+2022-09-10 17:59:59,954 - fecontrolestimator - INFO - var(cts_control)_fe=0.0285
+2022-09-10 17:59:59,954 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0045
+2022-09-10 17:59:59,954 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:59:59,954 - fecontrolestimator - INFO - var(cat_control)_fe=0.1854
+2022-09-10 17:59:59,954 - fecontrolestimator - INFO - var(cts_control)_fe=0.0285
+2022-09-10 17:59:59,954 - fecontrolestimator - INFO - var(psi)_fe=0.0640
+2022-09-10 17:59:59,954 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:59:59,954 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0045
+2022-09-10 17:59:59,954 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:59:59,954 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:59:59,964 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:59:59,964 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:59:59,964 - fecontrolestimator - INFO - data firms=4 workers=3 observations=302
+2022-09-10 17:59:59,964 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:59:59,966 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:59:59,968 - fecontrolestimator - INFO - total variance: 4.5157
+2022-09-10 17:59:59,968 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:59:59,968 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:59:59,968 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:59:59,968 - fecontrolestimator - INFO - fixed effect R-square 0.1913
+2022-09-10 17:59:59,968 - fecontrolestimator - INFO - [fe] variance of residuals 4.2733
+2022-09-10 17:59:59,969 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:59:59,969 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:59:59,969 - fecontrolestimator - INFO - var(psi)_fe=0.0466
+2022-09-10 17:59:59,969 - fecontrolestimator - INFO - var(cat_control)_fe=0.1246
+2022-09-10 17:59:59,969 - fecontrolestimator - INFO - var(cts_control)_fe=0.0155
+2022-09-10 17:59:59,969 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0018
+2022-09-10 17:59:59,969 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:59:59,969 - fecontrolestimator - INFO - var(cat_control)_fe=0.1246
+2022-09-10 17:59:59,969 - fecontrolestimator - INFO - var(cts_control)_fe=0.0155
+2022-09-10 17:59:59,969 - fecontrolestimator - INFO - var(psi)_fe=0.0466
+2022-09-10 17:59:59,969 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:59:59,969 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0018
+2022-09-10 17:59:59,969 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:59:59,969 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:59:59,978 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:59:59,978 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:59:59,979 - fecontrolestimator - INFO - data firms=4 workers=3 observations=302
+2022-09-10 17:59:59,979 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:59:59,981 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 17:59:59,983 - fecontrolestimator - INFO - total variance: 4.0930
+2022-09-10 17:59:59,983 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 17:59:59,983 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 17:59:59,983 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 17:59:59,983 - fecontrolestimator - INFO - fixed effect R-square 0.2780
+2022-09-10 17:59:59,983 - fecontrolestimator - INFO - [fe] variance of residuals 3.7546
+2022-09-10 17:59:59,983 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 17:59:59,983 - fecontrolestimator - INFO - [fe]
+2022-09-10 17:59:59,983 - fecontrolestimator - INFO - var(psi)_fe=0.1016
+2022-09-10 17:59:59,983 - fecontrolestimator - INFO - var(cat_control)_fe=0.1624
+2022-09-10 17:59:59,984 - fecontrolestimator - INFO - var(cts_control)_fe=0.0461
+2022-09-10 17:59:59,984 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0003
+2022-09-10 17:59:59,984 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 17:59:59,984 - fecontrolestimator - INFO - var(cat_control)_fe=0.1624
+2022-09-10 17:59:59,984 - fecontrolestimator - INFO - var(cts_control)_fe=0.0461
+2022-09-10 17:59:59,984 - fecontrolestimator - INFO - var(psi)_fe=0.1016
+2022-09-10 17:59:59,984 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 17:59:59,984 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0003
+2022-09-10 17:59:59,984 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 17:59:59,984 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 17:59:59,996 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 17:59:59,996 - fecontrolestimator - INFO - preparing data
+2022-09-10 17:59:59,997 - fecontrolestimator - INFO - data firms=4 workers=3 observations=307
+2022-09-10 17:59:59,997 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 17:59:59,999 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 18:00:00,001 - fecontrolestimator - INFO - total variance: 4.2677
+2022-09-10 18:00:00,001 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 18:00:00,001 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 18:00:00,001 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 18:00:00,001 - fecontrolestimator - INFO - fixed effect R-square 0.2442
+2022-09-10 18:00:00,002 - fecontrolestimator - INFO - [fe] variance of residuals 3.9630
+2022-09-10 18:00:00,002 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 18:00:00,002 - fecontrolestimator - INFO - [fe]
+2022-09-10 18:00:00,002 - fecontrolestimator - INFO - var(psi)_fe=0.0645
+2022-09-10 18:00:00,002 - fecontrolestimator - INFO - var(cat_control)_fe=0.1127
+2022-09-10 18:00:00,002 - fecontrolestimator - INFO - var(cts_control)_fe=0.1076
+2022-09-10 18:00:00,002 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0111
+2022-09-10 18:00:00,002 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 18:00:00,002 - fecontrolestimator - INFO - var(cat_control)_fe=0.1127
+2022-09-10 18:00:00,002 - fecontrolestimator - INFO - var(cts_control)_fe=0.1076
+2022-09-10 18:00:00,002 - fecontrolestimator - INFO - var(psi)_fe=0.0645
+2022-09-10 18:00:00,002 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 18:00:00,002 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0111
+2022-09-10 18:00:00,002 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 18:00:00,002 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 18:00:00,012 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 18:00:00,012 - fecontrolestimator - INFO - preparing data
+2022-09-10 18:00:00,012 - fecontrolestimator - INFO - data firms=4 workers=3 observations=306
+2022-09-10 18:00:00,013 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 18:00:00,014 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 18:00:00,016 - fecontrolestimator - INFO - total variance: 4.2181
+2022-09-10 18:00:00,016 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 18:00:00,016 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 18:00:00,016 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 18:00:00,016 - fecontrolestimator - INFO - fixed effect R-square 0.2557
+2022-09-10 18:00:00,017 - fecontrolestimator - INFO - [fe] variance of residuals 3.8342
+2022-09-10 18:00:00,017 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 18:00:00,017 - fecontrolestimator - INFO - [fe]
+2022-09-10 18:00:00,017 - fecontrolestimator - INFO - var(psi)_fe=0.0320
+2022-09-10 18:00:00,017 - fecontrolestimator - INFO - var(cat_control)_fe=0.2602
+2022-09-10 18:00:00,017 - fecontrolestimator - INFO - var(cts_control)_fe=0.0081
+2022-09-10 18:00:00,017 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0017
+2022-09-10 18:00:00,017 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 18:00:00,017 - fecontrolestimator - INFO - var(cat_control)_fe=0.2602
+2022-09-10 18:00:00,017 - fecontrolestimator - INFO - var(cts_control)_fe=0.0081
+2022-09-10 18:00:00,017 - fecontrolestimator - INFO - var(psi)_fe=0.0320
+2022-09-10 18:00:00,017 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 18:00:00,017 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0017
+2022-09-10 18:00:00,017 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 18:00:00,017 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 18:00:00,027 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 18:00:00,027 - fecontrolestimator - INFO - preparing data
+2022-09-10 18:00:00,027 - fecontrolestimator - INFO - data firms=4 workers=3 observations=304
+2022-09-10 18:00:00,027 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 18:00:00,029 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 18:00:00,031 - fecontrolestimator - INFO - total variance: 4.3120
+2022-09-10 18:00:00,031 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 18:00:00,031 - fecontrolestimator - INFO - solver time: 0.0002 seconds
+2022-09-10 18:00:00,031 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 18:00:00,032 - fecontrolestimator - INFO - fixed effect R-square 0.2271
+2022-09-10 18:00:00,032 - fecontrolestimator - INFO - [fe] variance of residuals 4.0238
+2022-09-10 18:00:00,032 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 18:00:00,032 - fecontrolestimator - INFO - [fe]
+2022-09-10 18:00:00,032 - fecontrolestimator - INFO - var(psi)_fe=0.0095
+2022-09-10 18:00:00,032 - fecontrolestimator - INFO - var(cat_control)_fe=0.2058
+2022-09-10 18:00:00,032 - fecontrolestimator - INFO - var(cts_control)_fe=0.0331
+2022-09-10 18:00:00,032 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0037
+2022-09-10 18:00:00,032 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 18:00:00,032 - fecontrolestimator - INFO - var(cat_control)_fe=0.2058
+2022-09-10 18:00:00,032 - fecontrolestimator - INFO - var(cts_control)_fe=0.0331
+2022-09-10 18:00:00,032 - fecontrolestimator - INFO - var(psi)_fe=0.0095
+2022-09-10 18:00:00,032 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 18:00:00,032 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0037
+2022-09-10 18:00:00,032 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 18:00:00,032 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 18:00:00,042 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 18:00:00,042 - fecontrolestimator - INFO - preparing data
+2022-09-10 18:00:00,042 - fecontrolestimator - INFO - data firms=4 workers=3 observations=310
+2022-09-10 18:00:00,042 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 18:00:00,044 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 18:00:00,046 - fecontrolestimator - INFO - total variance: 4.3442
+2022-09-10 18:00:00,046 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 18:00:00,046 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 18:00:00,046 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 18:00:00,046 - fecontrolestimator - INFO - fixed effect R-square 0.2183
+2022-09-10 18:00:00,046 - fecontrolestimator - INFO - [fe] variance of residuals 4.0404
+2022-09-10 18:00:00,047 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 18:00:00,047 - fecontrolestimator - INFO - [fe]
+2022-09-10 18:00:00,047 - fecontrolestimator - INFO - var(psi)_fe=0.0340
+2022-09-10 18:00:00,047 - fecontrolestimator - INFO - var(cat_control)_fe=0.1805
+2022-09-10 18:00:00,047 - fecontrolestimator - INFO - var(cts_control)_fe=0.0191
+2022-09-10 18:00:00,047 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0009
+2022-09-10 18:00:00,047 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 18:00:00,047 - fecontrolestimator - INFO - var(cat_control)_fe=0.1805
+2022-09-10 18:00:00,047 - fecontrolestimator - INFO - var(cts_control)_fe=0.0191
+2022-09-10 18:00:00,047 - fecontrolestimator - INFO - var(psi)_fe=0.0340
+2022-09-10 18:00:00,047 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 18:00:00,047 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0009
+2022-09-10 18:00:00,047 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 18:00:00,047 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 18:00:00,056 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 18:00:00,057 - fecontrolestimator - INFO - preparing data
+2022-09-10 18:00:00,057 - fecontrolestimator - INFO - data firms=4 workers=3 observations=287
+2022-09-10 18:00:00,057 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 18:00:00,059 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 18:00:00,060 - fecontrolestimator - INFO - total variance: 3.9773
+2022-09-10 18:00:00,060 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 18:00:00,061 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 18:00:00,061 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 18:00:00,061 - fecontrolestimator - INFO - fixed effect R-square 0.2960
+2022-09-10 18:00:00,061 - fecontrolestimator - INFO - [fe] variance of residuals 3.6570
+2022-09-10 18:00:00,061 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 18:00:00,061 - fecontrolestimator - INFO - [fe]
+2022-09-10 18:00:00,061 - fecontrolestimator - INFO - var(psi)_fe=0.0320
+2022-09-10 18:00:00,061 - fecontrolestimator - INFO - var(cat_control)_fe=0.2180
+2022-09-10 18:00:00,061 - fecontrolestimator - INFO - var(cts_control)_fe=0.0186
+2022-09-10 18:00:00,061 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0010
+2022-09-10 18:00:00,061 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 18:00:00,061 - fecontrolestimator - INFO - var(cat_control)_fe=0.2180
+2022-09-10 18:00:00,062 - fecontrolestimator - INFO - var(cts_control)_fe=0.0186
+2022-09-10 18:00:00,062 - fecontrolestimator - INFO - var(psi)_fe=0.0320
+2022-09-10 18:00:00,062 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 18:00:00,062 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0010
+2022-09-10 18:00:00,062 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 18:00:00,062 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 18:00:00,071 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 18:00:00,071 - fecontrolestimator - INFO - preparing data
+2022-09-10 18:00:00,071 - fecontrolestimator - INFO - data firms=4 workers=3 observations=300
+2022-09-10 18:00:00,072 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 18:00:00,073 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 18:00:00,075 - fecontrolestimator - INFO - total variance: 3.9448
+2022-09-10 18:00:00,075 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 18:00:00,075 - fecontrolestimator - INFO - solver time: 0.0002 seconds
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - fixed effect R-square 0.3102
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - [fe] variance of residuals 3.5491
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - [fe]
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - var(psi)_fe=0.0703
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - var(cat_control)_fe=0.2377
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - var(cts_control)_fe=0.0139
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0043
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - var(cat_control)_fe=0.2377
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - var(cts_control)_fe=0.0139
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - var(psi)_fe=0.0703
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - cov(psi, alpha)_fe=-0.0043
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 18:00:00,076 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 18:00:00,086 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 18:00:00,086 - fecontrolestimator - INFO - preparing data
+2022-09-10 18:00:00,086 - fecontrolestimator - INFO - data firms=4 workers=3 observations=305
+2022-09-10 18:00:00,086 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 18:00:00,088 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 18:00:00,090 - fecontrolestimator - INFO - total variance: 4.3267
+2022-09-10 18:00:00,090 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 18:00:00,090 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 18:00:00,090 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 18:00:00,090 - fecontrolestimator - INFO - fixed effect R-square 0.2224
+2022-09-10 18:00:00,090 - fecontrolestimator - INFO - [fe] variance of residuals 4.0054
+2022-09-10 18:00:00,091 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 18:00:00,091 - fecontrolestimator - INFO - [fe]
+2022-09-10 18:00:00,091 - fecontrolestimator - INFO - var(psi)_fe=0.0555
+2022-09-10 18:00:00,091 - fecontrolestimator - INFO - var(cat_control)_fe=0.1274
+2022-09-10 18:00:00,091 - fecontrolestimator - INFO - var(cts_control)_fe=0.0278
+2022-09-10 18:00:00,091 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0042
+2022-09-10 18:00:00,091 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 18:00:00,091 - fecontrolestimator - INFO - var(cat_control)_fe=0.1274
+2022-09-10 18:00:00,091 - fecontrolestimator - INFO - var(cts_control)_fe=0.0278
+2022-09-10 18:00:00,091 - fecontrolestimator - INFO - var(psi)_fe=0.0555
+2022-09-10 18:00:00,091 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 18:00:00,091 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0042
+2022-09-10 18:00:00,091 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 18:00:00,091 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----
+2022-09-10 18:00:00,102 - fecontrolestimator - INFO - ----- STARTING FE ESTIMATION -----
+2022-09-10 18:00:00,102 - fecontrolestimator - INFO - preparing data
+2022-09-10 18:00:00,103 - fecontrolestimator - INFO - data firms=4 workers=3 observations=290
+2022-09-10 18:00:00,103 - fecontrolestimator - INFO - data movers=3 stayers=0
+2022-09-10 18:00:00,105 - fecontrolestimator - INFO - preparing linear solver
+2022-09-10 18:00:00,107 - fecontrolestimator - INFO - total variance: 3.8469
+2022-09-10 18:00:00,107 - fecontrolestimator - INFO - estimating firm and worker effects
+2022-09-10 18:00:00,108 - fecontrolestimator - INFO - solver time: 0.0001 seconds
+2022-09-10 18:00:00,108 - fecontrolestimator - INFO - expected total time: 0.0000 minutes
+2022-09-10 18:00:00,108 - fecontrolestimator - INFO - fixed effect R-square 0.3161
+2022-09-10 18:00:00,108 - fecontrolestimator - INFO - [fe] variance of residuals 3.4884
+2022-09-10 18:00:00,108 - fecontrolestimator - INFO - starting plug-in estimation
+2022-09-10 18:00:00,108 - fecontrolestimator - INFO - [fe]
+2022-09-10 18:00:00,108 - fecontrolestimator - INFO - var(psi)_fe=0.0402
+2022-09-10 18:00:00,108 - fecontrolestimator - INFO - var(cat_control)_fe=0.2586
+2022-09-10 18:00:00,108 - fecontrolestimator - INFO - var(cts_control)_fe=0.0122
+2022-09-10 18:00:00,108 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0043
+2022-09-10 18:00:00,108 - fecontrolestimator - INFO - [fe] VARIANCES
+2022-09-10 18:00:00,108 - fecontrolestimator - INFO - var(cat_control)_fe=0.2586
+2022-09-10 18:00:00,109 - fecontrolestimator - INFO - var(cts_control)_fe=0.0122
+2022-09-10 18:00:00,109 - fecontrolestimator - INFO - var(psi)_fe=0.0402
+2022-09-10 18:00:00,109 - fecontrolestimator - INFO - [fe] COVARIANCES
+2022-09-10 18:00:00,109 - fecontrolestimator - INFO - cov(psi, alpha)_fe=0.0043
+2022-09-10 18:00:00,109 - fecontrolestimator - INFO - outputfile=None, so results not saved
+2022-09-10 18:00:00,109 - fecontrolestimator - INFO - ----- DONE WITH FE ESTIMATION -----

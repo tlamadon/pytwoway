@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Constraints module &mdash; PyTwoWay 0.3.21 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Attrition Utilities module" href="module-attrition_utils.html" />
+    <link rel="prev" title="Q module" href="module-Q.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> PyTwoWay
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">User documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc-python.html">From Python</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Notebook examples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/fe_example.html">FE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/cre_example.html">CRE</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/blm_example.html">BLM</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/sorkin_example.html">Sorkin</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/borovickovashimer_example.html">Borovickova-Shimer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/attrition_example.html">Attrition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/chk_example.html">CHK Event Study</a></li>
+<li class="toctree-l1"><a class="reference internal" href="notebooks/monte_carlo_example.html">Monte Carlo</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Under the hood</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="internal.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-feestimator.html">FEEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-fecontrolestimator.html">FEControlEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-creestimator.html">CREEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-attrition.html">Attrition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmmodel.html">BLMModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmestimator.html">BLMEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmbootstrap.html">BLMBootstrap</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-blmvariancedecomposition.html">BLMVarianceDecomposition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-interactedblmmodel.html">InteractedBLMModel</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-sorkinestimator.html">SorkinEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-bsestimator.html">BSEstimator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="class-montecarlo.html">MonteCarlo</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-Q.html">Q</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Constraints</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-attrition_utils.html">Attrition Utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="module-diagnostics.html">Diagnostics</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">PyTwoWay</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Constraints module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/module-constraints.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="module-pytwoway.constraints.constraints">
+<span id="constraints-module"></span><h1>Constraints module<a class="headerlink" href="#module-pytwoway.constraints.constraints" title="Permalink to this heading"></a></h1>
+<p>Classes for generating quadratic programming constraints for BLM.</p>
+<dl>
+<dt>All classes are for solving a quadratic programming model of the following form:</dt><dd><p>min_x(1/2 x.T &#64; P &#64; x + q.T &#64; x)
+s.t.    Gx &lt;= h</p>
+<blockquote>
+<div><p>Ax = b</p>
+</div></blockquote>
+</dd>
+</dl>
+<dl class="py class">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.BoundedAbove">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytwoway.constraints.constraints.</span></span><span class="sig-name descname"><span class="pre">BoundedAbove</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ub</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.BoundedAbove" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Generate BLM constraints so that worker-firm pair effects are bounded above.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ub</strong> (<em>float</em>) – upper bound</p></li>
+<li><p><strong>nt</strong> (<em>int</em>) – number of time periods</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.BoundedBelow">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytwoway.constraints.constraints.</span></span><span class="sig-name descname"><span class="pre">BoundedBelow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lb</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.BoundedBelow" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Generate BLM constraints so that worker-firm pair effects are bounded below.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lb</strong> (<em>float</em>) – lower bound</p></li>
+<li><p><strong>nt</strong> (<em>int</em>) – number of time periods</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.Linear">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytwoway.constraints.constraints.</span></span><span class="sig-name descname"><span class="pre">Linear</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nnt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.Linear" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Generate BLM constraints so that for a fixed firm type, worker types effects must change linearly.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nnt</strong> (<em>int</em><em> or </em><em>list of ints</em><em> or </em><em>None</em>) – time periods to constrain. This should be set to 0 if Linear() is being used in conjunction with Stationary(). None is equivalent to range(nt).</p></li>
+<li><p><strong>nt</strong> (<em>int</em>) – number of time periods</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.LinearAdditive">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytwoway.constraints.constraints.</span></span><span class="sig-name descname"><span class="pre">LinearAdditive</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nnt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.LinearAdditive" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Generate BLM constraints so that for a fixed firm type, worker types effects must change linear-additively.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nnt</strong> (<em>int</em><em> or </em><em>list of ints</em><em> or </em><em>None</em>) – time periods to constrain. This should be set to 1 if LinearAdditive() is being used in conjunction with Stationary(). None is equivalent to range(nt).</p></li>
+<li><p><strong>nt</strong> (<em>int</em>) – number of time periods</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.MinFirmType">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytwoway.constraints.constraints.</span></span><span class="sig-name descname"><span class="pre">MinFirmType</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">min_firm_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">md</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_min</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cross_period_mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nnt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.MinFirmType" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Generate BLM constraints so that the mean of a given firm type is less than or equal to the mean of every other firm type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>min_firm_type</strong> (<em>int</em>) – minimum firm type</p></li>
+<li><p><strong>md</strong> (<em>float</em>) – minimum difference between the lowest firm type and other types</p></li>
+<li><p><strong>is_min</strong> (<em>bool</em>) – if True, constraint firm type to be the lowest firm type; if False, constraint it to be the highest firm type</p></li>
+<li><p><strong>cross_period_mean</strong> (<em>bool</em>) – if True, rather than checking means are monotonic for each period separately, consider the mean worker effects over all periods jointly</p></li>
+<li><p><strong>nnt</strong> (<em>int</em><em> or </em><em>list of ints</em><em> or </em><em>None</em>) – time periods to constrain; None is equivalent to range(nt)</p></li>
+<li><p><strong>nt</strong> (<em>int</em>) – number of time periods</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.Monotonic">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytwoway.constraints.constraints.</span></span><span class="sig-name descname"><span class="pre">Monotonic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">md</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">increasing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.Monotonic" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Generate BLM constraints so that for a fixed firm type, worker types effects must increase (or decrease) monotonically.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>md</strong> (<em>float</em>) – minimum difference between consecutive types</p></li>
+<li><p><strong>increasing</strong> (<em>bool</em>) – if True, monotonic increasing; if False, monotonic decreasing</p></li>
+<li><p><strong>nt</strong> (<em>int</em>) – number of time periods</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.MonotonicMean">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytwoway.constraints.constraints.</span></span><span class="sig-name descname"><span class="pre">MonotonicMean</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">md</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">increasing</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cross_period_mean</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nnt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.MonotonicMean" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Generate BLM constraints so that the mean of worker types effects over all firm types must increase (or decrease) monotonically.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>md</strong> (<em>float</em>) – minimum difference between consecutive types</p></li>
+<li><p><strong>increasing</strong> (<em>bool</em>) – if True, monotonic increasing; if False, monotonic decreasing</p></li>
+<li><p><strong>cross_period_mean</strong> (<em>bool</em>) – if True, rather than checking means are monotonic for each period separately, consider the mean worker effects over all periods jointly</p></li>
+<li><p><strong>nnt</strong> (<em>int</em><em> or </em><em>list of ints</em><em> or </em><em>None</em>) – time periods to constrain; None is equivalent to range(nt)</p></li>
+<li><p><strong>nt</strong> (<em>int</em>) – number of time periods</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.NoWorkerTypeInteraction">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytwoway.constraints.constraints.</span></span><span class="sig-name descname"><span class="pre">NoWorkerTypeInteraction</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nnt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.NoWorkerTypeInteraction" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Generate BLM constraints so that for a fixed firm type, worker types effects must all be the same.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nnt</strong> (<em>int</em><em> or </em><em>list of ints</em><em> or </em><em>None</em>) – time periods to constrain; None is equivalent to range(nt)</p></li>
+<li><p><strong>nt</strong> (<em>int</em>) – number of time periods</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.NormalizeAll">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytwoway.constraints.constraints.</span></span><span class="sig-name descname"><span class="pre">NormalizeAll</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">min_firm_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cross_period_normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nnt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.NormalizeAll" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Generate BLM constraints so that all worker-firm type pairs that include the lowest firm type have effect 0.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>min_firm_type</strong> (<em>int</em>) – lowest firm type</p></li>
+<li><p><strong>cross_period_normalize</strong> (<em>bool</em>) – if True, rather than normalizing for each period separately, normalize the mean of all worker-firm type pair effects over all periods jointly</p></li>
+<li><p><strong>nnt</strong> (<em>int</em><em> or </em><em>list of ints</em><em> or </em><em>None</em>) – time periods to constrain; None is equivalent to range(nt)</p></li>
+<li><p><strong>nt</strong> (<em>int</em>) – number of time periods</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.NormalizeLowest">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytwoway.constraints.constraints.</span></span><span class="sig-name descname"><span class="pre">NormalizeLowest</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">min_firm_type</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cross_period_normalize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nnt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.NormalizeLowest" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Generate BLM constraints so that the lowest worker-firm type pair has effect 0.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>min_firm_type</strong> (<em>int</em>) – lowest firm type</p></li>
+<li><p><strong>cross_period_normalize</strong> (<em>bool</em>) – if True, rather than normalizing for each period separately, normalize the mean of the lowest worker-firm type pair effect over all periods jointly</p></li>
+<li><p><strong>nnt</strong> (<em>int</em><em> or </em><em>list of ints</em><em> or </em><em>None</em>) – time periods to constrain; None is equivalent to range(nt)</p></li>
+<li><p><strong>nt</strong> (<em>int</em>) – number of time periods</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.QPConstrained">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytwoway.constraints.constraints.</span></span><span class="sig-name descname"><span class="pre">QPConstrained</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nl</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nk</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.QPConstrained" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl>
+<dt>Solve a quadratic programming model of the following form:</dt><dd><p>min_x(1/2 x.T &#64; P &#64; x + q.T &#64; x)
+s.t.    Gx &lt;= h</p>
+<blockquote>
+<div><p>Ax = b</p>
+</div></blockquote>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nl</strong> (<em>int</em>) – number of worker types</p></li>
+<li><p><strong>nk</strong> (<em>int</em>) – number of firm types</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.QPConstrained.add_constraints">
+<span class="sig-name descname"><span class="pre">add_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">constraints</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.QPConstrained.add_constraints" title="Permalink to this definition"></a></dt>
+<dd><p>Add a built-in constraint.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>constraints</strong> (<em>object</em><em> or </em><em>list of objects</em>) – constraint objects with class method ._get_constraints() that defines constraints to add</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.QPConstrained.check_feasible">
+<span class="sig-name descname"><span class="pre">check_feasible</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.QPConstrained.check_feasible" title="Permalink to this definition"></a></dt>
+<dd><p>Check that constraints are feasible.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>True if constraints feasible, False otherwise</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>(bool)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.QPConstrained.clear_constraints">
+<span class="sig-name descname"><span class="pre">clear_constraints</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inequality</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">equality</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.QPConstrained.clear_constraints" title="Permalink to this definition"></a></dt>
+<dd><p>Clear constraints.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>inequality</strong> (<em>bool</em>) – if True, clear inequality constraints</p></li>
+<li><p><strong>equality</strong> (<em>bool</em>) – if True, clear equality constraints</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.QPConstrained.pad">
+<span class="sig-name descname"><span class="pre">pad</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">l</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.QPConstrained.pad" title="Permalink to this definition"></a></dt>
+<dd><p>Add padding to the left and/or right of C matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>l</strong> (<em>int</em>) – how many columns to add on left</p></li>
+<li><p><strong>r</strong> (<em>int</em>) – how many columns to add on right</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.QPConstrained.solve">
+<span class="sig-name descname"><span class="pre">solve</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">P</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">solver</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'quadprog'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.QPConstrained.solve" title="Permalink to this definition"></a></dt>
+<dd><dl>
+<dt>Solve a quadratic programming model of the following form:</dt><dd><p>min_x(1/2 x.T &#64; P &#64; x + q.T &#64; x)
+s.t.    Gx &lt;= h</p>
+<blockquote>
+<div><p>Ax = b</p>
+</div></blockquote>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>P</strong> (<em>NumPy Array</em>) – P in quadratic programming problem</p></li>
+<li><p><strong>q</strong> (<em>NumPy Array</em>) – q in quadratic programming problem</p></li>
+<li><p><strong>solver</strong> (<em>str</em>) – solver to use</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em>) – if True, print extra output</p></li>
+<li><p><strong>**kwargs</strong> – parameters for solver</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>x that solves quadratic programming problem</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(NumPy Array)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.Stationary">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytwoway.constraints.constraints.</span></span><span class="sig-name descname"><span class="pre">Stationary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nwt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.Stationary" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Generate BLM constraints so that worker-firm pair effects are the same in all periods.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nwt</strong> (<em>int</em>) – number of worker types to constrain. This is used in conjunction with Linear(), as only two worker types are required to be constrained in this case; or in conjunction with NoWorkerTypeInteraction(), as only one worker type is required to be constrained in this case. Setting ns=-1 constrains all worker types.</p></li>
+<li><p><strong>nt</strong> (<em>int</em>) – number of time periods</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="pytwoway.constraints.constraints.StationaryFirmTypeVariation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">pytwoway.constraints.constraints.</span></span><span class="sig-name descname"><span class="pre">StationaryFirmTypeVariation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nnt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nt</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#pytwoway.constraints.constraints.StationaryFirmTypeVariation" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Generate BLM constraints so that the firm type induced variation of worker-firm pair effects is the same in all periods. In particular, this is equivalent to setting A2 = (np.mean(A2, axis=1) + A1.T - np.mean(A1, axis=1)).T.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nnt</strong> (<em>int</em><em> or </em><em>list of ints</em><em> or </em><em>None</em>) – time periods to constrain; None is equivalent to range(1, nt)</p></li>
+<li><p><strong>nt</strong> (<em>int</em>) – number of time periods</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="module-Q.html" class="btn btn-neutral float-left" title="Q module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="module-attrition_utils.html" class="btn btn-neutral float-right" title="Attrition Utilities module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Thibaut Lamadon.
+      <span class="lastupdated">Last updated on Sep 15, 2022.
+      </span></p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
