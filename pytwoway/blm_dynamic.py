@@ -20,7 +20,7 @@ import bipartitepandas as bpd
 from bipartitepandas.util import to_list, HiddenPrints # , _is_subtype
 import pytwoway as tw
 from pytwoway import constraints as cons
-from pytwoway.util import DxSP, DxM, diag_of_sp_prod, jitter_scatter, logsumexp, lognormpdf, fast_lognormpdf
+from pytwoway.util import weighted_quantile, DxSP, DxM, diag_of_sp_prod, jitter_scatter, logsumexp, lognormpdf, fast_lognormpdf
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq2(a):
@@ -4531,4 +4531,93 @@ class DynamicBLMVarianceDecomposition:
         if ts:
             sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
 
+        self.res = res
+
+class DynamicBLMReallocation:
+    '''
+    Class for estimating dynamic BLM reallocation exercise using bootstrapping.
+
+    Arguments:
+        params (ParamsDict): dictionary of parameters for dynamic BLM estimation. Run tw.dynamic_blm_params().describe_all() for descriptions of all valid parameters.
+    '''
+
+    def __init__(self, params):
+        self.params = params
+        # No initial results
+        self.res = None
+
+    def fit(self, jdata, sdata, quantiles=None, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', ncore=1, rng=None):
+        '''
+        Estimate variance decomposition.
+
+        Arguments:
+            jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
+            sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
+            quantiles (NumPy Array or None): income quantiles to compute; if None, computes percentiles from 1-100 (specifically, np.arange(101) / 100)
+            blm_model (DynamicBLMModel or None): already-estimated dynamic BLM model; if None, estimate model inside the method
+            n_samples (int): number of bootstrap samples to estimate
+            n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
+            n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
+            reallocate_jointly (bool): if True, worker type proportions take the average over movers and stayers (i.e. all workers use the same type proportions); if False, consider movers and stayers separately
+            reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
+            ncore (int): number of cores for multiprocessing
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+        '''
+        if quantiles is None:
+            quantiles = np.arange(101) / 100
+        if rng is None:
+            rng = np.random.default_rng(None)
+
+        # Copy original wages, firm types, and optionally ids
+        yj = jdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
+        ys = sdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
+        gj = jdata.loc[:, ['g1', 'g4']].to_numpy()
+        gs = sdata.loc[:, 'g1'].to_numpy()
+        tj = False
+        ts = False
+        if not jdata._col_included('t'):
+            jdata = jdata.construct_artificial_time(is_sorted=True, copy=False)
+            tj = True
+        if not sdata._col_included('t'):
+            sdata = sdata.construct_artificial_time(is_sorted=True, copy=False)
+            ts = True
+
+        if blm_model is None:
+            # Run initial BLM estimator
+            blm_fit_init = DynamicBLMEstimator(self.params)
+            blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
+            blm_model = blm_fit_init.model
+
+        # Run bootstrap
+        res = np.zeros([n_samples, len(quantiles)])
+        for i in trange(n_samples):
+            # Simulate worker types then draw wages
+            yj_i, ys_i, Lm_i, Ls_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=True, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, rng=rng)
+            with bpd.util.ChainedAssignment():
+                jdata.loc[:, 'y1'], jdata.loc[:, 'y2'], jdata.loc[:, 'y3'], jdata.loc[:, 'y4'] = (yj_i[0], yj_i[1], yj_i[2], yj_i[3])
+                sdata.loc[:, 'y1'], sdata.loc[:, 'y2'], sdata.loc[:, 'y3'], sdata.loc[:, 'y4'] = (ys_i[0], ys_i[1], ys_i[2], ys_i[3])
+            # Convert to BipartitePandas DataFrame
+            bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
+            # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
+            bdf._set_attributes(jdata)
+            bdf = bdf.to_long(is_sorted=True, copy=False)
+            # Compute quantiles
+            if bdf._col_included('w'):
+                w = bdf.loc[:, 'w'].to_numpy()
+            else:
+                w = None
+            res[i, :] = weighted_quantile(values=bdf.loc[:, 'y'].to_numpy(), quantiles=quantiles, sample_weight=w)
+
+        with bpd.util.ChainedAssignment():
+            # Restore original wages and optionally ids
+            jdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = yj
+            sdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = ys
+
+        # Drop time column
+        if tj:
+            jdata = jdata.drop('t', axis=1, inplace=True, allow_optional=True)
+        if ts:
+            sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
+
+        # Store results
         self.res = res
