@@ -4044,10 +4044,12 @@ class DynamicBLMEstimator:
         if ncore > 1:
             # Multiprocessing
             with Pool(processes=ncore) as pool:
-                sim_model_lst = pool.starmap(self._fit_model, tqdm([(jdata, i, blm_model, np.random.default_rng(seed)) for i, seed in enumerate(seeds)], total=n_init))
+                sim_model_lst = list(tqdm(pool.imap(tw.util.f_star, [(self._fit_model, (jdata, i, blm_model, np.random.default_rng(seed))) for i, seed in enumerate(seeds)]), total=n_init))
+                # sim_model_lst = pool.starmap(self._fit_model, tqdm([(jdata, i, blm_model, np.random.default_rng(seed)) for i, seed in enumerate(seeds)], total=n_init))
         else:
             # No multiprocessing
-            sim_model_lst = itertools.starmap(self._fit_model, tqdm([(jdata, i, blm_model, np.random.default_rng(seed)) for i, seed in enumerate(seeds)], total=n_init))
+            sim_model_lst = list(tqdm(map(tw.util.f_star, [(self._fit_model, (jdata, i, blm_model, np.random.default_rng(seed))) for i, seed in enumerate(seeds)]), total=n_init))
+            # sim_model_lst = itertools.starmap(self._fit_model, tqdm([(jdata, i, blm_model, np.random.default_rng(seed)) for i, seed in enumerate(seeds)], total=n_init))
 
         # Sort by likelihoods FIXME better handling if connectedness is None
         sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst if model.connectedness is not None], reverse=True, key=lambda a: a[0])
