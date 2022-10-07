@@ -1253,11 +1253,13 @@ class FEEstimator:
         outputfile = self.params['outputfile']
         if outputfile is not None:
             # Convert results into strings to prevent JSON errors
+            json_res = {}
             for key, val in self.res.items():
-                self.res[key] = str(val)
+                # Replace spaces with underscores
+                json_res[key.replace(' ', '_')] = str(val)
 
             with open(outputfile, 'w') as outfile:
-                json.dump(self.res, outfile)
+                json.dump(json_res, outfile)
 
             self.logger.info(f'saved results to {outputfile}')
         else:
