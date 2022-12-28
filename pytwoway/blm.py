@@ -1401,8 +1401,8 @@ class BLMModel:
                 for l in range(nl):
                     # Update A1_sum/A2_sum/S1_sum_sq/S2_sum_sq to account for worker-interaction terms
                     A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts)
-                    lp1 = lognormpdf(Y1, A1[l, G1] + A1_sum + A1_sum_l, var=S1[l, G1] ** 2 + S1_sum_sq + S1_sum_sq_l, gpu=self.gpu)
-                    lp2 = lognormpdf(Y2, A2[l, G2] + A2_sum + A2_sum_l, var=S2[l, G2] ** 2 + S2_sum_sq + S2_sum_sq_l, gpu=self.gpu)
+                    lp1 = lognormpdf(Y1, A1[l, G1] + A1_sum + A1_sum_l, var=(S1[l, :] ** 2)[G1] + S1_sum_sq + S1_sum_sq_l, gpu=self.gpu)
+                    lp2 = lognormpdf(Y2, A2[l, G2] + A2_sum + A2_sum_l, var=(S2[l, :] ** 2)[G2] + S2_sum_sq + S2_sum_sq_l, gpu=self.gpu)
                     lp[:, l] = log_pk1[KK, l] + W1 * lp1 + W2 * lp2
             else:
                 for l in range(nl):
@@ -1768,20 +1768,36 @@ class BLMModel:
                     if len(cts_cols) > 0:
                         XwS_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}
 
+                    ## Residuals ##
+                    eps1_sq = []
+                    eps2_sq = []
+
                     ## Update S ##
                     for l in range(nl):
-                        # Update A1_sum and A2_sum to account for worker-interaction terms
-                        A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
-                        eps1_l_sq = (Y1_adj - A1_sum_l - A1[l, G1]) ** 2
-                        eps2_l_sq = (Y2_adj - A2_sum_l - A2[l, G2]) ** 2
+                        # Update A1_sum/A2_sum/S1_sum/S2_sum to account for worker-interaction terms
+                        if any_controls:
+                            # If controls, calculate S
+                            A1_sum_l, A2_sum_l, S1_sum_l, S2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=True)
+                        else:
+                            # If no controls, don't calculate S
+                            A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
+                        
+                        ## Residuals ##
+                        eps1_sq.append((Y1_adj - A1_sum_l - A1[l, G1]) ** 2)
+                        eps2_sq.append((Y2_adj - A2_sum_l - A2[l, G2]) ** 2)
                         del A1_sum_l, A2_sum_l
 
                         ## XwS_l ##
                         l_index, r_index = l * nk, (l + 1) * nk
 
                         ## Update weights ##
-                        weights1[l] *= eps1_l_sq
-                        weights2[l] *= eps2_l_sq
+                        weights1[l] *= eps1_sq[l]
+                        weights2[l] *= eps2_sq[l]
+                        if any_controls:
+                            ## Account for other variables' contribution to variance ##
+                            weights1[l] /= (S1_sum_sq + S1_sum_l)
+                            weights2[l] /= (S2_sum_sq + S2_sum_l)
+                            del S1_sum_l, S2_sum_l
 
                         ## Compute wS_l ##
                         XwS[l_index: r_index] = np.bincount(G1, weights=weights1[l])
@@ -1790,35 +1806,6 @@ class BLMModel:
                         ## Clear weights[l] ##
                         weights1[l] = 0
                         weights2[l] = 0
-
-                        ## Categorical ##
-                        for col in cat_cols:
-                            col_n = cat_dict[col]['n']
-                            l_index, r_index = l * col_n, (l + 1) * col_n
-
-                            ## Update weights ##
-                            weights1_cat[col][l] *= eps1_l_sq
-                            weights2_cat[col][l] *= eps2_l_sq
-
-                            ## XwS_cat_l ##
-                            XwS_cat[col][l_index: r_index] = np.bincount(C1[col], weights=weights1_cat[col][l])
-                            XwS_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = np.bincount(C2[col], weights=weights2_cat[col][l])
-
-                            ## Clear weights_cat[col][l] ##
-                            weights1_cat[col][l] = 0
-                            weights2_cat[col][l] = 0
-
-                        ## Continuous ##
-                        for col in cts_cols:
-                            ## XwS_cts_l ##
-                            # NOTE: take absolute value
-                            XwS_cts[col][l] = np.abs(Xw1_cts[col][l] @ eps1_l_sq)
-                            XwS_cts[col][l + nl] = np.abs(Xw2_cts[col][l] @ eps2_l_sq)
-
-                            ## Clear Xw_cts[col][l] ##
-                            Xw1_cts[col][l] = 0
-                            Xw2_cts[col][l] = 0
-                    del eps1_l_sq, eps2_l_sq
 
                     try:
                         cons_s.solve(XwX, -XwS, solver='quadprog')
@@ -1841,8 +1828,41 @@ class BLMModel:
 
                     ## Categorical ##
                     for col in cat_cols:
+                        col_n = cat_dict[col]['n']
+
+                        if not cat_dict[col]['worker_type_interaction']:
+                            S1_sum_sq -= (S1_cat[col] ** 2)[C1[col]]
+                            S2_sum_sq -= (S2_cat[col] ** 2)[C2[col]]
+
+                        for l in range(nl):
+                            # Update S1_sum and S2_sum to account for worker-interaction terms
+                            S1_sum_l, S2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_A=False, compute_S=True)
+
+                            l_index, r_index = l * col_n, (l + 1) * col_n
+
+                            ## Compute variances ##
+                            if cat_dict[col]['worker_type_interaction']:
+                                S1_cat_l = (S1_cat[col][l, :] ** 2)[C1[col]]
+                                S2_cat_l = (S2_cat[col][l, :] ** 2)[C2[col]]
+                            else:
+                                # Already removed from S_sum_sq
+                                S1_cat_l = 0
+                                S2_cat_l = 0
+
+                            ## Update weights ##
+                            weights1_cat[col][l] *= eps1_sq[l] / ((S1[l, :] ** 2)[G1] + S1_sum_sq + S1_sum_l - S1_cat_l)
+                            weights2_cat[col][l] *= eps2_sq[l] / ((S2[l, :] ** 2)[G2] + S2_sum_sq + S2_sum_l - S2_cat_l)
+                            del S1_sum_l, S2_sum_l, S1_cat_l, S2_cat_l
+
+                            ## XwS_cat_l ##
+                            XwS_cat[col][l_index: r_index] = np.bincount(C1[col], weights=weights1_cat[col][l])
+                            XwS_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = np.bincount(C2[col], weights=weights2_cat[col][l])
+
+                            ## Clear weights_cat[col][l] ##
+                            weights1_cat[col][l] = 0
+                            weights2_cat[col][l] = 0
+
                         try:
-                            col_n = cat_dict[col]['n']
                             s_solver = cons_s_dict[col]
                             s_solver.solve(XwX_cat[col], -XwS_cat[col], solver='quadprog')
                             del XwS_cat[col]
@@ -1866,8 +1886,39 @@ class BLMModel:
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
 
+                        if not cat_dict[col]['worker_type_interaction']:
+                            S1_sum_sq += (S1_cat[col] ** 2)[C1[col]]
+                            S2_sum_sq += (S2_cat[col] ** 2)[C2[col]]
+
                     ## Continuous ##
                     for col in cts_cols:
+                        if not cts_dict[col]['worker_type_interaction']:
+                            S1_sum_sq -= S1_cts[col] ** 2
+                            S2_sum_sq -= S2_cts[col] ** 2
+
+                        for l in range(nl):
+                            # Update S1_sum and S2_sum to account for worker-interaction terms
+                            S1_sum_l, S2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_A=False, compute_S=True)
+
+                            ## Compute variances ##
+                            if cts_dict[col]['worker_type_interaction']:
+                                S1_cts_l = S1_cts[col][l] ** 2
+                                S2_cts_l = S2_cts[col][l] ** 2
+                            else:
+                                # Already removed from S_sum_sq
+                                S1_cts_l = 0
+                                S2_cts_l = 0
+
+                            ## XwS_cts_l ##
+                            # NOTE: take absolute value
+                            XwS_cts[col][l] = np.abs(Xw1_cts[col][l] @ eps1_sq[l] / ((S1[l, :] ** 2)[G1] + S1_sum_sq + S1_sum_l - S1_cts_l))
+                            XwS_cts[col][l + nl] = np.abs(Xw2_cts[col][l] @ eps2_sq[l] / ((S2[l, :] ** 2)[G2] + S2_sum_sq + S2_sum_l - S2_cts_l))
+                            del S1_sum_l, S2_sum_l, S1_cts_l, S2_cts_l
+
+                            ## Clear Xw_cts[col][l] ##
+                            Xw1_cts[col][l] = 0
+                            Xw2_cts[col][l] = 0
+
                         try:
                             s_solver = cons_s_dict[col]
                             s_solver.solve(XwX_cts[col], -XwS_cts[col], solver='quadprog')
@@ -1891,6 +1942,12 @@ class BLMModel:
                             # If constraints inconsistent, keep S1_cts and S2_cts the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
+
+                        if not cts_dict[col]['worker_type_interaction']:
+                            S1_sum_sq += S1_cts[col] ** 2
+                            S2_sum_sq += S2_cts[col] ** 2
+
+                    del eps1_sq, eps2_sq
 
                 del XwX, weights1, weights2
                 if len(cat_cols) > 0:
@@ -2035,8 +2092,8 @@ class BLMModel:
             for l in range(nl):
                 # Update A1_sum/S1_sum_sq to account for worker-interaction terms
                 A1_sum_l, A2_sum_l, S1_sum_sq_l, S2_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=self.A1_cat, A2_cat=self.A2_cat, S1_cat=self.S1_cat, S2_cat=self.S2_cat, A1_cts=self.A1_cts, A2_cts=self.A2_cts, S1_cts=self.S1_cts, S2_cts=self.S2_cts)
-                lp1 = lognormpdf(Y1, A1[l, G1] + A1_sum + A1_sum_l, var=S1[l, G1] ** 2 + S1_sum_sq + S1_sum_sq_l, gpu=self.gpu)
-                # lp2 = lognormpdf(Y2, A2[l, G2] + A2_sum + A2_sum_l, var=S2[l, G2] ** 2 + S2_sum_sq + S2_sum_sq_l, gpu=self.gpu)
+                lp1 = lognormpdf(Y1, A1[l, G1] + A1_sum + A1_sum_l, var=(S1[l, :] ** 2)[G1] + S1_sum_sq + S1_sum_sq_l, gpu=self.gpu)
+                # lp2 = lognormpdf(Y2, A2[l, G2] + A2_sum + A2_sum_l, var=(S2[l, :] ** 2)[G2] + S2_sum_sq + S2_sum_sq_l, gpu=self.gpu)
                 lp_stable[:, l] = W1 * lp1 # + W2 * lp2
         else:
             for l in range(nl):
