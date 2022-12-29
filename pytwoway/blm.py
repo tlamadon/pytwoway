@@ -1460,7 +1460,9 @@ class BLMModel:
                 pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
 
                 if pd.isna(pk1).any():
-                    raise ValueError('Estimated pk1 has NaN values. Please try a different set of starting values.')
+                    warnings.warn('Estimated pk1 has NaN values. Please try a different set of starting values.')
+                    break
+                    # raise ValueError('Estimated pk1 has NaN values. Please try a different set of starting values.')
 
             if params['update_a'] or params['update_s']:
                 # ---------- M-step ----------
@@ -1509,8 +1511,8 @@ class BLMModel:
                     l_index, r_index = l * nk, (l + 1) * nk
 
                     ## Compute weights ##
-                    weights_1 = W1 * qi[:, l] / (S1[l, :] ** 2)[G1]
-                    weights_2 = W2 * qi[:, l] / (S2[l, :] ** 2)[G2]
+                    weights_1 = W1 * qi[:, l] / S1[l, G1]
+                    weights_2 = W2 * qi[:, l] / S2[l, G2]
                     if params['update_s']:
                         weights1.append(weights_1)
                         weights2.append(weights_2)
@@ -1605,11 +1607,11 @@ class BLMModel:
 
                         ## Compute variances ##
                         if cat_dict[col]['worker_type_interaction']:
-                            S1_cat_l = (S1_cat[col][l, :] ** 2)[C1[col]]
-                            S2_cat_l = (S2_cat[col][l, :] ** 2)[C2[col]]
+                            S1_cat_l = S1_cat[col][l, C1[col]]
+                            S2_cat_l = S2_cat[col][l, C2[col]]
                         else:
-                            S1_cat_l = (S1_cat[col] ** 2)[C1[col]]
-                            S2_cat_l = (S2_cat[col] ** 2)[C2[col]]
+                            S1_cat_l = S1_cat[col][C1[col]]
+                            S2_cat_l = S2_cat[col][C2[col]]
 
                         ## Compute weights ##
                         weights_1 = W1 * qi[:, l] / S1_cat_l
@@ -1689,11 +1691,11 @@ class BLMModel:
                     for l in range(nl):
                         ## Compute variances ##
                         if cts_dict[col]['worker_type_interaction']:
-                            S1_cts_l = S1_cts[col][l] ** 2
-                            S2_cts_l = S2_cts[col][l] ** 2
+                            S1_cts_l = S1_cts[col][l]
+                            S2_cts_l = S2_cts[col][l]
                         else:
-                            S1_cts_l = S1_cts[col] ** 2
-                            S2_cts_l = S2_cts[col] ** 2
+                            S1_cts_l = S1_cts[col]
+                            S2_cts_l = S2_cts[col]
 
                         ## Compute Xw_cts_l ##
                         Xw1_cts_l = C1[col].T * (W1 * qi[:, l] / S1_cts_l)
@@ -1857,10 +1859,6 @@ class BLMModel:
                             weights1_cat[col][l] = 0
                             weights2_cat[col][l] = 0
 
-                        if not cat_dict[col]['worker_type_interaction']:
-                            S1_sum_sq -= (S1_cat[col] ** 2)[C1[col]]
-                            S2_sum_sq -= (S2_cat[col] ** 2)[C2[col]]
-
                         try:
                             s_solver = cons_s_dict[col]
                             s_solver.solve(XwX_cat[col], -XwS_cat[col], solver='quadprog')
@@ -1873,6 +1871,11 @@ class BLMModel:
                                 res_s1, res_s2 = np.split(s_solver.res, 2)
                                 # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
                                 #     raise ValueError(f'Estimated S1_cat/S2_cat has NaN values for column {col!r}')
+
+                                if not cat_dict[col]['worker_type_interaction']:
+                                    S1_sum_sq -= (S1_cat[col] ** 2)[C1[col]]
+                                    S2_sum_sq -= (S2_cat[col] ** 2)[C2[col]]
+
                                 if cat_dict[col]['worker_type_interaction']:
                                     S1_cat[col] = np.sqrt(np.reshape(res_s1, (nl, col_n)))
                                     S2_cat[col] = np.sqrt(np.reshape(res_s2, (nl, col_n)))
@@ -1880,14 +1883,14 @@ class BLMModel:
                                     S1_cat[col] = np.sqrt(res_s1[: col_n])
                                     S2_cat[col] = np.sqrt(res_s2[: col_n])
 
+                                if not cat_dict[col]['worker_type_interaction']:
+                                    S1_sum_sq += (S1_cat[col] ** 2)[C1[col]]
+                                    S2_sum_sq += (S2_cat[col] ** 2)[C2[col]]
+
                         except ValueError as e:
                             # If constraints inconsistent, keep S1_cat and S2_cat the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S1_cat/S2_cat for column {col!r}: {e}')
-
-                        if not cat_dict[col]['worker_type_interaction']:
-                            S1_sum_sq += (S1_cat[col] ** 2)[C1[col]]
-                            S2_sum_sq += (S2_cat[col] ** 2)[C2[col]]
 
                     ## Continuous ##
                     for col in cts_cols:
@@ -1914,10 +1917,6 @@ class BLMModel:
                             Xw1_cts[col][l] = 0
                             Xw2_cts[col][l] = 0
 
-                        if not cts_dict[col]['worker_type_interaction']:
-                            S1_sum_sq -= S1_cts[col] ** 2
-                            S2_sum_sq -= S2_cts[col] ** 2
-
                         try:
                             s_solver = cons_s_dict[col]
                             s_solver.solve(XwX_cts[col], -XwS_cts[col], solver='quadprog')
@@ -1930,6 +1929,11 @@ class BLMModel:
                                 res_s1, res_s2 = np.split(s_solver.res, 2)
                                 # if pd.isna(res_s1).any() or pd.isna(res_s2).any():
                                 #     raise ValueError(f'Estimated S1_cts/S2_cts has NaN values for column {col!r}')
+
+                                if not cts_dict[col]['worker_type_interaction']:
+                                    S1_sum_sq -= S1_cts[col] ** 2
+                                    S2_sum_sq -= S2_cts[col] ** 2
+
                                 if cts_dict[col]['worker_type_interaction']:
                                     S1_cts[col] = np.sqrt(res_s1)
                                     S2_cts[col] = np.sqrt(res_s2)
@@ -1937,14 +1941,14 @@ class BLMModel:
                                     S1_cts[col] = np.sqrt(res_s1[0])
                                     S2_cts[col] = np.sqrt(res_s2[0])
 
+                                if not cts_dict[col]['worker_type_interaction']:
+                                    S1_sum_sq += S1_cts[col] ** 2
+                                    S2_sum_sq += S2_cts[col] ** 2
+
                         except ValueError as e:
                             # If constraints inconsistent, keep S1_cts and S2_cts the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S1_cts/S2_cts for column {col!r}: {e}')
-
-                        if not cts_dict[col]['worker_type_interaction']:
-                            S1_sum_sq += S1_cts[col] ** 2
-                            S2_sum_sq += S2_cts[col] ** 2
 
                     del eps1_sq, eps2_sq
 
