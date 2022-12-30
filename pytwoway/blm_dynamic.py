@@ -4399,7 +4399,7 @@ class DynamicBLMBootstrap:
 
 class DynamicBLMVarianceDecomposition:
     '''
-    Class for estimating dynamic BLM variance decomposition using bootstrapping.
+    Class for estimating dynamic BLM variance decomposition using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'var_decomp' gives the results for the variance decomposition, and the key 'var_decomp_comp' optionally gives the results for the variance decomposition with complementarities.
 
     Arguments:
         params (ParamsDict): dictionary of parameters for dynamic BLM estimation. Run tw.dynamic_blm_params().describe_all() for descriptions of all valid parameters.
@@ -4410,7 +4410,7 @@ class DynamicBLMVarianceDecomposition:
         # No initial results
         self.res = None
 
-    def fit(self, jdata, sdata, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', Q_var=None, Q_cov=None, firm_clusters_as_ids=True, worker_types_as_ids=True, ncore=1, rng=None):
+    def fit(self, jdata, sdata, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', Q_var=None, Q_cov=None, complementarities=True, firm_clusters_as_ids=True, worker_types_as_ids=True, ncore=1, rng=None):
         '''
         Estimate variance decomposition.
 
@@ -4426,11 +4426,15 @@ class DynamicBLMVarianceDecomposition:
             reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
             Q_var (list of Q variances): list of Q matrices to use when estimating variance term; None is equivalent to tw.Q.VarPsi() without controls, or tw.Q.VarCovariate('psi') with controls
             Q_cov (list of Q covariances): list of Q matrices to use when estimating covariance term; None is equivalent to tw.Q.CovPsiAlpha() without controls, or tw.Q.CovCovariate('psi', 'alpha') with controls
+            complementarities (bool): if True, estimate R^2 of regression with complementarities (by adding in all worker-firm interactions). Only allowed when firm_clusters_as_ids=True and worker_types_as_ids=True.
             firm_clusters_as_ids (bool): if True, regress on firm clusters; if False, regress on firm ids
             worker_types_as_ids (bool): if True, regress on true, simulated worker types; if False, regress on worker ids
             ncore (int): number of cores for multiprocessing
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
+        if complementarities and ((not firm_clusters_as_ids) or (not worker_types_as_ids)):
+            raise ValueError('If `complementarities=True`, then must also set `firm_clusters_as_ids=True` and `worker_types_as_ids=True`.')
+
         if rng is None:
             rng = np.random.default_rng(None)
 
@@ -4453,6 +4457,10 @@ class DynamicBLMVarianceDecomposition:
             fe_params['Q_var'] = Q_var
         if Q_cov is not None:
             fe_params['Q_cov'] = Q_cov
+        if complementarities:
+            fe_params_comp = fe_params.copy()
+            fe_params_comp['Q_var'] = []
+            fe_params_comp['Q_cov'] = []
 
         # Copy original wages, firm types, and optionally ids
         yj = jdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
@@ -4485,6 +4493,9 @@ class DynamicBLMVarianceDecomposition:
 
         # Run bootstrap
         res_lst = []
+        if complementarities:
+            res_lst_comp = []
+            n_workers = jdata.n_workers() + sdata.n_workers()
         for i in trange(n_samples):
             # Simulate worker types then draw wages
             yj_i, ys_i, Lm_i, Ls_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=reallocate, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, rng=rng)
@@ -4506,6 +4517,15 @@ class DynamicBLMVarianceDecomposition:
                 fe_estimator = tw.FEControlEstimator(bdf, fe_params)
             fe_estimator.fit()
             res_lst.append(fe_estimator.summary)
+            if complementarities:
+                # Estimate OLS with complementarities
+                bdf.loc[:, 'i'] = pd.factorize(bdf.loc[:, 'i'].to_numpy() + n_workers * bdf.loc[:, 'j'].to_numpy())[0]
+                if no_controls:
+                    fe_estimator = tw.FEEstimator(bdf, fe_params_comp)
+                else:
+                    fe_estimator = tw.FEControlEstimator(bdf, fe_params_comp)
+                fe_estimator.fit()
+                res_lst_comp.append(fe_estimator.summary)
 
         with bpd.util.ChainedAssignment():
             # Restore original wages and optionally ids
@@ -4523,9 +4543,16 @@ class DynamicBLMVarianceDecomposition:
         for i in range(n_samples):
             for k, v in res_lst[i].items():
                 res[k][i] = v
+        if complementarities:
+            res_comp = {k: np.zeros(n_samples) for k in res_lst_comp[0].keys()}
+            for i in range(n_samples):
+                for k, v in res_lst_comp[i].items():
+                    res_comp[k][i] = v
 
         # Remove '_fe' from result names
         res = {k.replace('_fe', ''): v for k, v in res.items()}
+        if complementarities:
+            res_comp = {k.replace('_fe', ''): v for k, v in res_comp.items()}
 
         # Drop time column
         if tj:
@@ -4533,7 +4560,9 @@ class DynamicBLMVarianceDecomposition:
         if ts:
             sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
 
-        self.res = res
+        self.res = {'var_decomp': res, 'var_decomp_comp': None}
+        if complementarities:
+            self.res['var_decomp_comp'] = res_comp
 
 class DynamicBLMReallocation:
     '''
