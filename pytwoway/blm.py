@@ -3003,7 +3003,7 @@ class BLMVarianceDecomposition:
 
 class BLMReallocation:
     '''
-    Class for estimating BLM reallocation exercise using bootstrapping.
+    Class for estimating BLM reallocation exercise using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'quantiles_outcome' gives the primary quantile results, and the keys 'quantiles_`col`' give the quantiles results for any columns included in alternative_quantiles_cols.
 
     Arguments:
         params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
@@ -3014,9 +3014,9 @@ class BLMReallocation:
         # No initial results
         self.res = None
 
-    def fit(self, jdata, sdata, quantiles=None, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', ncore=1, rng=None):
+    def fit(self, jdata, sdata, quantiles=None, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', alternative_quantiles_cols=None, ncore=1, rng=None):
         '''
-        Estimate variance decomposition.
+        Estimate reallocation exercise.
 
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
@@ -3028,11 +3028,15 @@ class BLMReallocation:
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
             reallocate_jointly (bool): if True, worker type proportions take the average over movers and stayers (i.e. all workers use the same type proportions); if False, consider movers and stayers separately
             reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
+            alternative_quantiles_cols (str or list of str or None): compute average value of alternative columns within each computed quantile; None is equivalent to []
             ncore (int): number of cores for multiprocessing
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
         if quantiles is None:
             quantiles = np.arange(101) / 100
+        if alternative_quantiles_cols is None:
+            alternative_quantiles_cols = []
+        alternative_quantiles_cols = to_list(alternative_quantiles_cols)
         if rng is None:
             rng = np.random.default_rng(None)
 
@@ -3066,6 +3070,7 @@ class BLMReallocation:
 
         # Run bootstrap
         res = np.zeros([n_samples, len(quantiles)])
+        res_alt = {col: np.zeros([n_samples, len(quantiles) - 1]) for col in alternative_quantiles_cols}
         for i in trange(n_samples):
             # Simulate worker types then draw wages
             yj_i, ys_i, Lm_i, Ls_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=True, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, wj=wj, ws=ws, rng=rng)
@@ -3083,6 +3088,18 @@ class BLMReallocation:
             else:
                 w = None
             res[i, :] = weighted_quantile(values=bdf.loc[:, 'y'].to_numpy(), quantiles=quantiles, sample_weight=w)
+            if len(alternative_quantiles_cols) > 0:
+                ## Compute average value of alternative columns within each quantile ##
+                # Group data by quantile
+                quantile_groups = pd.cut(bdf.loc[:, 'y'].to_numpy(), res[i, :], include_lowest=True).codes
+                # Groupby-mean across quantiles
+                w_sum = np.bincount(quantile_groups, weights=w)
+                for col in alternative_quantiles_cols:
+                    if w is not None:
+                        print('res_alt:', res_alt[col].shape)
+                        res_alt[col][i, :] = np.bincount(quantile_groups, weights=w * bdf.loc[:, col].to_numpy()) / w_sum
+                    else:
+                        res_alt[col][i, :] = np.bincount(quantile_groups, weights=bdf.loc[:, col].to_numpy()) / w_sum
 
         with bpd.util.ChainedAssignment():
             # Restore original wages and optionally ids
@@ -3096,4 +3113,6 @@ class BLMReallocation:
             sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
 
         # Store results
-        self.res = res
+        self.res = {'quantiles_outcome': res}
+        for k, v in res_alt.items():
+            self.res[f'quantiles_{k}'] = v
