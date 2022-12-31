@@ -2169,7 +2169,9 @@ class DynamicBLMModel:
                 pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
 
                 if pd.isna(pk1).any():
-                    raise ValueError('Estimated pk1 has NaN values. Please try a different set of starting values.')
+                    warnings.warn('Estimated pk1 has NaN values. Please try a different set of starting values.')
+                    break
+                    # raise ValueError('Estimated pk1 has NaN values. Please try a different set of starting values.')
 
             # ---------- M-step ----------
             # Alternate between updating A/S and updating rho
@@ -3297,7 +3299,9 @@ class DynamicBLMModel:
                 pk0 = DxM(1 / np.sum(pk0, axis=1), pk0)
 
                 if pd.isna(pk0).any():
-                    raise ValueError('Estimated pk0 has NaN values. Please try a different set of starting values.')
+                    warnings.warn('Estimated pk0 has NaN values. Please try a different set of starting values.')
+                    break
+                    # raise ValueError('Estimated pk0 has NaN values. Please try a different set of starting values.')
 
             # ---------- M-step ----------
             # Alternate between updating A/S and updating rho
