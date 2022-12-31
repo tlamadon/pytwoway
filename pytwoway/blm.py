@@ -1766,6 +1766,7 @@ class BLMModel:
                     ## Categorical ##
                     if len(cat_cols) > 0:
                         XwS_cat = {col: np.zeros(shape=2 * col_ts) for col, col_ts in ts_cat.items()}
+
                     ## Continuous ##
                     if len(cts_cols) > 0:
                         XwS_cts = {col: np.zeros(shape=2 * nl) for col in cts_cols}

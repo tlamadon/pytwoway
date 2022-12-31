@@ -2722,15 +2722,16 @@ class DynamicBLMModel:
 
                 if params['update_s_movers']:
                     ## Update the variances ##
-                    XwS = np.zeros(shape=len(periods) * ts)
+                    if iter == 0:
+                        XwS = np.zeros(shape=len(periods) * ts)
 
-                    ## Categorical ##
-                    if len(cat_cols) > 0:
-                        XwS_cat = {col: np.zeros(shape=len(periods) * col_ts) for col, col_ts in ts_cat.items()}
+                        ## Categorical ##
+                        if len(cat_cols) > 0:
+                            XwS_cat = {col: np.zeros(shape=len(periods) * col_ts) for col, col_ts in ts_cat.items()}
 
-                    ## Continuous ##
-                    if len(cts_cols) > 0:
-                        XwS_cts = {col: np.zeros(shape=len(periods) * nl) for col in cts_cols}
+                        ## Continuous ##
+                        if len(cts_cols) > 0:
+                            XwS_cts = {col: np.zeros(shape=len(periods) * nl) for col in cts_cols}
 
                     ## Residuals ##
                     eps_sq = []
@@ -2781,7 +2782,7 @@ class DynamicBLMModel:
                                 - A_sum['43'] \
                                 - A_sum_l['43']) ** 2
                         eps_sq.append(eps_l_sq)
-                        del A_sum_l
+                        del A_sum_l, eps_l_sq
 
                         ## XwS terms ##
                         l_index, r_index = l * nk * len(periods), (l + 1) * nk * len(periods)
@@ -2826,7 +2827,6 @@ class DynamicBLMModel:
                         else:
                             XwS[l_index: r_index] = Xw[l] @ eps_sq[l]
                         Xw[l] = 0
-                        del eps_l_sq
 
                     try:
                         cons_s.solve(XwX[X_order, :][:, X_order], -XwS[X_order], solver='quadprog')
@@ -2858,7 +2858,7 @@ class DynamicBLMModel:
 
                             l_index, r_index = l * col_n * len(periods), (l + 1) * col_n * len(periods)
 
-                            ## Compute weights_l ##
+                            ## Compute var_l_cat ##
                             if cat_dict[col]['worker_type_interaction']:
                                 S_l_dict = {period: (S_cat[col][period][l, :] ** 2)[C_dict[period][col]] for period in periods}
                             else:
@@ -2943,7 +2943,7 @@ class DynamicBLMModel:
 
                             l_index, r_index = l * len(periods), (l + 1) * len(periods)
 
-                            ## Compute weights_l ##
+                            ## Compute var_l_cts ##
                             if cts_dict[col]['worker_type_interaction']:
                                 S_l_dict = {period: S_cts[col][period][l] ** 2 for period in periods}
                             else:
@@ -3703,21 +3703,32 @@ class DynamicBLMModel:
                             A_sum[period] += A_cts[col][period] * C_dict[period][col]
 
                 if params['update_s_stayers']:
-                    # Next we extract the variances
+                    ## Update the variances ##
                     if iter == 0:
                         XwS = np.zeros(shape=len(periods_update) * ts)
 
                         ## Categorical ##
                         if len(cat_cols) > 0:
                             XwS_cat = {col: np.zeros(shape=len(periods_update) * col_ts) for col, col_ts in ts_cat.items()}
+
                         ## Continuous ##
                         if len(cts_cols) > 0:
                             XwS_cts = {col: np.zeros(shape=len(periods_update) * nl) for col in cts_cols}
 
+                    ## Residuals ##
+                    eps_sq = []
+
                     ## Update S ##
                     for l in range(nl):
-                        # Update A_sum to account for worker-interaction terms
-                        A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False, periods=periods)
+                        # Update A_sum/S_sum_sq to account for worker-interaction terms
+                        if any_controls:
+                            # If controls, calculate S
+                            A_sum_l, S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=True, periods=periods)
+                        else:
+                            # If no controls, don't calculate S
+                            A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False, periods=periods)
+
+                        ## Residuals ##
                         eps_l_sq = np.zeros(2 * ni)
                         # eps_2_l_sq
                         eps_l_sq[0 * ni: 1 * ni] = \
@@ -3732,29 +3743,35 @@ class DynamicBLMModel:
                                     - A_sum['2s'] - A_sum_l['2s']) \
                                 - A['3s'][l, G1] \
                                 - A_sum['3s'] - A_sum_l['3s']) ** 2
-                        del A_sum_l
+                        eps_sq.append(eps_l_sq)
+                        del A_sum_l, eps_l_sq
 
                         ## XwS terms ##
                         l_index, r_index = l * nk * len(periods_update), (l + 1) * nk * len(periods_update)
-                        XwS[l_index: r_index] = Xw[l] @ eps_l_sq
+                        if any_controls:
+                            ## Account for other variables' contribution to variance ##
+                            var_l_numerator = np.concatenate(
+                                [
+                                    (S['2s'][l, :] ** 2)[G1],
+                                    (S['3s'][l, :] ** 2 + (R32s * S['2s'][l, :]) ** 2)[G1]
+                                ]
+                            )
+                            var_l_denominator = np.concatenate(
+                                [
+                                    (S['2s'][l, :] ** 2)[G1] \
+                                        + S_sum_sq['2s'] + S_sum_sq_l['2s'],
+                                    (S['3s'][l, :] ** 2)[G1] \
+                                        + S_sum_sq['3s'] + S_sum_sq_l['3s'] \
+                                        + (R32s ** 2) \
+                                            * ((S['2s'][l, :] ** 2)[G1] \
+                                                + S_sum_sq['2s'] + S_sum_sq_l['2s'])
+                                ]
+                            )
+                            del S_sum_sq_l
+                            XwS[l_index: r_index] = Xw[l] @ ((var_l_numerator / var_l_denominator) * eps_l_sq)
+                        else:
+                            XwS[l_index: r_index] = Xw[l] @ eps_l_sq
                         Xw[l] = 0
-
-                        ## Categorical ##
-                        for col in cat_cols:
-                            col_n = cat_dict[col]['n']
-                            l_index, r_index = l * col_n * len(periods_update), (l + 1) * col_n * len(periods_update)
-                            ## XwS_cat terms ##
-                            XwS_cat[col][l_index: r_index] = Xw_cat[col][l] @ eps_l_sq
-                            Xw_cat[col][l] = 0
-
-                        ## Continuous ##
-                        for col in cts_cols:
-                            l_index, r_index = l * len(periods_update), (l + 1) * len(periods_update)
-                            ## XwS_cts terms ##
-                            # NOTE: take absolute value
-                            XwS_cts[col][l_index: r_index] = np.abs(Xw_cts[col][l] @ eps_l_sq)
-                            Xw_cts[col][l] = 0
-                        del eps_l_sq
 
                     try:
                         cons_s.solve(XwX[X_order, :][:, X_order], -XwS[X_order], solver='quadprog')
@@ -3775,8 +3792,45 @@ class DynamicBLMModel:
 
                     ## Categorical ##
                     for col in cat_cols:
+                        col_n = cat_dict[col]['n']
+
+                        for l in range(nl):
+                            # Update S_sum_sq to account for worker-interaction terms
+                            S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_A=False, compute_S=True, periods=periods)
+                                
+                            l_index, r_index = l * col_n * len(periods_update), (l + 1) * col_n * len(periods_update)
+
+                            ## Compute var_l_cat ##
+                            if cat_dict[col]['worker_type_interaction']:
+                                S_l_dict = {period: (S_cat[col][period][l, :] ** 2)[C_dict[period][col]] for period in periods_update}
+                            else:
+                                S_l_dict = {period: (S_cat[col][period] ** 2)[C_dict[period][col]] for period in periods_update}
+
+                            ## Account for other variables' contribution to variance ##
+                            var_l_numerator = np.concatenate(
+                                [
+                                    S_l_dict['2s'],
+                                    S_l_dict['3s'] + (R32s ** 2) * S_l_dict['2s']
+                                ]
+                            )
+                            var_l_denominator = np.concatenate(
+                                [
+                                    (S['2s'][l, :] ** 2)[G1] \
+                                        + S_sum_sq['2s'] + S_sum_sq_l['2s'],
+                                    (S['3s'][l, :] ** 2)[G1] \
+                                        + S_sum_sq['3s'] + S_sum_sq_l['3s'] \
+                                        + (R32s ** 2) \
+                                            * ((S['2s'][l, :] ** 2)[G1] \
+                                                + S_sum_sq['2s'] + S_sum_sq_l['2s'])
+                                ]
+                            )
+                            del S_sum_sq_l
+
+                            ## XwS_cat terms ##
+                            XwS_cat[col][l_index: r_index] = Xw_cat[col][l] @ ((var_l_numerator / var_l_denominator) * eps_l_sq)
+                            Xw_cat[col][l] = 0
+
                         try:
-                            col_n = cat_dict[col]['n']
                             s_solver = cons_s_dict[col]
                             s_solver.solve(XwX_cat[col][X_cat_order[col], :][:, X_cat_order[col]], -XwS_cat[col][X_cat_order[col]], solver='quadprog')
                             if s_solver.res is None:
@@ -3785,12 +3839,21 @@ class DynamicBLMModel:
                                     print(f'Passing S_cat for column {col!r}: estimates are None')
                             else:
                                 res_2s, res_3s = np.split(s_solver.res, len(periods_update))
+
+                                if not cat_dict[col]['worker_type_interaction']:
+                                    for period in periods_update:
+                                        S_sum_sq[period] -= (S_cat[col][period] ** 2)[C_dict[period][col]]
+
                                 if cat_dict[col]['worker_type_interaction']:
                                     S_cat[col]['2s'] = np.sqrt(np.reshape(res_2s, (nl, col_n)))
                                     S_cat[col]['3s'] = np.sqrt(np.reshape(res_3s, (nl, col_n)))
                                 else:
                                     S_cat[col]['2s'] = np.sqrt(res_2s[: col_n])
                                     S_cat[col]['3s'] = np.sqrt(res_3s[: col_n])
+
+                                if not cat_dict[col]['worker_type_interaction']:
+                                    for period in periods_update:
+                                        S_sum_sq[period] += (S_cat[col][period] ** 2)[C_dict[period][col]]
 
                         except ValueError as e:
                             # If constraints inconsistent, keep S_cat the same
@@ -3799,6 +3862,42 @@ class DynamicBLMModel:
 
                     ## Continuous ##
                     for col in cts_cols:
+                        for l in range(nl):
+                            # Update S_sum_sq to account for worker-interaction terms
+                            S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_A=False, compute_S=True, periods=periods)
+
+                            l_index, r_index = l * len(periods_update), (l + 1) * len(periods_update)
+
+                            ## Compute var_l_cts ##
+                            if cts_dict[col]['worker_type_interaction']:
+                                S_l_dict = {period: S_cts[col][period][l] ** 2 for period in periods_update}
+                            else:
+                                S_l_dict = {period: S_cts[col][period] ** 2 for period in periods_update}
+
+                            var_l_numerator = np.concatenate(
+                                [
+                                    S_l_dict['2s'],
+                                    S_l_dict['3s'] + (R32s ** 2) * S_l_dict['2s']
+                                ]
+                            )
+                            var_l_denominator = np.concatenate(
+                                [
+                                    (S['2s'][l, :] ** 2)[G1] \
+                                        + S_sum_sq['2s'] + S_sum_sq_l['2s'],
+                                    (S['3s'][l, :] ** 2)[G1] \
+                                        + S_sum_sq['3s'] + S_sum_sq_l['3s'] \
+                                        + (R32s ** 2) \
+                                            * ((S['2s'][l, :] ** 2)[G1] \
+                                                + S_sum_sq['2s'] + S_sum_sq_l['2s'])
+                                ]
+                            )
+                            del S_sum_sq_l
+
+                            ## XwS_cts terms ##
+                            # NOTE: take absolute value
+                            XwS_cts[col][l_index: r_index] = np.abs(Xw_cts[col][l] @ ((var_l_numerator / var_l_denominator) * eps_l_sq))
+                            Xw_cts[col][l] = 0
+
                         try:
                             s_solver = cons_s_dict[col]
                             s_solver.solve(XwX_cts[col][X_cts_order[col], :][:, X_cts_order[col]], -XwS_cts[col][X_cts_order[col]], solver='quadprog')
@@ -3808,12 +3907,21 @@ class DynamicBLMModel:
                                     print(f'Passing S_cts for column {col!r}: estimates are None')
                             else:
                                 res_2s, res_3s = np.split(s_solver.res, len(periods_update))
+
+                                if not cts_dict[col]['worker_type_interaction']:
+                                    for period in periods_update:
+                                        S_sum_sq[period] -= S_cts[col][period] ** 2
+
                                 if cts_dict[col]['worker_type_interaction']:
                                     S_cts[col]['2s'] = np.sqrt(res_2s)
                                     S_cts[col]['3s'] = np.sqrt(res_3s)
                                 else:
                                     S_cts[col]['2s'] = np.sqrt(res_2s[0])
                                     S_cts[col]['3s'] = np.sqrt(res_3s[0])
+
+                                if not cts_dict[col]['worker_type_interaction']:
+                                    for period in periods_update:
+                                        S_sum_sq[period] -= S_cts[col][period] ** 2
 
                         except ValueError as e:
                             # If constraints inconsistent, keep S_cts the same
