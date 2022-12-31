@@ -2727,14 +2727,25 @@ class DynamicBLMModel:
                     ## Categorical ##
                     if len(cat_cols) > 0:
                         XwS_cat = {col: np.zeros(shape=len(periods) * col_ts) for col, col_ts in ts_cat.items()}
+
                     ## Continuous ##
                     if len(cts_cols) > 0:
                         XwS_cts = {col: np.zeros(shape=len(periods) * nl) for col in cts_cols}
 
+                    ## Residuals ##
+                    eps_sq = []
+
                     ## Update S ##
                     for l in range(nl):
-                        # Update A_sum to account for worker-interaction terms
-                        A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False, periods=periods)
+                        # Update A_sum/S_sum_sq to account for worker-interaction terms
+                        if any_controls:
+                            # If controls, calculate S
+                            A_sum_l, S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=True, periods=periods)
+                        else:
+                            # If no controls, don't calculate S
+                            A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False, periods=periods)
+
+                        ## Residuals ##
                         eps_l_sq = np.zeros(4 * ni)
                         # eps_1_l_sq
                         eps_l_sq[0 * ni: 1 * ni] = \
@@ -2769,28 +2780,52 @@ class DynamicBLMModel:
                                 - A['43'][l, G2] \
                                 - A_sum['43'] \
                                 - A_sum_l['43']) ** 2
+                        eps_sq.append(eps_l_sq)
                         del A_sum_l
 
                         ## XwS terms ##
                         l_index, r_index = l * nk * len(periods), (l + 1) * nk * len(periods)
-                        XwS[l_index: r_index] = Xw[l] @ eps_l_sq
+                        if any_controls:
+                            ## Account for other variables' contribution to variance ##
+                            var_l_numerator = np.concatenate(
+                                [
+                                    (S['12'][l, :] ** 2 + (R12 * S['2ma'][l, :]) ** 2)[G1],
+                                    (S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2],
+                                    (S['3ma'][l, :] ** 2)[G2] + (S['3mb'] ** 2)[G1] + (R32m ** 2) * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]),
+                                    (S['43'][l, :] ** 2 + (R43 * S['3ma'][l, :]) ** 2)[G2]
+                                ]
+                            )
+                            var_l_denominator = np.concatenate(
+                                [
+                                    (S['12'][l, :] ** 2)[G1] \
+                                        + S_sum_sq['12'] + S_sum_sq_l['12'] \
+                                        + (R12 ** 2) \
+                                            * ((S['2ma'][l, :] ** 2)[G1] \
+                                                + S_sum_sq['2ma'] \
+                                                + S_sum_sq_l['2ma'])
+                                            ],
+                                    ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]) \
+                                        + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
+                                        + (S_sum_sq_l['2ma'] +  S_sum_sq_l['2mb']),
+                                    ((S['3ma'][l, :] ** 2)[G2] + (S['3mb'] ** 2)[G1]) \
+                                        + (S_sum_sq['3ma'] + S_sum_sq['3mb']) \
+                                        + (S_sum_sq_l['3ma'] + S_sum_sq_l['3mb']) \
+                                        + (R32m ** 2) \
+                                            * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
+                                                + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
+                                                + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])),
+                                    (S['43'][l, :] ** 2)[G2] \
+                                        + S_sum_sq['43'] + S_sum_sq_l['43'] \
+                                        + (R43 ** 2) \
+                                            * ((S['3ma'][l, :] ** 2)[G2] \
+                                                + S_sum_sq['3ma'] \
+                                                + S_sum_sq_l['3ma'])
+                            )
+                            del S_sum_sq_l
+                            XwS[l_index: r_index] = Xw[l] @ ((var_l_numerator / var_l_denominator) * eps_sq[l])
+                        else:
+                            XwS[l_index: r_index] = Xw[l] @ eps_sq[l]
                         Xw[l] = 0
-
-                        ## Categorical ##
-                        for col in cat_cols:
-                            col_n = cat_dict[col]['n']
-                            l_index, r_index = l * col_n * len(periods), (l + 1) * col_n * len(periods)
-                            ## XwS_cat terms ##
-                            XwS_cat[col][l_index: r_index] = Xw_cat[col][l] @ eps_l_sq
-                            Xw_cat[col][l] = 0
-
-                        ## Continuous ##
-                        for col in cts_cols:
-                            l_index, r_index = l * len(periods), (l + 1) * len(periods)
-                            ## XwS_cts terms ##
-                            # NOTE: take absolute value
-                            XwS_cts[col][l_index: r_index] = np.abs(Xw_cts[col][l] @ eps_l_sq)
-                            Xw_cts[col][l] = 0
                         del eps_l_sq
 
                     try:
@@ -2815,8 +2850,62 @@ class DynamicBLMModel:
 
                     ## Categorical ##
                     for col in cat_cols:
+                        col_n = cat_dict[col]['n']
+
+                        for l in range(nl):
+                            # Update S_sum_sq to account for worker-interaction terms
+                            S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_A=False, compute_S=True, periods=periods)
+
+                            l_index, r_index = l * col_n * len(periods), (l + 1) * col_n * len(periods)
+
+                            ## Compute weights_l ##
+                            if cat_dict[col]['worker_type_interaction']:
+                                S_l_dict = {period: (S_cat[col][period][l, :] ** 2)[C_dict[period][col]] for period in periods}
+                            else:
+                                S_l_dict = {period: (S_cat[col][period] ** 2)[C_dict[period][col]] for period in periods}
+
+                            ## Account for other variables' contribution to variance ##
+                            var_l_numerator = np.concatenate(
+                                [
+                                    S_l_dict['12'] + (R12 ** 2) * S_l_dict['2ma'],
+                                    S_l_dict['2ma'] + S_l_dict['2mb'],
+                                    S_l_dict['3ma'] + S_l_dict['3mb'] + (R32m ** 2) * (S_l_dict['2ma'] + S_l_dict['2mb']),
+                                    S_l_dict['43'] + (R43 ** 2) * S_l_dict['3ma']
+                                ]
+                            )
+                            var_l_denominator = np.concatenate(
+                                [
+                                    (S['12'][l, :] ** 2)[G1] \
+                                        + S_sum_sq['12'] + S_sum_sq_l['12'] \
+                                        + (R12 ** 2) \
+                                            * ((S['2ma'][l, :] ** 2)[G1] \
+                                                + S_sum_sq['2ma'] \
+                                                + S_sum_sq_l['2ma'])
+                                            ],
+                                    ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]) \
+                                        + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
+                                        + (S_sum_sq_l['2ma'] +  S_sum_sq_l['2mb']),
+                                    ((S['3ma'][l, :] ** 2)[G2] + (S['3mb'] ** 2)[G1]) \
+                                        + (S_sum_sq['3ma'] + S_sum_sq['3mb']) \
+                                        + (S_sum_sq_l['3ma'] + S_sum_sq_l['3mb']) \
+                                        + (R32m ** 2) \
+                                            * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
+                                                + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
+                                                + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])),
+                                    (S['43'][l, :] ** 2)[G2] \
+                                        + S_sum_sq['43'] + S_sum_sq_l['43'] \
+                                        + (R43 ** 2) \
+                                            * ((S['3ma'][l, :] ** 2)[G2] \
+                                                + S_sum_sq['3ma'] \
+                                                + S_sum_sq_l['3ma'])
+                            )
+                            del S_sum_sq_l
+                            
+                            ## XwS_cat terms ##
+                            XwS_cat[col][l_index: r_index] = Xw_cat[col][l] @ ((var_l_numerator / var_l_denominator) * eps_sq[l])
+                            Xw_cat[col][l] = 0
+
                         try:
-                            col_n = cat_dict[col]['n']
                             s_solver = cons_s_dict[col]
                             s_solver.solve(XwX_cat[col][X_cat_order[col], :][:, X_cat_order[col]], -XwS_cat[col][X_cat_order[col]], solver='quadprog')
                             del XwS_cat[col]
@@ -2826,11 +2915,20 @@ class DynamicBLMModel:
                                     print(f'Passing S_cat for column {col!r}: estimates are None')
                             else:
                                 split_res = np.split(s_solver.res, len(periods))
+
+                                if not cat_dict[col]['worker_type_interaction']:
+                                    for period in periods:
+                                        S_sum_sq[period] -= (S_cat[col][period] ** 2)[C_dict[period][col]]
+
                                 for i, period in enumerate(periods):
                                     if cat_dict[col]['worker_type_interaction'] and (period[-1] != 'b'):
                                         S_cat[col][period] = np.sqrt(np.reshape(split_res[i], (nl, col_n)))
                                     else:
                                         S_cat[col][period] = np.sqrt(split_res[i][: col_n])
+
+                                if not cat_dict[col]['worker_type_interaction']:
+                                    for period in periods:
+                                        S_sum_sq[period] += (S_cat[col][period] ** 2)[C_dict[period][col]]
 
                         except ValueError as e:
                             # If constraints inconsistent, keep S_cat the same
@@ -2839,6 +2937,61 @@ class DynamicBLMModel:
 
                     ## Continuous ##
                     for col in cts_cols:
+                        for l in range(nl):
+                            # Update S_sum_sq to account for worker-interaction terms
+                            S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_A=False, compute_S=True, periods=periods)
+
+                            l_index, r_index = l * len(periods), (l + 1) * len(periods)
+
+                            ## Compute weights_l ##
+                            if cts_dict[col]['worker_type_interaction']:
+                                S_l_dict = {period: S_cts[col][period][l] ** 2 for period in periods}
+                            else:
+                                S_l_dict = {period: S_cts[col][period] ** 2 for period in periods}
+
+                            ## Account for other variables' contribution to variance ##
+                            var_l_numerator = np.concatenate(
+                                [
+                                    S_l_dict['12'] + (R12 ** 2) * S_l_dict['2ma'],
+                                    S_l_dict['2ma'] + S_l_dict['2mb'],
+                                    S_l_dict['3ma'] + S_l_dict['3mb'] + (R32m ** 2) * (S_l_dict['2ma'] + S_l_dict['2mb']),
+                                    S_l_dict['43'] + (R43 ** 2) * S_l_dict['3ma']
+                                ]
+                            )
+                            var_l_denominator = np.concatenate(
+                                [
+                                    (S['12'][l, :] ** 2)[G1] \
+                                        + S_sum_sq['12'] + S_sum_sq_l['12'] \
+                                        + (R12 ** 2) \
+                                            * ((S['2ma'][l, :] ** 2)[G1] \
+                                                + S_sum_sq['2ma'] \
+                                                + S_sum_sq_l['2ma'])
+                                            ],
+                                    ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]) \
+                                        + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
+                                        + (S_sum_sq_l['2ma'] +  S_sum_sq_l['2mb']),
+                                    ((S['3ma'][l, :] ** 2)[G2] + (S['3mb'] ** 2)[G1]) \
+                                        + (S_sum_sq['3ma'] + S_sum_sq['3mb']) \
+                                        + (S_sum_sq_l['3ma'] + S_sum_sq_l['3mb']) \
+                                        + (R32m ** 2) \
+                                            * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
+                                                + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
+                                                + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])),
+                                    (S['43'][l, :] ** 2)[G2] \
+                                        + S_sum_sq['43'] + S_sum_sq_l['43'] \
+                                        + (R43 ** 2) \
+                                            * ((S['3ma'][l, :] ** 2)[G2] \
+                                                + S_sum_sq['3ma'] \
+                                                + S_sum_sq_l['3ma'])
+                            )
+                            del S_sum_sq_l
+
+                            ## XwS_cts terms ##
+                            # NOTE: take absolute value
+                            XwS_cts[col][l_index: r_index] = np.abs(Xw_cts[col][l] @ ((var_l_numerator / var_l_denominator) * eps_l_sq))
+                            Xw_cts[col][l] = 0
+                        del eps_l_sq
+
                         try:
                             s_solver = cons_s_dict[col]
                             s_solver.solve(XwX_cts[col][X_cts_order[col], :][:, X_cts_order[col]], -XwS_cts[col][X_cts_order[col]], solver='quadprog')
@@ -2849,22 +3002,33 @@ class DynamicBLMModel:
                                     print(f'Passing S_cts for column {col!r}: estimates are None')
                             else:
                                 split_res = np.split(s_solver.res, len(periods))
+
+                                if not cts_dict[col]['worker_type_interaction']:
+                                    for period in periods:
+                                        S_sum_sq[period] -= S_cts[col][period] ** 2
+
                                 for i, period in enumerate(periods):
                                     if cat_dict[col]['worker_type_interaction'] and (period[-1] != 'b'):
                                         S_cts[col][period] = np.sqrt(split_res[i])
                                     else:
                                         S_cts[col][period] = np.sqrt(split_res[i][0])
 
+                                if not cts_dict[col]['worker_type_interaction']:
+                                    for period in periods:
+                                        S_sum_sq[period] -= S_cts[col][period] ** 2
+
                         except ValueError as e:
                             # If constraints inconsistent, keep S_cts the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S_cts for column {col!r}: {e}')
 
-                    del XwX, Xw
-                    if len(cat_cols) > 0:
-                        del XwX_cat, Xw_cat
-                    if len(cts_cols) > 0:
-                        del XwX_cts, Xw_cts
+                    del eps_sq
+
+                del XwX, Xw
+                if len(cat_cols) > 0:
+                    del XwX_cat, Xw_cat
+                if len(cts_cols) > 0:
+                    del XwX_cts, Xw_cts
 
                 # print('A after:')
                 # print(A)

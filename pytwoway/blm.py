@@ -1783,7 +1783,7 @@ class BLMModel:
                         else:
                             # If no controls, don't calculate S
                             A1_sum_l, A2_sum_l = self._sum_by_nl_l(ni=ni, l=l, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts, compute_S=False)
-                        
+
                         ## Residuals ##
                         eps1_sq.append((Y1_adj - A1_sum_l - A1[l, G1]) ** 2)
                         eps2_sq.append((Y2_adj - A2_sum_l - A2[l, G2]) ** 2)
@@ -2999,7 +2999,6 @@ class BLMVarianceDecomposition:
         self.res = {'var_decomp': res, 'var_decomp_comp': None}
         if complementarities:
             self.res['var_decomp_comp'] = res_comp
-
 
 class BLMReallocation:
     '''
