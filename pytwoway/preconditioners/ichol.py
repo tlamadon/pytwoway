@@ -287,6 +287,7 @@ def ichol(
             print("    shift = %e" % shift)
             print("Try decreasing discard_threshold or start with a larger shift")
             print("")
+            print("NOTE: this is a warning, not an error")
 
         if nnz == -2:
             raise ValueError(
