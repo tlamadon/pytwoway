@@ -463,13 +463,13 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
                     S1_sum_sq += S1_cts[col] ** 2
                     S2_sum_sq += S2_cts[col] ** 2
 
-        Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq) / wj[:, 0], size=nmi)
-        Y2 = rng.normal(loc=A2_sum, scale=np.sqrt(S2_sum_sq) / wj[:, 1], size=nmi)
+        Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq / wj[:, 0]), size=nmi)
+        Y2 = rng.normal(loc=A2_sum, scale=np.sqrt(S2_sum_sq / wj[:, 1]), size=nmi)
         del S1_sum_sq, S2_sum_sq
     else:
         #### No control variables ####
-        Y1 = rng.normal(loc=A1_sum, scale=S1_sum / wj[:, 0], size=nmi)
-        Y2 = rng.normal(loc=A2_sum, scale=S2_sum / wj[:, 1], size=nmi)
+        Y1 = rng.normal(loc=A1_sum, scale=S1_sum / np.sqrt(wj[:, 0]), size=nmi)
+        Y2 = rng.normal(loc=A2_sum, scale=S2_sum / np.sqrt(wj[:, 1]), size=nmi)
     yj = (Y1, Y2)
     del A1_sum, A2_sum, S1_sum, S2_sum, Y1, Y2
 
@@ -514,10 +514,10 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
                     A1_sum += A1_cts[col] * sdata.loc[:, subcol_1]
                     S1_sum_sq += S1_cts[col] ** 2
 
-        Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq) / ws, size=nsi)
+        Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq / ws), size=nsi)
     else:
         #### No control variables ####
-        Y1 = rng.normal(loc=A1_sum, scale=S1_sum / ws, size=nsi)
+        Y1 = rng.normal(loc=A1_sum, scale=S1_sum / np.sqrt(ws), size=nsi)
     ys = Y1
 
     return (yj, ys, Lm, Ls)
