@@ -1624,29 +1624,26 @@ class DynamicBLMModel:
                         A_cat[tv_wi_col][period] += adj_val_tl
             else:
                 primary_period_dict = {
-                    'first': 0,
-                    'second': 1,
-                    'all': range(2)
+                    'first': '12',
+                    'second': '43',
+                    'all': ['12', '43']
                 }
                 secondary_period_dict = {
-                    'first': 1,
-                    'second': 0,
-                    'all': range(2)
+                    'first': '43',
+                    'second': '12',
+                    'all': ['12', '43']
                 }
-                params_dict = {
-                    0: [A['12'], A_cat['12']],
-                    1: [A['43'], A_cat['43']]
-                }
-                Ap = [params_dict[pp] for pp in to_list(primary_period_dict[params['primary_period']])]
-                As = [params_dict[sp] for sp in to_list(secondary_period_dict[params['primary_period']])]
+                A_list = [A, A_cat]
+                Ap = to_list(primary_period_dict[params['primary_period']])
+                As = to_list(secondary_period_dict[params['primary_period']])
                 if any_tnv_wi:
                     ## Normalize primary period ##
                     for l in range(nl):
                         ## Iterate over worker types ##
                         # Compute normalization
-                        adj_val_1 = Ap[0][0][l, min_firm_type]
-                        for Ap_sub in Ap[1:]:
-                            adj_val_1 += Ap_sub[0][l, min_firm_type]
+                        adj_val_1 = 0
+                        for Ap_sub in Ap:
+                            adj_val_1 += A_list[0][Ap_sub][l, min_firm_type]
                         adj_val_1 /= len(Ap)
 
                         for period in self.all_periods:
@@ -1685,9 +1682,9 @@ class DynamicBLMModel:
                     elif any_tnv_nwi:
                         ## Normalize lowest type pair in primary period ##
                         # Compute normalization
-                        adj_val_1 = Ap[0][0][0, min_firm_type]
-                        for Ap_sub in Ap[1:]:
-                            adj_val_1 += Ap_sub[0][0, min_firm_type]
+                        adj_val_1 = 0
+                        for Ap_sub in Ap:
+                            adj_val_1 += A_list[0][Ap_sub][0, min_firm_type]
                         adj_val_1 /= len(Ap)
 
                         for period in self.all_periods:
@@ -2333,7 +2330,7 @@ class DynamicBLMModel:
                         X_cat[col] = X_cat[col].tocsc()
                         # Re-order X to period-nl-n_col (this is so constraints are the same order as static BLM)
                         X_np_group = np.tile(np.repeat(np.arange(len(periods)), col_n), nl)
-                        X_nl_group = np.repeat(np.arange(nl), nk * len(periods))
+                        X_nl_group = np.repeat(np.arange(nl), col_n * len(periods))
                         X_col_n_group = np.tile(np.arange(col_n), nl * len(periods))
                         X_cat_order[col] = (X_col_n_group + col_n * X_nl_group + (nl * col_n) * X_np_group).argsort()
                         del X_np_group, X_nl_group, X_col_n_group
@@ -2370,8 +2367,8 @@ class DynamicBLMModel:
                         X_cts[col][3 * ni: 4 * ni, 3] = -(R43 * C2[col])
                         X_cts[col] = X_cts[col].tocsc()
                         # Re-order X to period-nl-n_col
-                        X_np_group = np.tile(np.repeat(np.arange(len(periods)), col_n), nl)
-                        X_nl_group = np.repeat(np.arange(nl), nk * len(periods))
+                        X_np_group = np.tile(np.repeat(np.arange(len(periods)), 1), nl)
+                        X_nl_group = np.repeat(np.arange(nl), 1 * len(periods))
                         X_cts_order[col] = (X_nl_group + nl * X_np_group).argsort()
                         del X_np_group, X_nl_group
 
@@ -2804,8 +2801,7 @@ class DynamicBLMModel:
                                         + (R12 ** 2) \
                                             * ((S['2ma'][l, :] ** 2)[G1] \
                                                 + S_sum_sq['2ma'] \
-                                                + S_sum_sq_l['2ma'])
-                                            ],
+                                                + S_sum_sq_l['2ma']),
                                     ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]) \
                                         + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
                                         + (S_sum_sq_l['2ma'] +  S_sum_sq_l['2mb']),
@@ -2822,6 +2818,7 @@ class DynamicBLMModel:
                                             * ((S['3ma'][l, :] ** 2)[G2] \
                                                 + S_sum_sq['3ma'] \
                                                 + S_sum_sq_l['3ma'])
+                                ]
                             )
                             del S_sum_sq_l
                             XwS[l_index: r_index] = Xw[l] @ ((var_l_numerator / var_l_denominator) * eps_sq[l])
@@ -2881,8 +2878,7 @@ class DynamicBLMModel:
                                         + (R12 ** 2) \
                                             * ((S['2ma'][l, :] ** 2)[G1] \
                                                 + S_sum_sq['2ma'] \
-                                                + S_sum_sq_l['2ma'])
-                                            ],
+                                                + S_sum_sq_l['2ma']),
                                     ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]) \
                                         + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
                                         + (S_sum_sq_l['2ma'] +  S_sum_sq_l['2mb']),
@@ -2899,6 +2895,7 @@ class DynamicBLMModel:
                                             * ((S['3ma'][l, :] ** 2)[G2] \
                                                 + S_sum_sq['3ma'] \
                                                 + S_sum_sq_l['3ma'])
+                                ]
                             )
                             del S_sum_sq_l
                             
@@ -2966,8 +2963,7 @@ class DynamicBLMModel:
                                         + (R12 ** 2) \
                                             * ((S['2ma'][l, :] ** 2)[G1] \
                                                 + S_sum_sq['2ma'] \
-                                                + S_sum_sq_l['2ma'])
-                                            ],
+                                                + S_sum_sq_l['2ma']),
                                     ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]) \
                                         + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
                                         + (S_sum_sq_l['2ma'] +  S_sum_sq_l['2mb']),
@@ -2984,14 +2980,14 @@ class DynamicBLMModel:
                                             * ((S['3ma'][l, :] ** 2)[G2] \
                                                 + S_sum_sq['3ma'] \
                                                 + S_sum_sq_l['3ma'])
+                                ]
                             )
                             del S_sum_sq_l
 
                             ## XwS_cts terms ##
                             # NOTE: take absolute value
-                            XwS_cts[col][l_index: r_index] = np.abs(Xw_cts[col][l] @ ((var_l_numerator / var_l_denominator) * eps_l_sq))
+                            XwS_cts[col][l_index: r_index] = np.abs(Xw_cts[col][l] @ ((var_l_numerator / var_l_denominator) * eps_sq[l]))
                             Xw_cts[col][l] = 0
-                        del eps_l_sq
 
                         try:
                             s_solver = cons_s_dict[col]
@@ -3771,9 +3767,9 @@ class DynamicBLMModel:
                                 ]
                             )
                             del S_sum_sq_l
-                            XwS[l_index: r_index] = Xw[l] @ ((var_l_numerator / var_l_denominator) * eps_l_sq)
+                            XwS[l_index: r_index] = Xw[l] @ ((var_l_numerator / var_l_denominator) * eps_sq[l])
                         else:
-                            XwS[l_index: r_index] = Xw[l] @ eps_l_sq
+                            XwS[l_index: r_index] = Xw[l] @ eps_sq[l]
                         Xw[l] = 0
 
                     try:
@@ -3830,7 +3826,7 @@ class DynamicBLMModel:
                             del S_sum_sq_l
 
                             ## XwS_cat terms ##
-                            XwS_cat[col][l_index: r_index] = Xw_cat[col][l] @ ((var_l_numerator / var_l_denominator) * eps_l_sq)
+                            XwS_cat[col][l_index: r_index] = Xw_cat[col][l] @ ((var_l_numerator / var_l_denominator) * eps_sq[l])
                             Xw_cat[col][l] = 0
 
                         try:
@@ -3898,7 +3894,7 @@ class DynamicBLMModel:
 
                             ## XwS_cts terms ##
                             # NOTE: take absolute value
-                            XwS_cts[col][l_index: r_index] = np.abs(Xw_cts[col][l] @ ((var_l_numerator / var_l_denominator) * eps_l_sq))
+                            XwS_cts[col][l_index: r_index] = np.abs(Xw_cts[col][l] @ ((var_l_numerator / var_l_denominator) * eps_sq[l]))
                             Xw_cts[col][l] = 0
 
                         try:
