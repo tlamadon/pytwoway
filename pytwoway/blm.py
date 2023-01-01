@@ -2881,6 +2881,7 @@ class BLMVarianceDecomposition:
                 fe_params['categorical_controls'] = self.params['categorical_controls'].keys()
             if not no_cts_controls:
                 fe_params['continuous_controls'] = self.params['continuous_controls'].keys()
+        fe_params['weighted'] = False
         fe_params['ho'] = False
         if Q_var is not None:
             fe_params['Q_var'] = Q_var
@@ -2917,10 +2918,10 @@ class BLMVarianceDecomposition:
         ## Weights ##
         wj = None
         ws = None
-        if jdata._col_included('w'):
-            wj = jdata.loc[:, ['w1', 'w2']].to_numpy()
-        if sdata._col_included('w'):
-            ws = sdata.loc[:, 'w1'].to_numpy()
+        # if jdata._col_included('w'):
+        #     wj = jdata.loc[:, ['w1', 'w2']].to_numpy()
+        # if sdata._col_included('w'):
+        #     ws = sdata.loc[:, 'w1'].to_numpy()
 
         if blm_model is None:
             # Run initial BLM estimator
