@@ -4723,6 +4723,7 @@ class DynamicBLMVarianceDecomposition:
                 fe_params['categorical_controls'] = self.params['categorical_controls'].keys()
             if not no_cts_controls:
                 fe_params['continuous_controls'] = self.params['continuous_controls'].keys()
+        fe_params['weighted'] = False
         fe_params['ho'] = False
         if Q_var is not None:
             fe_params['Q_var'] = Q_var
@@ -4908,23 +4909,16 @@ class DynamicBLMReallocation:
             # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
             bdf._set_attributes(jdata)
             bdf = bdf.to_long(is_sorted=True, copy=False)
-            # Compute quantiles
-            if bdf._col_included('w'):
-                w = bdf.loc[:, 'w'].to_numpy()
-            else:
-                w = None
-            res[i, :] = weighted_quantile(values=bdf.loc[:, 'y'].to_numpy(), quantiles=quantiles, sample_weight=w)
+            # Compute quantiles (no weights for dynamic BLM)
+            res[i, :] = weighted_quantile(values=bdf.loc[:, 'y'].to_numpy(), quantiles=quantiles, sample_weight=None)
             if len(alternative_quantiles_cols) > 0:
                 ## Compute average value of alternative columns within each quantile ##
                 # Group data by quantile
                 quantile_groups = pd.cut(bdf.loc[:, 'y'].to_numpy(), res[i, :], include_lowest=True).codes
                 # Groupby-mean across quantiles
-                w_sum = np.bincount(quantile_groups, weights=w)
+                w_sum = np.bincount(quantile_groups)
                 for col in alternative_quantiles_cols:
-                    if w is not None:
-                        res_alt[col][i, :] = np.bincount(quantile_groups, weights=w * bdf.loc[:, col].to_numpy()) / w_sum
-                    else:
-                        res_alt[col][i, :] = np.bincount(quantile_groups, weights=bdf.loc[:, col].to_numpy()) / w_sum
+                    res_alt[col][i, :] = np.bincount(quantile_groups, weights=bdf.loc[:, col].to_numpy()) / w_sum
 
         with bpd.util.ChainedAssignment():
             # Restore original wages and optionally ids
