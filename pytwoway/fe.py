@@ -465,7 +465,7 @@ class FEEstimator:
         else:
             ## Unweighted ##
             ## Dp (weight) ##
-            Dp = 1
+            Dp = np.ones(self.nn, dtype=int) # 1
 
             ## Weighted J and W ##
             DpJ = J

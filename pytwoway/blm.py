@@ -3097,7 +3097,6 @@ class BLMReallocation:
                 w_sum = np.bincount(quantile_groups, weights=w)
                 for col in alternative_quantiles_cols:
                     if w is not None:
-                        print('res_alt:', res_alt[col].shape)
                         res_alt[col][i, :] = np.bincount(quantile_groups, weights=w * bdf.loc[:, col].to_numpy()) / w_sum
                     else:
                         res_alt[col][i, :] = np.bincount(quantile_groups, weights=bdf.loc[:, col].to_numpy()) / w_sum

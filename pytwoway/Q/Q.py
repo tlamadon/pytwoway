@@ -17,10 +17,15 @@ from bipartitepandas.util import to_list, fast_shift
 class VarPsi():
     '''
     Generate Q to estimate var(psi).
+
+    Arguments:
+        category (NumPy Array or None): categorical vector of 0s and 1s; None is equivalent to all 1s
+        category_name (str or None): category 1 string representation; if None, just print 'psi'
     '''
 
-    def __init__(self):
-        pass
+    def __init__(self, category=None, category_name=None):
+        self.category = category
+        self.category_name = category_name
 
     def name(self):
         '''
@@ -29,7 +34,11 @@ class VarPsi():
         Returns:
             (str): string representation of var(psi)
         '''
-        return 'var(psi)'
+        str_name = 'var(psi'
+        if self.category_name is not None:
+            str_name += f'-{self.category_name}'
+        str_name += ')'
+        return str_name
 
     def _get_Q(self, adata, J, W, Dp):
         '''
@@ -44,7 +53,9 @@ class VarPsi():
         Returns:
             (tuple): (half of Q matrix, weights, psi/alpha) --> (J, Dp, 'psi')
         '''
-        return (J, Dp, 'psi')
+        if self.category is None:
+            return (J, Dp, 'psi')
+        return (J[self.category, :], Dp[self.category], 'psi')
 
     def _Q_mult(self, Q_matrix, psi, alpha):
         '''
@@ -63,10 +74,15 @@ class VarPsi():
 class VarAlpha():
     '''
     Generate Q to estimate var(alpha).
+
+    Arguments:
+        category (NumPy Array or None): categorical vector of 0s and 1s; None is equivalent to all 1s
+        category_name (str or None): category 1 string representation; if None, just print 'alpha'
     '''
 
-    def __init__(self):
-        pass
+    def __init__(self, category=None, category_name=None):
+        self.category = category
+        self.category_name = category_name
 
     def name(self):
         '''
@@ -75,7 +91,11 @@ class VarAlpha():
         Returns:
             (str): string representation of var(alpha)
         '''
-        return 'var(alpha)'
+        str_name = 'var(alpha'
+        if self.category_name is not None:
+            str_name += f'-{self.category_name}'
+        str_name += ')'
+        return str_name
 
     def _get_Q(self, adata, J, W, Dp):
         '''
@@ -90,7 +110,9 @@ class VarAlpha():
         Returns:
             (tuple): (half of Q matrix, weights, psi/alpha) --> (W, Dp, 'alpha')
         '''
-        return (W, Dp, 'alpha')
+        if self.category is None:
+            return (W, Dp, 'alpha')
+        return (W[self.category, :], Dp[self.category], 'alpha')
 
     def _Q_mult(self, Q_matrix, psi, alpha):
         '''
@@ -109,10 +131,15 @@ class VarAlpha():
 class VarPsiPlusAlpha():
     '''
     Generate Q to estimate var(psi + alpha).
+
+    Arguments:
+        category (NumPy Array or None): categorical vector of 0s and 1s; None is equivalent to all 1s
+        category_name (str or None): category 1 string representation; if None, just print 'psi + alpha'
     '''
 
-    def __init__(self):
-        pass
+    def __init__(self, category=None, category_name=None):
+        self.category = category
+        self.category_name = category_name
 
     def name(self):
         '''
@@ -121,7 +148,11 @@ class VarPsiPlusAlpha():
         Returns:
             (str): string representation of var(psi + alpha)
         '''
-        return 'var(psi + alpha)'
+        str_name = 'var(psi + alpha'
+        if self.category_name is not None:
+            str_name += f'-{self.category_name}'
+        str_name += ')'
+        return str_name
 
     def _get_Q(self, adata, J, W, Dp):
         '''
@@ -136,7 +167,9 @@ class VarPsiPlusAlpha():
         Returns:
             (tuple): (half of Q matrix, weights, psi/alpha) --> (hstack([J, W]), Dp, 'gamma')
         '''
-        return (hstack([J, W]), Dp, 'gamma')
+        if self.category is None:
+            return (hstack([J, W]), Dp, 'gamma')
+        return (hstack([J, W])[self.category, :], Dp[self.category], 'gamma')
 
     def _Q_mult(self, Q_matrix, psi, alpha):
         '''
@@ -155,10 +188,19 @@ class VarPsiPlusAlpha():
 class CovPsiAlpha():
     '''
     Generate Q to estimate cov(psi, alpha).
+
+    Arguments:
+        category1 (NumPy Array or None): categorical vector of 0s and 1s for left covariance term; None is equivalent to all 1s
+        category2 (NumPy Array or None): categorical vector of 0s and 1s for right covariance term; None is equivalent to all 1s
+        category1_name (str or None): category 1 string representation; if None, just print 'psi, alpha'
+        category2_name (str or None): category 2 string representation; if None, just print 'psi, alpha'
     '''
 
-    def __init__(self):
-        pass
+    def __init__(self, category1=None, category2=None, category1_name=None, category2_name=None):
+        self.category1 = category1
+        self.category2 = category2
+        self.category1_name = category1_name
+        self.category2_name = category2_name
 
     def name(self):
         '''
@@ -167,7 +209,14 @@ class CovPsiAlpha():
         Returns:
             (str): string representation of cov(psi, alpha)
         '''
-        return 'cov(psi, alpha)'
+        str_name = 'cov(psi'
+        if self.category1_name is not None:
+            str_name += f'-{self.category1_name}'
+        str_name += ', alpha'
+        if self.category2_name is not None:
+            str_name += f'-{self.category2_name}'
+        str_name += ')'
+        return str_name
 
     def _get_Ql(self, adata, J, W, Dp):
         '''
@@ -182,7 +231,9 @@ class CovPsiAlpha():
         Returns:
             (tuple): (left term of Q matrix, weights, psi/alpha) --> (J, Dp, 'psi')
         '''
-        return (J, Dp, 'psi')
+        if self.category1 is None:
+            return (J, Dp, 'psi')
+        return (J[self.category1, :], Dp[self.category1], 'psi')
 
     def _get_Qr(self, adata, J, W, Dp):
         '''
@@ -197,7 +248,9 @@ class CovPsiAlpha():
         Returns:
             (tuple): (right term of Q matrix, weights, psi/alpha) --> (W, Dp, 'alpha')
         '''
-        return (W, Dp, 'alpha')
+        if self.category2 is None:
+            return (W, Dp, 'alpha')
+        return (W[self.category2, :], Dp[self.category2], 'alpha')
 
     def _Ql_mult(self, Q_matrix, psi, alpha):
         '''
@@ -227,13 +280,117 @@ class CovPsiAlpha():
         '''
         return Q_matrix @ alpha
 
+# class CovAlphaAlpha():
+#     '''
+#     Generate Q to estimate cov(alpha, alpha).
+
+#     Arguments:
+#         category1 (NumPy Array or None): categorical vector of 0s and 1s for left covariance term; None is equivalent to all 1s
+#         category2 (NumPy Array or None): categorical vector of 0s and 1s for right covariance term; None is equivalent to all 1s
+#         category1_name (str or None): category 1 string representation; if None, just print 'alpha'
+#         category2_name (str or None): category 2 string representation; if None, just print 'alpha'
+#     '''
+
+#     def __init__(self, category1=None, category2=None, category1_name=None, category2_name=None):
+#         self.category1 = category1
+#         self.category2 = category2
+#         self.category1_name = category1_name
+#         self.category2_name = category2_name
+
+#     def name(self):
+#         '''
+#         Return string representation of cov(alpha, alpha).
+
+#         Returns:
+#             (str): string representation of cov(alpha, alpha)
+#         '''
+#         str_name = 'cov(alpha'
+#         if self.category1_name is not None:
+#             str_name += f'-{self.category1_name}'
+#         str_name += ', alpha'
+#         if self.category2_name is not None:
+#             str_name += f'-{self.category2_name}'
+#         str_name += ')'
+#         return str_name
+
+#     def _get_Ql(self, adata, J, W, Dp):
+#         '''
+#         Construct Ql matrix (Q-left) to use when estimating cov(alpha, alpha).
+
+#         Arguments:
+#             adata (BipartiteDataFrame): data
+#             J (CSC Sparse Matrix): firm ids matrix representation
+#             W (CSC Sparse Matrix): worker ids matrix representation
+#             Dp (NumPy Array): weights
+
+#         Returns:
+#             (tuple): (left term of Q matrix, weights, psi/alpha) --> (W, Dp, 'alpha')
+#         '''
+#         if self.category1 is None:
+#             return (W, Dp, 'alpha')
+#         return (W[self.category1, :], Dp[self.category1], 'alpha')
+
+#     def _get_Qr(self, adata, J, W, Dp):
+#         '''
+#         Construct Qr matrix (Q-right) to use when estimating cov(alpha, alpha).
+
+#         Arguments:
+#             adata (BipartiteDataFrame): data
+#             J (CSC Sparse Matrix): firm ids matrix representation
+#             W (CSC Sparse Matrix): worker ids matrix representation
+#             Dp (NumPy Array): weights
+
+#         Returns:
+#             (tuple): (right term of Q matrix, weights, psi/alpha) --> (W, Dp, 'alpha')
+#         '''
+#         if self.category2 is None:
+#             return (W, Dp, 'alpha')
+#         return (W[self.category2, :], Dp[self.category2], 'alpha')
+
+#     def _Ql_mult(self, Q_matrix, psi, alpha):
+#         '''
+#         Multiply Ql matrix by vectors related to psi and alpha to use when estimating cov(alpha, alpha).
+
+#         Arguments:
+#             Q_matrix (NumPy Array): Q matrix
+#             psi (NumPy Array): vector related to psi
+#             alpha (NumPy Array): vector related to alpha
+
+#         Returns:
+#             (NumPy Array): Q_matrix @ alpha
+#         '''
+#         return Q_matrix @ alpha
+
+#     def _Qr_mult(self, Q_matrix, psi, alpha):
+#         '''
+#         Multiply Qr matrix by vectors related to psi and alpha to use when estimating cov(alpha, alpha).
+
+#         Arguments:
+#             Q_matrix (NumPy Array): Q matrix
+#             psi (NumPy Array): vector related to psi
+#             alpha (NumPy Array): vector related to alpha
+
+#         Returns:
+#             (NumPy Array): Q_matrix @ alpha
+#         '''
+#         return Q_matrix @ alpha
+
 class CovPsiPrevPsiNext():
     '''
     Generate Q to estimate cov(psi_t, psi_{t+1}).
+
+    Arguments:
+        category1 (NumPy Array or None): categorical vector of 0s and 1s for left covariance term; None is equivalent to all 1s
+        category2 (NumPy Array or None): categorical vector of 0s and 1s for right covariance term; None is equivalent to all 1s
+        category1_name (str or None): category 1 string representation; if None, just print 'alpha'
+        category2_name (str or None): category 2 string representation; if None, just print 'alpha'
     '''
 
-    def __init__(self):
-        pass
+    def __init__(self, category1=None, category2=None, category1_name=None, category2_name=None):
+        self.category1 = category1
+        self.category2 = category2
+        self.category1_name = category1_name
+        self.category2_name = category2_name
 
     def name(self):
         '''
@@ -242,7 +399,14 @@ class CovPsiPrevPsiNext():
         Returns:
             (str): string representation of cov(psi_t, psi_{t+1})
         '''
-        return 'cov(psi_t, psi_{t+1})'
+        str_name = 'cov(psi_t'
+        if self.category1_name is not None:
+            str_name += f'-{self.category1_name}'
+        str_name += ', psi_{t+1}'
+        if self.category2_name is not None:
+            str_name += f'-{self.category2_name}'
+        str_name += ')'
+        return str_name
 
     def _get_Ql(self, adata, J, W, Dp):
         '''
@@ -275,7 +439,9 @@ class CovPsiPrevPsiNext():
         if not isinstance(Dp, (float, int)):
             Dp = Dp[keep_rows]
 
-        return (Ql, Dp, 'psi')
+        if self.category1 is None:
+            return (Ql, Dp, 'psi')
+        return (Ql[self.category1[keep_rows]], Dp[self.category1[keep_rows]], 'psi')
 
     def _get_Qr(self, adata, J, W, Dp):
         '''
@@ -308,7 +474,9 @@ class CovPsiPrevPsiNext():
         if not isinstance(Dp, (float, int)):
             Dp = Dp[keep_rows]
 
-        return (Qr, Dp, 'psi')
+        if self.category2 is None:
+            return (Qr, Dp, 'psi')
+        return (Qr[self.category2[keep_rows], :], Dp[self.category2[keep_rows]], 'psi')
 
     def _Ql_mult(self, Q_matrix, psi, alpha):
         '''
