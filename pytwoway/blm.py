@@ -2472,7 +2472,7 @@ class BLMEstimator:
             # sim_model_lst = itertools.starmap(self._fit_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
 
         # Sort by likelihoods FIXME better handling if connectedness is None
-        sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst if model.connectedness is not None], reverse=True, key=lambda a: a[0])
+        sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst if ((model.connectedness is not None) and (not pd.isna(model.pk1).any()))], reverse=True, key=lambda a: a[0])
         sorted_lik_models = [model for _, model in sorted_zipped_models]
 
         # Make sure at least one model converged
