@@ -20,7 +20,7 @@ class VarPsi():
 
     Arguments:
         category (NumPy Array or None): categorical vector of 0s and 1s; None is equivalent to all 1s
-        category_name (str or None): category 1 string representation; if None, just print 'psi'
+        category_name (str or None): category 1 string representation; if None, just print default text
     '''
 
     def __init__(self, category=None, category_name=None):
@@ -77,7 +77,7 @@ class VarAlpha():
 
     Arguments:
         category (NumPy Array or None): categorical vector of 0s and 1s; None is equivalent to all 1s
-        category_name (str or None): category 1 string representation; if None, just print 'alpha'
+        category_name (str or None): category 1 string representation; if None, just print default text
     '''
 
     def __init__(self, category=None, category_name=None):
@@ -134,7 +134,7 @@ class VarPsiPlusAlpha():
 
     Arguments:
         category (NumPy Array or None): categorical vector of 0s and 1s; None is equivalent to all 1s
-        category_name (str or None): category 1 string representation; if None, just print 'psi + alpha'
+        category_name (str or None): category 1 string representation; if None, just print default text
     '''
 
     def __init__(self, category=None, category_name=None):
@@ -192,8 +192,8 @@ class CovPsiAlpha():
     Arguments:
         category1 (NumPy Array or None): categorical vector of 0s and 1s for left covariance term; None is equivalent to all 1s
         category2 (NumPy Array or None): categorical vector of 0s and 1s for right covariance term; None is equivalent to all 1s
-        category1_name (str or None): category 1 string representation; if None, just print 'psi, alpha'
-        category2_name (str or None): category 2 string representation; if None, just print 'psi, alpha'
+        category1_name (str or None): category 1 string representation; if None, just print default text
+        category2_name (str or None): category 2 string representation; if None, just print default text
     '''
 
     def __init__(self, category1=None, category2=None, category1_name=None, category2_name=None):
@@ -287,8 +287,8 @@ class CovPsiAlpha():
 #     Arguments:
 #         category1 (NumPy Array or None): categorical vector of 0s and 1s for left covariance term; None is equivalent to all 1s
 #         category2 (NumPy Array or None): categorical vector of 0s and 1s for right covariance term; None is equivalent to all 1s
-#         category1_name (str or None): category 1 string representation; if None, just print 'alpha'
-#         category2_name (str or None): category 2 string representation; if None, just print 'alpha'
+#         category1_name (str or None): category 1 string representation; if None, just print default text
+#         category2_name (str or None): category 2 string representation; if None, just print default text
 #     '''
 
 #     def __init__(self, category1=None, category2=None, category1_name=None, category2_name=None):
@@ -382,8 +382,8 @@ class CovPsiPrevPsiNext():
     Arguments:
         category1 (NumPy Array or None): categorical vector of 0s and 1s for left covariance term; None is equivalent to all 1s
         category2 (NumPy Array or None): categorical vector of 0s and 1s for right covariance term; None is equivalent to all 1s
-        category1_name (str or None): category 1 string representation; if None, just print 'alpha'
-        category2_name (str or None): category 2 string representation; if None, just print 'alpha'
+        category1_name (str or None): category 1 string representation; if None, just print default text
+        category2_name (str or None): category 2 string representation; if None, just print default text
     '''
 
     def __init__(self, category1=None, category2=None, category1_name=None, category2_name=None):
@@ -516,14 +516,18 @@ class VarCovariate():
 
     Arguments:
         cov_names (str or list of str): covariate name or list of covariate names to sum
+        category (NumPy Array or None): categorical vector of 0s and 1s; None is equivalent to all 1s
+        category_name (str or None): category 1 string representation; if None, just print default text
     '''
 
-    def __init__(self, cov_names):
+    def __init__(self, cov_names, category=None, category_name=None):
         cov_names = to_list(cov_names)
         if len(cov_names) != len(set(cov_names)):
             raise ValueError('Cannot include a covariate name multiple times.')
 
         self.cov_names = cov_names
+        self.category = category
+        self.category_name = category_name
 
     def name(self):
         '''
@@ -536,7 +540,12 @@ class VarCovariate():
         for cov_name in self.cov_names[1:]:
             var_str += f' + {cov_name}'
 
-        return f'var({var_str})'
+        str_name = f'var({var_str}'
+        if self.category_name is not None:
+            str_name += f'-{self.category_name}'
+        str_name += ')'
+
+        return str_name
 
     def _get_Q(self, adata, A, Dp, cov_indices):
         '''
@@ -559,7 +568,9 @@ class VarCovariate():
             A_indices_2 = np.arange(idx_start, idx_end)
             A_indices = np.concatenate([A_indices, A_indices_2])
 
-        return (A[:, A_indices], Dp)
+        if self.category is None:
+            return (A[:, A_indices], Dp)
+        return (A[self.category, A_indices], Dp[self.category])
 
     def _Q_mult(self, Q_matrix, Z, cov_indices):
         '''
@@ -598,9 +609,13 @@ class CovCovariate():
     Arguments:
         cov_names_1 (str or list of str): covariate name or list of covariate names to sum for first term in covariance
         cov_names_2 (str or list of str): covariate name or list of covariate names to sum for second term in covariance
+        category1 (NumPy Array or None): categorical vector of 0s and 1s for left covariance term; None is equivalent to all 1s
+        category2 (NumPy Array or None): categorical vector of 0s and 1s for right covariance term; None is equivalent to all 1s
+        category1_name (str or None): category 1 string representation; if None, just print default text
+        category2_name (str or None): category 2 string representation; if None, just print default text
     '''
 
-    def __init__(self, cov_names_1, cov_names_2):
+    def __init__(self, cov_names_1, cov_names_2, category1=None, category2=None, category1_name=None, category2_name=None):
         cov_names_1 = to_list(cov_names_1)
         cov_names_2 = to_list(cov_names_2)
 
@@ -609,6 +624,10 @@ class CovCovariate():
 
         self.cov_names_1 = cov_names_1
         self.cov_names_2 = cov_names_2
+        self.category1 = category1
+        self.category2 = category2
+        self.category1_name = category1_name
+        self.category2_name = category2_name
 
     def name(self):
         '''
@@ -625,7 +644,15 @@ class CovCovariate():
         for cov_name_2 in self.cov_names_2[1:]:
             cov_str_2 += f' + {cov_name_2}'
 
-        return f'cov({cov_str_1}, {cov_str_2})'
+        str_name = f'cov({cov_str_1}'
+        if self.category1_name is not None:
+            str_name += f'-{self.category1_name}'
+        str_name += f', {cov_str_2}'
+        if self.category2_name is not None:
+            str_name += f'-{self.category2_name}'
+        str_name += ')'
+
+        return str_name
 
     def _get_Ql(self, adata, A, Dp, cov_indices):
         '''
@@ -648,7 +675,9 @@ class CovCovariate():
             A_indices_2 = np.arange(idx_start, idx_end)
             A_indices = np.concatenate([A_indices, A_indices_2])
 
-        return (A[:, A_indices], Dp)
+        if self.category1 is None:
+            return (A[:, A_indices], Dp)
+        return (A[self.category1, A_indices], Dp[self.category1])
 
     def _get_Qr(self, adata, A, Dp, cov_indices):
         '''
@@ -671,7 +700,9 @@ class CovCovariate():
             A_indices_2 = np.arange(idx_start, idx_end)
             A_indices = np.concatenate([A_indices, A_indices_2])
 
-        return (A[:, A_indices], Dp)
+        if self.category2 is None:
+            return (A[:, A_indices], Dp)
+        return (A[self.category2, A_indices], Dp[self.category2])
 
     def _Ql_mult(self, Q_matrix, Z, cov_indices):
         '''
