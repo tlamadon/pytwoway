@@ -3058,10 +3058,10 @@ class BLMReallocation:
         ## Weights ##
         wj = None
         ws = None
-        if jdata._col_included('w'):
-            wj = jdata.loc[:, ['w1', 'w2']].to_numpy()
-        if sdata._col_included('w'):
-            ws = sdata.loc[:, 'w1'].to_numpy()
+        # if jdata._col_included('w'):
+        #     wj = jdata.loc[:, ['w1', 'w2']].to_numpy()
+        # if sdata._col_included('w'):
+        #     ws = sdata.loc[:, 'w1'].to_numpy()
 
         if blm_model is None:
             # Run initial BLM estimator
