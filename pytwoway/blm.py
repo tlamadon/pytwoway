@@ -2475,6 +2475,10 @@ class BLMEstimator:
         sorted_zipped_models = sorted([(model.lik1, model) for model in sim_model_lst if model.connectedness is not None], reverse=True, key=lambda a: a[0])
         sorted_lik_models = [model for _, model in sorted_zipped_models]
 
+        # Make sure at least one model converged
+        if len(sorted_lik_models) == 0:
+            raise ValueError('No starting values converged. Please try a different set of starting values.')
+
         ## Save likelihood vs. connectedness for all models ##
         # Save likelihoods for n_best
         liks_high = np.zeros(shape=n_best)
