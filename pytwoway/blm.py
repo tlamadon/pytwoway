@@ -2477,7 +2477,7 @@ class BLMEstimator:
 
         # Make sure at least one model converged
         if len(sorted_lik_models) == 0:
-            raise ValueError('No starting values converged. Please try a different set of starting values.')
+            raise ValueError('All starting values converged to NaN. Please try a different set of starting values.')
 
         ## Save likelihood vs. connectedness for all models ##
         # Save likelihoods for n_best
