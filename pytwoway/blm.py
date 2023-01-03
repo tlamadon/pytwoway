@@ -2937,7 +2937,7 @@ class BLMVarianceDecomposition:
         res_lst = []
         if complementarities:
             res_lst_comp = []
-            n_workers = jdata.n_workers() + sdata.n_workers()
+            nl = blm_model.nl
         for i in trange(n_samples):
             # Simulate worker types then draw wages
             yj_i, ys_i, Lm_i, Ls_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=reallocate, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, wj=wj, ws=ws, rng=rng)
@@ -2961,7 +2961,7 @@ class BLMVarianceDecomposition:
             res_lst.append(fe_estimator.summary)
             if complementarities:
                 # Estimate OLS with complementarities
-                bdf.loc[:, 'i'] = pd.factorize(bdf.loc[:, 'i'].to_numpy() + n_workers * bdf.loc[:, 'j'].to_numpy())[0]
+                bdf.loc[:, 'i'] = pd.factorize(bdf.loc[:, 'i'].to_numpy() + nl * bdf.loc[:, 'j'].to_numpy())[0]
                 if no_controls:
                     fe_estimator = tw.FEEstimator(bdf, fe_params_comp)
                 else:
