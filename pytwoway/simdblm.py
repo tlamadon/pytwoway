@@ -947,25 +947,22 @@ class SimDynamicBLM:
         A2_cts_draws = {k[: -1] + '2': v for k, v in A1_cts_draws.items()}
         A4_cts_draws = {k[: -1] + '4': v for k, v in A3_cts_draws.items()}
 
-        Y1 = rng.normal( \
-            loc=A_sum['12'] - R12 * A_sum['2ma'], \
-            scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']), \
-            size=nmi)
         Y2 = rng.normal( \
             loc=A_sum['2ma'] + A_sum['2mb'], \
-            scale=np.sqrt(S_sum_sq['2ma'] + S_sum_sq['2mb']), \
-            size=nmi)
-        Y1 += R12 * Y2
+            scale=np.sqrt(S_sum_sq['2ma']), \
+            size=nmi) # scale=np.sqrt(S_sum_sq['2ma'] + S_sum_sq['2mb']), \
+        Y1 = rng.normal( \
+            loc=A_sum['12'] + R12 * (Y2 - A_sum['2ma']), \
+            scale=np.sqrt(S_sum_sq['12']), \
+            size=nmi) # scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']), \
         Y3 = rng.normal( \
-            loc=A_sum['3ma'] + A_sum['3mb'] - R32m * (A_sum['2ma'] + A_sum['2mb']), \
-            scale=np.sqrt(S_sum_sq['3ma'] + S_sum_sq['3mb'] + (R32m ** 2) * (S_sum_sq['2ma'] + S_sum_sq['2mb'])), \
-            size=nmi)
-        Y3 += R32m * Y2
+            loc=A_sum['3ma'] + A_sum['3mb'] + R32m * (Y2 - A_sum['2ma'] - A_sum['2mb']), \
+            scale=np.sqrt(S_sum_sq['3ma']), \
+            size=nmi) # scale=np.sqrt(S_sum_sq['3ma'] + S_sum_sq['3mb'] + (R32m ** 2) * (S_sum_sq['2ma'] + S_sum_sq['2mb'])), \
         Y4 = rng.normal( \
-            loc=A_sum['43'] - R43 * A_sum['3ma'], \
-            scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']), \
-            size=nmi)
-        Y4 += R43 * Y3
+            loc=A_sum['43'] + R43 * (Y3 - A_sum['3ma']), \
+            scale=np.sqrt(S_sum_sq['43']), \
+            size=nmi) # scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']), \
 
         return DataFrame(data={'y1': Y1, 'y2': Y2, 'y3': Y3, 'y4': Y4, 'g1': G1, 'g2': G1, 'g3': G2, 'g4': G2, 'l': L, **A1_cat_draws, **A2_cat_draws, **A3_cat_draws, **A4_cat_draws, **A1_cts_draws, **A2_cts_draws, **A3_cts_draws, **A4_cts_draws})
 
@@ -1076,25 +1073,22 @@ class SimDynamicBLM:
         A2_cts_draws = {k[: -1] + '2': v for k, v in A1_cts_draws.items()}
         A4_cts_draws = {k[: -1] + '4': v for k, v in A3_cts_draws.items()}
 
-        Y1 = rng.normal( \
-            loc=A_sum['12'] - R12 * A_sum['2ma'], \
-            scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']), \
-            size=nsi)
         Y2 = rng.normal( \
             loc=A_sum['2s'], \
             scale=np.sqrt(S_sum_sq['2s']), \
             size=nsi)
-        Y1 += R12 * Y2
+        Y1 = rng.normal( \
+            loc=A_sum['12'] + R12 * (Y2 - A_sum['2ma']), \
+            scale=np.sqrt(S_sum_sq['12']), \
+            size=nsi) # scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']), \
         Y3 = rng.normal( \
-            loc=A_sum['3s'] - R32s * A_sum['2s'], \
-            scale=np.sqrt(S_sum_sq['3s'] + (R32s ** 2) * S_sum_sq['2s']), \
-            size=nsi)
-        Y3 += R32s * Y2
+            loc=A_sum['3s'] + R32s * (Y2 - A_sum['2s']), \
+            scale=np.sqrt(S_sum_sq['3s']), \
+            size=nsi) # scale=np.sqrt(S_sum_sq['3s'] + (R32s ** 2) * S_sum_sq['2s']), \
         Y4 = rng.normal( \
-            loc=A_sum['43'] - R43 * A_sum['3ma'], \
-            scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']), \
-            size=nsi)
-        Y4 += R43 * Y3
+            loc=A_sum['43'] + R43 * (Y3 - A_sum['3ma']), \
+            scale=np.sqrt(S_sum_sq['43']), \
+            size=nsi) # scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']), \
 
         return DataFrame(data={'y1': Y1, 'y2': Y2, 'y3': Y3, 'y4': Y4, 'g1': G, 'g2': G, 'g3': G, 'g4': G, 'l': L, **A1_cat_draws, **A2_cat_draws, **A3_cat_draws, **A4_cat_draws, **A1_cts_draws, **A2_cts_draws, **A3_cts_draws, **A4_cts_draws})
 

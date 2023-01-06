@@ -2027,40 +2027,30 @@ class DynamicBLMModel:
                     A_sum_l, S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, periods=periods)
 
                     lp1 = lognormpdf(
-                        Y1 - R12 \
-                            * (Y2 \
-                                - A['2ma'][l, G1] \
-                                - A_sum['2ma'] \
-                                - A_sum_l['2ma']),
+                        Y1 - R12 * (Y2 - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma'])),
                         A['12'][l, G1] + A_sum['12'] + A_sum_l['12'],
                         var=\
-                            (S['12'][l, :] ** 2)[G1] \
-                            + S_sum_sq['12'] + S_sum_sq_l['12'] # \
+                            (S['12'][l, :] ** 2)[G1] + S_sum_sq['12'] + S_sum_sq_l['12'] # \
                             # + (R12 ** 2) \
                             #     * ((S['2ma'][l, :] ** 2)[G1] \
                             #         + S_sum_sq['2ma'] \
                             #         + S_sum_sq_l['2ma'])
                     )
                     lp2 = lognormpdf(
-                        Y2,
-                        (A['2ma'][l, G1] + A['2mb'][G2]) \
-                            + (A_sum['2ma'] + A_sum['2mb']) \
-                            + (A_sum_l['2ma'] + A_sum_l['2mb']),
+                        Y2 - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb']),
+                        (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']),
                         var=\
                             ((S['2ma'][l, :] ** 2)[G1] + S_sum_sq['2ma'] + S_sum_sq_l['2ma']) # \
                             # + ((S['2mb'] ** 2)[G2] + S_sum_sq['2mb'] + S_sum_sq_l['2mb'])
                     )
                     lp3 = lognormpdf(
-                        Y3 - R32m \
-                            * (Y2 \
-                                - (A['2ma'][l, G1] + A['2mb'][G2]) \
-                                - (A_sum['2ma'] + A_sum['2mb']) \
-                                - (A_sum_l['2ma'] + A_sum_l['2mb'])),
-                        (A['3ma'][l, G2] + A['3mb'][G1]) \
-                            + (A_sum['3ma'] + A_sum['3mb']) \
-                            + (A_sum_l['3ma'] + A_sum_l['3mb']),
+                        Y3 - (A['3mb'][G1] + A_sum['3mb'] + A_sum_l['3mb']) \
+                            - R32m * (Y2 \
+                                - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']) \
+                                - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb'])),
+                        A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma'],
                         var=\
-                            ((S['3ma'][l, :] ** 2)[G2] + S_sum_sq['3ma'] + S_sum_sq_l['3ma']) # \
+                            (S['3ma'][l, :] ** 2)[G2] + S_sum_sq['3ma'] + S_sum_sq_l['3ma'] # \
                             # + ((S['3mb'] ** 2)[G1] + S_sum_sq['3mb'] + S_sum_sq_l['3mb']) \
                             # + (R32m ** 2) \
                             #     * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
@@ -2068,15 +2058,10 @@ class DynamicBLMModel:
                             #         + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb']))
                     )
                     lp4 = lognormpdf(
-                        Y4 - R43 \
-                            * (Y3 \
-                                - A['3ma'][l, G2] \
-                                - A_sum['3ma'] \
-                                - A_sum_l['3ma']),
+                        Y4 - R43 * (Y3 - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma'])),
                         A['43'][l, G2] + A_sum['43'] + A_sum_l['43'],
                         var=\
-                            (S['43'][l, :] ** 2)[G2] \
-                            + S_sum_sq['43'] + S_sum_sq_l['43'] # \
+                            (S['43'][l, :] ** 2)[G2] + S_sum_sq['43'] + S_sum_sq_l['43'] # \
                             # + (R43 ** 2) \
                             #     * ((S['3ma'][l, :] ** 2)[G2] \
                             #         + S_sum_sq['3ma'] \
@@ -2093,22 +2078,27 @@ class DynamicBLMModel:
                         I = (G1 == g1) & (G2 == g2)
                         for l in range(nl):
                             lp1 = lognormpdf(
-                                Y1[I] - R12 * (Y2[I] - A['2ma'][l, g1]),
+                                Y1[I] \
+                                    - R12 * (Y2[I] - A['2ma'][l, g1]),
                                 A['12'][l, g1],
                                 var=S['12'][l, g1] ** 2 # + (R12 * S['2ma'][l, g1]) ** 2
                             )
                             lp2 = lognormpdf(
-                                Y2[I],
-                                A['2ma'][l, g1] + A['2mb'][g2],
+                                Y2[I] \
+                                    - A['2mb'][g2],
+                                A['2ma'][l, g1],
                                 var=S['2ma'][l, g1] ** 2 # + S['2mb'][g2] ** 2
                             )
                             lp3 = lognormpdf(
-                                Y3[I] - R32m * (Y2[I] - A['2ma'][l, g1] - A['2mb'][g2]),
-                                A['3ma'][l, g2] + A['3mb'][g1],
+                                Y3[I] \
+                                    - A['3mb'][g1] \
+                                    - R32m * (Y2[I] - (A['2ma'][l, g1] + A['2mb'][g2])),
+                                A['3ma'][l, g2],
                                 var=S['3ma'][l, g2] ** 2 # + S['3mb'][g1] ** 2 + (R32m ** 2) * (S['2ma'][l, g1] ** 2 + S['2mb'][g2] ** 2)
                             )
                             lp4 = lognormpdf(
-                                Y4[I] - R43 * (Y3[I] - A['3ma'][l, g2]),
+                                Y4[I] \
+                                    - R43 * (Y3[I] - A['3ma'][l, g2]),
                                 A['43'][l, g2],
                                 var=S['43'][l, g2] ** 2 # + (R43 * S['3ma'][l, g2]) ** 2
                             )
@@ -2379,8 +2369,8 @@ class DynamicBLMModel:
                     var_l = np.concatenate(
                         [
                             (S['12'][l, :] ** 2)[G1], # + (R12 * S['2ma'][l, :]) ** 2)[G1],
-                            (S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2],
-                            (S['3ma'][l, :] ** 2)[G2] + (S['3mb'] ** 2)[G1], # + (R32m ** 2) * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]),
+                            (S['2ma'][l, :] ** 2)[G1], # + (S['2mb'] ** 2)[G2],
+                            (S['3ma'][l, :] ** 2)[G2], # + (S['3mb'] ** 2)[G1] + (R32m ** 2) * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]),
                             (S['43'][l, :] ** 2)[G2] # + (R43 * S['3ma'][l, :]) ** 2)[G2]
                         ]
                     )
@@ -2405,33 +2395,26 @@ class DynamicBLMModel:
                         # Y1_l
                         Y_l[0 * ni: 1 * ni] = \
                             Y1 \
-                                - R12 * Y2 \
-                                - A_sum['12'] \
-                                - A_sum_l['12']
-                                # - R12 * (Y2 - A_sum['2ma'] - A_sum_l['2ma']) \
+                                - (A_sum['12'] + A_sum_l['12']) \
+                                - R12 * (Y2 - (A_sum['2ma'] + A_sum_l['2ma']))
                         # Y2_l
                         Y_l[1 * ni: 2 * ni] = \
                             Y2 \
-                                - (A_sum['2ma'] + A_sum['2mb']) \
-                                - (A_sum_l['2ma'] + A_sum_l['2mb'])
+                                - (A_sum['2ma'] + A_sum_l['2ma']) \
+                                - (A_sum['2mb'] + A_sum_l['2mb'])
                         # Y3_l
                         Y_l[2 * ni: 3 * ni] = \
                             Y3 \
-                                - R32m * Y2 \
-                                - (A_sum['3ma'] + A_sum['3mb']) \
-                                - (A_sum_l['3ma'] + A_sum_l['3mb'])
-                                # - R32m * (Y2 \
-                                #     - (A_sum['2ma'] + A_sum['2mb']) \
-                                #     - (A_sum_l['2ma'] + A_sum_l['2mb'])) \
+                                - (A_sum['3ma'] + A_sum_l['3ma']) \
+                                - (A_sum['3mb'] + A_sum_l['3mb']) \
+                                - R32m * (Y2 \
+                                    - (A_sum['2ma'] + A_sum_l['2ma']) \
+                                    - (A_sum['2mb'] + A_sum_l['2mb']))
                         # Y4_l
                         Y_l[3 * ni: 4 * ni] = \
-                            (Y4 \
-                                - R43 * Y3 \
-                                - A_sum['43'] \
-                                - A_sum_l['43'])
-                                # - R43 * (Y3 \
-                                #     - A_sum['3ma'] \
-                                #     - A_sum_l['3ma']) \
+                            Y4 \
+                                - (A_sum['43'] + A_sum_l['43']) \
+                                - R43 * (Y3 - (A_sum['3ma'] + A_sum_l['3ma']))
 
                         ## Compute XwY_l ##
                         XwY[l_index: r_index] = Xw_l @ Y_l
@@ -2533,39 +2516,26 @@ class DynamicBLMModel:
                             # Y1_cat_l
                             Y_cat_l[0 * ni: 1 * ni] = \
                                 Y1 \
-                                    - R12 * Y2 \
-                                    - A['12'][l, G1] \
-                                    - A_sum['12'] \
-                                    - A_sum_l['12']
-                                    # - R12 * (Y2 - A['2ma'][l, G1] - A_sum['2ma'] - A_sum_l['2ma']) \
+                                    - (A['12'][l, G1] + A_sum['12'] + A_sum_l['12']) \
+                                    - R12 * (Y2 - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']))
                             # Y2_cat_l
                             Y_cat_l[1 * ni: 2 * ni] = \
                                 Y2 \
-                                    - (A['2ma'][l, G1] + A['2mb'][G2]) \
-                                    - (A_sum['2ma'] + A_sum['2mb']) \
-                                    - (A_sum_l['2ma'] + A_sum_l['2mb'])
+                                    - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']) \
+                                    - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb'])
                             # Y3_cat_l
                             Y_cat_l[2 * ni: 3 * ni] = \
                                 Y3 \
-                                    - R32m * Y2 \
-                                    - (A['3ma'][l, G2] + A['3mb'][G1]) \
-                                    - (A_sum['3ma'] + A_sum['3mb']) \
-                                    - (A_sum_l['3ma'] + A_sum_l['3mb'])
-                                    # - R32m * (Y2 \
-                                    #     - (A['2ma'][l, G1] + A['2mb'][G2]) \
-                                    #     - (A_sum['2ma'] + A_sum['2mb']) \
-                                    #     - (A_sum_l['2ma'] + A_sum_l['2mb'])) \
+                                    - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma']) \
+                                    - (A['3mb'][G1] + A_sum['3mb'] + A_sum_l['3mb']) \
+                                    - R32m * (Y2 \
+                                        - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']) \
+                                        - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb']))
                             # Y4_cat_l
                             Y_cat_l[3 * ni: 4 * ni] = \
                                 Y4 \
-                                    - R43 * Y3 \
-                                    - A['43'][l, G2] \
-                                    - A_sum['43'] \
-                                    - A_sum_l['43']
-                                    # - R43 * (Y3 \
-                                    #     - A['3ma'][l, G2] \
-                                    #     - A_sum['3ma'] \
-                                    #     - A_sum_l['3ma']) \
+                                    - (A['43'][l, G2] + A_sum['43'] + A_sum_l['43']) \
+                                    - R43 * (Y3 - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma']))
 
                             ## Compute XwY_cat_l ##
                             XwY_cat[col][l_index: r_index] = Xw_cat_l @ Y_cat_l
@@ -2655,39 +2625,26 @@ class DynamicBLMModel:
                             # Y1_cts_l
                             Y_cts_l[0 * ni: 1 * ni] = \
                                 Y1 \
-                                    - R12 * Y2 \
-                                    - A['12'][l, G1] \
-                                    - A_sum['12'] \
-                                    - A_sum_l['12']
-                                    # - R12 * (Y2 - A['2ma'][l, G1] - A_sum['2ma'] - A_sum_l['2ma']) \
+                                    - (A['12'][l, G1] + A_sum['12'] + A_sum_l['12']) \
+                                    - R12 * (Y2 - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']))
                             # Y2_cts_l
                             Y_cts_l[1 * ni: 2 * ni] = \
                                 Y2 \
-                                    - (A['2ma'][l, G1] + A['2mb'][G2]) \
-                                    - (A_sum['2ma'] + A_sum['2mb']) \
-                                    - (A_sum_l['2ma'] + A_sum_l['2mb'])
+                                    - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']) \
+                                    - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb'])
                             # Y3_cts_l
                             Y_cts_l[2 * ni: 3 * ni] = \
                                 Y3 \
-                                    - R32m * Y2 \
-                                    - (A['3ma'][l, G2] + A['3mb'][G1]) \
-                                    - (A_sum['3ma'] + A_sum['3mb']) \
-                                    - (A_sum_l['3ma'] + A_sum_l['3mb'])
-                                    # - R32m * (Y2 \
-                                    #     - (A['2ma'][l, G1] + A['2mb'][G2]) \
-                                    #     - (A_sum['2ma'] + A_sum['2mb']) \
-                                    #     - (A_sum_l['2ma'] + A_sum_l['2mb'])) \
+                                    - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma']) \
+                                    - (A['3mb'][G1] + A_sum['3mb'] + A_sum_l['3mb']) \
+                                    - R32m * (Y2 \
+                                        - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']) \
+                                        - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb']))
                             # Y4_cts_l
                             Y_cts_l[3 * ni: 4 * ni] = \
                                 Y4 \
-                                    - R43 * Y3 \
-                                    - A['43'][l, G2] \
-                                    - A_sum['43'] \
-                                    - A_sum_l['43']
-                                    # - R43 * (Y3 \
-                                    #     - A['3ma'][l, G2] \
-                                    #     - A_sum['3ma'] \
-                                    #     - A_sum_l['3ma']) \
+                                    - (A['43'][l, G2] + A_sum['43'] + A_sum_l['43']) \
+                                    - R43 * (Y3 - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma']))
 
                             ## Compute XwY_cts_l ##
                             XwY_cts[col][l_index: r_index] = Xw_cts_l @ Y_cts_l
@@ -2755,39 +2712,31 @@ class DynamicBLMModel:
                         # eps_1_l_sq
                         eps_l_sq[0 * ni: 1 * ni] = \
                             (Y1 \
-                                - R12 * Y2 \
-                                - A['12'][l, G1] \
-                                - A_sum['12'] \
-                                - A_sum_l['12']) ** 2
-                                # - R12 * (Y2 - A['2ma'][l, G1] - A_sum['2ma'] - A_sum_l['2ma']) \
+                                - (A['12'][l, G1] + A_sum['12'] + A_sum_l['12']) \
+                                - R12 * (Y2 - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma'])) \
+                                ) ** 2
                         # eps_2_l_sq
                         eps_l_sq[1 * ni: 2 * ni] = \
                             (Y2 \
-                                - (A['2ma'][l, G1] + A['2mb'][G2]) \
-                                - (A_sum['2ma'] + A_sum['2mb']) \
-                                - (A_sum_l['2ma'] + A_sum_l['2mb'])) ** 2
+                                - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']) \
+                                - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb'])
+                                ) ** 2
                         # eps_3_l_sq
                         eps_l_sq[2 * ni: 3 * ni] = \
                             (Y3 \
-                                - R32m * Y2 \
-                                - (A['3ma'][l, G2] + A['3mb'][G1]) \
-                                - (A_sum['3ma'] + A_sum['3mb']) \
-                                - (A_sum_l['3ma'] + A_sum_l['3mb'])) ** 2
-                                # - R32m * (Y2 \
-                                #     - (A['2ma'][l, G1] + A['2mb'][G2]) \
-                                #     - (A_sum['2ma'] + A_sum['2mb']) \
-                                #     - (A_sum_l['2ma'] + A_sum_l['2mb'])) \
+                                - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma']) \
+                                - (A['3mb'][G1] + A_sum['3mb'] + A_sum_l['3mb'])
+                                - R32m * (Y2 \
+                                    - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']) \
+                                    - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb'])) \
+                                ) ** 2
                         # eps_1_4_sq
                         eps_l_sq[3 * ni: 4 * ni] = \
                             (Y4 \
-                                - R43 * Y3 \
-                                - A['43'][l, G2] \
-                                - A_sum['43'] \
-                                - A_sum_l['43']) ** 2
-                                # - R43 * (Y3 \
-                                #     - A['3ma'][l, G2] \
-                                #     - A_sum['3ma'] \
-                                #     - A_sum_l['3ma']) \
+                                - (A['43'][l, G2] + A_sum['43'] + A_sum_l['43']) \
+                                - R43 * (Y3 \
+                                    - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma'])) \
+                                ) ** 2
                         eps_sq.append(eps_l_sq)
                         del A_sum_l, eps_l_sq
 
@@ -2811,9 +2760,11 @@ class DynamicBLMModel:
                                         #     * ((S['2ma'][l, :] ** 2)[G1] \
                                         #         + S_sum_sq['2ma'] \
                                         #         + S_sum_sq_l['2ma']),
-                                    ((S['2ma'][l, :] ** 2)[G1] + S_sum_sq['2ma'] + S_sum_sq_l['2ma']), # \
+                                    ((S['2ma'][l, :] ** 2)[G1] \
+                                        + S_sum_sq['2ma'] + S_sum_sq_l['2ma']), # \
                                         # + (S['2mb'] ** 2)[G2] + S_sum_sq['2mb'] + S_sum_sq_l['2mb'],
-                                    ((S['3ma'][l, :] ** 2)[G2] + S_sum_sq['3ma'] + S_sum_sq_l['3ma']), # \
+                                    ((S['3ma'][l, :] ** 2)[G2] \
+                                        + S_sum_sq['3ma'] + S_sum_sq_l['3ma']), # \
                                         # + ((S['3mb'] ** 2)[G1] + S_sum_sq['3mb'] + S_sum_sq_l['3mb']) \
                                         # + (R32m ** 2) \
                                         #     * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
@@ -2886,9 +2837,11 @@ class DynamicBLMModel:
                                         #     * ((S['2ma'][l, :] ** 2)[G1] \
                                         #         + S_sum_sq['2ma'] \
                                         #         + S_sum_sq_l['2ma']),
-                                    ((S['2ma'][l, :] ** 2)[G1] + S_sum_sq['2ma'] + S_sum_sq_l['2ma']), # \
+                                    ((S['2ma'][l, :] ** 2)[G1] \
+                                        + S_sum_sq['2ma'] + S_sum_sq_l['2ma']), # \
                                         # + (S['2mb'] ** 2)[G2] + S_sum_sq['2mb'] + S_sum_sq_l['2mb'],
-                                    ((S['3ma'][l, :] ** 2)[G2] + S_sum_sq['3ma'] + S_sum_sq_l['3ma']), # \
+                                    ((S['3ma'][l, :] ** 2)[G2] \
+                                        + S_sum_sq['3ma'] + S_sum_sq_l['3ma']), # \
                                         # + ((S['3mb'] ** 2)[G1] + S_sum_sq['3mb'] + S_sum_sq_l['3mb']) \
                                         # + (R32m ** 2) \
                                         #     * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
@@ -2969,9 +2922,11 @@ class DynamicBLMModel:
                                         #     * ((S['2ma'][l, :] ** 2)[G1] \
                                         #         + S_sum_sq['2ma'] \
                                         #         + S_sum_sq_l['2ma']),
-                                    ((S['2ma'][l, :] ** 2)[G1] + S_sum_sq['2ma'] + S_sum_sq_l['2ma']), # \
+                                    ((S['2ma'][l, :] ** 2)[G1] \
+                                        + S_sum_sq['2ma'] + S_sum_sq_l['2ma']), # \
                                         # + (S['2mb'] ** 2)[G2] + S_sum_sq['2mb'] + S_sum_sq_l['2mb'],
-                                    ((S['3ma'][l, :] ** 2)[G2] + S_sum_sq['3ma'] + S_sum_sq_l['3ma']), # \
+                                    ((S['3ma'][l, :] ** 2)[G2] \
+                                        + S_sum_sq['3ma'] + S_sum_sq_l['3ma']), # \
                                         # + ((S['3mb'] ** 2)[G1] + S_sum_sq['3mb'] + S_sum_sq_l['3mb']) \
                                         # + (R32m ** 2) \
                                         #     * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
