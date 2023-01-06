@@ -2035,11 +2035,11 @@ class DynamicBLMModel:
                         A['12'][l, G1] + A_sum['12'] + A_sum_l['12'],
                         var=\
                             (S['12'][l, :] ** 2)[G1] \
-                            + S_sum_sq['12'] + S_sum_sq_l['12'] \
-                            + (R12 ** 2) \
-                                * ((S['2ma'][l, :] ** 2)[G1] \
-                                    + S_sum_sq['2ma'] \
-                                    + S_sum_sq_l['2ma'])
+                            + S_sum_sq['12'] + S_sum_sq_l['12'] # \
+                            # + (R12 ** 2) \
+                            #     * ((S['2ma'][l, :] ** 2)[G1] \
+                            #         + S_sum_sq['2ma'] \
+                            #         + S_sum_sq_l['2ma'])
                     )
                     lp2 = lognormpdf(
                         Y2,
@@ -2047,9 +2047,8 @@ class DynamicBLMModel:
                             + (A_sum['2ma'] + A_sum['2mb']) \
                             + (A_sum_l['2ma'] + A_sum_l['2mb']),
                         var=\
-                            ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]) \
-                            + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
-                            + (S_sum_sq_l['2ma'] +  S_sum_sq_l['2mb'])
+                            ((S['2ma'][l, :] ** 2)[G1] + S_sum_sq['2ma'] + S_sum_sq_l['2ma']) # \
+                            # + ((S['2mb'] ** 2)[G2] + S_sum_sq['2mb'] + S_sum_sq_l['2mb'])
                     )
                     lp3 = lognormpdf(
                         Y3 - R32m \
@@ -2061,13 +2060,12 @@ class DynamicBLMModel:
                             + (A_sum['3ma'] + A_sum['3mb']) \
                             + (A_sum_l['3ma'] + A_sum_l['3mb']),
                         var=\
-                            ((S['3ma'][l, :] ** 2)[G2] + (S['3mb'] ** 2)[G1]) \
-                            + (S_sum_sq['3ma'] + S_sum_sq['3mb']) \
-                            + (S_sum_sq_l['3ma'] + S_sum_sq_l['3mb']) \
-                            + (R32m ** 2) \
-                                * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
-                                    + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
-                                    + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb']))
+                            ((S['3ma'][l, :] ** 2)[G2] + S_sum_sq['3ma'] + S_sum_sq_l['3ma']) # \
+                            # + ((S['3mb'] ** 2)[G1] + S_sum_sq['3mb'] + S_sum_sq_l['3mb']) \
+                            # + (R32m ** 2) \
+                            #     * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
+                            #         + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
+                            #         + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb']))
                     )
                     lp4 = lognormpdf(
                         Y4 - R43 \
@@ -2078,11 +2076,11 @@ class DynamicBLMModel:
                         A['43'][l, G2] + A_sum['43'] + A_sum_l['43'],
                         var=\
                             (S['43'][l, :] ** 2)[G2] \
-                            + S_sum_sq['43'] + S_sum_sq_l['43'] \
-                            + (R43 ** 2) \
-                                * ((S['3ma'][l, :] ** 2)[G2] \
-                                    + S_sum_sq['3ma'] \
-                                    + S_sum_sq_l['3ma'])
+                            + S_sum_sq['43'] + S_sum_sq_l['43'] # \
+                            # + (R43 ** 2) \
+                            #     * ((S['3ma'][l, :] ** 2)[G2] \
+                            #         + S_sum_sq['3ma'] \
+                            #         + S_sum_sq_l['3ma'])
                     )
 
                     lp[:, l] = log_pk1[KK, l] + lp1 + lp2 + lp3 + lp4
@@ -2097,22 +2095,22 @@ class DynamicBLMModel:
                             lp1 = lognormpdf(
                                 Y1[I] - R12 * (Y2[I] - A['2ma'][l, g1]),
                                 A['12'][l, g1],
-                                var=S['12'][l, g1] ** 2 + (R12 * S['2ma'][l, g1]) ** 2
+                                var=S['12'][l, g1] ** 2 # + (R12 * S['2ma'][l, g1]) ** 2
                             )
                             lp2 = lognormpdf(
                                 Y2[I],
                                 A['2ma'][l, g1] + A['2mb'][g2],
-                                var=S['2ma'][l, g1] ** 2 + S['2mb'][g2] ** 2
+                                var=S['2ma'][l, g1] ** 2 # + S['2mb'][g2] ** 2
                             )
                             lp3 = lognormpdf(
                                 Y3[I] - R32m * (Y2[I] - A['2ma'][l, g1] - A['2mb'][g2]),
                                 A['3ma'][l, g2] + A['3mb'][g1],
-                                var=S['3ma'][l, g2] ** 2 + S['3mb'][g1] ** 2 + (R32m ** 2) * (S['2ma'][l, g1] ** 2 + S['2mb'][g2] ** 2)
+                                var=S['3ma'][l, g2] ** 2 # + S['3mb'][g1] ** 2 + (R32m ** 2) * (S['2ma'][l, g1] ** 2 + S['2mb'][g2] ** 2)
                             )
                             lp4 = lognormpdf(
                                 Y4[I] - R43 * (Y3[I] - A['3ma'][l, g2]),
                                 A['43'][l, g2],
-                                var=S['43'][l, g2] ** 2 + (R43 * S['3ma'][l, g2]) ** 2
+                                var=S['43'][l, g2] ** 2 # + (R43 * S['3ma'][l, g2]) ** 2
                             )
 
                             lp[I, l] = log_pk1[KK[I], l] + lp1 + lp2 + lp3 + lp4
@@ -2193,34 +2191,33 @@ class DynamicBLMModel:
                         YY12[l * ni: (l + 1) * ni] = Y1 - A['12'][l, G1] - A_sum['12'] - A_sum_l['12']
                         SS12 = ( \
                             (S['12'][l, :] ** 2)[G1] \
-                            + S_sum_sq['12'] + S_sum_sq_l['12'] \
-                            + (R12 ** 2) \
-                                * ((S['2ma'][l, :] ** 2)[G1] \
-                                    + S_sum_sq['2ma'] \
-                                    + S_sum_sq_l['2ma']))
+                            + S_sum_sq['12'] + S_sum_sq_l['12']) # \
+                            # + (R12 ** 2) \
+                            #     * ((S['2ma'][l, :] ** 2)[G1] \
+                            #         + S_sum_sq['2ma'] \
+                            #         + S_sum_sq_l['2ma']))
                         WW12[l * ni: (l + 1) * ni] = qi[:, l] / SS12
                     if params['update_rho43']:
                         XX43[l * ni: (l + 1) * ni] = Y3 - A['3ma'][l, G2] - A_sum['3ma'] - A_sum_l['3ma']
                         YY43[l * ni: (l + 1) * ni] = Y4 - A['43'][l, G2] - A_sum['43'] - A_sum_l['43']
                         SS43 = ( \
                             (S['43'][l, :] ** 2)[G2] \
-                            + S_sum_sq['43'] + S_sum_sq_l['43'] \
-                            + (R43 ** 2) * (\
-                                (S['3ma'][l, :] ** 2)[G2] \
-                                + S_sum_sq['3ma'] \
-                                + S_sum_sq_l['3ma']))
+                            + S_sum_sq['43'] + S_sum_sq_l['43']) # \
+                            # + (R43 ** 2) * (\
+                            #     (S['3ma'][l, :] ** 2)[G2] \
+                            #     + S_sum_sq['3ma'] \
+                            #     + S_sum_sq_l['3ma']))
                         WW43[l * ni: (l + 1) * ni] = qi[:, l] / SS43
                     if params['update_rho32m']:
                         XX32m[l * ni: (l + 1) * ni] = Y2 - (A['2ma'][l, G1] + A['2mb'][G2]) - (A_sum['2ma'] + A_sum['2mb']) - (A_sum_l['2ma'] + A_sum_l['2mb'])
                         YY32m[l * ni: (l + 1) * ni] = Y3 - (A['3ma'][l, G2] + A['3mb'][G1]) - (A_sum['3ma'] + A_sum['3mb']) - (A_sum_l['3ma'] + A_sum_l['3mb'])
                         SS32m = ( \
-                            ((S['3ma'][l, :] ** 2)[G2] + (S['3mb'] ** 2)[G1]) \
-                            + (S_sum_sq['3ma'] + S_sum_sq['3mb']) \
-                            + (S_sum_sq_l['3ma'] + S_sum_sq_l['3mb']) \
-                            + (R32m ** 2) \
-                                * (((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]) \
-                                    + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
-                                    + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])))
+                            (S['3ma'][l, :] ** 2)[G2] + S_sum_sq['3ma'] + S_sum_sq_l['3ma']) # \
+                            # + (S['3mb'] ** 2)[G1] + S_sum_sq['3mb'] + S_sum_sq_l['3mb'] \
+                            # + (R32m ** 2) \
+                            #     * (((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]) \
+                            #         + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
+                            #         + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])))
                         WW32m[l * ni: (l + 1) * ni] = qi[:, l] / SS32m
 
                 ## OLS ##
@@ -2381,10 +2378,10 @@ class DynamicBLMModel:
                     ## Compute weights_l ##
                     var_l = np.concatenate(
                         [
-                            (S['12'][l, :] ** 2 + (R12 * S['2ma'][l, :]) ** 2)[G1],
+                            (S['12'][l, :] ** 2)[G1], # + (R12 * S['2ma'][l, :]) ** 2)[G1],
                             (S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2],
-                            (S['3ma'][l, :] ** 2)[G2] + (S['3mb'] ** 2)[G1] + (R32m ** 2) * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]),
-                            (S['43'][l, :] ** 2 + (R43 * S['3ma'][l, :]) ** 2)[G2]
+                            (S['3ma'][l, :] ** 2)[G2] + (S['3mb'] ** 2)[G1], # + (R32m ** 2) * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]),
+                            (S['43'][l, :] ** 2)[G2] # + (R43 * S['3ma'][l, :]) ** 2)[G2]
                         ]
                     )
                     weights_l = np.tile(qi[:, l], 4) / np.sqrt(var_l)
@@ -2408,9 +2405,10 @@ class DynamicBLMModel:
                         # Y1_l
                         Y_l[0 * ni: 1 * ni] = \
                             Y1 \
-                                - R12 * (Y2 - A_sum['2ma'] - A_sum_l['2ma']) \
+                                - R12 * Y2 \
                                 - A_sum['12'] \
                                 - A_sum_l['12']
+                                # - R12 * (Y2 - A_sum['2ma'] - A_sum_l['2ma']) \
                         # Y2_l
                         Y_l[1 * ni: 2 * ni] = \
                             Y2 \
@@ -2419,19 +2417,21 @@ class DynamicBLMModel:
                         # Y3_l
                         Y_l[2 * ni: 3 * ni] = \
                             Y3 \
-                                - R32m * (Y2 \
-                                    - (A_sum['2ma'] + A_sum['2mb']) \
-                                    - (A_sum_l['2ma'] + A_sum_l['2mb'])) \
+                                - R32m * Y2 \
                                 - (A_sum['3ma'] + A_sum['3mb']) \
                                 - (A_sum_l['3ma'] + A_sum_l['3mb'])
+                                # - R32m * (Y2 \
+                                #     - (A_sum['2ma'] + A_sum['2mb']) \
+                                #     - (A_sum_l['2ma'] + A_sum_l['2mb'])) \
                         # Y4_l
                         Y_l[3 * ni: 4 * ni] = \
                             (Y4 \
-                                - R43 * (Y3 \
-                                    - A_sum['3ma'] \
-                                    - A_sum_l['3ma']) \
+                                - R43 * Y3 \
                                 - A_sum['43'] \
                                 - A_sum_l['43'])
+                                # - R43 * (Y3 \
+                                #     - A_sum['3ma'] \
+                                #     - A_sum_l['3ma']) \
 
                         ## Compute XwY_l ##
                         XwY[l_index: r_index] = Xw_l @ Y_l
@@ -2501,10 +2501,10 @@ class DynamicBLMModel:
 
                         var_l = np.concatenate(
                             [
-                                S_l_dict['12'] + (R12 ** 2) * S_l_dict['2ma'],
-                                S_l_dict['2ma'] + S_l_dict['2mb'],
-                                S_l_dict['3ma'] + S_l_dict['3mb'] + (R32m ** 2) * (S_l_dict['2ma'] + S_l_dict['2mb']),
-                                S_l_dict['43'] + (R43 ** 2) * S_l_dict['3ma']
+                                S_l_dict['12'], # + (R12 ** 2) * S_l_dict['2ma'],
+                                S_l_dict['2ma'], # + S_l_dict['2mb'],
+                                S_l_dict['3ma'], # + S_l_dict['3mb'] + (R32m ** 2) * (S_l_dict['2ma'] + S_l_dict['2mb']),
+                                S_l_dict['43'] # + (R43 ** 2) * S_l_dict['3ma']
                             ]
                         )
                         del S_l_dict
@@ -2533,10 +2533,11 @@ class DynamicBLMModel:
                             # Y1_cat_l
                             Y_cat_l[0 * ni: 1 * ni] = \
                                 Y1 \
-                                    - R12 * (Y2 - A['2ma'][l, G1] - A_sum['2ma'] - A_sum_l['2ma']) \
+                                    - R12 * Y2 \
                                     - A['12'][l, G1] \
                                     - A_sum['12'] \
                                     - A_sum_l['12']
+                                    # - R12 * (Y2 - A['2ma'][l, G1] - A_sum['2ma'] - A_sum_l['2ma']) \
                             # Y2_cat_l
                             Y_cat_l[1 * ni: 2 * ni] = \
                                 Y2 \
@@ -2546,23 +2547,25 @@ class DynamicBLMModel:
                             # Y3_cat_l
                             Y_cat_l[2 * ni: 3 * ni] = \
                                 Y3 \
-                                    - R32m * (Y2 \
-                                        - (A['2ma'][l, G1] + A['2mb'][G2]) \
-                                        - (A_sum['2ma'] + A_sum['2mb']) \
-                                        - (A_sum_l['2ma'] + A_sum_l['2mb'])) \
+                                    - R32m * Y2 \
                                     - (A['3ma'][l, G2] + A['3mb'][G1]) \
                                     - (A_sum['3ma'] + A_sum['3mb']) \
                                     - (A_sum_l['3ma'] + A_sum_l['3mb'])
+                                    # - R32m * (Y2 \
+                                    #     - (A['2ma'][l, G1] + A['2mb'][G2]) \
+                                    #     - (A_sum['2ma'] + A_sum['2mb']) \
+                                    #     - (A_sum_l['2ma'] + A_sum_l['2mb'])) \
                             # Y4_cat_l
                             Y_cat_l[3 * ni: 4 * ni] = \
                                 Y4 \
-                                    - R43 * (Y3 \
-                                        - A['3ma'][l, G2] \
-                                        - A_sum['3ma'] \
-                                        - A_sum_l['3ma']) \
+                                    - R43 * Y3 \
                                     - A['43'][l, G2] \
                                     - A_sum['43'] \
                                     - A_sum_l['43']
+                                    # - R43 * (Y3 \
+                                    #     - A['3ma'][l, G2] \
+                                    #     - A_sum['3ma'] \
+                                    #     - A_sum_l['3ma']) \
 
                             ## Compute XwY_cat_l ##
                             XwY_cat[col][l_index: r_index] = Xw_cat_l @ Y_cat_l
@@ -2620,10 +2623,10 @@ class DynamicBLMModel:
 
                         var_l = np.concatenate(
                             [
-                                S_l_dict['12'] + (R12 ** 2) * S_l_dict['2ma'],
-                                S_l_dict['2ma'] + S_l_dict['2mb'],
-                                S_l_dict['3ma'] + S_l_dict['3mb'] + (R32m ** 2) * (S_l_dict['2ma'] + S_l_dict['2mb']),
-                                S_l_dict['43'] + (R43 ** 2) * S_l_dict['3ma']
+                                S_l_dict['12'], # + (R12 ** 2) * S_l_dict['2ma'],
+                                S_l_dict['2ma'], # + S_l_dict['2mb'],
+                                S_l_dict['3ma'], # + S_l_dict['3mb'] + (R32m ** 2) * (S_l_dict['2ma'] + S_l_dict['2mb']),
+                                S_l_dict['43'] # + (R43 ** 2) * S_l_dict['3ma']
                             ]
                         )
                         del S_l_dict
@@ -2652,10 +2655,11 @@ class DynamicBLMModel:
                             # Y1_cts_l
                             Y_cts_l[0 * ni: 1 * ni] = \
                                 Y1 \
-                                    - R12 * (Y2 - A['2ma'][l, G1] - A_sum['2ma'] - A_sum_l['2ma']) \
+                                    - R12 * Y2 \
                                     - A['12'][l, G1] \
                                     - A_sum['12'] \
                                     - A_sum_l['12']
+                                    # - R12 * (Y2 - A['2ma'][l, G1] - A_sum['2ma'] - A_sum_l['2ma']) \
                             # Y2_cts_l
                             Y_cts_l[1 * ni: 2 * ni] = \
                                 Y2 \
@@ -2665,23 +2669,25 @@ class DynamicBLMModel:
                             # Y3_cts_l
                             Y_cts_l[2 * ni: 3 * ni] = \
                                 Y3 \
-                                    - R32m * (Y2 \
-                                        - (A['2ma'][l, G1] + A['2mb'][G2]) \
-                                        - (A_sum['2ma'] + A_sum['2mb']) \
-                                        - (A_sum_l['2ma'] + A_sum_l['2mb'])) \
+                                    - R32m * Y2 \
                                     - (A['3ma'][l, G2] + A['3mb'][G1]) \
                                     - (A_sum['3ma'] + A_sum['3mb']) \
                                     - (A_sum_l['3ma'] + A_sum_l['3mb'])
+                                    # - R32m * (Y2 \
+                                    #     - (A['2ma'][l, G1] + A['2mb'][G2]) \
+                                    #     - (A_sum['2ma'] + A_sum['2mb']) \
+                                    #     - (A_sum_l['2ma'] + A_sum_l['2mb'])) \
                             # Y4_cts_l
                             Y_cts_l[3 * ni: 4 * ni] = \
                                 Y4 \
-                                    - R43 * (Y3 \
-                                        - A['3ma'][l, G2] \
-                                        - A_sum['3ma'] \
-                                        - A_sum_l['3ma']) \
+                                    - R43 * Y3 \
                                     - A['43'][l, G2] \
                                     - A_sum['43'] \
                                     - A_sum_l['43']
+                                    # - R43 * (Y3 \
+                                    #     - A['3ma'][l, G2] \
+                                    #     - A_sum['3ma'] \
+                                    #     - A_sum_l['3ma']) \
 
                             ## Compute XwY_cts_l ##
                             XwY_cts[col][l_index: r_index] = Xw_cts_l @ Y_cts_l
@@ -2749,10 +2755,11 @@ class DynamicBLMModel:
                         # eps_1_l_sq
                         eps_l_sq[0 * ni: 1 * ni] = \
                             (Y1 \
-                                - R12 * (Y2 - A['2ma'][l, G1] - A_sum['2ma'] - A_sum_l['2ma']) \
+                                - R12 * Y2 \
                                 - A['12'][l, G1] \
                                 - A_sum['12'] \
                                 - A_sum_l['12']) ** 2
+                                # - R12 * (Y2 - A['2ma'][l, G1] - A_sum['2ma'] - A_sum_l['2ma']) \
                         # eps_2_l_sq
                         eps_l_sq[1 * ni: 2 * ni] = \
                             (Y2 \
@@ -2762,23 +2769,25 @@ class DynamicBLMModel:
                         # eps_3_l_sq
                         eps_l_sq[2 * ni: 3 * ni] = \
                             (Y3 \
-                                - R32m * (Y2 \
-                                    - (A['2ma'][l, G1] + A['2mb'][G2]) \
-                                    - (A_sum['2ma'] + A_sum['2mb']) \
-                                    - (A_sum_l['2ma'] + A_sum_l['2mb'])) \
+                                - R32m * Y2 \
                                 - (A['3ma'][l, G2] + A['3mb'][G1]) \
                                 - (A_sum['3ma'] + A_sum['3mb']) \
                                 - (A_sum_l['3ma'] + A_sum_l['3mb'])) ** 2
+                                # - R32m * (Y2 \
+                                #     - (A['2ma'][l, G1] + A['2mb'][G2]) \
+                                #     - (A_sum['2ma'] + A_sum['2mb']) \
+                                #     - (A_sum_l['2ma'] + A_sum_l['2mb'])) \
                         # eps_1_4_sq
                         eps_l_sq[3 * ni: 4 * ni] = \
                             (Y4 \
-                                - R43 * (Y3 \
-                                    - A['3ma'][l, G2] \
-                                    - A_sum['3ma'] \
-                                    - A_sum_l['3ma']) \
+                                - R43 * Y3 \
                                 - A['43'][l, G2] \
                                 - A_sum['43'] \
                                 - A_sum_l['43']) ** 2
+                                # - R43 * (Y3 \
+                                #     - A['3ma'][l, G2] \
+                                #     - A_sum['3ma'] \
+                                #     - A_sum_l['3ma']) \
                         eps_sq.append(eps_l_sq)
                         del A_sum_l, eps_l_sq
 
@@ -2788,36 +2797,34 @@ class DynamicBLMModel:
                             ## Account for other variables' contribution to variance ##
                             var_l_numerator = np.concatenate(
                                 [
-                                    (S['12'][l, :] ** 2 + (R12 * S['2ma'][l, :]) ** 2)[G1],
-                                    (S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2],
-                                    (S['3ma'][l, :] ** 2)[G2] + (S['3mb'] ** 2)[G1] + (R32m ** 2) * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]),
-                                    (S['43'][l, :] ** 2 + (R43 * S['3ma'][l, :]) ** 2)[G2]
+                                    (S['12'][l, :] ** 2)[G1], # + (R12 * S['2ma'][l, :]) ** 2)[G1],
+                                    (S['2ma'][l, :] ** 2)[G1], # + (S['2mb'] ** 2)[G2],
+                                    (S['3ma'][l, :] ** 2)[G2], # + (S['3mb'] ** 2)[G1] + (R32m ** 2) * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]),
+                                    (S['43'][l, :] ** 2)[G2] # + (R43 * S['3ma'][l, :]) ** 2)[G2]
                                 ]
                             )
                             var_l_denominator = np.concatenate(
                                 [
                                     (S['12'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['12'] + S_sum_sq_l['12'] \
-                                        + (R12 ** 2) \
-                                            * ((S['2ma'][l, :] ** 2)[G1] \
-                                                + S_sum_sq['2ma'] \
-                                                + S_sum_sq_l['2ma']),
-                                    ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]) \
-                                        + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
-                                        + (S_sum_sq_l['2ma'] +  S_sum_sq_l['2mb']),
-                                    ((S['3ma'][l, :] ** 2)[G2] + (S['3mb'] ** 2)[G1]) \
-                                        + (S_sum_sq['3ma'] + S_sum_sq['3mb']) \
-                                        + (S_sum_sq_l['3ma'] + S_sum_sq_l['3mb']) \
-                                        + (R32m ** 2) \
-                                            * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
-                                                + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
-                                                + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])),
+                                        + S_sum_sq['12'] + S_sum_sq_l['12'], # \
+                                        # + (R12 ** 2) \
+                                        #     * ((S['2ma'][l, :] ** 2)[G1] \
+                                        #         + S_sum_sq['2ma'] \
+                                        #         + S_sum_sq_l['2ma']),
+                                    ((S['2ma'][l, :] ** 2)[G1] + S_sum_sq['2ma'] + S_sum_sq_l['2ma']), # \
+                                        # + (S['2mb'] ** 2)[G2] + S_sum_sq['2mb'] + S_sum_sq_l['2mb'],
+                                    ((S['3ma'][l, :] ** 2)[G2] + S_sum_sq['3ma'] + S_sum_sq_l['3ma']), # \
+                                        # + ((S['3mb'] ** 2)[G1] + S_sum_sq['3mb'] + S_sum_sq_l['3mb']) \
+                                        # + (R32m ** 2) \
+                                        #     * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
+                                        #         + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
+                                        #         + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])),
                                     (S['43'][l, :] ** 2)[G2] \
-                                        + S_sum_sq['43'] + S_sum_sq_l['43'] \
-                                        + (R43 ** 2) \
-                                            * ((S['3ma'][l, :] ** 2)[G2] \
-                                                + S_sum_sq['3ma'] \
-                                                + S_sum_sq_l['3ma'])
+                                        + S_sum_sq['43'] + S_sum_sq_l['43'], # \
+                                        # + (R43 ** 2) \
+                                        #     * ((S['3ma'][l, :] ** 2)[G2] \
+                                        #         + S_sum_sq['3ma'] \
+                                        #         + S_sum_sq_l['3ma'])
                                 ]
                             )
                             del S_sum_sq_l
@@ -2865,36 +2872,34 @@ class DynamicBLMModel:
                             ## Account for other variables' contribution to variance ##
                             var_l_numerator = np.concatenate(
                                 [
-                                    S_l_dict['12'] + (R12 ** 2) * S_l_dict['2ma'],
-                                    S_l_dict['2ma'] + S_l_dict['2mb'],
-                                    S_l_dict['3ma'] + S_l_dict['3mb'] + (R32m ** 2) * (S_l_dict['2ma'] + S_l_dict['2mb']),
-                                    S_l_dict['43'] + (R43 ** 2) * S_l_dict['3ma']
+                                    S_l_dict['12'], # + (R12 ** 2) * S_l_dict['2ma'],
+                                    S_l_dict['2ma'], # + S_l_dict['2mb'],
+                                    S_l_dict['3ma'], # + S_l_dict['3mb'] + (R32m ** 2) * (S_l_dict['2ma'] + S_l_dict['2mb']),
+                                    S_l_dict['43'] # + (R43 ** 2) * S_l_dict['3ma']
                                 ]
                             )
                             var_l_denominator = np.concatenate(
                                 [
                                     (S['12'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['12'] + S_sum_sq_l['12'] \
-                                        + (R12 ** 2) \
-                                            * ((S['2ma'][l, :] ** 2)[G1] \
-                                                + S_sum_sq['2ma'] \
-                                                + S_sum_sq_l['2ma']),
-                                    ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]) \
-                                        + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
-                                        + (S_sum_sq_l['2ma'] +  S_sum_sq_l['2mb']),
-                                    ((S['3ma'][l, :] ** 2)[G2] + (S['3mb'] ** 2)[G1]) \
-                                        + (S_sum_sq['3ma'] + S_sum_sq['3mb']) \
-                                        + (S_sum_sq_l['3ma'] + S_sum_sq_l['3mb']) \
-                                        + (R32m ** 2) \
-                                            * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
-                                                + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
-                                                + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])),
+                                        + S_sum_sq['12'] + S_sum_sq_l['12'], # \
+                                        # + (R12 ** 2) \
+                                        #     * ((S['2ma'][l, :] ** 2)[G1] \
+                                        #         + S_sum_sq['2ma'] \
+                                        #         + S_sum_sq_l['2ma']),
+                                    ((S['2ma'][l, :] ** 2)[G1] + S_sum_sq['2ma'] + S_sum_sq_l['2ma']), # \
+                                        # + (S['2mb'] ** 2)[G2] + S_sum_sq['2mb'] + S_sum_sq_l['2mb'],
+                                    ((S['3ma'][l, :] ** 2)[G2] + S_sum_sq['3ma'] + S_sum_sq_l['3ma']), # \
+                                        # + ((S['3mb'] ** 2)[G1] + S_sum_sq['3mb'] + S_sum_sq_l['3mb']) \
+                                        # + (R32m ** 2) \
+                                        #     * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
+                                        #         + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
+                                        #         + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])),
                                     (S['43'][l, :] ** 2)[G2] \
-                                        + S_sum_sq['43'] + S_sum_sq_l['43'] \
-                                        + (R43 ** 2) \
-                                            * ((S['3ma'][l, :] ** 2)[G2] \
-                                                + S_sum_sq['3ma'] \
-                                                + S_sum_sq_l['3ma'])
+                                        + S_sum_sq['43'] + S_sum_sq_l['43'], # \
+                                        # + (R43 ** 2) \
+                                        #     * ((S['3ma'][l, :] ** 2)[G2] \
+                                        #         + S_sum_sq['3ma'] \
+                                        #         + S_sum_sq_l['3ma'])
                                 ]
                             )
                             del S_sum_sq_l
@@ -2950,36 +2955,34 @@ class DynamicBLMModel:
                             ## Account for other variables' contribution to variance ##
                             var_l_numerator = np.concatenate(
                                 [
-                                    S_l_dict['12'] + (R12 ** 2) * S_l_dict['2ma'],
-                                    S_l_dict['2ma'] + S_l_dict['2mb'],
-                                    S_l_dict['3ma'] + S_l_dict['3mb'] + (R32m ** 2) * (S_l_dict['2ma'] + S_l_dict['2mb']),
-                                    S_l_dict['43'] + (R43 ** 2) * S_l_dict['3ma']
+                                    S_l_dict['12'], # + (R12 ** 2) * S_l_dict['2ma'],
+                                    S_l_dict['2ma'], # + S_l_dict['2mb'],
+                                    S_l_dict['3ma'], # + S_l_dict['3mb'] + (R32m ** 2) * (S_l_dict['2ma'] + S_l_dict['2mb']),
+                                    S_l_dict['43'] # + (R43 ** 2) * S_l_dict['3ma']
                                 ]
                             )
                             var_l_denominator = np.concatenate(
                                 [
                                     (S['12'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['12'] + S_sum_sq_l['12'] \
-                                        + (R12 ** 2) \
-                                            * ((S['2ma'][l, :] ** 2)[G1] \
-                                                + S_sum_sq['2ma'] \
-                                                + S_sum_sq_l['2ma']),
-                                    ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]) \
-                                        + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
-                                        + (S_sum_sq_l['2ma'] +  S_sum_sq_l['2mb']),
-                                    ((S['3ma'][l, :] ** 2)[G2] + (S['3mb'] ** 2)[G1]) \
-                                        + (S_sum_sq['3ma'] + S_sum_sq['3mb']) \
-                                        + (S_sum_sq_l['3ma'] + S_sum_sq_l['3mb']) \
-                                        + (R32m ** 2) \
-                                            * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
-                                                + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
-                                                + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])),
+                                        + S_sum_sq['12'] + S_sum_sq_l['12'], # \
+                                        # + (R12 ** 2) \
+                                        #     * ((S['2ma'][l, :] ** 2)[G1] \
+                                        #         + S_sum_sq['2ma'] \
+                                        #         + S_sum_sq_l['2ma']),
+                                    ((S['2ma'][l, :] ** 2)[G1] + S_sum_sq['2ma'] + S_sum_sq_l['2ma']), # \
+                                        # + (S['2mb'] ** 2)[G2] + S_sum_sq['2mb'] + S_sum_sq_l['2mb'],
+                                    ((S['3ma'][l, :] ** 2)[G2] + S_sum_sq['3ma'] + S_sum_sq_l['3ma']), # \
+                                        # + ((S['3mb'] ** 2)[G1] + S_sum_sq['3mb'] + S_sum_sq_l['3mb']) \
+                                        # + (R32m ** 2) \
+                                        #     * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
+                                        #         + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
+                                        #         + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])),
                                     (S['43'][l, :] ** 2)[G2] \
-                                        + S_sum_sq['43'] + S_sum_sq_l['43'] \
-                                        + (R43 ** 2) \
-                                            * ((S['3ma'][l, :] ** 2)[G2] \
-                                                + S_sum_sq['3ma'] \
-                                                + S_sum_sq_l['3ma'])
+                                        + S_sum_sq['43'] + S_sum_sq_l['43'], # \
+                                        # + (R43 ** 2) \
+                                        #     * ((S['3ma'][l, :] ** 2)[G2] \
+                                        #         + S_sum_sq['3ma'] \
+                                        #         + S_sum_sq_l['3ma'])
                                 ]
                             )
                             del S_sum_sq_l
@@ -3158,11 +3161,11 @@ class DynamicBLMModel:
                     A['12'][l, G1] + A_sum['12'] + A_sum_l['12'],
                     var=\
                         (S['12'][l, :] ** 2)[G1] \
-                        + S_sum_sq['12'] + S_sum_sq_l['12'] \
-                        + (R12 ** 2) \
-                            * ((S['2ma'][l, :] ** 2)[G1] \
-                                + S_sum_sq['2ma'] \
-                                + S_sum_sq_l['2ma'])
+                        + S_sum_sq['12'] + S_sum_sq_l['12'] # \
+                        # + (R12 ** 2) \
+                        #     * ((S['2ma'][l, :] ** 2)[G1] \
+                        #         + S_sum_sq['2ma'] \
+                        #         + S_sum_sq_l['2ma'])
                 )
                 lp4 = lognormpdf(
                     Y4 - R43 \
@@ -3173,11 +3176,11 @@ class DynamicBLMModel:
                     A['43'][l, G1] + A_sum['43'] + A_sum_l['43'],
                     var=\
                         (S['43'][l, :] ** 2)[G1] \
-                        + S_sum_sq['43'] + S_sum_sq_l['43'] \
-                        + (R43 ** 2) \
-                            * ((S['3ma'][l, :] ** 2)[G1] \
-                                + S_sum_sq['3ma'] \
-                                + S_sum_sq_l['3ma'])
+                        + S_sum_sq['43'] + S_sum_sq_l['43'] # \
+                        # + (R43 ** 2) \
+                        #     * ((S['3ma'][l, :] ** 2)[G1] \
+                        #         + S_sum_sq['3ma'] \
+                        #         + S_sum_sq_l['3ma'])
                 )
 
                 lp_stable[:, l] = lp1 + lp4
@@ -3191,12 +3194,12 @@ class DynamicBLMModel:
                     lp1 = lognormpdf(
                         Y1[I] - R12 * (Y2[I] - A['2ma'][l, g1]),
                         A['12'][l, g1],
-                        var=S['12'][l, g1] ** 2 + (R12 * S['2ma'][l, g1]) ** 2
+                        var=S['12'][l, g1] ** 2 # + (R12 * S['2ma'][l, g1]) ** 2
                     )
                     lp4 = lognormpdf(
                         Y4[I] - R43 * (Y3[I] - A['3ma'][l, g1]),
                         A['43'][l, g1],
-                        var=S['43'][l, g1] ** 2 + (R43 * S['3ma'][l, g1]) ** 2
+                        var=S['43'][l, g1] ** 2 # + (R43 * S['3ma'][l, g1]) ** 2
                     )
 
                     lp_stable[I, l] = lp1 + lp4
@@ -3237,10 +3240,10 @@ class DynamicBLMModel:
                             + A_sum['3s'] + A_sum_l['3s'],
                         var=\
                             (S['3s'][l, :] ** 2)[G1] \
-                            + S_sum_sq['3s'] + S_sum_sq_l['3s'] \
-                            + (R32s ** 2) \
-                                * ((S['2s'][l, :] ** 2)[G1] \
-                                    + S_sum_sq['2s'] + S_sum_sq_l['2s'])
+                            + S_sum_sq['3s'] + S_sum_sq_l['3s'] # \
+                            # + (R32s ** 2) \
+                            #     * ((S['2s'][l, :] ** 2)[G1] \
+                            #         + S_sum_sq['2s'] + S_sum_sq_l['2s'])
                     )
 
                     lp[:, l] = log_pk0[G1, l] + lp2 + lp3
@@ -3259,7 +3262,7 @@ class DynamicBLMModel:
                         lp3 = lognormpdf(
                             Y3[I] - R32s * (Y2[I] - A['2s'][l, g1]),
                             A['3s'][l, g1],
-                            var=S['3s'][l, g1] ** 2 + (R32s * S['2s'][l, g1]) ** 2
+                            var=S['3s'][l, g1] ** 2 # + (R32s * S['2s'][l, g1]) ** 2
                         )
 
                         lp[I, l] = log_pk0[G1[I], l] + lp2 + lp3
@@ -3312,10 +3315,10 @@ class DynamicBLMModel:
                     YY32s[l * ni: (l + 1) * ni] = Y3 - A['3s'][l, G1] - A_sum['3s'] - A_sum_l['3s']
                     SS32s = ( \
                         (S['3s'][l, :] ** 2)[G1] \
-                        + S_sum_sq['3s'] + S_sum_sq_l['3s'] \
-                        + (R32s ** 2) \
-                            * ((S['2s'][l, :] ** 2)[G1] \
-                                + S_sum_sq['2s'] + S_sum_sq_l['2s']))
+                        + S_sum_sq['3s'] + S_sum_sq_l['3s']) # \
+                        # + (R32s ** 2) \
+                        #     * ((S['2s'][l, :] ** 2)[G1] \
+                        #         + S_sum_sq['2s'] + S_sum_sq_l['2s']))
                     WW32s[l * ni: (l + 1) * ni] = qi[:, l] / SS32s
 
                 ## OLS ##
@@ -3431,7 +3434,7 @@ class DynamicBLMModel:
                     var_l = np.concatenate(
                         [
                             (S['2s'][l, :] ** 2)[G1],
-                            (S['3s'][l, :] ** 2 + (R32s * S['2s'][l, :]) ** 2)[G1]
+                            (S['3s'][l, :] ** 2)[G1] # + (R32s * S['2s'][l, :]) ** 2)[G1]
                         ]
                     )
                     weights_l = np.tile(qi[:, l], 2) / np.sqrt(var_l)
@@ -3459,9 +3462,11 @@ class DynamicBLMModel:
                         # Y3_l
                         Y_l[1 * ni: 2 * ni] = \
                             Y3 \
-                                - R32s * (Y2 \
-                                    - A_sum['2s'] - A_sum_l['2s']) \
-                                - A_sum['3s'] - A_sum_l['3s']
+                                - R32s * Y2 \
+                                - A_sum['3s'] - A_sum_l['3s'] # \
+                                # - R32s * (Y2 \
+                                #     - A_sum['2s'] - A_sum_l['2s']) \
+                                # - A_sum['3s'] - A_sum_l['3s']
 
                         ## Compute XwY_l ##
                         XwY[l_index: r_index] = Xw_l @ Y_l
@@ -3528,7 +3533,7 @@ class DynamicBLMModel:
                         var_l = np.concatenate(
                             [
                                 S_l_dict['2s'],
-                                S_l_dict['3s'] + (R32s ** 2) * S_l_dict['2s']
+                                S_l_dict['3s'] # + (R32s ** 2) * S_l_dict['2s']
                             ]
                         )
                         del S_l_dict
@@ -3562,11 +3567,12 @@ class DynamicBLMModel:
                             # Y3_cat_l
                             Y_cat_l[1 * ni: 2 * ni] = \
                                 Y3 \
-                                    - R32s * (Y2 \
-                                        - A['2s'][l, G1] \
-                                        - A_sum['2s'] - A_sum_l['2s']) \
+                                    - R32s * Y2 \
                                     - A['3s'][l, G1] \
-                                    - A_sum['3s'] - A_sum_l['3s']
+                                    - A_sum['3s'] - A_sum_l['3s'] # \
+                                    # - R32s * (Y2 \
+                                    #     - A['2s'][l, G1] \
+                                    #     - A_sum['2s'] - A_sum_l['2s'])
 
                             ## Compute XwY_cat_l ##
                             XwY_cat[col][l_index: r_index] = Xw_cat_l @ Y_cat_l
@@ -3625,7 +3631,7 @@ class DynamicBLMModel:
                         var_l = np.concatenate(
                             [
                                 S_l_dict['2s'],
-                                S_l_dict['3s'] + (R32s ** 2) * S_l_dict['2s']
+                                S_l_dict['3s'] # + (R32s ** 2) * S_l_dict['2s']
                             ]
                         )
                         del S_l_dict
@@ -3659,11 +3665,12 @@ class DynamicBLMModel:
                             # Y3_cts_l
                             Y_cts_l[1 * ni: 2 * ni] = \
                                 Y3 \
-                                    - R32s * (Y2 \
-                                        - A['2s'][l, G1] \
-                                        - A_sum['2s'] - A_sum_l['2s']) \
+                                    - R32s * Y2 \
                                     - A['3s'][l, G1] \
-                                    - A_sum['3s'] - A_sum_l['3s']
+                                    - A_sum['3s'] - A_sum_l['3s'] # \
+                                    # - R32s * (Y2 \
+                                    #     - A['2s'][l, G1] \
+                                    #     - A_sum['2s'] - A_sum_l['2s'])
 
                             ## Compute XwY_cts_l ##
                             XwY_cts[col][l_index: r_index] = Xw_cts_l @ Y_cts_l
@@ -3737,11 +3744,12 @@ class DynamicBLMModel:
                         # eps_3_l_sq
                         eps_l_sq[1 * ni: 2 * ni] = \
                             (Y3 \
-                                - R32s * (Y2 \
-                                    - A['2s'][l, G1] \
-                                    - A_sum['2s'] - A_sum_l['2s']) \
+                                - R32s * Y2 \
                                 - A['3s'][l, G1] \
-                                - A_sum['3s'] - A_sum_l['3s']) ** 2
+                                - A_sum['3s'] - A_sum_l['3s']) ** 2 # \
+                                # - R32s * (Y2 \
+                                #     - A['2s'][l, G1] \
+                                #     - A_sum['2s'] - A_sum_l['2s'])
                         eps_sq.append(eps_l_sq)
                         del A_sum_l, eps_l_sq
 
@@ -3752,7 +3760,7 @@ class DynamicBLMModel:
                             var_l_numerator = np.concatenate(
                                 [
                                     (S['2s'][l, :] ** 2)[G1],
-                                    (S['3s'][l, :] ** 2 + (R32s * S['2s'][l, :]) ** 2)[G1]
+                                    (S['3s'][l, :] ** 2)[G1] # + (R32s * S['2s'][l, :]) ** 2)[G1]
                                 ]
                             )
                             var_l_denominator = np.concatenate(
@@ -3760,10 +3768,10 @@ class DynamicBLMModel:
                                     (S['2s'][l, :] ** 2)[G1] \
                                         + S_sum_sq['2s'] + S_sum_sq_l['2s'],
                                     (S['3s'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['3s'] + S_sum_sq_l['3s'] \
-                                        + (R32s ** 2) \
-                                            * ((S['2s'][l, :] ** 2)[G1] \
-                                                + S_sum_sq['2s'] + S_sum_sq_l['2s'])
+                                        + S_sum_sq['3s'] + S_sum_sq_l['3s'] # \
+                                        # + (R32s ** 2) \
+                                        #     * ((S['2s'][l, :] ** 2)[G1] \
+                                        #         + S_sum_sq['2s'] + S_sum_sq_l['2s'])
                                 ]
                             )
                             del S_sum_sq_l
@@ -3809,7 +3817,7 @@ class DynamicBLMModel:
                             var_l_numerator = np.concatenate(
                                 [
                                     S_l_dict['2s'],
-                                    S_l_dict['3s'] + (R32s ** 2) * S_l_dict['2s']
+                                    S_l_dict['3s'] # + (R32s ** 2) * S_l_dict['2s']
                                 ]
                             )
                             var_l_denominator = np.concatenate(
@@ -3817,10 +3825,10 @@ class DynamicBLMModel:
                                     (S['2s'][l, :] ** 2)[G1] \
                                         + S_sum_sq['2s'] + S_sum_sq_l['2s'],
                                     (S['3s'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['3s'] + S_sum_sq_l['3s'] \
-                                        + (R32s ** 2) \
-                                            * ((S['2s'][l, :] ** 2)[G1] \
-                                                + S_sum_sq['2s'] + S_sum_sq_l['2s'])
+                                        + S_sum_sq['3s'] + S_sum_sq_l['3s'] # \
+                                        # + (R32s ** 2) \
+                                        #     * ((S['2s'][l, :] ** 2)[G1] \
+                                        #         + S_sum_sq['2s'] + S_sum_sq_l['2s'])
                                 ]
                             )
                             del S_sum_sq_l
@@ -3876,7 +3884,7 @@ class DynamicBLMModel:
                             var_l_numerator = np.concatenate(
                                 [
                                     S_l_dict['2s'],
-                                    S_l_dict['3s'] + (R32s ** 2) * S_l_dict['2s']
+                                    S_l_dict['3s'] # + (R32s ** 2) * S_l_dict['2s']
                                 ]
                             )
                             var_l_denominator = np.concatenate(
@@ -3884,10 +3892,10 @@ class DynamicBLMModel:
                                     (S['2s'][l, :] ** 2)[G1] \
                                         + S_sum_sq['2s'] + S_sum_sq_l['2s'],
                                     (S['3s'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['3s'] + S_sum_sq_l['3s'] \
-                                        + (R32s ** 2) \
-                                            * ((S['2s'][l, :] ** 2)[G1] \
-                                                + S_sum_sq['2s'] + S_sum_sq_l['2s'])
+                                        + S_sum_sq['3s'] + S_sum_sq_l['3s'] # \
+                                        # + (R32s ** 2) \
+                                        #     * ((S['2s'][l, :] ** 2)[G1] \
+                                        #         + S_sum_sq['2s'] + S_sum_sq_l['2s'])
                                 ]
                             )
                             del S_sum_sq_l
