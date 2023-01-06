@@ -3108,30 +3108,20 @@ class DynamicBLMModel:
                 A_sum_l, S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, periods=periods)
 
                 lp1 = lognormpdf(
-                    Y1 - R12 \
-                        * (Y2 \
-                            - A['2ma'][l, G1] \
-                            - A_sum['2ma'] \
-                            - A_sum_l['2ma']),
+                    Y1 - R12 * (Y2 - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma'])),
                     A['12'][l, G1] + A_sum['12'] + A_sum_l['12'],
                     var=\
-                        (S['12'][l, :] ** 2)[G1] \
-                        + S_sum_sq['12'] + S_sum_sq_l['12'] # \
+                        (S['12'][l, :] ** 2)[G1] + S_sum_sq['12'] + S_sum_sq_l['12'] # \
                         # + (R12 ** 2) \
                         #     * ((S['2ma'][l, :] ** 2)[G1] \
                         #         + S_sum_sq['2ma'] \
                         #         + S_sum_sq_l['2ma'])
                 )
                 lp4 = lognormpdf(
-                    Y4 - R43 \
-                        * (Y3 \
-                            - A['3ma'][l, G1] \
-                            - A_sum['3ma'] \
-                            - A_sum_l['3ma']),
+                    Y4 - R43 * (Y3 - (A['3ma'][l, G1] + A_sum['3ma'] + A_sum_l['3ma'])),
                     A['43'][l, G1] + A_sum['43'] + A_sum_l['43'],
                     var=\
-                        (S['43'][l, :] ** 2)[G1] \
-                        + S_sum_sq['43'] + S_sum_sq_l['43'] # \
+                        (S['43'][l, :] ** 2)[G1] + S_sum_sq['43'] + S_sum_sq_l['43'] # \
                         # + (R43 ** 2) \
                         #     * ((S['3ma'][l, :] ** 2)[G1] \
                         #         + S_sum_sq['3ma'] \
@@ -3180,22 +3170,15 @@ class DynamicBLMModel:
 
                     lp2 = lognormpdf(
                         Y2,
-                        A['2s'][l, G1] \
-                            + A_sum['2s'] + A_sum_l['2s'],
+                        A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s'],
                         var=\
-                            (S['2s'][l, :] ** 2)[G1] \
-                            + S_sum_sq['2s'] + S_sum_sq_l['2s']
+                            (S['2s'][l, :] ** 2)[G1] + S_sum_sq['2s'] + S_sum_sq_l['2s']
                     )
                     lp3 = lognormpdf(
-                        Y3 - R32s \
-                            * (Y2 \
-                                - A['2s'][l, G1] \
-                                - A_sum['2s'] - A_sum_l['2s']),
-                        A['3s'][l, G1] \
-                            + A_sum['3s'] + A_sum_l['3s'],
+                        Y3 - R32s * (Y2 - (A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s'])),
+                        A['3s'][l, G1] + A_sum['3s'] + A_sum_l['3s'],
                         var=\
-                            (S['3s'][l, :] ** 2)[G1] \
-                            + S_sum_sq['3s'] + S_sum_sq_l['3s'] # \
+                            (S['3s'][l, :] ** 2)[G1] + S_sum_sq['3s'] + S_sum_sq_l['3s'] # \
                             # + (R32s ** 2) \
                             #     * ((S['2s'][l, :] ** 2)[G1] \
                             #         + S_sum_sq['2s'] + S_sum_sq_l['2s'])
@@ -3269,8 +3252,7 @@ class DynamicBLMModel:
                     XX32s[l * ni: (l + 1) * ni] = Y2 - A['2s'][l, G1] - A_sum['2s'] - A_sum_l['2s']
                     YY32s[l * ni: (l + 1) * ni] = Y3 - A['3s'][l, G1] - A_sum['3s'] - A_sum_l['3s']
                     SS32s = ( \
-                        (S['3s'][l, :] ** 2)[G1] \
-                        + S_sum_sq['3s'] + S_sum_sq_l['3s']) # \
+                        (S['3s'][l, :] ** 2)[G1] + S_sum_sq['3s'] + S_sum_sq_l['3s']) # \
                         # + (R32s ** 2) \
                         #     * ((S['2s'][l, :] ** 2)[G1] \
                         #         + S_sum_sq['2s'] + S_sum_sq_l['2s']))
@@ -3413,15 +3395,12 @@ class DynamicBLMModel:
                         # Y2_l
                         Y_l[0 * ni: 1 * ni] = \
                             Y2 \
-                                - A_sum['2s'] - A_sum_l['2s']
+                                - (A_sum['2s'] + A_sum_l['2s'])
                         # Y3_l
                         Y_l[1 * ni: 2 * ni] = \
                             Y3 \
-                                - R32s * Y2 \
-                                - A_sum['3s'] - A_sum_l['3s'] # \
-                                # - R32s * (Y2 \
-                                #     - A_sum['2s'] - A_sum_l['2s']) \
-                                # - A_sum['3s'] - A_sum_l['3s']
+                                - (A_sum['3s'] + A_sum_l['3s']) \
+                                - R32s * (Y2 - (A_sum['2s'] + A_sum_l['2s']))
 
                         ## Compute XwY_l ##
                         XwY[l_index: r_index] = Xw_l @ Y_l
@@ -3517,17 +3496,12 @@ class DynamicBLMModel:
                             # Y2_cat_l
                             Y_cat_l[0 * ni: 1 * ni] = \
                                 Y2 \
-                                    - A['2s'][l, G1] \
-                                    - A_sum['2s'] - A_sum_l['2s']
+                                    - (A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s'])
                             # Y3_cat_l
                             Y_cat_l[1 * ni: 2 * ni] = \
                                 Y3 \
-                                    - R32s * Y2 \
-                                    - A['3s'][l, G1] \
-                                    - A_sum['3s'] - A_sum_l['3s'] # \
-                                    # - R32s * (Y2 \
-                                    #     - A['2s'][l, G1] \
-                                    #     - A_sum['2s'] - A_sum_l['2s'])
+                                    - (A['3s'][l, G1] + A_sum['3s'] + A_sum_l['3s']) \
+                                    - R32s * (Y2 - (A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s']))
 
                             ## Compute XwY_cat_l ##
                             XwY_cat[col][l_index: r_index] = Xw_cat_l @ Y_cat_l
@@ -3615,17 +3589,12 @@ class DynamicBLMModel:
                             # Y2_cts_l
                             Y_cts_l[0 * ni: 1 * ni] = \
                                 Y2 \
-                                    - A['2s'][l, G1] \
-                                    - A_sum['2s'] - A_sum_l['2s']
+                                    - (A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s'])
                             # Y3_cts_l
                             Y_cts_l[1 * ni: 2 * ni] = \
                                 Y3 \
-                                    - R32s * Y2 \
-                                    - A['3s'][l, G1] \
-                                    - A_sum['3s'] - A_sum_l['3s'] # \
-                                    # - R32s * (Y2 \
-                                    #     - A['2s'][l, G1] \
-                                    #     - A_sum['2s'] - A_sum_l['2s'])
+                                    - (A['3s'][l, G1] + A_sum['3s'] + A_sum_l['3s']) \
+                                    - R32s * (Y2 - (A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s']))
 
                             ## Compute XwY_cts_l ##
                             XwY_cts[col][l_index: r_index] = Xw_cts_l @ Y_cts_l
@@ -3694,17 +3663,14 @@ class DynamicBLMModel:
                         # eps_2_l_sq
                         eps_l_sq[0 * ni: 1 * ni] = \
                             (Y2 \
-                                - A['2s'][l, G1] \
-                                - A_sum['2s'] - A_sum_l['2s']) ** 2
+                                - (A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s'])
+                                ) ** 2
                         # eps_3_l_sq
                         eps_l_sq[1 * ni: 2 * ni] = \
                             (Y3 \
-                                - R32s * Y2 \
-                                - A['3s'][l, G1] \
-                                - A_sum['3s'] - A_sum_l['3s']) ** 2 # \
-                                # - R32s * (Y2 \
-                                #     - A['2s'][l, G1] \
-                                #     - A_sum['2s'] - A_sum_l['2s'])
+                                - (A['3s'][l, G1] + A_sum['3s'] + A_sum_l['3s']) \
+                                - R32s * (Y2 - (A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s']))
+                                ) ** 2
                         eps_sq.append(eps_l_sq)
                         del A_sum_l, eps_l_sq
 
