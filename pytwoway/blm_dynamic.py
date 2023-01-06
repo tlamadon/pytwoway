@@ -976,25 +976,22 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
                     A_sum[period] += A_cts[col][period] * jdata.loc[:, subcol]
                     S_sum_sq[period] += S_cts[col][period] ** 2
 
-    Y1 = rng.normal( \
-        loc=A_sum['12'] - R12 * A_sum['2ma'], \
-        scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']), \
-        size=nmi)
     Y2 = rng.normal( \
         loc=A_sum['2ma'] + A_sum['2mb'], \
-        scale=np.sqrt(S_sum_sq['2ma'] + S_sum_sq['2mb']), \
-        size=nmi)
-    Y1 += R12 * Y2
+        scale=np.sqrt(S_sum_sq['2ma']), \
+        size=nmi) # scale=np.sqrt(S_sum_sq['2ma'] + S_sum_sq['2mb']), \
+    Y1 = rng.normal( \
+        loc=A_sum['12'] + R12 * (Y2 - A_sum['2ma']), \
+        scale=np.sqrt(S_sum_sq['12']), \
+        size=nmi) # scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']), \
     Y3 = rng.normal( \
-        loc=A_sum['3ma'] + A_sum['3mb'] - R32m * (A_sum['2ma'] + A_sum['2mb']), \
-        scale=np.sqrt(S_sum_sq['3ma'] + S_sum_sq['3mb'] + (R32m ** 2) * (S_sum_sq['2ma'] + S_sum_sq['2mb'])), \
-        size=nmi)
-    Y3 += R32m * Y2
+        loc=A_sum['3ma'] + A_sum['3mb'] + R32m * (Y2 - A_sum['2ma'] - A_sum['2mb']), \
+        scale=np.sqrt(S_sum_sq['3ma']), \
+        size=nmi) # scale=np.sqrt(S_sum_sq['3ma'] + S_sum_sq['3mb'] + (R32m ** 2) * (S_sum_sq['2ma'] + S_sum_sq['2mb'])), \
     Y4 = rng.normal( \
-        loc=A_sum['43'] - R43 * A_sum['3ma'], \
-        scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']), \
-        size=nmi)
-    Y4 += R43 * Y3
+        loc=A_sum['43'] + R43 * (Y3 - A_sum['3ma']), \
+        scale=np.sqrt(S_sum_sq['43']), \
+        size=nmi) # scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']), \
     yj = (Y1, Y2, Y3, Y4)
     del A_sum, S_sum_sq, Y1, Y2, Y3, Y4
 
@@ -1063,25 +1060,22 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
                         A_sum[period] += A_cts[col][period] * sdata.loc[:, subcol]
                         S_sum_sq[period] += S_cts[col][period] ** 2
 
-    Y1 = rng.normal( \
-        loc=A_sum['12'] - R12 * A_sum['2ma'], \
-        scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']), \
-        size=nsi)
     Y2 = rng.normal( \
         loc=A_sum['2s'], \
         scale=np.sqrt(S_sum_sq['2s']), \
         size=nsi)
-    Y1 += R12 * Y2
+    Y1 = rng.normal( \
+        loc=A_sum['12'] + R12 * (Y2 - A_sum['2ma']), \
+        scale=np.sqrt(S_sum_sq['12']), \
+        size=nsi) # scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']), \
     Y3 = rng.normal( \
-        loc=A_sum['3s'] - R32s * A_sum['2s'], \
-        scale=np.sqrt(S_sum_sq['3s'] + (R32s ** 2) * S_sum_sq['2s']), \
-        size=nsi)
-    Y3 += R32s * Y2
+        loc=A_sum['3s'] + R32s * (Y2 - A_sum['2s']), \
+        scale=np.sqrt(S_sum_sq['3s']), \
+        size=nsi) # scale=np.sqrt(S_sum_sq['3s'] + (R32s ** 2) * S_sum_sq['2s']), \
     Y4 = rng.normal( \
-        loc=A_sum['43'] - R43 * A_sum['3ma'], \
-        scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']), \
-        size=nsi)
-    Y4 += R43 * Y3
+        loc=A_sum['43'] + R43 * (Y3 - A_sum['3ma']), \
+        scale=np.sqrt(S_sum_sq['43']), \
+        size=nsi) # scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']), \
     ys = (Y1, Y2, Y3, Y4)
 
     return (yj, ys, Lm, Ls)
