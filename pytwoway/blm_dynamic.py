@@ -1328,7 +1328,7 @@ class DynamicBLMModel:
                     if period[-1] == 'b':
                         nnt_b.append(i)
                 constrain_b = (len(nnt_b) > 0)
-            nt_S = len(self.periods_var)
+            nt_S = len(self.periods_variance)
         else:
             nt = len(self.periods_update_stayers)
             nt_S = nt
