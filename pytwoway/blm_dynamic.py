@@ -2180,7 +2180,7 @@ class DynamicBLMModel:
                             #     * ((S['2ma'][l, :] ** 2)[G1] \
                             #         + S_sum_sq['2ma'] \
                             #         + S_sum_sq_l['2ma']))
-                        WW12[l * ni: (l + 1) * ni] = qi[:, l] / SS12
+                        WW12[l * ni: (l + 1) * ni] = qi[:, l] / np.sqrt(SS12)
                     if params['update_rho43']:
                         XX43[l * ni: (l + 1) * ni] = Y3 - A['3ma'][l, G2] - A_sum['3ma'] - A_sum_l['3ma']
                         YY43[l * ni: (l + 1) * ni] = Y4 - A['43'][l, G2] - A_sum['43'] - A_sum_l['43']
@@ -2191,7 +2191,7 @@ class DynamicBLMModel:
                             #     (S['3ma'][l, :] ** 2)[G2] \
                             #     + S_sum_sq['3ma'] \
                             #     + S_sum_sq_l['3ma']))
-                        WW43[l * ni: (l + 1) * ni] = qi[:, l] / SS43
+                        WW43[l * ni: (l + 1) * ni] = qi[:, l] / np.sqrt(SS43)
                     if params['update_rho32m']:
                         XX32m[l * ni: (l + 1) * ni] = Y2 - (A['2ma'][l, G1] + A['2mb'][G2]) - (A_sum['2ma'] + A_sum['2mb']) - (A_sum_l['2ma'] + A_sum_l['2mb'])
                         YY32m[l * ni: (l + 1) * ni] = Y3 - (A['3ma'][l, G2] + A['3mb'][G1]) - (A_sum['3ma'] + A_sum['3mb']) - (A_sum_l['3ma'] + A_sum_l['3mb'])
@@ -2202,7 +2202,7 @@ class DynamicBLMModel:
                             #     * (((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]) \
                             #         + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
                             #         + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])))
-                        WW32m[l * ni: (l + 1) * ni] = qi[:, l] / SS32m
+                        WW32m[l * ni: (l + 1) * ni] = qi[:, l] / np.sqrt(SS32m)
 
                 ## OLS ##
                 if params['update_rho12']:
@@ -3250,7 +3250,7 @@ class DynamicBLMModel:
                         # + (R32s ** 2) \
                         #     * ((S['2s'][l, :] ** 2)[G1] \
                         #         + S_sum_sq['2s'] + S_sum_sq_l['2s']))
-                    WW32s[l * ni: (l + 1) * ni] = qi[:, l] / SS32s
+                    WW32s[l * ni: (l + 1) * ni] = qi[:, l] / np.sqrt(SS32s)
 
                 ## OLS ##
                 Xw = XX32s * WW32s
