@@ -1126,6 +1126,7 @@ class DynamicBLMModel:
         self.all_periods = all_periods
         self.periods = periods
         self.periods_movers = [period for period in ['12', '43', '2ma', '3ma', '2mb', '3mb'] if period in periods]
+        self.periods_variance = ['12', '43', '2ma', '3ma']
         self.periods_stayers = ['12', '43', '2ma', '3ma', '2s', '3s']
         self.periods_update_stayers = ['2s', '3s']
         self.first_periods = ['12', '2ma', '3mb', '2s']
@@ -1327,16 +1328,18 @@ class DynamicBLMModel:
                     if period[-1] == 'b':
                         nnt_b.append(i)
                 constrain_b = (len(nnt_b) > 0)
+            nt_S = len(self.periods_var)
         else:
             nt = len(self.periods_update_stayers)
+            nt_S = nt
 
         ## General ##
         cons_a = cons.QPConstrained(nl, nk)
         cons_s = cons.QPConstrained(nl, nk)
-        cons_s.add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=nt))
+        cons_s.add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=nt_S))
         if constrain_b:
             cons_a.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt))
-            cons_s.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt))
+            # cons_s.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=4))
 
         if params['cons_a'] is not None:
             cons_a.add_constraints(params['cons_a'])
@@ -1359,11 +1362,11 @@ class DynamicBLMModel:
             cons_a_dict[col] = cons.QPConstrained(nl, 1)
             cons_s_dict[col] = cons.QPConstrained(nl, 1)
         for col in cat_cols + cts_cols:
-            cons_s_dict[col].add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=nt))
+            cons_s_dict[col].add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=nt_S))
 
             if not controls_dict[col]['worker_type_interaction']:
                 cons_a_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nt=nt))
-                cons_s_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nt=nt))
+                cons_s_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nt=nt_S))
             elif constrain_b:
                 cons_a_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt))
 
@@ -1911,7 +1914,7 @@ class DynamicBLMModel:
         ## Unpack parameters ##
         params = self.params
         nl, nk, ni = self.nl, self.nk, jdata.shape[0]
-        periods = self.periods_movers
+        periods, periods_var = self.periods_movers, self.periods_variance
         R12, R43, R32m = self.R12, self.R43, self.R32m
         A, A_cat, A_cts = self.A, self.A_cat, self.A_cts
         S, S_cat, S_cts = self.S, self.S_cat, self.S_cts
@@ -2230,15 +2233,15 @@ class DynamicBLMModel:
                 ### General ###
                 # Shift between periods
                 ts = nl * nk
-                # X
-                X = lil_matrix((4 * ni, len(periods) * nk))
-                # X'X (weighted)
-                XwX = np.zeros((len(periods) * ts, len(periods) * ts))
+                # XX
+                XX = lil_matrix((4 * ni, len(periods) * nk))
+                # XX'XX (weighted)
+                XXwXX = np.zeros((len(periods) * ts, len(periods) * ts))
                 if params['update_a_movers']:
-                    XwY = np.zeros(shape=len(periods) * ts)
+                    XXwY = np.zeros(shape=len(periods) * ts)
 
-                ## Compute X terms ##
-                # X =
+                ## Compute XX terms ##
+                # XX =
                 # +---------+---------+---------------+--------------+---------------+----------+
                 # | A['12'] | A['43'] |    A['2ma']   |   A['3ma']   |    A['2mb']   | A['3mb'] |
                 # +=========+=========+===============+==============+===============+==========+
@@ -2252,110 +2255,135 @@ class DynamicBLMModel:
                 # +---------+---------+---------------+--------------+---------------+----------+
 
                 # Y1 = A['12'] + R12 * (Y2 - A['2ma'])
-                X[0 * ni: 1 * ni, 0 * nk: 1 * nk] = GG1
-                X[0 * ni: 1 * ni, 2 * nk: 3 * nk] = - (R12 * GG1)
+                XX[0 * ni: 1 * ni, 0 * nk: 1 * nk] = GG1
+                XX[0 * ni: 1 * ni, 2 * nk: 3 * nk] = - (R12 * GG1)
                 # Y2 = A['2ma'] + A['2mb']
-                X[1 * ni: 2 * ni, 2 * nk: 3 * nk] = GG1
+                XX[1 * ni: 2 * ni, 2 * nk: 3 * nk] = GG1
                 if endogeneity:
-                    X[1 * ni: 2 * ni, 4 * nk: 5 * nk] = GG2
+                    XX[1 * ni: 2 * ni, 4 * nk: 5 * nk] = GG2
                 # Y3 = A['3ma'] + A['3mb'] + R32m * (Y2 - A['2ma'] - A['2mb'])
-                X[2 * ni: 3 * ni, 2 * nk: 3 * nk] = -(R32m * GG1)
-                X[2 * ni: 3 * ni, 3 * nk: 4 * nk] = GG2
+                XX[2 * ni: 3 * ni, 2 * nk: 3 * nk] = -(R32m * GG1)
+                XX[2 * ni: 3 * ni, 3 * nk: 4 * nk] = GG2
                 if endogeneity:
-                    X[2 * ni: 3 * ni, 4 * nk: 5 * nk] = -(R32m * GG2)
+                    XX[2 * ni: 3 * ni, 4 * nk: 5 * nk] = -(R32m * GG2)
                 if state_dependence:
-                    X[2 * ni: 3 * ni, (4 + endogeneity) * nk: (5 + endogeneity) * nk] = GG1
+                    XX[2 * ni: 3 * ni, (4 + endogeneity) * nk: (5 + endogeneity) * nk] = GG1
                 # Y4 = A['43'] + R43 * (Y3 - A['3ma'])
-                X[3 * ni: 4 * ni, 1 * nk: 2 * nk] = GG2
-                X[3 * ni: 4 * ni, 3 * nk: 4 * nk] = -(R43 * GG2)
-                X = X.tocsc()
-                # Re-order X to period-nl-nk (this is so constraints are the same order as static BLM)
-                X_np_group = np.tile(np.repeat(np.arange(len(periods)), nk), nl)
-                X_nl_group = np.repeat(np.arange(nl), nk * len(periods))
-                X_nk_group = np.tile(np.arange(nk), nl * len(periods))
-                X_order = (X_nk_group + nk * X_nl_group + (nl * nk) * X_np_group).argsort()
-                del X_np_group, X_nl_group, X_nk_group
+                XX[3 * ni: 4 * ni, 1 * nk: 2 * nk] = GG2
+                XX[3 * ni: 4 * ni, 3 * nk: 4 * nk] = -(R43 * GG2)
+                XX = XX.tocsc()
+                # Re-order XX to period-nl-nk for A (this is so constraints are the same order as static BLM)
+                XX_np_group = np.tile(np.repeat(np.arange(len(periods)), nk), nl)
+                XX_nl_group = np.repeat(np.arange(nl), nk * len(periods))
+                XX_nk_group = np.tile(np.arange(nk), nl * len(periods))
+                XX_order = (XX_nk_group + nk * XX_nl_group + (nl * nk) * XX_np_group).argsort()
+                del XX_np_group, XX_nl_group, XX_nk_group
+                if params['update_s_movers']:
+                    # Re-order XX to period-nl-nk for S (this is so constraints are the same order as static BLM)
+                    XS_np_group = np.tile(np.repeat(np.arange(len(periods_var)), nk), nl)
+                    XS_nl_group = np.repeat(np.arange(nl), nk * len(periods_var))
+                    XS_nk_group = np.tile(np.arange(nk), nl * len(periods_var))
+                    XS_order = (XS_nk_group + nk * XS_nl_group + (nl * nk) * XS_np_group).argsort()
+                    del XS_np_group, XS_nl_group, XS_nk_group
 
                 ### Categorical ###
                 if len(cat_cols) > 0:
                     ts_cat = {col: nl * col_dict['n'] for col, col_dict in cat_dict.items()}
-                    # X_cat
-                    X_cat = {col: lil_matrix((4 * ni, len(periods) * cat_dict[col]['n'])) for col in cat_cols}
-                    # X_cat'X_cat (weighted)
-                    XwX_cat = {col: np.zeros((len(periods) * col_ts, len(periods) * col_ts)) for col, col_ts in ts_cat.items()}
+                    # XX_cat
+                    XX_cat = {col: lil_matrix((4 * ni, len(periods) * cat_dict[col]['n'])) for col in cat_cols}
+                    # XX_cat'XX_cat (weighted)
+                    XXwXX_cat = {col: np.zeros((len(periods) * col_ts, len(periods) * col_ts)) for col, col_ts in ts_cat.items()}
                     # Re-order X to period-nl-n_col (this is so constraints are the same order as static BLM)
-                    X_cat_order = {}
+                    XX_cat_order = {}
+                    if params['update_s_movers']:
+                        XS_cat_order = {}
                     if params['update_a_movers']:
-                        XwY_cat = {col: np.zeros(shape=len(periods) * col_ts) for col, col_ts in ts_cat.items()}
+                        XXwY_cat = {col: np.zeros(shape=len(periods) * col_ts) for col, col_ts in ts_cat.items()}
 
                     for col in cat_cols:
-                        ## Compute X_cat terms ##
+                        ## Compute XX_cat terms ##
                         col_n = cat_dict[col]['n']
                         # Y1 = A['12'] + R12 * (Y2 - A['2ma'])
-                        X_cat[col][0 * ni: 1 * ni, 0 * col_n: 1 * col_n] = CC1[col]
-                        X_cat[col][0 * ni: 1 * ni, 2 * col_n: 3 * col_n] = - (R12 * CC1[col])
+                        XX_cat[col][0 * ni: 1 * ni, 0 * col_n: 1 * col_n] = CC1[col]
+                        XX_cat[col][0 * ni: 1 * ni, 2 * col_n: 3 * col_n] = - (R12 * CC1[col])
                         # Y2 = A['2ma'] + A['2mb']
-                        X_cat[col][1 * ni: 2 * ni, 2 * col_n: 3 * col_n] = CC1[col]
+                        XX_cat[col][1 * ni: 2 * ni, 2 * col_n: 3 * col_n] = CC1[col]
                         if endogeneity:
-                            X_cat[col][1 * ni: 2 * ni, 4 * col_n: 5 * col_n] = CC2[col]
+                            XX_cat[col][1 * ni: 2 * ni, 4 * col_n: 5 * col_n] = CC2[col]
                         # Y3 = A['3ma'] + A['3mb'] + R32m * (Y2 - A['2ma'] - A['2mb'])
-                        X_cat[col][2 * ni: 3 * ni, 2 * col_n: 3 * col_n] = -(R32m * CC1[col])
-                        X_cat[col][2 * ni: 3 * ni, 3 * col_n: 4 * col_n] = CC2[col]
+                        XX_cat[col][2 * ni: 3 * ni, 2 * col_n: 3 * col_n] = -(R32m * CC1[col])
+                        XX_cat[col][2 * ni: 3 * ni, 3 * col_n: 4 * col_n] = CC2[col]
                         if endogeneity:
-                            X_cat[col][2 * ni: 3 * ni, 4 * col_n: 5 * col_n] = -(R32m * CC2[col])
+                            XX_cat[col][2 * ni: 3 * ni, 4 * col_n: 5 * col_n] = -(R32m * CC2[col])
                         if state_dependence:
-                            X_cat[col][2 * ni: 3 * ni, (4 + endogeneity) * col_n: (5 + endogeneity) * col_n] = CC1[col]
+                            XX_cat[col][2 * ni: 3 * ni, (4 + endogeneity) * col_n: (5 + endogeneity) * col_n] = CC1[col]
                         # Y4 = A['43'] + R43 * (Y3 - A['3ma'])
-                        X_cat[col][3 * ni: 4 * ni, 1 * col_n: 2 * col_n] = CC2[col]
-                        X_cat[col][3 * ni: 4 * ni, 3 * col_n: 4 * col_n] = -(R43 * CC2[col])
-                        X_cat[col] = X_cat[col].tocsc()
-                        # Re-order X to period-nl-n_col (this is so constraints are the same order as static BLM)
-                        X_np_group = np.tile(np.repeat(np.arange(len(periods)), col_n), nl)
-                        X_nl_group = np.repeat(np.arange(nl), col_n * len(periods))
-                        X_col_n_group = np.tile(np.arange(col_n), nl * len(periods))
-                        X_cat_order[col] = (X_col_n_group + col_n * X_nl_group + (nl * col_n) * X_np_group).argsort()
-                        del X_np_group, X_nl_group, X_col_n_group
+                        XX_cat[col][3 * ni: 4 * ni, 1 * col_n: 2 * col_n] = CC2[col]
+                        XX_cat[col][3 * ni: 4 * ni, 3 * col_n: 4 * col_n] = -(R43 * CC2[col])
+                        XX_cat[col] = XX_cat[col].tocsc()
+                        # Re-order X to period-nl-n_col for A (this is so constraints are the same order as static BLM)
+                        XX_np_group = np.tile(np.repeat(np.arange(len(periods)), col_n), nl)
+                        XX_nl_group = np.repeat(np.arange(nl), col_n * len(periods))
+                        XX_col_n_group = np.tile(np.arange(col_n), nl * len(periods))
+                        XX_cat_order[col] = (XX_col_n_group + col_n * XX_nl_group + (nl * col_n) * XX_np_group).argsort()
+                        del XX_np_group, XX_nl_group, XX_col_n_group
+                        if params['update_s_movers']:
+                            # Re-order X to period-nl-n_col for S (this is so constraints are the same order as static BLM)
+                            XS_np_group = np.tile(np.repeat(np.arange(len(periods_var)), col_n), nl)
+                            XS_nl_group = np.repeat(np.arange(nl), col_n * len(periods_var))
+                            XS_col_n_group = np.tile(np.arange(col_n), nl * len(periods_var))
+                            XS_cat_order[col] = (XS_col_n_group + col_n * XS_nl_group + (nl * col_n) * XS_np_group).argsort()
+                            del XS_np_group, XS_nl_group, XS_col_n_group
 
                 ### Continuous ###
                 if len(cts_cols) > 0:
-                    # X_cts
-                    X_cts = {col: lil_matrix((4 * ni, len(periods))) for col in cts_cols}
-                    # X_cts'X_cts (weighted)
-                    XwX_cts = {col: np.zeros((len(periods) * nl, len(periods) * nl)) for col in cts_cols}
+                    # XX_cts
+                    XX_cts = {col: lil_matrix((4 * ni, len(periods))) for col in cts_cols}
+                    # XX_cts'XX_cts (weighted)
+                    XXwXX_cts = {col: np.zeros((len(periods) * nl, len(periods) * nl)) for col in cts_cols}
                     # Re-order X to period-nl
-                    X_cts_order = {}
+                    XX_cts_order = {}
+                    if params['update_s_movers']:
+                        XS_cts_order = {}
                     if params['update_a_movers']:
-                        XwY_cts = {col: np.zeros(shape=len(periods) * nl) for col in cts_cols}
+                        XXwY_cts = {col: np.zeros(shape=len(periods) * nl) for col in cts_cols}
 
                     for col in cts_cols:
-                        ## Compute X_cts terms ##
+                        ## Compute XX_cts terms ##
                         # Y1 = A['12'] + R12 * (Y2 - A['2ma'])
-                        X_cts[col][0 * ni: 1 * ni, 0] = C1[col]
-                        X_cts[col][0 * ni: 1 * ni, 2] = - (R12 * C1[col])
+                        XX_cts[col][0 * ni: 1 * ni, 0] = C1[col]
+                        XX_cts[col][0 * ni: 1 * ni, 2] = - (R12 * C1[col])
                         # Y2 = A['2ma'] + A['2mb']
-                        X_cts[col][1 * ni: 2 * ni, 2] = C1[col]
+                        XX_cts[col][1 * ni: 2 * ni, 2] = C1[col]
                         if endogeneity:
-                            X_cts[col][1 * ni: 2 * ni, 4] = C2[col]
+                            XX_cts[col][1 * ni: 2 * ni, 4] = C2[col]
                         # Y3 = A['3ma'] + A['3mb'] + R32m * (Y2 - A['2ma'] - A['2mb'])
-                        X_cts[col][2 * ni: 3 * ni, 2] = -(R32m * C1[col])
-                        X_cts[col][2 * ni: 3 * ni, 3] = C2[col]
+                        XX_cts[col][2 * ni: 3 * ni, 2] = -(R32m * C1[col])
+                        XX_cts[col][2 * ni: 3 * ni, 3] = C2[col]
                         if endogeneity:
-                            X_cts[col][2 * ni: 3 * ni, 4] = -(R32m * C2[col])
+                            XX_cts[col][2 * ni: 3 * ni, 4] = -(R32m * C2[col])
                         if state_dependence:
-                            X_cts[col][2 * ni: 3 * ni, 4 + endogeneity] = C1[col]
+                            XX_cts[col][2 * ni: 3 * ni, 4 + endogeneity] = C1[col]
                         # Y4 = A['43'] + R43 * (Y3 - A['3ma'])
-                        X_cts[col][3 * ni: 4 * ni, 1] = C2[col]
-                        X_cts[col][3 * ni: 4 * ni, 3] = -(R43 * C2[col])
-                        X_cts[col] = X_cts[col].tocsc()
-                        # Re-order X to period-nl-n_col
-                        X_np_group = np.tile(np.repeat(np.arange(len(periods)), 1), nl)
-                        X_nl_group = np.repeat(np.arange(nl), 1 * len(periods))
-                        X_cts_order[col] = (X_nl_group + nl * X_np_group).argsort()
-                        del X_np_group, X_nl_group
+                        XX_cts[col][3 * ni: 4 * ni, 1] = C2[col]
+                        XX_cts[col][3 * ni: 4 * ni, 3] = -(R43 * C2[col])
+                        XX_cts[col] = XX_cts[col].tocsc()
+                        # Re-order X to period-nl-n_col for A
+                        XX_np_group = np.tile(np.repeat(np.arange(len(periods)), 1), nl)
+                        XX_nl_group = np.repeat(np.arange(nl), 1 * len(periods))
+                        XX_cts_order[col] = (XX_nl_group + nl * XX_np_group).argsort()
+                        del XX_np_group, XX_nl_group
+                        if params['update_s_movers']:
+                            # Re-order X to period-nl-n_col for S
+                            XS_np_group = np.tile(np.repeat(np.arange(len(periods_var)), 1), nl)
+                            XS_nl_group = np.repeat(np.arange(nl), 1 * len(periods_var))
+                            XS_cts_order[col] = (XS_nl_group + nl * XS_np_group).argsort()
+                            del XS_np_group, XS_nl_group
 
                 ## Update A ##
                 if params['update_s_movers']:
-                    Xw = []
+                    # Store weights computed for A for use when computing S
+                    weights = []
                 for l in range(nl):
                     l_index, r_index = l * nk * len(periods), (l + 1) * nk * len(periods)
 
@@ -2370,15 +2398,15 @@ class DynamicBLMModel:
                     )
                     weights_l = np.tile(qi[:, l], 4) / np.sqrt(var_l)
                     del var_l
-
-                    ## Compute Xw_l ##
-                    Xw_l = DxSP(weights_l, X).T
                     if params['update_s_movers']:
-                        Xw.append(Xw_l)
+                        weights.append(weights_l)
+
+                    ## Compute XXw_l ##
+                    XXw_l = DxSP(weights_l, XX).T
                     del weights_l
 
                     ## Compute XwX_l ##
-                    XwX[l_index: r_index, l_index: r_index] = (Xw_l @ X).todense()
+                    XXwXX[l_index: r_index, l_index: r_index] = (XXw_l @ XX).todense()
 
                     if params['update_a_movers']:
                         Y_l = np.zeros(4 * ni)
@@ -2410,13 +2438,13 @@ class DynamicBLMModel:
                                 - (A_sum['43'] + A_sum_l['43']) \
                                 - R43 * (Y3 - (A_sum['3ma'] + A_sum_l['3ma']))
 
-                        ## Compute XwY_l ##
-                        XwY[l_index: r_index] = Xw_l @ Y_l
+                        ## Compute XXwY_l ##
+                        XXwY[l_index: r_index] = XXw_l @ Y_l
                         del Y_l, A_sum_l
-                    del Xw_l
+                    del XXw_l
 
                 if params['d_X_diag_movers'] > 1:
-                    XwX += (params['d_X_diag_movers'] - 1) * np.eye(XwX.shape[0])
+                    XXwXX += (params['d_X_diag_movers'] - 1) * np.eye(XXwXX.shape[0])
 
                 # print('A before:')
                 # print(A)
@@ -2437,8 +2465,7 @@ class DynamicBLMModel:
                         ## Constraints ##
                         cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type=min_firm_type, for_movers=True)
                     try:
-                        cons_a.solve(XwX[X_order, :][:, X_order], -XwY[X_order], solver='quadprog')
-                        del XwY
+                        cons_a.solve(XXwXX[XX_order, :][:, XX_order], -XXwY[XX_order], solver='quadprog')
                         if cons_a.res is None:
                             # If estimation fails, keep A the same
                             if params['verbose'] in [2, 3]:
@@ -2455,10 +2482,12 @@ class DynamicBLMModel:
                         # If constraints inconsistent, keep A the same
                         if params['verbose'] in [2, 3]:
                             print(f'Passing A: {e}')
+                    del XXwXX, XXwY
 
                 ## Categorical ##
                 if params['update_s_movers']:
-                    Xw_cat = {col: [] for col in cat_cols}
+                    # Store weights computed for A_cat for use when computing S_cat
+                    weights_cat = {col: [] for col in cat_cols}
                 for col in cat_cols:
                     col_n = cat_dict[col]['n']
 
@@ -2487,15 +2516,15 @@ class DynamicBLMModel:
                         del S_l_dict
                         weights_l = np.tile(qi[:, l], 4) / np.sqrt(var_l)
                         del var_l
-
-                        ## Compute Xw_cat_l ##
-                        Xw_cat_l = DxSP(weights_l, X_cat[col]).T
                         if params['update_s_movers']:
-                            Xw_cat[col].append(Xw_cat_l)
+                            weights_cat[col].append(weights_l)
+
+                        ## Compute XXw_cat_l ##
+                        XXw_cat_l = DxSP(weights_l, XX_cat[col]).T
                         del weights_l
 
-                        ## Compute XwX_cat_l ##
-                        XwX_cat[col][l_index: r_index, l_index: r_index] = (Xw_cat_l @ X_cat[col]).todense()
+                        ## Compute XXwXX_cat_l ##
+                        XXwXX_cat[col][l_index: r_index, l_index: r_index] = (XXw_cat_l @ XX_cat[col]).todense()
 
                         if params['update_a_movers']:
                             Y_cat_l = np.zeros(4 * ni)
@@ -2532,19 +2561,18 @@ class DynamicBLMModel:
                                     - R43 * (Y3 - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma']))
 
                             ## Compute XwY_cat_l ##
-                            XwY_cat[col][l_index: r_index] = Xw_cat_l @ Y_cat_l
+                            XXwY_cat[col][l_index: r_index] = XXw_cat_l @ Y_cat_l
                             del Y_cat_l, A_sum_l
-                        del Xw_cat_l
+                        del XXw_cat_l
 
                     if params['d_X_diag_movers'] > 1:
-                        XwX_cat[col] += (params['d_X_diag_movers'] - 1) * np.eye(XwX_cat[col].shape[0])
+                        XXwXX_cat[col] += (params['d_X_diag_movers'] - 1) * np.eye(XXwXX_cat[col].shape[0])
 
                     # We solve the system to get all the parameters (use dense solver)
                     if params['update_a_movers']:
                         try:
                             a_solver = cons_a_dict[col]
-                            a_solver.solve(XwX_cat[col][X_cat_order[col], :][:, X_cat_order[col]], -XwY_cat[col][X_cat_order[col]], solver='quadprog')
-                            del XwY_cat[col]
+                            a_solver.solve(XXwXX_cat[col][XX_cat_order[col], :][:, XX_cat_order[col]], -XXwY_cat[col][XX_cat_order[col]], solver='quadprog')
                             if a_solver.res is None:
                                 # If estimation fails, keep A_cat the same
                                 if params['verbose'] in [2, 3]:
@@ -2561,6 +2589,7 @@ class DynamicBLMModel:
                             # If constraints inconsistent, keep A_cat the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing A_cat for column {col!r}: {e}')
+                        del XXwXX_cat[col], XXwY_cat[col]
 
                     if not cat_dict[col]['worker_type_interaction']:
                         # Restore A_sum with updated values
@@ -2569,7 +2598,8 @@ class DynamicBLMModel:
 
                 ## Continuous ##
                 if params['update_s_movers']:
-                    Xw_cts = {col: [] for col in cts_cols}
+                    # Store weights computed for A_cts for use when computing S_cts
+                    weights_cts = {col: [] for col in cts_cols}
                 for col in cts_cols:
                     if not cts_dict[col]['worker_type_interaction']:
                         # Adjust A_sum
@@ -2596,15 +2626,15 @@ class DynamicBLMModel:
                         del S_l_dict
                         weights_l = np.tile(qi[:, l], 4) / np.repeat(np.sqrt(var_l), ni)
                         del var_l
-
-                        ## Compute Xw_cts_l ##
-                        Xw_cts_l = DxSP(weights_l, X_cts[col]).T
                         if params['update_s_movers']:
-                            Xw_cts[col].append(Xw_cts_l)
+                            weights_cts[col].append(weights_l)
+
+                        ## Compute XXw_cts_l ##
+                        XXw_cts_l = DxSP(weights_l, XX_cts[col]).T
                         del weights_l
 
-                        ## Compute XwX_cts_l ##
-                        XwX_cts[col][l_index: r_index, l_index: r_index] = (Xw_cts_l @ X_cts[col]).todense()
+                        ## Compute XXwXX_cts_l ##
+                        XXwXX_cts[col][l_index: r_index, l_index: r_index] = (XXw_cts_l @ XX_cts[col]).todense()
 
                         if params['update_a_movers']:
                             Y_cts_l = np.zeros(4 * ni)
@@ -2641,19 +2671,18 @@ class DynamicBLMModel:
                                     - R43 * (Y3 - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma']))
 
                             ## Compute XwY_cts_l ##
-                            XwY_cts[col][l_index: r_index] = Xw_cts_l @ Y_cts_l
+                            XXwY_cts[col][l_index: r_index] = XXw_cts_l @ Y_cts_l
                             del Y_cts_l, A_sum_l
-                        del Xw_cts_l
+                        del XXw_cts_l
 
                     if params['d_X_diag_movers'] > 1:
-                        XwX_cts[col] += (params['d_X_diag_movers'] - 1) * np.eye(XwX_cts[col].shape[0])
+                        XXwXX_cts[col] += (params['d_X_diag_movers'] - 1) * np.eye(XXwXX_cts[col].shape[0])
 
                     # We solve the system to get all the parameters (use dense solver)
                     if params['update_a_movers']:
                         try:
                             a_solver = cons_a_dict[col]
-                            a_solver.solve(XwX_cts[col][X_cts_order[col], :][:, X_cts_order[col]], -XwY_cts[col][X_cts_order[col]], solver='quadprog')
-                            del XwY_cts[col]
+                            a_solver.solve(XXwXX_cts[col][XX_cts_order[col], :][:, XX_cts_order[col]], -XXwY_cts[col][XX_cts_order[col]], solver='quadprog')
                             if a_solver.res is None:
                                 # If estimation fails, keep A_cts the same
                                 if params['verbose'] in [2, 3]:
@@ -2670,6 +2699,7 @@ class DynamicBLMModel:
                             # If constraints inconsistent, keep A_cts the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing A_cts for column {col!r}: {e}')
+                        del XXwXX_cts[col], XXwY_cts[col]
 
                     if not cts_dict[col]['worker_type_interaction']:
                         # Restore A_sum with updated values
@@ -2678,15 +2708,18 @@ class DynamicBLMModel:
 
                 if params['update_s_movers']:
                     ## Update the variances ##
-                    XwS = np.zeros(shape=len(periods) * ts)
+                    XSwXS = np.zeros(len(periods_var) * ts)
+                    XSwE = np.zeros(shape=len(periods_var) * ts)
 
                     ## Categorical ##
                     if len(cat_cols) > 0:
-                        XwS_cat = {col: np.zeros(shape=len(periods) * col_ts) for col, col_ts in ts_cat.items()}
+                        XSwXS_cat = {col: np.zeros(shape=len(periods_var) * col_ts) for col, col_ts in ts_cat.items()}
+                        XSwE_cat = {col: np.zeros(shape=len(periods_var) * col_ts) for col, col_ts in ts_cat.items()}
 
                     ## Continuous ##
                     if len(cts_cols) > 0:
-                        XwS_cts = {col: np.zeros(shape=len(periods) * nl) for col in cts_cols}
+                        XSwXS_cts = {col: np.zeros(shape=len(periods_var) * nl) for col in cts_cols}
+                        XSwE_cts = {col: np.zeros(shape=len(periods_var) * nl) for col in cts_cols}
 
                     ## Residuals ##
                     eps_sq = []
@@ -2734,8 +2767,22 @@ class DynamicBLMModel:
                         eps_sq.append(eps_l_sq)
                         del A_sum_l, eps_l_sq
 
-                        ## XwS terms ##
-                        l_index, r_index = l * nk * len(periods), (l + 1) * nk * len(periods)
+                        ## XSwXS and XSwE terms ##
+                        l_index, r_index = l * nk * len(periods_var), (l + 1) * nk * len(periods_var)
+
+                        ## First, XSwXS ##
+                        XSwXS[l_index + 0 * nk: l_index + 1 * nk] = \
+                            np.bincount(G1, weights=weights[l][0 * ni: 1 * ni])
+                        XSwXS[l_index + 1 * nk: l_index + 2 * nk] = \
+                            np.bincount(G2, weights=weights[l][3 * ni: 4 * ni])
+                        XSwXS[l_index + 2 * nk: l_index + 3 * nk] = \
+                            np.bincount(G1, weights=weights[l][1 * ni: 2 * ni])
+                        XSwXS[l_index + 3 * nk: l_index + 4 * nk] = \
+                            np.bincount(G2, weights=weights[l][2 * ni: 3 * ni])
+
+                        ## Second, XSwE ##
+                        weights[l] *= eps_sq[l]
+
                         if any_controls:
                             ## Account for other variables' contribution to variance ##
                             var_l_numerator = np.concatenate(
@@ -2773,30 +2820,39 @@ class DynamicBLMModel:
                                 ]
                             )
                             del S_sum_sq_l
-                            XwS[l_index: r_index] = Xw[l] @ ((var_l_numerator / var_l_denominator) * eps_sq[l])
-                        else:
-                            XwS[l_index: r_index] = Xw[l] @ eps_sq[l]
-                        Xw[l] = 0
+                            weights[l] *= (var_l_numerator / var_l_denominator)
+
+                        XSwE[l_index + 0 * nk: l_index + 1 * nk] = \
+                            np.bincount(G1, weights=weights[l][0 * ni: 1 * ni])
+                        XSwE[l_index + 1 * nk: l_index + 2 * nk] = \
+                            np.bincount(G2, weights=weights[l][3 * ni: 4 * ni])
+                        XSwE[l_index + 2 * nk: l_index + 3 * nk] = \
+                            np.bincount(G1, weights=weights[l][1 * ni: 2 * ni])
+                        XSwE[l_index + 3 * nk: l_index + 4 * nk] = \
+                            np.bincount(G2, weights=weights[l][2 * ni: 3 * ni])
+
+                        weights[l] = 0
+                    del weights
 
                     try:
-                        cons_s.solve(XwX[X_order, :][:, X_order], -XwS[X_order], solver='quadprog')
-                        del XwS
+                        cons_s.solve(np.diag(XSwXS[XS_order]), -XSwE[XS_order], solver='quadprog')
                         if cons_s.res is None:
                             # If estimation fails, keep S the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S: estimates are None')
                         else:
-                            split_res = np.split(cons_s.res, len(periods))
-                            for i, period in enumerate(periods):
-                                if period[-1] != 'b':
-                                    S[period] = np.sqrt(np.reshape(split_res[i], self.dims))
-                                else:
-                                    S[period] = np.sqrt(split_res[i][: nk])
+                            split_res = np.split(cons_s.res, len(periods_var))
+                            for i, period in enumerate(periods_var):
+                                # if period[-1] != 'b':
+                                S[period] = np.sqrt(np.reshape(split_res[i], self.dims))
+                                # else:
+                                #     S[period] = np.sqrt(split_res[i][: nk])
 
                     except ValueError as e:
                         # If constraints inconsistent, keep S the same
                         if params['verbose'] in [2, 3]:
                             print(f'Passing S: {e}')
+                    del XSwXS, XSwE
 
                     ## Categorical ##
                     for col in cat_cols:
@@ -2806,8 +2862,20 @@ class DynamicBLMModel:
                             # Update S_sum_sq to account for worker-interaction terms
                             S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_A=False, compute_S=True, periods=periods)
 
-                            l_index, r_index = l * col_n * len(periods), (l + 1) * col_n * len(periods)
+                            ### XSwXS_cat and XSwE_cat terms ###
+                            l_index, r_index = l * col_n * len(periods_var), (l + 1) * col_n * len(periods_var)
 
+                            ### First, XSwXS_cat ###
+                            XSwXS_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
+                                np.bincount(CC1[col], weights=weights_cat[col][l][0 * ni: 1 * ni])
+                            XSwXS_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
+                                np.bincount(CC2[col], weights=weights_cat[col][l][3 * ni: 4 * ni])
+                            XSwXS_cat[l_index + 2 * col_n: l_index + 3 * col_n] = \
+                                np.bincount(CC1[col], weights=weights_cat[col][l][1 * ni: 2 * ni])
+                            XSwXS_cat[l_index + 3 * col_n: l_index + 4 * col_n] = \
+                                np.bincount(CC2[col], weights=weights_cat[col][l][2 * ni: 3 * ni])
+
+                            ### Second, XSwE_cat ###
                             ## Compute var_l_cat ##
                             if cat_dict[col]['worker_type_interaction']:
                                 S_l_dict = {period: (S_cat[col][period][l, :] ** 2)[C_dict[period][col]] for period in periods}
@@ -2850,40 +2918,49 @@ class DynamicBLMModel:
                                 ]
                             )
                             del S_sum_sq_l
-                            
-                            ## XwS_cat terms ##
-                            XwS_cat[col][l_index: r_index] = Xw_cat[col][l] @ ((var_l_numerator / var_l_denominator) * eps_sq[l])
-                            Xw_cat[col][l] = 0
+                            weights_cat[col][l] *= ((var_l_numerator / var_l_denominator) * eps_sq[l])
+
+                            XSwE_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
+                                np.bincount(CC1[col], weights=weights_cat[col][l][0 * ni: 1 * ni])
+                            XSwE_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
+                                np.bincount(CC2[col], weights=weights_cat[col][l][3 * ni: 4 * ni])
+                            XSwE_cat[l_index + 2 * col_n: l_index + 3 * col_n] = \
+                                np.bincount(CC1[col], weights=weights_cat[col][l][1 * ni: 2 * ni])
+                            XSwE_cat[l_index + 3 * col_n: l_index + 4 * col_n] = \
+                                np.bincount(CC2[col], weights=weights_cat[col][l][2 * ni: 3 * ni])
+
+                            weights_cat[col][l] = 0
+                        del weights_cat[col]
 
                         try:
                             s_solver = cons_s_dict[col]
-                            s_solver.solve(XwX_cat[col][X_cat_order[col], :][:, X_cat_order[col]], -XwS_cat[col][X_cat_order[col]], solver='quadprog')
-                            del XwS_cat[col]
+                            s_solver.solve(np.diag(XSwXS_cat[col][XS_cat_order[col]]), -XSwE_cat[col][XS_cat_order[col]], solver='quadprog')
                             if s_solver.res is None:
                                 # If estimation fails, keep S_cat the same
                                 if params['verbose'] in [2, 3]:
                                     print(f'Passing S_cat for column {col!r}: estimates are None')
                             else:
-                                split_res = np.split(s_solver.res, len(periods))
+                                split_res = np.split(s_solver.res, len(periods_var))
 
                                 if not cat_dict[col]['worker_type_interaction']:
-                                    for period in periods:
+                                    for period in periods_var:
                                         S_sum_sq[period] -= (S_cat[col][period] ** 2)[C_dict[period][col]]
 
-                                for i, period in enumerate(periods):
-                                    if cat_dict[col]['worker_type_interaction'] and (period[-1] != 'b'):
+                                for i, period in enumerate(periods_var):
+                                    if cat_dict[col]['worker_type_interaction']: # and (period[-1] != 'b'):
                                         S_cat[col][period] = np.sqrt(np.reshape(split_res[i], (nl, col_n)))
                                     else:
                                         S_cat[col][period] = np.sqrt(split_res[i][: col_n])
 
                                 if not cat_dict[col]['worker_type_interaction']:
-                                    for period in periods:
+                                    for period in periods_var:
                                         S_sum_sq[period] += (S_cat[col][period] ** 2)[C_dict[period][col]]
 
                         except ValueError as e:
                             # If constraints inconsistent, keep S_cat the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S_cat for column {col!r}: {e}')
+                        del XSwXS_cat[col], XSwE_cat[col]
 
                     ## Continuous ##
                     for col in cts_cols:
@@ -2891,8 +2968,20 @@ class DynamicBLMModel:
                             # Update S_sum_sq to account for worker-interaction terms
                             S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_A=False, compute_S=True, periods=periods)
 
-                            l_index, r_index = l * len(periods), (l + 1) * len(periods)
+                            ### XSwXS_cts and XSwE_cts terms ###
+                            l_index, r_index = l * len(periods_var), (l + 1) * len(periods_var)
 
+                            ### First, XSwXS_cts ###
+                            XSwXS_cts[l_index + 0] = \
+                                np.sum(C1[col] * weights_cts[col][l][0 * ni: 1 * ni])
+                            XSwXS_cts[l_index + 1] = \
+                                np.sum(C2[col] * weights_cts[col][l][3 * ni: 4 * ni])
+                            XSwXS_cts[l_index + 2] = \
+                                np.sum(C1[col] * weights_cts[col][l][1 * ni: 2 * ni])
+                            XSwXS_cts[l_index + 3] = \
+                                np.sum(C2[col] * weights_cts[col][l][2 * ni: 3 * ni])
+
+                            ### Second, XSwE_cts ###
                             ## Compute var_l_cts ##
                             if cts_dict[col]['worker_type_interaction']:
                                 S_l_dict = {period: S_cts[col][period][l] ** 2 for period in periods}
@@ -2935,49 +3024,52 @@ class DynamicBLMModel:
                                 ]
                             )
                             del S_sum_sq_l
+                            weights_cts[col][l] *= ((var_l_numerator / var_l_denominator) * eps_sq[l])
 
-                            ## XwS_cts terms ##
                             # NOTE: take absolute value
-                            XwS_cts[col][l_index: r_index] = np.abs(Xw_cts[col][l] @ ((var_l_numerator / var_l_denominator) * eps_sq[l]))
-                            Xw_cts[col][l] = 0
+                            XSwE_cts[l_index + 0] = \
+                                np.abs(np.sum(C1[col] * weights_cts[col][l][0 * ni: 1 * ni]))
+                            XSwE_cts[l_index + 1] = \
+                                np.abs(np.sum(C2[col] * weights_cts[col][l][3 * ni: 4 * ni]))
+                            XSwE_cts[l_index + 2] = \
+                                np.abs(np.sum(C1[col] * weights_cts[col][l][1 * ni: 2 * ni]))
+                            XSwE_cts[l_index + 3] = \
+                                np.abs(np.sum(C2[col] * weights_cts[col][l][2 * ni: 3 * ni]))
+
+                            weights_cts[col][l] = 0
+                        del weights_cts[col]
 
                         try:
                             s_solver = cons_s_dict[col]
-                            s_solver.solve(XwX_cts[col][X_cts_order[col], :][:, X_cts_order[col]], -XwS_cts[col][X_cts_order[col]], solver='quadprog')
-                            del XwS_cts[col]
+                            s_solver.solve(np.diag(XSwXS_cts[col][XS_cts_order[col]]), -XSwE_cts[col][XS_cts_order[col]], solver='quadprog')
                             if s_solver.res is None:
                                 # If estimation fails, keep S_cts the same
                                 if params['verbose'] in [2, 3]:
                                     print(f'Passing S_cts for column {col!r}: estimates are None')
                             else:
-                                split_res = np.split(s_solver.res, len(periods))
+                                split_res = np.split(s_solver.res, len(periods_var))
 
                                 if not cts_dict[col]['worker_type_interaction']:
-                                    for period in periods:
+                                    for period in periods_var:
                                         S_sum_sq[period] -= S_cts[col][period] ** 2
 
-                                for i, period in enumerate(periods):
-                                    if cat_dict[col]['worker_type_interaction'] and (period[-1] != 'b'):
+                                for i, period in enumerate(periods_var):
+                                    if cat_dict[col]['worker_type_interaction']: # and (period[-1] != 'b'):
                                         S_cts[col][period] = np.sqrt(split_res[i])
                                     else:
                                         S_cts[col][period] = np.sqrt(split_res[i][0])
 
                                 if not cts_dict[col]['worker_type_interaction']:
-                                    for period in periods:
+                                    for period in periods_var:
                                         S_sum_sq[period] -= S_cts[col][period] ** 2
 
                         except ValueError as e:
                             # If constraints inconsistent, keep S_cts the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S_cts for column {col!r}: {e}')
+                        del XSwXS_cts[col], XSwE_cts[col]
 
                     del eps_sq
-
-                del XwX, Xw
-                if len(cat_cols) > 0:
-                    del XwX_cat, Xw_cat
-                if len(cts_cols) > 0:
-                    del XwX_cts, Xw_cts
 
                 # print('A after:')
                 # print(A)
@@ -3268,12 +3360,12 @@ class DynamicBLMModel:
                 ## General ##
                 # Shift between periods
                 ts = nl * nk
-                # X
-                X = lil_matrix((2 * ni, len(periods_update) * nk))
+                # XX
+                XX = lil_matrix((2 * ni, len(periods_update) * nk))
                 # X'X (weighted)
-                XwX = np.zeros((len(periods_update) * ts, len(periods_update) * ts))
+                XXwXX = np.zeros((len(periods_update) * ts, len(periods_update) * ts))
                 if params['update_a_stayers']:
-                    XwY = np.zeros(shape=len(periods_update) * ts)
+                    XXwY = np.zeros(shape=len(periods_update) * ts)
 
                 ## Compute X terms ##
                 # X =
@@ -3290,74 +3382,99 @@ class DynamicBLMModel:
                 # +---------+---------+---------------+---------+--------------+--------------+
 
                 # Y2 = A['2s']
-                X[0 * ni: 1 * ni, 0 * nk: 1 * nk] = GG1
+                XX[0 * ni: 1 * ni, 0 * nk: 1 * nk] = GG1
                 # Y3 = A['3s'] + R32s * (Y2 - A['2s'])
-                X[1 * ni: 2 * ni, 0 * nk: 1 * nk] = -(R32s * GG1)
-                X[1 * ni: 2 * ni, 1 * nk: 2 * nk] = GG1
-                X = X.tocsc()
-                # Re-order X to period-nl-nk (this is so constraints are the same order as static BLM)
-                X_np_group = np.tile(np.repeat(np.arange(len(periods_update)), nk), nl)
-                X_nl_group = np.repeat(np.arange(nl), nk * len(periods_update))
-                X_nk_group = np.tile(np.arange(nk), nl * len(periods_update))
-                X_order = (X_nk_group + nk * X_nl_group + (nl * nk) * X_np_group).argsort()
-                del X_np_group, X_nl_group, X_nk_group
+                XX[1 * ni: 2 * ni, 0 * nk: 1 * nk] = -(R32s * GG1)
+                XX[1 * ni: 2 * ni, 1 * nk: 2 * nk] = GG1
+                XX = XX.tocsc()
+                # Re-order XX to period-nl-nk for A (this is so constraints are the same order as static BLM)
+                XX_np_group = np.tile(np.repeat(np.arange(len(periods_update)), nk), nl)
+                XX_nl_group = np.repeat(np.arange(nl), nk * len(periods_update))
+                XX_nk_group = np.tile(np.arange(nk), nl * len(periods_update))
+                XX_order = (XX_nk_group + nk * XX_nl_group + (nl * nk) * XX_np_group).argsort()
+                del XX_np_group, XX_nl_group, XX_nk_group
+                if params['update_s_stayers']:
+                    # Re-order XX to period-nl-nk for S (this is so constraints are the same order as static BLM)
+                    XS_np_group = np.tile(np.repeat(np.arange(len(periods_update)), nk), nl)
+                    XS_nl_group = np.repeat(np.arange(nl), nk * len(periods_update))
+                    XS_nk_group = np.tile(np.arange(nk), nl * len(periods_update))
+                    XS_order = (XS_nk_group + nk * XS_nl_group + (nl * nk) * XS_np_group).argsort()
+                    del XS_np_group, XS_nl_group, XS_nk_group
 
                 ## Categorical ##
                 if len(cat_cols) > 0:
                     ts_cat = {col: nl * col_dict['n'] for col, col_dict in cat_dict.items()}
-                    # X_cat
-                    X_cat = {col: lil_matrix((2 * ni, len(periods_update) * cat_dict[col]['n'])) for col in cat_cols}
-                    # X_cat'X_cat (weighted)
-                    XwX_cat = {col: np.zeros((len(periods_update) * col_ts, len(periods_update) * col_ts)) for col, col_ts in ts_cat.items()}
+                    # XX_cat
+                    XX_cat = {col: lil_matrix((2 * ni, len(periods_update) * cat_dict[col]['n'])) for col in cat_cols}
+                    # XX_cat'XX_cat (weighted)
+                    XXwXX_cat = {col: np.zeros((len(periods_update) * col_ts, len(periods_update) * col_ts)) for col, col_ts in ts_cat.items()}
                     # Re-order X to period-nl-n_col (this is so constraints are the same order as static BLM)
-                    X_cat_order = {}
+                    XX_cat_order = {}
+                    if params['update_s_stayers']:
+                        XS_cat_order = {}
                     if params['update_a_stayers']:
-                        XwY_cat = {col: np.zeros(shape=len(periods_update) * col_ts) for col, col_ts in ts_cat.items()}
+                        XXwY_cat = {col: np.zeros(shape=len(periods_update) * col_ts) for col, col_ts in ts_cat.items()}
 
                     for col in cat_cols:
-                        ## Compute X_cat terms ##
+                        ## Compute XX_cat terms ##
                         col_n = cat_dict[col]['n']
                         # Y2 = A['2s']
-                        X_cat[col][0 * ni: 1 * ni, 0 * col_n: 1 * col_n] = CC1[col]
+                        XX_cat[col][0 * ni: 1 * ni, 0 * col_n: 1 * col_n] = CC1[col]
                         # Y3 = A['3s'] + R32s * (Y2 - A['2s'])
-                        X_cat[col][1 * ni: 2 * ni, 0 * col_n: 1 * col_n] = -(R32s * CC1[col])
-                        X_cat[col][1 * ni: 2 * ni, 1 * col_n: 2 * col_n] = CC1[col]
-                        X_cat[col] = X_cat[col].tocsc()
+                        XX_cat[col][1 * ni: 2 * ni, 0 * col_n: 1 * col_n] = -(R32s * CC1[col])
+                        XX_cat[col][1 * ni: 2 * ni, 1 * col_n: 2 * col_n] = CC1[col]
+                        XX_cat[col] = XX_cat[col].tocsc()
                         # Re-order X to period-nl-n_col (this is so constraints are the same order as static BLM)
-                        X_np_group = np.tile(np.repeat(np.arange(len(periods_update)), col_n), nl)
-                        X_nl_group = np.repeat(np.arange(nl), nk * len(periods_update))
-                        X_col_n_group = np.tile(np.arange(col_n), nl * len(periods_update))
-                        X_cat_order[col] = (X_col_n_group + col_n * X_nl_group + (nl * col_n) * X_np_group).argsort()
-                        del X_np_group, X_nl_group, X_col_n_group
+                        XX_np_group = np.tile(np.repeat(np.arange(len(periods_update)), col_n), nl)
+                        XX_nl_group = np.repeat(np.arange(nl), nk * len(periods_update))
+                        XX_col_n_group = np.tile(np.arange(col_n), nl * len(periods_update))
+                        XX_cat_order[col] = (XX_col_n_group + col_n * XX_nl_group + (nl * col_n) * XX_np_group).argsort()
+                        del XX_np_group, XX_nl_group, XX_col_n_group
+                        if params['update_s_stayers']:
+                            # Re-order X to period-nl-n_col for S (this is so constraints are the same order as static BLM)
+                            XS_np_group = np.tile(np.repeat(np.arange(len(periods_update)), col_n), nl)
+                            XS_nl_group = np.repeat(np.arange(nl), col_n * len(periods_update))
+                            XS_col_n_group = np.tile(np.arange(col_n), nl * len(periods_update))
+                            XS_cat_order[col] = (XS_col_n_group + col_n * XS_nl_group + (nl * col_n) * XS_np_group).argsort()
+                            del XS_np_group, XS_nl_group, XS_col_n_group
 
                 ### Continuous ###
                 if len(cts_cols) > 0:
-                    # X_cts
-                    X_cts = {col: lil_matrix((2 * ni, len(periods_update))) for col in cts_cols}
-                    # X_cts'X_cts (weighted)
-                    XwX_cts = {col: np.zeros((len(periods_update) * nl, len(periods_update) * nl)) for col in cts_cols}
+                    # XX_cts
+                    XX_cts = {col: lil_matrix((2 * ni, len(periods_update))) for col in cts_cols}
+                    # XX_cts'XX_cts (weighted)
+                    XXwXX_cts = {col: np.zeros((len(periods_update) * nl, len(periods_update) * nl)) for col in cts_cols}
                     # Re-order X to period-nl
-                    X_cts_order = {}
+                    XX_cts_order = {}
+                    if params['update_s_stayers']:
+                        XS_cts_order = {}
                     if params['update_a_stayers']:
-                        XwY_cts = {col: np.zeros(shape=len(periods_update) * nl) for col in cts_cols}
+                        XXwY_cts = {col: np.zeros(shape=len(periods_update) * nl) for col in cts_cols}
 
                     for col in cts_cols:
-                        ## Compute X_cts terms ##
+                        ## Compute XX_cts terms ##
                         # Y2 = A['2s']
-                        X_cts[col][0 * ni: 1 * ni, 0] = C1[col]
+                        XX_cts[col][0 * ni: 1 * ni, 0] = C1[col]
                         # Y3 = A['3s'] + R32s * (Y2 - A['2s'])
-                        X_cts[col][1 * ni: 2 * ni, 0] = -(R32s * C1[col])
-                        X_cts[col][1 * ni: 2 * ni, 1] = C1[col]
-                        X_cts[col] = X_cts[col].tocsc()
+                        XX_cts[col][1 * ni: 2 * ni, 0] = -(R32s * C1[col])
+                        XX_cts[col][1 * ni: 2 * ni, 1] = C1[col]
+                        XX_cts[col] = XX_cts[col].tocsc()
                         # Re-order X to period-nl-n_col
-                        X_np_group = np.tile(np.repeat(np.arange(len(periods_update)), col_n), nl)
-                        X_nl_group = np.repeat(np.arange(nl), nk * len(periods_update))
-                        X_cts_order[col] = (X_nl_group + nl * X_np_group).argsort()
-                        del X_np_group, X_nl_group
+                        XX_np_group = np.tile(np.repeat(np.arange(len(periods_update)), col_n), nl)
+                        XX_nl_group = np.repeat(np.arange(nl), nk * len(periods_update))
+                        XX_cts_order[col] = (XX_nl_group + nl * XX_np_group).argsort()
+                        del XX_np_group, XX_nl_group
+                        if params['update_s_stayers']:
+                            # Re-order X to period-nl-n_col for S
+                            XS_np_group = np.tile(np.repeat(np.arange(len(periods_update)), 1), nl)
+                            XS_nl_group = np.repeat(np.arange(nl), 1 * len(periods_update))
+                            XS_cts_order[col] = (XS_nl_group + nl * XS_np_group).argsort()
+                            del XS_np_group, XS_nl_group
 
                 ## Update A ##
                 if params['update_s_stayers']:
-                    Xw = []
+                    # Store weights computed for A for use when computing S
+                    weights = []
                 for l in range(nl):
                     l_index, r_index = l * nk * len(periods_update), (l + 1) * nk * len(periods_update)
 
@@ -3370,15 +3487,15 @@ class DynamicBLMModel:
                     )
                     weights_l = np.tile(qi[:, l], 2) / np.sqrt(var_l)
                     del var_l
-
-                    ## Compute Xw_l ##
-                    Xw_l = DxSP(weights_l, X).T
                     if params['update_s_stayers']:
-                        Xw.append(Xw_l)
+                        weights.append(weights_l)
+
+                    ## Compute XXw_l ##
+                    XXw_l = DxSP(weights_l, XX).T
                     del weights_l
 
                     ## Compute XwX_l ##
-                    XwX[l_index: r_index, l_index: r_index] = (Xw_l @ X).todense()
+                    XXwXX[l_index: r_index, l_index: r_index] = (XXw_l @ XX).todense()
 
                     if params['update_a_stayers']:
                         Y_l = np.zeros(2 * ni)
@@ -3396,13 +3513,13 @@ class DynamicBLMModel:
                                 - (A_sum['3s'] + A_sum_l['3s']) \
                                 - R32s * (Y2 - (A_sum['2s'] + A_sum_l['2s']))
 
-                        ## Compute XwY_l ##
-                        XwY[l_index: r_index] = Xw_l @ Y_l
+                        ## Compute XXwY_l ##
+                        XXwY[l_index: r_index] = XXw_l @ Y_l
                         del Y_l, A_sum_l
-                    del Xw_l
+                    del XXw_l
 
                 if params['d_X_diag_stayers'] > 1:
-                    XwX += (params['d_X_diag_stayers'] - 1) * np.eye(XwX.shape[0])
+                    XXwXX += (params['d_X_diag_stayers'] - 1) * np.eye(XXwXX.shape[0])
 
                 # print('A before:')
                 # print(A)
@@ -3423,7 +3540,7 @@ class DynamicBLMModel:
                         ## Constraints ##
                         cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type=min_firm_type, for_movers=False)
                     try:
-                        cons_a.solve(XwX[X_order, :][:, X_order], -XwY[X_order], solver='quadprog')
+                        cons_a.solve(XXwXX[XX_order, :][:, XX_order], -XXwY[XX_order], solver='quadprog')
                         if cons_a.res is None:
                             # If estimation fails, keep A the same
                             if params['verbose'] in [2, 3]:
@@ -3437,10 +3554,12 @@ class DynamicBLMModel:
                         # If constraints inconsistent, keep A the same
                         if params['verbose'] in [2, 3]:
                             print(f'Passing A: {e}')
+                    del XXwXX, XXwY
 
                 ## Categorical ##
                 if params['update_s_stayers']:
-                    Xw_cat = {col: [] for col in cat_cols}
+                    # Store weights computed for A_cat for use when computing S_cat
+                    weights_cat = {col: [] for col in cat_cols}
                 for col in cat_cols:
                     col_n = cat_dict[col]['n']
 
@@ -3467,15 +3586,15 @@ class DynamicBLMModel:
                         del S_l_dict
                         weights_l = np.tile(qi[:, l], 2) / np.sqrt(var_l)
                         del var_l
-
-                        ## Compute Xw_cat_l ##
-                        Xw_cat_l = DxSP(weights_l, X_cat[col]).T
                         if params['update_s_stayers']:
-                            Xw_cat[col].append(Xw_cat_l)
+                            weights_cat[col].append(weights_l)
+
+                        ## Compute XXw_cat_l ##
+                        XXw_cat_l = DxSP(weights_l, XX_cat[col]).T
                         del weights_l
 
-                        ## Compute XwX_cat_l ##
-                        XwX_cat[col][l_index: r_index, l_index: r_index] = (Xw_cat_l @ X_cat[col]).todense()
+                        ## Compute XXwXX_cat_l ##
+                        XXwXX_cat[col][l_index: r_index, l_index: r_index] = (XXw_cat_l @ XX_cat[col]).todense()
 
                         if params['update_a_stayers']:
                             Y_cat_l = np.zeros(2 * ni)
@@ -3498,18 +3617,18 @@ class DynamicBLMModel:
                                     - R32s * (Y2 - (A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s']))
 
                             ## Compute XwY_cat_l ##
-                            XwY_cat[col][l_index: r_index] = Xw_cat_l @ Y_cat_l
+                            XXwY_cat[col][l_index: r_index] = XXw_cat_l @ Y_cat_l
                             del Y_cat_l, A_sum_l
-                        del Xw_cat_l
+                        del XXw_cat_l
 
                     if params['d_X_diag_stayers'] > 1:
-                        XwX_cat[col] += (params['d_X_diag_stayers'] - 1) * np.eye(XwX_cat[col].shape[0])
+                        XXwXX_cat[col] += (params['d_X_diag_stayers'] - 1) * np.eye(XXwXX_cat[col].shape[0])
 
                     # We solve the system to get all the parameters (use dense solver)
                     if params['update_a_stayers']:
                         try:
                             a_solver = cons_a_dict[col]
-                            a_solver.solve(XwX_cat[col][X_cat_order[col], :][:, X_cat_order[col]], -XwY_cat[col][X_cat_order[col]], solver='quadprog')
+                            a_solver.solve(XXwXX_cat[col][XX_cat_order[col], :][:, XX_cat_order[col]], -XXwY_cat[col][XX_cat_order[col]], solver='quadprog')
                             if a_solver.res is None:
                                 # If estimation fails, keep A_cat the same
                                 if params['verbose'] in [2, 3]:
@@ -3527,6 +3646,7 @@ class DynamicBLMModel:
                             # If constraints inconsistent, keep A_cat the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing A_cat for column {col!r}: {e}')
+                        del XXwXX_cat[col], XXwY_cat[col]
 
                     if not cat_dict[col]['worker_type_interaction']:
                         # Restore A_sum with updated values
@@ -3535,7 +3655,8 @@ class DynamicBLMModel:
 
                 ## Continuous ##
                 if params['update_s_stayers']:
-                    Xw_cts = {col: [] for col in cts_cols}
+                    # Store weights computed for A_cts for use when computing S_cts
+                    weights_cts = {col: [] for col in cts_cols}
                 for col in cts_cols:
                     if not cts_dict[col]['worker_type_interaction']:
                         # Adjust A_sum
@@ -3560,15 +3681,15 @@ class DynamicBLMModel:
                         del S_l_dict
                         weights_l = np.tile(qi[:, l], 2) / np.repeat(np.sqrt(var_l), ni)
                         del var_l
-
-                        ## Compute Xw_cts_l ##
-                        Xw_cts_l = DxSP(weights_l, X_cts[col]).T
                         if params['update_s_stayers']:
-                            Xw_cts[col].append(Xw_cts_l)
+                            weights_cts[col].append(weights_l)
+
+                        ## Compute XXw_cts_l ##
+                        XXw_cts_l = DxSP(weights_l, XX_cts[col]).T
                         del weights_l
 
-                        ## Compute XwX_cts_l ##
-                        XwX_cts[col][l_index: r_index, l_index: r_index] = (Xw_cts_l @ X_cts[col]).todense()
+                        ## Compute XXwXX_cts_l ##
+                        XXwXX_cts[col][l_index: r_index, l_index: r_index] = (XXw_cts_l @ XX_cts[col]).todense()
 
                         if params['update_a_stayers']:
                             Y_cts_l = np.zeros(2 * ni)
@@ -3591,18 +3712,18 @@ class DynamicBLMModel:
                                     - R32s * (Y2 - (A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s']))
 
                             ## Compute XwY_cts_l ##
-                            XwY_cts[col][l_index: r_index] = Xw_cts_l @ Y_cts_l
+                            XXwY_cts[col][l_index: r_index] = XXw_cts_l @ Y_cts_l
                             del Y_cts_l, A_sum_l
-                        del Xw_cts_l
+                        del XXw_cts_l
 
                     if params['d_X_diag_stayers'] > 1:
-                        XwX_cts[col] += (params['d_X_diag_stayers'] - 1) * np.eye(XwX_cts[col].shape[0])
+                        XXwXX_cts[col] += (params['d_X_diag_stayers'] - 1) * np.eye(XXwXX_cts[col].shape[0])
 
                     # We solve the system to get all the parameters (use dense solver)
                     if params['update_a_stayers']:
                         try:
                             a_solver = cons_a_dict[col]
-                            a_solver.solve(XwX_cts[col][X_cts_order[col], :][:, X_cts_order[col]], -XwY_cts[col][X_cts_order[col]], solver='quadprog')
+                            a_solver.solve(XXwXX_cts[col][XX_cts_order[col], :][:, XX_cts_order[col]], -XXwY_cts[col][XX_cts_order[col]], solver='quadprog')
                             if a_solver.res is None:
                                 # If estimation fails, keep A_cts the same
                                 if params['verbose'] in [2, 3]:
@@ -3620,6 +3741,7 @@ class DynamicBLMModel:
                             # If constraints inconsistent, keep A_cts the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing A_cts for column {col!r}: {e}')
+                        del XXwXX_cts[col], XXwY_cts[col]
 
                     if not cts_dict[col]['worker_type_interaction']:
                         # Restore A_sum with updated values
@@ -3629,15 +3751,18 @@ class DynamicBLMModel:
                 if params['update_s_stayers']:
                     ## Update the variances ##
                     if iter == 0:
-                        XwS = np.zeros(shape=len(periods_update) * ts)
+                        XSwXS = np.zeros(len(periods_update) * ts)
+                        XSwE = np.zeros(shape=len(periods_update) * ts)
 
                         ## Categorical ##
                         if len(cat_cols) > 0:
-                            XwS_cat = {col: np.zeros(shape=len(periods_update) * col_ts) for col, col_ts in ts_cat.items()}
+                            XSwXS_cat = {col: np.zeros(shape=len(periods_update) * col_ts) for col, col_ts in ts_cat.items()}
+                            XSwE_cat = {col: np.zeros(shape=len(periods_update) * col_ts) for col, col_ts in ts_cat.items()}
 
                         ## Continuous ##
                         if len(cts_cols) > 0:
-                            XwS_cts = {col: np.zeros(shape=len(periods_update) * nl) for col in cts_cols}
+                            XSwXS_cts = {col: np.zeros(shape=len(periods_update) * nl) for col in cts_cols}
+                            XSwE_cts = {col: np.zeros(shape=len(periods_update) * nl) for col in cts_cols}
 
                     ## Residuals ##
                     eps_sq = []
@@ -3668,8 +3793,18 @@ class DynamicBLMModel:
                         eps_sq.append(eps_l_sq)
                         del A_sum_l, eps_l_sq
 
-                        ## XwS terms ##
+                        ## XSwXS and XSwE terms ##
                         l_index, r_index = l * nk * len(periods_update), (l + 1) * nk * len(periods_update)
+
+                        ## First, XSwXS ##
+                        XSwXS[l_index + 0 * nk: l_index + 1 * nk] = \
+                            np.bincount(G1, weights=weights[l][0 * ni: 1 * ni])
+                        XSwXS[l_index + 1 * nk: l_index + 2 * nk] = \
+                            np.bincount(G1, weights=weights[l][1 * ni: 2 * ni])
+
+                        ## Second, XSwE ##
+                        weights[l] *= eps_sq[l]
+
                         if any_controls:
                             ## Account for other variables' contribution to variance ##
                             var_l_numerator = np.concatenate(
@@ -3690,19 +3825,23 @@ class DynamicBLMModel:
                                 ]
                             )
                             del S_sum_sq_l
-                            XwS[l_index: r_index] = Xw[l] @ ((var_l_numerator / var_l_denominator) * eps_sq[l])
-                        else:
-                            XwS[l_index: r_index] = Xw[l] @ eps_sq[l]
-                        Xw[l] = 0
+                            weights[l] *= (var_l_numerator / var_l_denominator)
+
+                        XSwE[l_index + 0 * nk: l_index + 1 * nk] = \
+                            np.bincount(G1, weights=weights[l][0 * ni: 1 * ni])
+                        XSwE[l_index + 1 * nk: l_index + 2 * nk] = \
+                            np.bincount(G1, weights=weights[l][1 * ni: 2 * ni])
+
+                        weights[l] = 0
+                    del weights
 
                     try:
-                        cons_s.solve(XwX[X_order, :][:, X_order], -XwS[X_order], solver='quadprog')
+                        cons_s.solve(np.diag(XSwXS[XS_order]), -XSwE[XS_order], solver='quadprog')
                         if cons_s.res is None:
                             # If estimation fails, keep S the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S: estimates are None')
                         else:
-                            print('updating S')
                             res_2s, res_3s = np.split(cons_s.res, len(periods_update))
                             S['2s'] = np.sqrt(np.reshape(res_2s, self.dims))
                             S['3s'] = np.sqrt(np.reshape(res_3s, self.dims))
@@ -3719,9 +3858,17 @@ class DynamicBLMModel:
                         for l in range(nl):
                             # Update S_sum_sq to account for worker-interaction terms
                             S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_A=False, compute_S=True, periods=periods)
-                                
+
+                            ### XSwXS_cat and XSwE_cat terms ###
                             l_index, r_index = l * col_n * len(periods_update), (l + 1) * col_n * len(periods_update)
 
+                            ### First, XSwXS_cat ###
+                            XSwXS_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
+                                np.bincount(CC1[col], weights=weights_cat[col][l][0 * ni: 1 * ni])
+                            XSwXS_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
+                                np.bincount(CC1[col], weights=weights_cat[col][l][1 * ni: 2 * ni])
+
+                            ### Second, XSwE_cat ###
                             ## Compute var_l_cat ##
                             if cat_dict[col]['worker_type_interaction']:
                                 S_l_dict = {period: (S_cat[col][period][l, :] ** 2)[C_dict[period][col]] for period in periods_update}
@@ -3747,14 +3894,19 @@ class DynamicBLMModel:
                                 ]
                             )
                             del S_sum_sq_l
+                            weights_cat[col][l] *= ((var_l_numerator / var_l_denominator) * eps_sq[l])
 
-                            ## XwS_cat terms ##
-                            XwS_cat[col][l_index: r_index] = Xw_cat[col][l] @ ((var_l_numerator / var_l_denominator) * eps_sq[l])
-                            Xw_cat[col][l] = 0
+                            XSwE_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
+                                np.bincount(CC1[col], weights=weights_cat[col][l][0 * ni: 1 * ni])
+                            XSwE_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
+                                np.bincount(CC1[col], weights=weights_cat[col][l][1 * ni: 2 * ni])
+
+                            weights_cat[col][l] = 0
+                        del weights_cat[col]
 
                         try:
                             s_solver = cons_s_dict[col]
-                            s_solver.solve(XwX_cat[col][X_cat_order[col], :][:, X_cat_order[col]], -XwS_cat[col][X_cat_order[col]], solver='quadprog')
+                            s_solver.solve(np.diag(XSwXS_cat[col][XS_cat_order[col]]), -XSwE_cat[col][XS_cat_order[col]], solver='quadprog')
                             if s_solver.res is None:
                                 # If estimation fails, keep S_cat the same
                                 if params['verbose'] in [2, 3]:
@@ -3788,14 +3940,23 @@ class DynamicBLMModel:
                             # Update S_sum_sq to account for worker-interaction terms
                             S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_A=False, compute_S=True, periods=periods)
 
+                            ### XSwXS_cts and XSwE_cts terms ###
                             l_index, r_index = l * len(periods_update), (l + 1) * len(periods_update)
 
+                            ### First, XSwXS_cts ###
+                            XSwXS_cts[l_index + 0] = \
+                                np.sum(C1[col] * weights_cts[col][l][0 * ni: 1 * ni])
+                            XSwXS_cts[l_index + 1] = \
+                                np.sum(C1[col] * weights_cts[col][l][1 * ni: 2 * ni])
+
+                            ### Second, XSwE_cts ###
                             ## Compute var_l_cts ##
                             if cts_dict[col]['worker_type_interaction']:
                                 S_l_dict = {period: S_cts[col][period][l] ** 2 for period in periods_update}
                             else:
                                 S_l_dict = {period: S_cts[col][period] ** 2 for period in periods_update}
 
+                            ## Account for other variables' contribution to variance ##
                             var_l_numerator = np.concatenate(
                                 [
                                     S_l_dict['2s'],
@@ -3814,15 +3975,20 @@ class DynamicBLMModel:
                                 ]
                             )
                             del S_sum_sq_l
+                            weights_cts[col][l] *= ((var_l_numerator / var_l_denominator) * eps_sq[l])
 
-                            ## XwS_cts terms ##
                             # NOTE: take absolute value
-                            XwS_cts[col][l_index: r_index] = np.abs(Xw_cts[col][l] @ ((var_l_numerator / var_l_denominator) * eps_sq[l]))
-                            Xw_cts[col][l] = 0
+                            XSwE_cts[l_index + 0] = \
+                                np.abs(np.sum(C1[col] * weights_cts[col][l][0 * ni: 1 * ni]))
+                            XSwE_cts[l_index + 1] = \
+                                np.abs(np.sum(C1[col] * weights_cts[col][l][1 * ni: 2 * ni]))
+
+                            weights_cts[col][l] = 0
+                        del weights_cts[col]
 
                         try:
                             s_solver = cons_s_dict[col]
-                            s_solver.solve(XwX_cts[col][X_cts_order[col], :][:, X_cts_order[col]], -XwS_cts[col][X_cts_order[col]], solver='quadprog')
+                            s_solver.solve(XSwXS_cts[col][XS_cts_order[col]], -XSwE_cts[col][XS_cts_order[col]], solver='quadprog')
                             if s_solver.res is None:
                                 # If estimation fails, keep S_cts the same
                                 if params['verbose'] in [2, 3]:
@@ -3849,6 +4015,7 @@ class DynamicBLMModel:
                             # If constraints inconsistent, keep S_cts the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S_cts for column {col!r}: {e}')
+                        del XSwXS_cts[col], XSwE_cts[col]
 
                 # print('A after:')
                 # print(A)
