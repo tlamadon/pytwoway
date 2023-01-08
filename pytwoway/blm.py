@@ -2951,7 +2951,8 @@ class BLMVarianceDecomposition:
             bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
             # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
             bdf._set_attributes(jdata)
-            bdf = bdf.to_long(is_sorted=True, copy=False)
+            # If simulating worker types, data is not sorted
+            bdf = bdf.to_long(is_sorted=(not worker_types_as_ids), copy=False)
             # Estimate OLS
             if no_controls:
                 fe_estimator = tw.FEEstimator(bdf, fe_params)
@@ -3078,7 +3079,7 @@ class BLMReallocation:
         res_alt = {col: np.zeros([n_samples, len(quantiles) - 1]) for col in alternative_quantiles_cols}
         for i in trange(n_samples):
             # Simulate worker types then draw wages
-            yj_i, ys_i, Lm_i, Ls_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=True, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, wj=wj, ws=ws, rng=rng)
+            yj_i, ys_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=True, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, wj=wj, ws=ws, rng=rng)[: 2]
             with bpd.util.ChainedAssignment():
                 jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
                 sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)

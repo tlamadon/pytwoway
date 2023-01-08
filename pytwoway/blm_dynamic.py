@@ -4866,16 +4866,17 @@ class DynamicBLMVarianceDecomposition:
             # Simulate worker types then draw wages
             yj_i, ys_i, Lm_i, Ls_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=reallocate, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, rng=rng)
             with bpd.util.ChainedAssignment():
+                jdata.loc[:, 'y1'], jdata.loc[:, 'y2'], jdata.loc[:, 'y3'], jdata.loc[:, 'y4'] = (yj_i[0], yj_i[1], yj_i[2], yj_i[3])
+                sdata.loc[:, 'y1'], sdata.loc[:, 'y2'], sdata.loc[:, 'y3'], sdata.loc[:, 'y4'] = (ys_i[0], ys_i[1], ys_i[2], ys_i[3])
                 if worker_types_as_ids:
                     jdata.loc[:, 'i'] = Lm_i
                     sdata.loc[:, 'i'] = Ls_i
-                jdata.loc[:, 'y1'], jdata.loc[:, 'y2'], jdata.loc[:, 'y3'], jdata.loc[:, 'y4'] = (yj_i[0], yj_i[1], yj_i[2], yj_i[3])
-                sdata.loc[:, 'y1'], sdata.loc[:, 'y2'], sdata.loc[:, 'y3'], sdata.loc[:, 'y4'] = (ys_i[0], ys_i[1], ys_i[2], ys_i[3])
             # Convert to BipartitePandas DataFrame
             bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
             # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
             bdf._set_attributes(jdata)
-            bdf = bdf.to_long(is_sorted=True, copy=False)
+            # If simulating worker types, data is not sorted
+            bdf = bdf.to_long(is_sorted=(not worker_types_as_ids), copy=False)
             # Estimate OLS
             if no_controls:
                 fe_estimator = tw.FEEstimator(bdf, fe_params)
@@ -4969,7 +4970,7 @@ class DynamicBLMReallocation:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        # Copy original wages, firm types, and optionally ids
+        # Copy original wages and firm types
         yj = jdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
         ys = sdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
         gj = jdata.loc[:, ['g1', 'g4']].to_numpy()
@@ -4994,7 +4995,7 @@ class DynamicBLMReallocation:
         res_alt = {col: np.zeros([n_samples, len(quantiles) - 1]) for col in alternative_quantiles_cols}
         for i in trange(n_samples):
             # Simulate worker types then draw wages
-            yj_i, ys_i, Lm_i, Ls_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=True, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, rng=rng)
+            yj_i, ys_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=True, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, rng=rng)[: 2]
             with bpd.util.ChainedAssignment():
                 jdata.loc[:, 'y1'], jdata.loc[:, 'y2'], jdata.loc[:, 'y3'], jdata.loc[:, 'y4'] = (yj_i[0], yj_i[1], yj_i[2], yj_i[3])
                 sdata.loc[:, 'y1'], sdata.loc[:, 'y2'], sdata.loc[:, 'y3'], sdata.loc[:, 'y4'] = (ys_i[0], ys_i[1], ys_i[2], ys_i[3])
@@ -5029,3 +5030,133 @@ class DynamicBLMReallocation:
         self.res = {'quantiles_outcome': res}
         for k, v in res_alt.items():
             self.res[f'quantiles_{k}'] = v
+
+class DynamicBLMTransitions:
+    '''
+    Class for estimating dynamic BLM transition probability exercise using bootstrapping. Results are stored in class attribute .res, which gives a 4-D NumPy Array where the first dimension gives each particular simulation; the second dimension gives the subset of data considered (index 0 gives the full data; index 1 gives the first conditional decile of earnings; and index 2 gives the second conditional decile of earnings); the third dimension gives the starting group of clusters being considered; and the fourth dimension gives the destination group of clusters being considered (where the first index considers all destinations).
+
+    Arguments:
+        params (ParamsDict): dictionary of parameters for dynamic BLM estimation. Run tw.dynamic_blm_params().describe_all() for descriptions of all valid parameters.
+    '''
+
+    def __init__(self, params):
+        self.params = params
+        # No initial results
+        self.res = None
+
+    def fit(self, jdata, sdata, cluster_groups=None, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, ncore=1, rng=None):
+        '''
+        Estimate variance decomposition.
+
+        Arguments:
+            jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
+            sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
+            cluster_groups (list of lists or None): how to group firm clusters, where each element of the primary list gives a list of firm clusters in the corresponding group; if None, tries to divide firms in 3 evenly sized groups
+            blm_model (DynamicBLMModel or None): already-estimated dynamic BLM model; if None, estimate model inside the method
+            n_samples (int): number of bootstrap samples to estimate
+            n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
+            n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
+            ncore (int): number of cores for multiprocessing
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+        '''
+        nc = jdata.n_clusters()
+        if cluster_groups is None:
+            # Evenly divide into 3 groups
+            nc3 = nc // 3
+            g1 = np.arange(nc3)
+            g2 = np.arange(nc3, nc - nc3)
+            g3 = np.arange(nc - nc3, nc)
+            cluster_groups = [g1, g2, g3]
+        if rng is None:
+            rng = np.random.default_rng(None)
+
+        # Copy original wages, firm types, and ids
+        yj = jdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
+        ys = sdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
+        gj = jdata.loc[:, ['g1', 'g4']].to_numpy()
+        gs = sdata.loc[:, 'g1'].to_numpy()
+        ij = jdata.loc[:, 'i'].to_numpy().copy()
+        is_ = sdata.loc[:, 'i'].to_numpy().copy()
+        tj = False
+        ts = False
+        if not jdata._col_included('t'):
+            jdata = jdata.construct_artificial_time(is_sorted=True, copy=False)
+            tj = True
+        if not sdata._col_included('t'):
+            sdata = sdata.construct_artificial_time(is_sorted=True, copy=False)
+            ts = True
+
+        if blm_model is None:
+            # Run initial BLM estimator
+            blm_fit_init = DynamicBLMEstimator(self.params)
+            blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
+            blm_model = blm_fit_init.model
+
+        # Run bootstrap
+        res = np.zeros([n_samples, 3, len(cluster_groups), len(cluster_groups) + 1])
+        for i in trange(n_samples):
+            # Simulate worker types then draw wages
+            yj_i, ys_i, Lm_i, Ls_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=False, rng=rng)
+            with bpd.util.ChainedAssignment():
+                jdata.loc[:, 'y1'], jdata.loc[:, 'y2'], jdata.loc[:, 'y3'], jdata.loc[:, 'y4'] = (yj_i[0], yj_i[1], yj_i[2], yj_i[3])
+                sdata.loc[:, 'y1'], sdata.loc[:, 'y2'], sdata.loc[:, 'y3'], sdata.loc[:, 'y4'] = (ys_i[0], ys_i[1], ys_i[2], ys_i[3])
+                jdata.loc[:, 'i'] = Lm_i
+                sdata.loc[:, 'i'] = Ls_i
+            # Concatenate
+            bdf = pd.concat([jdata, sdata], axis=0, copy=False)
+            # Compute conditional earnings deciles
+            first_decile = np.zeros(len(bdf), dtype=int)
+            tenth_decile = np.zeros(len(bdf), dtype=int)
+            for l in range(blm_model.nl):
+                for k in range(blm_model.nk):
+                    bdf_lk = bdf.loc[(bdf.loc[:, 'i'].to_numpy() == l) & (bdf.loc[:, 'g2'].to_numpy() == k), 'y2']
+                    deciles = np.percentile(bdf_lk.to_numpy(), [10, 90])
+                    first_decile[bdf_lk.index] = (bdf_lk.to_numpy() <= deciles[0])
+                    tenth_decile[bdf_lk.index] = (bdf_lk.to_numpy() >= deciles[1])
+            first_decile = first_decile.astype(bool)
+            tenth_decile = tenth_decile.astype(bool)
+            ## Full data ##
+            for j, cg2 in enumerate(cluster_groups):
+                bdf_cg2 = bdf.loc[bdf.loc[:, 'g2'].isin(cg2), :]
+                # All transitions
+                res[i, 0, j, 0] = np.sum(bdf_cg2.loc[:, 'm'].to_numpy() > 0) / len(bdf_cg2)
+                for k, cg3 in enumerate(cluster_groups):
+                    # Transitions to specific cluster groups
+                    bdf_cg3 = bdf_cg2.loc[bdf_cg2.loc[:, 'g3'].isin(cg3), :]
+                    res[i, 0, j, k + 1] = np.sum(bdf_cg3.loc[:, 'm'].to_numpy() > 0) / len(bdf_cg3)
+            ## First conditional decile of earnings ##
+            bdf_1 = bdf.loc[first_decile, :]
+            for j, cg2 in enumerate(cluster_groups):
+                bdf_cg2 = bdf_1.loc[bdf_1.loc[:, 'g2'].isin(cg2), :]
+                # All transitions
+                res[i, 1, j, 0] = np.sum(bdf_cg2.loc[:, 'm'].to_numpy() > 0) / len(bdf_cg2)
+                for k, cg3 in enumerate(cluster_groups):
+                    # Transitions to specific cluster groups
+                    bdf_cg3 = bdf_cg2.loc[bdf_cg2.loc[:, 'g3'].isin(cg3), :]
+                    res[i, 1, j, k + 1] = np.sum(bdf_cg3.loc[:, 'm'].to_numpy() > 0) / len(bdf_cg3)
+            ## Tenth conditional decile of earnings ##
+            bdf_10 = bdf.loc[first_decile, :]
+            for j, cg2 in enumerate(cluster_groups):
+                bdf_cg2 = bdf_10.loc[bdf_10.loc[:, 'g2'].isin(cg2), :]
+                # All transitions
+                res[i, 2, j, 0] = np.sum(bdf_cg2.loc[:, 'm'].to_numpy() > 0) / len(bdf_cg2)
+                for k, cg3 in enumerate(cluster_groups):
+                    # Transitions to specific cluster groups
+                    bdf_cg3 = bdf_cg2.loc[bdf_cg2.loc[:, 'g3'].isin(cg3), :]
+                    res[i, 2, j, k + 1] = np.sum(bdf_cg3.loc[:, 'm'].to_numpy() > 0) / len(bdf_cg3)
+
+        with bpd.util.ChainedAssignment():
+            # Restore original wages and ids
+            jdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = yj
+            sdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = ys
+            jdata.loc[:, 'i'] = ij
+            sdata.loc[:, 'i'] = is_
+
+        # Drop time column
+        if tj:
+            jdata = jdata.drop('t', axis=1, inplace=True, allow_optional=True)
+        if ts:
+            sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
+
+        # Store results
+        self.res = res
