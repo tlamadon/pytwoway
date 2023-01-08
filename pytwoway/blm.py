@@ -3009,7 +3009,7 @@ class BLMVarianceDecomposition:
 
 class BLMReallocation:
     '''
-    Class for estimating BLM reallocation exercise using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'quantiles_outcome' gives the primary quantile results, and the keys 'quantiles_`col`' give the quantiles results for any columns included in alternative_quantiles_cols.
+    Class for estimating BLM reallocation exercise using bootstrapping. Results are stored in class attribute .res, which gives a dictionary with the following structure: baseline results are stored in key 'baseline'. Reallocation results are stored in key 'reallocation'. Within each sub-dictionary, primary outcome results are stored in the key 'outcome', categorical results are stored in the key 'cat', and continuous results are stored in the key 'cts'.
 
     Arguments:
         params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
@@ -3020,7 +3020,7 @@ class BLMReallocation:
         # No initial results
         self.res = None
 
-    def fit(self, jdata, sdata, quantiles=None, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', alternative_quantiles_cols=None, ncore=1, rng=None):
+    def fit(self, jdata, sdata, quantiles=None, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, ncore=1, rng=None):
         '''
         Estimate reallocation exercise.
 
@@ -3034,17 +3034,26 @@ class BLMReallocation:
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
             reallocate_jointly (bool): if True, worker type proportions take the average over movers and stayers (i.e. all workers use the same type proportions); if False, consider movers and stayers separately
             reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
-            alternative_quantiles_cols (str or list of str or None): compute average value of alternative columns within each computed quantile; None is equivalent to []
+            categorical_sort_cols (dict or None): in addition to standard quantiles results, return average income grouped by the alternative column(s) given (which are represented by the dictionary {column: number of quantiles to compute}). For categorical variables, use each group as a bin and take the average income within that bin. None is equivalent to {}.
+            continuous_sort_cols (dict or None): in addition to standard quantiles results, return average income grouped by the alternative column(s) given (which are represented by the dictionary {column: list of quantiles to compute}). For continuous variables, create bins based on the list of quantiles given in the dictionary. The list of quantiles must start at 0 and end at 1. None is equivalent to {}.
             ncore (int): number of cores for multiprocessing
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
         if quantiles is None:
             quantiles = np.arange(101) / 100
-        if alternative_quantiles_cols is None:
-            alternative_quantiles_cols = []
-        alternative_quantiles_cols = to_list(alternative_quantiles_cols)
+        if categorical_sort_cols is None:
+            categorical_sort_cols = {}
+        if continuous_sort_cols is None:
+            continuous_sort_cols = {}
         if rng is None:
             rng = np.random.default_rng(None)
+
+        # Make sure continuous quantiles start at 0 and end at 1
+        for col_cts, quantiles_cts in continuous_sort_cols.items():
+            if quantiles_cts[0] != 0:
+                raise ValueError(f'Lowest quantile associated with continuous column {col_cts} must be 0.')
+            elif quantiles_cts[-1] != 1:
+                raise ValueError(f'Highest quantile associated with continuous column {col_cts} must be 1.')
 
         # Copy original wages, firm types, and optionally ids
         yj = jdata.loc[:, ['y1', 'y2']].to_numpy().copy()
@@ -3074,9 +3083,44 @@ class BLMReallocation:
             blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
             blm_model = blm_fit_init.model
 
+        ## Baseline ##
+        res_cat_baseline = {}
+        res_cts_baseline = {}
+
+        # Convert to BipartitePandas DataFrame
+        bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
+        # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
+        bdf._set_attributes(jdata)
+        bdf = bdf.to_long(is_sorted=True, copy=False)
+        # Compute quantiles
+        y = bdf.loc[:, 'y'].to_numpy()
+        if bdf._col_included('w'):
+            w = bdf.loc[:, 'w'].to_numpy()
+        else:
+            w = None
+        res_baseline = weighted_quantile(values=y, quantiles=quantiles, sample_weight=w)
+        if w is not None:
+            # For sorting variables, use weighted y
+            y = w * y
+        for col_cat in categorical_sort_cols.keys():
+            ## Categorical sorting variables ##
+            col = bdf.loc[:, col_cat].to_numpy()
+            # Use categories as bins
+            res_cat_baseline[col_cat] =\
+                np.bincount(col, weights=y) / np.bincount(col, weights=w)
+        for col_cts, quantiles_cts in continuous_sort_cols.items():
+            ## Continuous sorting variables ##
+            col = bdf.loc[:, col_cts].to_numpy()
+            # Create bins based on quantiles
+            col_quantiles = weighted_quantile(values=col, quantiles=quantiles_cts, sample_weight=w)
+            quantile_groups = pd.cut(col, col_quantiles, include_lowest=True).codes
+            res_cts_baseline[col_cts] =\
+                np.bincount(quantile_groups, weights=y) / np.bincount(quantile_groups, weights=w)
+
         # Run bootstrap
         res = np.zeros([n_samples, len(quantiles)])
-        res_alt = {col: np.zeros([n_samples, len(quantiles) - 1]) for col in alternative_quantiles_cols}
+        res_cat = {col: np.zeros([n_samples, n_quantiles]) for col, n_quantiles in categorical_sort_cols.items()}
+        res_cts = {col: np.zeros([n_samples, len(quantiles) - 1]) for col, quantiles in continuous_sort_cols.items()}
         for i in trange(n_samples):
             # Simulate worker types then draw wages
             yj_i, ys_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=True, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, wj=wj, ws=ws, rng=rng)[: 2]
@@ -3089,22 +3133,29 @@ class BLMReallocation:
             bdf._set_attributes(jdata)
             bdf = bdf.to_long(is_sorted=True, copy=False)
             # Compute quantiles
+            y = bdf.loc[:, 'y'].to_numpy()
             if bdf._col_included('w'):
                 w = bdf.loc[:, 'w'].to_numpy()
             else:
                 w = None
-            res[i, :] = weighted_quantile(values=bdf.loc[:, 'y'].to_numpy(), quantiles=quantiles, sample_weight=w)
-            if len(alternative_quantiles_cols) > 0:
-                ## Compute average value of alternative columns within each quantile ##
-                # Group data by quantile
-                quantile_groups = pd.cut(bdf.loc[:, 'y'].to_numpy(), res[i, :], include_lowest=True).codes
-                # Groupby-mean across quantiles
-                w_sum = np.bincount(quantile_groups, weights=w)
-                for col in alternative_quantiles_cols:
-                    if w is not None:
-                        res_alt[col][i, :] = np.bincount(quantile_groups, weights=w * bdf.loc[:, col].to_numpy()) / w_sum
-                    else:
-                        res_alt[col][i, :] = np.bincount(quantile_groups, weights=bdf.loc[:, col].to_numpy()) / w_sum
+            res[i, :] = weighted_quantile(values=y, quantiles=quantiles, sample_weight=w)
+            if w is not None:
+                # For sorting variables, use weighted y
+                y = w * y
+            for col_cat in categorical_sort_cols.keys():
+                ## Categorical sorting variables ##
+                col = bdf.loc[:, col_cat].to_numpy()
+                # Use categories as bins
+                res_cat[col_cat][i, :] =\
+                    np.bincount(col, weights=y) / np.bincount(col, weights=w)
+            for col_cts, quantiles_cts in continuous_sort_cols.items():
+                ## Continuous sorting variables ##
+                col = bdf.loc[:, col_cts].to_numpy()
+                # Create bins based on quantiles
+                col_quantiles = weighted_quantile(values=col, quantiles=quantiles_cts, sample_weight=w)
+                quantile_groups = pd.cut(col, col_quantiles, include_lowest=True).codes
+                res_cts[col_cts][i, :] =\
+                    np.bincount(quantile_groups, weights=y) / np.bincount(quantile_groups, weights=w)
 
         with bpd.util.ChainedAssignment():
             # Restore original wages and optionally ids
@@ -3118,6 +3169,15 @@ class BLMReallocation:
             sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
 
         # Store results
-        self.res = {'quantiles_outcome': res}
-        for k, v in res_alt.items():
-            self.res[f'quantiles_{k}'] = v
+        self.res = {
+            'baseline': {
+                'outcome': res_baseline,
+                'cat': res_cat_baseline,
+                'cts': res_cts_baseline
+                },
+            'reallocation': {
+                'outcome': res,
+                'cat': res_cat,
+                'cts': res_cts
+                }
+        }
