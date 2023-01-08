@@ -3353,8 +3353,8 @@ class DynamicBLMModel:
             elif params['update_a_stayers'] or params['update_s_stayers']:
                 # Constrained OLS (source: https://scaron.info/blog/quadratic-programming-in-python.html)
 
-                # The regression has 2 * nl * nk parameters and 4 * nl * ni rows
-                # To avoid duplicating the data 4 * nl times, we construct X'X and X'Y by looping over nl
+                # The regression has 2 * nk parameters and 2 * ni rows
+                # To avoid duplicating the data 2 * nl times, we construct X'X and X'Y by looping over nl
                 # We also note that X'X is block diagonal with nl matrices of dimension (2 * nk, 2 * nk)
 
                 ## General ##
