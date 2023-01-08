@@ -5169,13 +5169,13 @@ class DynamicBLMTransitions:
             bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
             # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
             bdf._set_attributes(jdata)
+
             # Replace i to ensure unstacking works properly
             i_orig = bdf.loc[:, 'i'].to_numpy().copy()
             with bpd.util.ChainedAssignment():
                 bdf.loc[:, 'i'] = np.arange(len(bdf))
-
             # Cluster
-            bdf = bdf.to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng).to_extendedeventstudy(is_sorted=True, copy=False)
+            bdf = bdf.cluster(cluster_params, rng=rng)
             with bpd.util.ChainedAssignment():
                 # Restore i
                 bdf.loc[:, 'i'] = i_orig
