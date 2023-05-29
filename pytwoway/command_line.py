@@ -75,10 +75,10 @@ def main():
     p.add('--fe_weighted', type=str2bool, required=False, help='if True, use weighted fe estimators')
     p.add('--fe_ho', type=str2bool, required=False, help='if True, compute the homoskedastic correction when estimating fe')
     p.add('--fe_he', type=str2bool, required=False, help='if True, compute the heteroskedastic correction when estimating fe')
-    p.add('--fe_categorical_controls', type=str, required=False, help='list of columns to use as categorical controls when estimating fe')
-    p.add('--fe_continuous_controls', type=str, required=False, help='list of columns to use as continuous controls when estimating fe')
-    p.add('--fe_Q_var', type=str, required=False, help="list of columns to use when computing variances when estimating fe. Note this should be a list of column names, and should include 'psi' for firm effects and 'alpha' for worker effects.")
-    p.add('--fe_Q_cov', type=str, required=False, help="list of tuples of columns to use when computing covariances when estimating fe. As an example, ((psi, age), (alpha)) will compute cov(psi + age, alpha). This should include 'psi' for firm effects and 'alpha' for worker effects.")
+    p.add('--fe_categorical_controls', required=False, help='list of columns to use as categorical controls when estimating fe')
+    p.add('--fe_continuous_controls', required=False, help='list of columns to use as continuous controls when estimating fe')
+    p.add('--fe_Q_var', required=False, help="list of columns to use when computing variances when estimating fe. Note this should be a list of column names, and should include 'psi' for firm effects and 'alpha' for worker effects.")
+    p.add('--fe_Q_cov', required=False, help="list of tuples of columns to use when computing covariances when estimating fe. As an example, ((psi, age), (alpha)) will compute cov(psi + age, alpha). This should include 'psi' for firm effects and 'alpha' for worker effects.")
     p.add('--fe_Sii_stayers', required=False, help="how to compute variance of worker effects for stayers for heteroskedastic correction. 'firm_mean' gives stayers the average variance estimate for movers at their firm. 'upper_bound' gives the upper bound variance estimate for stayers for worker effects by assuming the variance matrix is diagonal (please see page 17 of https://github.com/rsaggio87/LeaveOutTwoWay/blob/master/doc/VIGNETTE.pdf for more details).")
     p.add('--fe_ndraw_trace_sigma_2', required=False, help='number of draws to use in trace approximation for sigma^2 when estimating fe')
     p.add('--fe_ndraw_trace_ho', required=False, help='number of draws to use in trace approximation for homoskedastic correction when estimating fe')
@@ -94,7 +94,7 @@ def main():
 
     ##### Cluster start #####
     #### General start ####
-    p.add('--cluster_measures', type=str, required=False, help="how to compute measures for clustering. Options are 'cdfs' for cdfs and 'moments' for moments. Can use a list for multiple measures. Details on options can be seen in bipartitepandas.measures.")
+    p.add('--cluster_measures', required=False, help="how to compute measures for clustering. Options are 'cdfs' for cdfs and 'moments' for moments. Can use a list for multiple measures. Details on options can be seen in bipartitepandas.measures.")
     p.add('--cluster_grouping', required=False, help="how to group firms based on measures. Options are 'kmeans' for kmeans and 'quantiles' for quantiles. Details on options can be seen in bipartitepandas.grouping.")
     p.add('--cluster_stayers_movers', required=False, help="if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers")
     p.add('--cluster_t', required=False, help='if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)')
@@ -109,7 +109,7 @@ def main():
     ''')
     ### CDFs end ###
     ### Moments start ###
-    p.add('--measures_moments', type=str, required=False, help='''
+    p.add('--measures_moments', required=False, help='''
     how to compute the measures when clustering ('mean' to compute average income within each firm; 'var' to compute variance of income within each firm; 'max' to compute max income within each firm; 'min' to compute min income within each firm)
     ''')
     ### Moments end ###
