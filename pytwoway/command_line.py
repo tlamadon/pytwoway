@@ -213,9 +213,9 @@ def main():
     moments_params = clear_dict(moments_params)
     ### Moments end ###
     #### Measures end ####
-    if params.grouping is not None:
+    if params.cluster_grouping is not None:
         #### Grouping start ####
-        if params.grouping.lower() == 'kmeans':
+        if params.cluster_grouping.lower() == 'kmeans':
             ### KMeans start ###
             KMeans_params = {
                 'n_clusters': params.n_clusters,
@@ -231,15 +231,15 @@ def main():
                 'algorithm': params.algorithm
             }
             KMeans_params = clear_dict(KMeans_params)
-            params.grouping = bpd.grouping.KMeans(**KMeans_params)
+            params.cluster_grouping = bpd.grouping.KMeans(**KMeans_params)
             ### KMeans end ###
-        elif params.grouping.lower() == 'quantiles':
+        elif params.cluster_grouping.lower() == 'quantiles':
             ### Quantiles start ###
             quantiles_params = {
                 'n_quantiles': params.n_quantiles
             }
             quantiles_params = clear_dict(quantiles_params)
-            params.grouping = bpd.grouping.Quantiles(**quantiles_params)
+            params.cluster_grouping = bpd.grouping.Quantiles(**quantiles_params)
             ### Quantiles end ###
         #### Grouping end ####
     #### General start ####
