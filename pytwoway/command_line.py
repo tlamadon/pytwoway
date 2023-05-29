@@ -209,7 +209,10 @@ def main():
                 tw.Q.VarCovariate('alpha')
             ]
         if params.fe_Q_cov is not None:
-            Q_cov = [tw.Q.CovCovariate(ast.literal_eval(ast.literal_eval(col)[0]), ast.literal_eval(ast.literal_eval(col)[1])) for col in params.fe_Q_cov]
+            print(ast.literal_eval(params.fe_Q_cov[0]))
+            print(ast.literal_eval(ast.literal_eval(params.fe_Q_cov[0])[0]))
+            print(ast.literal_eval(ast.literal_eval(params.fe_Q_cov[0])[1]))
+            Q_cov = [tw.Q.CovCovariate(*ast.literal_eval(col)) for col in params.fe_Q_cov]
         else:
             Q_cov = [
                 tw.Q.CovCovariate('psi', 'alpha')
