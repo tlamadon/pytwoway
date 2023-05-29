@@ -75,6 +75,8 @@ def main():
     p.add('--fe_weighted', type=str2bool, required=False, help='if True, use weighted fe estimators')
     p.add('--fe_ho', type=str2bool, required=False, help='if True, compute the homoskedastic correction when estimating fe')
     p.add('--fe_he', type=str2bool, required=False, help='if True, compute the heteroskedastic correction when estimating fe')
+    p.add('--fe_categorical_controls', required=False, help='list of columns to use as categorical controls when estimating fe')
+    p.add('--fe_continuous_controls', required=False, help='list of columns to use as continuous controls when estimating fe')
     p.add('--fe_Sii_stayers', required=False, help="how to compute variance of worker effects for stayers for heteroskedastic correction. 'firm_mean' gives stayers the average variance estimate for movers at their firm. 'upper_bound' gives the upper bound variance estimate for stayers for worker effects by assuming the variance matrix is diagonal (please see page 17 of https://github.com/rsaggio87/LeaveOutTwoWay/blob/master/doc/VIGNETTE.pdf for more details).")
     p.add('--fe_ndraw_trace_sigma_2', required=False, help='number of draws to use in trace approximation for sigma^2 when estimating fe')
     p.add('--fe_ndraw_trace_ho', required=False, help='number of draws to use in trace approximation for homoskedastic correction when estimating fe')
@@ -171,10 +173,18 @@ def main():
     ##### Stata end #####
 
     ##### FE start #####
+    if params.fe_categorical_controls is not None:
+        # Have to do ast.literal_eval twice for it to work properly
+        params.fe_categorical_controls = ast.literal_eval(ast.literal_eval(params.fe_categorical_controls))
+    if params.fe_continuous_controls is not None:
+        # Have to do ast.literal_eval twice for it to work properly
+        params.fe_continuous_controls = ast.literal_eval(ast.literal_eval(params.fe_continuous_controls))
     fe_params = {
         'weighted': params.fe_weighted,
         'ho': params.fe_ho,
         'he': params.fe_he,
+        'categorical_controls': params.fe_categorical_controls,
+        'continuous_controls': params.fe_continuous_controls,
         'Sii_stayers': params.fe_Sii_stayers,
         'ndraw_trace_sigma_2': params.fe_ndraw_trace_sigma_2,
         'ndraw_trace_ho': params.fe_ndraw_trace_ho,
@@ -189,7 +199,15 @@ def main():
     }
     if params.stata:
         fe_params['outputfile'] = 'res_fe.json'
-    fe_params = tw.fe_params(clear_dict(fe_params))
+    fe_params = clear_dict(fe_params)
+    if (params.fe_categorical_controls is not None) or (params.fe_continuous_controls is not None):
+        # Control variables
+        fecontrol = True
+        fe_params = tw.fecontrol_params(fe_params)
+    else:
+        # No control variables
+        fecontrol = False
+        fe_params = tw.fe_params(fe_params)
     ##### FE end #####
 
     ##### Cluster start #####
@@ -309,19 +327,33 @@ def main():
     }
     clean_params = bpd.clean_params(clear_dict(clean_params))
 
-    if params.t is None:
-        bdf = bpd.BipartiteDataFrame(
-            i=df.loc[:, params.i],
-            j=df.loc[:, params.j],
-            y=df.loc[:, params.y]
-        ).clean(clean_params)
-    else:
-        bdf = bpd.BipartiteDataFrame(
-            i=df.loc[:, params.i],
-            j=df.loc[:, params.j],
-            y=df.loc[:, params.y],
-            t=df.loc[:, params.t]
-        ).clean(clean_params)
+    col_dict = {
+        'i': df.loc[:, params.i].to_numpy(),
+        'j': df.loc[:, params.j].to_numpy(),
+        'y': df.loc[:, params.y].to_numpy()
+    }
+    custom_categorical_dict = {}
+    custom_dtype_dict = {}
+    custom_how_collapse_dict = {}
+
+    if params.t is not None:
+        col_dict['t'] = df.loc[:, params.t].to_numpy()
+    if fecontrol:
+        # If there are control variables
+        if params.fe_categorical_controls is not None:
+            # Categorical controls
+            for cat_control in params.fe_categorical_controls:
+                col_dict[cat_control] = df.loc[:, cat_control].to_numpy()
+                custom_categorical_dict[cat_control] = True
+                custom_dtype_dict[cat_control] = 'categorical'
+                custom_how_collapse_dict[cat_control] = 'first'
+        if params.fe_continuous_controls is not None:
+            # Categorical controls
+            for cts_control in params.fe_continuous_controls:
+                col_dict[cts_control] = df.loc[:, cts_control].to_numpy()
+
+    bdf = bpd.BipartiteDataFrame(custom_categorical_dict=custom_categorical_dict, custom_dtype_dict=custom_dtype_dict, custom_how_collapse_dict=custom_how_collapse_dict, **col_dict).clean(clean_params)
+
     if (params.collapse is not None) and params.collapse and not (type(bdf) == bpd.BipartiteLongCollapsed):
         # NOTE: data might collapse from collapse_at_connectedness_measure
         if params.collapse_level is not None:
@@ -336,7 +368,10 @@ def main():
         params.seed = int(params.seed)
     rng = default_rng(params.seed)
     if params.fe:
-        fe_estimator = tw.FEEstimator(bdf, fe_params)
+        if fecontrol:
+            fe_estimator = tw.FEControlEstimator(bdf, fe_params)
+        else:
+            fe_estimator = tw.FEEstimator(bdf, fe_params)
         fe_estimator.fit(rng=rng)
     if params.cre:
         bdf = bdf.cluster(cluster_params, rng=rng)
