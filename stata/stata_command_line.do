@@ -4,19 +4,23 @@
 * Requires insheetjson: install using
 * ssc install insheetjson, replace
 
-capture program drop statatwoway
-program define statatwoway, rclass
-    syntax namelist, config(string) [env(string)]
+capture program drop leedtwoway
+program define leedtwoway, rclass
+    syntax namelist, config(string) [env(string) ho he]
     * namelist: fe and/or cre
     * config: filepath for config file
     * env (optional): conda environment name
+    * ho (optional): if True, store homoskedastic bias correction results
+    * he (optional): if True, store heteroskedastic bias correction results
     * Save data
-    qui save "statatwoway.dta", replace
+    qui save "leedtwoway_temp_data.dta", replace
     qui local command = "!"
 
     if "`env'" != "" {
-        qui local command = "`command'source ~/opt/anaconda3/etc/profile.d/conda.sh" // Add conda path
-        qui local command = "`command'; conda activate `env'" // Activate environment
+        * Add conda path
+        qui local command = "`command'source /opt/anaconda3/etc/profile.d/conda.sh"
+        * Activate environment
+        qui local command = "`command'; conda activate `env'"
     }
 
     * Run estimator
@@ -25,31 +29,73 @@ program define statatwoway, rclass
             di "fe"
             qui local command_fe = "`command'; pytw --my-config `config' --stata --fe"
             `command_fe'
-            qui gen str240 var_fe = ""
-            qui gen str240 cov_fe = ""
-            qui gen str240 var_ho = ""
-            qui gen str240 cov_ho = ""
-            /* insheetjson using "res_fe.json", showresponse */
-            insheetjson var_fe cov_fe var_ho cov_ho using "res_fe.json", col("var(psi)_fe" "cov(psi, alpha)_fe" "var(psi)_ho" "cov(psi, alpha)_ho")
-            foreach var in var_fe cov_fe var_ho cov_ho {
+            qui capture drop var_y_fe
+            qui capture drop var_psi_fe
+            qui capture drop cov_psi_alpha_fe
+            qui capture drop var_eps_fe
+            qui gen str240 var_y_fe = ""
+            qui gen str240 var_psi_fe = ""
+            qui gen str240 cov_psi_alpha_fe = ""
+            qui gen str240 var_eps_fe = ""
+            * insheetjson using "res_fe.json", showresponse
+            insheetjson var_y_fe var_psi_fe cov_psi_alpha_fe var_eps_fe using "res_fe.json", col("var(y)" "var(psi)_fe" "cov(psi,_alpha)_fe" "var(eps)_fe")
+            foreach var in var_y_fe var_psi_fe cov_psi_alpha_fe var_eps_fe {
                 qui destring `var', replace
                 qui scalar `var' = `var'[0]
-                qui return scalar `var' = `var' // This line required, otherwise scalar dropped
+                * The following line is required, otherwise scalar dropped
+                qui return scalar `var' = `var'
                 drop `var'
+            }
+            if "`ho'" == "ho" {
+                qui capture drop var_psi_ho
+                qui capture drop cov_psi_alpha_ho
+                qui capture drop var_eps_ho
+                qui gen str240 var_psi_ho = ""
+                qui gen str240 cov_psi_alpha_ho = ""
+                qui gen str240 var_eps_ho = ""
+                insheetjson var_psi_ho cov_psi_alpha_ho var_eps_ho using "res_fe.json", col("var(psi)_ho" "cov(psi,_alpha)_ho" "var(eps)_ho")
+                foreach var in var_psi_ho cov_psi_alpha_ho var_eps_ho {
+                    qui destring `var', replace
+                    qui scalar `var' = `var'[0]
+                    * The following line is required, otherwise scalar dropped
+                    qui return scalar `var' = `var'
+                    drop `var'
+                }
+            }
+            if "`he'" == "he" {
+                qui capture drop var_psi_he
+                qui capture drop cov_psi_alpha_he
+                qui capture drop var_eps_he
+                qui gen str240 var_psi_he = ""
+                qui gen str240 cov_psi_alpha_he = ""
+                qui gen str240 var_eps_he = ""
+                insheetjson var_psi_he cov_psi_alpha_he var_eps_he using "res_fe.json", col("var(psi)_he" "cov(psi,_alpha)_he" "var(eps)_he")
+                foreach var in var_psi_he cov_psi_alpha_he var_eps_he {
+                    qui destring `var', replace
+                    qui scalar `var' = `var'[0]
+                    * The following line is required, otherwise scalar dropped
+                    qui return scalar `var' = `var'
+                    drop `var'
+                }
             }
         }
         else if "`name'" == "cre" {
             di "cre"
             qui local command_cre = "`command'; pytw --my-config `config' --stata --cre"
             `command_cre'
+            qui capture drop var_y_cre
+            qui capture drop var_cre
+            qui capture drop cov_cre
+            qui gen str240 var_y_cre = ""
             qui gen str240 var_cre = ""
             qui gen str240 cov_cre = ""
-            /* insheetjson using "res_cre.json", showresponse */
-            insheetjson var_cre cov_cre using "res_cre.json", col("tot_var" "tot_cov")
-            foreach var in var_cre cov_cre {
+            * insheetjson using "res_cre.json", showresponse
+            insheetjson var_y_cre var_cre cov_cre using "res_cre.json", col("var_y" "tot_var" "tot_cov")
+            foreach var in var_y_cre var_cre cov_cre {
                 qui destring `var', replace
                 qui scalar `var' = `var'[0]
-                qui return scalar `var' = `var' // This line required, otherwise scalar dropped
+                * The following line is required, otherwise scalar dropped
+                qui return scalar `var' = `var'
                 drop `var'
             }
         }
@@ -58,7 +104,8 @@ program define statatwoway, rclass
         }
     }
 
-    erase "statatwoway.dta" // Remove file
+    * Remove file
+    erase "leedtwoway_temp_data.dta"
 end
 
 /*
@@ -68,5 +115,5 @@ set maxvar 100000
 cd "/Users/adamalexanderoppenheimer/Desktop/pytwoway/stata"
 import delimited "twoway_sample_data.csv", clear
 
-statatwoway fe cre, config("config.txt") env("stata-env")
+leedtwoway fe cre, config("config.txt") env("stata-env") ho he
 */
