@@ -92,7 +92,7 @@ def main():
 
     ##### Cluster start #####
     #### General start ####
-    p.add('--cluster_measures', required=False, help="how to compute measures for clustering. Options are 'cdfs' for cdfs and 'moments' for moments. Can use a list for multiple measures. Details on options can be seen in bipartitepandas.measures.")
+    p.add('--cluster_measures', action='append', required=False, help="how to compute measures for clustering. Options are 'cdfs' for cdfs and 'moments' for moments. Can use a list for multiple measures. Details on options can be seen in bipartitepandas.measures.")
     p.add('--cluster_grouping', required=False, help="how to group firms based on measures. Options are 'kmeans' for kmeans and 'quantiles' for quantiles. Details on options can be seen in bipartitepandas.grouping.")
     p.add('--cluster_stayers_movers', required=False, help="if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers")
     p.add('--cluster_t', required=False, help='if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)')
@@ -107,7 +107,7 @@ def main():
     ''')
     ### CDFs end ###
     ### Moments start ###
-    p.add('--measures_moments', required=False, help='''
+    p.add('--measures_moments', action='append', required=False, help='''
     how to compute the measures when clustering ('mean' to compute average income within each firm; 'var' to compute variance of income within each firm; 'max' to compute max income within each firm; 'min' to compute min income within each firm)
     ''')
     ### Moments end ###
@@ -214,13 +214,8 @@ def main():
     cdf_params = clear_dict(cdf_params)
     ### CDFs end ###
     ### Moments start ###
-    if params.measures_moments is not None:
-        # Have to do ast.literal_eval twice for it to work properly
-        measures_moments = ast.literal_eval(ast.literal_eval(params.measures_moments))
-    else:
-        measures_moments = params.measures_moments
     moments_params = {
-        'measures_moments': measures_moments
+        'measures_moments': params.measures_moments
     }
     moments_params = clear_dict(moments_params)
     ### Moments end ###
@@ -256,9 +251,7 @@ def main():
         #### Grouping end ####
     #### General start ####
     if params.cluster_measures is not None:
-        # Have to do ast.literal_eval twice for it to work properly
-        measures_raw = ast.literal_eval(ast.literal_eval(params.cluster_measures))
-        measures_raw = bpd.to_list(measures_raw)
+        measures_raw = bpd.to_list(params.cluster_measures)
         measures = []
         for measure in measures_raw:
             if measure.lower() == 'cdfs':
