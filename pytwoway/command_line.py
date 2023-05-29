@@ -169,18 +169,18 @@ def main():
     params = p.parse_args()
 
     ## Interpret lists ##
-    if p.fe_categorical_controls is not None:
-        p.fe_categorical_controls = ast.literal_eval(p.fe_categorical_controls)
-    if p.fe_continuous_controls is not None:
-        p.fe_continuous_controls = ast.literal_eval(p.fe_continuous_controls)
-    if p.fe_Q_var is not None:
-        p.fe_Q_var = ast.literal_eval(p.fe_Q_var)
-    if p.fe_Q_cov is not None:
-        p.fe_Q_cov = ast.literal_eval(p.fe_Q_cov)
-    if p.cluster_measures is not None:
-        p.cluster_measures = ast.literal_eval(p.cluster_measures)
-    if p.measures_moments is not None:
-        p.measures_moments = ast.literal_eval(p.measures_moments)
+    if params.fe_categorical_controls is not None:
+        params.fe_categorical_controls = ast.literal_eval(params.fe_categorical_controls)
+    if params.fe_continuous_controls is not None:
+        params.fe_continuous_controls = ast.literal_eval(params.fe_continuous_controls)
+    if params.fe_Q_var is not None:
+        params.fe_Q_var = ast.literal_eval(params.fe_Q_var)
+    if params.fe_Q_cov is not None:
+        params.fe_Q_cov = ast.literal_eval(params.fe_Q_cov)
+    if params.cluster_measures is not None:
+        params.cluster_measures = ast.literal_eval(params.cluster_measures)
+    if params.measures_moments is not None:
+        params.measures_moments = ast.literal_eval(params.measures_moments)
 
     ##### Stata start #####
     if params.stata:
