@@ -169,18 +169,19 @@ def main():
     params = p.parse_args()
 
     ## Interpret lists ##
+    # NOTE: need to do ast.literal_eval twice for it to work properly
     if params.fe_categorical_controls is not None:
-        params.fe_categorical_controls = ast.literal_eval(params.fe_categorical_controls)
+        params.fe_categorical_controls = ast.literal_eval(ast.literal_eval(params.fe_categorical_controls))
     if params.fe_continuous_controls is not None:
-        params.fe_continuous_controls = ast.literal_eval(params.fe_continuous_controls)
+        params.fe_continuous_controls = ast.literal_eval(ast.literal_eval(params.fe_continuous_controls))
     if params.fe_Q_var is not None:
-        params.fe_Q_var = ast.literal_eval(params.fe_Q_var)
+        params.fe_Q_var = ast.literal_eval(ast.literal_eval(params.fe_Q_var))
     if params.fe_Q_cov is not None:
-        params.fe_Q_cov = ast.literal_eval(params.fe_Q_cov)
+        params.fe_Q_cov = ast.literal_eval(ast.literal_eval(params.fe_Q_cov))
     if params.cluster_measures is not None:
-        params.cluster_measures = ast.literal_eval(params.cluster_measures)
+        params.cluster_measures = ast.literal_eval(ast.literal_eval(params.cluster_measures))
     if params.measures_moments is not None:
-        params.measures_moments = ast.literal_eval(params.measures_moments)
+        params.measures_moments = ast.literal_eval(ast.literal_eval(params.measures_moments))
 
     ##### Stata start #####
     if params.stata:
@@ -397,3 +398,5 @@ def main():
         bdf = bdf.cluster(cluster_params, rng=rng)
         cre_estimator = tw.CREEstimator(bdf.to_eventstudy(is_sorted=True, copy=False).get_cs(copy=False), cre_params)
         cre_estimator.fit(rng=rng)
+
+main()
