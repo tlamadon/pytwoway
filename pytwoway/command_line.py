@@ -322,7 +322,8 @@ def main():
             y=df.loc[:, params.y],
             t=df.loc[:, params.t]
         ).clean(clean_params)
-    if (params.collapse is not None) and params.collapse:
+    if (params.collapse is not None) and params.collapse and not (type(bdf) == bpd.BipartiteLongCollapsed):
+        # NOTE: data might collapse from collapse_at_connectedness_measure
         if params.collapse_level is not None:
             bdf = bdf.collapse(level=params.collapse_level, is_sorted=True, copy=False)
         else:
