@@ -54,10 +54,16 @@ def main():
     p.add('--fe', action='store_true', help='run FE estimation') # This option can be set in a config file because it starts with '--'
     p.add('--cre', action='store_true', help='run CRE estimation')
 
+    # Column names
+    p.add('--i', required=True, help='name of column containing worker ids')
+    p.add('--j', required=True, help='name of column containing firm ids')
+    p.add('--y', required=True, help='name of column containing outcome variable (usually wage)')
+    p.add('--t', required=False, help='name of column containing date variable')
+
     ##### TwoWay start #####
     p.add('--filepath', required=False, help='filepath for data')
     p.add('--collapse', type=str2bool, required=False, help='if True, run estimators on data collapsed at the worker-firm spell level', default=True)
-    p.add('--collapse_level', required=False, help="if collapsing data: if 'spell', collapse at the worker-firm spell level; if 'match', collapse at the worker-firm match level ('spell' and 'match' will differ if a worker leaves then returns to a firm)", default=True)
+    p.add('--collapse_level', required=False, help="if collapsing data: if 'spell', collapse at the worker-firm spell level; if 'match', collapse at the worker-firm match level ('spell' and 'match' will differ if a worker leaves then returns to a firm)")
     p.add('--seed', required=False, help='seed for rng')
     ##### TwoWay end #####
 
@@ -303,8 +309,20 @@ def main():
     }
     clean_params = bpd.clean_params(clear_dict(clean_params))
 
-    bdf = bpd.BipartiteDataFrame(df).clean(clean_params)
-    if (params.collapse is not None) and params.collapse and not (type(bdf) == bpd.BipartiteLongCollapsed):
+    if params.t is None:
+        bdf = bpd.BipartiteDataFrame(
+            i=df.loc[:, params.i],
+            j=df.loc[:, params.j],
+            y=df.loc[:, params.y]
+        ).clean(clean_params)
+    else:
+        bdf = bpd.BipartiteDataFrame(
+            i=df.loc[:, params.i],
+            j=df.loc[:, params.j],
+            y=df.loc[:, params.y],
+            t=df.loc[:, params.t]
+        ).clean(clean_params)
+    if (params.collapse is not None) and params.collapse:
         if params.collapse_level is not None:
             bdf = bdf.collapse(level=params.collapse_level, is_sorted=True, copy=False)
         else:
