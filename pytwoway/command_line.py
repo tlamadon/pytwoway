@@ -331,6 +331,9 @@ def main():
     ##### Prepare data end #####
 
     # Run estimation
+    if params.seed is not None:
+        # Convert seed from string to int
+        params.seed = int(params.seed)
     rng = default_rng(params.seed)
     if params.fe:
         fe_estimator = tw.FEEstimator(bdf, fe_params)
