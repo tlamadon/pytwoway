@@ -55,8 +55,9 @@ def main():
     p.add('--cre', action='store_true', help='run CRE estimation')
 
     ##### TwoWay start #####
-    p.add('--data', required=False, help='path to labor data file')
+    p.add('--filepath', required=False, help='filepath for data')
     p.add('--collapse', type=str2bool, required=False, help='if True, run estimators on data collapsed at the worker-firm spell level', default=True)
+    p.add('--collapse_level', required=False, help="if collapsing data: if 'spell', collapse at the worker-firm spell level; if 'match', collapse at the worker-firm match level ('spell' and 'match' will differ if a worker leaves then returns to a firm)", default=True)
     p.add('--seed', required=False, help='seed for rng')
     ##### TwoWay end #####
 
@@ -65,16 +66,20 @@ def main():
     ##### Stata end #####
 
     ##### FE start #####
+    p.add('--weighted_fe', type=str2bool, required=False, help='if True, use weighted fe estimators')
     p.add('--ho', type=str2bool, required=False, help='if True, compute the homoskedastic correction when estimating fe')
     p.add('--he', type=str2bool, required=False, help='if True, compute the heteroskedastic correction when estimating fe')
+    p.add('--Sii_stayers', required=False, help="how to compute variance of worker effects for stayers for heteroskedastic correction. 'firm_mean' gives stayers the average variance estimate for movers at their firm. 'upper_bound' gives the upper bound variance estimate for stayers for worker effects by assuming the variance matrix is diagonal (please see page 17 of https://github.com/rsaggio87/LeaveOutTwoWay/blob/master/doc/VIGNETTE.pdf for more details).")
     p.add('--ndraw_trace_sigma_2', required=False, help='number of draws to use in trace approximation for sigma^2 when estimating fe')
     p.add('--ndraw_trace_ho', required=False, help='number of draws to use in trace approximation for homoskedastic correction when estimating fe')
     p.add('--ndraw_trace_he', required=False, help='number of draws to use in trace approximation for heteroskedastic correction when estimating fe')
     p.add('--ndraw_lev_he', required=False, help='number of draw to use in leverage approximation for heteroskedastic correction when estimating fe')
-    p.add('--outputfile_fe', required=False, help='outputfile where fe results are saved')
     p.add('--ncore_fe', required=False, help='number of cores to use when estimating fe')
     p.add('--solver', required=False, help="solver to use when estimating fe; options are 'bicg', 'bicgstab', 'cg', 'cgs', 'gmres', 'minres', 'qmr', and 'amg'. 'minres' is recommended for small datasets and 'amg' is recommended for large datasets (100 million observations+).")
+    p.add('--solver_tol', required=False, help="tolerance for convergence of linear solver (Ax=b) when estimating fe, iterations stop when norm(residual) <= tol * norm(b). A lower tolerance will achieve better estimates at the cost of computation time.")
     p.add('--preconditioner', required=False, help="preconditioner to use when estimating fe; options are None, 'jacobi', 'vcycle', 'ichol', and 'ilu'. 'ichol' is recommended for small datasets and 'jacobi' is recommended if 'ichol' raises an error.")
+    p.add('--preconditioner_options', required=False, help="dictionary of preconditioner options to use when estimating fe. If None, sets discard threshold to 0.05 for 'ichol' and 'ilu' preconditioners, but uses default values for all other parameters. Options for the Jacobi, iCholesky, and V-Cycle preconditioners can be found here: https://pymatting.github.io/pymatting.preconditioner.html. Options for the iLU preconditioner can be found here: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spilu.html.")
+    p.add('--outputfile_fe', required=False, help='outputfile where fe results are saved')
     ##### FE end #####
 
     ##### Cluster start #####
@@ -90,7 +95,7 @@ def main():
     ### CDFs start ###
     p.add('--cdf_resolution', required=False, help='how many values to use to approximate the cdfs when clustering')
     p.add('--measure_cdfs', required=False, help='''
-    how to compute the cdfs when clustering ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm_small' to get quantiles at the firm-level and have values be compensations if small data; 'quantile_firm_large' to get quantiles at the firm-level and have values be compensations if large data, note that this is up to 50 times slower than 'quantile_firm_small' and should only be used if the dataset is too large to copy into a dictionary
+    how to compute the cdfs when clustering ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm' to get quantiles at the firm-level and have values be compensations)
     ''')
     ### CDFs end ###
     ### Moments start ###
@@ -136,28 +141,46 @@ def main():
     ##### CRE start #####
     p.add('--ncore_cre', required=False, help='number of cores to use when estimating cre')
     p.add('--ndraw_trace_cre', required=False, help='number of draws to use in approximation for traces when estimating cre')
-    p.add('--ndp', required=False, help=' number of draw to use in approximation for leverages when estimating cre')
+    p.add('--ndp', required=False, help='number of draw to use in approximation for leverages when estimating cre')
     p.add('--outputfile_cre', required=False, help='outputfile where cre results are saved')
     p.add('--posterior', type=str2bool, required=False, help='whether to compute the posterior variance when estimating cre')
     p.add('--wo_btw', required=False, help='sets between variation to 0, pure RE when estimating cre')
     ##### CRE end #####
 
     ##### Clean start #####
-    p.add('--connectedness', required=False, help="for data cleaning, when computing largest connected set of firms: if 'connected', keep observations in the largest connected set of firms; if 'strongly_connected', keep observations in the largest strongly connected set of firms; if 'leave_out_observation', keep observations in the largest leave-one-observation-out connected set; if 'leave_out_spell', keep observations in the largest leave-one-spell-out connected set; if 'leave_out_match', keep observations in the largest leave-one-match-out connected set; if 'leave_out_worker', keep observations in the largest leave-one-worker-out connected set; if 'leave_out_firm', keep observations in the largest leave-one-firm-out connected set; if None, keep all observations.")
+    p.add('--connectedness', required=False, help="for data cleaning, when computing largest connected set of firms: if 'connected', keep observations in the largest connected set of firms; if 'strongly_connected', keep observations in the largest strongly connected set of firms; if 'leave_out_x', keep observations in the largest leave-one-x-out connected set; if 'strongly_leave_out_x', keep observations in the largest strongly connected set that is also leave-one-x-out connected (NOT leave-one-x-out strongly connected); if None, keep all observations.")
+    p.add('--component_size_variable', required=False, help="for data cleaning, when computing largest connected set of firms: how to determine largest connected component. Options are 'len'/'length' (length of frames), 'firms' (number of unique firms), 'workers' (number of unique workers), 'stayers' (number of unique stayers), 'movers' (number of unique movers), 'firms_plus_workers' (number of unique firms + number of unique workers), 'firms_plus_stayers' (number of unique firms + number of unique stayers), 'firms_plus_movers' (number of unique firms + number of unique movers), 'len_stayers'/'length_stayers' (number of stayer observations), 'len_movers'/'length_movers' (number of mover observations), 'stays' (number of stay observations), and 'moves' (number of move observations).")
+    p.add('--drop_single_stayers', required=False, help="for data cleaning, if True, drop stayers who have <= 1 observation weight (check number of observations if data is unweighted) when computing largest connected set of firms.")
     p.add('--i_t_how', required=False, help="for data cleaning, when dropping i-t duplicates: if 'max', keep max paying job; otherwise, take `i_t_how` over duplicate worker-firm-year observations, then take the highest paying worker-firm observation. `i_t_how` can take any input valid for a Pandas transform. Note that if multiple time and/or firm columns are included (as in collapsed long and event study formats), then data is converted to long, cleaned, then converted back to its original format.")
     p.add('--drop_returns', required=False, help="for data cleaning, if 'returns', drop observations where workers leave a firm then return to it; if 'returners', drop workers who ever leave then return to a firm; if 'keep_first_returns', keep first spell where a worker leaves a firm then returns to it; if 'keep_last_returns', keep last spell where a worker leaves a firm then returns to it; if False, keep all observations.")
+    p.add('--drop_returns_to_stays', required=False, help="for data cleaning, applies only if 'drop_returns' is set to False. If True, when recollapsing collapsed data, drop observations that need to be recollapsed instead of collapsing (this is for computational efficiency when re-collapsing data for leave-one-out connected components, where intermediate observations can be dropped, causing a worker who returns to a firm to become a stayer).")
     ##### Clean end #####
 
     params = p.parse_args()
 
     ##### Stata start #####
     if params.stata:
-        params.data = 'leedtwoway_temp_data.dta'
+        params.filepath = 'leedtwoway_temp_data.dta'
         params.filetype = 'dta'
     ##### Stata end #####
 
     ##### FE start #####
-    fe_params = {'ho': params.ho, 'he': params.he, 'ndraw_trace_sigma_2': params.ndraw_trace_sigma_2, 'ndraw_trace_ho': params.ndraw_trace_ho, 'ndraw_trace_he': params.ndraw_trace_he, 'ndraw_lev_he': params.ndraw_lev_he, 'outputfile': params.outputfile_fe, 'ncore': params.ncore_fe, 'solver': params.solver, 'preconditioner': params.preconditioner}
+    fe_params = {
+        'weighted': params.weighted_fe,
+        'ho': params.ho,
+        'he': params.he,
+        'Sii_stayers': params.Sii_stayers,
+        'ndraw_trace_sigma_2': params.ndraw_trace_sigma_2,
+        'ndraw_trace_ho': params.ndraw_trace_ho,
+        'ndraw_trace_he': params.ndraw_trace_he,
+        'ndraw_lev_he': params.ndraw_lev_he,
+        'ncore': params.ncore_fe,
+        'solver': params.solver,
+        'solver_tol': params.solver_tol,
+        'preconditioner': params.preconditioner,
+        'preconditioner_options': params.preconditioner_options,
+        'outputfile': params.outputfile_fe
+    }
     if params.stata:
         fe_params['outputfile'] = 'res_fe.json'
     fe_params = tw.fe_params(clear_dict(fe_params))
@@ -166,7 +189,10 @@ def main():
     ##### Cluster start #####
     #### Measures start ####
     ### CDFs start ###
-    cdf_params = {'cdf_resolution': params.cdf_resolution, 'measure': params.measure_cdfs}
+    cdf_params = {
+        'cdf_resolution': params.cdf_resolution,
+        'measure': params.measure_cdfs
+    }
     cdf_params = clear_dict(cdf_params)
     ### CDFs end ###
     ### Moments start ###
@@ -175,7 +201,9 @@ def main():
         measures_moments = ast.literal_eval(ast.literal_eval(params.measures_moments))
     else:
         measures_moments = params.measures_moments
-    moments_params = {'measures_moments': measures_moments}
+    moments_params = {
+        'measures_moments': measures_moments
+    }
     moments_params = clear_dict(moments_params)
     ### Moments end ###
     #### Measures end ####
@@ -183,13 +211,27 @@ def main():
         #### Grouping start ####
         if params.grouping.lower() == 'kmeans':
             ### KMeans start ###
-            KMeans_params = {'n_clusters': params.n_clusters, 'init': params.init, 'n_init': params.n_init, 'max_iter': params.max_iter, 'tol': params.tol, 'precompute_distances': params.precompute_distances, 'verbose': params.verbose, 'random_state': params.random_state, 'copy_x': params.copy_x, 'n_jobs': params.n_jobs, 'algorithm': params.algorithm}
+            KMeans_params = {
+                'n_clusters': params.n_clusters,
+                'init': params.init,
+                'n_init': params.n_init,
+                'max_iter': params.max_iter,
+                'tol': params.tol,
+                'precompute_distances': params.precompute_distances,
+                'verbose': params.verbose,
+                'random_state': params.random_state,
+                'copy_x': params.copy_x,
+                'n_jobs': params.n_jobs,
+                'algorithm': params.algorithm
+            }
             KMeans_params = clear_dict(KMeans_params)
             params.grouping = bpd.grouping.KMeans(**KMeans_params)
             ### KMeans end ###
         elif params.grouping.lower() == 'quantiles':
             ### Quantiles start ###
-            quantiles_params = {'n_quantiles': params.n_quantiles}
+            quantiles_params = {
+                'n_quantiles': params.n_quantiles
+            }
             quantiles_params = clear_dict(quantiles_params)
             params.grouping = bpd.grouping.Quantiles(**quantiles_params)
             ### Quantiles end ###
@@ -208,13 +250,27 @@ def main():
             measures.append(measure_fn)
     else:
         measures = params.measures
-    cluster_params = {'measures': measures, 'grouping': params.grouping, 'stayers_movers': params.stayers_movers, 't': params.t, 'weighted': params.weighted, 'dropna': params.dropna}
+    cluster_params = {
+        'measures': measures,
+        'grouping': params.grouping,
+        'stayers_movers': params.stayers_movers,
+        't': params.t,
+        'weighted': params.weighted,
+        'dropna': params.dropna
+    }
     cluster_params = bpd.cluster_params(clear_dict(cluster_params))
     #### General end ####
     ##### Cluster end #####
 
     ##### CRE start #####
-    cre_params = {'ncore': params.ncore_cre, 'ndraw_trace': params.ndraw_trace_cre, 'ndp': params.ndp, 'outputfile': params.outputfile_cre, 'posterior': params.posterior, 'wo_btw': params.wo_btw}
+    cre_params = {
+        'ncore': params.ncore_cre,
+        'ndraw_trace': params.ndraw_trace_cre,
+        'ndp': params.ndp,
+        'outputfile': params.outputfile_cre,
+        'posterior': params.posterior,
+        'wo_btw': params.wo_btw
+    }
     if params.stata:
         cre_params['outputfile'] = 'res_cre.json'
     cre_params = tw.cre_params(clear_dict(cre_params))
@@ -236,15 +292,23 @@ def main():
     }
     if params.filetype is None:
         params.filetype = 'csv'
-    df = pd_from_filetype[params.filetype.lower()](params.data)
+    df = pd_from_filetype[params.filetype.lower()](params.filepath)
 
     # Clean data
-    clean_params = {'connectedness': params.connectedness, 'collapse_at_connectedness_measure': True, 'i_t_how': params.i_t_how, 'drop_returns': params.drop_returns}
+    clean_params = {
+        'connectedness': params.connectedness,
+        'collapse_at_connectedness_measure': True,
+        'i_t_how': params.i_t_how,
+        'drop_returns': params.drop_returns
+    }
     clean_params = bpd.clean_params(clear_dict(clean_params))
 
     bdf = bpd.BipartiteDataFrame(df).clean(clean_params)
-    if (params.collapse is not None) and params.collapse and (not type(bdf) == bpd.BipartiteLongCollapsed):
-        bdf = bdf.collapse(is_sorted=True, copy=False)
+    if (params.collapse is not None) and params.collapse and not (type(bdf) == bpd.BipartiteLongCollapsed):
+        if params.collapse_level is not None:
+            bdf = bdf.collapse(level=params.collapse_level, is_sorted=True, copy=False)
+        else:
+            bdf = bdf.collapse(is_sorted=True, copy=False)
     ##### Prepare data end #####
 
     # Run estimation

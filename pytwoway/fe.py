@@ -141,7 +141,7 @@ fe_params = ParamsDict({
         ''', None),
     'solver_tol': (1e-10, 'type_constrained', (int, _gteq0),
         '''
-            (default=1e-10) Tolerance for convergence of linear solver (Ax=b), iterations stop when norm(residual) <= tol * norm(b). A lower tolerance will achieve better estimates at the cost of comp1e-10utation time.
+            (default=1e-10) Tolerance for convergence of linear solver (Ax=b), iterations stop when norm(residual) <= tol * norm(b). A lower tolerance will achieve better estimates at the cost of computation time.
         ''', '>= 0'),
     'preconditioner': ('ichol', 'set', (None, 'jacobi', 'vcycle', 'ichol', 'ilu'),
         '''
