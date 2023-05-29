@@ -72,35 +72,35 @@ def main():
     ##### Stata end #####
 
     ##### FE start #####
-    p.add('--weighted_fe', type=str2bool, required=False, help='if True, use weighted fe estimators')
-    p.add('--ho', type=str2bool, required=False, help='if True, compute the homoskedastic correction when estimating fe')
-    p.add('--he', type=str2bool, required=False, help='if True, compute the heteroskedastic correction when estimating fe')
-    p.add('--Sii_stayers', required=False, help="how to compute variance of worker effects for stayers for heteroskedastic correction. 'firm_mean' gives stayers the average variance estimate for movers at their firm. 'upper_bound' gives the upper bound variance estimate for stayers for worker effects by assuming the variance matrix is diagonal (please see page 17 of https://github.com/rsaggio87/LeaveOutTwoWay/blob/master/doc/VIGNETTE.pdf for more details).")
-    p.add('--ndraw_trace_sigma_2', required=False, help='number of draws to use in trace approximation for sigma^2 when estimating fe')
-    p.add('--ndraw_trace_ho', required=False, help='number of draws to use in trace approximation for homoskedastic correction when estimating fe')
-    p.add('--ndraw_trace_he', required=False, help='number of draws to use in trace approximation for heteroskedastic correction when estimating fe')
-    p.add('--ndraw_lev_he', required=False, help='number of draw to use in leverage approximation for heteroskedastic correction when estimating fe')
-    p.add('--ncore_fe', required=False, help='number of cores to use when estimating fe')
-    p.add('--solver', required=False, help="solver to use when estimating fe; options are 'bicg', 'bicgstab', 'cg', 'cgs', 'gmres', 'minres', 'qmr', and 'amg'. 'minres' is recommended for small datasets and 'amg' is recommended for large datasets (100 million observations+).")
-    p.add('--solver_tol', required=False, help="tolerance for convergence of linear solver (Ax=b) when estimating fe, iterations stop when norm(residual) <= tol * norm(b). A lower tolerance will achieve better estimates at the cost of computation time.")
-    p.add('--preconditioner', required=False, help="preconditioner to use when estimating fe; options are None, 'jacobi', 'vcycle', 'ichol', and 'ilu'. 'ichol' is recommended for small datasets and 'jacobi' is recommended if 'ichol' raises an error.")
-    p.add('--preconditioner_options', required=False, help="dictionary of preconditioner options to use when estimating fe. If None, sets discard threshold to 0.05 for 'ichol' and 'ilu' preconditioners, but uses default values for all other parameters. Options for the Jacobi, iCholesky, and V-Cycle preconditioners can be found here: https://pymatting.github.io/pymatting.preconditioner.html. Options for the iLU preconditioner can be found here: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spilu.html.")
-    p.add('--outputfile_fe', required=False, help='outputfile where fe results are saved')
+    p.add('--fe_weighted', type=str2bool, required=False, help='if True, use weighted fe estimators')
+    p.add('--fe_ho', type=str2bool, required=False, help='if True, compute the homoskedastic correction when estimating fe')
+    p.add('--fe_he', type=str2bool, required=False, help='if True, compute the heteroskedastic correction when estimating fe')
+    p.add('--fe_Sii_stayers', required=False, help="how to compute variance of worker effects for stayers for heteroskedastic correction. 'firm_mean' gives stayers the average variance estimate for movers at their firm. 'upper_bound' gives the upper bound variance estimate for stayers for worker effects by assuming the variance matrix is diagonal (please see page 17 of https://github.com/rsaggio87/LeaveOutTwoWay/blob/master/doc/VIGNETTE.pdf for more details).")
+    p.add('--fe_ndraw_trace_sigma_2', required=False, help='number of draws to use in trace approximation for sigma^2 when estimating fe')
+    p.add('--fe_ndraw_trace_ho', required=False, help='number of draws to use in trace approximation for homoskedastic correction when estimating fe')
+    p.add('--fe_ndraw_trace_he', required=False, help='number of draws to use in trace approximation for heteroskedastic correction when estimating fe')
+    p.add('--fe_ndraw_lev_he', required=False, help='number of draw to use in leverage approximation for heteroskedastic correction when estimating fe')
+    p.add('--fe_ncore', required=False, help='number of cores to use when estimating fe')
+    p.add('--fe_solver', required=False, help="solver to use when estimating fe; options are 'bicg', 'bicgstab', 'cg', 'cgs', 'gmres', 'minres', 'qmr', and 'amg'. 'minres' is recommended for small datasets and 'amg' is recommended for large datasets (100 million observations+).")
+    p.add('--fe_solver_tol', required=False, help="tolerance for convergence of linear solver (Ax=b) when estimating fe, iterations stop when norm(residual) <= tol * norm(b). A lower tolerance will achieve better estimates at the cost of computation time.")
+    p.add('--fe_preconditioner', required=False, help="preconditioner to use when estimating fe; options are None, 'jacobi', 'vcycle', 'ichol', and 'ilu'. 'ichol' is recommended for small datasets and 'jacobi' is recommended if 'ichol' raises an error.")
+    p.add('--fe_preconditioner_options', required=False, help="dictionary of preconditioner options to use when estimating fe. If None, sets discard threshold to 0.05 for 'ichol' and 'ilu' preconditioners, but uses default values for all other parameters. Options for the Jacobi, iCholesky, and V-Cycle preconditioners can be found here: https://pymatting.github.io/pymatting.preconditioner.html. Options for the iLU preconditioner can be found here: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spilu.html.")
+    p.add('--fe_outputfile', required=False, help='outputfile where fe results are saved')
     ##### FE end #####
 
     ##### Cluster start #####
     #### General start ####
-    p.add('--measures', required=False, help="how to compute measures for clustering. Options are 'cdfs' for cdfs and 'moments' for moments. Can use a list for multiple measures. Details on options can be seen in bipartitepandas.measures.")
-    p.add('--grouping', required=False, help="how to group firms based on measures. Options are 'kmeans' for kmeans and 'quantiles' for quantiles. Details on options can be seen in bipartitepandas.grouping.")
-    p.add('--stayers_movers', required=False, help="if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers")
-    p.add('--t', required=False, help='if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)')
-    p.add('--weighted', type=str2bool, required=False, help='if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)')
-    p.add('--dropna', type=str2bool, required=False, help="if True, drop observations where firms aren't clustered; if False, keep all observations")
+    p.add('--cluster_measures', required=False, help="how to compute measures for clustering. Options are 'cdfs' for cdfs and 'moments' for moments. Can use a list for multiple measures. Details on options can be seen in bipartitepandas.measures.")
+    p.add('--cluster_grouping', required=False, help="how to group firms based on measures. Options are 'kmeans' for kmeans and 'quantiles' for quantiles. Details on options can be seen in bipartitepandas.grouping.")
+    p.add('--cluster_stayers_movers', required=False, help="if None, clusters on entire dataset; if 'stayers', clusters on only stayers; if 'movers', clusters on only movers")
+    p.add('--cluster_t', required=False, help='if None, clusters on entire dataset; if int, gives period in data to consider (only valid for non-collapsed data)')
+    p.add('--cluster_weighted', type=str2bool, required=False, help='if True, weight firm clusters by firm size (if a weight column is included, firm weight is computed using this column; otherwise, each observation has weight 1)')
+    p.add('--cluster_dropna', type=str2bool, required=False, help="if True, drop observations where firms aren't clustered; if False, keep all observations")
     #### General end ####
     #### Measures start ####
     ### CDFs start ###
     p.add('--cdf_resolution', required=False, help='how many values to use to approximate the cdfs when clustering')
-    p.add('--measure_cdfs', required=False, help='''
+    p.add('--cdf_measure', required=False, help='''
     how to compute the cdfs when clustering ('quantile_all' to get quantiles from entire set of data, then have firm-level values between 0 and 1; 'quantile_firm' to get quantiles at the firm-level and have values be compensations)
     ''')
     ### CDFs end ###
@@ -145,12 +145,12 @@ def main():
     ##### Cluster end #####
 
     ##### CRE start #####
-    p.add('--ncore_cre', required=False, help='number of cores to use when estimating cre')
-    p.add('--ndraw_trace_cre', required=False, help='number of draws to use in approximation for traces when estimating cre')
-    p.add('--ndp', required=False, help='number of draw to use in approximation for leverages when estimating cre')
-    p.add('--outputfile_cre', required=False, help='outputfile where cre results are saved')
-    p.add('--posterior', type=str2bool, required=False, help='whether to compute the posterior variance when estimating cre')
-    p.add('--wo_btw', required=False, help='sets between variation to 0, pure RE when estimating cre')
+    p.add('--cre_ncore', required=False, help='number of cores to use when estimating cre')
+    p.add('--cre_ndraw_trace', required=False, help='number of draws to use in approximation for traces when estimating cre')
+    p.add('--cre_ndp', required=False, help='number of draw to use in approximation for leverages when estimating cre')
+    p.add('--cre_outputfile', required=False, help='outputfile where cre results are saved')
+    p.add('--cre_posterior', type=str2bool, required=False, help='whether to compute the posterior variance when estimating cre')
+    p.add('--cre_wo_btw', required=False, help='sets between variation to 0, pure RE when estimating cre')
     ##### CRE end #####
 
     ##### Clean start #####
@@ -172,20 +172,20 @@ def main():
 
     ##### FE start #####
     fe_params = {
-        'weighted': params.weighted_fe,
-        'ho': params.ho,
-        'he': params.he,
-        'Sii_stayers': params.Sii_stayers,
-        'ndraw_trace_sigma_2': params.ndraw_trace_sigma_2,
-        'ndraw_trace_ho': params.ndraw_trace_ho,
-        'ndraw_trace_he': params.ndraw_trace_he,
-        'ndraw_lev_he': params.ndraw_lev_he,
-        'ncore': params.ncore_fe,
-        'solver': params.solver,
-        'solver_tol': params.solver_tol,
-        'preconditioner': params.preconditioner,
-        'preconditioner_options': params.preconditioner_options,
-        'outputfile': params.outputfile_fe
+        'weighted': params.fe_weighted,
+        'ho': params.fe_ho,
+        'he': params.fe_he,
+        'Sii_stayers': params.fe_Sii_stayers,
+        'ndraw_trace_sigma_2': params.fe_ndraw_trace_sigma_2,
+        'ndraw_trace_ho': params.fe_ndraw_trace_ho,
+        'ndraw_trace_he': params.fe_ndraw_trace_he,
+        'ndraw_lev_he': params.fe_ndraw_lev_he,
+        'ncore': params.fe_ncore,
+        'solver': params.fe_solver,
+        'solver_tol': params.fe_solver_tol,
+        'preconditioner': params.fe_preconditioner,
+        'preconditioner_options': params.fe_preconditioner_options,
+        'outputfile': params.fe_outputfile
     }
     if params.stata:
         fe_params['outputfile'] = 'res_fe.json'
@@ -197,7 +197,7 @@ def main():
     ### CDFs start ###
     cdf_params = {
         'cdf_resolution': params.cdf_resolution,
-        'measure': params.measure_cdfs
+        'measure': params.cdf_measure
     }
     cdf_params = clear_dict(cdf_params)
     ### CDFs end ###
@@ -243,9 +243,9 @@ def main():
             ### Quantiles end ###
         #### Grouping end ####
     #### General start ####
-    if params.measures is not None:
+    if params.cluster_measures is not None:
         # Have to do ast.literal_eval twice for it to work properly
-        measures_raw = ast.literal_eval(ast.literal_eval(params.measures))
+        measures_raw = ast.literal_eval(ast.literal_eval(params.cluster_measures))
         measures_raw = bpd.to_list(measures_raw)
         measures = []
         for measure in measures_raw:
@@ -255,14 +255,14 @@ def main():
                 measure_fn = bpd.measures.Moments(**moments_params)
             measures.append(measure_fn)
     else:
-        measures = params.measures
+        measures = params.cluster_measures
     cluster_params = {
         'measures': measures,
-        'grouping': params.grouping,
-        'stayers_movers': params.stayers_movers,
-        't': params.t,
-        'weighted': params.weighted,
-        'dropna': params.dropna
+        'grouping': params.cluster_grouping,
+        'stayers_movers': params.cluster_stayers_movers,
+        't': params.cluster_t,
+        'weighted': params.cluster_weighted,
+        'dropna': params.cluster_dropna
     }
     cluster_params = bpd.cluster_params(clear_dict(cluster_params))
     #### General end ####
@@ -270,12 +270,12 @@ def main():
 
     ##### CRE start #####
     cre_params = {
-        'ncore': params.ncore_cre,
-        'ndraw_trace': params.ndraw_trace_cre,
-        'ndp': params.ndp,
-        'outputfile': params.outputfile_cre,
-        'posterior': params.posterior,
-        'wo_btw': params.wo_btw
+        'ncore': params.cre_ncore,
+        'ndraw_trace': params.cre_ndraw_trace,
+        'ndp': params.cre_ndp,
+        'outputfile': params.cre_outputfile,
+        'posterior': params.cre_posterior,
+        'wo_btw': params.cre_wo_btw
     }
     if params.stata:
         cre_params['outputfile'] = 'res_cre.json'
