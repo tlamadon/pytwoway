@@ -202,14 +202,14 @@ def main():
         fe_params = tw.fecontrol_params(fe_params)
 
         if params.fe_Q_var is not None:
-            Q_var = [tw.Q.VarCovariate(col) for col in ast.literal_eval(ast.literal_eval(params.fe_Q_var))]
+            Q_var = [tw.Q.VarCovariate(col) for col in params.fe_Q_var]
         else:
             Q_var = [
                 tw.Q.VarCovariate('psi'),
                 tw.Q.VarCovariate('alpha')
             ]
         if params.fe_Q_cov is not None:
-            Q_cov = [tw.Q.CovCovariate(col[0], col[1]) for col in ast.literal_eval(ast.literal_eval(params.fe_Q_cov))]
+            Q_cov = [tw.Q.CovCovariate(ast.literal_eval(ast.literal_eval(col)[0]), ast.literal_eval(ast.literal_eval(col)[1])) for col in params.fe_Q_cov]
         else:
             Q_cov = [
                 tw.Q.CovCovariate('psi', 'alpha')
