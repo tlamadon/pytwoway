@@ -6,10 +6,11 @@
 
 capture program drop leedtwoway
 program define leedtwoway, rclass
-    syntax namelist, config(string) [env(string) ho he]
+    syntax namelist, config(string) [env(string) os(string) ho he]
     * namelist: fe and/or cre
     * config: filepath for config file
     * env (optional): conda environment name
+    * os (optional, required if using env): operating system ("mac", "windows", or "linux")
     * ho (optional): if True, store homoskedastic bias correction results
     * he (optional): if True, store heteroskedastic bias correction results
     * Save data
@@ -18,7 +19,18 @@ program define leedtwoway, rclass
 
     if "`env'" != "" {
         * Add conda path
-        qui local command = "`command'source /opt/anaconda3/etc/profile.d/conda.sh"
+        if "`os'" == "mac" {
+            qui local command = "`command'source /opt/anaconda3/etc/profile.d/conda.sh"
+        }
+        else if "`os'" == "windows" {
+            qui local command = "`command'source /opt/anaconda3/etc/profile.d/conda.sh"
+        }
+        else if "`os'" == "linux" {
+            qui local command = "`command'source /opt/anaconda3/etc/profile.d/conda.sh"
+        }
+        else {
+            di "input `os' for operating system is invalid"
+        }
         * Activate environment
         qui local command = "`command'; conda activate `env'"
     }
@@ -115,5 +127,5 @@ set maxvar 100000
 cd "/Users/adamalexanderoppenheimer/Desktop/pytwoway/stata"
 import delimited "twoway_sample_data.csv", clear
 
-leedtwoway fe cre, config("config.txt") env("stata-env") ho he
+leedtwoway fe cre, config("config.txt") env("stata-env") os("mac") ho he
 */
