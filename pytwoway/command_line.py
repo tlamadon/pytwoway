@@ -57,7 +57,7 @@ def main():
     # Column names
     p.add('--i', required=True, help='name of column containing worker ids')
     p.add('--j', required=True, help='name of column containing firm ids')
-    p.add('--y', required=True, help='name of column containing outcome variable (usually wage)')
+    p.add('--y', required=True, help='name of column containing outcome variable')
     p.add('--t', required=False, help='name of column containing date variable')
 
     ##### TwoWay start #####
