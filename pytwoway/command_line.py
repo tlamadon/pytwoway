@@ -173,12 +173,6 @@ def main():
     ##### Stata end #####
 
     ##### FE start #####
-    if params.fe_categorical_controls is not None:
-        # Have to do ast.literal_eval twice for it to work properly
-        params.fe_categorical_controls = ast.literal_eval(ast.literal_eval(params.fe_categorical_controls))
-    if params.fe_continuous_controls is not None:
-        # Have to do ast.literal_eval twice for it to work properly
-        params.fe_continuous_controls = ast.literal_eval(ast.literal_eval(params.fe_continuous_controls))
     fe_params = {
         'weighted': params.fe_weighted,
         'ho': params.fe_ho,
