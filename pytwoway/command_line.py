@@ -6,7 +6,6 @@ pytw --my-config config.txt --fe --cre
 '''
 import configargparse
 import ast
-import json
 from numpy.random import default_rng
 import pandas as pd
 import bipartitepandas as bpd
@@ -79,7 +78,7 @@ def main():
     p.add('--fe_categorical_controls', nargs='+', required=False, help='list of columns to use as categorical controls when estimating fe')
     p.add('--fe_continuous_controls', nargs='+', required=False, help='list of columns to use as continuous controls when estimating fe')
     p.add('--fe_Q_var', nargs='+', type=str, required=False, help="list of columns to use when computing variances when estimating fe. Note this should be a list of column names, and should include 'psi' for firm effects and 'alpha' for worker effects.")
-    p.add('--fe_Q_cov', nargs='+', type=json.loads, required=False, help="list of tuples of columns to use when computing covariances when estimating fe. As an example, ((psi, age), (alpha)) will compute cov(psi + age, alpha). This should include 'psi' for firm effects and 'alpha' for worker effects.")
+    p.add('--fe_Q_cov', nargs='+', type=str, required=False, help="list of tuples of columns to use when computing covariances when estimating fe. As an example, ((psi, age), (alpha)) will compute cov(psi + age, alpha). This should include 'psi' for firm effects and 'alpha' for worker effects.")
     p.add('--fe_Sii_stayers', required=False, help="how to compute variance of worker effects for stayers for heteroskedastic correction. 'firm_mean' gives stayers the average variance estimate for movers at their firm. 'upper_bound' gives the upper bound variance estimate for stayers for worker effects by assuming the variance matrix is diagonal (please see page 17 of https://github.com/rsaggio87/LeaveOutTwoWay/blob/master/doc/VIGNETTE.pdf for more details).")
     p.add('--fe_ndraw_trace_sigma_2', required=False, help='number of draws to use in trace approximation for sigma^2 when estimating fe')
     p.add('--fe_ndraw_trace_ho', required=False, help='number of draws to use in trace approximation for homoskedastic correction when estimating fe')
@@ -203,14 +202,14 @@ def main():
         fe_params = tw.fecontrol_params(fe_params)
 
         if params.fe_Q_var is not None:
-            Q_var = [tw.Q.VarCovariate(col) for col in params.fe_Q_var]
+            Q_var = [tw.Q.VarCovariate(col) for col in ast.literal_eval(ast.literal_eval(params.fe_Q_var))]
         else:
             Q_var = [
                 tw.Q.VarCovariate('psi'),
                 tw.Q.VarCovariate('alpha')
             ]
         if params.fe_Q_cov is not None:
-            Q_cov = [tw.Q.CovCovariate(col[0], col[1]) for col in params.fe_Q_cov]
+            Q_cov = [tw.Q.CovCovariate(col[0], col[1]) for col in ast.literal_eval(ast.literal_eval(params.fe_Q_cov))]
         else:
             Q_cov = [
                 tw.Q.CovCovariate('psi', 'alpha')
