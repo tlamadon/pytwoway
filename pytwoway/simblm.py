@@ -227,7 +227,7 @@ sim_continuous_control_params = ParamsDict({
 
 class SimBLM:
     '''
-    Class of SimBLM, where SimBLM simulates a bipartite BLM network of firms and workers.
+    Class for simulating bipartite BLM networks of firms and workers.
 
     Arguments:
         sim_params (ParamsDict): dictionary of parameters for simulating data. Run tw.sim_blm_params().describe_all() for descriptions of all valid parameters. None is equivalent to tw.sim_blm_params().

@@ -4,7 +4,6 @@ Class for simulating from the Borovickova-Shimer dgp.
 import numpy as np
 from paramsdict import ParamsDict
 from bipartitepandas import BipartiteDataFrame, clean_params
-from bipartitepandas.util import _sort_cols
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq2(a):

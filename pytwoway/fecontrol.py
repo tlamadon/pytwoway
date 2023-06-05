@@ -230,14 +230,10 @@ class FEControlEstimator:
         ## Control variables ##
         self.cat_cols = params['categorical_controls']
         self.cts_cols = params['continuous_controls']
-        if params['categorical_controls'] is None:
+        if self.cat_cols is None:
             self.cat_cols = []
-        else:
-            self.cat_cols = to_list(params['categorical_controls'])
-        if params['continuous_controls'] is None:
+        if self.cts_cols is None:
             self.cts_cols = []
-        else:
-            self.cts_cols = to_list(params['continuous_controls'])
         ## Clustered SE ##
         if params['se_cols'] is not None:
             # Run checks
