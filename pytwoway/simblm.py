@@ -97,7 +97,7 @@ sim_blm_params = ParamsDict({
         '''
             (default=None) Dirichlet prior for pk0 (probability of being at each firm type for stayers). Must have length nl. None is equivalent to np.ones(nl).
         ''', 'min > 0'),
-    'strictly_monotone_a': (False, 'type', bool,
+    'strictly_monotone_A': (False, 'type', bool,
         '''
             (default=False) If True, set A1 and A2 to be strictly increasing by firm type for each worker type (otherwise, they are required to be increasing only by firm type over the average for all worker types).
         ''', None),
@@ -236,6 +236,7 @@ class SimBLM:
     def __init__(self, sim_params=None):
         if sim_params is None:
             sim_params = sim_blm_params()
+
         # Store parameters
         self.params = sim_params
         nl, nk, NNm, NNs = self.params.get_multiple(('nl', 'nk', 'NNm', 'NNs'))
@@ -293,9 +294,9 @@ class SimBLM:
             (tuple): sorted arrays
         '''
         # Extract parameters
-        nl, strictly_monotone_a = self.params.get_multiple(('nl', 'strictly_monotone_a'))
+        nl, strictly_monotone_A = self.params.get_multiple(('nl', 'strictly_monotone_A'))
 
-        if strictly_monotone_a:
+        if strictly_monotone_A:
             ## Make A1 and A2 monotone by worker type ##
             for l in range(nl):
                 A1[l, :] = np.sort(A1[l, :], axis=0)
@@ -308,7 +309,7 @@ class SimBLM:
         A1 = A1[worker_effect_order, :]
         A2 = A2[worker_effect_order, :]
 
-        if not strictly_monotone_a:
+        if not strictly_monotone_A:
             ## Sort firm effects ##
             firm_effect_order = np.mean(A1, axis=0).argsort()
             A1 = A1[:, firm_effect_order]

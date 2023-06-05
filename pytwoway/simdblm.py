@@ -220,7 +220,7 @@ sim_dynamic_blm_params = ParamsDict({
         '''
             (default=None) Dirichlet prior for pk0 (probability of being at each firm type for stayers). Must have length nl. None is equivalent to np.ones(nl).
         ''', 'min > 0'),
-    'strictly_monotone_a': (False, 'type', bool,
+    'strictly_monotone_A': (False, 'type', bool,
         '''
             (default=False) If True, set A to be strictly increasing by firm type for each worker type in each period (otherwise, each period is required to be increasing only by firm type over the average for all worker types).
         ''', None),
@@ -616,9 +616,9 @@ class SimDynamicBLM:
             (dict of NumPy Arrays): sorted arrays
         '''
         # Extract parameters
-        nl, strictly_monotone_a = self.params.get_multiple(('nl', 'strictly_monotone_a'))
+        nl, strictly_monotone_A = self.params.get_multiple(('nl', 'strictly_monotone_A'))
 
-        if strictly_monotone_a:
+        if strictly_monotone_A:
             ## Make A1 and A2 monotone by worker type ##
             for l in range(nl):
                 for period in self.all_periods:
@@ -633,7 +633,7 @@ class SimDynamicBLM:
             if period[-1] != 'b':
                 A[period] = A[period][worker_effect_order, :]
 
-        if not strictly_monotone_a:
+        if not strictly_monotone_A:
             ## Sort firm effects ##
             firm_effect_order = np.mean(A['12'], axis=0).argsort()
             for period in self.all_periods:
