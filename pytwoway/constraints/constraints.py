@@ -203,14 +203,16 @@ class Linear():
     Arguments:
         nnt (int or list of ints or None): time periods to constrain. This should be set to 0 if Linear() is being used in conjunction with Stationary(). None is equivalent to range(nt).
         nt (int): number of time periods
+        dynamic (bool): if True, using dynamic BLM estimator
     '''
 
-    def __init__(self, nnt=None, nt=2):
+    def __init__(self, nnt=None, nt=2, dynamic=False):
         if nnt is None:
             self.nnt = range(nt)
         else:
             self.nnt = to_list(nnt)
         self.nt = nt
+        self.dynamic = dynamic
 
     def _get_constraints(self, nl, nk):
         '''
@@ -223,18 +225,31 @@ class Linear():
         Returns:
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        nnt, nt = self.nnt, self.nt
+        ## Unpack parameters ##
+        nnt, nt, dynamic = self.nnt, self.nt, self.dynamic
+
+        ## Initialize variables ##
+        # A starts with 4 dimensions
         A = np.zeros(shape=(len(nnt) * (nl - 2) * nk, nt, nl, nk))
         i = 0
 
+        ## Generate constraints ##
         for period in nnt:
+            ## Iterate over periods ##
             for k in range(nk):
+                ## Iterate over firm types ##
                 for l in range(nl - 2):
+                    ## Iterate over worker types ##
                     A[i, period, l, k] = 1
                     A[i, period, l + 1, k] = -2
                     A[i, period, l + 2, k] = 1
                     i += 1
 
+        if dynamic:
+            # Use dynamic BLM dimensions (i, l, period, k)
+            A = A.transpose((0, 2, 1, 3))
+
+        # Reshape A to 2 dimensions
         A = A.reshape((len(nnt) * (nl - 2) * nk, nt * nl * nk))
 
         b = - np.zeros(shape=A.shape[0])
@@ -248,14 +263,16 @@ class LinearAdditive():
     Arguments:
         nnt (int or list of ints or None): time periods to constrain. This should be set to 1 if LinearAdditive() is being used in conjunction with Stationary(). None is equivalent to range(nt).
         nt (int): number of time periods
+        dynamic (bool): if True, using dynamic BLM estimator
     '''
 
-    def __init__(self, nnt=None, nt=2):
+    def __init__(self, nnt=None, nt=2, dynamic=False):
         if nnt is None:
             self.nnt = range(nt)
         else:
             self.nnt = to_list(nnt)
         self.nt = nt
+        self.dynamic = dynamic
 
     def _get_constraints(self, nl, nk):
         '''
@@ -268,14 +285,22 @@ class LinearAdditive():
         Returns:
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        nnt, nt = self.nnt, self.nt
+        ## Unpack parameters ##
+        nnt, nt, dynamic = self.nnt, self.nt, self.dynamic
+
+        ## Initialize variables ##
+        # A starts with 4 dimensions
         A = np.zeros(shape=(len(nnt) * ((nl - 2) * nk + (nk - 1)), nt, nl, nk))
         i = 0
 
+        ### Generate constraints ###
         ## Linear ##
         for period in nnt:
+            ## Iterate over periods ##
             for k in range(nk):
+                ## Iterate over firm types ##
                 for l in range(nl - 2):
+                    ## Iterate over worker types ##
                     A[i, period, l, k] = 1
                     A[i, period, l + 1, k] = -2
                     A[i, period, l + 2, k] = 1
@@ -283,13 +308,20 @@ class LinearAdditive():
 
         ## Additive ##
         for period in nnt:
+            ## Iterate over periods ##
             for k in range(nk - 1):
+                ## Iterate over firm types ##
                 A[i, period, 0, k] = 1
                 A[i, period, 1, k] = -1
                 A[i, period, 0, k + 1] = -1
                 A[i, period, 1, k + 1] = 1
                 i += 1
 
+        if dynamic:
+            # Use dynamic BLM dimensions (i, l, period, k)
+            A = A.transpose((0, 2, 1, 3))
+
+        # Reshape A to 2 dimensions
         A = A.reshape((len(nnt) * ((nl - 2) * nk + (nk - 1)), nt * nl * nk))
 
         b = - np.zeros(shape=A.shape[0])
@@ -304,12 +336,14 @@ class Monotonic():
         md (float): minimum difference between consecutive types
         increasing (bool): if True, monotonic increasing; if False, monotonic decreasing
         nt (int): number of time periods
+        dynamic (bool): if True, using dynamic BLM estimator
     '''
 
-    def __init__(self, md=0, increasing=True, nt=2):
+    def __init__(self, md=0, increasing=True, nt=2, dynamic=False):
         self.md = md
         self.increasing = increasing
         self.nt = nt
+        self.dynamic = dynamic
 
     def _get_constraints(self, nl, nk):
         '''
@@ -322,17 +356,30 @@ class Monotonic():
         Returns:
             (dict of NumPy Arrays): {'G': G, 'h': h, 'A': None, 'b': None}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        md, increasing, nt = self.md, self.increasing, self.nt
+        ## Unpack parameters ##
+        md, increasing, nt, dynamic = self.md, self.increasing, self.nt, self.dynamic
+
+        ## Initialize variables ##
+        # G starts with 4 dimensions
         G = np.zeros(shape=(nt * (nl - 1) * nk, nt, nl, nk))
         i = 0
 
+        ## Generate constraints ##
         for period in range(nt):
+            ## Iterate over periods ##
             for k in range(nk):
+                ## Iterate over firm types ##
                 for l in range(nl - 1):
+                    ## Iterate over worker types ##
                     G[i, period, l, k] = 1
                     G[i, period, l + 1, k] = -1
                     i += 1
 
+        if dynamic:
+            # Use dynamic BLM dimensions (i, l, period, k)
+            G = G.transpose((0, 2, 1, 3))
+
+        # Reshape G to 2 dimensions
         G = G.reshape((nt * (nl - 1) * nk, nt * nl * nk))
 
         h = - md * np.ones(shape=G.shape[0])
@@ -352,9 +399,10 @@ class MonotonicMean():
         cross_period_mean (bool): if True, rather than checking means are monotonic for each period separately, consider the mean worker effects over all periods jointly
         nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
         nt (int): number of time periods
+        dynamic (bool): if True, using dynamic BLM estimator
     '''
 
-    def __init__(self, md=0, increasing=True, cross_period_mean=False, nnt=None, nt=2):
+    def __init__(self, md=0, increasing=True, cross_period_mean=False, nnt=None, nt=2, dynamic=False):
         self.md = md
         self.increasing = increasing
         self.cross_period_mean = cross_period_mean
@@ -363,6 +411,7 @@ class MonotonicMean():
         else:
             self.nnt = to_list(nnt)
         self.nt = nt
+        self.dynamic = dynamic
 
     def _get_constraints(self, nl, nk):
         '''
@@ -375,18 +424,26 @@ class MonotonicMean():
         Returns:
             (dict of NumPy Arrays): {'G': G, 'h': h, 'A': None, 'b': None}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        md, increasing, cross_period_mean, nnt, nt = self.md, self.increasing, self.cross_period_mean, self.nnt, self.nt
+        ## Unpack parameters ##
+        md, increasing, cross_period_mean, nnt, nt, dynamic = self.md, self.increasing, self.cross_period_mean, self.nnt, self.nt, self.dynamic
+
+        ## Initialize variables ##
+        # G starts with 4 dimensions
         if cross_period_mean:
             G = np.zeros(shape=((nl - 1), nt, nl, nk))
         else:
             G = np.zeros(shape=(len(nnt) * (nl - 1), nt, nl, nk))
         i = 0
 
+        ## Generate constraints ##
         for period in nnt:
+            ## Iterate over periods ##
             if cross_period_mean:
                 i = 0
             for l in range(nl - 1):
+                ## Iterate over worker types ##
                 for k in range(nk):
+                    ## Iterate over firm types ##
                     if cross_period_mean:
                         G[i, period, l, k] = (1 / (len(nnt) * nk))
                         G[i, period, l + 1, k] = - (1 / (len(nnt) * nk))
@@ -395,6 +452,11 @@ class MonotonicMean():
                         G[i, period, l + 1, k] = - (1 / nk)
                 i += 1
 
+        if dynamic:
+            # Use dynamic BLM dimensions (i, l, period, k)
+            G = G.transpose((0, 2, 1, 3))
+
+        # Reshape G to 2 dimensions
         if cross_period_mean:
             G = G.reshape(((nl - 1), nt * nl * nk))
         else:
@@ -418,9 +480,10 @@ class MinFirmType():
         cross_period_mean (bool): if True, rather than checking means are monotonic for each period separately, consider the mean worker effects over all periods jointly
         nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
         nt (int): number of time periods
+        dynamic (bool): if True, using dynamic BLM estimator
     '''
 
-    def __init__(self, min_firm_type, md=0, is_min=True, cross_period_mean=False, nnt=None, nt=2):
+    def __init__(self, min_firm_type, md=0, is_min=True, cross_period_mean=False, nnt=None, nt=2, dynamic=False):
         self.min_firm_type = min_firm_type
         self.md = md
         self.is_min = is_min
@@ -430,6 +493,7 @@ class MinFirmType():
         else:
             self.nnt = to_list(nnt)
         self.nt = nt
+        self.dynamic = dynamic
 
     def _get_constraints(self, nl, nk):
         '''
@@ -442,14 +506,20 @@ class MinFirmType():
         Returns:
             (dict of NumPy Arrays): {'G': G, 'h': h, 'A': None, 'b': None}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        min_firm_type, md, is_min, cross_period_mean, nnt, nt = self.min_firm_type, self.md, self.is_min, self.cross_period_mean, self.nnt, self.nt
+        ## Unpack parameters ##
+        min_firm_type, md, is_min, cross_period_mean, nnt, nt, dynamic = self.min_firm_type, self.md, self.is_min, self.cross_period_mean, self.nnt, self.nt, self.dynamic
+
+        ## Initialize variables ##
+        # G starts with 4 dimensions
         if cross_period_mean:
             G = np.zeros(shape=((nk - 1), nt, nl, nk))
         else:
             G = np.zeros(shape=(len(nnt) * (nk - 1), nt, nl, nk))
         i = 0
 
+        ## Generate constraints ##
         for period in nnt:
+            ## Iterate over periods ##
             if cross_period_mean:
                 i = 0
             for k in list(range(min_firm_type)) + list(range(min_firm_type + 1, nk)):
@@ -468,7 +538,11 @@ class MinFirmType():
                         G[i, period, l, k] = - (1 / nl)
                 i += 1
 
-        ## Reshape parameters ##
+        if dynamic:
+            # Use dynamic BLM dimensions (i, l, period, k)
+            G = G.transpose((0, 2, 1, 3))
+
+        # Reshape G to 2 dimensions
         if cross_period_mean:
             G = np.reshape(G, ((nk - 1), nt * nl * nk))
         else:
@@ -483,19 +557,21 @@ class MinFirmType():
 
 class NoWorkerTypeInteraction():
     '''
-    Generate BLM constraints so that for a fixed firm type, worker types effects must all be the same.
+    Generate BLM constraints so that for a fixed firm type, worker type effects must all be the same.
 
     Arguments:
         nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
         nt (int): number of time periods
+        dynamic (bool): if True, using dynamic BLM estimator
     '''
 
-    def __init__(self, nnt=None, nt=2):
+    def __init__(self, nnt=None, nt=2, dynamic=False):
         if nnt is None:
             self.nnt = range(nt)
         else:
             self.nnt = to_list(nnt)
         self.nt = nt
+        self.dynamic = dynamic
 
     def _get_constraints(self, nl, nk):
         '''
@@ -508,17 +584,30 @@ class NoWorkerTypeInteraction():
         Returns:
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        nnt, nt = self.nnt, self.nt
+        ## Unpack parameters ##
+        nnt, nt, dynamic = self.nnt, self.nt, self.dynamic
+
+        ## Initialize variables ##
+        # A starts with 4 dimensions
         A = np.zeros(shape=(len(nnt) * (nl - 1) * nk, nt, nl, nk))
         i = 0
 
+        ## Generate constraints ##
         for period in nnt:
+            ## Iterate over periods ##
             for k in range(nk):
+                ## Iterate over firm types ##
                 for l in range(nl - 1):
+                    ## Iterate over worker types ##
                     A[i, period, l, k] = 1
                     A[i, period, l + 1, k] = -1
                     i += 1
 
+        if dynamic:
+            # Use dynamic BLM dimensions (i, l, period, k)
+            A = A.transpose((0, 2, 1, 3))
+
+        # Reshape A to 2 dimensions
         A = A.reshape((len(nnt) * (nl - 1) * nk, nt * nl * nk))
 
         b = - np.zeros(shape=A.shape[0])
@@ -534,9 +623,10 @@ class NormalizeLowest():
         cross_period_normalize (bool): if True, rather than normalizing for each period separately, normalize the mean of the lowest worker-firm type pair effect over all periods jointly
         nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
         nt (int): number of time periods
+        dynamic (bool): if True, using dynamic BLM estimator
     '''
 
-    def __init__(self, min_firm_type, cross_period_normalize=False, nnt=None, nt=2):
+    def __init__(self, min_firm_type, cross_period_normalize=False, nnt=None, nt=2, dynamic=False):
         self.min_firm_type = min_firm_type
         self.cross_period_normalize = cross_period_normalize
         if nnt is None:
@@ -544,6 +634,7 @@ class NormalizeLowest():
         else:
             self.nnt = to_list(nnt)
         self.nt = nt
+        self.dynamic = dynamic
 
     def _get_constraints(self, nl, nk):
         '''
@@ -556,20 +647,31 @@ class NormalizeLowest():
         Returns:
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        min_firm_type, cross_period_normalize, nnt, nt = self.min_firm_type, self.cross_period_normalize, self.nnt, self.nt
+        ## Unpack parameters ##
+        min_firm_type, cross_period_normalize, nnt, nt, dynamic = self.min_firm_type, self.cross_period_normalize, self.nnt, self.nt, self.dynamic
+
+        ## Initialize variables ##
+        # A starts with 4 dimensions
         if cross_period_normalize:
             A = np.zeros(shape=(1, nt, nl, nk))
         else:
             A = np.zeros(shape=(len(nnt), nt, nl, nk))
             i = 0
 
+        ## Generate constraints ##
         for period in nnt:
+            ## Iterate over periods ##
             if cross_period_normalize:
                 A[0, period, 0, min_firm_type] = (1 / len(nnt))
             else:
                 A[i, period, 0, min_firm_type] = 1
                 i += 1
 
+        if dynamic:
+            # Use dynamic BLM dimensions (i, l, period, k)
+            A = A.transpose((0, 2, 1, 3))
+
+        # Reshape A to 2 dimensions
         if cross_period_normalize:
             A = A.reshape((1, nt * nl * nk))
         else:
@@ -588,9 +690,10 @@ class NormalizeAll():
         cross_period_normalize (bool): if True, rather than normalizing for each period separately, normalize the mean of all worker-firm type pair effects over all periods jointly
         nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
         nt (int): number of time periods
+        dynamic (bool): if True, using dynamic BLM estimator
     '''
 
-    def __init__(self, min_firm_type, cross_period_normalize=False, nnt=None, nt=2):
+    def __init__(self, min_firm_type, cross_period_normalize=False, nnt=None, nt=2, dynamic=False):
         self.min_firm_type = min_firm_type
         self.cross_period_normalize = cross_period_normalize
         if nnt is None:
@@ -598,6 +701,7 @@ class NormalizeAll():
         else:
             self.nnt = to_list(nnt)
         self.nt = nt
+        self.dynamic = dynamic
 
     def _get_constraints(self, nl, nk):
         '''
@@ -610,21 +714,33 @@ class NormalizeAll():
         Returns:
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        min_firm_type, cross_period_normalize, nnt, nt = self.min_firm_type, self.cross_period_normalize, self.nnt, self.nt
+        ## Unpack parameters ##
+        min_firm_type, cross_period_normalize, nnt, nt, dynamic = self.min_firm_type, self.cross_period_normalize, self.nnt, self.nt, self.dynamic
+
+        ## Initialize variables ##
+        # A starts with 4 dimensions
         if cross_period_normalize:
             A = np.zeros(shape=(nl, nt, nl, nk))
         else:
             A = np.zeros(shape=(len(nnt) * nl, nt, nl, nk))
             i = 0
 
+        ## Generate constraints ##
         for period in nnt:
+            ## Iterate over periods ##
             for l in range(nl):
+                ## Iterate over worker types ##
                 if cross_period_normalize:
                     A[l, period, l, min_firm_type] = (1 / len(nnt))
                 else:
                     A[i, period, l, min_firm_type] = 1
                     i += 1
 
+        if dynamic:
+            # Use dynamic BLM dimensions (i, l, period, k)
+            A = A.transpose((0, 2, 1, 3))
+
+        # Reshape A to 2 dimensions
         if cross_period_normalize:
             A = A.reshape((nl, nt * nl * nk))
         else:
@@ -641,13 +757,15 @@ class Stationary():
     Arguments:
         nwt (int): number of worker types to constrain. This is used in conjunction with Linear(), as only two worker types are required to be constrained in this case; or in conjunction with NoWorkerTypeInteraction(), as only one worker type is required to be constrained in this case. Setting nwt=-1 constrains all worker types.
         nt (int): number of time periods
+        dynamic (bool): if True, using dynamic BLM estimator
     '''
 
-    def __init__(self, nwt=-1, nt=2):
+    def __init__(self, nwt=-1, nt=2, dynamic=False):
         self.nwt = nwt
         if (nwt < -1) or (nwt == 0):
             raise NotImplementedError(f'nwt must equal -1 or be positive, but input specifies nwt={nwt}.')
         self.nt = nt
+        self.dynamic = dynamic
 
     def _get_constraints(self, nl, nk):
         '''
@@ -660,21 +778,34 @@ class Stationary():
         Returns:
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        nt, nwt = self.nt, self.nwt
+        ## Unpack parameters ##
+        nt, nwt, dynamic = self.nt, self.nwt, self.dynamic
+
+        ## Initialize variables ##
         if nwt == -1:
             nl_adj = nl
         else:
             nl_adj = min(nl, nwt)
+        # A starts with 4 dimensions
         A = np.zeros(shape=((nt - 1) * nl_adj * nk, nt, nl, nk))
         i = 0
 
+        ## Generate constraints ##
         for period in range(nt - 1):
+            ## Iterate over periods ##
             for l in range(nl_adj):
+                ## Iterate over worker types ##
                 for k in range(nk):
+                    ## Iterate over firm types ##
                     A[i, period, l, k] = 1
                     A[i, period + 1, l, k] = -1
                     i += 1
 
+        if dynamic:
+            # Use dynamic BLM dimensions (i, l, period, k)
+            A = A.transpose((0, 2, 1, 3))
+
+        # Reshape A to 2 dimensions
         A = A.reshape(((nt - 1) * nl_adj * nk, nt * nl * nk))
 
         b = - np.zeros(shape=A.shape[0])
@@ -688,14 +819,16 @@ class StationaryFirmTypeVariation():
     Arguments:
         nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(1, nt)
         nt (int): number of time periods
+        dynamic (bool): if True, using dynamic BLM estimator
     '''
 
-    def __init__(self, nnt=None, nt=2):
+    def __init__(self, nnt=None, nt=2, dynamic=False):
         if nnt is None:
             self.nnt = range(1, nt)
         else:
             self.nnt = to_list(nnt)
         self.nt = nt
+        self.dynamic = dynamic
 
     def _get_constraints(self, nl, nk):
         '''
@@ -708,14 +841,23 @@ class StationaryFirmTypeVariation():
         Returns:
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        nnt, nt = self.nnt, self.nt
+        ## Unpack parameters ##
+        nnt, nt, dynamic = self.nnt, self.nt, self.dynamic
+
+        ## Initialize variables ##
+        # A starts with 4 dimensions
         A = np.zeros(shape=(len(nnt) * nl * nk, nt, nl, nk))
         i = 0
 
+        ## Generate constraints ##
         for period in nnt:
+            ## Iterate over periods ##
             for l in range(nl):
+                ## Iterate over worker types ##
                 for k1 in range(nk):
+                    ## Iterate over firm types ##
                     for k2 in range(nk):
+                        ## Iterate over firm types ##
                         # Baseline is period 1
                         A[i, 0, l, k2] = - (1 / nk)
                         # Comparison is period > 1
@@ -726,6 +868,11 @@ class StationaryFirmTypeVariation():
                     A[i, period, l, k1] -= 1
                     i += 1
 
+        if dynamic:
+            # Use dynamic BLM dimensions (i, l, period, k)
+            A = A.transpose((0, 2, 1, 3))
+
+        # Reshape A to 2 dimensions
         A = A.reshape((len(nnt) * nl * nk, nt * nl * nk))
 
         b = - np.zeros(shape=A.shape[0])

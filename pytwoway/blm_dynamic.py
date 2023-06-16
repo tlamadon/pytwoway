@@ -1338,8 +1338,8 @@ class DynamicBLMModel:
         cons_s = cons.QPConstrained(nl, nk)
         cons_s.add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=nt_S))
         if constrain_b:
-            cons_a.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt))
-            # cons_s.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=4))
+            cons_a.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt, dynamic=True))
+            # cons_s.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=4, dynamic=True))
 
         if params['cons_a'] is not None:
             cons_a.add_constraints(params['cons_a'])
@@ -1365,10 +1365,10 @@ class DynamicBLMModel:
             cons_s_dict[col].add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=nt_S))
 
             if not controls_dict[col]['worker_type_interaction']:
-                cons_a_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nt=nt))
-                cons_s_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nt=nt_S))
+                cons_a_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nt=nt, dynamic=True))
+                cons_s_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nt=nt_S, dynamic=True))
             elif constrain_b:
-                cons_a_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt))
+                cons_a_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt, dynamic=True))
 
             if controls_dict[col]['cons_a'] is not None:
                 cons_a_dict[col].add_constraints(controls_dict[col]['cons_a'])
@@ -1430,29 +1430,29 @@ class DynamicBLMModel:
                 sp = secondary_period_dict[params['primary_period']]
                 ### Add constraints ###
                 ## Monotonic worker types ##
-                cons_a.add_constraints(cons.MonotonicMean(md=params['d_mean_worker_effect'], cross_period_mean=True, nnt=pp, nt=nt))
+                cons_a.add_constraints(cons.MonotonicMean(md=params['d_mean_worker_effect'], cross_period_mean=True, nnt=pp, nt=nt, dynamic=True))
                 if params['normalize']:
                     ## Lowest firm type ##
                     if params['force_min_firm_type'] and params['force_min_firm_type_constraint']:
-                        cons_a.add_constraints(cons.MinFirmType(min_firm_type=min_firm_type, md=params['d_mean_firm_effect'], is_min=True, cross_period_mean=True, nnt=pp, nt=nt))
+                        cons_a.add_constraints(cons.MinFirmType(min_firm_type=min_firm_type, md=params['d_mean_firm_effect'], is_min=True, cross_period_mean=True, nnt=pp, nt=nt, dynamic=True))
                     ## Normalize ##
                     if any_tv_wi:
                         # Normalize everything
-                        cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=range(nt), nt=nt))
+                        cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=range(nt), nt=nt, dynamic=True))
                     else:
                         if any_tnv_wi:
                             # Normalize primary period
-                            cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp, nt=nt))
+                            cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp, nt=nt, dynamic=True))
                             if any_tv_nwi:
                                 # Normalize lowest type pair in each period
-                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(nt), nt=nt))
+                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(nt), nt=nt, dynamic=True))
                         else:
                             if any_tv_nwi:
                                 # Normalize lowest type pair in each period
-                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(nt), nt=nt))
+                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(nt), nt=nt, dynamic=True))
                             elif any_tnv_nwi:
                                 # Normalize lowest type pair in primary period
-                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp, nt=nt))
+                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp, nt=nt, dynamic=True))
 
         return (cons_a, cons_s, cons_a_dict, cons_s_dict)
 
@@ -2272,19 +2272,6 @@ class DynamicBLMModel:
                 XX[3 * ni: 4 * ni, 1 * nk: 2 * nk] = GG2
                 XX[3 * ni: 4 * ni, 3 * nk: 4 * nk] = -(R43 * GG2)
                 XX = XX.tocsc()
-                # Re-order XX to period-nl-nk for A (this is so constraints are the same order as static BLM)
-                XX_np_group = np.tile(np.repeat(np.arange(len(periods)), nk), nl)
-                XX_nl_group = np.repeat(np.arange(nl), nk * len(periods))
-                XX_nk_group = np.tile(np.arange(nk), nl * len(periods))
-                XX_order = (XX_nk_group + nk * XX_nl_group + (nl * nk) * XX_np_group).argsort()
-                del XX_np_group, XX_nl_group, XX_nk_group
-                if params['update_s_movers']:
-                    # Re-order XX to period-nl-nk for S (this is so constraints are the same order as static BLM)
-                    XS_np_group = np.tile(np.repeat(np.arange(len(periods_var)), nk), nl)
-                    XS_nl_group = np.repeat(np.arange(nl), nk * len(periods_var))
-                    XS_nk_group = np.tile(np.arange(nk), nl * len(periods_var))
-                    XS_order = (XS_nk_group + nk * XS_nl_group + (nl * nk) * XS_np_group).argsort()
-                    del XS_np_group, XS_nl_group, XS_nk_group
 
                 ### Categorical ###
                 if len(cat_cols) > 0:
@@ -2293,10 +2280,6 @@ class DynamicBLMModel:
                     XX_cat = {col: lil_matrix((4 * ni, len(periods) * cat_dict[col]['n'])) for col in cat_cols}
                     # XX_cat'XX_cat (weighted)
                     XXwXX_cat = {col: np.zeros((len(periods) * col_ts, len(periods) * col_ts)) for col, col_ts in ts_cat.items()}
-                    # Re-order X to period-nl-n_col (this is so constraints are the same order as static BLM)
-                    XX_cat_order = {}
-                    if params['update_s_movers']:
-                        XS_cat_order = {}
                     if params['update_a_movers']:
                         XXwY_cat = {col: np.zeros(shape=len(periods) * col_ts) for col, col_ts in ts_cat.items()}
 
@@ -2321,19 +2304,6 @@ class DynamicBLMModel:
                         XX_cat[col][3 * ni: 4 * ni, 1 * col_n: 2 * col_n] = CC2[col]
                         XX_cat[col][3 * ni: 4 * ni, 3 * col_n: 4 * col_n] = -(R43 * CC2[col])
                         XX_cat[col] = XX_cat[col].tocsc()
-                        # Re-order X to period-nl-n_col for A (this is so constraints are the same order as static BLM)
-                        XX_np_group = np.tile(np.repeat(np.arange(len(periods)), col_n), nl)
-                        XX_nl_group = np.repeat(np.arange(nl), col_n * len(periods))
-                        XX_col_n_group = np.tile(np.arange(col_n), nl * len(periods))
-                        XX_cat_order[col] = (XX_col_n_group + col_n * XX_nl_group + (nl * col_n) * XX_np_group).argsort()
-                        del XX_np_group, XX_nl_group, XX_col_n_group
-                        if params['update_s_movers']:
-                            # Re-order X to period-nl-n_col for S (this is so constraints are the same order as static BLM)
-                            XS_np_group = np.tile(np.repeat(np.arange(len(periods_var)), col_n), nl)
-                            XS_nl_group = np.repeat(np.arange(nl), col_n * len(periods_var))
-                            XS_col_n_group = np.tile(np.arange(col_n), nl * len(periods_var))
-                            XS_cat_order[col] = (XS_col_n_group + col_n * XS_nl_group + (nl * col_n) * XS_np_group).argsort()
-                            del XS_np_group, XS_nl_group, XS_col_n_group
 
                 ### Continuous ###
                 if len(cts_cols) > 0:
@@ -2341,10 +2311,6 @@ class DynamicBLMModel:
                     XX_cts = {col: lil_matrix((4 * ni, len(periods))) for col in cts_cols}
                     # XX_cts'XX_cts (weighted)
                     XXwXX_cts = {col: np.zeros((len(periods) * nl, len(periods) * nl)) for col in cts_cols}
-                    # Re-order X to period-nl
-                    XX_cts_order = {}
-                    if params['update_s_movers']:
-                        XS_cts_order = {}
                     if params['update_a_movers']:
                         XXwY_cts = {col: np.zeros(shape=len(periods) * nl) for col in cts_cols}
 
@@ -2368,17 +2334,6 @@ class DynamicBLMModel:
                         XX_cts[col][3 * ni: 4 * ni, 1] = C2[col]
                         XX_cts[col][3 * ni: 4 * ni, 3] = -(R43 * C2[col])
                         XX_cts[col] = XX_cts[col].tocsc()
-                        # Re-order X to period-nl-n_col for A
-                        XX_np_group = np.tile(np.repeat(np.arange(len(periods)), 1), nl)
-                        XX_nl_group = np.repeat(np.arange(nl), 1 * len(periods))
-                        XX_cts_order[col] = (XX_nl_group + nl * XX_np_group).argsort()
-                        del XX_np_group, XX_nl_group
-                        if params['update_s_movers']:
-                            # Re-order X to period-nl-n_col for S
-                            XS_np_group = np.tile(np.repeat(np.arange(len(periods_var)), 1), nl)
-                            XS_nl_group = np.repeat(np.arange(nl), 1 * len(periods_var))
-                            XS_cts_order[col] = (XS_nl_group + nl * XS_np_group).argsort()
-                            del XS_np_group, XS_nl_group
 
                 ## Update A ##
                 if params['update_s_movers']:
@@ -2465,18 +2420,22 @@ class DynamicBLMModel:
                         ## Constraints ##
                         cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type=min_firm_type, for_movers=True)
                     try:
-                        cons_a.solve(XXwXX[XX_order, :][:, XX_order], -XXwY[XX_order], solver='quadprog')
+                        cons_a.solve(XXwXX, -XXwY, solver='quadprog')
                         if cons_a.res is None:
                             # If estimation fails, keep A the same
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing A: estimates are None')
                         else:
                             split_res = np.split(cons_a.res, len(periods))
+                            print('Before:')
+                            print(A['12'])
                             for i, period in enumerate(periods):
                                 if period[-1] != 'b':
                                     A[period] = np.reshape(split_res[i], self.dims)
                                 else:
                                     A[period] = split_res[i][: nk]
+                            print('After:')
+                            print(A['12'])
 
                     except ValueError as e:
                         # If constraints inconsistent, keep A the same
@@ -2572,7 +2531,7 @@ class DynamicBLMModel:
                     if params['update_a_movers']:
                         try:
                             a_solver = cons_a_dict[col]
-                            a_solver.solve(XXwXX_cat[col][XX_cat_order[col], :][:, XX_cat_order[col]], -XXwY_cat[col][XX_cat_order[col]], solver='quadprog')
+                            a_solver.solve(XXwXX_cat[col], -XXwY_cat[col], solver='quadprog')
                             if a_solver.res is None:
                                 # If estimation fails, keep A_cat the same
                                 if params['verbose'] in [2, 3]:
@@ -2682,7 +2641,7 @@ class DynamicBLMModel:
                     if params['update_a_movers']:
                         try:
                             a_solver = cons_a_dict[col]
-                            a_solver.solve(XXwXX_cts[col][XX_cts_order[col], :][:, XX_cts_order[col]], -XXwY_cts[col][XX_cts_order[col]], solver='quadprog')
+                            a_solver.solve(XXwXX_cts[col], -XXwY_cts[col], solver='quadprog')
                             if a_solver.res is None:
                                 # If estimation fails, keep A_cts the same
                                 if params['verbose'] in [2, 3]:
@@ -2835,7 +2794,7 @@ class DynamicBLMModel:
                     del weights
 
                     try:
-                        cons_s.solve(np.diag(XSwXS[XS_order]), -XSwE[XS_order], solver='quadprog')
+                        cons_s.solve(np.diag(XSwXS), -XSwE, solver='quadprog')
                         if cons_s.res is None:
                             # If estimation fails, keep S the same
                             if params['verbose'] in [2, 3]:
@@ -2934,7 +2893,7 @@ class DynamicBLMModel:
 
                         try:
                             s_solver = cons_s_dict[col]
-                            s_solver.solve(np.diag(XSwXS_cat[col][XS_cat_order[col]]), -XSwE_cat[col][XS_cat_order[col]], solver='quadprog')
+                            s_solver.solve(np.diag(XSwXS_cat[col]), -XSwE_cat[col], solver='quadprog')
                             if s_solver.res is None:
                                 # If estimation fails, keep S_cat the same
                                 if params['verbose'] in [2, 3]:
@@ -3041,7 +3000,7 @@ class DynamicBLMModel:
 
                         try:
                             s_solver = cons_s_dict[col]
-                            s_solver.solve(np.diag(XSwXS_cts[col][XS_cts_order[col]]), -XSwE_cts[col][XS_cts_order[col]], solver='quadprog')
+                            s_solver.solve(np.diag(XSwXS_cts[col]), -XSwE_cts[col], solver='quadprog')
                             if s_solver.res is None:
                                 # If estimation fails, keep S_cts the same
                                 if params['verbose'] in [2, 3]:
@@ -3387,19 +3346,6 @@ class DynamicBLMModel:
                 XX[1 * ni: 2 * ni, 0 * nk: 1 * nk] = -(R32s * GG1)
                 XX[1 * ni: 2 * ni, 1 * nk: 2 * nk] = GG1
                 XX = XX.tocsc()
-                # Re-order XX to period-nl-nk for A (this is so constraints are the same order as static BLM)
-                XX_np_group = np.tile(np.repeat(np.arange(len(periods_update)), nk), nl)
-                XX_nl_group = np.repeat(np.arange(nl), nk * len(periods_update))
-                XX_nk_group = np.tile(np.arange(nk), nl * len(periods_update))
-                XX_order = (XX_nk_group + nk * XX_nl_group + (nl * nk) * XX_np_group).argsort()
-                del XX_np_group, XX_nl_group, XX_nk_group
-                if params['update_s_stayers']:
-                    # Re-order XX to period-nl-nk for S (this is so constraints are the same order as static BLM)
-                    XS_np_group = np.tile(np.repeat(np.arange(len(periods_update)), nk), nl)
-                    XS_nl_group = np.repeat(np.arange(nl), nk * len(periods_update))
-                    XS_nk_group = np.tile(np.arange(nk), nl * len(periods_update))
-                    XS_order = (XS_nk_group + nk * XS_nl_group + (nl * nk) * XS_np_group).argsort()
-                    del XS_np_group, XS_nl_group, XS_nk_group
 
                 ## Categorical ##
                 if len(cat_cols) > 0:
@@ -3408,10 +3354,6 @@ class DynamicBLMModel:
                     XX_cat = {col: lil_matrix((2 * ni, len(periods_update) * cat_dict[col]['n'])) for col in cat_cols}
                     # XX_cat'XX_cat (weighted)
                     XXwXX_cat = {col: np.zeros((len(periods_update) * col_ts, len(periods_update) * col_ts)) for col, col_ts in ts_cat.items()}
-                    # Re-order X to period-nl-n_col (this is so constraints are the same order as static BLM)
-                    XX_cat_order = {}
-                    if params['update_s_stayers']:
-                        XS_cat_order = {}
                     if params['update_a_stayers']:
                         XXwY_cat = {col: np.zeros(shape=len(periods_update) * col_ts) for col, col_ts in ts_cat.items()}
 
@@ -3424,19 +3366,6 @@ class DynamicBLMModel:
                         XX_cat[col][1 * ni: 2 * ni, 0 * col_n: 1 * col_n] = -(R32s * CC1[col])
                         XX_cat[col][1 * ni: 2 * ni, 1 * col_n: 2 * col_n] = CC1[col]
                         XX_cat[col] = XX_cat[col].tocsc()
-                        # Re-order X to period-nl-n_col (this is so constraints are the same order as static BLM)
-                        XX_np_group = np.tile(np.repeat(np.arange(len(periods_update)), col_n), nl)
-                        XX_nl_group = np.repeat(np.arange(nl), nk * len(periods_update))
-                        XX_col_n_group = np.tile(np.arange(col_n), nl * len(periods_update))
-                        XX_cat_order[col] = (XX_col_n_group + col_n * XX_nl_group + (nl * col_n) * XX_np_group).argsort()
-                        del XX_np_group, XX_nl_group, XX_col_n_group
-                        if params['update_s_stayers']:
-                            # Re-order X to period-nl-n_col for S (this is so constraints are the same order as static BLM)
-                            XS_np_group = np.tile(np.repeat(np.arange(len(periods_update)), col_n), nl)
-                            XS_nl_group = np.repeat(np.arange(nl), col_n * len(periods_update))
-                            XS_col_n_group = np.tile(np.arange(col_n), nl * len(periods_update))
-                            XS_cat_order[col] = (XS_col_n_group + col_n * XS_nl_group + (nl * col_n) * XS_np_group).argsort()
-                            del XS_np_group, XS_nl_group, XS_col_n_group
 
                 ### Continuous ###
                 if len(cts_cols) > 0:
@@ -3444,10 +3373,6 @@ class DynamicBLMModel:
                     XX_cts = {col: lil_matrix((2 * ni, len(periods_update))) for col in cts_cols}
                     # XX_cts'XX_cts (weighted)
                     XXwXX_cts = {col: np.zeros((len(periods_update) * nl, len(periods_update) * nl)) for col in cts_cols}
-                    # Re-order X to period-nl
-                    XX_cts_order = {}
-                    if params['update_s_stayers']:
-                        XS_cts_order = {}
                     if params['update_a_stayers']:
                         XXwY_cts = {col: np.zeros(shape=len(periods_update) * nl) for col in cts_cols}
 
@@ -3459,17 +3384,6 @@ class DynamicBLMModel:
                         XX_cts[col][1 * ni: 2 * ni, 0] = -(R32s * C1[col])
                         XX_cts[col][1 * ni: 2 * ni, 1] = C1[col]
                         XX_cts[col] = XX_cts[col].tocsc()
-                        # Re-order X to period-nl-n_col
-                        XX_np_group = np.tile(np.repeat(np.arange(len(periods_update)), col_n), nl)
-                        XX_nl_group = np.repeat(np.arange(nl), nk * len(periods_update))
-                        XX_cts_order[col] = (XX_nl_group + nl * XX_np_group).argsort()
-                        del XX_np_group, XX_nl_group
-                        if params['update_s_stayers']:
-                            # Re-order X to period-nl-n_col for S
-                            XS_np_group = np.tile(np.repeat(np.arange(len(periods_update)), 1), nl)
-                            XS_nl_group = np.repeat(np.arange(nl), 1 * len(periods_update))
-                            XS_cts_order[col] = (XS_nl_group + nl * XS_np_group).argsort()
-                            del XS_np_group, XS_nl_group
 
                 ## Update A ##
                 if params['update_s_stayers']:
@@ -3540,7 +3454,7 @@ class DynamicBLMModel:
                         ## Constraints ##
                         cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(min_firm_type=min_firm_type, for_movers=False)
                     try:
-                        cons_a.solve(XXwXX[XX_order, :][:, XX_order], -XXwY[XX_order], solver='quadprog')
+                        cons_a.solve(XXwXX, -XXwY, solver='quadprog')
                         if cons_a.res is None:
                             # If estimation fails, keep A the same
                             if params['verbose'] in [2, 3]:
@@ -3628,7 +3542,7 @@ class DynamicBLMModel:
                     if params['update_a_stayers']:
                         try:
                             a_solver = cons_a_dict[col]
-                            a_solver.solve(XXwXX_cat[col][XX_cat_order[col], :][:, XX_cat_order[col]], -XXwY_cat[col][XX_cat_order[col]], solver='quadprog')
+                            a_solver.solve(XXwXX_cat[col], -XXwY_cat[col], solver='quadprog')
                             if a_solver.res is None:
                                 # If estimation fails, keep A_cat the same
                                 if params['verbose'] in [2, 3]:
@@ -3723,7 +3637,7 @@ class DynamicBLMModel:
                     if params['update_a_stayers']:
                         try:
                             a_solver = cons_a_dict[col]
-                            a_solver.solve(XXwXX_cts[col][XX_cts_order[col], :][:, XX_cts_order[col]], -XXwY_cts[col][XX_cts_order[col]], solver='quadprog')
+                            a_solver.solve(XXwXX_cts[col], -XXwY_cts[col], solver='quadprog')
                             if a_solver.res is None:
                                 # If estimation fails, keep A_cts the same
                                 if params['verbose'] in [2, 3]:
@@ -3836,7 +3750,7 @@ class DynamicBLMModel:
                     del weights
 
                     try:
-                        cons_s.solve(np.diag(XSwXS[XS_order]), -XSwE[XS_order], solver='quadprog')
+                        cons_s.solve(np.diag(XSwXS), -XSwE, solver='quadprog')
                         if cons_s.res is None:
                             # If estimation fails, keep S the same
                             if params['verbose'] in [2, 3]:
@@ -3906,7 +3820,7 @@ class DynamicBLMModel:
 
                         try:
                             s_solver = cons_s_dict[col]
-                            s_solver.solve(np.diag(XSwXS_cat[col][XS_cat_order[col]]), -XSwE_cat[col][XS_cat_order[col]], solver='quadprog')
+                            s_solver.solve(np.diag(XSwXS_cat[col]), -XSwE_cat[col], solver='quadprog')
                             if s_solver.res is None:
                                 # If estimation fails, keep S_cat the same
                                 if params['verbose'] in [2, 3]:
@@ -3988,7 +3902,7 @@ class DynamicBLMModel:
 
                         try:
                             s_solver = cons_s_dict[col]
-                            s_solver.solve(XSwXS_cts[col][XS_cts_order[col]], -XSwE_cts[col][XS_cts_order[col]], solver='quadprog')
+                            s_solver.solve(XSwXS_cts[col], -XSwE_cts[col], solver='quadprog')
                             if s_solver.res is None:
                                 # If estimation fails, keep S_cts the same
                                 if params['verbose'] in [2, 3]:
@@ -4104,9 +4018,9 @@ class DynamicBLMModel:
         if self.nl > 1:
             # Set constraints
             if user_params['cons_a_all'] is None:
-                self.params['cons_a_all'] = cons.LinearAdditive(nt=len(self.periods_movers))
+                self.params['cons_a_all'] = cons.LinearAdditive(nt=len(self.periods_movers), dynamic=True)
             else:
-                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.LinearAdditive(nt=len(self.periods_movers))]
+                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.LinearAdditive(nt=len(self.periods_movers), dynamic=True)]
             if self.params['verbose'] in [1, 2, 3]:
                 print('Fitting movers with Linear Additive constraint on A')
             self.fit_movers(jdata, compute_NNm=False)
@@ -4115,9 +4029,9 @@ class DynamicBLMModel:
         if self.nl > 1:
             # Set constraints
             if user_params['cons_a_all'] is None:
-                self.params['cons_a_all'] = cons.StationaryFirmTypeVariation(nnt=range(1, 4), nt=len(self.periods_movers))
+                self.params['cons_a_all'] = cons.StationaryFirmTypeVariation(nnt=range(1, 4), nt=len(self.periods_movers), dynamic=True)
             else:
-                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation(nnt=range(1, 4), nt=len(self.periods_movers))]
+                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation(nnt=range(1, 4), nt=len(self.periods_movers), dynamic=True)]
             if self.params['verbose'] in [1, 2, 3]:
                 print('Fitting movers with Stationary Firm Type Variation constraint on A')
             self.fit_movers(jdata, compute_NNm=False)
