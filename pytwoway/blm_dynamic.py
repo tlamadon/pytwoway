@@ -2426,16 +2426,13 @@ class DynamicBLMModel:
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing A: estimates are None')
                         else:
-                            split_res = np.split(cons_a.res, len(periods))
-                            print('Before:')
-                            print(A['12'])
+                            res_a = cons_a.res.reshape((nl, len(periods), nk))
                             for i, period in enumerate(periods):
                                 if period[-1] != 'b':
-                                    A[period] = np.reshape(split_res[i], self.dims)
+                                    A[period] = res_a[:, i, :]
                                 else:
-                                    A[period] = split_res[i][: nk]
-                            print('After:')
-                            print(A['12'])
+                                    A[period] = res_a[0, i, :]
+                            del res_a
 
                     except ValueError as e:
                         # If constraints inconsistent, keep A the same
@@ -2537,12 +2534,13 @@ class DynamicBLMModel:
                                 if params['verbose'] in [2, 3]:
                                     print(f'Passing A_cat for column {col!r}: estimates are None')
                             else:
-                                split_res = np.split(a_solver.res, len(periods))
+                                res_a = a_solver.res.reshape((nl, len(periods), col_n))
                                 for i, period in enumerate(periods):
                                     if cat_dict[col]['worker_type_interaction'] and (period[-1] != 'b'):
-                                        A_cat[col][period] = np.reshape(split_res[i], (nl, col_n))
+                                        A_cat[col][period] = res_a[:, i, :]
                                     else:
-                                        A_cat[col][period] = split_res[i][: col_n]
+                                        A_cat[col][period] = res_a[0, i, :]
+                                del res_a
 
                         except ValueError as e:
                             # If constraints inconsistent, keep A_cat the same
@@ -2647,12 +2645,13 @@ class DynamicBLMModel:
                                 if params['verbose'] in [2, 3]:
                                     print(f'Passing A_cts for column {col!r}: estimates are None')
                             else:
-                                split_res = np.split(a_solver.res, len(periods))
+                                res_a = a_solver.res.reshape((nl, len(periods)))
                                 for i, period in enumerate(periods):
                                     if cts_dict[col]['worker_type_interaction'] and (period[-1] != 'b'):
-                                        A_cts[col][period] = split_res[i]
+                                        A_cts[col][period] = res_a[:, i]
                                     else:
-                                        A_cts[col][period] = split_res[i][0]
+                                        A_cts[col][period] = res_a[0, i]
+                                del res_a
 
                         except ValueError as e:
                             # If constraints inconsistent, keep A_cts the same
@@ -2800,12 +2799,13 @@ class DynamicBLMModel:
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S: estimates are None')
                         else:
-                            split_res = np.split(cons_s.res, len(periods_var))
+                            res_s = cons_s.res.reshape((nl, len(periods_var), nk))
                             for i, period in enumerate(periods_var):
                                 # if period[-1] != 'b':
-                                S[period] = np.sqrt(np.reshape(split_res[i], self.dims))
+                                S[period] = np.sqrt(res_s[:, i, :])
                                 # else:
                                 #     S[period] = np.sqrt(split_res[i][: nk])
+                            del res_s
 
                     except ValueError as e:
                         # If constraints inconsistent, keep S the same
@@ -2899,7 +2899,7 @@ class DynamicBLMModel:
                                 if params['verbose'] in [2, 3]:
                                     print(f'Passing S_cat for column {col!r}: estimates are None')
                             else:
-                                split_res = np.split(s_solver.res, len(periods_var))
+                                res_s = s_solver.res.reshape((nl, len(periods_var), col_n))
 
                                 if not cat_dict[col]['worker_type_interaction']:
                                     for period in periods_var:
@@ -2907,9 +2907,10 @@ class DynamicBLMModel:
 
                                 for i, period in enumerate(periods_var):
                                     if cat_dict[col]['worker_type_interaction']: # and (period[-1] != 'b'):
-                                        S_cat[col][period] = np.sqrt(np.reshape(split_res[i], (nl, col_n)))
+                                        S_cat[col][period] = np.sqrt(res_s[:, i, :])
                                     else:
-                                        S_cat[col][period] = np.sqrt(split_res[i][: col_n])
+                                        S_cat[col][period] = np.sqrt(res_s[0, i, :])
+                                del res_s
 
                                 if not cat_dict[col]['worker_type_interaction']:
                                     for period in periods_var:
@@ -3006,7 +3007,7 @@ class DynamicBLMModel:
                                 if params['verbose'] in [2, 3]:
                                     print(f'Passing S_cts for column {col!r}: estimates are None')
                             else:
-                                split_res = np.split(s_solver.res, len(periods_var))
+                                res_s = s_solver.res.reshape((nl, len(periods_var)))
 
                                 if not cts_dict[col]['worker_type_interaction']:
                                     for period in periods_var:
@@ -3014,9 +3015,10 @@ class DynamicBLMModel:
 
                                 for i, period in enumerate(periods_var):
                                     if cat_dict[col]['worker_type_interaction']: # and (period[-1] != 'b'):
-                                        S_cts[col][period] = np.sqrt(split_res[i])
+                                        S_cts[col][period] = np.sqrt(res_s[:, i])
                                     else:
-                                        S_cts[col][period] = np.sqrt(split_res[i][0])
+                                        S_cts[col][period] = np.sqrt(res_s[0, i])
+                                del res_s
 
                                 if not cts_dict[col]['worker_type_interaction']:
                                     for period in periods_var:
@@ -3460,9 +3462,10 @@ class DynamicBLMModel:
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing A: estimates are None')
                         else:
-                            res_2s, res_3s = np.split(cons_a.res, len(periods_update))
-                            A['2s'] = np.reshape(res_2s, self.dims)
-                            A['3s'] = np.reshape(res_3s, self.dims)
+                            res_a = cons_a.res.reshape((nl, len(periods_update), nk))
+                            A['2s'] = res_a[:, 0, :]
+                            A['3s'] = res_a[:, 1, :]
+                            del res_a
 
                     except ValueError as e:
                         # If constraints inconsistent, keep A the same
@@ -3548,13 +3551,14 @@ class DynamicBLMModel:
                                 if params['verbose'] in [2, 3]:
                                     print(f'Passing A_cat for column {col!r}: estimates are None')
                             else:
-                                res_2s, res_3s = np.split(cons_a.res, len(periods_update))
+                                res_a = a_solver.res.reshape((nl, len(periods_update), col_n))
                                 if cat_dict[col]['worker_type_interaction']:
-                                    A_cat[col]['2s'] = np.reshape(res_2s, (nl, col_n))
-                                    A_cat[col]['3s'] = np.reshape(res_3s, (nl, col_n))
+                                    A_cat[col]['2s'] = res_a[:, 0, :]
+                                    A_cat[col]['3s'] = res_a[:, 1, :]
                                 else:
-                                    A_cat[col]['2s'] = res_2s[: col_n]
-                                    A_cat[col]['3s'] = res_3s[: col_n]
+                                    A_cat[col]['2s'] = res_a[0, 0, :]
+                                    A_cat[col]['3s'] = res_a[0, 1, :]
+                                del res_a
 
                         except ValueError as e:
                             # If constraints inconsistent, keep A_cat the same
@@ -3643,13 +3647,14 @@ class DynamicBLMModel:
                                 if params['verbose'] in [2, 3]:
                                     print(f'Passing A_cts for column {col!r}: estimates are None')
                             else:
-                                res_2s, res_3s = np.split(cons_a.res, len(periods_update))
+                                res_a = a_solver.res.reshape((nl, len(periods_update)))
                                 if cts_dict[col]['worker_type_interaction']:
-                                    A_cts[col]['2s'] = res_2s
-                                    A_cts[col]['3s'] = res_3s
+                                    A_cts[col]['2s'] = res_a[:, 0]
+                                    A_cts[col]['3s'] = res_a[:, 1]
                                 else:
-                                    A_cts[col]['2s'] = res_2s[0]
-                                    A_cts[col]['3s'] = res_3s[0]
+                                    A_cts[col]['2s'] = res_a[0, 0]
+                                    A_cts[col]['3s'] = res_a[0, 1]
+                                del res_a
 
                         except ValueError as e:
                             # If constraints inconsistent, keep A_cts the same
@@ -3756,9 +3761,10 @@ class DynamicBLMModel:
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S: estimates are None')
                         else:
-                            res_2s, res_3s = np.split(cons_s.res, len(periods_update))
-                            S['2s'] = np.sqrt(np.reshape(res_2s, self.dims))
-                            S['3s'] = np.sqrt(np.reshape(res_3s, self.dims))
+                            res_s = cons_s.res.reshape((nl, len(periods_update), nk))
+                            S['2s'] = np.sqrt(res_s[:, 0, :])
+                            S['3s'] = np.sqrt(res_s[:, 1, :])
+                            del res_s
 
                     except ValueError as e:
                         # If constraints inconsistent, keep S the same
@@ -3826,18 +3832,19 @@ class DynamicBLMModel:
                                 if params['verbose'] in [2, 3]:
                                     print(f'Passing S_cat for column {col!r}: estimates are None')
                             else:
-                                res_2s, res_3s = np.split(s_solver.res, len(periods_update))
+                                res_s = s_solver.res.reshape((nl, len(periods_update), col_n))
 
                                 if not cat_dict[col]['worker_type_interaction']:
                                     for period in periods_update:
                                         S_sum_sq[period] -= (S_cat[col][period] ** 2)[C_dict[period][col]]
 
                                 if cat_dict[col]['worker_type_interaction']:
-                                    S_cat[col]['2s'] = np.sqrt(np.reshape(res_2s, (nl, col_n)))
-                                    S_cat[col]['3s'] = np.sqrt(np.reshape(res_3s, (nl, col_n)))
+                                    S_cat[col]['2s'] = np.sqrt(res_s[:, 0, :])
+                                    S_cat[col]['3s'] = np.sqrt(res_s[:, 1, :])
                                 else:
-                                    S_cat[col]['2s'] = np.sqrt(res_2s[: col_n])
-                                    S_cat[col]['3s'] = np.sqrt(res_3s[: col_n])
+                                    S_cat[col]['2s'] = np.sqrt(res_s[0, 0, :])
+                                    S_cat[col]['3s'] = np.sqrt(res_s[0, 1, :])
+                                del res_s
 
                                 if not cat_dict[col]['worker_type_interaction']:
                                     for period in periods_update:
@@ -3908,18 +3915,19 @@ class DynamicBLMModel:
                                 if params['verbose'] in [2, 3]:
                                     print(f'Passing S_cts for column {col!r}: estimates are None')
                             else:
-                                res_2s, res_3s = np.split(s_solver.res, len(periods_update))
+                                res_s = s_solver.res.reshape((nl, len(periods_update)))
 
                                 if not cts_dict[col]['worker_type_interaction']:
                                     for period in periods_update:
                                         S_sum_sq[period] -= S_cts[col][period] ** 2
 
                                 if cts_dict[col]['worker_type_interaction']:
-                                    S_cts[col]['2s'] = np.sqrt(res_2s)
-                                    S_cts[col]['3s'] = np.sqrt(res_3s)
+                                    S_cts[col]['2s'] = np.sqrt(res_s[:, 0])
+                                    S_cts[col]['3s'] = np.sqrt(res_s[:, 1])
                                 else:
-                                    S_cts[col]['2s'] = np.sqrt(res_2s[0])
-                                    S_cts[col]['3s'] = np.sqrt(res_3s[0])
+                                    S_cts[col]['2s'] = np.sqrt(res_s[0, 0])
+                                    S_cts[col]['3s'] = np.sqrt(res_s[0, 1])
+                                del res_s
 
                                 if not cts_dict[col]['worker_type_interaction']:
                                     for period in periods_update:
