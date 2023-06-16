@@ -4342,14 +4342,22 @@ class DynamicBLMEstimator:
         if len(sorted_lik_models) == 0:
             raise ValueError('All starting values converged to NaN. Please try a different set of starting values.')
 
-        # Save likelihood vs. connectedness for all models
-        liks_high = np.zeros(shape=n_best) # Save likelihoods for n_best
-        connectedness_high = np.zeros(shape=n_best) # Save connectedness for n_best
-        liks_low = np.zeros(shape=n_init - n_best) # Save likelihoods for not n_best
-        connectedness_low = np.zeros(shape=n_init - n_best) # Save connectedness for not n_best
-        liks_all = [] # Save paths of likelihoods
+        ## Save likelihood vs. connectedness for all models ##
+        # Save likelihoods for n_best
+        liks_high = np.zeros(shape=n_best)
+        # Save connectedness for n_best
+        connectedness_high = np.zeros(shape=n_best)
+        # Save likelihoods for not n_best
+        liks_low = np.zeros(shape=n_init - n_best)
+        # Save connectedness for not n_best
+        connectedness_low = np.zeros(shape=n_init - n_best)
+        # Save paths of likelihoods
+        liks_all = []
+        # Save paths of connectedness
+        connectedness_all = []
         for i, model in enumerate(sorted_lik_models):
             liks_all.append(model.liks1)
+            connectedness_all.append(model.connectedness)
             if i < n_best:
                 liks_high[i] = model.lik1
                 connectedness_high[i] = model.connectedness
@@ -4361,6 +4369,7 @@ class DynamicBLMEstimator:
         self.liks_low = liks_low
         self.connectedness_low = connectedness_low
         self.liks_all = liks_all
+        self.connectedness_all = connectedness_all
 
         # Take the n_best best estimates and find the lowest connectedness
         best_lik_models = sorted_lik_models[: n_best]
@@ -4427,7 +4436,7 @@ class DynamicBLMEstimator:
                 plot = plt.scatter
             plot(self.liks_low, self.connectedness_low, marker='o', facecolors='None', edgecolors='C0')
             plot(liks_high_lst, connectedness_high_lst, marker='^', facecolors='None', edgecolors='C1')
-            plt.scatter(self.model.lik1, self.model.connectedness, marker=(6, 2, 45), facecolors='C2')
+            plt.scatter(self.liks_all, self.connectedness_all, marker=(6, 2, 45), facecolors='C2')
             plt.xlabel('Likelihood')
             plt.ylabel('Connectedness')
             plt.show()
