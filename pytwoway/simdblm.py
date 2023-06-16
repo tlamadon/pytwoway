@@ -723,6 +723,11 @@ class SimDynamicBLM:
             pk0_prior = np.ones(nl)
         pk0 = rng.dirichlet(alpha=pk0_prior, size=nk)
 
+        # Normalize 2mb and 3mb #
+        min_firm_type = np.mean(A['12'], axis=0).argsort()[0]
+        A['2mb'] -= A['2mb'][min_firm_type]
+        A['3mb'] -= A['3mb'][min_firm_type]
+
         ### Control variables ###
         ## Categorical ##
         A_cat = {
@@ -745,6 +750,10 @@ class SimDynamicBLM:
             }
             for col in cat_cols
         }
+        # Normalize 2mb and 3mb #
+        for col in cat_cols:
+            A_cat[col]['2mb'] -= A_cat[col]['2mb'][min_firm_type]
+            A_cat[col]['3mb'] -= A_cat[col]['3mb'][min_firm_type]
         # Stationary #
         for col in cat_cols:
             for period in all_periods[1:]:

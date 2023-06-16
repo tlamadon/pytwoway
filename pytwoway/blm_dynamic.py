@@ -1340,6 +1340,8 @@ class DynamicBLMModel:
         if constrain_b:
             cons_a.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt, dynamic=True))
             # cons_s.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=4, dynamic=True))
+            # Normalize 2mb and 3mb so the lowest effect is 0 (otherwise these are free parameters)
+            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=nnt_b, nt=nt, dynamic=True))
 
         if params['cons_a'] is not None:
             cons_a.add_constraints(params['cons_a'])
@@ -1369,6 +1371,9 @@ class DynamicBLMModel:
                 cons_s_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nt=nt_S, dynamic=True))
             elif constrain_b:
                 cons_a_dict[col].add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt, dynamic=True))
+                if col in cat_cols:
+                    # Normalize 2mb and 3mb so the lowest effect is 0 (otherwise these are free parameters)
+                    cons_a_dict[col].add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=nnt_b, nt=nt, dynamic=True))
 
             if controls_dict[col]['cons_a'] is not None:
                 cons_a_dict[col].add_constraints(controls_dict[col]['cons_a'])
