@@ -44,7 +44,7 @@ def test_blm_control_constraints_linear():
         'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
         's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
         'categorical_controls': {'cat_tv_wi_control': cat_tv_wi_params},
-        'd_mean_worker_effect': 0.025
+        'd_mean_worker_effect': 0.015
     })
     # Simulate data
     blm_true = tw.SimBLM(blm_sim_params)
@@ -65,7 +65,7 @@ def test_blm_control_constraints_linear():
     blm_fit.fit_movers(jdata=jdata)
     # blm_fit.fit_stayers(sdata=sdata)
 
-    assert np.max(np.abs(np.diff(np.diff(blm_fit.A1_cat['cat_tv_wi_control'], axis=0), axis=0))) < 1e-11
+    assert np.max(np.abs(np.diff(np.diff(blm_fit.A1_cat['cat_tv_wi_control'], axis=0), axis=0))) < 1e-15
     assert np.max(np.abs(np.diff(np.diff(blm_fit.A2_cat['cat_tv_wi_control'], axis=0), axis=0))) < 1e-15
 
     # Make sure normalization also works properly
@@ -73,7 +73,7 @@ def test_blm_control_constraints_linear():
     assert np.all(blm_fit.A2[:, 1] == 0)
 
     # Make sure monotonic mean also works properly
-    assert np.all(np.isclose(np.diff(np.mean(blm_fit.A1, axis=1)), 0.025))
+    assert np.all(np.isclose(np.diff(np.mean(blm_fit.A1, axis=1)), 0.015))
 
 def test_blm_control_constraints_linear_additive():
     # Test whether LinearAdditive() constraint for control variables works for BLM estimator.
@@ -133,8 +133,8 @@ def test_blm_control_constraints_linear_additive():
     assert np.var(np.diff(blm_fit.A2_cat['cat_tv_wi_control'], axis=0)) < 1e-30
 
     # Make sure normalization also works properly
-    assert np.all(blm_fit.A1[:, 1] == 0)
-    assert np.all(blm_fit.A2[:, 1] == 0)
+    assert np.all(blm_fit.A1[:, 2] == 0)
+    assert np.all(blm_fit.A2[:, 2] == 0)
 
     # Make sure monotonic mean also works properly
     assert np.all(np.isclose(np.diff(np.mean(blm_fit.A1, axis=1)), 0.025))
@@ -199,8 +199,8 @@ def test_blm_control_constraints_monotonic():
     assert np.min(np.diff(blm_fit.A2_cat['cat_tv_wi_control'], axis=0)) >= 0
 
     # Make sure normalization also works properly
-    assert np.all(blm_fit.A1[:, 0] == 0)
-    assert np.all(blm_fit.A2[:, 0] == 0)
+    assert np.all(blm_fit.A1[:, 2] == 0)
+    assert np.all(blm_fit.A2[:, 2] == 0)
 
 def test_blm_control_constraints_stationary_firm_type_variation():
     # Test whether StationaryFirmTypeVariation() constraint for control variables works for BLM estimator.

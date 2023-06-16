@@ -224,17 +224,18 @@ class Linear():
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
         nnt, nt = self.nnt, self.nt
-        A = np.zeros(shape=(len(nnt) * (nl - 2) * nk, nt * nl * nk))
-        for i, period in enumerate(nnt):
-            row_shift = i * (nl - 2) * nk
-            col_shift = period * nl * nk
+        A = np.zeros(shape=(len(nnt) * (nl - 2) * nk, nt, nl, nk))
+        i = 0
+
+        for period in nnt:
             for k in range(nk):
                 for l in range(nl - 2):
-                    A[row_shift + l, col_shift + nk * l] = 1
-                    A[row_shift + l, col_shift + nk * (l + 1)] = -2
-                    A[row_shift + l, col_shift + nk * (l + 2)] = 1
-                row_shift += (nl - 2)
-                col_shift += 1
+                    A[i, period, l, k] = 1
+                    A[i, period, l + 1, k] = -2
+                    A[i, period, l + 2, k] = 1
+                    i += 1
+
+        A = A.reshape((len(nnt) * (nl - 2) * nk, nt * nl * nk))
 
         b = - np.zeros(shape=A.shape[0])
 
@@ -268,28 +269,28 @@ class LinearAdditive():
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
         nnt, nt = self.nnt, self.nt
-        A = np.zeros(shape=(len(nnt) * ((nl - 2) * nk + (nk - 1)), nt * nl * nk))
+        A = np.zeros(shape=(len(nnt) * ((nl - 2) * nk + (nk - 1)), nt, nl, nk))
+        i = 0
+
         ## Linear ##
-        for i, period in enumerate(nnt):
-            row_shift = i * (nl - 2) * nk
-            col_shift = period * nl * nk
+        for period in nnt:
             for k in range(nk):
                 for l in range(nl - 2):
-                    A[row_shift + l, col_shift + nk * l] = 1
-                    A[row_shift + l, col_shift + nk * (l + 1)] = -2
-                    A[row_shift + l, col_shift + nk * (l + 2)] = 1
-                row_shift += (nl - 2)
-                col_shift += 1
+                    A[i, period, l, k] = 1
+                    A[i, period, l + 1, k] = -2
+                    A[i, period, l + 2, k] = 1
+                    i += 1
 
         ## Additive ##
-        for i, period in enumerate(nnt):
-            row_shift = len(nnt) * (nl - 2) * nk + i * (nk - 1)
-            col_shift = period * nl * nk
+        for period in nnt:
             for k in range(nk - 1):
-                A[row_shift + k, col_shift + k] = 1
-                A[row_shift + k, col_shift + nk + k] = -1
-                A[row_shift + k, col_shift + k + 1] = -1
-                A[row_shift + k, col_shift + nk + k + 1] = 1
+                A[i, period, 0, k] = 1
+                A[i, period, 1, k] = -1
+                A[i, period, 0, k + 1] = -1
+                A[i, period, 1, k + 1] = 1
+                i += 1
+
+        A = A.reshape((len(nnt) * ((nl - 2) * nk + (nk - 1)), nt * nl * nk))
 
         b = - np.zeros(shape=A.shape[0])
 
@@ -322,16 +323,17 @@ class Monotonic():
             (dict of NumPy Arrays): {'G': G, 'h': h, 'A': None, 'b': None}, where G, h, A, and b are defined in the quadratic programming model
         '''
         md, increasing, nt = self.md, self.increasing, self.nt
-        G = np.zeros(shape=(nt * (nl - 1) * nk, nt * nl * nk))
+        G = np.zeros(shape=(nt * (nl - 1) * nk, nt, nl, nk))
+        i = 0
+
         for period in range(nt):
-            row_shift = period * (nl - 1) * nk
-            col_shift = period * nl * nk
             for k in range(nk):
                 for l in range(nl - 1):
-                    G[row_shift + l, col_shift + nk * l] = 1
-                    G[row_shift + l, col_shift + nk * (l + 1)] = -1
-                row_shift += (nl - 1)
-                col_shift += 1
+                    G[i, period, l, k] = 1
+                    G[i, period, l + 1, k] = -1
+                    i += 1
+
+        G = G.reshape((nt * (nl - 1) * nk, nt * nl * nk))
 
         h = - md * np.ones(shape=G.shape[0])
 
@@ -375,25 +377,28 @@ class MonotonicMean():
         '''
         md, increasing, cross_period_mean, nnt, nt = self.md, self.increasing, self.cross_period_mean, self.nnt, self.nt
         if cross_period_mean:
-            G = np.zeros(shape=((nl - 1), nt * nl * nk))
+            G = np.zeros(shape=((nl - 1), nt, nl, nk))
         else:
-            G = np.zeros(shape=(len(nnt) * (nl - 1), nt * nl * nk))
-        for i, period in enumerate(nnt):
+            G = np.zeros(shape=(len(nnt) * (nl - 1), nt, nl, nk))
+        i = 0
+
+        for period in nnt:
             if cross_period_mean:
-                row_shift = 0
-            else:
-                row_shift = i * (nl - 1)
-            col_shift = period * nl * nk
-            for k in range(nk):
-                # Iterate over firm types
-                for l in range(nl - 1):
-                    # For a fixed firm type, consider consecutive worker types
+                i = 0
+            for l in range(nl - 1):
+                for k in range(nk):
                     if cross_period_mean:
-                        G[row_shift + l, period * nl * nk + k + l * nk] = 1 / (len(nnt) * nk)
-                        G[row_shift + l, period * nl * nk + k + (l + 1) * nk] = - (1 / (len(nnt) * nk))
+                        G[i, period, l, k] = (1 / (len(nnt) * nk))
+                        G[i, period, l + 1, k] = - (1 / (len(nnt) * nk))
                     else:
-                        G[row_shift + l, period * nl * nk + k + l * nk] = 1 / nk
-                        G[row_shift + l, period * nl * nk + k + (l + 1) * nk] = - (1 / nk)
+                        G[i, period, l, k] = (1 / nk)
+                        G[i, period, l + 1, k] = - (1 / nk)
+                i += 1
+
+        if cross_period_mean:
+            G = G.reshape(((nl - 1), nt * nl * nk))
+        else:
+            G = G.reshape((len(nnt) * (nl - 1), nt * nl * nk))
 
         h = - md * np.ones(shape=G.shape[0])
 
@@ -442,25 +447,26 @@ class MinFirmType():
             G = np.zeros(shape=((nk - 1), nt, nl, nk))
         else:
             G = np.zeros(shape=(len(nnt) * (nk - 1), nt, nl, nk))
-        for i, period in enumerate(nnt):
+        i = 0
+
+        for period in nnt:
             if cross_period_mean:
-                row_shift = 0
-            else:
-                row_shift = i * (nk - 1)
-            for l in range(nl):
-                ## Iterate over worker types ##
-                for j, k in enumerate(list(range(min_firm_type)) + list(range(min_firm_type + 1, nk))):
-                    ## Iterate over firm types ##
+                i = 0
+            for k in list(range(min_firm_type)) + list(range(min_firm_type + 1, nk)):
+                ## Iterate over firm types ##
+                for l in range(nl):
+                    ## Iterate over worker types ##
                     # First, consider minimum firm type
                     if cross_period_mean:
-                        G[row_shift + j, period, l, min_firm_type] = 1 / (len(nnt) * nl)
+                        G[i, period, l, min_firm_type] = (1 / (len(nnt) * nl))
                     else:
-                        G[row_shift + j, period, l, min_firm_type] = 1 / nl
+                        G[i, period, l, min_firm_type] = (1 / nl)
                     # Second, consider all other firm types
                     if cross_period_mean:
-                        G[row_shift + j, period, l, k] = - (1 / (len(nnt) * nl))
+                        G[i, period, l, k] = - (1 / (len(nnt) * nl))
                     else:
-                        G[row_shift + j, period, l, k] = - (1 / nl)
+                        G[i, period, l, k] = - (1 / nl)
+                i += 1
 
         ## Reshape parameters ##
         if cross_period_mean:
@@ -503,16 +509,17 @@ class NoWorkerTypeInteraction():
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
         nnt, nt = self.nnt, self.nt
-        A = np.zeros(shape=(len(nnt) * (nl - 1) * nk, nt * nl * nk))
-        for i, period in enumerate(nnt):
-            row_shift = i * (nl - 1) * nk
-            col_shift = period * nl * nk
+        A = np.zeros(shape=(len(nnt) * (nl - 1) * nk, nt, nl, nk))
+        i = 0
+
+        for period in nnt:
             for k in range(nk):
                 for l in range(nl - 1):
-                    A[row_shift + l, col_shift + nk * l] = 1
-                    A[row_shift + l, col_shift + nk * (l + 1)] = -1
-                row_shift += (nl - 1)
-                col_shift += 1
+                    A[i, period, l, k] = 1
+                    A[i, period, l + 1, k] = -1
+                    i += 1
+
+        A = A.reshape((len(nnt) * (nl - 1) * nk, nt * nl * nk))
 
         b = - np.zeros(shape=A.shape[0])
 
@@ -549,16 +556,24 @@ class NormalizeLowest():
         Returns:
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        cross_period_normalize, nnt, nt = self.cross_period_normalize, self.nnt, self.nt
+        min_firm_type, cross_period_normalize, nnt, nt = self.min_firm_type, self.cross_period_normalize, self.nnt, self.nt
         if cross_period_normalize:
-            A = np.zeros(shape=(1, nt * nl * nk))
+            A = np.zeros(shape=(1, nt, nl, nk))
         else:
-            A = np.zeros(shape=(len(nnt), nt * nl * nk))
-        for i, period in enumerate(nnt):
+            A = np.zeros(shape=(len(nnt), nt, nl, nk))
+            i = 0
+
+        for period in nnt:
             if cross_period_normalize:
-                A[0, period * nl * nk + self.min_firm_type] = 1 / len(nnt)
+                A[0, period, 0, min_firm_type] = (1 / len(nnt))
             else:
-                A[i, period * nl * nk + self.min_firm_type] = 1
+                A[i, period, 0, min_firm_type] = 1
+                i += 1
+
+        if cross_period_normalize:
+            A = A.reshape((1, nt * nl * nk))
+        else:
+            A = A.reshape((len(nnt), nt * nl * nk))
 
         b = - np.zeros(shape=A.shape[0])
 
@@ -595,17 +610,25 @@ class NormalizeAll():
         Returns:
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
-        cross_period_normalize, nnt, nt = self.cross_period_normalize, self.nnt, self.nt
+        min_firm_type, cross_period_normalize, nnt, nt = self.min_firm_type, self.cross_period_normalize, self.nnt, self.nt
         if cross_period_normalize:
-            A = np.zeros(shape=(nl, nt * nl * nk))
+            A = np.zeros(shape=(nl, nt, nl, nk))
         else:
-            A = np.zeros(shape=(len(nnt) * nl, nt * nl * nk))
-        for i, period in enumerate(nnt):
+            A = np.zeros(shape=(len(nnt) * nl, nt, nl, nk))
+            i = 0
+
+        for period in nnt:
             for l in range(nl):
                 if cross_period_normalize:
-                    A[l, period * nl * nk + l * nk + self.min_firm_type] = 1 / len(nnt)
+                    A[l, period, l, min_firm_type] = (1 / len(nnt))
                 else:
-                    A[i * nl + l, period * nl * nk + l * nk + self.min_firm_type] = 1
+                    A[i, period, l, min_firm_type] = 1
+                    i += 1
+
+        if cross_period_normalize:
+            A = A.reshape((nl, nt * nl * nk))
+        else:
+            A = A.reshape((len(nnt) * nl, nt * nl * nk))
 
         b = - np.zeros(shape=A.shape[0])
 
@@ -616,7 +639,7 @@ class Stationary():
     Generate BLM constraints so that worker-firm pair effects are the same in all periods.
 
     Arguments:
-        nwt (int): number of worker types to constrain. This is used in conjunction with Linear(), as only two worker types are required to be constrained in this case; or in conjunction with NoWorkerTypeInteraction(), as only one worker type is required to be constrained in this case. Setting ns=-1 constrains all worker types.
+        nwt (int): number of worker types to constrain. This is used in conjunction with Linear(), as only two worker types are required to be constrained in this case; or in conjunction with NoWorkerTypeInteraction(), as only one worker type is required to be constrained in this case. Setting nwt=-1 constrains all worker types.
         nt (int): number of time periods
     '''
 
@@ -642,15 +665,17 @@ class Stationary():
             nl_adj = nl
         else:
             nl_adj = min(nl, nwt)
-        A = np.zeros(shape=((nt - 1) * nl_adj * nk, nt * nl * nk))
+        A = np.zeros(shape=((nt - 1) * nl_adj * nk, nt, nl, nk))
+        i = 0
+
         for period in range(nt - 1):
-            row_shift = period * nl_adj * nk
-            col_shift = period * nl * nk
-            for k in range(nk):
-                for l in range(nl_adj):
-                    A[row_shift + k + l, col_shift + nl * k + l] = 1
-                    A[row_shift + k + l, col_shift + nl * nk + nl * k + l] = -1
-                row_shift += (nl_adj - 1)
+            for l in range(nl_adj):
+                for k in range(nk):
+                    A[i, period, l, k] = 1
+                    A[i, period + 1, l, k] = -1
+                    i += 1
+
+        A = A.reshape(((nt - 1) * nl_adj * nk, nt * nl * nk))
 
         b = - np.zeros(shape=A.shape[0])
 
@@ -684,23 +709,24 @@ class StationaryFirmTypeVariation():
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
         nnt, nt = self.nnt, self.nt
-        A = np.zeros(shape=(len(nnt) * nl * nk, nt * nl * nk))
-        for i, period in enumerate(nnt):
-            row_shift = i * nl * nk
-            col_shift = period * nl * nk
+        A = np.zeros(shape=(len(nnt) * nl * nk, nt, nl, nk))
+        i = 0
+
+        for period in nnt:
             for l in range(nl):
                 for k1 in range(nk):
                     for k2 in range(nk):
                         # Baseline is period 1
-                        A[row_shift + k1, (col_shift - period * nl * nk) + k2] = -(1 / nk)
+                        A[i, 0, l, k2] = - (1 / nk)
                         # Comparison is period > 1
-                        A[row_shift + k1, col_shift + k2] = (1 / nk)
+                        A[i, period, l, k2] = (1 / nk)
                     # Baseline is period 1
-                    A[row_shift + k1, (col_shift - period * nl * nk) + k1] += 1
+                    A[i, 0, l, k1] += 1
                     # Comparison is period > 1
-                    A[row_shift + k1, col_shift + k1] -= 1
-                row_shift += nk
-                col_shift += nk
+                    A[i, period, l, k1] -= 1
+                    i += 1
+
+        A = A.reshape((len(nnt) * nl * nk, nt * nl * nk))
 
         b = - np.zeros(shape=A.shape[0])
 
