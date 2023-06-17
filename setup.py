@@ -22,7 +22,7 @@ setuptools.setup(
         'scipy',
         'statsmodels',
         'pyamg',
-        'qpsolvers',
+        'qpsolvers==1.5',
         'quadprog',
         'ConfigArgParse',
         'matplotlib',
