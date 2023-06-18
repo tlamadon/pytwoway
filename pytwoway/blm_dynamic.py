@@ -628,7 +628,7 @@ dynamic_continuous_control_params = ParamsDict({
 
 def double_bincount(group1, group2, weights=None):
     '''
-    Perform groupby-sum on 2 groups with given weights.
+    Perform groupby-sum on 2 groups with given weights and return the corresponding matrix representation.
 
     Arguments:
         group1 (NumPy Array): first group
@@ -636,7 +636,7 @@ def double_bincount(group1, group2, weights=None):
         weights (NumPy Array or None): weights; None is equivalent to all weights being equal
 
     Returns:
-        (NumPy Array): groupby-sum matrix
+        (NumPy Array): groupby-sum matrix representation
     '''
     if weights is None:
         df = pd.DataFrame({'g1': group1, 'g2': group2})
@@ -2319,9 +2319,10 @@ class DynamicBLMModel:
                         G2W2G2 = np.diag(np.bincount(G2, weights_l[1]))
                     G2W3G2 = np.diag(np.bincount(G2, weights_l[2]))
                     G2W4G2 = np.diag(np.bincount(G2, weights_l[3]))
-                    G1W3G2 = double_bincount(G1, G2, weights_l[2])
                     if endogeneity:
                         G1W2G2 = double_bincount(G1, G2, weights_l[1])
+                    G1W3G2 = double_bincount(G1, G2, weights_l[2])
+
                     XXwXX_l = np.vstack(
                         [
                             np.hstack(
@@ -2411,8 +2412,8 @@ class DynamicBLMModel:
                                 )
                             ]
                         )
+                    del G1W1G1, G1W2G1, G1W3G1, G2W2G2, G2W3G2, G2W4G2, G1W2G2, G1W3G2
 
-                    ## Compute XwX_l ##
                     XXwXX[l_index: r_index, l_index: r_index] = XXwXX_l
 
                     if params['update_a_movers']:
