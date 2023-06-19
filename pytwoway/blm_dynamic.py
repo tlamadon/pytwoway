@@ -2415,6 +2415,7 @@ class DynamicBLMModel:
                     del G1W1G1, G1W2G1, G1W3G1, G2W2G2, G2W3G2, G2W4G2, G1W2G2, G1W3G2
 
                     XXwXX[l_index: r_index, l_index: r_index] = XXwXX_l
+                    del XXwXX_l
 
                     if params['update_a_movers']:
                         # Update A_sum to account for worker-interaction terms
@@ -2517,34 +2518,127 @@ class DynamicBLMModel:
 
                         ## Compute weights_l ##
                         if cat_dict[col]['worker_type_interaction']:
-                            S_l_dict = {period: (S_cat[col][period][l, :] ** 2)[C_dict[period][col]] for period in periods}
+                            S_l_dict = {period: S_cat[col][period][l, C_dict[period][col]] for period in periods}
                         else:
-                            S_l_dict = {period: (S_cat[col][period] ** 2)[C_dict[period][col]] for period in periods}
+                            S_l_dict = {period: S_cat[col][period][C_dict[period][col]] for period in periods}
 
-                        var_l = np.concatenate(
-                            [
-                                S_l_dict['12'], # + (R12 ** 2) * S_l_dict['2ma'],
-                                S_l_dict['2ma'], # + S_l_dict['2mb'],
-                                S_l_dict['3ma'], # + S_l_dict['3mb'] + (R32m ** 2) * (S_l_dict['2ma'] + S_l_dict['2mb']),
-                                S_l_dict['43'] # + (R43 ** 2) * S_l_dict['3ma']
-                            ]
-                        )
+                        weights_l = [
+                            qi[:, l] / S_l_dict['12'],
+                            qi[:, l] / S_l_dict['2ma'],
+                            qi[:, l] / S_l_dict['3ma'],
+                            qi[:, l] / S_l_dict['43']
+                        ]
                         del S_l_dict
-                        weights_l = np.tile(qi[:, l], 4) / np.sqrt(var_l)
-                        del var_l
-                        if params['update_s_movers']:
-                            weights_cat[col].append(weights_l)
 
-                        ## Compute XXw_cat_l ##
-                        XXw_cat_l = DxSP(weights_l, XX_cat[col]).T
-                        del weights_l
+                        if params['update_s_movers']:
+                            weights_cat[col].append(np.concatenate(weights_l))
 
                         ## Compute XXwXX_cat_l ##
-                        XXwXX_cat[col][l_index: r_index, l_index: r_index] = (XXw_cat_l @ XX_cat[col]).todense()
+                        C1W1C1 = np.diag(np.bincount(C1[col], weights_l[0]))
+                        C1W2C1 = np.diag(np.bincount(C1[col], weights_l[1]))
+                        C1W3C1 = np.diag(np.bincount(C1[col], weights_l[2]))
+                        if endogeneity:
+                            C2W2C2 = np.diag(np.bincount(C2[col], weights_l[1]))
+                        C2W3C2 = np.diag(np.bincount(C2[col], weights_l[2]))
+                        C2W4C2 = np.diag(np.bincount(C2[col], weights_l[3]))
+                        if endogeneity:
+                            C1W2C2 = double_bincount(C1[col], C2[col], weights_l[1])
+                        C1W3C2 = double_bincount(C1[col], C2[col], weights_l[2])
+
+                        XXwXX_cat_l = np.vstack(
+                            [
+                                np.hstack(
+                                    [C1W1C1, XX0, - R12 * C1W1C1, XX0]
+                                ),
+                                np.hstack(
+                                    [XX0, C2W4C2, XX0, - R43 * C2W4C2]
+                                ),
+                                np.hstack(
+                                    [- R12 * C1W1C1, XX0, (R12 ** 2) * C1W1C1 + C1W2C1 + (R32m ** 2) * C1W3C1, - R32m * C1W3C1]
+                                ),
+                                np.hstack(
+                                    [XX0, - R43 * C2W4C2, - R32m * C1W3C2.T, C2W3C2 + (R43 ** 2) * C2W4C2]
+                                )
+                            ]
+                        )
+                        if endogeneity:
+                            XXwXX_cat_l = np.hstack(
+                                [
+                                    XXwXX_cat_l,
+                                    np.vstack(
+                                        [
+                                            XX0,
+                                            XX0,
+                                            C1W2C2 + (R32m ** 2) * C1W3C2,
+                                            - R32m * C2W3C2
+                                        ]
+                                    )
+                                ]
+                            )
+                            XXwXX_cat_l = np.vstack(
+                                [
+                                    XXwXX_cat_l,
+                                    np.hstack(
+                                        [
+                                            XX0, XX0, C1W2C2.T + (R32m ** 2) * C1W3C2.T, - R32m * C2W3C2, C2W2C2 + (R32m ** 2) * C2W3C2
+                                        ]
+                                    )
+                                ]
+                            )
+                            if state_dependence:
+                                XXwXX_cat_l = np.hstack(
+                                    [
+                                        XXwXX_cat_l,
+                                        np.vstack(
+                                            [
+                                                XX0,
+                                                XX0,
+                                                - R32m * C1W3C1,
+                                                C1W3C2.T,
+                                                - R32m * C1W3C2.T
+                                            ]
+                                        )
+                                    ]
+                                )
+                                XXwXX_cat_l = np.vstack(
+                                    [
+                                        XXwXX_cat_l,
+                                        np.hstack(
+                                            [
+                                                XX0, XX0, - R32m * C1W3C1, C1W3C2, - R32m * C1W3C2, C1W3C1
+                                            ]
+                                        )
+                                    ]
+                                )
+                        elif state_dependence:
+                            XXwXX_cat_l = np.hstack(
+                                [
+                                    XXwXX_cat_l,
+                                    np.vstack(
+                                        [
+                                            XX0,
+                                            XX0,
+                                            - R32m * C1W3C1,
+                                            C1W3C2.T
+                                        ]
+                                    )
+                                ]
+                            )
+                            XXwXX_cat_l = np.vstack(
+                                [
+                                    XXwXX_cat_l,
+                                    np.hstack(
+                                        [
+                                            XX0, XX0, - R32m * C1W3C1, C1W3C2, C1W3C1
+                                        ]
+                                    )
+                                ]
+                            )
+                        del C1W1C1, C1W2C1, C1W3C1, C2W2C2, C2W3C2, C2W4C2, C1W2C2, C1W3C2
+                        XXwXX_cat[col][l_index: r_index, l_index: r_index] = XXwXX_cat_l
+                        del XXwXX_cat_l
 
                         if params['update_a_movers']:
-                            Y_cat_l = np.zeros(4 * ni)
-
                             # Update A_sum to account for worker-interaction terms
                             A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False, periods=periods)
                             if cat_dict[col]['worker_type_interaction']:
@@ -2552,34 +2646,43 @@ class DynamicBLMModel:
                                 for period in periods:
                                     A_sum_l[period] -= A_cat[col][period][l, C_dict[period][col]]
 
-                            # Y1_cat_l
-                            Y_cat_l[0 * ni: 1 * ni] = \
+                            # Yl_cat_1
+                            Yl_cat_1 = \
                                 Y1 \
                                     - (A['12'][l, G1] + A_sum['12'] + A_sum_l['12']) \
                                     - R12 * (Y2 - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']))
-                            # Y2_cat_l
-                            Y_cat_l[1 * ni: 2 * ni] = \
+                            # Yl_cat_2
+                            Yl_cat_2 = \
                                 Y2 \
                                     - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']) \
                                     - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb'])
-                            # Y3_cat_l
-                            Y_cat_l[2 * ni: 3 * ni] = \
+                            # Yl_cat_3
+                            Yl_cat_3 = \
                                 Y3 \
                                     - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma']) \
                                     - (A['3mb'][G1] + A_sum['3mb'] + A_sum_l['3mb']) \
                                     - R32m * (Y2 \
                                         - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']) \
                                         - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb']))
-                            # Y4_cat_l
-                            Y_cat_l[3 * ni: 4 * ni] = \
+                            # Yl_cat_4
+                            Yl_cat_4 = \
                                 Y4 \
                                     - (A['43'][l, G2] + A_sum['43'] + A_sum_l['43']) \
                                     - R43 * (Y3 - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma']))
 
-                            ## Compute XwY_cat_l ##
-                            XXwY_cat[col][l_index: r_index] = XXw_cat_l @ Y_cat_l
-                            del Y_cat_l, A_sum_l
-                        del XXw_cat_l
+                            ## Compute XXwY_cat_l ##
+                            XXwY_cat[col][l_index: r_index] = np.concatenate(
+                                [
+                                    np.bincount(C1[col], weights_l[0] * Yl_cat_1),
+                                    np.bincount(C2[col], weights_l[3] * Yl_cat_4),
+                                    np.bincount(C1[col], - R12 * weights_l[0] * Yl_cat_1 + weights_l[1] * Yl_cat_2 - R32m * Yl_cat_3),
+                                    np.bincount(C2[col], weights_l[2] * Yl_cat_3 - R43 * weights_l[3] * Yl_cat_4),
+                                    np.bincount(C2[col], weights_l[1] * Yl_cat_2 - R32m * weights_l[2] * Yl_cat_3),
+                                    np.bincount(C1[col], weights_l[2] * Yl_cat_3)
+                                ]
+                            )
+                            del Yl_cat_1, Yl_cat_2, Yl_cat_3, Yl_cat_4, A_sum_l
+                        del weights_l
 
                     if params['d_X_diag_movers'] > 1:
                         XXwXX_cat[col] += (params['d_X_diag_movers'] - 1) * np.eye(XXwXX_cat[col].shape[0])
@@ -2628,34 +2731,127 @@ class DynamicBLMModel:
 
                         ## Compute weights_l ##
                         if cts_dict[col]['worker_type_interaction']:
-                            S_l_dict = {period: S_cts[col][period][l] ** 2 for period in periods}
+                            S_l_dict = {period: S_cts[col][period][l] for period in periods}
                         else:
-                            S_l_dict = {period: S_cts[col][period] ** 2 for period in periods}
+                            S_l_dict = {period: S_cts[col][period] for period in periods}
 
-                        var_l = np.concatenate(
-                            [
-                                S_l_dict['12'], # + (R12 ** 2) * S_l_dict['2ma'],
-                                S_l_dict['2ma'], # + S_l_dict['2mb'],
-                                S_l_dict['3ma'], # + S_l_dict['3mb'] + (R32m ** 2) * (S_l_dict['2ma'] + S_l_dict['2mb']),
-                                S_l_dict['43'] # + (R43 ** 2) * S_l_dict['3ma']
-                            ]
-                        )
+                        weights_l = [
+                            qi[:, l] / S_l_dict['12'],
+                            qi[:, l] / S_l_dict['2ma'],
+                            qi[:, l] / S_l_dict['3ma'],
+                            qi[:, l] / S_l_dict['43']
+                        ]
                         del S_l_dict
-                        weights_l = np.tile(qi[:, l], 4) / np.repeat(np.sqrt(var_l), ni)
-                        del var_l
-                        if params['update_s_movers']:
-                            weights_cts[col].append(weights_l)
 
-                        ## Compute XXw_cts_l ##
-                        XXw_cts_l = DxSP(weights_l, XX_cts[col]).T
-                        del weights_l
+                        if params['update_s_movers']:
+                            weights_cts[col].append(np.concatenate(weights_l))
 
                         ## Compute XXwXX_cts_l ##
-                        XXwXX_cts[col][l_index: r_index, l_index: r_index] = (XXw_cts_l @ XX_cts[col]).todense()
+                        C1W1C1 = np.sum(weights_l[0] * C1[col])
+                        C1W2C1 = np.sum(weights_l[1] * C1[col])
+                        C1W3C1 = np.sum(weights_l[2] * C1[col])
+                        if endogeneity:
+                            C2W2C2 = np.sum(weights_l[1] * C2[col])
+                        C2W3C2 = np.sum(weights_l[2] * C2[col])
+                        C2W4C2 = np.sum(weights_l[3] * C2[col])
+                        if endogeneity:
+                            C1W2C2 = np.sum(weights_l[1] * C1[col] * C2[col])
+                        C1W3C2 = np.sum(weights_l[2] * C1[col] * C2[col])
+
+                        XXwXX_cts_l = np.vstack(
+                            [
+                                np.array(
+                                    [C1W1C1, XX0, - R12 * C1W1C1, XX0]
+                                ),
+                                np.array(
+                                    [XX0, C2W4C2, XX0, - R43 * C2W4C2]
+                                ),
+                                np.array(
+                                    [- R12 * C1W1C1, XX0, (R12 ** 2) * C1W1C1 + C1W2C1 + (R32m ** 2) * C1W3C1, - R32m * C1W3C1]
+                                ),
+                                np.array(
+                                    [XX0, - R43 * C2W4C2, - R32m * C1W3C2.T, C2W3C2 + (R43 ** 2) * C2W4C2]
+                                )
+                            ]
+                        )
+                        if endogeneity:
+                            XXwXX_cts_l = np.hstack(
+                                [
+                                    XXwXX_cts_l,
+                                    np.array(
+                                        [
+                                            XX0,
+                                            XX0,
+                                            C1W2C2 + (R32m ** 2) * C1W3C2,
+                                            - R32m * C2W3C2
+                                        ]
+                                    )
+                                ]
+                            )
+                            XXwXX_cts_l = np.vstack(
+                                [
+                                    XXwXX_cts_l,
+                                    np.array(
+                                        [
+                                            XX0, XX0, C1W2C2.T + (R32m ** 2) * C1W3C2.T, - R32m * C2W3C2, C2W2C2 + (R32m ** 2) * C2W3C2
+                                        ]
+                                    )
+                                ]
+                            )
+                            if state_dependence:
+                                XXwXX_cts_l = np.hstack(
+                                    [
+                                        XXwXX_cts_l,
+                                        np.array(
+                                            [
+                                                XX0,
+                                                XX0,
+                                                - R32m * C1W3C1,
+                                                C1W3C2.T,
+                                                - R32m * C1W3C2.T
+                                            ]
+                                        )
+                                    ]
+                                )
+                                XXwXX_cts_l = np.vstack(
+                                    [
+                                        XXwXX_cts_l,
+                                        np.array(
+                                            [
+                                                XX0, XX0, - R32m * C1W3C1, C1W3C2, - R32m * C1W3C2, C1W3C1
+                                            ]
+                                        )
+                                    ]
+                                )
+                        elif state_dependence:
+                            XXwXX_cts_l = np.hstack(
+                                [
+                                    XXwXX_cts_l,
+                                    np.array(
+                                        [
+                                            XX0,
+                                            XX0,
+                                            - R32m * C1W3C1,
+                                            C1W3C2.T
+                                        ]
+                                    )
+                                ]
+                            )
+                            XXwXX_cts_l = np.vstack(
+                                [
+                                    XXwXX_cts_l,
+                                    np.array(
+                                        [
+                                            XX0, XX0, - R32m * C1W3C1, C1W3C2, C1W3C1
+                                        ]
+                                    )
+                                ]
+                            )
+                        del C1W1C1, C1W2C1, C1W3C1, C2W2C2, C2W3C2, C2W4C2, C1W2C2, C1W3C2
+                        XXwXX_cts[col][l_index: r_index, l_index: r_index] = XXwXX_cts_l
+                        del XXwXX_cts_l
 
                         if params['update_a_movers']:
-                            Y_cts_l = np.zeros(4 * ni)
-
                             # Update A_sum to account for worker-interaction terms
                             A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False, periods=periods)
                             if cts_dict[col]['worker_type_interaction']:
@@ -2663,34 +2859,43 @@ class DynamicBLMModel:
                                 for period in periods:
                                     A_sum_l[period] -= A_cts[col][period][l] * C_dict[period][col]
 
-                            # Y1_cts_l
-                            Y_cts_l[0 * ni: 1 * ni] = \
+                            # Yl_cts_1
+                            Yl_cts_1 = \
                                 Y1 \
                                     - (A['12'][l, G1] + A_sum['12'] + A_sum_l['12']) \
                                     - R12 * (Y2 - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']))
-                            # Y2_cts_l
-                            Y_cts_l[1 * ni: 2 * ni] = \
+                            # Yl_cts_2
+                            Yl_cts_2 = \
                                 Y2 \
                                     - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']) \
                                     - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb'])
-                            # Y3_cts_l
-                            Y_cts_l[2 * ni: 3 * ni] = \
+                            # Yl_cts_3
+                            Yl_cts_3 = \
                                 Y3 \
                                     - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma']) \
                                     - (A['3mb'][G1] + A_sum['3mb'] + A_sum_l['3mb']) \
                                     - R32m * (Y2 \
                                         - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']) \
                                         - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb']))
-                            # Y4_cts_l
-                            Y_cts_l[3 * ni: 4 * ni] = \
+                            # Yl_cts_4
+                            Yl_cts_4 = \
                                 Y4 \
                                     - (A['43'][l, G2] + A_sum['43'] + A_sum_l['43']) \
                                     - R43 * (Y3 - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma']))
 
                             ## Compute XwY_cts_l ##
-                            XXwY_cts[col][l_index: r_index] = XXw_cts_l @ Y_cts_l
-                            del Y_cts_l, A_sum_l
-                        del XXw_cts_l
+                            XXwY_cts[col][l_index: r_index] = np.array(
+                                [
+                                    np.sum(weights_l[0] * Yl_cts_1 * C1[col]),
+                                    np.sum(weights_l[3] * Yl_cts_4 * C2[col]),
+                                    np.sum((- R12 * weights_l[0] * Yl_cts_1 + weights_l[1] * Yl_cts_2 - R32m * Yl_cts_3) * C1[col]),
+                                    np.sum((weights_l[2] * Yl_cts_3 - R43 * weights_l[3] * Yl_cts_4) * C2[col]),
+                                    np.sum((weights_l[1] * Yl_cts_2 - R32m * weights_l[2] * Yl_cts_3) * C2[col]),
+                                    np.sum(weights_l[2] * Yl_cts_3 * C1[col])
+                                ]
+                            )
+                            del Yl_cts_1, Yl_cts_2, Yl_cts_3, Yl_cts_4, A_sum_l
+                        del weights_l
 
                     if params['d_X_diag_movers'] > 1:
                         XXwXX_cts[col] += (params['d_X_diag_movers'] - 1) * np.eye(XXwXX_cts[col].shape[0])
