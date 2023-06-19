@@ -2485,9 +2485,9 @@ class BLMEstimator:
         # Save connectedness for n_best
         connectedness_high = np.zeros(shape=n_best)
         # Save likelihoods for not n_best
-        liks_low = np.zeros(shape=n_init - n_best)
+        liks_low = np.zeros(shape=len(sorted_lik_models) - n_best)
         # Save connectedness for not n_best
-        connectedness_low = np.zeros(shape=n_init - n_best)
+        connectedness_low = np.zeros(shape=len(sorted_lik_models) - n_best)
         # Save paths of likelihoods
         liks_all = []
         # Save paths of connectedness

@@ -2412,7 +2412,9 @@ class DynamicBLMModel:
                                 )
                             ]
                         )
-                    del G1W1G1, G1W2G1, G1W3G1, G2W2G2, G2W3G2, G2W4G2, G1W2G2, G1W3G2
+                    del G1W1G1, G1W2G1, G1W3G1, G2W3G2, G2W4G2, G1W3G2
+                    if endogeneity:
+                        del G2W2G2, G1W2G2
 
                     XXwXX[l_index: r_index, l_index: r_index] = XXwXX_l
                     del XXwXX_l
@@ -2446,17 +2448,28 @@ class DynamicBLMModel:
                                 - R43 * (Y3 - (A_sum['3ma'] + A_sum_l['3ma']))
 
                         ## Compute XXwY_l ##
-                        XXwY[l_index: r_index] = np.concatenate(
+                        XXwY_l = np.concatenate(
                             [
                                 np.bincount(G1, weights_l[0] * Yl_1),
                                 np.bincount(G2, weights_l[3] * Yl_4),
                                 np.bincount(G1, - R12 * weights_l[0] * Yl_1 + weights_l[1] * Yl_2 - R32m * Yl_3),
-                                np.bincount(G2, weights_l[2] * Yl_3 - R43 * weights_l[3] * Yl_4),
-                                np.bincount(G2, weights_l[1] * Yl_2 - R32m * weights_l[2] * Yl_3),
-                                np.bincount(G1, weights_l[2] * Yl_3)
+                                np.bincount(G2, weights_l[2] * Yl_3 - R43 * weights_l[3] * Yl_4)
                             ]
                         )
-                        del Yl_1, Yl_2, Yl_3, Yl_4, A_sum_l
+                        if endogeneity:
+                            XXwY_l = np.concatenate(
+                                [
+                                    XXwY_l, np.bincount(G2, weights_l[1] * Yl_2 - R32m * weights_l[2] * Yl_3)
+                                ]
+                            )
+                        if state_dependence:
+                            XXwY_l = np.concatenate(
+                                [
+                                    XXwY_l, np.bincount(G1, weights_l[2] * Yl_3)
+                                ]
+                            )
+                        XXwY[l_index: r_index] = XXwY_l
+                        del Yl_1, Yl_2, Yl_3, Yl_4, XXwY_l, A_sum_l
                     del weights_l
 
                 if params['d_X_diag_movers'] > 1:
@@ -2634,7 +2647,9 @@ class DynamicBLMModel:
                                     )
                                 ]
                             )
-                        del C1W1C1, C1W2C1, C1W3C1, C2W2C2, C2W3C2, C2W4C2, C1W2C2, C1W3C2
+                        del C1W1C1, C1W2C1, C1W3C1, C2W3C2, C2W4C2, C1W3C2
+                        if endogeneity:
+                            del C2W2C2, C1W2C2
                         XXwXX_cat[col][l_index: r_index, l_index: r_index] = XXwXX_cat_l
                         del XXwXX_cat_l
 
@@ -2671,17 +2686,28 @@ class DynamicBLMModel:
                                     - R43 * (Y3 - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma']))
 
                             ## Compute XXwY_cat_l ##
-                            XXwY_cat[col][l_index: r_index] = np.concatenate(
+                            XXwY_cat_l = np.concatenate(
                                 [
                                     np.bincount(C1[col], weights_l[0] * Yl_cat_1),
                                     np.bincount(C2[col], weights_l[3] * Yl_cat_4),
                                     np.bincount(C1[col], - R12 * weights_l[0] * Yl_cat_1 + weights_l[1] * Yl_cat_2 - R32m * Yl_cat_3),
-                                    np.bincount(C2[col], weights_l[2] * Yl_cat_3 - R43 * weights_l[3] * Yl_cat_4),
-                                    np.bincount(C2[col], weights_l[1] * Yl_cat_2 - R32m * weights_l[2] * Yl_cat_3),
-                                    np.bincount(C1[col], weights_l[2] * Yl_cat_3)
+                                    np.bincount(C2[col], weights_l[2] * Yl_cat_3 - R43 * weights_l[3] * Yl_cat_4)
                                 ]
                             )
-                            del Yl_cat_1, Yl_cat_2, Yl_cat_3, Yl_cat_4, A_sum_l
+                            if endogeneity:
+                                XXwY_cat_l = np.concatenate(
+                                    [
+                                        XXwY_cat_l, np.bincount(C2[col], weights_l[1] * Yl_cat_2 - R32m * weights_l[2] * Yl_cat_3)
+                                    ]
+                                )
+                            if state_dependence:
+                                XXwY_cat_l = np.concatenate(
+                                    [
+                                        XXwY_cat_l, np.bincount(C1[col], weights_l[2] * Yl_cat_3)
+                                    ]
+                                )
+                            XXwY_cat[col][l_index: r_index] = XXwY_cat_l
+                            del Yl_cat_1, Yl_cat_2, Yl_cat_3, Yl_cat_4, XXwY_cat_l, A_sum_l
                         del weights_l
 
                     if params['d_X_diag_movers'] > 1:
@@ -2758,20 +2784,12 @@ class DynamicBLMModel:
                             C1W2C2 = np.sum(weights_l[1] * C1[col] * C2[col])
                         C1W3C2 = np.sum(weights_l[2] * C1[col] * C2[col])
 
-                        XXwXX_cts_l = np.vstack(
+                        XXwXX_cts_l = np.array(
                             [
-                                np.array(
-                                    [C1W1C1, XX0, - R12 * C1W1C1, XX0]
-                                ),
-                                np.array(
-                                    [XX0, C2W4C2, XX0, - R43 * C2W4C2]
-                                ),
-                                np.array(
-                                    [- R12 * C1W1C1, XX0, (R12 ** 2) * C1W1C1 + C1W2C1 + (R32m ** 2) * C1W3C1, - R32m * C1W3C1]
-                                ),
-                                np.array(
-                                    [XX0, - R43 * C2W4C2, - R32m * C1W3C2.T, C2W3C2 + (R43 ** 2) * C2W4C2]
-                                )
+                                [C1W1C1, XX0, - R12 * C1W1C1, XX0],
+                                [XX0, C2W4C2, XX0, - R43 * C2W4C2],
+                                [- R12 * C1W1C1, XX0, (R12 ** 2) * C1W1C1 + C1W2C1 + (R32m ** 2) * C1W3C1, - R32m * C1W3C1],
+                                [XX0, - R43 * C2W4C2, - R32m * C1W3C2.T, C2W3C2 + (R43 ** 2) * C2W4C2]
                             ]
                         )
                         if endogeneity:
@@ -2847,7 +2865,9 @@ class DynamicBLMModel:
                                     )
                                 ]
                             )
-                        del C1W1C1, C1W2C1, C1W3C1, C2W2C2, C2W3C2, C2W4C2, C1W2C2, C1W3C2
+                        del C1W1C1, C1W2C1, C1W3C1, C2W3C2, C2W4C2, C1W3C2
+                        if endogeneity:
+                            del C2W2C2, C1W2C2
                         XXwXX_cts[col][l_index: r_index, l_index: r_index] = XXwXX_cts_l
                         del XXwXX_cts_l
 
@@ -2884,17 +2904,24 @@ class DynamicBLMModel:
                                     - R43 * (Y3 - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma']))
 
                             ## Compute XwY_cts_l ##
-                            XXwY_cts[col][l_index: r_index] = np.array(
+                            XwY_cts_l = np.array(
                                 [
                                     np.sum(weights_l[0] * Yl_cts_1 * C1[col]),
                                     np.sum(weights_l[3] * Yl_cts_4 * C2[col]),
                                     np.sum((- R12 * weights_l[0] * Yl_cts_1 + weights_l[1] * Yl_cts_2 - R32m * Yl_cts_3) * C1[col]),
-                                    np.sum((weights_l[2] * Yl_cts_3 - R43 * weights_l[3] * Yl_cts_4) * C2[col]),
-                                    np.sum((weights_l[1] * Yl_cts_2 - R32m * weights_l[2] * Yl_cts_3) * C2[col]),
-                                    np.sum(weights_l[2] * Yl_cts_3 * C1[col])
+                                    np.sum((weights_l[2] * Yl_cts_3 - R43 * weights_l[3] * Yl_cts_4) * C2[col])
                                 ]
                             )
-                            del Yl_cts_1, Yl_cts_2, Yl_cts_3, Yl_cts_4, A_sum_l
+                            if endogeneity:
+                                XwY_cts_l = np.append(
+                                    XwY_cts_l, np.sum((weights_l[1] * Yl_cts_2 - R32m * weights_l[2] * Yl_cts_3) * C2[col])
+                                )
+                            if state_dependence:
+                                XwY_cts_l = np.append(
+                                    XwY_cts_l, np.sum(weights_l[2] * Yl_cts_3 * C1[col])
+                                )
+                            XXwY_cts[col][l_index: r_index] = XwY_cts_l
+                            del Yl_cts_1, Yl_cts_2, Yl_cts_3, Yl_cts_4, XwY_cts_l, A_sum_l
                         del weights_l
 
                     if params['d_X_diag_movers'] > 1:
@@ -4538,8 +4565,6 @@ class DynamicBLMEstimator:
         # No likelihoods yet
         self.liks_high = None
         self.liks_low = None
-        # No paths of likelihoods yet
-        self.liks_all = None
         # No connectedness yet
         self.connectedness_high = None
         self.connectedness_low = None
@@ -4613,15 +4638,12 @@ class DynamicBLMEstimator:
         # Save connectedness for n_best
         connectedness_high = np.zeros(shape=n_best)
         # Save likelihoods for not n_best
-        liks_low = np.zeros(shape=n_init - n_best)
+        liks_low = np.zeros(shape=len(sorted_lik_models) - n_best)
         # Save connectedness for not n_best
-        connectedness_low = np.zeros(shape=n_init - n_best)
-        # Save paths of likelihoods
-        liks_all = []
+        connectedness_low = np.zeros(shape=len(sorted_lik_models) - n_best)
         # Save paths of connectedness
         connectedness_all = []
         for i, model in enumerate(sorted_lik_models):
-            liks_all.append(model.liks1)
             connectedness_all.append(model.connectedness)
             if i < n_best:
                 liks_high[i] = model.lik1
@@ -4633,7 +4655,6 @@ class DynamicBLMEstimator:
         self.connectedness_high = connectedness_high
         self.liks_low = liks_low
         self.connectedness_low = connectedness_low
-        self.liks_all = liks_all
         self.connectedness_all = connectedness_all
 
         # Take the n_best best estimates and find the lowest connectedness
@@ -4701,7 +4722,7 @@ class DynamicBLMEstimator:
                 plot = plt.scatter
             plot(self.liks_low, self.connectedness_low, marker='o', facecolors='None', edgecolors='C0')
             plot(liks_high_lst, connectedness_high_lst, marker='^', facecolors='None', edgecolors='C1')
-            plt.scatter(self.liks_all, self.connectedness_all, marker=(6, 2, 45), facecolors='C2')
+            plt.scatter(self.model.lik1, self.model.connectedness, marker=(6, 2, 45), facecolors='C2')
             plt.xlabel('Likelihood')
             plt.ylabel('Connectedness')
             plt.show()
