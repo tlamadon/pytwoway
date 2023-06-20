@@ -2335,7 +2335,7 @@ class DynamicBLMModel:
                                 [XX0, G2W4G2, XX0, - R43 * G2W4G2]
                             ),
                             np.hstack(
-                                [- R12 * G1W1G1, XX0, (R12 ** 2) * G1W1G1 + G1W2G1 + (R32m ** 2) * G1W3G1, - R32m * G1W3G1]
+                                [- R12 * G1W1G1, XX0, (R12 ** 2) * G1W1G1 + G1W2G1 + (R32m ** 2) * G1W3G1, - R32m * G1W3G2]
                             ),
                             np.hstack(
                                 [XX0, - R43 * G2W4G2, - R32m * G1W3G2.T, G2W3G2 + (R43 ** 2) * G2W4G2]
@@ -2564,16 +2564,16 @@ class DynamicBLMModel:
                         XXwXX_cat_l = np.vstack(
                             [
                                 np.hstack(
-                                    [C1W1C1, XX0, - R12 * C1W1C1, XX0]
+                                    [C1W1C1, XX0_cat[col], - R12 * C1W1C1, XX0_cat[col]]
                                 ),
                                 np.hstack(
-                                    [XX0, C2W4C2, XX0, - R43 * C2W4C2]
+                                    [XX0_cat[col], C2W4C2, XX0_cat[col], - R43 * C2W4C2]
                                 ),
                                 np.hstack(
-                                    [- R12 * C1W1C1, XX0, (R12 ** 2) * C1W1C1 + C1W2C1 + (R32m ** 2) * C1W3C1, - R32m * C1W3C1]
+                                    [- R12 * C1W1C1, XX0_cat[col], (R12 ** 2) * C1W1C1 + C1W2C1 + (R32m ** 2) * C1W3C1, - R32m * C1W3C2]
                                 ),
                                 np.hstack(
-                                    [XX0, - R43 * C2W4C2, - R32m * C1W3C2.T, C2W3C2 + (R43 ** 2) * C2W4C2]
+                                    [XX0_cat[col], - R43 * C2W4C2, - R32m * C1W3C2.T, C2W3C2 + (R43 ** 2) * C2W4C2]
                                 )
                             ]
                         )
@@ -2583,8 +2583,8 @@ class DynamicBLMModel:
                                     XXwXX_cat_l,
                                     np.vstack(
                                         [
-                                            XX0,
-                                            XX0,
+                                            XX0_cat[col],
+                                            XX0_cat[col],
                                             C1W2C2 + (R32m ** 2) * C1W3C2,
                                             - R32m * C2W3C2
                                         ]
@@ -2596,7 +2596,7 @@ class DynamicBLMModel:
                                     XXwXX_cat_l,
                                     np.hstack(
                                         [
-                                            XX0, XX0, C1W2C2.T + (R32m ** 2) * C1W3C2.T, - R32m * C2W3C2, C2W2C2 + (R32m ** 2) * C2W3C2
+                                            XX0_cat[col], XX0_cat[col], C1W2C2.T + (R32m ** 2) * C1W3C2.T, - R32m * C2W3C2, C2W2C2 + (R32m ** 2) * C2W3C2
                                         ]
                                     )
                                 ]
@@ -2607,8 +2607,8 @@ class DynamicBLMModel:
                                         XXwXX_cat_l,
                                         np.vstack(
                                             [
-                                                XX0,
-                                                XX0,
+                                                XX0_cat[col],
+                                                XX0_cat[col],
                                                 - R32m * C1W3C1,
                                                 C1W3C2.T,
                                                 - R32m * C1W3C2.T
@@ -2621,7 +2621,7 @@ class DynamicBLMModel:
                                         XXwXX_cat_l,
                                         np.hstack(
                                             [
-                                                XX0, XX0, - R32m * C1W3C1, C1W3C2, - R32m * C1W3C2, C1W3C1
+                                                XX0_cat[col], XX0_cat[col], - R32m * C1W3C1, C1W3C2, - R32m * C1W3C2, C1W3C1
                                             ]
                                         )
                                     ]
@@ -2632,8 +2632,8 @@ class DynamicBLMModel:
                                     XXwXX_cat_l,
                                     np.vstack(
                                         [
-                                            XX0,
-                                            XX0,
+                                            XX0_cat[col],
+                                            XX0_cat[col],
                                             - R32m * C1W3C1,
                                             C1W3C2.T
                                         ]
@@ -2645,7 +2645,7 @@ class DynamicBLMModel:
                                     XXwXX_cat_l,
                                     np.hstack(
                                         [
-                                            XX0, XX0, - R32m * C1W3C1, C1W3C2, C1W3C1
+                                            XX0_cat[col], XX0_cat[col], - R32m * C1W3C1, C1W3C2, C1W3C1
                                         ]
                                     )
                                 ]
@@ -2789,10 +2789,10 @@ class DynamicBLMModel:
 
                         XXwXX_cts_l = np.array(
                             [
-                                [C1W1C1, XX0, - R12 * C1W1C1, XX0],
-                                [XX0, C2W4C2, XX0, - R43 * C2W4C2],
-                                [- R12 * C1W1C1, XX0, (R12 ** 2) * C1W1C1 + C1W2C1 + (R32m ** 2) * C1W3C1, - R32m * C1W3C1],
-                                [XX0, - R43 * C2W4C2, - R32m * C1W3C2.T, C2W3C2 + (R43 ** 2) * C2W4C2]
+                                [C1W1C1, 0, - R12 * C1W1C1, 0],
+                                [0, C2W4C2, 0, - R43 * C2W4C2],
+                                [- R12 * C1W1C1, 0, (R12 ** 2) * C1W1C1 + C1W2C1 + (R32m ** 2) * C1W3C1, - R32m * C1W3C2],
+                                [0, - R43 * C2W4C2, - R32m * C1W3C2.T, C2W3C2 + (R43 ** 2) * C2W4C2]
                             ]
                         )
                         if endogeneity:
@@ -2801,8 +2801,8 @@ class DynamicBLMModel:
                                     XXwXX_cts_l,
                                     np.array(
                                         [
-                                            XX0,
-                                            XX0,
+                                            0,
+                                            0,
                                             C1W2C2 + (R32m ** 2) * C1W3C2,
                                             - R32m * C2W3C2
                                         ]
@@ -2814,7 +2814,7 @@ class DynamicBLMModel:
                                     XXwXX_cts_l,
                                     np.array(
                                         [
-                                            XX0, XX0, C1W2C2.T + (R32m ** 2) * C1W3C2.T, - R32m * C2W3C2, C2W2C2 + (R32m ** 2) * C2W3C2
+                                            0, 0, C1W2C2.T + (R32m ** 2) * C1W3C2.T, - R32m * C2W3C2, C2W2C2 + (R32m ** 2) * C2W3C2
                                         ]
                                     )
                                 ]
@@ -2825,8 +2825,8 @@ class DynamicBLMModel:
                                         XXwXX_cts_l,
                                         np.array(
                                             [
-                                                XX0,
-                                                XX0,
+                                                0,
+                                                0,
                                                 - R32m * C1W3C1,
                                                 C1W3C2.T,
                                                 - R32m * C1W3C2.T
@@ -2839,7 +2839,7 @@ class DynamicBLMModel:
                                         XXwXX_cts_l,
                                         np.array(
                                             [
-                                                XX0, XX0, - R32m * C1W3C1, C1W3C2, - R32m * C1W3C2, C1W3C1
+                                                0, 0, - R32m * C1W3C1, C1W3C2, - R32m * C1W3C2, C1W3C1
                                             ]
                                         )
                                     ]
@@ -2850,8 +2850,8 @@ class DynamicBLMModel:
                                     XXwXX_cts_l,
                                     np.array(
                                         [
-                                            XX0,
-                                            XX0,
+                                            0,
+                                            0,
                                             - R32m * C1W3C1,
                                             C1W3C2.T
                                         ]
@@ -2863,7 +2863,7 @@ class DynamicBLMModel:
                                     XXwXX_cts_l,
                                     np.array(
                                         [
-                                            XX0, XX0, - R32m * C1W3C1, C1W3C2, C1W3C1
+                                            0, 0, - R32m * C1W3C1, C1W3C2, C1W3C1
                                         ]
                                     )
                                 ]
@@ -4287,12 +4287,12 @@ class DynamicBLMModel:
             self.A['12'] = copy.deepcopy(blm_model.A1)
             self.A['43'] = copy.deepcopy(blm_model.A2)
             if initialize_all:
-                self.A['2ma'] = copy.deepcopy(blm_model.A1)
-                self.A['3ma'] = copy.deepcopy(blm_model.A2)
+                self.A['2mb'] = copy.deepcopy(blm_model.A1)
+                self.A['3mb'] = copy.deepcopy(blm_model.A2)
                 self.A['2s'] = copy.deepcopy(blm_model.A1)
                 self.A['3s'] = copy.deepcopy(blm_model.A2)
-                self.A['2mb'][:] = 0
-                self.A['3mb'][:] = 0
+                self.A['2ma'][:] = 0
+                self.A['3ma'][:] = 0
                 self.R12 = 0
                 self.R43 = 0
                 self.R32m = 0

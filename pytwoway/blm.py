@@ -2574,7 +2574,7 @@ class BLMEstimator:
                 plot = plt.scatter
             plot(self.liks_low, self.connectedness_low, marker='o', facecolors='None', edgecolors='C0')
             plot(liks_high_lst, connectedness_high_lst, marker='^', facecolors='None', edgecolors='C1')
-            plt.scatter(self.liks_all, self.connectedness_all, marker=(6, 2, 45), facecolors='C2')
+            plt.scatter(self.model.lik1, self.model.connectedness, marker=(6, 2, 45), facecolors='C2')
             plt.xlabel('Likelihood')
             plt.ylabel('Connectedness')
             plt.show()

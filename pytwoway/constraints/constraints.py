@@ -455,7 +455,6 @@ class MonotonicMean():
         if dynamic:
             # Use dynamic BLM dimensions (i, l, period, k)
             G = G.transpose((0, 2, 1, 3))
-            print('dynamic')
 
         # Reshape G to 2 dimensions
         if cross_period_mean:
