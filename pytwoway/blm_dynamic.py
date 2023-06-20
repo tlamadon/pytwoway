@@ -29,9 +29,7 @@ def _gteq2(a):
 def _gteq1(a):
     return a >= 1
 def _gteq0(a):
-    if isinstance(a, col_type):
-        return a.min() >= 0
-    return a >= 0
+    return np.min(a) >= 0
 def _gt0(a):
     return a > 0
 def _min_gt0(a):
@@ -74,132 +72,132 @@ dynamic_blm_params = ParamsDict({
         ''', None),
     ### Starting values ###
     ## A ##
-    'a12_mu': (1, 'type', (float, int, col_type),
+    'a12_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of simulated A12 (mean of fixed effects).
         ''', None),
-    'a12_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a12_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A12 (mean of fixed effects).
         ''', '>= 0'),
-    'a43_mu': (1, 'type', (float, int, col_type),
+    'a43_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of simulated A43 (mean of fixed effects).
         ''', None),
-    'a43_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a43_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A43 (mean of fixed effects).
         ''', '>= 0'),
-    'a2ma_mu': (1, 'type', (float, int, col_type),
+    'a2ma_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of simulated A2a for movers (mean of fixed effects).
         ''', None),
-    'a2ma_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a2ma_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A2a for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a2mb_mu': (1, 'type', (float, int, col_type),
+    'a2mb_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of simulated A2b for movers (mean of fixed effects).
         ''', None),
-    'a2mb_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a2mb_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A2b for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a3ma_mu': (1, 'type', (float, int, col_type),
+    'a3ma_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of simulated A3a for movers (mean of fixed effects).
         ''', None),
-    'a3ma_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a3ma_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A3a for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a3mb_mu': (1, 'type', (float, int, col_type),
+    'a3mb_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of simulated A3b for movers (mean of fixed effects).
         ''', None),
-    'a3mb_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a3mb_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A3b for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a2s_mu': (1, 'type', (float, int, col_type),
+    'a2s_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of simulated A2 for stayers (mean of fixed effects).
         ''', None),
-    'a2s_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a2s_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A2 for stayers (mean of fixed effects).
         ''', '>= 0'),
-    'a3s_mu': (1, 'type', (float, int, col_type),
+    'a3s_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of simulated A3 for stayers (mean of fixed effects).
         ''', None),
-    'a3s_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a3s_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A3 for stayers (mean of fixed effects).
         ''', '>= 0'),
     ## S ##
-    's12_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's12_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S12 (standard deviation of fixed effects).
         ''', '>= 0'),
-    's12_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's12_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S12 (standard deviation of fixed effects).
         ''', '>= 0'),
-    's43_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's43_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S43 (standard deviation of fixed effects).
         ''', '>= 0'),
-    's43_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's43_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S43 (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2ma_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2ma_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S2a for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2ma_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2ma_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S2a for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2mb_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2mb_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S2b for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2mb_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2mb_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S2b for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3ma_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's3ma_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S3a for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3ma_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's3ma_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S3a for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3mb_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's3mb_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S3b for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3mb_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's3mb_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S3b for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2s_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2s_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S2 for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2s_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2s_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S2 for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3s_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's3s_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S3 for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3s_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's3s_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S3 for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
@@ -351,132 +349,132 @@ dynamic_categorical_control_params = ParamsDict({
             (default=6) Number of types for the parameter. None will raise an error when running the estimator.
         ''', '>= 2'),
     ## A ##
-    'a12_mu': (1, 'type', (float, int, col_type),
+    'a12_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of starting values for A12_cat (mean of fixed effects).
         ''', None),
-    'a12_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a12_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A12_cat (mean of fixed effects).
         ''', '>= 0'),
-    'a43_mu': (1, 'type', (float, int, col_type),
+    'a43_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of starting values for A43_cat (mean of fixed effects).
         ''', None),
-    'a43_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a43_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A43_cat (mean of fixed effects).
         ''', '>= 0'),
-    'a2ma_mu': (1, 'type', (float, int, col_type),
+    'a2ma_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of starting values for A2a_cat for movers (mean of fixed effects).
         ''', None),
-    'a2ma_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a2ma_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A2a_cat for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a2mb_mu': (1, 'type', (float, int, col_type),
+    'a2mb_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of starting values for A2b_cat for movers (mean of fixed effects).
         ''', None),
-    'a2mb_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a2mb_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A2b_cat for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a2s_mu': (1, 'type', (float, int, col_type),
+    'a2s_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of starting values for A2_cat for stayers (mean of fixed effects).
         ''', None),
-    'a2s_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a2s_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A2_cat for stayers (mean of fixed effects).
         ''', '>= 0'),
-    'a3ma_mu': (1, 'type', (float, int, col_type),
+    'a3ma_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of starting values for A3a_cat for movers (mean of fixed effects).
         ''', None),
-    'a3ma_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a3ma_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A3a_cat for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a3mb_mu': (1, 'type', (float, int, col_type),
+    'a3mb_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of starting values for A3b_cat for movers (mean of fixed effects).
         ''', None),
-    'a3mb_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a3mb_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A3b_cat for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a3s_mu': (1, 'type', (float, int, col_type),
+    'a3s_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of starting values for A3_cat for stayers (mean of fixed effects).
         ''', None),
-    'a3s_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a3s_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A3_cat for stayers (mean of fixed effects).
         ''', '>= 0'),
     ## S ##
-    's12_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's12_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S12_cat (standard deviation of fixed effects).
         ''', '>= 0'),
-    's12_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's12_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S12_cat (standard deviation of fixed effects).
         ''', '>= 0'),
-    's43_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's43_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S43_cat (standard deviation of fixed effects).
         ''', '>= 0'),
-    's43_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's43_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S43_cat (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2ma_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2ma_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S2a_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2ma_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2ma_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S2a_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2mb_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2mb_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S2b_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2mb_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2mb_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S2b_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2s_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2s_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S2_cat for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2s_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2s_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S2_cat for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3ma_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's3ma_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S3a_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3ma_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's3ma_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S3a_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3mb_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's3mb_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S3b_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3mb_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's3mb_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S3b_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3s_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's3s_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S3_cat for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3s_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's3s_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S3_cat for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
@@ -497,124 +495,124 @@ dynamic_categorical_control_params = ParamsDict({
 
 dynamic_continuous_control_params = ParamsDict({
     ## A ##
-    'a12_mu': (1, 'type', (float, int, col_type),
+    'a12_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of starting values for A12_cts (mean of fixed effects).
         ''', None),
-    'a12_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a12_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A12_cts (mean of fixed effects).
         ''', '>= 0'),
-    'a43_mu': (1, 'type', (float, int, col_type),
+    'a43_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of starting values for A43_cts (mean of fixed effects).
         ''', None),
-    'a43_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a43_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A43_cts (mean of fixed effects).
         ''', '>= 0'),
-    'a2ma_mu': (1, 'type', (float, int, col_type),
+    'a2ma_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of starting values for A2a_cts for movers (mean of fixed effects).
         ''', None),
-    'a2ma_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a2ma_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A2a_cts for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a2mb_mu': (1, 'type', (float, int, col_type),
+    'a2mb_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of starting values for A2b_cts for movers (mean of fixed effects).
         ''', None),
-    'a2mb_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a2mb_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A2b_cts for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a2s_mu': (1, 'type', (float, int, col_type),
+    'a2s_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of starting values for A2_cts for stayers (mean of fixed effects).
         ''', None),
-    'a2s_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a2s_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A2_cts for stayers (mean of fixed effects).
         ''', '>= 0'),
-    'a3ma_mu': (1, 'type', (float, int, col_type),
+    'a3ma_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of starting values for A3a_cts for movers (mean of fixed effects).
         ''', None),
-    'a3ma_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a3ma_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A3a_cts for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a3mb_mu': (1, 'type', (float, int, col_type),
+    'a3mb_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of starting values for A3b_cts for movers (mean of fixed effects).
         ''', None),
-    'a3mb_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a3mb_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A3b_cts for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a3s_mu': (1, 'type', (float, int, col_type),
+    'a3s_mu': (1, 'type', (float, int, list, col_type),
         '''
             (default=1) Mean of starting values for A3_cts for stayers (mean of fixed effects).
         ''', None),
-    'a3s_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    'a3s_sig': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A3_cts for stayers (mean of fixed effects).
         ''', '>= 0'),
     ## S ##
-    's12_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's12_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S12_cts (standard deviation of fixed effects).
         ''', '>= 0'),
-    's12_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's12_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S12_cts (standard deviation of fixed effects).
         ''', '>= 0'),
-    's43_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's43_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S43_cts (standard deviation of fixed effects).
         ''', '>= 0'),
-    's43_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's43_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S43_cts (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2ma_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2ma_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S2a_cts for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2ma_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2ma_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S2a_cts for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2mb_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2mb_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S2b_cts for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2mb_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2mb_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S2b_cts for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2s_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2s_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S2_cts for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2s_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's2s_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S2_cts for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3m_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's3m_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S3_cts for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3m_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's3m_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S3_cts for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3s_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
+    's3s_low': (0.3, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S3_cts for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3s_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
+    's3s_high': (0.5, 'type_constrained', ((float, int, list, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S3_cts for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
@@ -2324,8 +2322,6 @@ class DynamicBLMModel:
                             qi[:, l] / S['3ma'][l, G2],
                             qi[:, l] / S['43'][l, G2]
                     ]
-                    if params['update_s_movers']:
-                        weights.append(weights_l)
 
                     ## Compute XXwXX_l ##
                     G1W1G1 = np.diag(np.bincount(G1, weights_l[0]))
@@ -2338,6 +2334,20 @@ class DynamicBLMModel:
                     if endogeneity:
                         G1W2G2 = double_bincount(G1, G2, weights_l[1])
                     G1W3G2 = double_bincount(G1, G2, weights_l[2])
+
+                    if params['update_s_movers']:
+                        weights.append(weights_l)
+                        ## XSwXS ##
+                        l_index_S = l * nk * len(periods_var)
+
+                        XSwXS[l_index_S + 0 * nk: l_index_S + 1 * nk] = \
+                            np.diag(G1W1G1)
+                        XSwXS[l_index_S + 1 * nk: l_index_S + 2 * nk] = \
+                            np.diag(G1W2G1)
+                        XSwXS[l_index_S + 2 * nk: l_index_S + 3 * nk] = \
+                            np.diag(G2W3G2)
+                        XSwXS[l_index_S + 3 * nk: l_index_S + 4 * nk] = \
+                            np.diag(G2W4G2)
 
                     XXwXX_l = np.vstack(
                         [
@@ -2559,9 +2569,6 @@ class DynamicBLMModel:
                         ]
                         del S_l_dict
 
-                        if params['update_s_movers']:
-                            weights_cat[col].append(weights_l)
-
                         ## Compute XXwXX_cat_l ##
                         C1W1C1 = np.diag(np.bincount(C1[col], weights_l[0]))
                         C1W2C1 = np.diag(np.bincount(C1[col], weights_l[1]))
@@ -2573,6 +2580,21 @@ class DynamicBLMModel:
                         if endogeneity:
                             C1W2C2 = double_bincount(C1[col], C2[col], weights_l[1])
                         C1W3C2 = double_bincount(C1[col], C2[col], weights_l[2])
+
+                        if params['update_s_movers']:
+                            weights_cat[col].append(weights_l)
+
+                            ### XSwXS_cat ###
+                            l_index_S = l * col_n * len(periods_var)
+
+                            XSwXS_cat[l_index_S + 0 * col_n: l_index_S + 1 * col_n] = \
+                                np.diag(C1W1C1)
+                            XSwXS_cat[l_index_S + 1 * col_n: l_index_S + 2 * col_n] = \
+                                np.diag(C1W2C1)
+                            XSwXS_cat[l_index_S + 2 * col_n: l_index_S + 3 * col_n] = \
+                                np.diag(C2W3C2)
+                            XSwXS_cat[l_index_S + 3 * col_n: l_index_S + 4 * col_n] = \
+                                np.diag(C2W4C2)
 
                         XXwXX_cat_l = np.vstack(
                             [
@@ -2785,9 +2807,6 @@ class DynamicBLMModel:
                         ]
                         del S_l_dict
 
-                        if params['update_s_movers']:
-                            weights_cts[col].append(weights_l)
-
                         ## Compute XXwXX_cts_l ##
                         C1W1C1 = np.sum(weights_l[0] * C1[col])
                         C1W2C1 = np.sum(weights_l[1] * C1[col])
@@ -2799,6 +2818,16 @@ class DynamicBLMModel:
                         if endogeneity:
                             C1W2C2 = np.sum(weights_l[1] * C1[col] * C2[col])
                         C1W3C2 = np.sum(weights_l[2] * C1[col] * C2[col])
+
+                        if params['update_s_movers']:
+                            weights_cts[col].append(weights_l)
+
+                            ### XSwXS_cts ###
+                            l_index_S = l * len(periods_var)
+                            XSwXS_cts[l_index_S + 0] = C1W1C1
+                            XSwXS_cts[l_index_S + 1] = C1W2C1
+                            XSwXS_cts[l_index_S + 2] = C2W3C2
+                            XSwXS_cts[l_index_S + 3] = C2W4C2
 
                         XXwXX_cts_l = np.array(
                             [
@@ -3024,20 +3053,9 @@ class DynamicBLMModel:
                         eps_sq.append(eps_l_sq)
                         del A_sum_l, eps_l_sq
 
-                        ## XSwXS and XSwE terms ##
+                        ## XSwE ##
                         l_index, r_index = l * nk * len(periods_var), (l + 1) * nk * len(periods_var)
 
-                        ## First, XSwXS ##
-                        XSwXS[l_index + 0 * nk: l_index + 1 * nk] = \
-                            np.bincount(G1, weights=weights[l][0])
-                        XSwXS[l_index + 1 * nk: l_index + 2 * nk] = \
-                            np.bincount(G1, weights=weights[l][1])
-                        XSwXS[l_index + 2 * nk: l_index + 3 * nk] = \
-                            np.bincount(G2, weights=weights[l][2])
-                        XSwXS[l_index + 3 * nk: l_index + 4 * nk] = \
-                            np.bincount(G2, weights=weights[l][3])
-
-                        ## Second, XSwE ##
                         for t in range(4):
                             weights[l][t] *= eps_sq[l][t]
 
@@ -3060,6 +3078,7 @@ class DynamicBLMModel:
                                     + S_sum_sq['43'] + S_sum_sq_l['43'],
                             ]
                             del S_sum_sq_l
+
                             for t in range(4):
                                 weights[l][t] *= (var_l_numerator[t] / var_l_denominator[t])
 
@@ -3107,20 +3126,9 @@ class DynamicBLMModel:
                             # Update S_sum_sq to account for worker-interaction terms
                             S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_A=False, compute_S=True, periods=periods)
 
-                            ### XSwXS_cat and XSwE_cat terms ###
+                            ### XSwE_cat ###
                             l_index, r_index = l * col_n * len(periods_var), (l + 1) * col_n * len(periods_var)
 
-                            ### First, XSwXS_cat ###
-                            XSwXS_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
-                                np.bincount(CC1[col], weights=weights_cat[col][l][0])
-                            XSwXS_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
-                                np.bincount(CC1[col], weights=weights_cat[col][l][1])
-                            XSwXS_cat[l_index + 2 * col_n: l_index + 3 * col_n] = \
-                                np.bincount(CC2[col], weights=weights_cat[col][l][2])
-                            XSwXS_cat[l_index + 3 * col_n: l_index + 4 * col_n] = \
-                                np.bincount(CC2[col], weights=weights_cat[col][l][3])
-
-                            ### Second, XSwE_cat ###
                             ## Compute var_l_cat ##
                             if cat_dict[col]['worker_type_interaction']:
                                 S_l_dict = {period: (S_cat[col][period][l, :] ** 2)[C_dict[period][col]] for period in periods}
@@ -3145,6 +3153,7 @@ class DynamicBLMModel:
                                     + S_sum_sq['43'] + S_sum_sq_l['43'],
                             ]
                             del S_sum_sq_l
+
                             for t in range(4):
                                 weights_cat[col][l][t] *= ((var_l_numerator[t] / var_l_denominator[t]) * eps_sq[l][t])
 
@@ -3200,20 +3209,9 @@ class DynamicBLMModel:
                             # Update S_sum_sq to account for worker-interaction terms
                             S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_A=False, compute_S=True, periods=periods)
 
-                            ### XSwXS_cts and XSwE_cts terms ###
+                            ### XSwE_cts ###
                             l_index, r_index = l * len(periods_var), (l + 1) * len(periods_var)
 
-                            ### First, XSwXS_cts ###
-                            XSwXS_cts[l_index + 0] = \
-                                np.sum(C1[col] * weights_cts[col][l][0])
-                            XSwXS_cts[l_index + 1] = \
-                                np.sum(C1[col] * weights_cts[col][l][1])
-                            XSwXS_cts[l_index + 2] = \
-                                np.sum(C2[col] * weights_cts[col][l][2])
-                            XSwXS_cts[l_index + 3] = \
-                                np.sum(C2[col] * weights_cts[col][l][3])
-
-                            ### Second, XSwE_cts ###
                             ## Compute var_l_cts ##
                             if cts_dict[col]['worker_type_interaction']:
                                 S_l_dict = {period: S_cts[col][period][l] ** 2 for period in periods}
