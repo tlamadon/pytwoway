@@ -278,9 +278,13 @@ dynamic_blm_params = ParamsDict({
         '''
             (default=1 + 1e-7) Account for probabilities being too small by adding (d_prior - 1) to pk1.
         ''', '>= 1'),
-    'd_X_diag_movers': (1 + 1e-10, 'type_constrained', ((float, int), _gteq1),
+    'd_X_diag_movers_A': (1 + 1e-10, 'type_constrained', ((float, int), _gteq1),
         '''
-            (default=1 + 1e-10) Account for numerical rounding causing X'X to not be positive definite by adding (d_X_diag_movers - 1) to the diagonal of X'X.
+            (default=1 + 1e-10) Account for numerical rounding causing X'X to not be positive definite when computing A by adding (d_X_diag_movers_A - 1) to the diagonal of X'X.
+        ''', '>= 1'),
+    'd_X_diag_movers_S': (1 + 1e-5, 'type_constrained', ((float, int), _gteq1),
+        '''
+            (default=1 + 1e-5) Account for numerical rounding causing X'X to not be positive definite when computing S by adding (d_X_diag_movers_S - 1) to the diagonal of X'X.
         ''', '>= 1'),
     'd_mean_worker_effect': (1e-7, 'type', (float, int),
         '''
@@ -2278,6 +2282,9 @@ class DynamicBLMModel:
                 XX0 = np.zeros((nk, nk))
                 if params['update_a_movers']:
                     XXwY = np.zeros(shape=len(periods) * ts)
+                if params['update_s_movers']:
+                    XSwXS = np.zeros(len(periods_var) * ts)
+                    XSwE = np.zeros(shape=len(periods_var) * ts)
 
                 ### Categorical ###
                 if len(cat_cols) > 0:
@@ -2289,6 +2296,9 @@ class DynamicBLMModel:
                     XX0_cat = {col: np.zeros((col_dict['n'], col_dict['n'])) for col, col_dict in cat_dict.items()}
                     if params['update_a_movers']:
                         XXwY_cat = {col: np.zeros(shape=len(periods) * col_ts) for col, col_ts in ts_cat.items()}
+                    if params['update_s_movers']:
+                        XSwXS_cat = {col: np.zeros(shape=len(periods_var) * col_ts) for col, col_ts in ts_cat.items()}
+                        XSwE_cat = {col: np.zeros(shape=len(periods_var) * col_ts) for col, col_ts in ts_cat.items()}
 
                 ### Continuous ###
                 if len(cts_cols) > 0:
@@ -2296,6 +2306,9 @@ class DynamicBLMModel:
                     XXwXX_cts = {col: np.zeros((len(periods) * nl, len(periods) * nl)) for col in cts_cols}
                     if params['update_a_movers']:
                         XXwY_cts = {col: np.zeros(shape=len(periods) * nl) for col in cts_cols}
+                    if params['update_s_movers']:
+                        XSwXS_cts = {col: np.zeros(shape=len(periods_var) * nl) for col in cts_cols}
+                        XSwE_cts = {col: np.zeros(shape=len(periods_var) * nl) for col in cts_cols}
 
                 ## Update A ##
                 if params['update_s_movers']:
@@ -2312,7 +2325,7 @@ class DynamicBLMModel:
                             qi[:, l] / S['43'][l, G2]
                     ]
                     if params['update_s_movers']:
-                        weights.append(np.concatenate(weights_l))
+                        weights.append(weights_l)
 
                     ## Compute XXwXX_l ##
                     G1W1G1 = np.diag(np.bincount(G1, weights_l[0]))
@@ -2475,8 +2488,8 @@ class DynamicBLMModel:
                         del Yl_1, Yl_2, Yl_3, Yl_4, XXwY_l, A_sum_l
                     del weights_l
 
-                if params['d_X_diag_movers'] > 1:
-                    XXwXX += (params['d_X_diag_movers'] - 1) * np.eye(XXwXX.shape[0])
+                if params['d_X_diag_movers_A'] > 1:
+                    XXwXX += (params['d_X_diag_movers_A'] - 1) * np.eye(XXwXX.shape[0])
 
                 # print('A before:')
                 # print(A)
@@ -2547,7 +2560,7 @@ class DynamicBLMModel:
                         del S_l_dict
 
                         if params['update_s_movers']:
-                            weights_cat[col].append(np.concatenate(weights_l))
+                            weights_cat[col].append(weights_l)
 
                         ## Compute XXwXX_cat_l ##
                         C1W1C1 = np.diag(np.bincount(C1[col], weights_l[0]))
@@ -2713,8 +2726,8 @@ class DynamicBLMModel:
                             del Yl_cat_1, Yl_cat_2, Yl_cat_3, Yl_cat_4, XXwY_cat_l, A_sum_l
                         del weights_l
 
-                    if params['d_X_diag_movers'] > 1:
-                        XXwXX_cat[col] += (params['d_X_diag_movers'] - 1) * np.eye(XXwXX_cat[col].shape[0])
+                    if params['d_X_diag_movers_A'] > 1:
+                        XXwXX_cat[col] += (params['d_X_diag_movers_A'] - 1) * np.eye(XXwXX_cat[col].shape[0])
 
                     # We solve the system to get all the parameters (use dense solver)
                     if params['update_a_movers']:
@@ -2773,7 +2786,7 @@ class DynamicBLMModel:
                         del S_l_dict
 
                         if params['update_s_movers']:
-                            weights_cts[col].append(np.concatenate(weights_l))
+                            weights_cts[col].append(weights_l)
 
                         ## Compute XXwXX_cts_l ##
                         C1W1C1 = np.sum(weights_l[0] * C1[col])
@@ -2927,8 +2940,8 @@ class DynamicBLMModel:
                             del Yl_cts_1, Yl_cts_2, Yl_cts_3, Yl_cts_4, XwY_cts_l, A_sum_l
                         del weights_l
 
-                    if params['d_X_diag_movers'] > 1:
-                        XXwXX_cts[col] += (params['d_X_diag_movers'] - 1) * np.eye(XXwXX_cts[col].shape[0])
+                    if params['d_X_diag_movers_A'] > 1:
+                        XXwXX_cts[col] += (params['d_X_diag_movers_A'] - 1) * np.eye(XXwXX_cts[col].shape[0])
 
                     # We solve the system to get all the parameters (use dense solver)
                     if params['update_a_movers']:
@@ -2961,20 +2974,7 @@ class DynamicBLMModel:
 
                 if params['update_s_movers']:
                     ## Update the variances ##
-                    XSwXS = np.zeros(len(periods_var) * ts)
-                    XSwE = np.zeros(shape=len(periods_var) * ts)
-
-                    ## Categorical ##
-                    if len(cat_cols) > 0:
-                        XSwXS_cat = {col: np.zeros(shape=len(periods_var) * col_ts) for col, col_ts in ts_cat.items()}
-                        XSwE_cat = {col: np.zeros(shape=len(periods_var) * col_ts) for col, col_ts in ts_cat.items()}
-
-                    ## Continuous ##
-                    if len(cts_cols) > 0:
-                        XSwXS_cts = {col: np.zeros(shape=len(periods_var) * nl) for col in cts_cols}
-                        XSwE_cts = {col: np.zeros(shape=len(periods_var) * nl) for col in cts_cols}
-
-                    ## Residuals ##
+                    # Residuals
                     eps_sq = []
 
                     ## Update S ##
@@ -2988,21 +2988,23 @@ class DynamicBLMModel:
                             A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False, periods=periods)
 
                         ## Residuals ##
-                        eps_l_sq = np.zeros(4 * ni)
-                        # eps_1_l_sq
-                        eps_l_sq[0 * ni: 1 * ni] = \
+                        eps_l_sq = []
+                        # eps_l_sq_1
+                        eps_l_sq.append(
                             (Y1 \
                                 - (A['12'][l, G1] + A_sum['12'] + A_sum_l['12']) \
                                 - R12 * (Y2 - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma'])) \
                                 ) ** 2
-                        # eps_2_l_sq
-                        eps_l_sq[1 * ni: 2 * ni] = \
+                        )
+                        # eps_l_sq_2
+                        eps_l_sq.append(
                             (Y2 \
                                 - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']) \
                                 - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb'])
                                 ) ** 2
-                        # eps_3_l_sq
-                        eps_l_sq[2 * ni: 3 * ni] = \
+                        )
+                        # eps_l_sq_3
+                        eps_l_sq.append(
                             (Y3 \
                                 - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma']) \
                                 - (A['3mb'][G1] + A_sum['3mb'] + A_sum_l['3mb'])
@@ -3010,13 +3012,15 @@ class DynamicBLMModel:
                                     - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']) \
                                     - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb'])) \
                                 ) ** 2
-                        # eps_1_4_sq
-                        eps_l_sq[3 * ni: 4 * ni] = \
+                        )
+                        # eps_l_sq_4
+                        eps_l_sq.append(
                             (Y4 \
                                 - (A['43'][l, G2] + A_sum['43'] + A_sum_l['43']) \
                                 - R43 * (Y3 \
                                     - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma'])) \
                                 ) ** 2
+                        )
                         eps_sq.append(eps_l_sq)
                         del A_sum_l, eps_l_sq
 
@@ -3025,67 +3029,54 @@ class DynamicBLMModel:
 
                         ## First, XSwXS ##
                         XSwXS[l_index + 0 * nk: l_index + 1 * nk] = \
-                            np.bincount(G1, weights=weights[l][0 * ni: 1 * ni])
+                            np.bincount(G1, weights=weights[l][0])
                         XSwXS[l_index + 1 * nk: l_index + 2 * nk] = \
-                            np.bincount(G2, weights=weights[l][3 * ni: 4 * ni])
+                            np.bincount(G1, weights=weights[l][1])
                         XSwXS[l_index + 2 * nk: l_index + 3 * nk] = \
-                            np.bincount(G1, weights=weights[l][1 * ni: 2 * ni])
+                            np.bincount(G2, weights=weights[l][2])
                         XSwXS[l_index + 3 * nk: l_index + 4 * nk] = \
-                            np.bincount(G2, weights=weights[l][2 * ni: 3 * ni])
+                            np.bincount(G2, weights=weights[l][3])
 
                         ## Second, XSwE ##
-                        weights[l] *= eps_sq[l]
+                        for t in range(4):
+                            weights[l][t] *= eps_sq[l][t]
 
                         if any_controls:
                             ## Account for other variables' contribution to variance ##
-                            var_l_numerator = np.concatenate(
-                                [
-                                    (S['12'][l, :] ** 2)[G1], # + (R12 * S['2ma'][l, :]) ** 2)[G1],
-                                    (S['2ma'][l, :] ** 2)[G1], # + (S['2mb'] ** 2)[G2],
-                                    (S['3ma'][l, :] ** 2)[G2], # + (S['3mb'] ** 2)[G1] + (R32m ** 2) * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]),
-                                    (S['43'][l, :] ** 2)[G2] # + (R43 * S['3ma'][l, :]) ** 2)[G2]
-                                ]
-                            )
-                            var_l_denominator = np.concatenate(
-                                [
-                                    (S['12'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['12'] + S_sum_sq_l['12'], # \
-                                        # + (R12 ** 2) \
-                                        #     * ((S['2ma'][l, :] ** 2)[G1] \
-                                        #         + S_sum_sq['2ma'] \
-                                        #         + S_sum_sq_l['2ma']),
-                                    ((S['2ma'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['2ma'] + S_sum_sq_l['2ma']), # \
-                                        # + (S['2mb'] ** 2)[G2] + S_sum_sq['2mb'] + S_sum_sq_l['2mb'],
-                                    ((S['3ma'][l, :] ** 2)[G2] \
-                                        + S_sum_sq['3ma'] + S_sum_sq_l['3ma']), # \
-                                        # + ((S['3mb'] ** 2)[G1] + S_sum_sq['3mb'] + S_sum_sq_l['3mb']) \
-                                        # + (R32m ** 2) \
-                                        #     * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
-                                        #         + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
-                                        #         + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])),
-                                    (S['43'][l, :] ** 2)[G2] \
-                                        + S_sum_sq['43'] + S_sum_sq_l['43'], # \
-                                        # + (R43 ** 2) \
-                                        #     * ((S['3ma'][l, :] ** 2)[G2] \
-                                        #         + S_sum_sq['3ma'] \
-                                        #         + S_sum_sq_l['3ma'])
-                                ]
-                            )
+                            var_l_numerator = [
+                                (S['12'][l, :] ** 2)[G1],
+                                (S['2ma'][l, :] ** 2)[G1],
+                                (S['3ma'][l, :] ** 2)[G2],
+                                (S['43'][l, :] ** 2)[G2]
+                            ]
+                            var_l_denominator = [
+                                (S['12'][l, :] ** 2)[G1] \
+                                    + S_sum_sq['12'] + S_sum_sq_l['12'],
+                                ((S['2ma'][l, :] ** 2)[G1] \
+                                    + S_sum_sq['2ma'] + S_sum_sq_l['2ma']),
+                                ((S['3ma'][l, :] ** 2)[G2] \
+                                    + S_sum_sq['3ma'] + S_sum_sq_l['3ma']),
+                                (S['43'][l, :] ** 2)[G2] \
+                                    + S_sum_sq['43'] + S_sum_sq_l['43'],
+                            ]
                             del S_sum_sq_l
-                            weights[l] *= (var_l_numerator / var_l_denominator)
+                            for t in range(4):
+                                weights[l][t] *= (var_l_numerator[t] / var_l_denominator[t])
 
                         XSwE[l_index + 0 * nk: l_index + 1 * nk] = \
-                            np.bincount(G1, weights=weights[l][0 * ni: 1 * ni])
+                            np.bincount(G1, weights=weights[l][0])
                         XSwE[l_index + 1 * nk: l_index + 2 * nk] = \
-                            np.bincount(G2, weights=weights[l][3 * ni: 4 * ni])
+                            np.bincount(G1, weights=weights[l][1])
                         XSwE[l_index + 2 * nk: l_index + 3 * nk] = \
-                            np.bincount(G1, weights=weights[l][1 * ni: 2 * ni])
+                            np.bincount(G2, weights=weights[l][2])
                         XSwE[l_index + 3 * nk: l_index + 4 * nk] = \
-                            np.bincount(G2, weights=weights[l][2 * ni: 3 * ni])
+                            np.bincount(G2, weights=weights[l][3])
 
                         weights[l] = 0
                     del weights
+
+                    if params['d_X_diag_movers_S'] > 1:
+                        XSwXS += (params['d_X_diag_movers_S'] - 1)
 
                     try:
                         cons_s.solve(np.diag(XSwXS), -XSwE, solver='quadprog')
@@ -3121,13 +3112,13 @@ class DynamicBLMModel:
 
                             ### First, XSwXS_cat ###
                             XSwXS_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
-                                np.bincount(CC1[col], weights=weights_cat[col][l][0 * ni: 1 * ni])
+                                np.bincount(CC1[col], weights=weights_cat[col][l][0])
                             XSwXS_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
-                                np.bincount(CC2[col], weights=weights_cat[col][l][3 * ni: 4 * ni])
+                                np.bincount(CC1[col], weights=weights_cat[col][l][1])
                             XSwXS_cat[l_index + 2 * col_n: l_index + 3 * col_n] = \
-                                np.bincount(CC1[col], weights=weights_cat[col][l][1 * ni: 2 * ni])
+                                np.bincount(CC2[col], weights=weights_cat[col][l][2])
                             XSwXS_cat[l_index + 3 * col_n: l_index + 4 * col_n] = \
-                                np.bincount(CC2[col], weights=weights_cat[col][l][2 * ni: 3 * ni])
+                                np.bincount(CC2[col], weights=weights_cat[col][l][3])
 
                             ### Second, XSwE_cat ###
                             ## Compute var_l_cat ##
@@ -3137,54 +3128,40 @@ class DynamicBLMModel:
                                 S_l_dict = {period: (S_cat[col][period] ** 2)[C_dict[period][col]] for period in periods}
 
                             ## Account for other variables' contribution to variance ##
-                            var_l_numerator = np.concatenate(
-                                [
-                                    S_l_dict['12'], # + (R12 ** 2) * S_l_dict['2ma'],
-                                    S_l_dict['2ma'], # + S_l_dict['2mb'],
-                                    S_l_dict['3ma'], # + S_l_dict['3mb'] + (R32m ** 2) * (S_l_dict['2ma'] + S_l_dict['2mb']),
-                                    S_l_dict['43'] # + (R43 ** 2) * S_l_dict['3ma']
-                                ]
-                            )
-                            var_l_denominator = np.concatenate(
-                                [
-                                    (S['12'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['12'] + S_sum_sq_l['12'], # \
-                                        # + (R12 ** 2) \
-                                        #     * ((S['2ma'][l, :] ** 2)[G1] \
-                                        #         + S_sum_sq['2ma'] \
-                                        #         + S_sum_sq_l['2ma']),
-                                    ((S['2ma'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['2ma'] + S_sum_sq_l['2ma']), # \
-                                        # + (S['2mb'] ** 2)[G2] + S_sum_sq['2mb'] + S_sum_sq_l['2mb'],
-                                    ((S['3ma'][l, :] ** 2)[G2] \
-                                        + S_sum_sq['3ma'] + S_sum_sq_l['3ma']), # \
-                                        # + ((S['3mb'] ** 2)[G1] + S_sum_sq['3mb'] + S_sum_sq_l['3mb']) \
-                                        # + (R32m ** 2) \
-                                        #     * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
-                                        #         + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
-                                        #         + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])),
-                                    (S['43'][l, :] ** 2)[G2] \
-                                        + S_sum_sq['43'] + S_sum_sq_l['43'], # \
-                                        # + (R43 ** 2) \
-                                        #     * ((S['3ma'][l, :] ** 2)[G2] \
-                                        #         + S_sum_sq['3ma'] \
-                                        #         + S_sum_sq_l['3ma'])
-                                ]
-                            )
+                            var_l_numerator = [
+                                S_l_dict['12'],
+                                S_l_dict['2ma'],
+                                S_l_dict['3ma'],
+                                S_l_dict['43']
+                            ]
+                            var_l_denominator = [
+                                (S['12'][l, :] ** 2)[G1] \
+                                    + S_sum_sq['12'] + S_sum_sq_l['12'],
+                                ((S['2ma'][l, :] ** 2)[G1] \
+                                    + S_sum_sq['2ma'] + S_sum_sq_l['2ma']),
+                                ((S['3ma'][l, :] ** 2)[G2] \
+                                    + S_sum_sq['3ma'] + S_sum_sq_l['3ma']),
+                                (S['43'][l, :] ** 2)[G2] \
+                                    + S_sum_sq['43'] + S_sum_sq_l['43'],
+                            ]
                             del S_sum_sq_l
-                            weights_cat[col][l] *= ((var_l_numerator / var_l_denominator) * eps_sq[l])
+                            for t in range(4):
+                                weights_cat[col][l][t] *= ((var_l_numerator[t] / var_l_denominator[t]) * eps_sq[l][t])
 
                             XSwE_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
-                                np.bincount(CC1[col], weights=weights_cat[col][l][0 * ni: 1 * ni])
+                                np.bincount(CC1[col], weights=weights_cat[col][l][0])
                             XSwE_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
-                                np.bincount(CC2[col], weights=weights_cat[col][l][3 * ni: 4 * ni])
+                                np.bincount(CC1[col], weights=weights_cat[col][l][1])
                             XSwE_cat[l_index + 2 * col_n: l_index + 3 * col_n] = \
-                                np.bincount(CC1[col], weights=weights_cat[col][l][1 * ni: 2 * ni])
+                                np.bincount(CC2[col], weights=weights_cat[col][l][2])
                             XSwE_cat[l_index + 3 * col_n: l_index + 4 * col_n] = \
-                                np.bincount(CC2[col], weights=weights_cat[col][l][2 * ni: 3 * ni])
+                                np.bincount(CC2[col], weights=weights_cat[col][l][3])
 
                             weights_cat[col][l] = 0
                         del weights_cat[col]
+
+                        if params['d_X_diag_movers_S'] > 1:
+                            XSwXS_cat[col] += (params['d_X_diag_movers_S'] - 1)
 
                         try:
                             s_solver = cons_s_dict[col]
@@ -3228,13 +3205,13 @@ class DynamicBLMModel:
 
                             ### First, XSwXS_cts ###
                             XSwXS_cts[l_index + 0] = \
-                                np.sum(C1[col] * weights_cts[col][l][0 * ni: 1 * ni])
+                                np.sum(C1[col] * weights_cts[col][l][0])
                             XSwXS_cts[l_index + 1] = \
-                                np.sum(C2[col] * weights_cts[col][l][3 * ni: 4 * ni])
+                                np.sum(C1[col] * weights_cts[col][l][1])
                             XSwXS_cts[l_index + 2] = \
-                                np.sum(C1[col] * weights_cts[col][l][1 * ni: 2 * ni])
+                                np.sum(C2[col] * weights_cts[col][l][2])
                             XSwXS_cts[l_index + 3] = \
-                                np.sum(C2[col] * weights_cts[col][l][2 * ni: 3 * ni])
+                                np.sum(C2[col] * weights_cts[col][l][3])
 
                             ### Second, XSwE_cts ###
                             ## Compute var_l_cts ##
@@ -3244,55 +3221,41 @@ class DynamicBLMModel:
                                 S_l_dict = {period: S_cts[col][period] ** 2 for period in periods}
 
                             ## Account for other variables' contribution to variance ##
-                            var_l_numerator = np.concatenate(
-                                [
-                                    S_l_dict['12'], # + (R12 ** 2) * S_l_dict['2ma'],
-                                    S_l_dict['2ma'], # + S_l_dict['2mb'],
-                                    S_l_dict['3ma'], # + S_l_dict['3mb'] + (R32m ** 2) * (S_l_dict['2ma'] + S_l_dict['2mb']),
-                                    S_l_dict['43'] # + (R43 ** 2) * S_l_dict['3ma']
-                                ]
-                            )
-                            var_l_denominator = np.concatenate(
-                                [
-                                    (S['12'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['12'] + S_sum_sq_l['12'], # \
-                                        # + (R12 ** 2) \
-                                        #     * ((S['2ma'][l, :] ** 2)[G1] \
-                                        #         + S_sum_sq['2ma'] \
-                                        #         + S_sum_sq_l['2ma']),
-                                    ((S['2ma'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['2ma'] + S_sum_sq_l['2ma']), # \
-                                        # + (S['2mb'] ** 2)[G2] + S_sum_sq['2mb'] + S_sum_sq_l['2mb'],
-                                    ((S['3ma'][l, :] ** 2)[G2] \
-                                        + S_sum_sq['3ma'] + S_sum_sq_l['3ma']), # \
-                                        # + ((S['3mb'] ** 2)[G1] + S_sum_sq['3mb'] + S_sum_sq_l['3mb']) \
-                                        # + (R32m ** 2) \
-                                        #     * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
-                                        #         + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
-                                        #         + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])),
-                                    (S['43'][l, :] ** 2)[G2] \
-                                        + S_sum_sq['43'] + S_sum_sq_l['43'], # \
-                                        # + (R43 ** 2) \
-                                        #     * ((S['3ma'][l, :] ** 2)[G2] \
-                                        #         + S_sum_sq['3ma'] \
-                                        #         + S_sum_sq_l['3ma'])
-                                ]
-                            )
+                            var_l_numerator = [
+                                S_l_dict['12'],
+                                S_l_dict['2ma'],
+                                S_l_dict['3ma'],
+                                S_l_dict['43']
+                            ]
+                            var_l_denominator = [
+                                (S['12'][l, :] ** 2)[G1] \
+                                    + S_sum_sq['12'] + S_sum_sq_l['12'],
+                                ((S['2ma'][l, :] ** 2)[G1] \
+                                    + S_sum_sq['2ma'] + S_sum_sq_l['2ma']),
+                                ((S['3ma'][l, :] ** 2)[G2] \
+                                    + S_sum_sq['3ma'] + S_sum_sq_l['3ma']),
+                                (S['43'][l, :] ** 2)[G2] \
+                                    + S_sum_sq['43'] + S_sum_sq_l['43'],
+                            ]
                             del S_sum_sq_l
-                            weights_cts[col][l] *= ((var_l_numerator / var_l_denominator) * eps_sq[l])
+                            for t in range(4):
+                                weights_cts[col][l][t] *= ((var_l_numerator[t] / var_l_denominator[t]) * eps_sq[l][t])
 
                             # NOTE: take absolute value
                             XSwE_cts[l_index + 0] = \
-                                np.abs(np.sum(C1[col] * weights_cts[col][l][0 * ni: 1 * ni]))
+                                np.abs(np.sum(C1[col] * weights_cts[col][l][0]))
                             XSwE_cts[l_index + 1] = \
-                                np.abs(np.sum(C2[col] * weights_cts[col][l][3 * ni: 4 * ni]))
+                                np.abs(np.sum(C1[col] * weights_cts[col][l][1]))
                             XSwE_cts[l_index + 2] = \
-                                np.abs(np.sum(C1[col] * weights_cts[col][l][1 * ni: 2 * ni]))
+                                np.abs(np.sum(C2[col] * weights_cts[col][l][2]))
                             XSwE_cts[l_index + 3] = \
-                                np.abs(np.sum(C2[col] * weights_cts[col][l][2 * ni: 3 * ni]))
+                                np.abs(np.sum(C2[col] * weights_cts[col][l][3]))
 
                             weights_cts[col][l] = 0
                         del weights_cts[col]
+
+                        if params['d_X_diag_movers_S'] > 1:
+                            XSwXS_cts[col] += (params['d_X_diag_movers_S'] - 1)
 
                         try:
                             s_solver = cons_s_dict[col]
@@ -4341,8 +4304,8 @@ class DynamicBLMModel:
         ##### Loop 4 #####
         # Restore user constraints
         self.params['cons_a_all'] = user_params['cons_a_all']
-        # Update d_X_diag_movers to be closer to 1
-        self.params['d_X_diag_movers'] = 1 + (self.params['d_X_diag_movers'] - 1) / 2
+        # Update d_X_diag_movers_A to be closer to 1
+        self.params['d_X_diag_movers_A'] = 1 + (self.params['d_X_diag_movers_A'] - 1) / 2
         if self.params['verbose'] in [1, 2, 3]:
             print('Fitting unconstrained movers')
         self.fit_movers(jdata, compute_NNm=compute_NNm)
