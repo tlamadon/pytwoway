@@ -280,7 +280,7 @@ dynamic_blm_params = ParamsDict({
         '''
             (default=1 + 1e-10) Account for numerical rounding causing X'X to not be positive definite when computing A by adding (d_X_diag_movers_A - 1) to the diagonal of X'X.
         ''', '>= 1'),
-    'd_X_diag_movers_S': (1 + 1e-5, 'type_constrained', ((float, int), _gteq1),
+    'd_X_diag_movers_S': (1 + 1e-10, 'type_constrained', ((float, int), _gteq1),
         '''
             (default=1 + 1e-5) Account for numerical rounding causing X'X to not be positive definite when computing S by adding (d_X_diag_movers_S - 1) to the diagonal of X'X.
         ''', '>= 1'),
@@ -2343,11 +2343,11 @@ class DynamicBLMModel:
                         XSwXS[l_index_S + 0 * nk: l_index_S + 1 * nk] = \
                             np.diag(G1W1G1)
                         XSwXS[l_index_S + 1 * nk: l_index_S + 2 * nk] = \
-                            np.diag(G1W2G1)
-                        XSwXS[l_index_S + 2 * nk: l_index_S + 3 * nk] = \
-                            np.diag(G2W3G2)
-                        XSwXS[l_index_S + 3 * nk: l_index_S + 4 * nk] = \
                             np.diag(G2W4G2)
+                        XSwXS[l_index_S + 2 * nk: l_index_S + 3 * nk] = \
+                            np.diag(G1W2G1)
+                        XSwXS[l_index_S + 3 * nk: l_index_S + 4 * nk] = \
+                            np.diag(G2W3G2)
 
                     XXwXX_l = np.vstack(
                         [
@@ -2590,11 +2590,11 @@ class DynamicBLMModel:
                             XSwXS_cat[l_index_S + 0 * col_n: l_index_S + 1 * col_n] = \
                                 np.diag(C1W1C1)
                             XSwXS_cat[l_index_S + 1 * col_n: l_index_S + 2 * col_n] = \
-                                np.diag(C1W2C1)
-                            XSwXS_cat[l_index_S + 2 * col_n: l_index_S + 3 * col_n] = \
-                                np.diag(C2W3C2)
-                            XSwXS_cat[l_index_S + 3 * col_n: l_index_S + 4 * col_n] = \
                                 np.diag(C2W4C2)
+                            XSwXS_cat[l_index_S + 2 * col_n: l_index_S + 3 * col_n] = \
+                                np.diag(C1W2C1)
+                            XSwXS_cat[l_index_S + 3 * col_n: l_index_S + 4 * col_n] = \
+                                np.diag(C2W3C2)
 
                         XXwXX_cat_l = np.vstack(
                             [
@@ -2825,9 +2825,9 @@ class DynamicBLMModel:
                             ### XSwXS_cts ###
                             l_index_S = l * len(periods_var)
                             XSwXS_cts[l_index_S + 0] = C1W1C1
-                            XSwXS_cts[l_index_S + 1] = C1W2C1
-                            XSwXS_cts[l_index_S + 2] = C2W3C2
-                            XSwXS_cts[l_index_S + 3] = C2W4C2
+                            XSwXS_cts[l_index_S + 1] = C2W4C2
+                            XSwXS_cts[l_index_S + 2] = C1W2C1
+                            XSwXS_cts[l_index_S + 3] = C2W3C2
 
                         XXwXX_cts_l = np.array(
                             [
@@ -3085,11 +3085,11 @@ class DynamicBLMModel:
                         XSwE[l_index + 0 * nk: l_index + 1 * nk] = \
                             np.bincount(G1, weights=weights[l][0])
                         XSwE[l_index + 1 * nk: l_index + 2 * nk] = \
-                            np.bincount(G1, weights=weights[l][1])
-                        XSwE[l_index + 2 * nk: l_index + 3 * nk] = \
-                            np.bincount(G2, weights=weights[l][2])
-                        XSwE[l_index + 3 * nk: l_index + 4 * nk] = \
                             np.bincount(G2, weights=weights[l][3])
+                        XSwE[l_index + 2 * nk: l_index + 3 * nk] = \
+                            np.bincount(G1, weights=weights[l][1])
+                        XSwE[l_index + 3 * nk: l_index + 4 * nk] = \
+                            np.bincount(G2, weights=weights[l][2])
 
                         weights[l] = 0
                     del weights
@@ -3160,11 +3160,11 @@ class DynamicBLMModel:
                             XSwE_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
                                 np.bincount(CC1[col], weights=weights_cat[col][l][0])
                             XSwE_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
-                                np.bincount(CC1[col], weights=weights_cat[col][l][1])
-                            XSwE_cat[l_index + 2 * col_n: l_index + 3 * col_n] = \
-                                np.bincount(CC2[col], weights=weights_cat[col][l][2])
-                            XSwE_cat[l_index + 3 * col_n: l_index + 4 * col_n] = \
                                 np.bincount(CC2[col], weights=weights_cat[col][l][3])
+                            XSwE_cat[l_index + 2 * col_n: l_index + 3 * col_n] = \
+                                np.bincount(CC1[col], weights=weights_cat[col][l][1])
+                            XSwE_cat[l_index + 3 * col_n: l_index + 4 * col_n] = \
+                                np.bincount(CC2[col], weights=weights_cat[col][l][2])
 
                             weights_cat[col][l] = 0
                         del weights_cat[col]
@@ -3243,11 +3243,11 @@ class DynamicBLMModel:
                             XSwE_cts[l_index + 0] = \
                                 np.abs(np.sum(C1[col] * weights_cts[col][l][0]))
                             XSwE_cts[l_index + 1] = \
-                                np.abs(np.sum(C1[col] * weights_cts[col][l][1]))
-                            XSwE_cts[l_index + 2] = \
-                                np.abs(np.sum(C2[col] * weights_cts[col][l][2]))
-                            XSwE_cts[l_index + 3] = \
                                 np.abs(np.sum(C2[col] * weights_cts[col][l][3]))
+                            XSwE_cts[l_index + 2] = \
+                                np.abs(np.sum(C1[col] * weights_cts[col][l][1]))
+                            XSwE_cts[l_index + 3] = \
+                                np.abs(np.sum(C2[col] * weights_cts[col][l][2]))
 
                             weights_cts[col][l] = 0
                         del weights_cts[col]
