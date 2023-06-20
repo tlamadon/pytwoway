@@ -4,6 +4,7 @@ Class for simulating bipartite BLM networks.
 import numpy as np
 from pandas import DataFrame
 from paramsdict import ParamsDict, ParamsDictBase
+from paramsdict.util import col_type
 from bipartitepandas import BipartiteDataFrame
 from bipartitepandas.util import _sort_cols
 
@@ -57,35 +58,35 @@ sim_blm_params = ParamsDict({
         '''
             (default=1) Factor by which to increase observations for stayers (smult * NNs).
         ''', '>= 1'),
-    'a1_mu': (1, 'type', (float, int),
+    'a1_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of simulated A1 (mean of fixed effects in first period).
         ''', None),
-    'a1_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a1_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A1 (mean of fixed effects in first period).
         ''', '>= 0'),
-    'a2_mu': (1, 'type', (float, int),
+    'a2_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of simulated A2 (mean of fixed effects in second period).
         ''', None),
-    'a2_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a2_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A2 (mean of fixed effects in second period).
         ''', '>= 0'),
-    's1_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's1_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S1 (standard deviation of fixed effects in first period).
         ''', '>= 0'),
-    's1_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's1_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S1 (standard deviation of fixed effects in first period).
         ''', '>= 0'),
-    's2_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S2 (standard deviation of fixed effects in second period).
         ''', '>= 0'),
-    's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S2 (standard deviation of fixed effects in second period).
         ''', '>= 0'),
@@ -124,35 +125,35 @@ sim_categorical_control_params = ParamsDict({
         '''
             (default=6) Number of types for the parameter.
         ''', '>= 2'),
-    'a1_mu': (1, 'type', (float, int),
+    'a1_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of simulated A1_cat (mean of fixed effects in first period).
         ''', None),
-    'a1_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a1_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A1_cat (mean of fixed effects in first period).
         ''', '>= 0'),
-    'a2_mu': (1, 'type', (float, int),
+    'a2_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of simulated A2_cat (mean of fixed effects in second period).
         ''', None),
-    'a2_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a2_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A2_cat (mean of fixed effects in second period).
         ''', '>= 0'),
-    's1_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's1_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S1_cat (standard deviation of fixed effects in first period).
         ''', '>= 0'),
-    's1_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's1_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S1_cat (standard deviation of fixed effects in first period).
         ''', '>= 0'),
-    's2_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S2_cat (standard deviation of fixed effects in second period).
         ''', '>= 0'),
-    's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S2_cat (standard deviation of fixed effects in second period).
         ''', '>= 0'),
@@ -175,35 +176,35 @@ sim_categorical_control_params = ParamsDict({
 })
 
 sim_continuous_control_params = ParamsDict({
-    'a1_mu': (1, 'type', (float, int),
+    'a1_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of simulated A1_cts (mean of coefficient in first period).
         ''', None),
-    'a1_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a1_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A1_cts (mean of coefficient in first period).
         ''', '>= 0'),
-    'a2_mu': (1, 'type', (float, int),
+    'a2_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of simulated A2_cts (mean of coefficient in second period).
         ''', None),
-    'a2_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a2_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A2_cts (mean of coefficient in second period).
         ''', '>= 0'),
-    's1_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's1_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S1_cts (standard deviation of coefficient in first period).
         ''', '>= 0'),
-    's1_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's1_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S1_cts (standard deviation of coefficient in first period).
         ''', '>= 0'),
-    's2_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S2_cts (standard deviation of coefficient in second period).
         ''', '>= 0'),
-    's2_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S2_cts (standard deviation of coefficient in second period).
         ''', '>= 0'),

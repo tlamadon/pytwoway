@@ -16,6 +16,7 @@ from scipy.sparse import csc_matrix, lil_matrix, hstack, vstack
 from scipy.optimize import minimize as opt
 from matplotlib import pyplot as plt
 from paramsdict import ParamsDict, ParamsDictBase
+from paramsdict.util import col_type
 import bipartitepandas as bpd
 from bipartitepandas.util import to_list, HiddenPrints # , _is_subtype
 import pytwoway as tw
@@ -28,6 +29,8 @@ def _gteq2(a):
 def _gteq1(a):
     return a >= 1
 def _gteq0(a):
+    if isinstance(a, col_type):
+        return a.min() >= 0
     return a >= 0
 def _gt0(a):
     return a > 0
@@ -71,132 +74,132 @@ dynamic_blm_params = ParamsDict({
         ''', None),
     ### Starting values ###
     ## A ##
-    'a12_mu': (1, 'type', (float, int),
+    'a12_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of simulated A12 (mean of fixed effects).
         ''', None),
-    'a12_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a12_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A12 (mean of fixed effects).
         ''', '>= 0'),
-    'a43_mu': (1, 'type', (float, int),
+    'a43_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of simulated A43 (mean of fixed effects).
         ''', None),
-    'a43_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a43_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A43 (mean of fixed effects).
         ''', '>= 0'),
-    'a2ma_mu': (1, 'type', (float, int),
+    'a2ma_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of simulated A2a for movers (mean of fixed effects).
         ''', None),
-    'a2ma_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a2ma_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A2a for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a2mb_mu': (1, 'type', (float, int),
+    'a2mb_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of simulated A2b for movers (mean of fixed effects).
         ''', None),
-    'a2mb_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a2mb_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A2b for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a3ma_mu': (1, 'type', (float, int),
+    'a3ma_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of simulated A3a for movers (mean of fixed effects).
         ''', None),
-    'a3ma_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a3ma_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A3a for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a3mb_mu': (1, 'type', (float, int),
+    'a3mb_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of simulated A3b for movers (mean of fixed effects).
         ''', None),
-    'a3mb_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a3mb_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A3b for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a2s_mu': (1, 'type', (float, int),
+    'a2s_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of simulated A2 for stayers (mean of fixed effects).
         ''', None),
-    'a2s_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a2s_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A2 for stayers (mean of fixed effects).
         ''', '>= 0'),
-    'a3s_mu': (1, 'type', (float, int),
+    'a3s_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of simulated A3 for stayers (mean of fixed effects).
         ''', None),
-    'a3s_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a3s_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of simulated A3 for stayers (mean of fixed effects).
         ''', '>= 0'),
     ## S ##
-    's12_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's12_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S12 (standard deviation of fixed effects).
         ''', '>= 0'),
-    's12_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's12_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S12 (standard deviation of fixed effects).
         ''', '>= 0'),
-    's43_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's43_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S43 (standard deviation of fixed effects).
         ''', '>= 0'),
-    's43_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's43_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S43 (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2ma_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2ma_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S2a for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2ma_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2ma_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S2a for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2mb_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2mb_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S2b for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2mb_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2mb_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S2b for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3ma_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's3ma_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S3a for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3ma_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's3ma_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S3a for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3mb_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's3mb_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S3b for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3mb_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's3mb_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S3b for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2s_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S2 for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2s_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2s_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S2 for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's3s_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of simulated S3 for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3s_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's3s_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of simulated S3 for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
@@ -344,132 +347,132 @@ dynamic_categorical_control_params = ParamsDict({
             (default=6) Number of types for the parameter. None will raise an error when running the estimator.
         ''', '>= 2'),
     ## A ##
-    'a12_mu': (1, 'type', (float, int),
+    'a12_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of starting values for A12_cat (mean of fixed effects).
         ''', None),
-    'a12_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a12_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A12_cat (mean of fixed effects).
         ''', '>= 0'),
-    'a43_mu': (1, 'type', (float, int),
+    'a43_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of starting values for A43_cat (mean of fixed effects).
         ''', None),
-    'a43_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a43_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A43_cat (mean of fixed effects).
         ''', '>= 0'),
-    'a2ma_mu': (1, 'type', (float, int),
+    'a2ma_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of starting values for A2a_cat for movers (mean of fixed effects).
         ''', None),
-    'a2ma_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a2ma_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A2a_cat for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a2mb_mu': (1, 'type', (float, int),
+    'a2mb_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of starting values for A2b_cat for movers (mean of fixed effects).
         ''', None),
-    'a2mb_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a2mb_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A2b_cat for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a2s_mu': (1, 'type', (float, int),
+    'a2s_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of starting values for A2_cat for stayers (mean of fixed effects).
         ''', None),
-    'a2s_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a2s_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A2_cat for stayers (mean of fixed effects).
         ''', '>= 0'),
-    'a3ma_mu': (1, 'type', (float, int),
+    'a3ma_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of starting values for A3a_cat for movers (mean of fixed effects).
         ''', None),
-    'a3ma_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a3ma_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A3a_cat for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a3mb_mu': (1, 'type', (float, int),
+    'a3mb_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of starting values for A3b_cat for movers (mean of fixed effects).
         ''', None),
-    'a3mb_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a3mb_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A3b_cat for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a3s_mu': (1, 'type', (float, int),
+    'a3s_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of starting values for A3_cat for stayers (mean of fixed effects).
         ''', None),
-    'a3s_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a3s_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A3_cat for stayers (mean of fixed effects).
         ''', '>= 0'),
     ## S ##
-    's12_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's12_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S12_cat (standard deviation of fixed effects).
         ''', '>= 0'),
-    's12_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's12_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S12_cat (standard deviation of fixed effects).
         ''', '>= 0'),
-    's43_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's43_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S43_cat (standard deviation of fixed effects).
         ''', '>= 0'),
-    's43_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's43_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S43_cat (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2ma_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2ma_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S2a_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2ma_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2ma_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S2a_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2mb_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2mb_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S2b_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2mb_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2mb_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S2b_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2s_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S2_cat for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2s_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2s_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S2_cat for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3ma_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's3ma_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S3a_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3ma_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's3ma_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S3a_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3mb_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's3mb_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S3b_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3mb_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's3mb_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S3b_cat for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's3s_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S3_cat for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3s_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's3s_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S3_cat for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
@@ -490,124 +493,124 @@ dynamic_categorical_control_params = ParamsDict({
 
 dynamic_continuous_control_params = ParamsDict({
     ## A ##
-    'a12_mu': (1, 'type', (float, int),
+    'a12_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of starting values for A12_cts (mean of fixed effects).
         ''', None),
-    'a12_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a12_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A12_cts (mean of fixed effects).
         ''', '>= 0'),
-    'a43_mu': (1, 'type', (float, int),
+    'a43_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of starting values for A43_cts (mean of fixed effects).
         ''', None),
-    'a43_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a43_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A43_cts (mean of fixed effects).
         ''', '>= 0'),
-    'a2ma_mu': (1, 'type', (float, int),
+    'a2ma_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of starting values for A2a_cts for movers (mean of fixed effects).
         ''', None),
-    'a2ma_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a2ma_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A2a_cts for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a2mb_mu': (1, 'type', (float, int),
+    'a2mb_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of starting values for A2b_cts for movers (mean of fixed effects).
         ''', None),
-    'a2mb_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a2mb_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A2b_cts for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a2s_mu': (1, 'type', (float, int),
+    'a2s_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of starting values for A2_cts for stayers (mean of fixed effects).
         ''', None),
-    'a2s_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a2s_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A2_cts for stayers (mean of fixed effects).
         ''', '>= 0'),
-    'a3ma_mu': (1, 'type', (float, int),
+    'a3ma_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of starting values for A3a_cts for movers (mean of fixed effects).
         ''', None),
-    'a3ma_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a3ma_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A3a_cts for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a3mb_mu': (1, 'type', (float, int),
+    'a3mb_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of starting values for A3b_cts for movers (mean of fixed effects).
         ''', None),
-    'a3mb_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a3mb_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A3b_cts for movers (mean of fixed effects).
         ''', '>= 0'),
-    'a3s_mu': (1, 'type', (float, int),
+    'a3s_mu': (1, 'type', (float, int, col_type),
         '''
             (default=1) Mean of starting values for A3_cts for stayers (mean of fixed effects).
         ''', None),
-    'a3s_sig': (0.5, 'type_constrained', ((float, int), _gteq0),
+    'a3s_sig': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Standard error of starting values for A3_cts for stayers (mean of fixed effects).
         ''', '>= 0'),
     ## S ##
-    's12_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's12_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S12_cts (standard deviation of fixed effects).
         ''', '>= 0'),
-    's12_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's12_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S12_cts (standard deviation of fixed effects).
         ''', '>= 0'),
-    's43_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's43_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S43_cts (standard deviation of fixed effects).
         ''', '>= 0'),
-    's43_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's43_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S43_cts (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2ma_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2ma_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S2a_cts for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2ma_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2ma_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S2a_cts for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2mb_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2mb_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S2b_cts for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2mb_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2mb_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S2b_cts for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's2s_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S2_cts for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's2s_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's2s_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S2_cts for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3m_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's3m_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S3_cts for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3m_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's3m_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S3_cts for movers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3s_low': (0.3, 'type_constrained', ((float, int), _gteq0),
+    's3s_low': (0.3, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.3) Minimum value of starting values for S3_cts for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
-    's3s_high': (0.5, 'type_constrained', ((float, int), _gteq0),
+    's3s_high': (0.5, 'type_constrained', ((float, int, col_type), _gteq0),
         '''
             (default=0.5) Maximum value of starting values for S3_cts for stayers (standard deviation of fixed effects).
         ''', '>= 0'),
