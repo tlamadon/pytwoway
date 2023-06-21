@@ -1988,16 +1988,8 @@ class DynamicBLMModel:
                 C1[col] = jdata.loc[:, subcol_1].to_numpy()
                 C2[col] = jdata.loc[:, subcol_2].to_numpy()
 
-        ## Sparse matrix representations ##
-        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
-        GG2 = csc_matrix((np.ones(ni), (range(ni), G2)), shape=(ni, nk))
-        CC1 = {col: csc_matrix((np.ones(ni), (range(ni), C1[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
-        CC2 = {col: csc_matrix((np.ones(ni), (range(ni), C2[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
-        ## Dictionaries linking periods to vectors/matrices ##
-        # G_dict = {period: G1 if period in self.first_periods else G2 for period in periods}
-        # GG_dict = {period: GG1 if period in self.first_periods else GG2 for period in periods}
+        ## Dictionary linking periods to vectors ##
         C_dict = {period: C1 if period in self.first_periods else C2 for period in periods}
-        # CC_dict = {period: CC1 if period in self.first_periods else CC2 for period in periods}
 
         # Joint firm indicator
         KK = G1 + nk * G2
@@ -2056,18 +2048,13 @@ class DynamicBLMModel:
                         Y1 - R12 * (Y2 - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma'])),
                         A['12'][l, G1] + A_sum['12'] + A_sum_l['12'],
                         var=\
-                            (S['12'][l, :] ** 2)[G1] + S_sum_sq['12'] + S_sum_sq_l['12'] # \
-                            # + (R12 ** 2) \
-                            #     * ((S['2ma'][l, :] ** 2)[G1] \
-                            #         + S_sum_sq['2ma'] \
-                            #         + S_sum_sq_l['2ma'])
+                            (S['12'][l, :] ** 2)[G1] + S_sum_sq['12'] + S_sum_sq_l['12']
                     )
                     lp2 = lognormpdf(
                         Y2 - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb']),
                         (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']),
                         var=\
-                            ((S['2ma'][l, :] ** 2)[G1] + S_sum_sq['2ma'] + S_sum_sq_l['2ma']) # \
-                            # + ((S['2mb'] ** 2)[G2] + S_sum_sq['2mb'] + S_sum_sq_l['2mb'])
+                            ((S['2ma'][l, :] ** 2)[G1] + S_sum_sq['2ma'] + S_sum_sq_l['2ma'])
                     )
                     lp3 = lognormpdf(
                         Y3 - (A['3mb'][G1] + A_sum['3mb'] + A_sum_l['3mb']) \
@@ -2076,22 +2063,13 @@ class DynamicBLMModel:
                                 - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb'])),
                         A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma'],
                         var=\
-                            (S['3ma'][l, :] ** 2)[G2] + S_sum_sq['3ma'] + S_sum_sq_l['3ma'] # \
-                            # + ((S['3mb'] ** 2)[G1] + S_sum_sq['3mb'] + S_sum_sq_l['3mb']) \
-                            # + (R32m ** 2) \
-                            #     * ((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2] \
-                            #         + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
-                            #         + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb']))
+                            (S['3ma'][l, :] ** 2)[G2] + S_sum_sq['3ma'] + S_sum_sq_l['3ma']
                     )
                     lp4 = lognormpdf(
                         Y4 - R43 * (Y3 - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma'])),
                         A['43'][l, G2] + A_sum['43'] + A_sum_l['43'],
                         var=\
-                            (S['43'][l, :] ** 2)[G2] + S_sum_sq['43'] + S_sum_sq_l['43'] # \
-                            # + (R43 ** 2) \
-                            #     * ((S['3ma'][l, :] ** 2)[G2] \
-                            #         + S_sum_sq['3ma'] \
-                            #         + S_sum_sq_l['3ma'])
+                            (S['43'][l, :] ** 2)[G2] + S_sum_sq['43'] + S_sum_sq_l['43']
                     )
 
                     lp[:, l] = log_pk1[KK, l] + lp1 + lp2 + lp3 + lp4
@@ -2207,33 +2185,20 @@ class DynamicBLMModel:
                         YY12[l * ni: (l + 1) * ni] = Y1 - A['12'][l, G1] - A_sum['12'] - A_sum_l['12']
                         SS12 = ( \
                             (S['12'][l, :] ** 2)[G1] \
-                            + S_sum_sq['12'] + S_sum_sq_l['12']) # \
-                            # + (R12 ** 2) \
-                            #     * ((S['2ma'][l, :] ** 2)[G1] \
-                            #         + S_sum_sq['2ma'] \
-                            #         + S_sum_sq_l['2ma']))
+                            + S_sum_sq['12'] + S_sum_sq_l['12'])
                         WW12[l * ni: (l + 1) * ni] = qi[:, l] / np.sqrt(SS12)
                     if params['update_rho43']:
                         XX43[l * ni: (l + 1) * ni] = Y3 - A['3ma'][l, G2] - A_sum['3ma'] - A_sum_l['3ma']
                         YY43[l * ni: (l + 1) * ni] = Y4 - A['43'][l, G2] - A_sum['43'] - A_sum_l['43']
                         SS43 = ( \
                             (S['43'][l, :] ** 2)[G2] \
-                            + S_sum_sq['43'] + S_sum_sq_l['43']) # \
-                            # + (R43 ** 2) * (\
-                            #     (S['3ma'][l, :] ** 2)[G2] \
-                            #     + S_sum_sq['3ma'] \
-                            #     + S_sum_sq_l['3ma']))
+                            + S_sum_sq['43'] + S_sum_sq_l['43'])
                         WW43[l * ni: (l + 1) * ni] = qi[:, l] / np.sqrt(SS43)
                     if params['update_rho32m']:
                         XX32m[l * ni: (l + 1) * ni] = Y2 - (A['2ma'][l, G1] + A['2mb'][G2]) - (A_sum['2ma'] + A_sum['2mb']) - (A_sum_l['2ma'] + A_sum_l['2mb'])
                         YY32m[l * ni: (l + 1) * ni] = Y3 - (A['3ma'][l, G2] + A['3mb'][G1]) - (A_sum['3ma'] + A_sum['3mb']) - (A_sum_l['3ma'] + A_sum_l['3mb'])
                         SS32m = ( \
-                            (S['3ma'][l, :] ** 2)[G2] + S_sum_sq['3ma'] + S_sum_sq_l['3ma']) # \
-                            # + (S['3mb'] ** 2)[G1] + S_sum_sq['3mb'] + S_sum_sq_l['3mb'] \
-                            # + (R32m ** 2) \
-                            #     * (((S['2ma'][l, :] ** 2)[G1] + (S['2mb'] ** 2)[G2]) \
-                            #         + (S_sum_sq['2ma'] + S_sum_sq['2mb']) \
-                            #         + (S_sum_sq_l['2ma'] + S_sum_sq_l['2mb'])))
+                            (S['3ma'][l, :] ** 2)[G2] + S_sum_sq['3ma'] + S_sum_sq_l['3ma'])
                         WW32m[l * ni: (l + 1) * ni] = qi[:, l] / np.sqrt(SS32m)
 
                 ## OLS ##
@@ -2318,10 +2283,10 @@ class DynamicBLMModel:
 
                     ## Compute weights_l ##
                     weights_l = [
-                            qi[:, l] / S['12'][l, G1],
-                            qi[:, l] / S['2ma'][l, G1],
-                            qi[:, l] / S['3ma'][l, G2],
-                            qi[:, l] / S['43'][l, G2]
+                        qi[:, l] / S['12'][l, G1],
+                        qi[:, l] / S['2ma'][l, G1],
+                        qi[:, l] / S['3ma'][l, G2],
+                        qi[:, l] / S['43'][l, G2]
                     ]
 
                     ## Compute XXwXX_l ##
@@ -2501,6 +2466,8 @@ class DynamicBLMModel:
 
                 if params['d_X_diag_movers_A'] > 1:
                     XXwXX += (params['d_X_diag_movers_A'] - 1) * np.eye(XXwXX.shape[0])
+                if params['d_X_diag_movers_S'] > 1:
+                    XSwXS += (params['d_X_diag_movers_S'] - 1)
 
                 # print('A before:')
                 # print(A)
@@ -2751,6 +2718,8 @@ class DynamicBLMModel:
 
                     if params['d_X_diag_movers_A'] > 1:
                         XXwXX_cat[col] += (params['d_X_diag_movers_A'] - 1) * np.eye(XXwXX_cat[col].shape[0])
+                    if params['d_X_diag_movers_S'] > 1:
+                        XSwXS_cat[col] += (params['d_X_diag_movers_S'] - 1)
 
                     # We solve the system to get all the parameters (use dense solver)
                     if params['update_a_movers']:
@@ -2972,6 +2941,8 @@ class DynamicBLMModel:
 
                     if params['d_X_diag_movers_A'] > 1:
                         XXwXX_cts[col] += (params['d_X_diag_movers_A'] - 1) * np.eye(XXwXX_cts[col].shape[0])
+                    if params['d_X_diag_movers_S'] > 1:
+                        XSwXS_cts[col] += (params['d_X_diag_movers_S'] - 1)
 
                     # We solve the system to get all the parameters (use dense solver)
                     if params['update_a_movers']:
@@ -3095,9 +3066,6 @@ class DynamicBLMModel:
                         weights[l] = 0
                     del weights
 
-                    if params['d_X_diag_movers_S'] > 1:
-                        XSwXS += (params['d_X_diag_movers_S'] - 1)
-
                     try:
                         cons_s.solve(np.diag(XSwXS), -XSwE, solver='quadprog')
                         if cons_s.res is None:
@@ -3159,19 +3127,16 @@ class DynamicBLMModel:
                                 weights_cat[col][l][t] *= ((var_l_numerator[t] / var_l_denominator[t]) * eps_sq[l][t])
 
                             XSwE_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
-                                np.bincount(CC1[col], weights=weights_cat[col][l][0])
+                                np.bincount(C1[col], weights=weights_cat[col][l][0])
                             XSwE_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
-                                np.bincount(CC2[col], weights=weights_cat[col][l][3])
+                                np.bincount(C2[col], weights=weights_cat[col][l][3])
                             XSwE_cat[l_index + 2 * col_n: l_index + 3 * col_n] = \
-                                np.bincount(CC1[col], weights=weights_cat[col][l][1])
+                                np.bincount(C1[col], weights=weights_cat[col][l][1])
                             XSwE_cat[l_index + 3 * col_n: l_index + 4 * col_n] = \
-                                np.bincount(CC2[col], weights=weights_cat[col][l][2])
+                                np.bincount(C2[col], weights=weights_cat[col][l][2])
 
                             weights_cat[col][l] = 0
                         del weights_cat[col]
-
-                        if params['d_X_diag_movers_S'] > 1:
-                            XSwXS_cat[col] += (params['d_X_diag_movers_S'] - 1)
 
                         try:
                             s_solver = cons_s_dict[col]
@@ -3252,9 +3217,6 @@ class DynamicBLMModel:
 
                             weights_cts[col][l] = 0
                         del weights_cts[col]
-
-                        if params['d_X_diag_movers_S'] > 1:
-                            XSwXS_cts[col] += (params['d_X_diag_movers_S'] - 1)
 
                         try:
                             s_solver = cons_s_dict[col]
