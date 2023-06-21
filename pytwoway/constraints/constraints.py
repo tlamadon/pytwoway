@@ -895,36 +895,53 @@ class StationaryFirmTypeVariation():
         ## Unpack parameters ##
         nnt, nt, dynamic = self.nnt, self.nt, self.dynamic
 
-        ## Initialize variables ##
-        # A starts with 4 dimensions
-        A = np.zeros(shape=(len(nnt) * nl * nk, nt, nl, nk))
-        i = 0
+        if not dynamic:
+            ## Initialize variables ##
+            # A starts with 4 dimensions
+            A = np.zeros(shape=(len(nnt) * nl * nk, nt, nl, nk))
+            i = 0
 
-        ## Generate constraints ##
-        for period in nnt:
-            ## Iterate over periods ##
-            for l in range(nl):
-                ## Iterate over worker types ##
-                for k1 in range(nk):
-                    ## Iterate over firm types ##
-                    for k2 in range(nk):
+            ## Generate constraints ##
+            for period in nnt:
+                ## Iterate over periods ##
+                for l in range(nl):
+                    ## Iterate over worker types ##
+                    for k1 in range(nk):
                         ## Iterate over firm types ##
+                        for k2 in range(nk):
+                            ## Iterate over firm types ##
+                            # Baseline is period 1
+                            A[i, 0, l, k2] = - (1 / nk)
+                            # Comparison is period > 1
+                            A[i, period, l, k2] = (1 / nk)
                         # Baseline is period 1
-                        A[i, 0, l, k2] = - (1 / nk)
+                        A[i, 0, l, k1] += 1
                         # Comparison is period > 1
-                        A[i, period, l, k2] = (1 / nk)
-                    # Baseline is period 1
-                    A[i, 0, l, k1] += 1
-                    # Comparison is period > 1
-                    A[i, period, l, k1] -= 1
-                    i += 1
+                        A[i, period, l, k1] -= 1
+                        i += 1
 
-        if dynamic:
+            # Reshape A to 2 dimensions
+            A = A.reshape((len(nnt) * nl * nk, nt * nl * nk))
+        else:
+            # NOTE: in reality, this is fixb from the R code
+            # NOTE: the other method doesn't work with the dynamic model
+            KK = np.zeros(shape=(nk - 1, nk))
+            for k in range(nk - 1):
+                KK[k, k] = 1
+                KK[k, k + 1] = - 1
+            A = - np.kron(np.eye(nl), KK)
+            MM = np.zeros(shape=(nt - 1, nt))
+            for m in range(nt - 1):
+                MM[m, m] = 1
+                MM[m, m + 1] = - 1
+            A = - np.kron(MM, A)
+            A = A.reshape((A.shape[0], nt, nl, nk))
+
             # Use dynamic BLM dimensions (i, l, period, k)
             A = A.transpose((0, 2, 1, 3))
 
-        # Reshape A to 2 dimensions
-        A = A.reshape((len(nnt) * nl * nk, nt * nl * nk))
+            # Reshape A to 2 dimensions
+            A = A.reshape((A.shape[0], nt * nl * nk))
 
         b = - np.zeros(shape=A.shape[0])
 

@@ -4288,17 +4288,17 @@ class DynamicBLMModel:
             if self.params['verbose'] in [1, 2, 3]:
                 print('Fitting movers with Linear Additive constraint on A')
             self.fit_movers(jdata, compute_NNm=False)
-        # ##### Loop 3 #####
-        # # Now update A with Stationary Firm Type Variation constraint
-        # if self.nl > 1:
-        #     # Set constraints
-        #     if user_params['cons_a_all'] is None:
-        #         self.params['cons_a_all'] = cons.StationaryFirmTypeVariation(nnt=range(1, 4), nt=len(self.periods_movers), dynamic=True)
-        #     else:
-        #         self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation(nnt=range(1, 4), nt=len(self.periods_movers), dynamic=True)]
-        #     if self.params['verbose'] in [1, 2, 3]:
-        #         print('Fitting movers with Stationary Firm Type Variation constraint on A')
-        #     self.fit_movers(jdata, compute_NNm=False)
+        ##### Loop 3 #####
+        # Now update A with Stationary Firm Type Variation constraint
+        if self.nl > 1:
+            # Set constraints
+            if user_params['cons_a_all'] is None:
+                self.params['cons_a_all'] = cons.StationaryFirmTypeVariation(nt=len(self.periods_movers), dynamic=True)
+            else:
+                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation(nt=len(self.periods_movers), dynamic=True)]
+            if self.params['verbose'] in [1, 2, 3]:
+                print('Fitting movers with Stationary Firm Type Variation constraint on A')
+            self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 4 #####
         # Restore user constraints
         self.params['cons_a_all'] = user_params['cons_a_all']
