@@ -1359,8 +1359,9 @@ class DynamicBLMModel:
         ## General ##
         cons_a = cons.QPConstrained(nl, nk)
         cons_s = cons.QPConstrained(nl, nk)
-        # Normalize 2ma and 3ma so the lowest effect is 0 (otherwise these are free parameters)
-        cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=(2, 3), nt=nt, dynamic=True))
+        if for_movers:
+            # Normalize 2ma and 3ma so the lowest effect is 0 (otherwise these are free parameters)
+            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=(2, 3), nt=nt, dynamic=True))
         cons_s.add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=nt_S))
         if constrain_b:
             cons_a.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt, dynamic=True))
