@@ -1359,12 +1359,12 @@ class DynamicBLMModel:
         ## General ##
         cons_a = cons.QPConstrained(nl, nk)
         cons_s = cons.QPConstrained(nl, nk)
+        # Normalize 2ma and 3ma so the lowest effect is 0 (otherwise these are free parameters)
+        cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=(2, 3), nt=nt, dynamic=True))
         cons_s.add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=nt_S))
         if constrain_b:
             cons_a.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt, dynamic=True))
             # cons_s.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=4, dynamic=True))
-            # Normalize 2mb and 3mb so the lowest effect is 0 (otherwise these are free parameters)
-            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=nnt_b, nt=nt, dynamic=True))
 
         if params['cons_a'] is not None:
             cons_a.add_constraints(params['cons_a'])
@@ -2106,26 +2106,26 @@ class DynamicBLMModel:
                                 Y1[I] \
                                     - R12 * (Y2[I] - A['2ma'][l, g1]),
                                 A['12'][l, g1],
-                                var=S['12'][l, g1] ** 2 # + (R12 * S['2ma'][l, g1]) ** 2
+                                var=S['12'][l, g1] ** 2
                             )
                             lp2 = lognormpdf(
                                 Y2[I] \
                                     - A['2mb'][g2],
                                 A['2ma'][l, g1],
-                                var=S['2ma'][l, g1] ** 2 # + S['2mb'][g2] ** 2
+                                var=S['2ma'][l, g1] ** 2
                             )
                             lp3 = lognormpdf(
                                 Y3[I] \
                                     - A['3mb'][g1] \
                                     - R32m * (Y2[I] - (A['2ma'][l, g1] + A['2mb'][g2])),
                                 A['3ma'][l, g2],
-                                var=S['3ma'][l, g2] ** 2 # + S['3mb'][g1] ** 2 + (R32m ** 2) * (S['2ma'][l, g1] ** 2 + S['2mb'][g2] ** 2)
+                                var=S['3ma'][l, g2] ** 2
                             )
                             lp4 = lognormpdf(
                                 Y4[I] \
                                     - R43 * (Y3[I] - A['3ma'][l, g2]),
                                 A['43'][l, g2],
-                                var=S['43'][l, g2] ** 2 # + (R43 * S['3ma'][l, g2]) ** 2
+                                var=S['43'][l, g2] ** 2
                             )
 
                             lp[I, l] = log_pk1[KK[I], l] + lp1 + lp2 + lp3 + lp4
@@ -4288,17 +4288,17 @@ class DynamicBLMModel:
             if self.params['verbose'] in [1, 2, 3]:
                 print('Fitting movers with Linear Additive constraint on A')
             self.fit_movers(jdata, compute_NNm=False)
-        ##### Loop 3 #####
-        # Now update A with Stationary Firm Type Variation constraint
-        if self.nl > 1:
-            # Set constraints
-            if user_params['cons_a_all'] is None:
-                self.params['cons_a_all'] = cons.StationaryFirmTypeVariation(nnt=range(1, 4), nt=len(self.periods_movers), dynamic=True)
-            else:
-                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation(nnt=range(1, 4), nt=len(self.periods_movers), dynamic=True)]
-            if self.params['verbose'] in [1, 2, 3]:
-                print('Fitting movers with Stationary Firm Type Variation constraint on A')
-            self.fit_movers(jdata, compute_NNm=False)
+        # ##### Loop 3 #####
+        # # Now update A with Stationary Firm Type Variation constraint
+        # if self.nl > 1:
+        #     # Set constraints
+        #     if user_params['cons_a_all'] is None:
+        #         self.params['cons_a_all'] = cons.StationaryFirmTypeVariation(nnt=range(1, 4), nt=len(self.periods_movers), dynamic=True)
+        #     else:
+        #         self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation(nnt=range(1, 4), nt=len(self.periods_movers), dynamic=True)]
+        #     if self.params['verbose'] in [1, 2, 3]:
+        #         print('Fitting movers with Stationary Firm Type Variation constraint on A')
+        #     self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 4 #####
         # Restore user constraints
         self.params['cons_a_all'] = user_params['cons_a_all']

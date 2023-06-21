@@ -42,6 +42,9 @@ class QPConstrained:
         self.A = np.array([])
         # Equality constraint bound
         self.b = np.array([])
+        # Columns to drop (these columns are normalized to 0)
+        self.drop_cols = []
+        self.drop_cols_mask = None
 
     def add_constraints(self, constraints):
         '''
@@ -53,7 +56,7 @@ class QPConstrained:
         for constraint in to_list(constraints):
             self._add_constraint(**constraint._get_constraints(nl=self.nl, nk=self.nk))
 
-    def _add_constraint(self, G=None, h=None, A=None, b=None):
+    def _add_constraint(self, G=None, h=None, A=None, b=None, drop_cols=None):
         '''
         Manually add a constraint. If setting inequality constraints, must set both G and h to have the same dimension 0. If setting equality constraints, must set both A and b to have the same dimension 0.
 
@@ -62,6 +65,7 @@ class QPConstrained:
             h (NumPy Array): inequality constraint bound; None is equivalent to np.array([])
             A (NumPy Array): equality constraint matrix; None is equivalent to np.array([])
             b (NumPy Array): equality constraint bound; None is equivalent to np.array([])
+            drop_cols (list of int): indices of columns to drop (these columns are normalized to 0)
         '''
         if G is None:
             G = np.array([])
@@ -80,7 +84,7 @@ class QPConstrained:
             else:
                 self.G = G
                 self.h = h
-        if len(A) > 0:
+        elif len(A) > 0:
             # If equality constraints
             if len(self.A) > 0:
                 self.A = np.concatenate((self.A, A), axis=0)
@@ -88,6 +92,10 @@ class QPConstrained:
             else:
                 self.A = A
                 self.b = b
+        elif drop_cols is not None:
+            self.drop_cols += drop_cols
+            # np.unique also sorts
+            self.drop_cols = list(np.unique(self.drop_cols))
 
     def pad(self, l=0, r=0):
         '''
@@ -113,14 +121,18 @@ class QPConstrained:
                 ), axis=1)
         else:
             self.A = np.zeros(shape=l + r)
+        for i in range(len(self.drop_cols)):
+            self.drop_cols[i] += l
 
-    def clear_constraints(self, inequality=True, equality=True):
+    def clear_constraints(self, inequality=True, equality=True, drop_cols=True, drop_cols_mask=True):
         '''
         Clear constraints.
 
         Arguments:
             inequality (bool): if True, clear inequality constraints
             equality (bool): if True, clear equality constraints
+            drop_cols (bool): if True, clear columns to normalize to 0
+            drop_cols_mask (bool): if True, clear mask for columns to normalize to 0
         '''
         if inequality:
             self.G = np.array([])
@@ -128,6 +140,10 @@ class QPConstrained:
         if equality:
             self.A = np.array([])
             self.b = np.array([])
+        if drop_cols:
+            self.drop_cols = []
+        if drop_cols_mask:
+            self.drop_cols_mask = None
 
     def check_feasible(self):
         '''
@@ -180,21 +196,48 @@ class QPConstrained:
         Returns:
             (NumPy Array): x that solves quadratic programming problem
         '''
+        G, h = self.G, self.h
+        A, b = self.A, self.b
+        drop_cols, drop_cols_mask = self.drop_cols, self.drop_cols_mask
+
         if solver in ['ecos', 'gurobi', 'mosek', 'osqp', 'qpswift', 'scs']:
             # If using sparse solver
-            if (self.G.shape[0] > 0) and not isinstance(self.G, csc_matrix):
-                self.G = csc_matrix(self.G)
-            if (self.A.shape[0] > 0) and not isinstance(self.A, csc_matrix):
-                self.A = csc_matrix(self.A)
+            if (G.shape[0] > 0) and not isinstance(G, csc_matrix):
+                G = csc_matrix(G)
+                self.G = G
+            if (A.shape[0] > 0) and not isinstance(A, csc_matrix):
+                A = csc_matrix(A)
+                self.A = A
 
-        if self.G.shape[0] > 0 and self.A.shape[0] > 0:
-            self.res = solve_qp(P=P, q=q, G=self.G, h=self.h, A=self.A, b=self.b, solver=solver, verbose=verbose, **kwargs)
-        elif self.G.shape[0] > 0:
-            self.res = solve_qp(P=P, q=q, G=self.G, h=self.h, solver=solver, verbose=verbose, **kwargs)
-        elif self.A.shape[0] > 0:
-            self.res = solve_qp(P=P, q=q, A=self.A, b=self.b, solver=solver, verbose=verbose, **kwargs)
+        if len(drop_cols) > 0:
+            # Drop columns that will be normalized to 0
+            n_params = P.shape[0]
+            if drop_cols_mask is None:
+                # Source: https://stackoverflow.com/a/12518492/17333120
+                drop_cols_mask = np.zeros(n_params)
+                drop_cols_mask[drop_cols] = 1
+                drop_cols_mask = drop_cols_mask.astype(bool)
+            P = P[~drop_cols_mask, :][:, ~drop_cols_mask]
+            q = q[~drop_cols_mask]
+            if G.shape[0] > 0:
+                G = G[:, ~drop_cols_mask]
+            if A.shape[0] > 0:
+                A = A[:, ~drop_cols_mask]
+
+        if (G.shape[0] > 0) and (A.shape[0] > 0):
+            self.res = solve_qp(P=P, q=q, G=G, h=h, A=A, b=b, solver=solver, verbose=verbose, **kwargs)
+        elif G.shape[0] > 0:
+            self.res = solve_qp(P=P, q=q, G=G, h=h, solver=solver, verbose=verbose, **kwargs)
+        elif A.shape[0] > 0:
+            self.res = solve_qp(P=P, q=q, A=A, b=b, solver=solver, verbose=verbose, **kwargs)
         else:
             self.res = solve_qp(P=P, q=q, solver=solver, verbose=verbose, **kwargs)
+
+        if len(drop_cols) > 0:
+            # Add back in zeros for normalized parameters
+            res = np.zeros(n_params)
+            res[~drop_cols_mask] = self.res
+            self.res = res
 
 class Linear():
     '''
@@ -674,12 +717,16 @@ class NormalizeLowest():
         # Reshape A to 2 dimensions
         if cross_period_normalize:
             A = A.reshape((1, nt * nl * nk))
+
+            b = - np.zeros(shape=A.shape[0])
+
+            return {'G': None, 'h': None, 'A': A, 'b': b}
         else:
+            # Keep track of columns to normalize, and drop them before estimation
             A = A.reshape((len(nnt), nt * nl * nk))
+            drop_cols = list(np.nonzero(A.sum(axis=0) == 1)[0])
 
-        b = - np.zeros(shape=A.shape[0])
-
-        return {'G': None, 'h': None, 'A': A, 'b': b}
+            return {'G': None, 'h': None, 'A': None, 'b': None, 'drop_cols': drop_cols}
 
 class NormalizeAll():
     '''
@@ -743,12 +790,16 @@ class NormalizeAll():
         # Reshape A to 2 dimensions
         if cross_period_normalize:
             A = A.reshape((nl, nt * nl * nk))
+
+            b = - np.zeros(shape=A.shape[0])
+
+            return {'G': None, 'h': None, 'A': A, 'b': b}
         else:
+            # Keep track of columns to normalize, and drop them before estimation
             A = A.reshape((len(nnt) * nl, nt * nl * nk))
+            drop_cols = list(np.nonzero(A.sum(axis=0) == 1)[0])
 
-        b = - np.zeros(shape=A.shape[0])
-
-        return {'G': None, 'h': None, 'A': A, 'b': b}
+            return {'G': None, 'h': None, 'A': None, 'b': None, 'drop_cols': drop_cols}
 
 class Stationary():
     '''
