@@ -4509,7 +4509,7 @@ class DynamicBLMEstimator:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        model = DynamicBLMModel(self.params.copy(), self.rho_0, rng)
+        model = DynamicBLMModel(self.params, self.rho_0, rng)
         if iter % 4 == 0:
             model.fit_movers_cstr_uncstr(jdata, blm_model=blm_model, initialize_all=(iter == 0))
         elif iter % 4 == 1:
