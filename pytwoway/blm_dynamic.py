@@ -645,9 +645,9 @@ def double_bincount(group1, group2, weights=None):
     '''
     if weights is None:
         df = pd.DataFrame({'g1': group1, 'g2': group2})
-        return df.groupby('g1')['g2'].value_counts().unstack(fill_value=0).to_numpy()
+        return df.groupby('g1')['g2'].value_counts().unstack(fill_value=0).to_numpy().T
     df = pd.DataFrame({'g1': group1, 'g2': group2, 'w': weights})
-    return df.groupby(['g1', 'g2'])['w'].sum().unstack(fill_value=0).to_numpy()
+    return df.groupby(['g1', 'g2'])['w'].sum().unstack(fill_value=0).to_numpy().T
 
 def _var_stayers(sdata, rho_1, rho_4, rho_t, weights=None, diff=False):
     '''
@@ -2464,9 +2464,9 @@ class DynamicBLMModel:
                         del Yl_1, Yl_2, Yl_3, Yl_4, XXwY_l, A_sum_l
                     del weights_l
 
-                if params['d_X_diag_movers_A'] > 1:
+                if params['update_a_movers'] and (params['d_X_diag_movers_A'] > 1):
                     XXwXX += (params['d_X_diag_movers_A'] - 1) * np.eye(XXwXX.shape[0])
-                if params['d_X_diag_movers_S'] > 1:
+                if params['update_s_movers'] and (params['d_X_diag_movers_S'] > 1):
                     XSwXS += (params['d_X_diag_movers_S'] - 1)
 
                 # print('A before:')
@@ -2716,9 +2716,9 @@ class DynamicBLMModel:
                             del Yl_cat_1, Yl_cat_2, Yl_cat_3, Yl_cat_4, XXwY_cat_l, A_sum_l
                         del weights_l
 
-                    if params['d_X_diag_movers_A'] > 1:
+                    if params['update_a_movers'] and (params['d_X_diag_movers_A'] > 1):
                         XXwXX_cat[col] += (params['d_X_diag_movers_A'] - 1) * np.eye(XXwXX_cat[col].shape[0])
-                    if params['d_X_diag_movers_S'] > 1:
+                    if params['update_s_movers'] and (params['d_X_diag_movers_S'] > 1):
                         XSwXS_cat[col] += (params['d_X_diag_movers_S'] - 1)
 
                     # We solve the system to get all the parameters (use dense solver)
@@ -2939,9 +2939,9 @@ class DynamicBLMModel:
                             del Yl_cts_1, Yl_cts_2, Yl_cts_3, Yl_cts_4, XwY_cts_l, A_sum_l
                         del weights_l
 
-                    if params['d_X_diag_movers_A'] > 1:
+                    if params['update_a_movers'] and (params['d_X_diag_movers_A'] > 1):
                         XXwXX_cts[col] += (params['d_X_diag_movers_A'] - 1) * np.eye(XXwXX_cts[col].shape[0])
-                    if params['d_X_diag_movers_S'] > 1:
+                    if params['update_s_movers'] and (params['d_X_diag_movers_S'] > 1):
                         XSwXS_cts[col] += (params['d_X_diag_movers_S'] - 1)
 
                     # We solve the system to get all the parameters (use dense solver)
@@ -4251,17 +4251,17 @@ class DynamicBLMModel:
             if self.params['verbose'] in [1, 2, 3]:
                 print('Fitting movers with Linear Additive constraint on A')
             self.fit_movers(jdata, compute_NNm=False)
-        ##### Loop 3 #####
-        # Now update A with Stationary Firm Type Variation constraint
-        if self.nl > 1:
-            # Set constraints
-            if user_params['cons_a_all'] is None:
-                self.params['cons_a_all'] = cons.StationaryFirmTypeVariation(nt=len(self.periods_movers), dynamic=True)
-            else:
-                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation(nt=len(self.periods_movers), dynamic=True)]
-            if self.params['verbose'] in [1, 2, 3]:
-                print('Fitting movers with Stationary Firm Type Variation constraint on A')
-            self.fit_movers(jdata, compute_NNm=False)
+        # ##### Loop 3 #####
+        # # Now update A with Stationary Firm Type Variation constraint
+        # if self.nl > 1:
+        #     # Set constraints
+        #     if user_params['cons_a_all'] is None:
+        #         self.params['cons_a_all'] = cons.StationaryFirmTypeVariation(nt=len(self.periods_movers), dynamic=True)
+        #     else:
+        #         self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation(nt=len(self.periods_movers), dynamic=True)]
+        #     if self.params['verbose'] in [1, 2, 3]:
+        #         print('Fitting movers with Stationary Firm Type Variation constraint on A')
+        #     self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 4 #####
         # Restore user constraints
         self.params['cons_a_all'] = user_params['cons_a_all']
@@ -4510,10 +4510,12 @@ class DynamicBLMEstimator:
             rng = np.random.default_rng(None)
 
         model = DynamicBLMModel(self.params, self.rho_0, rng)
-        if iter % 2 == 0:
+        if iter % 4 == 0:
             model.fit_movers_cstr_uncstr(jdata, blm_model=blm_model, initialize_all=(iter == 0))
-        else:
+        elif iter % 4 == 1:
             model.fit_movers_cstr_uncstr(jdata, blm_model=None, initialize_all=False)
+        else:
+            model.fit_movers(jdata)
         return model
 
     def fit(self, jdata, sdata, n_init=20, n_best=5, blm_model=None, rho_0=(0.6, 0.6, 0.6), weights=None, diff=False, ncore=1, rng=None):
