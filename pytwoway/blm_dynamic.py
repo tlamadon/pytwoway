@@ -4245,9 +4245,11 @@ class DynamicBLMModel:
         if self.nl > 1:
             # Set constraints
             if user_params['cons_a_all'] is None:
-                self.params['cons_a_all'] = cons.LinearAdditive(nt=len(self.periods_movers), dynamic=True)
+                # Linear addivity can't be applied to endogeneity or state dependence terms
+                self.params['cons_a_all'] = cons.LinearAdditive(nnt=range(4), nt=len(self.periods_movers), dynamic=True)
             else:
-                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.LinearAdditive(nt=len(self.periods_movers), dynamic=True)]
+                # Linear addivity can't be applied to endogeneity or state dependence terms
+                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.LinearAdditive(nnt=range(4), nt=len(self.periods_movers), dynamic=True)]
             if self.params['verbose'] in [1, 2, 3]:
                 print('Fitting movers with Linear Additive constraint on A')
             self.fit_movers(jdata, compute_NNm=False)

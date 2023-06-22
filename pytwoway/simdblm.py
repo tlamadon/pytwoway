@@ -221,9 +221,9 @@ sim_dynamic_blm_params = ParamsDict({
         '''
             (default=None) Dirichlet prior for pk0 (probability of being at each firm type for stayers). Must have length nl. None is equivalent to np.ones(nl).
         ''', 'min > 0'),
-    'strictly_monotone_A': (False, 'type', bool,
+    'strictly_monotone_A': (True, 'type', bool,
         '''
-            (default=False) If True, set A to be strictly increasing by firm type for each worker type in each period (otherwise, each period is required to be increasing only by firm type over the average for all worker types).
+            (default=True) If True, set A to be strictly increasing by firm type for each worker type in each period (otherwise, each period is required to be increasing only by firm type over the average for all worker types).
         ''', None),
     'stationary_A': (False, 'type', bool,
         '''
@@ -237,9 +237,9 @@ sim_dynamic_blm_params = ParamsDict({
         '''
             (default=False) If True, make A linearly additive in each period.
         ''', None),
-    'stationary_firm_type_variation': (False, 'type', bool,
+    'stationary_firm_type_variation': (True, 'type', bool,
         '''
-            (default=False) If True, set constraints for A in each period so that the firm type induced variation of worker-firm pair effects is the same in all periods. In particular, this sets A2 = np.mean(A2, axis=1) + A1 - np.mean(A1, axis=1), for each set of periods 1 and 2.
+            (default=True) If True, set constraints for A in each period so that the firm type induced variation of worker-firm pair effects is the same in all periods. In particular, this sets A2 = np.mean(A2, axis=1) + A1 - np.mean(A1, axis=1), for each set of periods 1 and 2.
         ''', None)
 })
 
@@ -765,9 +765,9 @@ class SimDynamicBLM:
         # Stationary firm type variation #
         for col in cat_cols:
             for period in all_periods[1:]:
-                if controls_dict[col]['stationary_firm_type_variation']:
+                if controls_dict[col]['stationary_firm_type_variation'] and (period[-1] != 'b'):
                     if controls_dict[col]['worker_type_interaction']:
-                        A_cat[col][period] = np.mean(A_cat[col][period], axis=1) + A_cat[col]['12'] - np.mean(A_cat[col]['12'], axis=1)
+                        A_cat[col][period] = (np.mean(A_cat[col][period], axis=1) + A_cat[col]['12'].T - np.mean(A_cat[col]['12'], axis=1)).T
                     else:
                         A_cat[col][period] = np.mean(A_cat[col][period]) + A_cat[col]['12'] - np.mean(A_cat[col]['12'])
         # Endogeneity and state dependence
@@ -809,7 +809,7 @@ class SimDynamicBLM:
         # Stationary firm type variation #
         for col in cts_cols:
             for period in all_periods[1:]:
-                if controls_dict[col]['stationary_firm_type_variation']:
+                if controls_dict[col]['stationary_firm_type_variation'] and (period[-1] != 'b'):
                     A_cts[col][period] = np.mean(A_cts[col][period]) + A_cts[col]['12'] - np.mean(A_cts[col]['12'])
         # Endogeneity and state dependence
         for col in cts_cols:
@@ -833,7 +833,8 @@ class SimDynamicBLM:
 
         if stationary_firm_type_variation:
             for period in all_periods[1:]:
-                A[period] = np.mean(A[period], axis=1) + A['12'] - np.mean(A['12'], axis=1)
+                if period[-1] != 'b':
+                    A[period] = (np.mean(A[period], axis=1) + A['12'].T - np.mean(A['12'], axis=1)).T
 
         if not endogeneity:
             A['2mb'][:] = 0
