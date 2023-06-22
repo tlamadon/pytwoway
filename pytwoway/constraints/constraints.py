@@ -728,7 +728,7 @@ class NormalizeLowest():
 
             return {'G': None, 'h': None, 'A': None, 'b': None, 'drop_cols': drop_cols}
 
-class NormalizeAll():
+class NormalizeAllWorkerTypes():
     '''
     Generate BLM constraints so that all worker-firm type pairs that include the lowest firm type have effect 0.
 
@@ -797,6 +797,77 @@ class NormalizeAll():
         else:
             # Keep track of columns to normalize, and drop them before estimation
             A = A.reshape((len(nnt) * nl, nt * nl * nk))
+            drop_cols = list(np.nonzero(A.sum(axis=0) == 1)[0])
+
+            return {'G': None, 'h': None, 'A': None, 'b': None, 'drop_cols': drop_cols}
+
+class NormalizeAllFirmTypes():
+    '''
+    Generate BLM constraints so that all worker-firm type pairs that include the lowest worker type have effect 0.
+
+    Arguments:
+        cross_period_normalize (bool): if True, rather than normalizing for each period separately, normalize the mean of all worker-firm type pair effects over all periods jointly
+        nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
+        nt (int): number of time periods
+        dynamic (bool): if True, using dynamic BLM estimator
+    '''
+
+    def __init__(self, cross_period_normalize=False, nnt=None, nt=2, dynamic=False):
+        self.cross_period_normalize = cross_period_normalize
+        if nnt is None:
+            self.nnt = range(nt)
+        else:
+            self.nnt = to_list(nnt)
+        self.nt = nt
+        self.dynamic = dynamic
+
+    def _get_constraints(self, nl, nk):
+        '''
+        Generate constraint arrays.
+
+        Arguments:
+            nl (int): number of worker types
+            nk (int): number of firm types
+
+        Returns:
+            (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
+        '''
+        ## Unpack parameters ##
+        cross_period_normalize, nnt, nt, dynamic = self.cross_period_normalize, self.nnt, self.nt, self.dynamic
+
+        ## Initialize variables ##
+        # A starts with 4 dimensions
+        if cross_period_normalize:
+            A = np.zeros(shape=(nk, nt, nl, nk))
+        else:
+            A = np.zeros(shape=(len(nnt) * nk, nt, nl, nk))
+            i = 0
+
+        ## Generate constraints ##
+        for period in nnt:
+            ## Iterate over periods ##
+            for k in range(nk):
+                ## Iterate over firm types ##
+                if cross_period_normalize:
+                    A[k, period, 0, k] = (1 / len(nnt))
+                else:
+                    A[i, period, 0, k] = 1
+                    i += 1
+
+        if dynamic:
+            # Use dynamic BLM dimensions (i, l, period, k)
+            A = A.transpose((0, 2, 1, 3))
+
+        # Reshape A to 2 dimensions
+        if cross_period_normalize:
+            A = A.reshape((nk, nt * nl * nk))
+
+            b = - np.zeros(shape=A.shape[0])
+
+            return {'G': None, 'h': None, 'A': A, 'b': b}
+        else:
+            # Keep track of columns to normalize, and drop them before estimation
+            A = A.reshape((len(nnt) * nk, nt * nl * nk))
             drop_cols = list(np.nonzero(A.sum(axis=0) == 1)[0])
 
             return {'G': None, 'h': None, 'A': None, 'b': None, 'drop_cols': drop_cols}

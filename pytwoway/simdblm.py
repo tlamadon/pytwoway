@@ -724,11 +724,6 @@ class SimDynamicBLM:
             pk0_prior = np.ones(nl)
         pk0 = rng.dirichlet(alpha=pk0_prior, size=nk)
 
-        # Normalize 2mb and 3mb #
-        min_firm_type = np.mean(A['12'], axis=0).argsort()[0]
-        A['2mb'] -= A['2mb'][min_firm_type]
-        A['3mb'] -= A['3mb'][min_firm_type]
-
         ### Control variables ###
         ## Categorical ##
         A_cat = {
@@ -751,10 +746,6 @@ class SimDynamicBLM:
             }
             for col in cat_cols
         }
-        # Normalize 2mb and 3mb #
-        for col in cat_cols:
-            A_cat[col]['2mb'] -= A_cat[col]['2mb'][min_firm_type]
-            A_cat[col]['3mb'] -= A_cat[col]['3mb'][min_firm_type]
         # Stationary #
         for col in cat_cols:
             for period in all_periods[1:]:
@@ -770,6 +761,10 @@ class SimDynamicBLM:
                         A_cat[col][period] = (np.mean(A_cat[col][period], axis=1) + A_cat[col]['12'].T - np.mean(A_cat[col]['12'], axis=1)).T
                     else:
                         A_cat[col][period] = np.mean(A_cat[col][period]) + A_cat[col]['12'] - np.mean(A_cat[col]['12'])
+        # Normalize 2ma and 3ma #
+        for col in cat_cols:
+            A_cat[col]['2ma'] -= A_cat[col]['2ma'][0, :]
+            A_cat[col]['3ma'] -= A_cat[col]['3ma'][0, :]
         # Endogeneity and state dependence
         for col in cat_cols:
             if not endogeneity:
@@ -835,6 +830,10 @@ class SimDynamicBLM:
             for period in all_periods[1:]:
                 if period[-1] != 'b':
                     A[period] = (np.mean(A[period], axis=1) + A['12'].T - np.mean(A['12'], axis=1)).T
+
+        # Normalize 2ma and 3ma #
+        A['2ma'] -= A['2ma'][0, :]
+        A['3ma'] -= A['3ma'][0, :]
 
         if not endogeneity:
             A['2mb'][:] = 0

@@ -1360,8 +1360,8 @@ class DynamicBLMModel:
         cons_a = cons.QPConstrained(nl, nk)
         cons_s = cons.QPConstrained(nl, nk)
         if for_movers:
-            # Normalize 2ma and 3ma so the lowest effect is 0 (otherwise these are free parameters)
-            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=(2, 3), nt=nt, dynamic=True))
+            # Normalize 2ma and 3ma so that for each firm type, the lowest worker type is 0 (otherwise these are free parameters)
+            cons_a.add_constraints(cons.NormalizeAllFirmTypes(nnt=(2, 3), nt=nt, dynamic=True))
         cons_s.add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=nt_S))
         if constrain_b:
             cons_a.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt, dynamic=True))
@@ -1467,11 +1467,11 @@ class DynamicBLMModel:
                     ## Normalize ##
                     if any_tv_wi:
                         # Normalize everything
-                        cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=range(nt), nt=nt, dynamic=True))
+                        cons_a.add_constraints(cons.NormalizeAllWorkerTypes(min_firm_type=min_firm_type, nnt=range(nt), nt=nt, dynamic=True))
                     else:
                         if any_tnv_wi:
                             # Normalize primary period
-                            cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp, nt=nt, dynamic=True))
+                            cons_a.add_constraints(cons.NormalizeAllWorkerTypes(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp, nt=nt, dynamic=True))
                             if any_tv_nwi:
                                 # Normalize lowest type pair in each period
                                 cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(nt), nt=nt, dynamic=True))

@@ -832,11 +832,11 @@ class BLMModel:
                     ## Normalize ##
                     if any_tv_wi:
                         # Normalize everything
-                        cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, nnt=range(2)))
+                        cons_a.add_constraints(cons.NormalizeAllWorkerTypes(min_firm_type=min_firm_type, nnt=range(2)))
                     else:
                         if any_tnv_wi:
                             # Normalize primary period
-                            cons_a.add_constraints(cons.NormalizeAll(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp))
+                            cons_a.add_constraints(cons.NormalizeAllWorkerTypes(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp))
                             if any_tv_nwi:
                                 # Normalize lowest type pair from secondary period
                                 cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=sp))
