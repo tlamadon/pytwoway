@@ -645,9 +645,9 @@ def double_bincount(group1, group2, weights=None):
     '''
     if weights is None:
         df = pd.DataFrame({'g1': group1, 'g2': group2})
-        return df.groupby('g1')['g2'].value_counts().unstack(fill_value=0).to_numpy().T
+        return df.groupby('g1')['g2'].value_counts().unstack(fill_value=0).to_numpy()
     df = pd.DataFrame({'g1': group1, 'g2': group2, 'w': weights})
-    return df.groupby(['g1', 'g2'])['w'].sum().unstack(fill_value=0).to_numpy().T
+    return df.groupby(['g1', 'g2'])['w'].sum().unstack(fill_value=0).to_numpy()
 
 def _var_stayers(sdata, rho_1, rho_4, rho_t, weights=None, diff=False):
     '''
@@ -2444,7 +2444,7 @@ class DynamicBLMModel:
                             [
                                 np.bincount(G1, weights_l[0] * Yl_1),
                                 np.bincount(G2, weights_l[3] * Yl_4),
-                                np.bincount(G1, - R12 * weights_l[0] * Yl_1 + weights_l[1] * Yl_2 - R32m * Yl_3),
+                                np.bincount(G1, - R12 * weights_l[0] * Yl_1 + weights_l[1] * Yl_2 - R32m * weights_l[2] * Yl_3),
                                 np.bincount(G2, weights_l[2] * Yl_3 - R43 * weights_l[3] * Yl_4)
                             ]
                         )
@@ -2696,7 +2696,7 @@ class DynamicBLMModel:
                                 [
                                     np.bincount(C1[col], weights_l[0] * Yl_cat_1),
                                     np.bincount(C2[col], weights_l[3] * Yl_cat_4),
-                                    np.bincount(C1[col], - R12 * weights_l[0] * Yl_cat_1 + weights_l[1] * Yl_cat_2 - R32m * Yl_cat_3),
+                                    np.bincount(C1[col], - R12 * weights_l[0] * Yl_cat_1 + weights_l[1] * Yl_cat_2 - R32m * weights_l[2] * Yl_cat_3),
                                     np.bincount(C2[col], weights_l[2] * Yl_cat_3 - R43 * weights_l[3] * Yl_cat_4)
                                 ]
                             )
@@ -2923,7 +2923,7 @@ class DynamicBLMModel:
                                 [
                                     np.sum(weights_l[0] * Yl_cts_1 * C1[col]),
                                     np.sum(weights_l[3] * Yl_cts_4 * C2[col]),
-                                    np.sum((- R12 * weights_l[0] * Yl_cts_1 + weights_l[1] * Yl_cts_2 - R32m * Yl_cts_3) * C1[col]),
+                                    np.sum((- R12 * weights_l[0] * Yl_cts_1 + weights_l[1] * Yl_cts_2 - R32m * weights_l[2] * Yl_cts_3) * C1[col]),
                                     np.sum((weights_l[2] * Yl_cts_3 - R43 * weights_l[3] * Yl_cts_4) * C2[col])
                                 ]
                             )
@@ -4509,7 +4509,7 @@ class DynamicBLMEstimator:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        model = DynamicBLMModel(self.params, self.rho_0, rng)
+        model = DynamicBLMModel(self.params.copy(), self.rho_0, rng)
         if iter % 4 == 0:
             model.fit_movers_cstr_uncstr(jdata, blm_model=blm_model, initialize_all=(iter == 0))
         elif iter % 4 == 1:
