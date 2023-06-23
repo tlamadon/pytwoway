@@ -939,17 +939,19 @@ class StationaryFirmTypeVariation():
     Generate BLM constraints so that the firm type induced variation of worker-firm pair effects is the same in all periods. In particular, this is equivalent to setting A2 = (np.mean(A2, axis=1) + A1.T - np.mean(A1, axis=1)).T.
 
     Arguments:
-        nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(1, nt)
+        nnt (int or list of ints or None): time periods to constrain; None is equivalent to [0, 1]
         nt (int): number of time periods
+        R_version (bool): if True, use R version of stationary firm-type variation constraint (this is called fixb in the R code, but this version is not recommended)
         dynamic (bool): if True, using dynamic BLM estimator
     '''
 
-    def __init__(self, nnt=None, nt=2, dynamic=False):
+    def __init__(self, nnt=None, nt=2, R_version=False, dynamic=False):
         if nnt is None:
-            self.nnt = range(1, nt)
+            self.nnt = [0, 1]
         else:
             self.nnt = to_list(nnt)
         self.nt = nt
+        self.R_version = R_version
         self.dynamic = dynamic
 
     def _get_constraints(self, nl, nk):
@@ -964,16 +966,16 @@ class StationaryFirmTypeVariation():
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
         ## Unpack parameters ##
-        nnt, nt, dynamic = self.nnt, self.nt, self.dynamic
+        nnt, nt, R_version, dynamic = self.nnt, self.nt, self.R_version, self.dynamic
 
-        if not dynamic:
+        if not R_version:
             ## Initialize variables ##
             # A starts with 4 dimensions
-            A = np.zeros(shape=(len(nnt) * nl * nk, nt, nl, nk))
+            A = np.zeros(shape=((len(nnt) - 1) * nl * nk, nt, nl, nk))
             i = 0
 
             ## Generate constraints ##
-            for period in nnt:
+            for period in nnt[1:]:
                 ## Iterate over periods ##
                 for l in range(nl):
                     ## Iterate over worker types ##
@@ -981,18 +983,22 @@ class StationaryFirmTypeVariation():
                         ## Iterate over firm types ##
                         for k2 in range(nk):
                             ## Iterate over firm types ##
-                            # Baseline is period 1
-                            A[i, 0, l, k2] = - (1 / nk)
-                            # Comparison is period > 1
+                            # Baseline is first period in nnt
+                            A[i, nnt[0], l, k2] = - (1 / nk)
+                            # Comparisons are remaining periods in nnt
                             A[i, period, l, k2] = (1 / nk)
-                        # Baseline is period 1
-                        A[i, 0, l, k1] += 1
-                        # Comparison is period > 1
+                        # Baseline is first period in nnt
+                        A[i, nnt[0], l, k1] += 1
+                        # Comparisons are remaining periods in nnt
                         A[i, period, l, k1] -= 1
                         i += 1
 
+            if dynamic:
+                # Use dynamic BLM dimensions (i, l, period, k)
+                A = A.transpose((0, 2, 1, 3))
+
             # Reshape A to 2 dimensions
-            A = A.reshape((len(nnt) * nl * nk, nt * nl * nk))
+            A = A.reshape(((len(nnt) - 1) * nl * nk, nt * nl * nk))
         else:
             # NOTE: in reality, this is fixb from the R code
             # NOTE: the other method doesn't work with the dynamic model
@@ -1008,8 +1014,9 @@ class StationaryFirmTypeVariation():
             A = - np.kron(MM, A)
             A = A.reshape((A.shape[0], nt, nl, nk))
 
-            # Use dynamic BLM dimensions (i, l, period, k)
-            A = A.transpose((0, 2, 1, 3))
+            if dynamic:
+                # Use dynamic BLM dimensions (i, l, period, k)
+                A = A.transpose((0, 2, 1, 3))
 
             # Reshape A to 2 dimensions
             A = A.reshape((A.shape[0], nt * nl * nk))

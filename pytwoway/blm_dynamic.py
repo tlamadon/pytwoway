@@ -2243,11 +2243,10 @@ class DynamicBLMModel:
                 ### General ###
                 # Shift between periods
                 ts = nl * nk
-                # XX'XX (weighted)
-                XXwXX = np.zeros((len(periods) * ts, len(periods) * ts))
                 # 0 matrix
                 XX0 = np.zeros((nk, nk))
                 if params['update_a_movers']:
+                    XXwXX = np.zeros((len(periods) * ts, len(periods) * ts))
                     XXwY = np.zeros(shape=len(periods) * ts)
                 if params['update_s_movers']:
                     XSwXS = np.zeros(len(periods_var) * ts)
@@ -2257,11 +2256,10 @@ class DynamicBLMModel:
                 if len(cat_cols) > 0:
                     # Shift between periods
                     ts_cat = {col: nl * col_dict['n'] for col, col_dict in cat_dict.items()}
-                    # XX_cat'XX_cat (weighted)
-                    XXwXX_cat = {col: np.zeros((len(periods) * col_ts, len(periods) * col_ts)) for col, col_ts in ts_cat.items()}
                     # 0 matrix
                     XX0_cat = {col: np.zeros((col_dict['n'], col_dict['n'])) for col, col_dict in cat_dict.items()}
                     if params['update_a_movers']:
+                        XXwXX_cat = {col: np.zeros((len(periods) * col_ts, len(periods) * col_ts)) for col, col_ts in ts_cat.items()}
                         XXwY_cat = {col: np.zeros(shape=len(periods) * col_ts) for col, col_ts in ts_cat.items()}
                     if params['update_s_movers']:
                         XSwXS_cat = {col: np.zeros(shape=len(periods_var) * col_ts) for col, col_ts in ts_cat.items()}
@@ -2269,9 +2267,8 @@ class DynamicBLMModel:
 
                 ### Continuous ###
                 if len(cts_cols) > 0:
-                    # XX_cts'XX_cts (weighted)
-                    XXwXX_cts = {col: np.zeros((len(periods) * nl, len(periods) * nl)) for col in cts_cols}
                     if params['update_a_movers']:
+                        XXwXX_cts = {col: np.zeros((len(periods) * nl, len(periods) * nl)) for col in cts_cols}
                         XXwY_cts = {col: np.zeros(shape=len(periods) * nl) for col in cts_cols}
                     if params['update_s_movers']:
                         XSwXS_cts = {col: np.zeros(shape=len(periods_var) * nl) for col in cts_cols}
@@ -2292,21 +2289,22 @@ class DynamicBLMModel:
                         qi[:, l] / S['43'][l, G2]
                     ]
 
-                    ## Compute XXwXX_l ##
+                    ## Compute GwG terms ##
                     G1W1G1 = np.diag(np.bincount(G1, weights_l[0]))
                     G1W2G1 = np.diag(np.bincount(G1, weights_l[1]))
-                    G1W3G1 = np.diag(np.bincount(G1, weights_l[2]))
-                    if endogeneity:
-                        G2W2G2 = np.diag(np.bincount(G2, weights_l[1]))
                     G2W3G2 = np.diag(np.bincount(G2, weights_l[2]))
                     G2W4G2 = np.diag(np.bincount(G2, weights_l[3]))
-                    if endogeneity:
-                        G1W2G2 = double_bincount(G1, G2, weights_l[1])
-                    G1W3G2 = double_bincount(G1, G2, weights_l[2])
+                    if params['update_a_movers']:
+                        G1W3G1 = np.diag(np.bincount(G1, weights_l[2]))
+                        if endogeneity:
+                            G2W2G2 = np.diag(np.bincount(G2, weights_l[1]))
+                        if endogeneity:
+                            G1W2G2 = double_bincount(G1, G2, weights_l[1])
+                        G1W3G2 = double_bincount(G1, G2, weights_l[2])
 
                     if params['update_s_movers']:
+                        ## Compute XSwXS ##
                         weights.append(weights_l)
-                        ## XSwXS ##
                         l_index_S = l * nk * len(periods_var)
 
                         XSwXS[l_index_S + 0 * nk: l_index_S + 1 * nk] = \
@@ -2318,47 +2316,25 @@ class DynamicBLMModel:
                         XSwXS[l_index_S + 3 * nk: l_index_S + 4 * nk] = \
                             np.diag(G2W3G2)
 
-                    XXwXX_l = np.vstack(
-                        [
-                            np.hstack(
-                                [G1W1G1, XX0, - R12 * G1W1G1, XX0]
-                            ),
-                            np.hstack(
-                                [XX0, G2W4G2, XX0, - R43 * G2W4G2]
-                            ),
-                            np.hstack(
-                                [- R12 * G1W1G1, XX0, (R12 ** 2) * G1W1G1 + G1W2G1 + (R32m ** 2) * G1W3G1, - R32m * G1W3G2]
-                            ),
-                            np.hstack(
-                                [XX0, - R43 * G2W4G2, - R32m * G1W3G2.T, G2W3G2 + (R43 ** 2) * G2W4G2]
-                            )
-                        ]
-                    )
-                    if endogeneity:
-                        XXwXX_l = np.hstack(
-                            [
-                                XXwXX_l,
-                                np.vstack(
-                                    [
-                                        XX0,
-                                        XX0,
-                                        G1W2G2 + (R32m ** 2) * G1W3G2,
-                                        - R32m * G2W3G2
-                                    ]
-                                )
-                            ]
-                        )
+                    if params['update_a_movers']:
+                        ## Compute XXwXX_l ##
                         XXwXX_l = np.vstack(
                             [
-                                XXwXX_l,
                                 np.hstack(
-                                    [
-                                        XX0, XX0, G1W2G2.T + (R32m ** 2) * G1W3G2.T, - R32m * G2W3G2, G2W2G2 + (R32m ** 2) * G2W3G2
-                                    ]
+                                    [G1W1G1, XX0, - R12 * G1W1G1, XX0]
+                                ),
+                                np.hstack(
+                                    [XX0, G2W4G2, XX0, - R43 * G2W4G2]
+                                ),
+                                np.hstack(
+                                    [- R12 * G1W1G1, XX0, (R12 ** 2) * G1W1G1 + G1W2G1 + (R32m ** 2) * G1W3G1, - R32m * G1W3G2]
+                                ),
+                                np.hstack(
+                                    [XX0, - R43 * G2W4G2, - R32m * G1W3G2.T, G2W3G2 + (R43 ** 2) * G2W4G2]
                                 )
                             ]
                         )
-                        if state_dependence:
+                        if endogeneity:
                             XXwXX_l = np.hstack(
                                 [
                                     XXwXX_l,
@@ -2366,9 +2342,8 @@ class DynamicBLMModel:
                                         [
                                             XX0,
                                             XX0,
-                                            - R32m * G1W3G1,
-                                            G1W3G2.T,
-                                            - R32m * G1W3G2.T
+                                            G1W2G2 + (R32m ** 2) * G1W3G2,
+                                            - R32m * G2W3G2
                                         ]
                                     )
                                 ]
@@ -2378,41 +2353,66 @@ class DynamicBLMModel:
                                     XXwXX_l,
                                     np.hstack(
                                         [
-                                            XX0, XX0, - R32m * G1W3G1, G1W3G2, - R32m * G1W3G2, G1W3G1
+                                            XX0, XX0, G1W2G2.T + (R32m ** 2) * G1W3G2.T, - R32m * G2W3G2, G2W2G2 + (R32m ** 2) * G2W3G2
                                         ]
                                     )
                                 ]
                             )
-                    elif state_dependence:
-                        XXwXX_l = np.hstack(
-                            [
-                                XXwXX_l,
-                                np.vstack(
+                            if state_dependence:
+                                XXwXX_l = np.hstack(
                                     [
-                                        XX0,
-                                        XX0,
-                                        - R32m * G1W3G1,
-                                        G1W3G2.T
+                                        XXwXX_l,
+                                        np.vstack(
+                                            [
+                                                XX0,
+                                                XX0,
+                                                - R32m * G1W3G1,
+                                                G1W3G2.T,
+                                                - R32m * G1W3G2.T
+                                            ]
+                                        )
                                     ]
                                 )
-                            ]
-                        )
-                        XXwXX_l = np.vstack(
-                            [
-                                XXwXX_l,
-                                np.hstack(
+                                XXwXX_l = np.vstack(
                                     [
-                                        XX0, XX0, - R32m * G1W3G1, G1W3G2, G1W3G1
+                                        XXwXX_l,
+                                        np.hstack(
+                                            [
+                                                XX0, XX0, - R32m * G1W3G1, G1W3G2, - R32m * G1W3G2, G1W3G1
+                                            ]
+                                        )
                                     ]
                                 )
-                            ]
-                        )
-                    del G1W1G1, G1W2G1, G1W3G1, G2W3G2, G2W4G2, G1W3G2
-                    if endogeneity:
-                        del G2W2G2, G1W2G2
+                        elif state_dependence:
+                            XXwXX_l = np.hstack(
+                                [
+                                    XXwXX_l,
+                                    np.vstack(
+                                        [
+                                            XX0,
+                                            XX0,
+                                            - R32m * G1W3G1,
+                                            G1W3G2.T
+                                        ]
+                                    )
+                                ]
+                            )
+                            XXwXX_l = np.vstack(
+                                [
+                                    XXwXX_l,
+                                    np.hstack(
+                                        [
+                                            XX0, XX0, - R32m * G1W3G1, G1W3G2, G1W3G1
+                                        ]
+                                    )
+                                ]
+                            )
 
-                    XXwXX[l_index: r_index, l_index: r_index] = XXwXX_l
-                    del XXwXX_l
+                        XXwXX[l_index: r_index, l_index: r_index] = XXwXX_l
+                        del XXwXX_l, G1W3G1, G1W3G2
+                        if endogeneity:
+                            del G2W2G2, G1W2G2
+                    del G1W1G1, G1W2G1, G2W3G2, G2W4G2
 
                     if params['update_a_movers']:
                         # Update A_sum to account for worker-interaction terms
@@ -2540,22 +2540,22 @@ class DynamicBLMModel:
                         ]
                         del S_l_dict
 
-                        ## Compute XXwXX_cat_l ##
+                        ## Compute CwC terms ##
                         C1W1C1 = np.diag(np.bincount(C1[col], weights_l[0]))
                         C1W2C1 = np.diag(np.bincount(C1[col], weights_l[1]))
-                        C1W3C1 = np.diag(np.bincount(C1[col], weights_l[2]))
-                        if endogeneity:
-                            C2W2C2 = np.diag(np.bincount(C2[col], weights_l[1]))
                         C2W3C2 = np.diag(np.bincount(C2[col], weights_l[2]))
                         C2W4C2 = np.diag(np.bincount(C2[col], weights_l[3]))
-                        if endogeneity:
-                            C1W2C2 = double_bincount(C1[col], C2[col], weights_l[1])
-                        C1W3C2 = double_bincount(C1[col], C2[col], weights_l[2])
+                        if params['update_a_movers']:
+                            C1W3C1 = np.diag(np.bincount(C1[col], weights_l[2]))
+                            if endogeneity:
+                                C2W2C2 = np.diag(np.bincount(C2[col], weights_l[1]))
+                            if endogeneity:
+                                C1W2C2 = double_bincount(C1[col], C2[col], weights_l[1])
+                            C1W3C2 = double_bincount(C1[col], C2[col], weights_l[2])
 
                         if params['update_s_movers']:
+                            ### Compute XSwXS_cat ###
                             weights_cat[col].append(weights_l)
-
-                            ### XSwXS_cat ###
                             l_index_S = l * col_n * len(periods_var)
 
                             XSwXS_cat[l_index_S + 0 * col_n: l_index_S + 1 * col_n] = \
@@ -2567,47 +2567,25 @@ class DynamicBLMModel:
                             XSwXS_cat[l_index_S + 3 * col_n: l_index_S + 4 * col_n] = \
                                 np.diag(C2W3C2)
 
-                        XXwXX_cat_l = np.vstack(
-                            [
-                                np.hstack(
-                                    [C1W1C1, XX0_cat[col], - R12 * C1W1C1, XX0_cat[col]]
-                                ),
-                                np.hstack(
-                                    [XX0_cat[col], C2W4C2, XX0_cat[col], - R43 * C2W4C2]
-                                ),
-                                np.hstack(
-                                    [- R12 * C1W1C1, XX0_cat[col], (R12 ** 2) * C1W1C1 + C1W2C1 + (R32m ** 2) * C1W3C1, - R32m * C1W3C2]
-                                ),
-                                np.hstack(
-                                    [XX0_cat[col], - R43 * C2W4C2, - R32m * C1W3C2.T, C2W3C2 + (R43 ** 2) * C2W4C2]
-                                )
-                            ]
-                        )
-                        if endogeneity:
-                            XXwXX_cat_l = np.hstack(
-                                [
-                                    XXwXX_cat_l,
-                                    np.vstack(
-                                        [
-                                            XX0_cat[col],
-                                            XX0_cat[col],
-                                            C1W2C2 + (R32m ** 2) * C1W3C2,
-                                            - R32m * C2W3C2
-                                        ]
-                                    )
-                                ]
-                            )
+                        if params['update_a_movers']:
+                            ## Compute XXwXX_cat_l ##
                             XXwXX_cat_l = np.vstack(
                                 [
-                                    XXwXX_cat_l,
                                     np.hstack(
-                                        [
-                                            XX0_cat[col], XX0_cat[col], C1W2C2.T + (R32m ** 2) * C1W3C2.T, - R32m * C2W3C2, C2W2C2 + (R32m ** 2) * C2W3C2
-                                        ]
+                                        [C1W1C1, XX0_cat[col], - R12 * C1W1C1, XX0_cat[col]]
+                                    ),
+                                    np.hstack(
+                                        [XX0_cat[col], C2W4C2, XX0_cat[col], - R43 * C2W4C2]
+                                    ),
+                                    np.hstack(
+                                        [- R12 * C1W1C1, XX0_cat[col], (R12 ** 2) * C1W1C1 + C1W2C1 + (R32m ** 2) * C1W3C1, - R32m * C1W3C2]
+                                    ),
+                                    np.hstack(
+                                        [XX0_cat[col], - R43 * C2W4C2, - R32m * C1W3C2.T, C2W3C2 + (R43 ** 2) * C2W4C2]
                                     )
                                 ]
                             )
-                            if state_dependence:
+                            if endogeneity:
                                 XXwXX_cat_l = np.hstack(
                                     [
                                         XXwXX_cat_l,
@@ -2615,9 +2593,8 @@ class DynamicBLMModel:
                                             [
                                                 XX0_cat[col],
                                                 XX0_cat[col],
-                                                - R32m * C1W3C1,
-                                                C1W3C2.T,
-                                                - R32m * C1W3C2.T
+                                                C1W2C2 + (R32m ** 2) * C1W3C2,
+                                                - R32m * C2W3C2
                                             ]
                                         )
                                     ]
@@ -2627,40 +2604,66 @@ class DynamicBLMModel:
                                         XXwXX_cat_l,
                                         np.hstack(
                                             [
-                                                XX0_cat[col], XX0_cat[col], - R32m * C1W3C1, C1W3C2, - R32m * C1W3C2, C1W3C1
+                                                XX0_cat[col], XX0_cat[col], C1W2C2.T + (R32m ** 2) * C1W3C2.T, - R32m * C2W3C2, C2W2C2 + (R32m ** 2) * C2W3C2
                                             ]
                                         )
                                     ]
                                 )
-                        elif state_dependence:
-                            XXwXX_cat_l = np.hstack(
-                                [
-                                    XXwXX_cat_l,
-                                    np.vstack(
+                                if state_dependence:
+                                    XXwXX_cat_l = np.hstack(
                                         [
-                                            XX0_cat[col],
-                                            XX0_cat[col],
-                                            - R32m * C1W3C1,
-                                            C1W3C2.T
+                                            XXwXX_cat_l,
+                                            np.vstack(
+                                                [
+                                                    XX0_cat[col],
+                                                    XX0_cat[col],
+                                                    - R32m * C1W3C1,
+                                                    C1W3C2.T,
+                                                    - R32m * C1W3C2.T
+                                                ]
+                                            )
                                         ]
                                     )
-                                ]
-                            )
-                            XXwXX_cat_l = np.vstack(
-                                [
-                                    XXwXX_cat_l,
-                                    np.hstack(
+                                    XXwXX_cat_l = np.vstack(
                                         [
-                                            XX0_cat[col], XX0_cat[col], - R32m * C1W3C1, C1W3C2, C1W3C1
+                                            XXwXX_cat_l,
+                                            np.hstack(
+                                                [
+                                                    XX0_cat[col], XX0_cat[col], - R32m * C1W3C1, C1W3C2, - R32m * C1W3C2, C1W3C1
+                                                ]
+                                            )
                                         ]
                                     )
-                                ]
-                            )
-                        del C1W1C1, C1W2C1, C1W3C1, C2W3C2, C2W4C2, C1W3C2
-                        if endogeneity:
-                            del C2W2C2, C1W2C2
-                        XXwXX_cat[col][l_index: r_index, l_index: r_index] = XXwXX_cat_l
-                        del XXwXX_cat_l
+                            elif state_dependence:
+                                XXwXX_cat_l = np.hstack(
+                                    [
+                                        XXwXX_cat_l,
+                                        np.vstack(
+                                            [
+                                                XX0_cat[col],
+                                                XX0_cat[col],
+                                                - R32m * C1W3C1,
+                                                C1W3C2.T
+                                            ]
+                                        )
+                                    ]
+                                )
+                                XXwXX_cat_l = np.vstack(
+                                    [
+                                        XXwXX_cat_l,
+                                        np.hstack(
+                                            [
+                                                XX0_cat[col], XX0_cat[col], - R32m * C1W3C1, C1W3C2, C1W3C1
+                                            ]
+                                        )
+                                    ]
+                                )
+
+                            XXwXX_cat[col][l_index: r_index, l_index: r_index] = XXwXX_cat_l
+                            del XXwXX_cat_l, C1W3C1, C1W3C2
+                            if endogeneity:
+                                del C2W2C2, C1W2C2
+                        del C1W1C1, C1W2C1, C2W3C2, C2W4C2
 
                         if params['update_a_movers']:
                             # Update A_sum to account for worker-interaction terms
@@ -2780,61 +2783,40 @@ class DynamicBLMModel:
                         ]
                         del S_l_dict
 
-                        ## Compute XXwXX_cts_l ##
+                        ## Compute CwC terms ##
                         C1W1C1 = np.sum(weights_l[0] * C1[col])
                         C1W2C1 = np.sum(weights_l[1] * C1[col])
-                        C1W3C1 = np.sum(weights_l[2] * C1[col])
-                        if endogeneity:
-                            C2W2C2 = np.sum(weights_l[1] * C2[col])
                         C2W3C2 = np.sum(weights_l[2] * C2[col])
                         C2W4C2 = np.sum(weights_l[3] * C2[col])
-                        if endogeneity:
-                            C1W2C2 = np.sum(weights_l[1] * C1[col] * C2[col])
-                        C1W3C2 = np.sum(weights_l[2] * C1[col] * C2[col])
+                        if params['update_a_movers']:
+                            C1W3C1 = np.sum(weights_l[2] * C1[col])
+                            if endogeneity:
+                                C2W2C2 = np.sum(weights_l[1] * C2[col])
+                            if endogeneity:
+                                C1W2C2 = np.sum(weights_l[1] * C1[col] * C2[col])
+                            C1W3C2 = np.sum(weights_l[2] * C1[col] * C2[col])
 
                         if params['update_s_movers']:
+                            ### Compute XSwXS_cts ###
                             weights_cts[col].append(weights_l)
-
-                            ### XSwXS_cts ###
                             l_index_S = l * len(periods_var)
+
                             XSwXS_cts[l_index_S + 0] = C1W1C1
                             XSwXS_cts[l_index_S + 1] = C2W4C2
                             XSwXS_cts[l_index_S + 2] = C1W2C1
                             XSwXS_cts[l_index_S + 3] = C2W3C2
 
-                        XXwXX_cts_l = np.array(
-                            [
-                                [C1W1C1, 0, - R12 * C1W1C1, 0],
-                                [0, C2W4C2, 0, - R43 * C2W4C2],
-                                [- R12 * C1W1C1, 0, (R12 ** 2) * C1W1C1 + C1W2C1 + (R32m ** 2) * C1W3C1, - R32m * C1W3C2],
-                                [0, - R43 * C2W4C2, - R32m * C1W3C2.T, C2W3C2 + (R43 ** 2) * C2W4C2]
-                            ]
-                        )
-                        if endogeneity:
-                            XXwXX_cts_l = np.hstack(
+                        if params['update_a_movers']:
+                        ## Compute XXwXX_cts_l ##
+                            XXwXX_cts_l = np.array(
                                 [
-                                    XXwXX_cts_l,
-                                    np.array(
-                                        [
-                                            0,
-                                            0,
-                                            C1W2C2 + (R32m ** 2) * C1W3C2,
-                                            - R32m * C2W3C2
-                                        ]
-                                    )
+                                    [C1W1C1, 0, - R12 * C1W1C1, 0],
+                                    [0, C2W4C2, 0, - R43 * C2W4C2],
+                                    [- R12 * C1W1C1, 0, (R12 ** 2) * C1W1C1 + C1W2C1 + (R32m ** 2) * C1W3C1, - R32m * C1W3C2],
+                                    [0, - R43 * C2W4C2, - R32m * C1W3C2.T, C2W3C2 + (R43 ** 2) * C2W4C2]
                                 ]
                             )
-                            XXwXX_cts_l = np.vstack(
-                                [
-                                    XXwXX_cts_l,
-                                    np.array(
-                                        [
-                                            0, 0, C1W2C2.T + (R32m ** 2) * C1W3C2.T, - R32m * C2W3C2, C2W2C2 + (R32m ** 2) * C2W3C2
-                                        ]
-                                    )
-                                ]
-                            )
-                            if state_dependence:
+                            if endogeneity:
                                 XXwXX_cts_l = np.hstack(
                                     [
                                         XXwXX_cts_l,
@@ -2842,9 +2824,8 @@ class DynamicBLMModel:
                                             [
                                                 0,
                                                 0,
-                                                - R32m * C1W3C1,
-                                                C1W3C2.T,
-                                                - R32m * C1W3C2.T
+                                                C1W2C2 + (R32m ** 2) * C1W3C2,
+                                                - R32m * C2W3C2
                                             ]
                                         )
                                     ]
@@ -2854,40 +2835,66 @@ class DynamicBLMModel:
                                         XXwXX_cts_l,
                                         np.array(
                                             [
-                                                0, 0, - R32m * C1W3C1, C1W3C2, - R32m * C1W3C2, C1W3C1
+                                                0, 0, C1W2C2.T + (R32m ** 2) * C1W3C2.T, - R32m * C2W3C2, C2W2C2 + (R32m ** 2) * C2W3C2
                                             ]
                                         )
                                     ]
                                 )
-                        elif state_dependence:
-                            XXwXX_cts_l = np.hstack(
-                                [
-                                    XXwXX_cts_l,
-                                    np.array(
+                                if state_dependence:
+                                    XXwXX_cts_l = np.hstack(
                                         [
-                                            0,
-                                            0,
-                                            - R32m * C1W3C1,
-                                            C1W3C2.T
+                                            XXwXX_cts_l,
+                                            np.array(
+                                                [
+                                                    0,
+                                                    0,
+                                                    - R32m * C1W3C1,
+                                                    C1W3C2.T,
+                                                    - R32m * C1W3C2.T
+                                                ]
+                                            )
                                         ]
                                     )
-                                ]
-                            )
-                            XXwXX_cts_l = np.vstack(
-                                [
-                                    XXwXX_cts_l,
-                                    np.array(
+                                    XXwXX_cts_l = np.vstack(
                                         [
-                                            0, 0, - R32m * C1W3C1, C1W3C2, C1W3C1
+                                            XXwXX_cts_l,
+                                            np.array(
+                                                [
+                                                    0, 0, - R32m * C1W3C1, C1W3C2, - R32m * C1W3C2, C1W3C1
+                                                ]
+                                            )
                                         ]
                                     )
-                                ]
-                            )
-                        del C1W1C1, C1W2C1, C1W3C1, C2W3C2, C2W4C2, C1W3C2
-                        if endogeneity:
-                            del C2W2C2, C1W2C2
-                        XXwXX_cts[col][l_index: r_index, l_index: r_index] = XXwXX_cts_l
-                        del XXwXX_cts_l
+                            elif state_dependence:
+                                XXwXX_cts_l = np.hstack(
+                                    [
+                                        XXwXX_cts_l,
+                                        np.array(
+                                            [
+                                                0,
+                                                0,
+                                                - R32m * C1W3C1,
+                                                C1W3C2.T
+                                            ]
+                                        )
+                                    ]
+                                )
+                                XXwXX_cts_l = np.vstack(
+                                    [
+                                        XXwXX_cts_l,
+                                        np.array(
+                                            [
+                                                0, 0, - R32m * C1W3C1, C1W3C2, C1W3C1
+                                            ]
+                                        )
+                                    ]
+                                )
+
+                            XXwXX_cts[col][l_index: r_index, l_index: r_index] = XXwXX_cts_l
+                            del XXwXX_cts_l, C1W3C1, C1W3C2
+                            if endogeneity:
+                                del C2W2C2, C1W2C2
+                        del C1W1C1, C1W2C1, C2W3C2, C2W4C2
 
                         if params['update_a_movers']:
                             # Update A_sum to account for worker-interaction terms
@@ -4263,9 +4270,9 @@ class DynamicBLMModel:
         # if self.nl > 1:
         #     # Set constraints
         #     if user_params['cons_a_all'] is None:
-        #         self.params['cons_a_all'] = cons.StationaryFirmTypeVariation(nt=len(self.periods_movers), dynamic=True)
+        #         self.params['cons_a_all'] = cons.StationaryFirmTypeVariation(nt=len(self.periods_movers), R_version=True, dynamic=True)
         #     else:
-        #         self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation(nt=len(self.periods_movers), dynamic=True)]
+        #         self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.StationaryFirmTypeVariation(nt=len(self.periods_movers), R_version=True, dynamic=True)]
         #     if self.params['verbose'] in [1, 2, 3]:
         #         print('Fitting movers with Stationary Firm Type Variation constraint on A')
         #     self.fit_movers(jdata, compute_NNm=False)
