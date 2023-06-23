@@ -724,6 +724,36 @@ class SimDynamicBLM:
             pk0_prior = np.ones(nl)
         pk0 = rng.dirichlet(alpha=pk0_prior, size=nk)
 
+        ## Sort parameters ##
+        A = self._sort_A(A)
+
+        ## Impose constraints ##
+        if stationary_A:
+            for period in all_periods[1:]:
+                A[period] = A['12']
+
+        if stationary_S:
+            for period in all_periods[1:]:
+                S[period] = S['12']
+
+        if stationary_firm_type_variation:
+            for period in all_periods[1:]:
+                if period[-1] != 'b':
+                    A[period] = (np.mean(A[period], axis=1) + A['12'].T - np.mean(A['12'], axis=1)).T
+
+        # Normalize 2ma and 3ma #
+        min_firm_type = np.mean(A['12'], axis=0).argsort()[0]
+        A['2ma'] = (A['2ma'].T - A['2ma'][:, min_firm_type]).T
+        A['3ma'] = (A['3ma'].T - A['3ma'][:, min_firm_type]).T
+
+        if not endogeneity:
+            A['2mb'][:] = 0
+            S['2mb'][:] = 0
+
+        if not state_dependence:
+            A['3mb'][:] = 0
+            S['3mb'][:] = 0
+
         ### Control variables ###
         ## Categorical ##
         A_cat = {
@@ -746,6 +776,7 @@ class SimDynamicBLM:
             }
             for col in cat_cols
         }
+        ## Impose constraints ##
         # Stationary #
         for col in cat_cols:
             for period in all_periods[1:]:
@@ -763,8 +794,8 @@ class SimDynamicBLM:
                         A_cat[col][period] = np.mean(A_cat[col][period]) + A_cat[col]['12'] - np.mean(A_cat[col]['12'])
         # Normalize 2ma and 3ma #
         for col in cat_cols:
-            A_cat[col]['2ma'] -= A_cat[col]['2ma'][0, :]
-            A_cat[col]['3ma'] -= A_cat[col]['3ma'][0, :]
+            A_cat[col]['2ma'] = (A_cat[col]['2ma'].T - A_cat[col]['2ma'][:, min_firm_type]).T
+            A_cat[col]['3ma'] = (A_cat[col]['3ma'].T - A_cat[col]['3ma'][:, min_firm_type]).T
         # Endogeneity and state dependence
         for col in cat_cols:
             if not endogeneity:
@@ -794,6 +825,7 @@ class SimDynamicBLM:
             }
             for col in cts_cols
         }
+        ## Impose constraints ##
         # Stationary #
         for col in cts_cols:
             for period in all_periods[1:]:
@@ -814,34 +846,6 @@ class SimDynamicBLM:
             if not state_dependence:
                 A_cts[col]['3mb'] = 0
                 S_cts[col]['3mb'] = 0
-
-        ## Sort parameters ##
-        A = self._sort_A(A)
-
-        if stationary_A:
-            for period in all_periods[1:]:
-                A[period] = A['12']
-
-        if stationary_S:
-            for period in all_periods[1:]:
-                S[period] = S['12']
-
-        if stationary_firm_type_variation:
-            for period in all_periods[1:]:
-                if period[-1] != 'b':
-                    A[period] = (np.mean(A[period], axis=1) + A['12'].T - np.mean(A['12'], axis=1)).T
-
-        # Normalize 2ma and 3ma #
-        A['2ma'] -= A['2ma'][0, :]
-        A['3ma'] -= A['3ma'][0, :]
-
-        if not endogeneity:
-            A['2mb'][:] = 0
-            S['2mb'][:] = 0
-
-        if not state_dependence:
-            A['3mb'][:] = 0
-            S['3mb'][:] = 0
 
         return {'A': A, 'S': S, 'pk1': pk1, 'pk0': pk0, 'A_cat': A_cat, 'S_cat': S_cat, 'A_cts': A_cts, 'S_cts': S_cts}
 
