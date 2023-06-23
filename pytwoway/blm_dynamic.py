@@ -4913,7 +4913,7 @@ class DynamicBLMVarianceDecomposition:
             reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
             Q_var (list of Q variances): list of Q matrices to use when estimating variance term; None is equivalent to tw.Q.VarPsi() without controls, or tw.Q.VarCovariate('psi') with controls
             Q_cov (list of Q covariances): list of Q matrices to use when estimating covariance term; None is equivalent to tw.Q.CovPsiAlpha() without controls, or tw.Q.CovCovariate('psi', 'alpha') with controls
-            complementarities (bool): if True, estimate R^2 of regression with complementarities (by adding in all worker-firm interactions). Only allowed when firm_clusters_as_ids=True and worker_types_as_ids=True.
+            complementarities (bool): if True, also estimate R^2 of regression with complementarities (by adding in all worker-firm interactions). Only allowed when firm_clusters_as_ids=True and worker_types_as_ids=True.
             firm_clusters_as_ids (bool): if True, regress on firm clusters; if False, regress on firm ids
             worker_types_as_ids (bool): if True, regress on true, simulated worker types; if False, regress on worker ids
             ncore (int): number of cores for multiprocessing
@@ -4959,8 +4959,8 @@ class DynamicBLMVarianceDecomposition:
             jj = jdata.loc[:, ['j1', 'j4']].to_numpy().copy()
             js = sdata.loc[:, 'j1'].to_numpy().copy()
             with bpd.util.ChainedAssignment():
-                jdata.loc[:, ['j1', 'j4']] = gj
-                sdata.loc[:, 'j1'], sdata.loc[:, 'j4'] = (gs, gs)
+                jdata.loc[:, ['j1', 'j4']], jdata.loc[:, ['j2', 'j3']] = (gj, gj)
+                sdata.loc[:, 'j1'], sdata.loc[:, 'j2'], sdata.loc[:, 'j3'], sdata.loc[:, 'j4'] = (gs, gs, gs, gs)
         if worker_types_as_ids:
             ij = jdata.loc[:, 'i'].to_numpy().copy()
             is_ = sdata.loc[:, 'i'].to_numpy().copy()
@@ -5021,8 +5021,8 @@ class DynamicBLMVarianceDecomposition:
             jdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = yj
             sdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = ys
             if firm_clusters_as_ids:
-                jdata.loc[:, ['j1', 'j4']] = jj
-                sdata.loc[:, 'j4'], sdata.loc[:, 'j4'] = (js, js)
+                jdata.loc[:, ['j1', 'j4']], jdata.loc[:, ['j2', 'j3']] = (jj, jj)
+                sdata.loc[:, 'j1'], sdata.loc[:, 'j2'], sdata.loc[:, 'j3'], sdata.loc[:, 'j4'] = (js, js, js, js)
             if worker_types_as_ids:
                 jdata.loc[:, 'i'] = ij
                 sdata.loc[:, 'i'] = is_
