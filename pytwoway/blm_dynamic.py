@@ -2207,19 +2207,19 @@ class DynamicBLMModel:
                     XwX = np.sum(Xw * XX12)
                     XwY = np.sum(Xw * YY12)
                     R12 = XwY / XwX
-                    del XX12, WW12
+                    del XX12, YY12, SS12, WW12
                 if params['update_rho43']:
                     Xw = XX43 * WW43
                     XwX = np.sum(Xw * XX43)
                     XwY = np.sum(Xw * YY43)
                     R43 = XwY / XwX
-                    del XX43, WW43
+                    del XX43, YY43, SS43, WW43
                 if params['update_rho32m']:
                     Xw = XX32m * WW32m
                     XwX = np.sum(Xw * XX32m)
                     XwY = np.sum(Xw * YY32m)
                     R32m = XwY / XwX
-                    del XX32m, WW32m
+                    del XX32m, YY32m, SS32m, WW32m
                 del Xw, XwX, XwY
             elif params['update_a_movers'] or params['update_s_movers']:
                 # Constrained OLS (source: https://scaron.info/blog/quadratic-programming-in-python.html)
@@ -3532,7 +3532,7 @@ class DynamicBLMModel:
                 XwX = np.sum(Xw * XX32s)
                 XwY = np.sum(Xw * YY32s)
                 R32s = XwY / XwX
-                del XX32s, WW32s, Xw, XwX, XwY
+                del XX32s, YY32s, SS32s, WW32s, Xw, XwX, XwY
             elif params['update_a_stayers'] or params['update_s_stayers']:
                 # Constrained OLS (source: https://scaron.info/blog/quadratic-programming-in-python.html)
 
