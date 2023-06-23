@@ -4249,10 +4249,12 @@ class DynamicBLMModel:
             # Set constraints
             if user_params['cons_a_all'] is None:
                 # Linear addivity can't be applied to endogeneity or state dependence terms
-                self.params['cons_a_all'] = cons.LinearAdditive(nnt=range(4), nt=len(self.periods_movers), dynamic=True)
+                # If linear additivity is applied to 2ma and 3ma, because each is normalized to be constant for the lowest firm type, this constrains them to be equal across all worker types - this is too restrictive, so don't impose linear additivity for these terms
+                self.params['cons_a_all'] = cons.LinearAdditive(nnt=[0, 1], nt=len(self.periods_movers), dynamic=True)
             else:
                 # Linear addivity can't be applied to endogeneity or state dependence terms
-                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.LinearAdditive(nnt=range(4), nt=len(self.periods_movers), dynamic=True)]
+                # If linear additivity is applied to 2ma and 3ma, because each is normalized to be constant for the lowest firm type, this constrains them to be equal across all worker types - this is too restrictive, so don't impose linear additivity for these terms
+                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.LinearAdditive(nnt=[0, 1], nt=len(self.periods_movers), dynamic=True)]
             if self.params['verbose'] in [1, 2, 3]:
                 print('Fitting movers with Linear Additive constraint on A')
             self.fit_movers(jdata, compute_NNm=False)
