@@ -724,7 +724,7 @@ class NormalizeLowest():
         else:
             # Keep track of columns to normalize, and drop them before estimation
             A = A.reshape((len(nnt), nt * nl * nk))
-            drop_cols = list(np.nonzero(A.sum(axis=0) > 0)[0])
+            drop_cols = list(np.nonzero(A.sum(axis=0) > 0.5)[0])
 
             return {'G': None, 'h': None, 'A': None, 'b': None, 'drop_cols': drop_cols}
 
@@ -797,7 +797,7 @@ class NormalizeAllWorkerTypes():
         else:
             # Keep track of columns to normalize, and drop them before estimation
             A = A.reshape((len(nnt) * nl, nt * nl * nk))
-            drop_cols = list(np.nonzero(A.sum(axis=0) > 0)[0])
+            drop_cols = list(np.nonzero(A.sum(axis=0) > 0.5)[0])
 
             return {'G': None, 'h': None, 'A': None, 'b': None, 'drop_cols': drop_cols}
 
@@ -868,7 +868,7 @@ class NormalizeAllFirmTypes():
         else:
             # Keep track of columns to normalize, and drop them before estimation
             A = A.reshape((len(nnt) * nk, nt * nl * nk))
-            drop_cols = list(np.nonzero(A.sum(axis=0) > 0)[0])
+            drop_cols = list(np.nonzero(A.sum(axis=0) > 0.5)[0])
 
             return {'G': None, 'h': None, 'A': None, 'b': None, 'drop_cols': drop_cols}
 
