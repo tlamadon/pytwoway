@@ -278,11 +278,11 @@ dynamic_blm_params = ParamsDict({
         ''', '>= 1'),
     'd_X_diag_movers_A': (1 + 1e-10, 'type_constrained', ((float, int), _gteq1),
         '''
-            (default=1 + 1e-10) Account for numerical rounding causing X'X to not be positive definite when computing A by adding (d_X_diag_movers_A - 1) to the diagonal of X'X.
+            (default=1 + 1e-10) Account for numerical rounding causing X'X (for means) to not be positive definite when computing A by adding (d_X_diag_movers_A - 1) to the diagonal of X'X.
         ''', '>= 1'),
     'd_X_diag_movers_S': (1 + 1e-10, 'type_constrained', ((float, int), _gteq1),
         '''
-            (default=1 + 1e-5) Account for numerical rounding causing X'X to not be positive definite when computing S by adding (d_X_diag_movers_S - 1) to the diagonal of X'X.
+            (default=1 + 1e-10) Account for numerical rounding causing X'X (for variances) to not be positive definite when computing S by adding (d_X_diag_movers_S - 1) to the diagonal of X'X.
         ''', '>= 1'),
     'd_mean_worker_effect': (1e-7, 'type', (float, int),
         '''
@@ -337,9 +337,13 @@ dynamic_blm_params = ParamsDict({
         '''
             (default=1 + 1e-7) Account for probabilities being too small by adding (d_prior - 1) to pk0.
         ''', '>= 1'),
-    'd_X_diag_stayers': (1 + 1e-10, 'type_constrained', ((float, int), _gteq1),
+    'd_X_diag_stayers_A': (1 + 1e-10, 'type_constrained', ((float, int), _gteq1),
         '''
-            (default=1 + 1e-10) Account for numerical rounding causing X'X to not be positive definite by adding (d_X_diag_stayers - 1) to the diagonal of X'X.
+            (default=1 + 1e-10) Account for numerical rounding causing X'X (for means) to not be positive definite by adding (d_X_diag_stayers_A - 1) to the diagonal of X'X.
+        ''', '>= 1'),
+    'd_X_diag_stayers_S': (1 + 1e-10, 'type_constrained', ((float, int), _gteq1),
+        '''
+            (default=1 + 1e-10) Account for numerical rounding causing X'X (for variances) to not be positive definite by adding (d_X_diag_stayers_S - 1) to the diagonal of X'X.
         ''', '>= 1')
 })
 
@@ -1988,7 +1992,7 @@ class DynamicBLMModel:
                 C1[col] = jdata.loc[:, subcol_1].to_numpy()
                 C2[col] = jdata.loc[:, subcol_2].to_numpy()
 
-        ## Dictionary linking periods to vectors ##
+        # Dictionary linking periods to vectors
         C_dict = {period: C1 if period in self.first_periods else C2 for period in periods}
 
         # Joint firm indicator
@@ -2227,8 +2231,8 @@ class DynamicBLMModel:
                 # To avoid duplicating the data 4 * nl times, we construct X'X and X'Y by looping over nl
                 # We also note that X'X is block diagonal with nl matrices of dimension (6 * nk, 6 * nk)
 
-                #### Initialize XX terms ####
-                # XX =
+                #### Initialize X terms ####
+                # X =
                 # +---------+---------+---------------+--------------+---------------+----------+
                 # | A['12'] | A['43'] |    A['2ma']   |   A['3ma']   |    A['2mb']   | A['3mb'] |
                 # +=========+=========+===============+==============+===============+==========+
@@ -2240,6 +2244,7 @@ class DynamicBLMModel:
                 # +---------+---------+---------------+--------------+---------------+----------+
                 # |    0    |   GG2   |       0       | -(R43 * GG2) |       0       |     0    |
                 # +---------+---------+---------------+--------------+---------------+----------+
+
                 ### General ###
                 # Shift between periods
                 ts = nl * nk
@@ -2303,7 +2308,7 @@ class DynamicBLMModel:
                         G1W3G2 = double_bincount(G1, G2, weights_l[2])
 
                     if params['update_s_movers']:
-                        ## Compute XSwXS ##
+                        ## Compute XSwXS_l ##
                         weights.append(weights_l)
                         l_index_S = l * nk * len(periods_var)
 
@@ -2554,7 +2559,7 @@ class DynamicBLMModel:
                             C1W3C2 = double_bincount(C1[col], C2[col], weights_l[2])
 
                         if params['update_s_movers']:
-                            ### Compute XSwXS_cat ###
+                            ### Compute XSwXS_cat_l ###
                             weights_cat[col].append(weights_l)
                             l_index_S = l * col_n * len(periods_var)
 
@@ -2797,7 +2802,7 @@ class DynamicBLMModel:
                             C1W3C2 = np.sum(weights_l[2] * C1[col] * C2[col])
 
                         if params['update_s_movers']:
-                            ### Compute XSwXS_cts ###
+                            ### Compute XSwXS_cts_l ###
                             weights_cts[col].append(weights_l)
                             l_index_S = l * len(periods_var)
 
@@ -2928,8 +2933,8 @@ class DynamicBLMModel:
                                     - (A['43'][l, G2] + A_sum['43'] + A_sum_l['43']) \
                                     - R43 * (Y3 - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma']))
 
-                            ## Compute XwY_cts_l ##
-                            XwY_cts_l = np.array(
+                            ## Compute XXwY_cts_l ##
+                            XXwY_cts_l = np.array(
                                 [
                                     np.sum(weights_l[0] * Yl_cts_1 * C1[col]),
                                     np.sum(weights_l[3] * Yl_cts_4 * C2[col]),
@@ -2938,15 +2943,15 @@ class DynamicBLMModel:
                                 ]
                             )
                             if endogeneity:
-                                XwY_cts_l = np.append(
-                                    XwY_cts_l, np.sum((weights_l[1] * Yl_cts_2 - R32m * weights_l[2] * Yl_cts_3) * C2[col])
+                                XXwY_cts_l = np.append(
+                                    XXwY_cts_l, np.sum((weights_l[1] * Yl_cts_2 - R32m * weights_l[2] * Yl_cts_3) * C2[col])
                                 )
                             if state_dependence:
-                                XwY_cts_l = np.append(
-                                    XwY_cts_l, np.sum(weights_l[2] * Yl_cts_3 * C1[col])
+                                XXwY_cts_l = np.append(
+                                    XXwY_cts_l, np.sum(weights_l[2] * Yl_cts_3 * C1[col])
                                 )
-                            XXwY_cts[col][l_index: r_index] = XwY_cts_l
-                            del Yl_cts_1, Yl_cts_2, Yl_cts_3, Yl_cts_4, XwY_cts_l, A_sum_l
+                            XXwY_cts[col][l_index: r_index] = XXwY_cts_l
+                            del Yl_cts_1, Yl_cts_2, Yl_cts_3, Yl_cts_4, XXwY_cts_l, A_sum_l
                         del weights_l
 
                     if params['update_a_movers'] and (params['d_X_diag_movers_A'] > 1):
@@ -3212,6 +3217,7 @@ class DynamicBLMModel:
                                     + S_sum_sq['43'] + S_sum_sq_l['43'],
                             ]
                             del S_sum_sq_l
+
                             for t in range(4):
                                 weights_cts[col][l][t] *= ((var_l_numerator[t] / var_l_denominator[t]) * eps_sq[l][t])
 
@@ -3258,7 +3264,6 @@ class DynamicBLMModel:
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S_cts for column {col!r}: {e}')
                         del XSwXS_cts[col], XSwE_cts[col]
-
                     del eps_sq
 
                 # print('A after:')
@@ -3324,7 +3329,6 @@ class DynamicBLMModel:
         Y3 = sdata['y3'].to_numpy()
         Y4 = sdata['y4'].to_numpy()
         G1 = sdata['g1'].to_numpy().astype(int, copy=False)
-        # G2 = sdata['g4'].to_numpy().astype(int, copy=False)
 
         ## Control variables ##
         C1 = {}
@@ -3352,13 +3356,11 @@ class DynamicBLMModel:
                 C1[col] = sdata.loc[:, subcol_1].to_numpy()
                 C2[col] = sdata.loc[:, subcol_2].to_numpy()
 
-        ## Sparse matrix representations ##
-        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
-        CC1 = {col: csc_matrix((np.ones(ni), (range(ni), C1[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
-        # CC2 = {col: csc_matrix((np.ones(ni), (range(ni), C2[col])), shape=(ni, controls_dict[col]['n'])) for col in cat_cols}
-        ## Dictionaries linking periods to vectors/matrices ##
+        # Dictionary linking periods to vectors
         C_dict = {period: C1 if period in self.first_periods else C2 for period in periods}
-        # CC_dict = {period: CC1 if period in self.first_periods else CC2 for period in periods}
+
+        # Transition probability matrix
+        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
 
         # Matrix of prior probabilities
         pk0 = self.pk0
@@ -3387,21 +3389,13 @@ class DynamicBLMModel:
                     Y1 - R12 * (Y2 - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma'])),
                     A['12'][l, G1] + A_sum['12'] + A_sum_l['12'],
                     var=\
-                        (S['12'][l, :] ** 2)[G1] + S_sum_sq['12'] + S_sum_sq_l['12'] # \
-                        # + (R12 ** 2) \
-                        #     * ((S['2ma'][l, :] ** 2)[G1] \
-                        #         + S_sum_sq['2ma'] \
-                        #         + S_sum_sq_l['2ma'])
+                        (S['12'][l, :] ** 2)[G1] + S_sum_sq['12'] + S_sum_sq_l['12']
                 )
                 lp4 = lognormpdf(
                     Y4 - R43 * (Y3 - (A['3ma'][l, G1] + A_sum['3ma'] + A_sum_l['3ma'])),
                     A['43'][l, G1] + A_sum['43'] + A_sum_l['43'],
                     var=\
-                        (S['43'][l, :] ** 2)[G1] + S_sum_sq['43'] + S_sum_sq_l['43'] # \
-                        # + (R43 ** 2) \
-                        #     * ((S['3ma'][l, :] ** 2)[G1] \
-                        #         + S_sum_sq['3ma'] \
-                        #         + S_sum_sq_l['3ma'])
+                        (S['43'][l, :] ** 2)[G1] + S_sum_sq['43'] + S_sum_sq_l['43']
                 )
 
                 lp_stable[:, l] = lp1 + lp4
@@ -3415,12 +3409,12 @@ class DynamicBLMModel:
                     lp1 = lognormpdf(
                         Y1[I] - R12 * (Y2[I] - A['2ma'][l, g1]),
                         A['12'][l, g1],
-                        var=S['12'][l, g1] ** 2 # + (R12 * S['2ma'][l, g1]) ** 2
+                        var=S['12'][l, g1] ** 2
                     )
                     lp4 = lognormpdf(
                         Y4[I] - R43 * (Y3[I] - A['3ma'][l, g1]),
                         A['43'][l, g1],
-                        var=S['43'][l, g1] ** 2 # + (R43 * S['3ma'][l, g1]) ** 2
+                        var=S['43'][l, g1] ** 2
                     )
 
                     lp_stable[I, l] = lp1 + lp4
@@ -3454,10 +3448,7 @@ class DynamicBLMModel:
                         Y3 - R32s * (Y2 - (A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s'])),
                         A['3s'][l, G1] + A_sum['3s'] + A_sum_l['3s'],
                         var=\
-                            (S['3s'][l, :] ** 2)[G1] + S_sum_sq['3s'] + S_sum_sq_l['3s'] # \
-                            # + (R32s ** 2) \
-                            #     * ((S['2s'][l, :] ** 2)[G1] \
-                            #         + S_sum_sq['2s'] + S_sum_sq_l['2s'])
+                            (S['3s'][l, :] ** 2)[G1] + S_sum_sq['3s'] + S_sum_sq_l['3s']
                     )
 
                     lp[:, l] = log_pk0[G1, l] + lp2 + lp3
@@ -3476,7 +3467,7 @@ class DynamicBLMModel:
                         lp3 = lognormpdf(
                             Y3[I] - R32s * (Y2[I] - A['2s'][l, g1]),
                             A['3s'][l, g1],
-                            var=S['3s'][l, g1] ** 2 # + (R32s * S['2s'][l, g1]) ** 2
+                            var=S['3s'][l, g1] ** 2
                         )
 
                         lp[I, l] = log_pk0[G1[I], l] + lp2 + lp3
@@ -3528,10 +3519,7 @@ class DynamicBLMModel:
                     XX32s[l * ni: (l + 1) * ni] = Y2 - A['2s'][l, G1] - A_sum['2s'] - A_sum_l['2s']
                     YY32s[l * ni: (l + 1) * ni] = Y3 - A['3s'][l, G1] - A_sum['3s'] - A_sum_l['3s']
                     SS32s = ( \
-                        (S['3s'][l, :] ** 2)[G1] + S_sum_sq['3s'] + S_sum_sq_l['3s']) # \
-                        # + (R32s ** 2) \
-                        #     * ((S['2s'][l, :] ** 2)[G1] \
-                        #         + S_sum_sq['2s'] + S_sum_sq_l['2s']))
+                        (S['3s'][l, :] ** 2)[G1] + S_sum_sq['3s'] + S_sum_sq_l['3s'])
                     WW32s[l * ni: (l + 1) * ni] = qi[:, l] / np.sqrt(SS32s)
 
                 ## OLS ##
@@ -3542,22 +3530,11 @@ class DynamicBLMModel:
                 del XX32s, YY32s, SS32s, WW32s, Xw, XwX, XwY
             elif params['update_a_stayers'] or params['update_s_stayers']:
                 # Constrained OLS (source: https://scaron.info/blog/quadratic-programming-in-python.html)
-
                 # The regression has 2 * nk parameters and 2 * ni rows
                 # To avoid duplicating the data 2 * nl times, we construct X'X and X'Y by looping over nl
                 # We also note that X'X is block diagonal with nl matrices of dimension (2 * nk, 2 * nk)
 
-                ## General ##
-                # Shift between periods
-                ts = nl * nk
-                # XX
-                XX = lil_matrix((2 * ni, len(periods_update) * nk))
-                # X'X (weighted)
-                XXwXX = np.zeros((len(periods_update) * ts, len(periods_update) * ts))
-                if params['update_a_stayers']:
-                    XXwY = np.zeros(shape=len(periods_update) * ts)
-
-                ## Compute X terms ##
+                ### Initialize X terms ###
                 # X =
                 # +---------+---------+---------------+---------+--------------+--------------+
                 # | A['12'] | A['43'] | A['2s']       | A['3s'] |   A['2ma']   |   A['3ma']   |
@@ -3571,50 +3548,35 @@ class DynamicBLMModel:
                 # |    0    |   GG1   | 0             | 0       |       0      | -(R43 * GG1) |
                 # +---------+---------+---------------+---------+--------------+--------------+
 
-                # Y2 = A['2s']
-                XX[0 * ni: 1 * ni, 0 * nk: 1 * nk] = GG1
-                # Y3 = A['3s'] + R32s * (Y2 - A['2s'])
-                XX[1 * ni: 2 * ni, 0 * nk: 1 * nk] = -(R32s * GG1)
-                XX[1 * ni: 2 * ni, 1 * nk: 2 * nk] = GG1
-                XX = XX.tocsc()
+                ### General ###
+                # Shift between periods
+                ts = nl * nk
+                if params['update_a_stayers']:
+                    XXwXX = np.zeros((len(periods_update) * ts, len(periods_update) * ts))
+                    XXwY = np.zeros(shape=len(periods_update) * ts)
+                if params['update_s_stayers']:
+                    XSwXS = np.zeros(len(periods_update) * ts)
+                    XSwE = np.zeros(shape=len(periods_update) * ts)
 
-                ## Categorical ##
+                ### Categorical ###
                 if len(cat_cols) > 0:
+                    # Shift between periods
                     ts_cat = {col: nl * col_dict['n'] for col, col_dict in cat_dict.items()}
-                    # XX_cat
-                    XX_cat = {col: lil_matrix((2 * ni, len(periods_update) * cat_dict[col]['n'])) for col in cat_cols}
-                    # XX_cat'XX_cat (weighted)
-                    XXwXX_cat = {col: np.zeros((len(periods_update) * col_ts, len(periods_update) * col_ts)) for col, col_ts in ts_cat.items()}
                     if params['update_a_stayers']:
+                        XXwXX_cat = {col: np.zeros((len(periods_update) * col_ts, len(periods_update) * col_ts)) for col, col_ts in ts_cat.items()}
                         XXwY_cat = {col: np.zeros(shape=len(periods_update) * col_ts) for col, col_ts in ts_cat.items()}
-
-                    for col in cat_cols:
-                        ## Compute XX_cat terms ##
-                        col_n = cat_dict[col]['n']
-                        # Y2 = A['2s']
-                        XX_cat[col][0 * ni: 1 * ni, 0 * col_n: 1 * col_n] = CC1[col]
-                        # Y3 = A['3s'] + R32s * (Y2 - A['2s'])
-                        XX_cat[col][1 * ni: 2 * ni, 0 * col_n: 1 * col_n] = -(R32s * CC1[col])
-                        XX_cat[col][1 * ni: 2 * ni, 1 * col_n: 2 * col_n] = CC1[col]
-                        XX_cat[col] = XX_cat[col].tocsc()
+                    if params['update_s_stayers']:
+                        XSwXS_cat = {col: np.zeros(shape=len(periods_update) * col_ts) for col, col_ts in ts_cat.items()}
+                        XSwE_cat = {col: np.zeros(shape=len(periods_update) * col_ts) for col, col_ts in ts_cat.items()}
 
                 ### Continuous ###
                 if len(cts_cols) > 0:
-                    # XX_cts
-                    XX_cts = {col: lil_matrix((2 * ni, len(periods_update))) for col in cts_cols}
-                    # XX_cts'XX_cts (weighted)
-                    XXwXX_cts = {col: np.zeros((len(periods_update) * nl, len(periods_update) * nl)) for col in cts_cols}
                     if params['update_a_stayers']:
+                        XXwXX_cts = {col: np.zeros((len(periods_update) * nl, len(periods_update) * nl)) for col in cts_cols}
                         XXwY_cts = {col: np.zeros(shape=len(periods_update) * nl) for col in cts_cols}
-
-                    for col in cts_cols:
-                        ## Compute XX_cts terms ##
-                        # Y2 = A['2s']
-                        XX_cts[col][0 * ni: 1 * ni, 0] = C1[col]
-                        # Y3 = A['3s'] + R32s * (Y2 - A['2s'])
-                        XX_cts[col][1 * ni: 2 * ni, 0] = -(R32s * C1[col])
-                        XX_cts[col][1 * ni: 2 * ni, 1] = C1[col]
-                        XX_cts[col] = XX_cts[col].tocsc()
+                    if params['update_s_stayers']:
+                        XSwXS_cts = {col: np.zeros(shape=len(periods_update) * nl) for col in cts_cols}
+                        XSwE_cts = {col: np.zeros(shape=len(periods_update) * nl) for col in cts_cols}
 
                 ## Update A ##
                 if params['update_s_stayers']:
@@ -3624,47 +3586,63 @@ class DynamicBLMModel:
                     l_index, r_index = l * nk * len(periods_update), (l + 1) * nk * len(periods_update)
 
                     ## Compute weights_l ##
-                    var_l = np.concatenate(
-                        [
-                            (S['2s'][l, :] ** 2)[G1],
-                            (S['3s'][l, :] ** 2)[G1] # + (R32s * S['2s'][l, :]) ** 2)[G1]
-                        ]
-                    )
-                    weights_l = np.tile(qi[:, l], 2) / np.sqrt(var_l)
-                    del var_l
+                    weights_l = [
+                        qi[:, l] / S['2s'][l, G1],
+                        qi[:, l] / S['3s'][l, G1]
+                    ]
+
+                    ## Compute GwG terms ##
+                    G1W1G1 = np.diag(np.bincount(G1, weights_l[0]))
+                    G1W2G1 = np.diag(np.bincount(G1, weights_l[1]))
+
                     if params['update_s_stayers']:
+                        ## Compute XSwXS_l ##
                         weights.append(weights_l)
+                        l_index_S = l * nk * len(periods_update)
 
-                    ## Compute XXw_l ##
-                    XXw_l = DxSP(weights_l, XX).T
-                    del weights_l
-
-                    ## Compute XwX_l ##
-                    XXwXX[l_index: r_index, l_index: r_index] = (XXw_l @ XX).todense()
+                        XSwXS[l_index_S + 0 * nk: l_index_S + 1 * nk] = \
+                            np.diag(G1W1G1)
+                        XSwXS[l_index_S + 1 * nk: l_index_S + 2 * nk] = \
+                            np.diag(G1W2G1)
 
                     if params['update_a_stayers']:
-                        Y_l = np.zeros(2 * ni)
+                        ## Compute XXwXX_l ##
+                        XXwXX[l_index: r_index, l_index: r_index] = np.vstack(
+                            [
+                                np.hstack([G1W1G1 + (R32s ** 2) * G1W2G1, - R32s * G1W2G1]),
+                                np.hstack([- R32s * G1W2G1, G1W2G1])
+                            ]
+                        )
+                    del G1W1G1, G1W2G1
 
+                    if params['update_a_stayers']:
                         # Update A_sum to account for worker-interaction terms
                         A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False, periods=periods)
 
-                        # Y2_l
-                        Y_l[0 * ni: 1 * ni] = \
+                        # Yl_2
+                        Yl_2 = \
                             Y2 \
                                 - (A_sum['2s'] + A_sum_l['2s'])
-                        # Y3_l
-                        Y_l[1 * ni: 2 * ni] = \
+                        # Yl_3
+                        Yl_3 = \
                             Y3 \
                                 - (A_sum['3s'] + A_sum_l['3s']) \
                                 - R32s * (Y2 - (A_sum['2s'] + A_sum_l['2s']))
 
                         ## Compute XXwY_l ##
-                        XXwY[l_index: r_index] = XXw_l @ Y_l
-                        del Y_l, A_sum_l
-                    del XXw_l
+                        XXwY[l_index: r_index] = np.concatenate(
+                            [
+                                np.bincount(G1, weights_l[0] * Yl_2 - R32s * weights_l[1] * Yl_3),
+                                np.bincount(G1, weights_l[1] * Yl_3)
+                            ]
+                        )
+                        del Yl_2, Yl_3, A_sum_l
+                    del weights_l
 
-                if params['d_X_diag_stayers'] > 1:
-                    XXwXX += (params['d_X_diag_stayers'] - 1) * np.eye(XXwXX.shape[0])
+                if params['update_a_stayers'] and (params['d_X_diag_stayers_A'] > 1):
+                    XXwXX += (params['d_X_diag_stayers_A'] - 1) * np.eye(XXwXX.shape[0])
+                if params['update_s_stayers'] and (params['d_X_diag_stayers_S'] > 1):
+                    XSwXS += (params['d_X_diag_stayers_S'] - 1)
 
                 # print('A before:')
                 # print(A)
@@ -3719,32 +3697,40 @@ class DynamicBLMModel:
 
                         ## Compute weights_l ##
                         if cat_dict[col]['worker_type_interaction']:
-                            S_l_dict = {period: (S_cat[col][period][l, :] ** 2)[C_dict[period][col]] for period in periods_update}
+                            S_l_dict = {period: S_cat[col][period][l, C_dict[period][col]] for period in periods_update}
                         else:
-                            S_l_dict = {period: (S_cat[col][period] ** 2)[C_dict[period][col]] for period in periods_update}
+                            S_l_dict = {period: S_cat[col][period][C_dict[period][col]] for period in periods_update}
 
-                        var_l = np.concatenate(
-                            [
-                                S_l_dict['2s'],
-                                S_l_dict['3s'] # + (R32s ** 2) * S_l_dict['2s']
-                            ]
-                        )
-                        del S_l_dict
-                        weights_l = np.tile(qi[:, l], 2) / np.sqrt(var_l)
-                        del var_l
+                        weights_l = [
+                            qi[:, l] / S_l_dict['2s'],
+                            qi[:, l] / S_l_dict['3s']
+                        ]
+
+                        ## Compute CwC terms ##
+                        C1W1C1 = np.diag(np.bincount(C1[col], weights_l[0]))
+                        C1W2C1 = np.diag(np.bincount(C1[col], weights_l[1]))
+
                         if params['update_s_stayers']:
+                            ## Compute XSwXS_cat_l ##
                             weights_cat[col].append(weights_l)
+                            l_index_S = l * col_n * len(periods_update)
 
-                        ## Compute XXw_cat_l ##
-                        XXw_cat_l = DxSP(weights_l, XX_cat[col]).T
-                        del weights_l
-
-                        ## Compute XXwXX_cat_l ##
-                        XXwXX_cat[col][l_index: r_index, l_index: r_index] = (XXw_cat_l @ XX_cat[col]).todense()
+                            XSwXS_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
+                                np.diag(C1W1C1)
+                            XSwXS_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
+                                np.diag(C1W2C1)
 
                         if params['update_a_stayers']:
-                            Y_cat_l = np.zeros(2 * ni)
+                            ## Compute XXwXX_cat_l ##
+                            XXwXX_cat[col][l_index: r_index, l_index: r_index] = np.vstack(
+                                [
+                                    np.hstack([C1W1C1 + (R32s ** 2) * C1W2C1, - R32s * C1W2C1]),
+                                    np.hstack([- R32s * C1W2C1, C1W2C1])
+                                ]
+                            )
+                        del C1W1C1, C1W2C1
 
+                        if params['update_a_stayers']:
                             # Update A_sum to account for worker-interaction terms
                             A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False, periods=periods_update)
                             if cat_dict[col]['worker_type_interaction']:
@@ -3752,23 +3738,30 @@ class DynamicBLMModel:
                                 for period in periods_update:
                                     A_sum_l[period] -= A_cat[col][period][l, C_dict[period][col]]
 
-                            # Y2_cat_l
-                            Y_cat_l[0 * ni: 1 * ni] = \
+                            # Yl_cat_2
+                            Yl_cat_2 = \
                                 Y2 \
                                     - (A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s'])
-                            # Y3_cat_l
-                            Y_cat_l[1 * ni: 2 * ni] = \
+                            # Yl_cat_3
+                            Yl_cat_3 = \
                                 Y3 \
                                     - (A['3s'][l, G1] + A_sum['3s'] + A_sum_l['3s']) \
                                     - R32s * (Y2 - (A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s']))
 
-                            ## Compute XwY_cat_l ##
-                            XXwY_cat[col][l_index: r_index] = XXw_cat_l @ Y_cat_l
-                            del Y_cat_l, A_sum_l
-                        del XXw_cat_l
+                            ## Compute XXwY_cat_l ##
+                            XXwY_cat[col][l_index: r_index] = np.concatenate(
+                                [
+                                    np.bincount(C1[col], weights_l[0] * Yl_cat_2 - R32s * weights_l[1] * Yl_cat_3),
+                                    np.bincount(C1[col], weights_l[1] * Yl_cat_3)
+                                ]
+                            )
+                            del Yl_cat_2, Yl_cat_3, A_sum_l
+                        del weights_l
 
-                    if params['d_X_diag_stayers'] > 1:
-                        XXwXX_cat[col] += (params['d_X_diag_stayers'] - 1) * np.eye(XXwXX_cat[col].shape[0])
+                    if params['update_a_stayers'] and (params['d_X_diag_stayers_A'] > 1):
+                        XXwXX_cat[col] += (params['d_X_diag_stayers_A'] - 1) * np.eye(XXwXX_cat[col].shape[0])
+                    if params['update_a_stayers'] and (params['d_X_diag_stayers_S'] > 1):
+                        XSwXS_cat[col] += (params['d_X_diag_stayers_S'] - 1)
 
                     # We solve the system to get all the parameters (use dense solver)
                     if params['update_a_stayers']:
@@ -3815,32 +3808,38 @@ class DynamicBLMModel:
 
                         ## Compute weights_l ##
                         if cts_dict[col]['worker_type_interaction']:
-                            S_l_dict = {period: S_cts[col][period][l] ** 2 for period in periods_update}
+                            S_l_dict = {period: S_cts[col][period][l] for period in periods_update}
                         else:
-                            S_l_dict = {period: S_cts[col][period] ** 2 for period in periods_update}
+                            S_l_dict = {period: S_cts[col][period] for period in periods_update}
 
-                        var_l = np.concatenate(
-                            [
-                                S_l_dict['2s'],
-                                S_l_dict['3s'] # + (R32s ** 2) * S_l_dict['2s']
-                            ]
-                        )
-                        del S_l_dict
-                        weights_l = np.tile(qi[:, l], 2) / np.repeat(np.sqrt(var_l), ni)
-                        del var_l
+                        weights_l = [
+                            qi[:, l] / S_l_dict['2s'],
+                            qi[:, l] / S_l_dict['3s']
+                        ]
+
+                        ## Compute CwC terms ##
+                        C1W1C1 = np.sum(C1[col] * weights_l[0])
+                        C1W2C1 = np.sum(C1[col] * weights_l[1])
+
                         if params['update_s_stayers']:
+                            ## Compute XSwXS_cts_l ##
                             weights_cts[col].append(weights_l)
+                            l_index_S = l * len(periods_update)
 
-                        ## Compute XXw_cts_l ##
-                        XXw_cts_l = DxSP(weights_l, XX_cts[col]).T
-                        del weights_l
-
-                        ## Compute XXwXX_cts_l ##
-                        XXwXX_cts[col][l_index: r_index, l_index: r_index] = (XXw_cts_l @ XX_cts[col]).todense()
+                            XSwXS_cts[l_index + 0] = C1W1C1
+                            XSwXS_cts[l_index + 1] = C1W2C1
 
                         if params['update_a_stayers']:
-                            Y_cts_l = np.zeros(2 * ni)
+                            ## Compute XXwXX_cts_l ##
+                            XXwXX_cts[col][l_index: r_index, l_index: r_index] = np.array(
+                                [
+                                    [C1W1C1 + (R32s ** 2) * C1W2C1, - R32s * C1W2C1],
+                                    [- R32s * C1W2C1, C1W2C1]
+                                ]
+                            )
+                        del C1W1C1, C1W2C1
 
+                        if params['update_a_stayers']:
                             # Update A_sum to account for worker-interaction terms
                             A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False, periods=periods_update)
                             if cts_dict[col]['worker_type_interaction']:
@@ -3848,23 +3847,30 @@ class DynamicBLMModel:
                                 for period in periods_update:
                                     A_sum_l[period] -= A_cts[col][period][l] * C_dict[period][col]
 
-                            # Y2_cts_l
-                            Y_cts_l[0 * ni: 1 * ni] = \
+                            # Yl_cts_2
+                            Yl_cts_2 = \
                                 Y2 \
                                     - (A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s'])
-                            # Y3_cts_l
-                            Y_cts_l[1 * ni: 2 * ni] = \
+                            # Yl_cts_3
+                            Yl_cts_3 = \
                                 Y3 \
                                     - (A['3s'][l, G1] + A_sum['3s'] + A_sum_l['3s']) \
                                     - R32s * (Y2 - (A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s']))
 
-                            ## Compute XwY_cts_l ##
-                            XXwY_cts[col][l_index: r_index] = XXw_cts_l @ Y_cts_l
-                            del Y_cts_l, A_sum_l
-                        del XXw_cts_l
+                            ## Compute XXwY_cts_l ##
+                            XXwY_cts[col][l_index: r_index] = np.array(
+                                [
+                                    np.sum(C1[col] * (weights_l[0] * Yl_cts_2 - R32s * weights_l[1] * Yl_cts_3)),
+                                    np.sum(C1[col] * weights_l[1] * Yl_cts_3)
+                                ]
+                            )
+                            del Yl_cts_2, Yl_cts_3, A_sum_l
+                        del weights_l
 
-                    if params['d_X_diag_stayers'] > 1:
-                        XXwXX_cts[col] += (params['d_X_diag_stayers'] - 1) * np.eye(XXwXX_cts[col].shape[0])
+                    if params['update_a_stayers'] and (params['d_X_diag_stayers_A'] > 1):
+                        XXwXX_cts[col] += (params['d_X_diag_stayers_A'] - 1) * np.eye(XXwXX_cts[col].shape[0])
+                    if params['update_s_stayers'] and (params['d_X_diag_stayers_S'] > 1):
+                        XSwXS_cts[col] += (params['d_X_diag_stayers_S'] - 1)
 
                     # We solve the system to get all the parameters (use dense solver)
                     if params['update_a_stayers']:
@@ -3898,21 +3904,7 @@ class DynamicBLMModel:
 
                 if params['update_s_stayers']:
                     ## Update the variances ##
-                    if iter == 0:
-                        XSwXS = np.zeros(len(periods_update) * ts)
-                        XSwE = np.zeros(shape=len(periods_update) * ts)
-
-                        ## Categorical ##
-                        if len(cat_cols) > 0:
-                            XSwXS_cat = {col: np.zeros(shape=len(periods_update) * col_ts) for col, col_ts in ts_cat.items()}
-                            XSwE_cat = {col: np.zeros(shape=len(periods_update) * col_ts) for col, col_ts in ts_cat.items()}
-
-                        ## Continuous ##
-                        if len(cts_cols) > 0:
-                            XSwXS_cts = {col: np.zeros(shape=len(periods_update) * nl) for col in cts_cols}
-                            XSwE_cts = {col: np.zeros(shape=len(periods_update) * nl) for col in cts_cols}
-
-                    ## Residuals ##
+                    # Residuals
                     eps_sq = []
 
                     ## Update S ##
@@ -3926,59 +3918,50 @@ class DynamicBLMModel:
                             A_sum_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_S=False, periods=periods)
 
                         ## Residuals ##
-                        eps_l_sq = np.zeros(2 * ni)
-                        # eps_2_l_sq
-                        eps_l_sq[0 * ni: 1 * ni] = \
+                        eps_l_sq = []
+                        # eps_l_sq_2
+                        eps_l_sq.append(
                             (Y2 \
                                 - (A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s'])
                                 ) ** 2
-                        # eps_3_l_sq
-                        eps_l_sq[1 * ni: 2 * ni] = \
+                        )
+                        # eps_l_sq_3
+                        eps_l_sq.append(
                             (Y3 \
                                 - (A['3s'][l, G1] + A_sum['3s'] + A_sum_l['3s']) \
                                 - R32s * (Y2 - (A['2s'][l, G1] + A_sum['2s'] + A_sum_l['2s']))
                                 ) ** 2
+                        )
                         eps_sq.append(eps_l_sq)
                         del A_sum_l, eps_l_sq
 
-                        ## XSwXS and XSwE terms ##
+                        ## XSwE ##
                         l_index, r_index = l * nk * len(periods_update), (l + 1) * nk * len(periods_update)
 
-                        ## First, XSwXS ##
-                        XSwXS[l_index + 0 * nk: l_index + 1 * nk] = \
-                            np.bincount(G1, weights=weights[l][0 * ni: 1 * ni])
-                        XSwXS[l_index + 1 * nk: l_index + 2 * nk] = \
-                            np.bincount(G1, weights=weights[l][1 * ni: 2 * ni])
-
-                        ## Second, XSwE ##
-                        weights[l] *= eps_sq[l]
+                        weights[l][0] *= eps_sq[l][0]
+                        weights[l][1] *= eps_sq[l][1]
 
                         if any_controls:
                             ## Account for other variables' contribution to variance ##
-                            var_l_numerator = np.concatenate(
-                                [
-                                    (S['2s'][l, :] ** 2)[G1],
-                                    (S['3s'][l, :] ** 2)[G1] # + (R32s * S['2s'][l, :]) ** 2)[G1]
-                                ]
-                            )
-                            var_l_denominator = np.concatenate(
-                                [
-                                    (S['2s'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['2s'] + S_sum_sq_l['2s'],
-                                    (S['3s'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['3s'] + S_sum_sq_l['3s'] # \
-                                        # + (R32s ** 2) \
-                                        #     * ((S['2s'][l, :] ** 2)[G1] \
-                                        #         + S_sum_sq['2s'] + S_sum_sq_l['2s'])
-                                ]
-                            )
+                            var_l_numerator = [
+                                (S['2s'][l, :] ** 2)[G1],
+                                (S['3s'][l, :] ** 2)[G1]
+                            ]
+                            var_l_denominator = [
+                                (S['2s'][l, :] ** 2)[G1] \
+                                    + S_sum_sq['2s'] + S_sum_sq_l['2s'],
+                                (S['3s'][l, :] ** 2)[G1] \
+                                    + S_sum_sq['3s'] + S_sum_sq_l['3s']
+                            ]
                             del S_sum_sq_l
-                            weights[l] *= (var_l_numerator / var_l_denominator)
+
+                            weights[l][0] *= (var_l_numerator[0] / var_l_denominator[0])
+                            weights[l][1] *= (var_l_numerator[1] / var_l_denominator[1])
 
                         XSwE[l_index + 0 * nk: l_index + 1 * nk] = \
-                            np.bincount(G1, weights=weights[l][0 * ni: 1 * ni])
+                            np.bincount(G1, weights=weights[l][0])
                         XSwE[l_index + 1 * nk: l_index + 2 * nk] = \
-                            np.bincount(G1, weights=weights[l][1 * ni: 2 * ni])
+                            np.bincount(G1, weights=weights[l][1])
 
                         weights[l] = 0
                     del weights
@@ -4008,16 +3991,9 @@ class DynamicBLMModel:
                             # Update S_sum_sq to account for worker-interaction terms
                             S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_A=False, compute_S=True, periods=periods)
 
-                            ### XSwXS_cat and XSwE_cat terms ###
+                            ### XSwE_cat ###
                             l_index, r_index = l * col_n * len(periods_update), (l + 1) * col_n * len(periods_update)
 
-                            ### First, XSwXS_cat ###
-                            XSwXS_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
-                                np.bincount(CC1[col], weights=weights_cat[col][l][0 * ni: 1 * ni])
-                            XSwXS_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
-                                np.bincount(CC1[col], weights=weights_cat[col][l][1 * ni: 2 * ni])
-
-                            ### Second, XSwE_cat ###
                             ## Compute var_l_cat ##
                             if cat_dict[col]['worker_type_interaction']:
                                 S_l_dict = {period: (S_cat[col][period][l, :] ** 2)[C_dict[period][col]] for period in periods_update}
@@ -4025,30 +4001,27 @@ class DynamicBLMModel:
                                 S_l_dict = {period: (S_cat[col][period] ** 2)[C_dict[period][col]] for period in periods_update}
 
                             ## Account for other variables' contribution to variance ##
-                            var_l_numerator = np.concatenate(
-                                [
-                                    S_l_dict['2s'],
-                                    S_l_dict['3s'] # + (R32s ** 2) * S_l_dict['2s']
-                                ]
-                            )
+                            var_l_numerator = [
+                                S_l_dict['2s'],
+                                S_l_dict['3s']
+                            ]
                             var_l_denominator = np.concatenate(
                                 [
                                     (S['2s'][l, :] ** 2)[G1] \
                                         + S_sum_sq['2s'] + S_sum_sq_l['2s'],
                                     (S['3s'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['3s'] + S_sum_sq_l['3s'] # \
-                                        # + (R32s ** 2) \
-                                        #     * ((S['2s'][l, :] ** 2)[G1] \
-                                        #         + S_sum_sq['2s'] + S_sum_sq_l['2s'])
+                                        + S_sum_sq['3s'] + S_sum_sq_l['3s']
                                 ]
                             )
                             del S_sum_sq_l
-                            weights_cat[col][l] *= ((var_l_numerator / var_l_denominator) * eps_sq[l])
+
+                            weights_cat[col][l][0] *= ((var_l_numerator[0] / var_l_denominator[0]) * eps_sq[l][0])
+                            weights_cat[col][l][1] *= ((var_l_numerator[1] / var_l_denominator[1]) * eps_sq[l][1])
 
                             XSwE_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
-                                np.bincount(CC1[col], weights=weights_cat[col][l][0 * ni: 1 * ni])
+                                np.bincount(C1[col], weights=weights_cat[col][l][0])
                             XSwE_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
-                                np.bincount(CC1[col], weights=weights_cat[col][l][1 * ni: 2 * ni])
+                                np.bincount(C1[col], weights=weights_cat[col][l][1])
 
                             weights_cat[col][l] = 0
                         del weights_cat[col]
@@ -4090,16 +4063,9 @@ class DynamicBLMModel:
                             # Update S_sum_sq to account for worker-interaction terms
                             S_sum_sq_l = self._sum_by_nl_l(ni=ni, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, compute_A=False, compute_S=True, periods=periods)
 
-                            ### XSwXS_cts and XSwE_cts terms ###
+                            ### XSwE_cts ###
                             l_index, r_index = l * len(periods_update), (l + 1) * len(periods_update)
 
-                            ### First, XSwXS_cts ###
-                            XSwXS_cts[l_index + 0] = \
-                                np.sum(C1[col] * weights_cts[col][l][0 * ni: 1 * ni])
-                            XSwXS_cts[l_index + 1] = \
-                                np.sum(C1[col] * weights_cts[col][l][1 * ni: 2 * ni])
-
-                            ### Second, XSwE_cts ###
                             ## Compute var_l_cts ##
                             if cts_dict[col]['worker_type_interaction']:
                                 S_l_dict = {period: S_cts[col][period][l] ** 2 for period in periods_update}
@@ -4107,31 +4073,26 @@ class DynamicBLMModel:
                                 S_l_dict = {period: S_cts[col][period] ** 2 for period in periods_update}
 
                             ## Account for other variables' contribution to variance ##
-                            var_l_numerator = np.concatenate(
-                                [
-                                    S_l_dict['2s'],
-                                    S_l_dict['3s'] # + (R32s ** 2) * S_l_dict['2s']
-                                ]
-                            )
-                            var_l_denominator = np.concatenate(
-                                [
-                                    (S['2s'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['2s'] + S_sum_sq_l['2s'],
-                                    (S['3s'][l, :] ** 2)[G1] \
-                                        + S_sum_sq['3s'] + S_sum_sq_l['3s'] # \
-                                        # + (R32s ** 2) \
-                                        #     * ((S['2s'][l, :] ** 2)[G1] \
-                                        #         + S_sum_sq['2s'] + S_sum_sq_l['2s'])
-                                ]
-                            )
+                            var_l_numerator = [
+                                S_l_dict['2s'],
+                                S_l_dict['3s']
+                            ]
+                            var_l_denominator = [
+                                (S['2s'][l, :] ** 2)[G1] \
+                                    + S_sum_sq['2s'] + S_sum_sq_l['2s'],
+                                (S['3s'][l, :] ** 2)[G1] \
+                                    + S_sum_sq['3s'] + S_sum_sq_l['3s']
+                            ]
                             del S_sum_sq_l
-                            weights_cts[col][l] *= ((var_l_numerator / var_l_denominator) * eps_sq[l])
+
+                            weights_cts[col][l][0] *= ((var_l_numerator[0] / var_l_denominator[0]) * eps_sq[l][0])
+                            weights_cts[col][l][1] *= ((var_l_numerator[1] / var_l_denominator[1]) * eps_sq[l][1])
 
                             # NOTE: take absolute value
                             XSwE_cts[l_index + 0] = \
-                                np.abs(np.sum(C1[col] * weights_cts[col][l][0 * ni: 1 * ni]))
+                                np.abs(np.sum(C1[col] * weights_cts[col][l][0]))
                             XSwE_cts[l_index + 1] = \
-                                np.abs(np.sum(C1[col] * weights_cts[col][l][1 * ni: 2 * ni]))
+                                np.abs(np.sum(C1[col] * weights_cts[col][l][1]))
 
                             weights_cts[col][l] = 0
                         del weights_cts[col]
@@ -4167,6 +4128,7 @@ class DynamicBLMModel:
                             if params['verbose'] in [2, 3]:
                                 print(f'Passing S_cts for column {col!r}: {e}')
                         del XSwXS_cts[col], XSwE_cts[col]
+                    del eps_sq
 
                 # print('A after:')
                 # print(A)
