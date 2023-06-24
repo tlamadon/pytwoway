@@ -830,7 +830,7 @@ def rho_init(sdata, rho_0=(0.6, 0.6, 0.6), weights=None, diff=False):
     # Run _var_stayers with optimal rho
     return _var_stayers(sdata, *rho_optim, weights=weights, diff=diff)
 
-def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, reallocate_jointly=True, reallocate_period='first', rng=None):
+def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, reallocate_jointly=True, reallocate_period='first', simulate_wages=True, rng=None):
     '''
     Using data and estimated dynamic BLM parameters, simulate worker types and wages.
 
@@ -843,10 +843,11 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
         reallocate (bool): if True, draw worker type proportions independently of firm type; if False, uses worker type proportions that are conditional on firm type
         reallocate_jointly (bool): if True, worker type proportions take the average over movers and stayers (i.e. all workers use the same type proportions); if False, consider movers and stayers separately
         reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
+        simulate_wages (bool): if True, also simulate wages
         rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
     Returns:
-        (tuple of NumPy Arrays): (yj --> tuple of wages for movers, where element gives that period's wages; ys --> tuple of wages for movers, where element gives that period's wages; Lm --> vector of mover types; Ls --> vector of stayer types)
+        (tuple of NumPy Arrays): (yj --> tuple of wages for movers, where element gives that period's wages; ys --> tuple of wages for movers, where element gives that period's wages; Lm --> vector of mover types; Ls --> vector of stayer types) if simulating wages; otherwise, (Lm, Ls)
     '''
     if rng is None:
         rng = np.random.default_rng(None)
@@ -942,109 +943,18 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
             # Draw worker types
             Lm[rows_kk] = rng.choice(worker_types, size=ni, replace=True, p=pk1[jj, :])
 
-    A_sum = {period:
-                A[period][Lm, gj[:, periods_movers_dict[period]]]
-                    if period[-1] != 'b' else
-                A[period][gj[:, periods_movers_dict[period]]]
-            for period in periods_movers}
-    S_sum_sq = {period:
-                    S[period][Lm, gj[:, periods_movers_dict[period]]] ** 2
+    if simulate_wages:
+        A_sum = {period:
+                    A[period][Lm, gj[:, periods_movers_dict[period]]]
                         if period[-1] != 'b' else
-                    S[period][gj[:, periods_movers_dict[period]]] ** 2
+                    A[period][gj[:, periods_movers_dict[period]]]
                 for period in periods_movers}
+        S_sum_sq = {period:
+                        S[period][Lm, gj[:, periods_movers_dict[period]]] ** 2
+                            if period[-1] != 'b' else
+                        S[period][gj[:, periods_movers_dict[period]]] ** 2
+                    for period in periods_movers}
 
-    #### Simulate control variable wages ####
-    for i, col in enumerate(cat_cols + cts_cols):
-        # Get subcolumns associated with col
-        subcols = to_list(jdata.col_reference_dict[col])
-        n_subcols = len(subcols)
-        if n_subcols == 1:
-            # If column is constant over time
-            subcols = [subcols[0], subcols[0]]
-        elif n_subcols == 4:
-            # If column can change over time
-            subcols = [subcols[0], subcols[3]]
-        else:
-            raise NotImplementedError(f'Column names must have either one or four associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
-        if i < len(cat_cols):
-            ### Categorical ###
-            if controls_dict[col]['worker_type_interaction']:
-                ## Worker-interaction ##
-                for period in periods_movers:
-                    subcol = periods_movers_dict[period]
-                    if period[-1] != 'b':
-                        A_sum[period] += A_cat[col][period][Lm, jdata.loc[:, subcol]]
-                        S_sum_sq[period] += S_cat[col][period][Lm, jdata.loc[:, subcol]] ** 2
-                    else:
-                        A_sum[period] += A_cat[col][period][jdata.loc[:, subcol]]
-                        S_sum_sq[period] += S_cat[col][period][jdata.loc[:, subcol]] ** 2
-            else:
-                ## Non-worker-interaction ##
-                for period in periods_movers:
-                    subcol = periods_movers_dict[period]
-                    A_sum[period] += A_cat[col][period][jdata.loc[:, subcol]]
-                    S_sum_sq[period] += S_cat[col][period][jdata.loc[:, subcol]] ** 2
-        else:
-            ### Continuous ###
-            if controls_dict[col]['worker_type_interaction']:
-                ## Worker-interaction ##
-                for period in periods_movers:
-                    subcol = periods_movers_dict[period]
-                    if period[-1] != 'b':
-                        A_sum[period] += A_cts[col][period][Lm] * jdata.loc[:, subcol]
-                        S_sum_sq[period] += S_cts[col][period][Lm] ** 2
-                    else:
-                        A_sum[period] += A_cts[col][period] * jdata.loc[:, subcol]
-                        S_sum_sq[period] += S_cts[col][period] ** 2
-            else:
-                ## Non-worker-interaction ##
-                for period in periods_movers:
-                    subcol = periods_movers_dict[period]
-                    A_sum[period] += A_cts[col][period] * jdata.loc[:, subcol]
-                    S_sum_sq[period] += S_cts[col][period] ** 2
-
-    Y2 = rng.normal( \
-        loc=A_sum['2ma'] + A_sum['2mb'], \
-        scale=np.sqrt(S_sum_sq['2ma']), \
-        size=nmi) # scale=np.sqrt(S_sum_sq['2ma'] + S_sum_sq['2mb']), \
-    Y1 = rng.normal( \
-        loc=A_sum['12'] + R12 * (Y2 - A_sum['2ma']), \
-        scale=np.sqrt(S_sum_sq['12']), \
-        size=nmi) # scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']), \
-    Y3 = rng.normal( \
-        loc=A_sum['3ma'] + A_sum['3mb'] + R32m * (Y2 - A_sum['2ma'] - A_sum['2mb']), \
-        scale=np.sqrt(S_sum_sq['3ma']), \
-        size=nmi) # scale=np.sqrt(S_sum_sq['3ma'] + S_sum_sq['3mb'] + (R32m ** 2) * (S_sum_sq['2ma'] + S_sum_sq['2mb'])), \
-    Y4 = rng.normal( \
-        loc=A_sum['43'] + R43 * (Y3 - A_sum['3ma']), \
-        scale=np.sqrt(S_sum_sq['43']), \
-        size=nmi) # scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']), \
-    yj = (Y1, Y2, Y3, Y4)
-    del A_sum, S_sum_sq, Y1, Y2, Y3, Y4
-
-    ## Stayers ##
-    Ls = np.zeros(shape=len(sdata), dtype=int)
-    for k in range(nk):
-        ## Iterate over all firm types a worker can work at ##
-        # Find movers who work at this firm type
-        rows_k = np.where(gs == k)[0]
-        ni = len(rows_k)
-
-        # Draw worker types
-        Ls[rows_k] = rng.choice(worker_types, size=ni, replace=True, p=pk0[k, :])
-
-    A_sum = {period:
-                A[period][Ls, gs]
-                    if period[-1] != 'b' else
-                A[period][gs]
-            for period in periods_stayers}
-    S_sum_sq = {period:
-                    S[period][Ls, gs] ** 2
-                        if period[-1] != 'b' else
-                    S[period][gs] ** 2
-                for period in periods_stayers}
-
-    if len(controls_dict) > 0:
         #### Simulate control variable wages ####
         for i, col in enumerate(cat_cols + cts_cols):
             # Get subcolumns associated with col
@@ -1062,50 +972,145 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
                 ### Categorical ###
                 if controls_dict[col]['worker_type_interaction']:
                     ## Worker-interaction ##
-                    for period in periods_stayers:
-                        subcol = periods_stayers_dict[period]
-                        A_sum[period] += A_cat[col][period][Ls, sdata.loc[:, subcol]]
-                        S_sum_sq[period] += S_cat[col][period][Ls, sdata.loc[:, subcol]] ** 2
+                    for period in periods_movers:
+                        subcol = periods_movers_dict[period]
+                        if period[-1] != 'b':
+                            A_sum[period] += A_cat[col][period][Lm, jdata.loc[:, subcol]]
+                            S_sum_sq[period] += S_cat[col][period][Lm, jdata.loc[:, subcol]] ** 2
+                        else:
+                            A_sum[period] += A_cat[col][period][jdata.loc[:, subcol]]
+                            S_sum_sq[period] += S_cat[col][period][jdata.loc[:, subcol]] ** 2
                 else:
                     ## Non-worker-interaction ##
-                    for period in periods_stayers:
-                        subcol = periods_stayers_dict[period]
-                        A_sum[period] += A_cat[col][period][sdata.loc[:, subcol]]
-                        S_sum_sq[period] += S_cat[col][period][sdata.loc[:, subcol]] ** 2
+                    for period in periods_movers:
+                        subcol = periods_movers_dict[period]
+                        A_sum[period] += A_cat[col][period][jdata.loc[:, subcol]]
+                        S_sum_sq[period] += S_cat[col][period][jdata.loc[:, subcol]] ** 2
             else:
                 ### Continuous ###
                 if controls_dict[col]['worker_type_interaction']:
                     ## Worker-interaction ##
-                    for period in periods_stayers:
-                        subcol = periods_stayers_dict[period]
-                        A_sum[period] += A_cts[col][period][Ls] * sdata.loc[:, subcol]
-                        S_sum_sq[period] += S_cts[col][period][Ls] ** 2
+                    for period in periods_movers:
+                        subcol = periods_movers_dict[period]
+                        if period[-1] != 'b':
+                            A_sum[period] += A_cts[col][period][Lm] * jdata.loc[:, subcol]
+                            S_sum_sq[period] += S_cts[col][period][Lm] ** 2
+                        else:
+                            A_sum[period] += A_cts[col][period] * jdata.loc[:, subcol]
+                            S_sum_sq[period] += S_cts[col][period] ** 2
                 else:
                     ## Non-worker-interaction ##
-                    for period in periods_stayers:
-                        subcol = periods_stayers_dict[period]
-                        A_sum[period] += A_cts[col][period] * sdata.loc[:, subcol]
+                    for period in periods_movers:
+                        subcol = periods_movers_dict[period]
+                        A_sum[period] += A_cts[col][period] * jdata.loc[:, subcol]
                         S_sum_sq[period] += S_cts[col][period] ** 2
 
-    Y2 = rng.normal( \
-        loc=A_sum['2s'], \
-        scale=np.sqrt(S_sum_sq['2s']), \
-        size=nsi)
-    Y1 = rng.normal( \
-        loc=A_sum['12'] + R12 * (Y2 - A_sum['2ma']), \
-        scale=np.sqrt(S_sum_sq['12']), \
-        size=nsi) # scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']), \
-    Y3 = rng.normal( \
-        loc=A_sum['3s'] + R32s * (Y2 - A_sum['2s']), \
-        scale=np.sqrt(S_sum_sq['3s']), \
-        size=nsi) # scale=np.sqrt(S_sum_sq['3s'] + (R32s ** 2) * S_sum_sq['2s']), \
-    Y4 = rng.normal( \
-        loc=A_sum['43'] + R43 * (Y3 - A_sum['3ma']), \
-        scale=np.sqrt(S_sum_sq['43']), \
-        size=nsi) # scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']), \
-    ys = (Y1, Y2, Y3, Y4)
+        Y2 = rng.normal( \
+            loc=A_sum['2ma'] + A_sum['2mb'], \
+            scale=np.sqrt(S_sum_sq['2ma']), \
+            size=nmi) # scale=np.sqrt(S_sum_sq['2ma'] + S_sum_sq['2mb']), \
+        Y1 = rng.normal( \
+            loc=A_sum['12'] + R12 * (Y2 - A_sum['2ma']), \
+            scale=np.sqrt(S_sum_sq['12']), \
+            size=nmi) # scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']), \
+        Y3 = rng.normal( \
+            loc=A_sum['3ma'] + A_sum['3mb'] + R32m * (Y2 - A_sum['2ma'] - A_sum['2mb']), \
+            scale=np.sqrt(S_sum_sq['3ma']), \
+            size=nmi) # scale=np.sqrt(S_sum_sq['3ma'] + S_sum_sq['3mb'] + (R32m ** 2) * (S_sum_sq['2ma'] + S_sum_sq['2mb'])), \
+        Y4 = rng.normal( \
+            loc=A_sum['43'] + R43 * (Y3 - A_sum['3ma']), \
+            scale=np.sqrt(S_sum_sq['43']), \
+            size=nmi) # scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']), \
+        yj = (Y1, Y2, Y3, Y4)
+        del A_sum, S_sum_sq, Y1, Y2, Y3, Y4
 
-    return (yj, ys, Lm, Ls)
+    ## Stayers ##
+    Ls = np.zeros(shape=len(sdata), dtype=int)
+    for k in range(nk):
+        ## Iterate over all firm types a worker can work at ##
+        # Find movers who work at this firm type
+        rows_k = np.where(gs == k)[0]
+        ni = len(rows_k)
+
+        # Draw worker types
+        Ls[rows_k] = rng.choice(worker_types, size=ni, replace=True, p=pk0[k, :])
+
+    if simulate_wages:
+        A_sum = {period:
+                    A[period][Ls, gs]
+                        if period[-1] != 'b' else
+                    A[period][gs]
+                for period in periods_stayers}
+        S_sum_sq = {period:
+                        S[period][Ls, gs] ** 2
+                            if period[-1] != 'b' else
+                        S[period][gs] ** 2
+                    for period in periods_stayers}
+
+        if len(controls_dict) > 0:
+            #### Simulate control variable wages ####
+            for i, col in enumerate(cat_cols + cts_cols):
+                # Get subcolumns associated with col
+                subcols = to_list(jdata.col_reference_dict[col])
+                n_subcols = len(subcols)
+                if n_subcols == 1:
+                    # If column is constant over time
+                    subcols = [subcols[0], subcols[0]]
+                elif n_subcols == 4:
+                    # If column can change over time
+                    subcols = [subcols[0], subcols[3]]
+                else:
+                    raise NotImplementedError(f'Column names must have either one or four associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
+                if i < len(cat_cols):
+                    ### Categorical ###
+                    if controls_dict[col]['worker_type_interaction']:
+                        ## Worker-interaction ##
+                        for period in periods_stayers:
+                            subcol = periods_stayers_dict[period]
+                            A_sum[period] += A_cat[col][period][Ls, sdata.loc[:, subcol]]
+                            S_sum_sq[period] += S_cat[col][period][Ls, sdata.loc[:, subcol]] ** 2
+                    else:
+                        ## Non-worker-interaction ##
+                        for period in periods_stayers:
+                            subcol = periods_stayers_dict[period]
+                            A_sum[period] += A_cat[col][period][sdata.loc[:, subcol]]
+                            S_sum_sq[period] += S_cat[col][period][sdata.loc[:, subcol]] ** 2
+                else:
+                    ### Continuous ###
+                    if controls_dict[col]['worker_type_interaction']:
+                        ## Worker-interaction ##
+                        for period in periods_stayers:
+                            subcol = periods_stayers_dict[period]
+                            A_sum[period] += A_cts[col][period][Ls] * sdata.loc[:, subcol]
+                            S_sum_sq[period] += S_cts[col][period][Ls] ** 2
+                    else:
+                        ## Non-worker-interaction ##
+                        for period in periods_stayers:
+                            subcol = periods_stayers_dict[period]
+                            A_sum[period] += A_cts[col][period] * sdata.loc[:, subcol]
+                            S_sum_sq[period] += S_cts[col][period] ** 2
+
+        Y2 = rng.normal( \
+            loc=A_sum['2s'], \
+            scale=np.sqrt(S_sum_sq['2s']), \
+            size=nsi)
+        Y1 = rng.normal( \
+            loc=A_sum['12'] + R12 * (Y2 - A_sum['2ma']), \
+            scale=np.sqrt(S_sum_sq['12']), \
+            size=nsi) # scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']), \
+        Y3 = rng.normal( \
+            loc=A_sum['3s'] + R32s * (Y2 - A_sum['2s']), \
+            scale=np.sqrt(S_sum_sq['3s']), \
+            size=nsi) # scale=np.sqrt(S_sum_sq['3s'] + (R32s ** 2) * S_sum_sq['2s']), \
+        Y4 = rng.normal( \
+            loc=A_sum['43'] + R43 * (Y3 - A_sum['3ma']), \
+            scale=np.sqrt(S_sum_sq['43']), \
+            size=nsi) # scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']), \
+        ys = (Y1, Y2, Y3, Y4)
+
+    if simulate_wages:
+        return (yj, ys, Lm, Ls)
+    return (Lm, Ls)
 
 class DynamicBLMModel:
     '''

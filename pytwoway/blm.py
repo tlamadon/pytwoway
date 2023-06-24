@@ -301,7 +301,7 @@ continuous_control_params = ParamsDict({
         ''', None)
 })
 
-def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, reallocate_jointly=True, reallocate_period='first', wj=None, ws=None, rng=None):
+def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, reallocate_jointly=True, reallocate_period='first', simulate_wages=True, wj=None, ws=None, rng=None):
     '''
     Using data and estimated BLM parameters, simulate worker types and wages.
 
@@ -314,12 +314,13 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
         reallocate (bool): if True, draw worker type proportions independently of firm type; if False, uses worker type proportions that are conditional on firm type
         reallocate_jointly (bool): if True, worker type proportions take the average over movers and stayers (i.e. all workers use the same type proportions); if False, consider movers and stayers separately
         reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
+        simulate_wages (bool): if True, simulate wages
         wj (NumPy Array or None): mover weights for both periods; if None, don't weight
         ws (NumPy Array or None): stayer weights for the first period; if None, don't weight
         rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
     Returns:
-        (tuple of NumPy Arrays): (yj --> tuple of wages for movers, where first element in first period wages and second element is second period wages; ys --> wages for stayers; Lm --> vector of mover types; Ls --> vector of stayer types)
+        (tuple of NumPy Arrays): (yj --> tuple of wages for movers, where first element in first period wages and second element is second period wages; ys --> wages for stayers; Lm --> vector of mover types; Ls --> vector of stayer types) if simulating wages; otherwise, (Lm, Ls)
     '''
     if rng is None:
         rng = np.random.default_rng(None)
@@ -412,67 +413,68 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
             # Draw worker types
             Lm[rows_kk] = rng.choice(worker_types, size=ni, replace=True, p=pk1[jj, :])
 
-    A1_sum = A1[Lm, gj[:, 0]]
-    A2_sum = A2[Lm, gj[:, 1]]
-    S1_sum = S1[Lm, gj[:, 0]]
-    S2_sum = S2[Lm, gj[:, 1]]
+    if simulate_wages:
+        A1_sum = A1[Lm, gj[:, 0]]
+        A2_sum = A2[Lm, gj[:, 1]]
+        S1_sum = S1[Lm, gj[:, 0]]
+        S2_sum = S2[Lm, gj[:, 1]]
 
-    if len(controls_dict) > 0:
-        #### Simulate control variable wages ####
-        S1_sum_sq = S1_sum ** 2
-        S2_sum_sq = S2_sum ** 2
-        for i, col in enumerate(cat_cols + cts_cols):
-            # Get subcolumns associated with col
-            subcols = to_list(jdata.col_reference_dict[col])
-            n_subcols = len(subcols)
-            if n_subcols == 1:
-                # If column is constant over time
-                subcol_1 = subcols[0]
-                subcol_2 = subcols[0]
-            elif n_subcols == 2:
-                # If column can change over time
-                subcol_1 = subcols[0]
-                subcol_2 = subcols[1]
-            else:
-                raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
-            if i < len(cat_cols):
-                ### Categorical ###
-                if controls_dict[col]['worker_type_interaction']:
-                    ## Worker-interaction ##
-                    A1_sum += A1_cat[col][Lm, jdata.loc[:, subcol_1]]
-                    A2_sum += A2_cat[col][Lm, jdata.loc[:, subcol_2]]
-                    S1_sum_sq += S1_cat[col][Lm, jdata.loc[:, subcol_1]] ** 2
-                    S2_sum_sq += S2_cat[col][Lm, jdata.loc[:, subcol_2]] ** 2
+        if len(controls_dict) > 0:
+            #### Simulate control variable wages ####
+            S1_sum_sq = S1_sum ** 2
+            S2_sum_sq = S2_sum ** 2
+            for i, col in enumerate(cat_cols + cts_cols):
+                # Get subcolumns associated with col
+                subcols = to_list(jdata.col_reference_dict[col])
+                n_subcols = len(subcols)
+                if n_subcols == 1:
+                    # If column is constant over time
+                    subcol_1 = subcols[0]
+                    subcol_2 = subcols[0]
+                elif n_subcols == 2:
+                    # If column can change over time
+                    subcol_1 = subcols[0]
+                    subcol_2 = subcols[1]
                 else:
-                    ## Non-worker-interaction ##
-                    A1_sum += A1_cat[col][jdata.loc[:, subcol_1]]
-                    A2_sum += A2_cat[col][jdata.loc[:, subcol_2]]
-                    S1_sum_sq += S1_cat[col][jdata.loc[:, subcol_1]] ** 2
-                    S2_sum_sq += S2_cat[col][jdata.loc[:, subcol_2]] ** 2
-            else:
-                ### Continuous ###
-                if controls_dict[col]['worker_type_interaction']:
-                    ## Worker-interaction ##
-                    A1_sum += A1_cts[col][Lm] * jdata.loc[:, subcol_1]
-                    A2_sum += A2_cts[col][Lm] * jdata.loc[:, subcol_2]
-                    S1_sum_sq += S1_cts[col][Lm] ** 2
-                    S2_sum_sq += S2_cts[col][Lm] ** 2
+                    raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
+                if i < len(cat_cols):
+                    ### Categorical ###
+                    if controls_dict[col]['worker_type_interaction']:
+                        ## Worker-interaction ##
+                        A1_sum += A1_cat[col][Lm, jdata.loc[:, subcol_1]]
+                        A2_sum += A2_cat[col][Lm, jdata.loc[:, subcol_2]]
+                        S1_sum_sq += S1_cat[col][Lm, jdata.loc[:, subcol_1]] ** 2
+                        S2_sum_sq += S2_cat[col][Lm, jdata.loc[:, subcol_2]] ** 2
+                    else:
+                        ## Non-worker-interaction ##
+                        A1_sum += A1_cat[col][jdata.loc[:, subcol_1]]
+                        A2_sum += A2_cat[col][jdata.loc[:, subcol_2]]
+                        S1_sum_sq += S1_cat[col][jdata.loc[:, subcol_1]] ** 2
+                        S2_sum_sq += S2_cat[col][jdata.loc[:, subcol_2]] ** 2
                 else:
-                    ## Non-worker-interaction ##
-                    A1_sum += A1_cts[col] * jdata.loc[:, subcol_1]
-                    A2_sum += A2_cts[col] * jdata.loc[:, subcol_2]
-                    S1_sum_sq += S1_cts[col] ** 2
-                    S2_sum_sq += S2_cts[col] ** 2
+                    ### Continuous ###
+                    if controls_dict[col]['worker_type_interaction']:
+                        ## Worker-interaction ##
+                        A1_sum += A1_cts[col][Lm] * jdata.loc[:, subcol_1]
+                        A2_sum += A2_cts[col][Lm] * jdata.loc[:, subcol_2]
+                        S1_sum_sq += S1_cts[col][Lm] ** 2
+                        S2_sum_sq += S2_cts[col][Lm] ** 2
+                    else:
+                        ## Non-worker-interaction ##
+                        A1_sum += A1_cts[col] * jdata.loc[:, subcol_1]
+                        A2_sum += A2_cts[col] * jdata.loc[:, subcol_2]
+                        S1_sum_sq += S1_cts[col] ** 2
+                        S2_sum_sq += S2_cts[col] ** 2
 
-        Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq / wj[:, 0]), size=nmi)
-        Y2 = rng.normal(loc=A2_sum, scale=np.sqrt(S2_sum_sq / wj[:, 1]), size=nmi)
-        del S1_sum_sq, S2_sum_sq
-    else:
-        #### No control variables ####
-        Y1 = rng.normal(loc=A1_sum, scale=S1_sum / np.sqrt(wj[:, 0]), size=nmi)
-        Y2 = rng.normal(loc=A2_sum, scale=S2_sum / np.sqrt(wj[:, 1]), size=nmi)
-    yj = (Y1, Y2)
-    del A1_sum, A2_sum, S1_sum, S2_sum, Y1, Y2
+            Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq / wj[:, 0]), size=nmi)
+            Y2 = rng.normal(loc=A2_sum, scale=np.sqrt(S2_sum_sq / wj[:, 1]), size=nmi)
+            del S1_sum_sq, S2_sum_sq
+        else:
+            #### No control variables ####
+            Y1 = rng.normal(loc=A1_sum, scale=S1_sum / np.sqrt(wj[:, 0]), size=nmi)
+            Y2 = rng.normal(loc=A2_sum, scale=S2_sum / np.sqrt(wj[:, 1]), size=nmi)
+        yj = (Y1, Y2)
+        del A1_sum, A2_sum, S1_sum, S2_sum, Y1, Y2
 
     ## Stayers ##
     Ls = np.zeros(shape=len(sdata), dtype=int)
@@ -485,43 +487,46 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
         # Draw worker types
         Ls[rows_k] = rng.choice(worker_types, size=ni, replace=True, p=pk0[k, :])
 
-    A1_sum = A1[Ls, gs]
-    S1_sum = S1[Ls, gs]
+    if simulate_wages:
+        A1_sum = A1[Ls, gs]
+        S1_sum = S1[Ls, gs]
 
-    if len(controls_dict) > 0:
-        #### Simulate control variable wages ####
-        S1_sum_sq = S1_sum ** 2
-        for i, col in enumerate(cat_cols + cts_cols):
-            # Get subcolumns associated with col
-            subcol_1 = to_list(sdata.col_reference_dict[col])[0]
-            if i < len(cat_cols):
-                ### Categorical ###
-                if controls_dict[col]['worker_type_interaction']:
-                    ## Worker-interaction ##
-                    A1_sum += A1_cat[col][Ls, sdata.loc[:, subcol_1]]
-                    S1_sum_sq += S1_cat[col][Ls, sdata.loc[:, subcol_1]] ** 2
+        if len(controls_dict) > 0:
+            #### Simulate control variable wages ####
+            S1_sum_sq = S1_sum ** 2
+            for i, col in enumerate(cat_cols + cts_cols):
+                # Get subcolumns associated with col
+                subcol_1 = to_list(sdata.col_reference_dict[col])[0]
+                if i < len(cat_cols):
+                    ### Categorical ###
+                    if controls_dict[col]['worker_type_interaction']:
+                        ## Worker-interaction ##
+                        A1_sum += A1_cat[col][Ls, sdata.loc[:, subcol_1]]
+                        S1_sum_sq += S1_cat[col][Ls, sdata.loc[:, subcol_1]] ** 2
+                    else:
+                        ## Non-worker-interaction ##
+                        A1_sum += A1_cat[col][sdata.loc[:, subcol_1]]
+                        S1_sum_sq += S1_cat[col][sdata.loc[:, subcol_1]] ** 2
                 else:
-                    ## Non-worker-interaction ##
-                    A1_sum += A1_cat[col][sdata.loc[:, subcol_1]]
-                    S1_sum_sq += S1_cat[col][sdata.loc[:, subcol_1]] ** 2
-            else:
-                ### Continuous ###
-                if controls_dict[col]['worker_type_interaction']:
-                    ## Worker-interaction ##
-                    A1_sum += A1_cts[col][Ls] * sdata.loc[:, subcol_1]
-                    S1_sum_sq += S1_cts[col][Ls] ** 2
-                else:
-                    ## Non-worker-interaction ##
-                    A1_sum += A1_cts[col] * sdata.loc[:, subcol_1]
-                    S1_sum_sq += S1_cts[col] ** 2
+                    ### Continuous ###
+                    if controls_dict[col]['worker_type_interaction']:
+                        ## Worker-interaction ##
+                        A1_sum += A1_cts[col][Ls] * sdata.loc[:, subcol_1]
+                        S1_sum_sq += S1_cts[col][Ls] ** 2
+                    else:
+                        ## Non-worker-interaction ##
+                        A1_sum += A1_cts[col] * sdata.loc[:, subcol_1]
+                        S1_sum_sq += S1_cts[col] ** 2
 
-        Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq / ws), size=nsi)
-    else:
-        #### No control variables ####
-        Y1 = rng.normal(loc=A1_sum, scale=S1_sum / np.sqrt(ws), size=nsi)
-    ys = Y1
+            Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq / ws), size=nsi)
+        else:
+            #### No control variables ####
+            Y1 = rng.normal(loc=A1_sum, scale=S1_sum / np.sqrt(ws), size=nsi)
+        ys = Y1
 
-    return (yj, ys, Lm, Ls)
+    if simulate_wages:
+        return (yj, ys, Lm, Ls)
+    return (Lm, Ls)
 
 class BLMModel:
     '''
