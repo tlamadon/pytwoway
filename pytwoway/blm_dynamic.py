@@ -4258,6 +4258,50 @@ class DynamicBLMModel:
         # Restore original parameters
         self.params = user_params
 
+    def fit_stayers_cstr_uncstr(self, sdata, compute_NNs=True):
+        '''
+        Run fit_stayers(), first constrained, then using results as starting values, run unconstrained.
+
+        Arguments:
+            sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
+            compute_NNm (bool): if True, compute vector giving the number of stayers at each firm type (e.g. entry (1) gives the number of stayers at firm type 1)
+        '''
+        ## First, simulate parameters but keep A fixed ##
+        ## Second, use estimated parameters as starting point to run with A constrained to be linear ##
+        ## Finally use estimated parameters as starting point to run without constraints ##
+        # Save original parameters
+        user_params = self.params.copy()
+        ##### Loop 1 #####
+        # First fix A but update S and pk
+        self.params['update_a_stayers'] = False
+        self.params['update_s_stayers'] = True
+        self.params['update_pk0'] = True
+        if self.params['verbose'] in [1, 2, 3]:
+            print('Fitting stayers with A fixed')
+        self.fit_stayers(sdata, compute_NNs=False)
+        ##### Loop 2 #####
+        # Now update A with Linear Additive constraint
+        self.params['update_a_stayers'] = True
+        if self.nl > 1:
+            # Set constraints
+            if user_params['cons_a_all'] is None:
+                self.params['cons_a_all'] = cons.LinearAdditive(nt=2, dynamic=True)
+            else:
+                self.params['cons_a_all'] = to_list(user_params['cons_a_all']) + [cons.LinearAdditive(nt=2, dynamic=True)]
+            if self.params['verbose'] in [1, 2, 3]:
+                print('Fitting stayers with Linear Additive constraint on A')
+            self.fit_stayers(sdata, compute_NNs=False)
+        ##### Loop 3 #####
+        # Restore user constraints
+        self.params['cons_a_all'] = user_params['cons_a_all']
+        # Update d_X_diag_stayers_A to be closer to 1
+        self.params['d_X_diag_stayers_A'] = 1 + (self.params['d_X_diag_stayers_A'] - 1) / 2
+        if self.params['verbose'] in [1, 2, 3]:
+            print('Fitting unconstrained stayers')
+        self.fit_stayers(sdata, compute_NNs=compute_NNs)
+        # Restore original parameters
+        self.params = user_params
+
     def fit_A(self, jdata, compute_NNm=True):
         '''
         Run fit_movers() and update A while keeping S and pk1 fixed.
@@ -4582,7 +4626,11 @@ class DynamicBLMEstimator:
         # Using best estimated parameters from fit_movers(), run fit_stayers()
         if self.params['verbose'] in [1, 2, 3]:
             print('Fitting stayers')
-        self.model.fit_stayers(sdata)
+        self.model.A['2s'] = self.model.A['2ma'].copy()
+        self.model.A['3s'] = self.model.A['3ma'].copy()
+        self.model.S['2s'] = self.model.S['2ma'].copy()
+        self.model.S['3s'] = self.model.S['3ma'].copy()
+        self.model.fit_stayers_cstr_uncstr(sdata)
 
     def plot_log_earnings(self, period='first', xlabel='firm class k', ylabel='log-earnings', grid=True, dpi=None):
         '''
