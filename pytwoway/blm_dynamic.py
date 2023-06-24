@@ -2136,6 +2136,8 @@ class DynamicBLMModel:
             if ((abs(lik1 - prev_lik) < params['threshold_movers']) and (min_firm_type == prev_min_firm_type)):
                 # Break loop
                 break
+            if iter == (params['n_iters_movers'] - 1):
+                print(f"Maximum iterations reached for movers. It is recommended to increase the value for `n_iters_movers` from its current value of {params['n_iters_movers']}.")
             prev_lik = lik1
             prev_min_firm_type = min_firm_type
 
@@ -3492,6 +3494,8 @@ class DynamicBLMModel:
             if (abs(lik0 - prev_lik) < params['threshold_movers']):
                 # Break loop
                 break
+            if iter == (params['n_iters_stayers'] - 1):
+                print(f"Maximum iterations reached for stayers. It is recommended to increase the value for `n_iters_stayers` from its current value of {params['n_iters_stayers']}.")
             prev_lik = lik0
 
             # ---------- Update pk0 ----------
@@ -4347,12 +4351,14 @@ class DynamicBLMModel:
             self.connectedness = EV
         self.connectedness = np.abs(EV).min()
 
-    def plot_log_earnings(self, period='first', grid=True, dpi=None):
+    def plot_log_earnings(self, period='first', xlabel='firm class k', ylabel='log-earnings', grid=True, dpi=None):
         '''
         Plot log-earnings by worker-firm type pairs.
 
         Arguments:
             period (str): 'first' plots log-earnings in the first period; 'second' plots log-earnings in the second period; 'all' plots the average over log-earnings in the first and second periods
+            xlabel (str): label for x-axis
+            ylabel (str): label for y-axis
             grid (bool): if True, plot grid
             dpi (float or None): dpi for plot
         '''
@@ -4376,20 +4382,23 @@ class DynamicBLMModel:
         x_axis = np.arange(1, nk + 1)
         for l in range(nl):
             plt.plot(x_axis, A_all[l, :])
-        plt.xlabel('firm class k')
-        plt.ylabel('log-earnings')
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
         plt.xticks(x_axis)
         if grid:
             plt.grid()
         plt.show()
 
-    def plot_type_proportions(self, period='first', subset='all', dpi=None):
+    def plot_type_proportions(self, period='first', subset='all', xlabel='firm class k', ylabel='type proportions', title='Proportions of worker types', dpi=None):
         '''
         Plot proportions of worker types at each firm class.
 
         Arguments:
             period (str): 'first' plots type proportions in the first period; 'second' plots type proportions in the second period; 'all' plots the average over type proportions in the first and second periods
             subset (str): 'all' plots a weighted average over movers and stayers; 'movers' plots movers; 'stayers' plots stayers
+            xlabel (str): label for x-axis
+            ylabel (str): label for y-axis
+            title (str): plot title
             dpi (float or None): dpi for plot
         '''
         nl, nk = self.nl, self.nk
@@ -4448,9 +4457,9 @@ class DynamicBLMModel:
         ax.bar(x_axis, pk_mean[:, 0])
         for l in range(1, nl):
             ax.bar(x_axis, pk_mean[:, l], bottom=pk_cumsum[:, l - 1])
-        ax.set_xlabel('firm class k')
-        ax.set_ylabel('type proportions')
-        ax.set_title('Proportions of worker types')
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
         plt.show()
 
 class DynamicBLMEstimator:
@@ -4575,31 +4584,36 @@ class DynamicBLMEstimator:
             print('Fitting stayers')
         self.model.fit_stayers(sdata)
 
-    def plot_log_earnings(self, period='first', grid=True, dpi=None):
+    def plot_log_earnings(self, period='first', xlabel='firm class k', ylabel='log-earnings', grid=True, dpi=None):
         '''
         Plot log-earnings by worker-firm type pairs.
 
         Arguments:
             period (str): 'first' plots log-earnings in the first period; 'second' plots log-earnings in the second period; 'all' plots the average over log-earnings in the first and second periods
+            xlabel (str): label for x-axis
+            ylabel (str): label for y-axis
             grid (bool): if True, plot grid
             dpi (float or None): dpi for plot
         '''
         if self.model is not None:
-            self.model.plot_log_earnings(period=period, grid=grid, dpi=dpi)
+            self.model.plot_log_earnings(period=period, xlabel=xlabel, ylabel=ylabel, grid=grid, dpi=dpi)
         else:
             warnings.warn('Estimation has not yet been run.')
 
-    def plot_type_proportions(self, period='first', subset='all', dpi=None):
+    def plot_type_proportions(self, period='first', subset='all', xlabel='firm class k', ylabel='type proportions', title='Proportions of worker types', dpi=None):
         '''
         Plot proportions of worker types at each firm class.
 
         Arguments:
             period (str): 'first' plots type proportions in the first period; 'second' plots type proportions in the second period; 'all' plots the average over type proportions in the first and second periods
             subset (str): 'all' plots a weighted average over movers and stayers; 'movers' plots movers; 'stayers' plots stayers
+            xlabel (str): label for x-axis
+            ylabel (str): label for y-axis
+            title (str): plot title
             dpi (float or None): dpi for plot
         '''
         if self.model is not None:
-            self.model.plot_type_proportions(period=period, subset=subset, dpi=dpi)
+            self.model.plot_type_proportions(period=period, subset=subset, xlabel=xlabel, ylabel=ylabel, title=title, dpi=dpi)
         else:
             warnings.warn('Estimation has not yet been run.')
 
@@ -4765,12 +4779,14 @@ class DynamicBLMBootstrap:
 
         self.models = models
 
-    def plot_log_earnings(self, period='first', grid=True, dpi=None):
+    def plot_log_earnings(self, period='first', xlabel='firm class k', ylabel='log-earnings', grid=True, dpi=None):
         '''
         Plot log-earnings by worker-firm type pairs.
 
         Arguments:
             period (str): 'first' plots log-earnings in the first period; 'second' plots log-earnings in the second period; 'all' plots the average over log-earnings in the first and second periods
+            xlabel (str): label for x-axis
+            ylabel (str): label for y-axis
             grid (bool): if True, plot grid
             dpi (float or None): dpi for plot
         '''
@@ -4807,20 +4823,23 @@ class DynamicBLMBootstrap:
             x_axis = np.arange(1, nk + 1)
             for l in range(nl):
                 plt.errorbar(x_axis, A_mean[l, :], yerr=A_ci[:, l, :], capsize=3)
-            plt.xlabel('firm class k')
-            plt.ylabel('log-earnings')
+            plt.xlabel(xlabel)
+            plt.ylabel(ylabel)
             plt.xticks(x_axis)
             if grid:
                 plt.grid()
             plt.show()
 
-    def plot_type_proportions(self, period='first', subset='all', dpi=None):
+    def plot_type_proportions(self, period='first', subset='all', xlabel='firm class k', ylabel='type proportions', title='Proportions of worker types', dpi=None):
         '''
         Plot proportions of worker types at each firm class.
 
         Arguments:
             period (str): 'first' plots type proportions in the first period; 'second' plots type proportions in the second period; 'all' plots the average over type proportions in the first and second periods
             subset (str): 'all' plots a weighted average over movers and stayers; 'movers' plots movers; 'stayers' plots stayers
+            xlabel (str): label for x-axis
+            ylabel (str): label for y-axis
+            title (str): plot title
             dpi (float or None): dpi for plot
         '''
         if self.models is None:
@@ -4879,9 +4898,9 @@ class DynamicBLMBootstrap:
             ax.bar(x_axis, pk_mean[:, 0])
             for l in range(1, nl):
                 ax.bar(x_axis, pk_mean[:, l], bottom=pk_cumsum[:, l - 1])
-            ax.set_xlabel('firm class k')
-            ax.set_ylabel('type proportions')
-            ax.set_title('Proportions of worker types')
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel)
+            ax.set_title(title)
             plt.show()
 
 class DynamicBLMVarianceDecomposition:
