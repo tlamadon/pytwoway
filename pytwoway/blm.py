@@ -14,6 +14,8 @@ import pandas as pd
 # from scipy.special import logsumexp
 from scipy.sparse import csc_matrix
 from matplotlib import pyplot as plt
+import plotly.graph_objects as go
+# import plotly.express as px
 from paramsdict import ParamsDict, ParamsDictBase
 from paramsdict.util import col_type
 import bipartitepandas as bpd
@@ -361,7 +363,8 @@ def _simulate_types_wages(blm_model, jdata, sdata, pk1=None, pk0=None, qi_cum_j=
             ## Update wages ##
             jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = yj
             sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys, ys)
-    del Lm, Ls, yj, ys
+            del yj, ys
+        del Lm, Ls
 
     ## Convert to BipartitePandas DataFrame ##
     bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
@@ -2109,6 +2112,89 @@ class BLMModel:
         ax.set_ylabel(ylabel)
         ax.set_title(title)
         plt.show()
+
+    def plot_type_flows(self, title='Worker flows', dpi=None):
+        '''
+        Plot flows of worker types between each firm class.
+
+        Arguments:
+            title (str): plot title
+            dpi (float or None): dpi for plot
+        '''
+        if self.NNm is None:
+            raise ValueError('The dynamic BLM estimation must be run on movers (and NNm must be computed) before plotting type proportions for movers.')
+        
+        ## Extract parameters ##
+        nl, nk = self.nl, self.nk
+        A1, A2, pk1, NNm = self._sort_parameters(self.A1, self.A2, pk1=self.pk1, NNm=self.NNm, sort_firm_types=True)
+        # colors = px.colors.qualitative.Alphabet
+        opacity = 0.4
+        colors = [
+            f'rgba(31, 119, 180, {opacity})',
+            f'rgba(255, 127, 14, {opacity})',
+            f'rgba(44, 160, 44, {opacity})',
+            f'rgba(214, 39, 40, {opacity})',
+            f'rgba(148, 103, 189, {opacity})',
+            f'rgba(140, 86, 75, {opacity})',
+            f'rgba(227, 119, 194, {opacity})',
+            f'rgba(127, 127, 127, {opacity})',
+            f'rgba(188, 189, 34, {opacity})',
+            f'rgba(23, 190, 207, {opacity})',
+            f'rgba(255, 0, 255, {opacity})'
+        ]
+
+        ## Compute worker flows ##
+        reshaped_pk1 = np.reshape(pk1, (nk, nk, nl))
+        mover_flows = (NNm.T * reshaped_pk1.T).T
+
+        ## Sankey with legend ##
+        # Source: https://stackoverflow.com/a/76223740/17333120
+        sankey = go.Sankey(
+            # Define nodes
+            node=dict(
+                pad=15,
+                thickness=1,
+                line=dict(color='white', width=0),
+                label=[f'k={k + 1}' for k in range(nk)] + [f'k={k + 1}' for k in range(nk)],
+                color='white'
+            ),
+            link=dict(
+                # Source firm
+                source=np.repeat(np.arange(nk), nk * nl),
+                # Destination firm
+                target=np.tile(np.repeat(np.arange(nk), nl), nk) + nk,
+                # Worker type
+                label=[f'$l={l + 1}$' for _ in range(nk) for _ in range(nk) for l in range(nl)],
+                # Worker flows
+                value=mover_flows.flatten(),
+                # Color
+                color=[colors[l] for _ in range(nk) for _ in range(nk) for l in range(nl)]
+            )
+        )
+
+        legend = []
+        for l in range(nl):
+            legend.append(
+                go.Scatter(
+                    mode='markers',
+                    x=[None],
+                    y=[None],
+                    marker=dict(size=10, color=colors[l], symbol='square'),
+                    name=f'$l={l + 1}$',
+                )
+            )
+
+        traces = [sankey] + legend
+        layout = go.Layout(
+            showlegend=True,
+            plot_bgcolor='rgba(0, 0, 0, 0)',
+        )
+
+        fig = go.Figure(data=traces, layout=layout)
+        fig.update_xaxes(visible=False)
+        fig.update_yaxes(visible=False)
+        fig.update_layout(title_text=title, font_size=10)
+        # fig.show()
 
 class BLMEstimator:
     '''

@@ -1,5 +1,5 @@
 '''
-Class for simulating bipartite BLM networks.
+Class for simulating bipartite static BLM networks.
 '''
 import numpy as np
 from pandas import DataFrame
