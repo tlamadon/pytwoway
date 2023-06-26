@@ -314,7 +314,7 @@ def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, rea
         reallocate (bool): if True, draw worker type proportions independently of firm type; if False, uses worker type proportions that are conditional on firm type
         reallocate_jointly (bool): if True, worker type proportions take the average over movers and stayers (i.e. all workers use the same type proportions); if False, consider movers and stayers separately
         reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
-        simulate_wages (bool): if True, simulate wages
+        simulate_wages (bool): if True, also simulate wages
         wj (NumPy Array or None): mover weights for both periods; if None, don't weight
         ws (NumPy Array or None): stayer weights for the first period; if None, don't weight
         rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
@@ -613,10 +613,10 @@ class BLMModel:
         s_lb = params['s_lower_bound']
         # Model for Y1 | Y2, l, k for movers and stayers
         self.A1 = rng.normal(loc=a1_mu, scale=a1_sig, size=dims)
-        self.S1 = rng.uniform(low=max(s1_low, s_lb), high=s1_high, size=dims)
+        self.S1 = rng.uniform(low=np.maximum(s1_low, s_lb), high=s1_high, size=dims)
         # Model for Y4 | Y3, l, k for movers and stayers
         self.A2 = rng.normal(loc=a2_mu, scale=a2_sig, size=dims)
-        self.S2 = rng.uniform(low=max(s2_low, s_lb), high=s2_high, size=dims)
+        self.S2 = rng.uniform(low=np.maximum(s2_low, s_lb), high=s2_high, size=dims)
         # Model for p(K | l, l') for movers
         if pk1_prior is None:
             pk1_prior = np.ones(nl)
@@ -640,14 +640,14 @@ class BLMModel:
                 rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=controls_dict[col]['n'])
             for col in cat_cols}
         self.S1_cat = {col:
-                rng.uniform(low=max(controls_dict[col]['s1_low'], s_lb), high=controls_dict[col]['s1_high'], size=(nl, controls_dict[col]['n']))
+                rng.uniform(low=np.maximum(controls_dict[col]['s1_low'], s_lb), high=controls_dict[col]['s1_high'], size=(nl, controls_dict[col]['n']))
                 if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s1_low'], s_lb), high=controls_dict[col]['s1_high'], size=controls_dict[col]['n'])
+                rng.uniform(low=np.maximum(controls_dict[col]['s1_low'], s_lb), high=controls_dict[col]['s1_high'], size=controls_dict[col]['n'])
             for col in cat_cols}
         self.S2_cat = {col:
-                rng.uniform(low=max(controls_dict[col]['s2_low'], s_lb), high=controls_dict[col]['s2_high'], size=(nl, controls_dict[col]['n']))
+                rng.uniform(low=np.maximum(controls_dict[col]['s2_low'], s_lb), high=controls_dict[col]['s2_high'], size=(nl, controls_dict[col]['n']))
                 if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s2_low'], s_lb), high=controls_dict[col]['s2_high'], size=controls_dict[col]['n'])
+                rng.uniform(low=np.maximum(controls_dict[col]['s2_low'], s_lb), high=controls_dict[col]['s2_high'], size=controls_dict[col]['n'])
             for col in cat_cols}
         # # Stationary #
         # for col in cat_cols:
@@ -667,14 +667,14 @@ class BLMModel:
                 rng.normal(loc=controls_dict[col]['a2_mu'], scale=controls_dict[col]['a2_sig'], size=1)
             for col in cts_cols}
         self.S1_cts = {col:
-                rng.uniform(low=max(controls_dict[col]['s1_low'], s_lb), high=controls_dict[col]['s1_high'], size=nl)
+                rng.uniform(low=np.maximum(controls_dict[col]['s1_low'], s_lb), high=controls_dict[col]['s1_high'], size=nl)
                 if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s1_low'], s_lb), high=controls_dict[col]['s1_high'], size=1)
+                rng.uniform(low=np.maximum(controls_dict[col]['s1_low'], s_lb), high=controls_dict[col]['s1_high'], size=1)
             for col in cts_cols}
         self.S2_cts = {col:
-                rng.uniform(low=max(controls_dict[col]['s2_low'], s_lb), high=controls_dict[col]['s2_high'], size=nl)
+                rng.uniform(low=np.maximum(controls_dict[col]['s2_low'], s_lb), high=controls_dict[col]['s2_high'], size=nl)
                 if controls_dict[col]['worker_type_interaction'] else
-                rng.uniform(low=max(controls_dict[col]['s2_low'], s_lb), high=controls_dict[col]['s2_high'], size=1)
+                rng.uniform(low=np.maximum(controls_dict[col]['s2_low'], s_lb), high=controls_dict[col]['s2_high'], size=1)
             for col in cts_cols}
         # # Stationary #
         # for col in cts_cols:
@@ -2642,40 +2642,74 @@ class BLMBootstrap:
             grouping = bpd.grouping.KMeans(n_clusters=jdata.n_clusters())
             cluster_params = bpd.cluster_params({'grouping': grouping})
 
+        # Parameter dictionary
+        params = self.params
+
         # Update clustering parameters
         cluster_params = cluster_params.copy()
         cluster_params['is_sorted'] = True
         cluster_params['copy'] = False
 
         if method == 'parametric':
-            # Copy original wages and firm types
+            ## Copy original wages and firm types ##
             yj = jdata.loc[:, ['y1', 'y2']].to_numpy().copy()
             ys = sdata.loc[:, ['y1', 'y2']].to_numpy().copy()
             gj = jdata.loc[:, ['g1', 'g2']].to_numpy().copy()
             gs = sdata.loc[:, 'g1'].to_numpy().copy()
+
             ## Weights ##
-            wj = None
+            wj1, wj2 = None, None
             ws = None
             if jdata._col_included('w'):
-                wj = jdata.loc[:, ['w1', 'w2']].to_numpy()
+                wj1, wj2 = jdata.loc[:, 'w1'].to_numpy(), jdata.loc[:, 'w2'].to_numpy()
             if sdata._col_included('w'):
                 ws = sdata.loc[:, 'w1'].to_numpy()
 
+            ## Unpack parameters ##
+            nl, nk = params.get_multiple(('nl', 'nk'))
+
             if blm_model is None:
-                # Run initial BLM estimator
-                blm_fit_init = BLMEstimator(self.params)
+                ## Run initial BLM estimator ##
+                blm_fit_init = BLMEstimator(params)
                 blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
                 blm_model = blm_fit_init.model
+
+                ## Update parameters ##
+                params = copy.deepcopy(self.params)
+                params['a1_mu'] = blm_model.A1
+                params['a1_sig'] = blm_model.A1.std() / nl
+                params['a2_mu'] = blm_model.A2
+                params['a2_sig'] = blm_model.A2.std() / nl
+                params['s1_low'] = blm_model.S1
+                params['s1_high'] = blm_model.S1
+                params['s2_low'] = blm_model.S2
+                params['s2_high'] = blm_model.S2
+                # TODO: add control variables
+
+            ## Unpack parameters ##
+            NNm, NNs = blm_model.NNm, blm_model.NNs
+
+            ## Reallocate ##
+            pk1, pk0 = blm_model.pk1, blm_model.pk0
+            if reallocate:
+                pk1, pk0 = tw.simblm._reallocate(pk1=pk1, pk0=pk0, NNm=NNm, NNs=NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
 
             # Run parametric bootstrap
             models = []
             for _ in trange(n_samples):
-                # Simulate worker types then draw wages
-                yj_i, ys_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=reallocate, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, wj=wj, ws=ws, rng=rng)[:2]
+                ## Simulate worker types ##
+                Lm_i = tw.simblm._simulate_worker_types_movers(nl=nl, nk=nk, NNm=NNm, G1=gj[:, 0], G2=gj[:, 1], pk1=pk1, simulating_data=False, rng=rng)
+                Ls_i = tw.simblm._simulate_worker_types_stayers(nl=nl, nk=nk, NNs=NNs, G=gs, pk0=pk0, simulating_data=False, rng=rng)
+                ## Simulate wages ##
+                yj_i = tw.simblm._simulate_wages_movers(jdata, Lm_i, blm_model=blm_model, w1=wj1, w2=wj2, rng=rng)
+                ys_i = tw.simblm._simulate_wages_stayers(sdata, Ls_i, blm_model=blm_model, w=ws, rng=rng)
+                del Lm_i, Ls_i
                 with bpd.util.ChainedAssignment():
-                    jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
+                    ## Update wages ##
+                    jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = yj_i
                     sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
-                # Cluster
+                del yj_i, ys_i
+                ## Cluster ##
                 bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
                 # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
                 bdf._set_attributes(jdata)
@@ -2689,24 +2723,24 @@ class BLMBootstrap:
                     jdata.loc[:, 'g2'] = jdata.loc[:, 'j2'].map(clusters_dict)
                     sdata.loc[:, 'g1'] = sdata.loc[:, 'j1'].map(clusters_dict)
                     sdata.loc[:, 'g2'] = sdata.loc[:, 'g1']
-                # Run BLM estimator
-                blm_fit_i = BLMEstimator(self.params)
+                ## Run BLM estimator ##
+                blm_fit_i = BLMEstimator(params)
                 blm_fit_i.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
                 models.append(blm_fit_i.model)
                 del blm_fit_i
 
             with bpd.util.ChainedAssignment():
-                # Re-assign original wages and firm types
+                ## Re-assign original wages and firm types ##
                 jdata.loc[:, ['y1', 'y2']] = yj
                 sdata.loc[:, ['y1', 'y2']] = ys
                 jdata.loc[:, ['g1', 'g2']] = gj
                 sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
         elif method == 'standard':
             wj = None
-            if self.params['weighted'] and jdata._col_included('w'):
+            if params['weighted'] and jdata._col_included('w'):
                 wj = jdata['w1'].to_numpy() + jdata['w2'].to_numpy()
             ws = None
-            if self.params['weighted'] and sdata._col_included('w'):
+            if params['weighted'] and sdata._col_included('w'):
                 ws = sdata['w1'].to_numpy() + sdata['w2'].to_numpy()
 
             models = []
@@ -2727,7 +2761,7 @@ class BLMBootstrap:
                 sdata_i.loc[:, 'g1'] = sdata_i.loc[:, 'j1'].map(clusters_dict)
                 sdata_i.loc[:, 'g2'] = sdata_i.loc[:, 'g1']
                 # Run BLM estimator
-                blm_fit_i = BLMEstimator(self.params)
+                blm_fit_i = BLMEstimator(params)
                 blm_fit_i.fit(jdata=jdata_i, sdata=sdata_i, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
                 models.append(blm_fit_i.model)
                 del jdata_i, sdata_i, blm_fit_i
@@ -2901,9 +2935,12 @@ class BLMVarianceDecomposition:
         if rng is None:
             rng = np.random.default_rng(None)
 
+        # Parameter dictionary
+        params = self.params
+
         # FE parameters
-        no_cat_controls = (self.params['categorical_controls'] is None) or (len(self.params['categorical_controls']) == 0)
-        no_cts_controls = (self.params['continuous_controls'] is None) or (len(self.params['continuous_controls']) == 0)
+        no_cat_controls = (params['categorical_controls'] is None) or (len(params['categorical_controls']) == 0)
+        no_cts_controls = (params['continuous_controls'] is None) or (len(params['continuous_controls']) == 0)
         no_controls = (no_cat_controls and no_cts_controls)
         if no_controls:
             # If no controls
@@ -2912,9 +2949,9 @@ class BLMVarianceDecomposition:
             # If controls
             fe_params = tw.fecontrol_params()
             if not no_cat_controls:
-                fe_params['categorical_controls'] = self.params['categorical_controls'].keys()
+                fe_params['categorical_controls'] = params['categorical_controls'].keys()
             if not no_cts_controls:
-                fe_params['continuous_controls'] = self.params['continuous_controls'].keys()
+                fe_params['continuous_controls'] = params['continuous_controls'].keys()
         fe_params['weighted'] = False
         fe_params['ho'] = False
         if Q_var is not None:
@@ -2950,18 +2987,41 @@ class BLMVarianceDecomposition:
             ts = True
 
         ## Weights ##
-        wj = None
+        wj1, wj2 = None, None
         ws = None
         # if jdata._col_included('w'):
-        #     wj = jdata.loc[:, ['w1', 'w2']].to_numpy()
+        #     wj1, wj2 = jdata.loc[:, 'w1'].to_numpy(), jdata.loc[:, 'w2'].to_numpy()
         # if sdata._col_included('w'):
         #     ws = sdata.loc[:, 'w1'].to_numpy()
 
+        ## Unpack parameters ##
+        nl, nk = params.get_multiple(('nl', 'nk'))
+
         if blm_model is None:
-            # Run initial BLM estimator
-            blm_fit_init = BLMEstimator(self.params)
+            ## Run initial BLM estimator ##
+            blm_fit_init = BLMEstimator(params)
             blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
             blm_model = blm_fit_init.model
+
+            ## Update parameters ##
+            params = copy.deepcopy(self.params)
+            params['a1_mu'] = blm_model.A1
+            params['a1_sig'] = blm_model.A1.std() / nl
+            params['a2_mu'] = blm_model.A2
+            params['a2_sig'] = blm_model.A2.std() / nl
+            params['s1_low'] = blm_model.S1
+            params['s1_high'] = blm_model.S1
+            params['s2_low'] = blm_model.S2
+            params['s2_high'] = blm_model.S2
+            # TODO: add control variables
+
+        ## Unpack parameters ##
+        NNm, NNs = blm_model.NNm, blm_model.NNs
+
+        ## Reallocate ##
+        pk1, pk0 = blm_model.pk1, blm_model.pk0
+        if reallocate:
+            pk1, pk0 = tw.simblm._reallocate(pk1=pk1, pk0=pk0, NNm=NNm, NNs=NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
 
         # Run bootstrap
         res_lst = []
@@ -2969,21 +3029,28 @@ class BLMVarianceDecomposition:
             res_lst_comp = []
             nl = blm_model.nl
         for i in trange(n_samples):
-            # Simulate worker types then draw wages
-            yj_i, ys_i, Lm_i, Ls_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=reallocate, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, wj=wj, ws=ws, rng=rng)
+            ## Simulate worker types ##
+            Lm_i = tw.simblm._simulate_worker_types_movers(nl=nl, nk=nk, NNm=NNm, G1=gj[:, 0], G2=gj[:, 1], pk1=pk1, simulating_data=False, rng=rng)
+            Ls_i = tw.simblm._simulate_worker_types_stayers(nl=nl, nk=nk, NNs=NNs, G=gs, pk0=pk0, simulating_data=False, rng=rng)
+            ## Simulate wages ##
+            yj_i = tw.simblm._simulate_wages_movers(jdata, Lm_i, blm_model=blm_model, w1=wj1, w2=wj2, rng=rng)
+            ys_i = tw.simblm._simulate_wages_stayers(sdata, Ls_i, blm_model=blm_model, w=ws, rng=rng)
             with bpd.util.ChainedAssignment():
                 if worker_types_as_ids:
+                    ## Update worker types ##
                     jdata.loc[:, 'i'] = Lm_i
                     sdata.loc[:, 'i'] = Ls_i
-                jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
+                ## Update wages ##
+                jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = yj_i
                 sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
-            # Convert to BipartitePandas DataFrame
+            del Lm_i, Ls_i, yj_i, ys_i
+            ## Convert to BipartitePandas DataFrame ##
             bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
             # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
             bdf._set_attributes(jdata)
             # If simulating worker types, data is not sorted
             bdf = bdf.to_long(is_sorted=(not worker_types_as_ids), copy=False)
-            # Estimate OLS
+            ## Estimate OLS ##
             if no_controls:
                 fe_estimator = tw.FEEstimator(bdf, fe_params)
             else:
@@ -3078,6 +3145,9 @@ class BLMReallocation:
         if rng is None:
             rng = np.random.default_rng(None)
 
+        # Parameter dictionary
+        params = self.params
+
         # Make sure continuous quantiles start at 0 and end at 1
         for col_cts, quantiles_cts in continuous_sort_cols.items():
             if quantiles_cts[0] != 0:
@@ -3100,18 +3170,40 @@ class BLMReallocation:
             ts = True
 
         ## Weights ##
-        wj = None
+        wj1, wj2 = None, None
         ws = None
         # if jdata._col_included('w'):
-        #     wj = jdata.loc[:, ['w1', 'w2']].to_numpy()
+        #     wj1, wj2 = jdata.loc[:, 'w1'].to_numpy(), jdata.loc[:, 'w2'].to_numpy()
         # if sdata._col_included('w'):
         #     ws = sdata.loc[:, 'w1'].to_numpy()
 
+        ## Unpack parameters ##
+        nl, nk = params.get_multiple(('nl', 'nk'))
+
         if blm_model is None:
-            # Run initial BLM estimator
-            blm_fit_init = BLMEstimator(self.params)
+            ## Run initial BLM estimator ##
+            blm_fit_init = BLMEstimator(params)
             blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
             blm_model = blm_fit_init.model
+
+            ## Update parameters ##
+            params = copy.deepcopy(self.params)
+            params['a1_mu'] = blm_model.A1
+            params['a1_sig'] = blm_model.A1.std() / nl
+            params['a2_mu'] = blm_model.A2
+            params['a2_sig'] = blm_model.A2.std() / nl
+            params['s1_low'] = blm_model.S1
+            params['s1_high'] = blm_model.S1
+            params['s2_low'] = blm_model.S2
+            params['s2_high'] = blm_model.S2
+            # TODO: add control variables
+
+        ## Unpack parameters ##
+        NNm, NNs = blm_model.NNm, blm_model.NNs
+
+        ## Reallocate ##
+        pk1, pk0 = blm_model.pk1, blm_model.pk0
+        pk1, pk0 = tw.simblm._reallocate(pk1=pk1, pk0=pk0, NNm=NNm, NNs=NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
 
         ## Baseline ##
         res_cat_baseline = {}
@@ -3152,17 +3244,24 @@ class BLMReallocation:
         res_cat = {col: np.zeros([n_samples, n_quantiles]) for col, n_quantiles in categorical_sort_cols.items()}
         res_cts = {col: np.zeros([n_samples, len(quantiles) - 1]) for col, quantiles in continuous_sort_cols.items()}
         for i in trange(n_samples):
-            # Simulate worker types then draw wages
-            yj_i, ys_i = _simulate_types_wages(jdata=jdata, sdata=sdata, gj=gj, gs=gs, blm_model=blm_model, reallocate=True, reallocate_jointly=reallocate_jointly, reallocate_period=reallocate_period, wj=wj, ws=ws, rng=rng)[: 2]
+            ## Simulate worker types ##
+            Lm_i = tw.simblm._simulate_worker_types_movers(nl=nl, nk=nk, NNm=NNm, G1=gj[:, 0], G2=gj[:, 1], pk1=pk1, simulating_data=False, rng=rng)
+            Ls_i = tw.simblm._simulate_worker_types_stayers(nl=nl, nk=nk, NNs=NNs, G=gs, pk0=pk0, simulating_data=False, rng=rng)
+            ## Simulate wages ##
+            yj_i = tw.simblm._simulate_wages_movers(jdata, Lm_i, blm_model=blm_model, w1=wj1, w2=wj2, rng=rng)
+            ys_i = tw.simblm._simulate_wages_stayers(sdata, Ls_i, blm_model=blm_model, w=ws, rng=rng)
+            del Lm_i, Ls_i
             with bpd.util.ChainedAssignment():
+                ## Update wages ##
                 jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
                 sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
-            # Convert to BipartitePandas DataFrame
+            del yj_i, ys_i
+            ## Convert to BipartitePandas DataFrame ##
             bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
             # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
             bdf._set_attributes(jdata)
             bdf = bdf.to_long(is_sorted=True, copy=False)
-            # Compute quantiles
+            ## Compute quantiles ##
             y = bdf.loc[:, 'y'].to_numpy()
             if bdf._col_included('w'):
                 w = bdf.loc[:, 'w'].to_numpy()
