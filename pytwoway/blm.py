@@ -2113,13 +2113,13 @@ class BLMModel:
         ax.set_title(title)
         plt.show()
 
-    def plot_type_flows(self, title='Worker flows', dpi=None):
+    def plot_type_flows(self, title='Worker flows', font_size=15):
         '''
         Plot flows of worker types between each firm class.
 
         Arguments:
             title (str): plot title
-            dpi (float or None): dpi for plot
+            font_size (float): font size for plot
         '''
         if self.NNm is None:
             raise ValueError('The dynamic BLM estimation must be run on movers (and NNm must be computed) before plotting type proportions for movers.')
@@ -2129,19 +2129,21 @@ class BLMModel:
         A1, A2, pk1, NNm = self._sort_parameters(self.A1, self.A2, pk1=self.pk1, NNm=self.NNm, sort_firm_types=True)
         # colors = px.colors.qualitative.Alphabet
         opacity = 0.4
-        colors = [
-            f'rgba(31, 119, 180, {opacity})',
-            f'rgba(255, 127, 14, {opacity})',
-            f'rgba(44, 160, 44, {opacity})',
-            f'rgba(214, 39, 40, {opacity})',
-            f'rgba(148, 103, 189, {opacity})',
-            f'rgba(140, 86, 75, {opacity})',
-            f'rgba(227, 119, 194, {opacity})',
-            f'rgba(127, 127, 127, {opacity})',
-            f'rgba(188, 189, 34, {opacity})',
-            f'rgba(23, 190, 207, {opacity})',
-            f'rgba(255, 0, 255, {opacity})'
-        ]
+        colors = np.array(
+            [
+                [31, 119, 180],
+                [255, 127, 14],
+                [44, 160, 44],
+                [214, 39, 40],
+                [148, 103, 189],
+                [140, 86, 75],
+                [227, 119, 194],
+                [127, 127, 127],
+                [188, 189, 34],
+                [23, 190, 207],
+                [255, 0, 255]
+            ]
+        )
 
         ## Compute worker flows ##
         reshaped_pk1 = np.reshape(pk1, (nk, nk, nl))
@@ -2164,11 +2166,11 @@ class BLMModel:
                 # Destination firm
                 target=np.tile(np.repeat(np.arange(nk), nl), nk) + nk,
                 # Worker type
-                label=[f'$l={l + 1}$' for _ in range(nk) for _ in range(nk) for l in range(nl)],
+                label=[f'l={l + 1}' for _ in range(nk) for _ in range(nk) for l in range(nl)],
                 # Worker flows
                 value=mover_flows.flatten(),
-                # Color
-                color=[colors[l] for _ in range(nk) for _ in range(nk) for l in range(nl)]
+                # Color (specify mean for each l, and for each k go from -80 below the mean to +80 above the mean)
+                color=[f'rgba({str(list(np.minimum(255, np.maximum(0, colors[l, :] - 80) + 160 * k / (nk - 1))))[1: -1]}, {opacity})' for k in range(nk) for _ in range(nk) for l in range(nl)]
             )
         )
 
@@ -2179,7 +2181,7 @@ class BLMModel:
                     mode='markers',
                     x=[None],
                     y=[None],
-                    marker=dict(size=10, color=colors[l], symbol='square'),
+                    marker=dict(color=f'rgba({str(list(colors[l, :]))[1: -1]}, {opacity})', symbol='square'),
                     name=f'$l={l + 1}$',
                 )
             )
@@ -2193,7 +2195,7 @@ class BLMModel:
         fig = go.Figure(data=traces, layout=layout)
         fig.update_xaxes(visible=False)
         fig.update_yaxes(visible=False)
-        fig.update_layout(title_text=title, font_size=10)
+        fig.update_layout(title_text=title, font_size=font_size)
         # fig.show()
 
 class BLMEstimator:
