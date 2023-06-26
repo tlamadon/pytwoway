@@ -15,7 +15,6 @@ import pandas as pd
 from scipy.sparse import csc_matrix
 from matplotlib import pyplot as plt
 import plotly.graph_objects as go
-# import plotly.express as px
 from paramsdict import ParamsDict, ParamsDictBase
 from paramsdict.util import col_type
 import bipartitepandas as bpd
@@ -2113,12 +2112,13 @@ class BLMModel:
         ax.set_title(title)
         plt.show()
 
-    def plot_type_flows(self, title='Worker flows', font_size=15):
+    def plot_type_flows(self, title='Worker flows', opacity=0.4, font_size=15):
         '''
         Plot flows of worker types between each firm class.
 
         Arguments:
             title (str): plot title
+            opacity (float): opacity of flows
             font_size (float): font size for plot
         '''
         if self.NNm is None:
@@ -2127,8 +2127,6 @@ class BLMModel:
         ## Extract parameters ##
         nl, nk = self.nl, self.nk
         A1, A2, pk1, NNm = self._sort_parameters(self.A1, self.A2, pk1=self.pk1, NNm=self.NNm, sort_firm_types=True)
-        # colors = px.colors.qualitative.Alphabet
-        opacity = 0.4
         colors = np.array(
             [
                 [31, 119, 180],
