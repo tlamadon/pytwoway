@@ -301,232 +301,76 @@ continuous_control_params = ParamsDict({
         ''', None)
 })
 
-def _simulate_types_wages(jdata, sdata, gj, gs, blm_model, reallocate=False, reallocate_jointly=True, reallocate_period='first', simulate_wages=True, wj=None, ws=None, rng=None):
+def _simulate_types_wages(blm_model, jdata, sdata, pk1=None, pk0=None, qi_cum_j=None, qi_cum_s=None, wj1=None, wj2=None, ws=None, worker_types_as_ids=True, simulate_wages=True, return_long_df=True, store_worker_types=True, rng=None):
     '''
-    Using data and estimated BLM parameters, simulate worker types and wages.
+    Using data and estimated BLM parameters, simulate worker types (and optionally wages).
 
     Arguments:
+        blm_model (BLMModel): BLM model with estimated parameters
         jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
         sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
-        gj (NumPy Array): mover firm types for both periods
-        gs (NumPy Array): stayer firm types for the first period
-        blm_model (BLMModel): BLM model with estimated parameters
-        reallocate (bool): if True, draw worker type proportions independently of firm type; if False, uses worker type proportions that are conditional on firm type
-        reallocate_jointly (bool): if True, worker type proportions take the average over movers and stayers (i.e. all workers use the same type proportions); if False, consider movers and stayers separately
-        reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
+        pk1 (NumPy Array or None): probability of being at each combination of firm types for movers; None if qi_cum_j is not None
+        pk0 (NumPy Array or None): probability of being at each firm type for stayers; None if qi_cum_s is not None
+        qi_cum_j (NumPy Array or None): cumulative probabilities for each mover observation to be each worker type; None if pk1 is not None
+        qi_cum_s (NumPy Array or None): cumulative probabilities for each stayer observation to be each worker type; None if pk0 is not None
+        wj1 (NumPy Array or None): mover weights for the first period; if None, don't weight
+        wj2 (NumPy Array or None): mover weights for the second period; if None, don't weight
+        ws (NumPy Array or None): stayer weights; if None, don't weight
+        worker_types_as_ids (bool): if True, regress on true, simulated worker types; if False, regress on worker ids
         simulate_wages (bool): if True, also simulate wages
-        wj (NumPy Array or None): mover weights for both periods; if None, don't weight
-        ws (NumPy Array or None): stayer weights for the first period; if None, don't weight
+        return_long_df (bool): if True, return data as a long-format BipartitePandas DataFrame; otherwise, return tuple of simulated types and wages
+        store_worker_types (bool): if True, and return_long_df is True and worker_types_as_ids is False, then stores simulated worker types in the column labeled 'l'
         rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
     Returns:
-        (tuple of NumPy Arrays): (yj --> tuple of wages for movers, where first element in first period wages and second element is second period wages; ys --> wages for stayers; Lm --> vector of mover types; Ls --> vector of stayer types) if simulating wages; otherwise, (Lm, Ls)
+        (BipartitePandas DataFrame or tuple of NumPy Arrays): if return_long_df is True, return BipartitePandas DataFrame with simulated data; if False, return tuple of (Lm --> vector of mover types; Ls --> vector of stayer types; yj --> tuple of wages for movers, where first element in first period wages and second element is second period wages; ys --> wages for stayers) if simulating wages; otherwise, (Lm, Ls)
     '''
     if rng is None:
         rng = np.random.default_rng(None)
 
-    nl, nk, nmi, nsi = blm_model.nl, blm_model.nk, len(jdata), len(sdata)
-    A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, pk0 = blm_model.A1, blm_model.A2, blm_model.S1, blm_model.S2, blm_model.A1_cat, blm_model.A2_cat, blm_model.S1_cat, blm_model.S2_cat, blm_model.A1_cts, blm_model.A2_cts, blm_model.S1_cts, blm_model.S2_cts, blm_model.pk1, blm_model.pk0
-    controls_dict, cat_cols, cts_cols = blm_model.controls_dict, blm_model.cat_cols, blm_model.cts_cols
+    ## Unpack parameters ##
+    nl, nk = blm_model.nl, blm_model.nk
 
-    # Correct datatype for gj and gs
-    gj = gj.astype(int, copy=False)
-    gs = gs.astype(int, copy=False)
+    ## Correct datatype for gj and gs ##
+    gj = jdata.loc[:, ['g1', 'g2']].to_numpy().astype(int, copy=False)
+    gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=False)
 
-    # Unpack weights
-    if wj is None:
-        wj = np.array([[1, 1]])
-    if ws is None:
-        ws = 1
-
-    # Worker types
-    worker_types = np.arange(nl)
-
-    if reallocate:
-        ### Re-allocate ###
-        NNm = blm_model.NNm
-        NNs = blm_model.NNs
-        NNm_1 = np.sum(NNm, axis=1)
-        NNm_2 = np.sum(NNm, axis=0)
-        nm = np.sum(NNm)
-        ns = np.sum(NNs)
-        ## Extract subset(s) ##
-        # First, pk1 #
-        reshaped_pk1 = np.reshape(pk1, (nk, nk, nl))
-        pk1_period1 = (np.sum((NNm.T * reshaped_pk1.T).T, axis=1).T / NNm_1).T
-        pk1_period2 = (np.sum((NNm.T * reshaped_pk1.T).T, axis=0).T / NNm_2).T
-        if reallocate_jointly:
-            # Second, take weighted average over pk1 and pk0 #
-            pk1_period1 = ((NNm_1 * pk1_period1.T + NNs * pk0.T) / (NNm_1 + NNs)).T
-            pk1_period2 = ((NNm_2 * pk1_period2.T + NNs * pk0.T) / (NNm_2 + NNs)).T
-            pk0_period1 = pk1_period1
-            pk0_period2 = pk1_period2
-        else:
-            pk0_period1 = pk0
-            pk0_period1 = pk0
-
-        ## Consider correct period(s) ##
-        if reallocate_period == 'first':
-            pk1 = pk1_period1
-            pk0 = pk0_period1
-        elif reallocate_period == 'second':
-            pk1 = pk1_period2
-            pk0 = pk0_period2
-        elif reallocate_period == 'all':
-            pk1 = (pk1_period1 + pk1_period2) / 2
-            pk0 = (pk0_period1 + pk0_period2) / 2
-        else:
-            raise ValueError(f"`reallocate_period` must be one of 'first', 'second', 'all', or None, but input specifies {reallocate_period!r}.")
-
-        ## Compute unconditional pk1 and pk0 ##
-        if reallocate_jointly:
-            if reallocate_period == 'first':
-                pk1 = np.sum(((NNm_1 + NNs) * pk1.T).T, axis=0) / (nm + ns)
-            elif reallocate_period == 'second':
-                pk1 = np.sum(((NNm_2 + NNs) * pk1.T).T, axis=0) / (nm + ns)
-            elif reallocate_period == 'all':
-                pk1 = np.sum((((NNm_1 + NNm_2) / 2 + NNs) * pk1.T).T, axis=0) / (nm + ns)
-            pk0 = pk1
-        else:
-            if reallocate_period == 'first':
-                pk1 = np.sum((NNm_1 * pk1.T).T, axis=0) / nm
-            elif reallocate_period == 'second':
-                pk1 = np.sum((NNm_2 * pk1.T).T, axis=0) / nm
-            elif reallocate_period == 'all':
-                pk1 = np.sum((((NNm_1 + NNm_2) / 2) * pk1.T).T, axis=0) / nm
-            pk0 = np.sum((NNs * pk0.T).T, axis=0) / ns
-
-        # Repeat unconditional mean across all firm types
-        pk1 = np.tile(pk1, (nk * nk, 1))
-        pk0 = np.tile(pk0, (nk, 1))
-
-    ## Movers ##
-    Lm = np.zeros(shape=len(jdata), dtype=int)
-    for k1 in range(nk):
-        for k2 in range(nk):
-            ## Iterate over all firm type combinations a worker can transition between ##
-            # Find movers who work at this combination of firm types
-            rows_kk = np.where((gj[:, 0] == k1) & (gj[:, 1] == k2))[0]
-            ni = len(rows_kk)
-            jj = k1 + nk * k2
-
-            # Draw worker types
-            Lm[rows_kk] = rng.choice(worker_types, size=ni, replace=True, p=pk1[jj, :])
+    ## Simulate worker types ##
+    Lm = tw.simblm._simulate_worker_types_movers(nl=nl, nk=nk, NNm=None, G1=gj[:, 0], G2=gj[:, 1], pk1=pk1, qi_cum=qi_cum_j, simulating_data=False, rng=rng)
+    Ls = tw.simblm._simulate_worker_types_stayers(nl=nl, nk=nk, NNs=None, G=gs, pk0=pk0, qi_cum=qi_cum_s, simulating_data=False, rng=rng)
 
     if simulate_wages:
-        A1_sum = A1[Lm, gj[:, 0]]
-        A2_sum = A2[Lm, gj[:, 1]]
-        S1_sum = S1[Lm, gj[:, 0]]
-        S2_sum = S2[Lm, gj[:, 1]]
+        ## Simulate wages ##
+        yj = tw.simblm._simulate_wages_movers(jdata, Lm, blm_model=blm_model, w1=wj1, w2=wj2, rng=rng)
+        ys = tw.simblm._simulate_wages_stayers(sdata, Ls, blm_model=blm_model, w=ws, rng=rng)
 
-        if len(controls_dict) > 0:
-            #### Simulate control variable wages ####
-            S1_sum_sq = S1_sum ** 2
-            S2_sum_sq = S2_sum ** 2
-            for i, col in enumerate(cat_cols + cts_cols):
-                # Get subcolumns associated with col
-                subcols = to_list(jdata.col_reference_dict[col])
-                n_subcols = len(subcols)
-                if n_subcols == 1:
-                    # If column is constant over time
-                    subcol_1 = subcols[0]
-                    subcol_2 = subcols[0]
-                elif n_subcols == 2:
-                    # If column can change over time
-                    subcol_1 = subcols[0]
-                    subcol_2 = subcols[1]
-                else:
-                    raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
-                if i < len(cat_cols):
-                    ### Categorical ###
-                    if controls_dict[col]['worker_type_interaction']:
-                        ## Worker-interaction ##
-                        A1_sum += A1_cat[col][Lm, jdata.loc[:, subcol_1]]
-                        A2_sum += A2_cat[col][Lm, jdata.loc[:, subcol_2]]
-                        S1_sum_sq += S1_cat[col][Lm, jdata.loc[:, subcol_1]] ** 2
-                        S2_sum_sq += S2_cat[col][Lm, jdata.loc[:, subcol_2]] ** 2
-                    else:
-                        ## Non-worker-interaction ##
-                        A1_sum += A1_cat[col][jdata.loc[:, subcol_1]]
-                        A2_sum += A2_cat[col][jdata.loc[:, subcol_2]]
-                        S1_sum_sq += S1_cat[col][jdata.loc[:, subcol_1]] ** 2
-                        S2_sum_sq += S2_cat[col][jdata.loc[:, subcol_2]] ** 2
-                else:
-                    ### Continuous ###
-                    if controls_dict[col]['worker_type_interaction']:
-                        ## Worker-interaction ##
-                        A1_sum += A1_cts[col][Lm] * jdata.loc[:, subcol_1]
-                        A2_sum += A2_cts[col][Lm] * jdata.loc[:, subcol_2]
-                        S1_sum_sq += S1_cts[col][Lm] ** 2
-                        S2_sum_sq += S2_cts[col][Lm] ** 2
-                    else:
-                        ## Non-worker-interaction ##
-                        A1_sum += A1_cts[col] * jdata.loc[:, subcol_1]
-                        A2_sum += A2_cts[col] * jdata.loc[:, subcol_2]
-                        S1_sum_sq += S1_cts[col] ** 2
-                        S2_sum_sq += S2_cts[col] ** 2
+    if not return_long_df:
+        if simulate_wages:
+            return (Lm, Ls, yj, ys)
+        return (Lm, Ls)
 
-            Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq / wj[:, 0]), size=nmi)
-            Y2 = rng.normal(loc=A2_sum, scale=np.sqrt(S2_sum_sq / wj[:, 1]), size=nmi)
-            del S1_sum_sq, S2_sum_sq
-        else:
-            #### No control variables ####
-            Y1 = rng.normal(loc=A1_sum, scale=S1_sum / np.sqrt(wj[:, 0]), size=nmi)
-            Y2 = rng.normal(loc=A2_sum, scale=S2_sum / np.sqrt(wj[:, 1]), size=nmi)
-        yj = (Y1, Y2)
-        del A1_sum, A2_sum, S1_sum, S2_sum, Y1, Y2
+    with bpd.util.ChainedAssignment():
+        if worker_types_as_ids:
+            ## Update worker types ##
+            jdata.loc[:, 'i'] = Lm
+            sdata.loc[:, 'i'] = Ls
+        elif store_worker_types:
+            jdata = jdata.add_column('l', Lm, is_categorical=True, dtype='categorical')
+            sdata = sdata.add_column('l', Ls, is_categorical=True, dtype='categorical')
+        if simulate_wages:
+            ## Update wages ##
+            jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = yj
+            sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys, ys)
+    del Lm, Ls, yj, ys
 
-    ## Stayers ##
-    Ls = np.zeros(shape=len(sdata), dtype=int)
-    for k in range(nk):
-        ## Iterate over all firm types a worker can work at ##
-        # Find movers who work at this firm type
-        rows_k = np.where(gs == k)[0]
-        ni = len(rows_k)
+    ## Convert to BipartitePandas DataFrame ##
+    bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
+    # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
+    bdf._set_attributes(jdata)
+    # If simulating worker types, data is not sorted
+    bdf = bdf.to_long(is_sorted=(not worker_types_as_ids), copy=False)
 
-        # Draw worker types
-        Ls[rows_k] = rng.choice(worker_types, size=ni, replace=True, p=pk0[k, :])
-
-    if simulate_wages:
-        A1_sum = A1[Ls, gs]
-        S1_sum = S1[Ls, gs]
-
-        if len(controls_dict) > 0:
-            #### Simulate control variable wages ####
-            S1_sum_sq = S1_sum ** 2
-            for i, col in enumerate(cat_cols + cts_cols):
-                # Get subcolumns associated with col
-                subcol_1 = to_list(sdata.col_reference_dict[col])[0]
-                if i < len(cat_cols):
-                    ### Categorical ###
-                    if controls_dict[col]['worker_type_interaction']:
-                        ## Worker-interaction ##
-                        A1_sum += A1_cat[col][Ls, sdata.loc[:, subcol_1]]
-                        S1_sum_sq += S1_cat[col][Ls, sdata.loc[:, subcol_1]] ** 2
-                    else:
-                        ## Non-worker-interaction ##
-                        A1_sum += A1_cat[col][sdata.loc[:, subcol_1]]
-                        S1_sum_sq += S1_cat[col][sdata.loc[:, subcol_1]] ** 2
-                else:
-                    ### Continuous ###
-                    if controls_dict[col]['worker_type_interaction']:
-                        ## Worker-interaction ##
-                        A1_sum += A1_cts[col][Ls] * sdata.loc[:, subcol_1]
-                        S1_sum_sq += S1_cts[col][Ls] ** 2
-                    else:
-                        ## Non-worker-interaction ##
-                        A1_sum += A1_cts[col] * sdata.loc[:, subcol_1]
-                        S1_sum_sq += S1_cts[col] ** 2
-
-            Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq / ws), size=nsi)
-        else:
-            #### No control variables ####
-            Y1 = rng.normal(loc=A1_sum, scale=S1_sum / np.sqrt(ws), size=nsi)
-        ys = Y1
-
-    if simulate_wages:
-        return (yj, ys, Lm, Ls)
-    return (Lm, Ls)
+    return bdf
 
 class BLMModel:
     '''
@@ -1284,7 +1128,7 @@ class BLMModel:
                 # Break loop
                 break
             if iter == (params['n_iters_movers'] - 1):
-                print(f"Maximum iterations reached for movers. It is recommended to increase the value for `n_iters_movers` from its current value of {params['n_iters_movers']}.")
+                print(f"Maximum iterations reached for movers. It is recommended to increase `n_iters_movers` from its current value of {params['n_iters_movers']}.")
             prev_lik = lik1
             prev_min_firm_type = min_firm_type
 
@@ -1977,7 +1821,7 @@ class BLMModel:
                 # Break loop
                 break
             if iter == (params['n_iters_stayers'] - 1):
-                print(f"Maximum iterations reached for stayers. It is recommended to increase the value for `n_iters_stayers` from its current value of {params['n_iters_stayers']}.")
+                print(f"Maximum iterations reached for stayers. It is recommended to increase `n_iters_stayers` from its current value of {params['n_iters_stayers']}.")
             prev_lik = lik0
 
             # ---------- M-step ----------
@@ -2540,24 +2384,11 @@ class BLMBootstrap:
             # Run parametric bootstrap
             models = []
             for _ in trange(n_samples):
-                ## Simulate worker types ##
-                Lm_i = tw.simblm._simulate_worker_types_movers(nl=nl, nk=nk, NNm=NNm, G1=gj[:, 0], G2=gj[:, 1], pk1=pk1, simulating_data=False, rng=rng)
-                Ls_i = tw.simblm._simulate_worker_types_stayers(nl=nl, nk=nk, NNs=NNs, G=gs, pk0=pk0, simulating_data=False, rng=rng)
-                ## Simulate wages ##
-                yj_i = tw.simblm._simulate_wages_movers(jdata, Lm_i, blm_model=blm_model, w1=wj1, w2=wj2, rng=rng)
-                ys_i = tw.simblm._simulate_wages_stayers(sdata, Ls_i, blm_model=blm_model, w=ws, rng=rng)
-                del Lm_i, Ls_i
-                with bpd.util.ChainedAssignment():
-                    ## Update wages ##
-                    jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = yj_i
-                    sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
-                del yj_i, ys_i
+                ## Simulate worker types and wages ##
+                bdf = _simulate_types_wages(blm_model, jdata, sdata, pk1=pk1, pk0=pk0, qi_cum_j=None, qi_cum_s=None, wj1=wj1, wj2=wj2, ws=ws, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
+
                 ## Cluster ##
-                bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
-                # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
-                bdf._set_attributes(jdata)
-                # Cluster
-                bdf = bdf.to_long(is_sorted=True, copy=False).cluster(cluster_params, rng=rng)
+                bdf = bdf.cluster(cluster_params, rng=rng)
                 clusters_dict = bdf.loc[:, ['j', 'g']].groupby('j', sort=False)['g'].first().to_dict()
                 del bdf
                 with bpd.util.ChainedAssignment():
@@ -2872,27 +2703,8 @@ class BLMVarianceDecomposition:
             res_lst_comp = []
             nl = blm_model.nl
         for i in trange(n_samples):
-            ## Simulate worker types ##
-            Lm_i = tw.simblm._simulate_worker_types_movers(nl=nl, nk=nk, NNm=NNm, G1=gj[:, 0], G2=gj[:, 1], pk1=pk1, simulating_data=False, rng=rng)
-            Ls_i = tw.simblm._simulate_worker_types_stayers(nl=nl, nk=nk, NNs=NNs, G=gs, pk0=pk0, simulating_data=False, rng=rng)
-            ## Simulate wages ##
-            yj_i = tw.simblm._simulate_wages_movers(jdata, Lm_i, blm_model=blm_model, w1=wj1, w2=wj2, rng=rng)
-            ys_i = tw.simblm._simulate_wages_stayers(sdata, Ls_i, blm_model=blm_model, w=ws, rng=rng)
-            with bpd.util.ChainedAssignment():
-                if worker_types_as_ids:
-                    ## Update worker types ##
-                    jdata.loc[:, 'i'] = Lm_i
-                    sdata.loc[:, 'i'] = Ls_i
-                ## Update wages ##
-                jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = yj_i
-                sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
-            del Lm_i, Ls_i, yj_i, ys_i
-            ## Convert to BipartitePandas DataFrame ##
-            bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
-            # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
-            bdf._set_attributes(jdata)
-            # If simulating worker types, data is not sorted
-            bdf = bdf.to_long(is_sorted=(not worker_types_as_ids), copy=False)
+            ## Simulate worker types and wages ##
+            bdf = _simulate_types_wages(blm_model, jdata, sdata, pk1=pk1, pk0=pk0, qi_cum_j=None, qi_cum_s=None, wj1=wj1, wj2=wj2, ws=ws, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
             ## Estimate OLS ##
             if no_controls:
                 fe_estimator = tw.FEEstimator(bdf, fe_params)
@@ -3087,23 +2899,9 @@ class BLMReallocation:
         res_cat = {col: np.zeros([n_samples, n_quantiles]) for col, n_quantiles in categorical_sort_cols.items()}
         res_cts = {col: np.zeros([n_samples, len(quantiles) - 1]) for col, quantiles in continuous_sort_cols.items()}
         for i in trange(n_samples):
-            ## Simulate worker types ##
-            Lm_i = tw.simblm._simulate_worker_types_movers(nl=nl, nk=nk, NNm=NNm, G1=gj[:, 0], G2=gj[:, 1], pk1=pk1, simulating_data=False, rng=rng)
-            Ls_i = tw.simblm._simulate_worker_types_stayers(nl=nl, nk=nk, NNs=NNs, G=gs, pk0=pk0, simulating_data=False, rng=rng)
-            ## Simulate wages ##
-            yj_i = tw.simblm._simulate_wages_movers(jdata, Lm_i, blm_model=blm_model, w1=wj1, w2=wj2, rng=rng)
-            ys_i = tw.simblm._simulate_wages_stayers(sdata, Ls_i, blm_model=blm_model, w=ws, rng=rng)
-            del Lm_i, Ls_i
-            with bpd.util.ChainedAssignment():
-                ## Update wages ##
-                jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (yj_i[0], yj_i[1])
-                sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys_i, ys_i)
-            del yj_i, ys_i
-            ## Convert to BipartitePandas DataFrame ##
-            bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
-            # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
-            bdf._set_attributes(jdata)
-            bdf = bdf.to_long(is_sorted=True, copy=False)
+            ## Simulate worker types and wages ##
+            bdf = _simulate_types_wages(blm_model, jdata, sdata, pk1=pk1, pk0=pk0, qi_cum_j=None, qi_cum_s=None, wj1=wj1, wj2=wj2, ws=ws, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
+
             ## Compute quantiles ##
             y = bdf.loc[:, 'y'].to_numpy()
             if bdf._col_included('w'):
