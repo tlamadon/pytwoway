@@ -356,7 +356,7 @@ def _simulate_controls_movers(nmi, cat_dict=None, cts_cols=None, rng=None):
 
     Arguments:
         nmi (int): number of mover observations
-        cat_dict (dict or None): dictionary linking categorical controls to number of categories; None is equivalent to {}
+        cat_dict (dict or None): dictionary linking categorical controls to categorical parameter dictionaries; None is equivalent to {}
         cts_cols (list or None): list of continuous controls; None is equivalent to []
         rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
@@ -393,7 +393,7 @@ def _simulate_controls_stayers(nsi, cat_dict=None, cts_cols=None, rng=None):
 
     Arguments:
         nsi (int): number of stayers observations
-        cat_dict (dict or None): dictionary linking categorical controls to number of categories; None is equivalent to {}
+        cat_dict (dict or None): dictionary linking categorical controls to categorical parameter dictionaries; None is equivalent to {}
         cts_cols (list or None): list of continuous controls; None is equivalent to []
         rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
@@ -676,6 +676,150 @@ def _simulate_wages_stayers(sdata, L, blm_model=None, A1=None, S1=None, A1_cat=N
     #### No control variables ####
     return rng.normal(loc=A1_sum, scale=S1_sum / np.sqrt(w), size=nsi)
 
+def _min_firm_type(A1, A2, primary_period='first'):
+        '''
+        Find the lowest firm type.
+
+        Arguments:
+            A1 (NumPy Array): mean of fixed effects in the first period
+            A2 (NumPy Array): mean of fixed effects in the second period
+            primary_period (str): period to normalize and sort over. 'first' uses first period parameters; 'second' uses second period parameters; 'all' uses the average over first and second period parameters.
+
+        Returns:
+            (int): lowest firm type
+        '''
+        # Compute parameters from primary period
+        if primary_period == 'first':
+            A_mean = A1
+        elif primary_period == 'second':
+            A_mean = A2
+        elif primary_period == 'all':
+            A_mean = (A1 + A2) / 2
+
+        # Return lowest firm type
+        return np.mean(A_mean, axis=0).argsort()[0]
+
+def _normalize(nl, A1, A2, A1_cat, A2_cat, cat_dict, primary_period='first'):
+    '''
+    Normalize means given categorical controls.
+
+    Arguments:
+        nl (int): number of worker types
+        A1 (NumPy Array): mean of fixed effects in the first period
+        A2 (NumPy Array): mean of fixed effects in the second period
+        A1_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the first period for categorical control variables
+        A2_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the second period for categorical control variables
+        cat_dict (dict or None): dictionary linking categorical controls to categorical parameter dictionaries; None is equivalent to {}
+        primary_period (str): period to normalize and sort over. 'first' uses first period parameters; 'second' uses second period parameters; 'all' uses the average over first and second period parameters.
+
+    Returns:
+        (tuple): tuple of normalized parameters (A1, A2, A1_cat, A2_cat)
+    '''
+    # Unpack parameters
+    A1, A2, A1_cat, A2_cat = A1.copy(), A2.copy(), A1_cat.copy(), A2_cat.copy()
+
+    if len(cat_dict) > 0:
+        # Compute minimum firm type
+        min_firm_type = _min_firm_type(A1, A2, primary_period)
+        # Check if any columns interact with worker type and/or are stationary (tv stands for time-varying, which is equivalent to non-stationary; and wi stands for worker-interaction)
+        any_tv_nwi = False
+        any_tnv_nwi = False
+        any_tv_wi = False
+        any_tnv_wi = False
+        for col in cat_dict.keys():
+            # Check if column is stationary
+            is_stationary = cat_dict[col]['stationary_A']
+
+            if cat_dict[col]['worker_type_interaction']:
+                # If the column interacts with worker types
+                if is_stationary:
+                    any_tnv_wi = True
+                    tnv_wi_col = col
+                else:
+                    any_tv_wi = True
+                    tv_wi_col = col
+                    break
+            else:
+                if is_stationary:
+                    any_tnv_nwi = True
+                    tnv_nwi_col = col
+                else:
+                    any_tv_nwi = True
+                    tv_nwi_col = col
+
+        ## Normalize parameters ##
+        if any_tv_wi:
+            for l in range(nl):
+                # First period
+                adj_val_1 = A1[l, min_firm_type]
+                A1[l, :] -= adj_val_1
+                A1_cat[tv_wi_col][l, :] += adj_val_1
+                # Second period
+                adj_val_2 = A2[l, min_firm_type]
+                A2[l, :] -= adj_val_2
+                A2_cat[tv_wi_col][l, :] += adj_val_2
+        else:
+            primary_period_dict = {
+                'first': 0,
+                'second': 1,
+                'all': range(2)
+            }
+            secondary_period_dict = {
+                'first': 1,
+                'second': 0,
+                'all': range(2)
+            }
+            params_dict = {
+                0: [A1, A1_cat],
+                1: [A2, A2_cat]
+            }
+            Ap = [params_dict[pp] for pp in to_list(primary_period_dict[primary_period])]
+            As = [params_dict[sp] for sp in to_list(secondary_period_dict[primary_period])]
+            if any_tnv_wi:
+                ## Normalize primary period ##
+                for l in range(nl):
+                    # Compute normalization
+                    adj_val_1 = Ap[0][0][l, min_firm_type]
+                    for Ap_sub in Ap[1:]:
+                        adj_val_1 += Ap_sub[0][l, min_firm_type]
+                    adj_val_1 /= len(Ap)
+                    # Normalize
+                    A1[l, :] -= adj_val_1
+                    A1_cat[tnv_wi_col][l, :] += adj_val_1
+                    A2[l, :] -= adj_val_1
+                    A2_cat[tnv_wi_col][l, :] += adj_val_1
+                if any_tv_nwi:
+                    ## Normalize lowest type pair from secondary period ##
+                    for As_sub in As:
+                        adj_val_2 = As_sub[0][0, min_firm_type]
+                        As_sub[0] -= adj_val_2
+                        As_sub[1][tv_nwi_col] += adj_val_2
+            else:
+                if any_tv_nwi:
+                    ## Normalize lowest type pair in both periods ##
+                    # First period
+                    adj_val_1 = A1[0, min_firm_type]
+                    A1 -= adj_val_1
+                    A1_cat[tv_nwi_col] += adj_val_1
+                    # Second period
+                    adj_val_2 = A2[0, min_firm_type]
+                    A2 -= adj_val_2
+                    A2_cat[tv_nwi_col] += adj_val_2
+                elif any_tnv_nwi:
+                    ## Normalize lowest type pair in primary period ##
+                    # Compute normalization
+                    adj_val_1 = Ap[0][0][0, min_firm_type]
+                    for Ap_sub in Ap[1:]:
+                        adj_val_1 += Ap_sub[0][0, min_firm_type]
+                    adj_val_1 /= len(Ap)
+                    # Normalize
+                    A1 -= adj_val_1
+                    A1_cat[tnv_nwi_col] += adj_val_1
+                    A2 -= adj_val_1
+                    A2_cat[tnv_nwi_col] += adj_val_1
+
+    return (A1, A2, A1_cat, A2_cat)
+
 def _reallocate(pk1, pk0, NNm, NNs, reallocate_period='first', reallocate_jointly=True):
     '''
     Draw worker type proportions independently of firm type.
@@ -956,6 +1100,10 @@ class SimBLM:
         ## Sort parameters ##
         A1, A2 = self._sort_A(A1, A2)
 
+        # ## Normalize ##
+        # A1, A2, A1_cat, A2_cat = _normalize(nl, A1, A2, A1_cat, A2_cat, self.cat_dict, primary_period='first')
+
+        ## Apply constraints ##
         if stationary_A:
             A2 = A1
 

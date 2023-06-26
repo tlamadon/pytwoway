@@ -697,30 +697,6 @@ class BLMModel:
         self.NNm = None
         self.NNs = None
 
-    def _min_firm_type(self, A1, A2):
-        '''
-        Find the lowest firm type.
-
-        Arguments:
-            A1 (NumPy Array): mean of fixed effects in the first period
-            A2 (NumPy Array): mean of fixed effects in the second period
-
-        Returns:
-            (int): lowest firm type
-        '''
-        params = self.params
-
-        # Compute parameters from primary period
-        if params['primary_period'] == 'first':
-            A_mean = A1
-        elif params['primary_period'] == 'second':
-            A_mean = A2
-        elif params['primary_period'] == 'all':
-            A_mean = (A1 + A2) / 2
-
-        # Return lowest firm type
-        return np.mean(A_mean, axis=0).argsort()[0]
-
     def _gen_constraints(self, min_firm_type):
         '''
         Generate constraints for estimating A and S in fit_movers().
@@ -780,8 +756,6 @@ class BLMModel:
 
         ## Normalization ##
         if len(cat_cols) > 0:
-            # Check that there is at least one constraint on a categorical column
-            any_cat_constraints = (params['cons_a_all'] is not None)
             # Check if any columns interact with worker type and/or are stationary (tv stands for time-varying, which is equivalent to non-stationary; and wi stands for worker-interaction)
             any_tv_nwi = False
             any_tnv_nwi = False
@@ -791,7 +765,6 @@ class BLMModel:
                 # Check if column is stationary
                 is_stationary = False
                 if controls_dict[col]['cons_a'] is not None:
-                    any_cat_constraints = True
                     for subcons_a in to_list(controls_dict[col]['cons_a']):
                         if isinstance(subcons_a, cons.Stationary):
                             is_stationary = True
@@ -806,52 +779,49 @@ class BLMModel:
                         break
                 else:
                     # If the column doesn't interact with worker types (this requires a constraint)
-                    any_cat_constraints = True
                     if is_stationary:
                         any_tnv_nwi = True
                     else:
                         any_tv_nwi = True
 
-            if any_cat_constraints:
-                # Add constraints only if at least one categorical control uses constraints
-                ## Determine primary and second periods ##
-                primary_period_dict = {
-                    'first': 0,
-                    'second': 1,
-                    'all': range(2)
-                }
-                secondary_period_dict = {
-                    'first': 1,
-                    'second': 0,
-                    'all': 0
-                }
-                pp = primary_period_dict[params['primary_period']]
-                sp = secondary_period_dict[params['primary_period']]
-                ### Add constraints ###
-                ## Monotonic worker types ##
-                cons_a.add_constraints(cons.MonotonicMean(md=params['d_mean_worker_effect'], cross_period_mean=True, nnt=pp))
-                if params['normalize']:
-                    ## Lowest firm type ##
-                    if params['force_min_firm_type'] and params['force_min_firm_type_constraint']:
-                        cons_a.add_constraints(cons.MinFirmType(min_firm_type=min_firm_type, md=params['d_mean_firm_effect'], is_min=True, cross_period_mean=True, nnt=pp))
-                    ## Normalize ##
-                    if any_tv_wi:
-                        # Normalize everything
-                        cons_a.add_constraints(cons.NormalizeAllWorkerTypes(min_firm_type=min_firm_type, nnt=range(2)))
+            ## Determine primary and second periods ##
+            primary_period_dict = {
+                'first': 0,
+                'second': 1,
+                'all': range(2)
+            }
+            secondary_period_dict = {
+                'first': 1,
+                'second': 0,
+                'all': 0
+            }
+            pp = primary_period_dict[params['primary_period']]
+            sp = secondary_period_dict[params['primary_period']]
+            ### Add constraints ###
+            ## Monotonic worker types ##
+            cons_a.add_constraints(cons.MonotonicMean(md=params['d_mean_worker_effect'], cross_period_mean=True, nnt=pp))
+            if params['normalize']:
+                ## Lowest firm type ##
+                if params['force_min_firm_type'] and params['force_min_firm_type_constraint']:
+                    cons_a.add_constraints(cons.MinFirmType(min_firm_type=min_firm_type, md=params['d_mean_firm_effect'], is_min=True, cross_period_mean=True, nnt=pp))
+                ## Normalize ##
+                if any_tv_wi:
+                    # Normalize everything
+                    cons_a.add_constraints(cons.NormalizeAllWorkerTypes(min_firm_type=min_firm_type, nnt=range(2)))
+                else:
+                    if any_tnv_wi:
+                        # Normalize primary period
+                        cons_a.add_constraints(cons.NormalizeAllWorkerTypes(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp))
+                        if any_tv_nwi:
+                            # Normalize lowest type pair from secondary period
+                            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=sp))
                     else:
-                        if any_tnv_wi:
-                            # Normalize primary period
-                            cons_a.add_constraints(cons.NormalizeAllWorkerTypes(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp))
-                            if any_tv_nwi:
-                                # Normalize lowest type pair from secondary period
-                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=sp))
-                        else:
-                            if any_tv_nwi:
-                                # Normalize lowest type pair in both periods
-                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(2)))
-                            elif any_tnv_nwi:
-                                # Normalize lowest type pair in primary period
-                                cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp))
+                        if any_tv_nwi:
+                            # Normalize lowest type pair in both periods
+                            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=range(2)))
+                        elif any_tnv_nwi:
+                            # Normalize lowest type pair in primary period
+                            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp))
 
         return (cons_a, cons_s, cons_a_dict, cons_s_dict)
 
@@ -967,132 +937,6 @@ class BLMModel:
             res = res[0]
 
         return res
-
-    def _normalize(self, A1, A2, A1_cat, A2_cat):
-        '''
-        Normalize means given categorical controls.
-
-        Arguments:
-            A1 (NumPy Array): mean of fixed effects in the first period
-            A2 (NumPy Array): mean of fixed effects in the second period
-            A1_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the first period for categorical control variables
-            A2_cat (dict of NumPy Arrays): dictionary linking column names to the mean of fixed effects in the second period for categorical control variables
-
-        Returns:
-            (tuple): tuple of normalized parameters (A1, A2, A1_cat, A2_cat)
-        '''
-        # Unpack parameters
-        params = self.params
-        nl, nk = self.nl, self.nk
-        cat_cols, cat_dict = self.cat_cols, self.cat_dict
-        A1, A2, A1_cat, A2_cat = A1.copy(), A2.copy(), A1_cat.copy(), A2_cat.copy()
-
-        if len(cat_cols) > 0:
-            # Compute minimum firm type
-            min_firm_type = self._min_firm_type(A1, A2)
-            # Check if any columns interact with worker type and/or are stationary (tv stands for time-varying, which is equivalent to non-stationary; and wi stands for worker-interaction)
-            any_tv_nwi = False
-            any_tnv_nwi = False
-            any_tv_wi = False
-            any_tnv_wi = False
-            for col in cat_cols:
-                # Check if column is stationary
-                is_stationary = False
-                if cat_dict[col]['cons_a'] is not None:
-                    for subcons_a in to_list(cat_dict[col]['cons_a']):
-                        if isinstance(subcons_a, cons.Stationary):
-                            is_stationary = True
-                            break
-
-                if cat_dict[col]['worker_type_interaction']:
-                    # If the column interacts with worker types
-                    if is_stationary:
-                        any_tnv_wi = True
-                        tnv_wi_col = col
-                    else:
-                        any_tv_wi = True
-                        tv_wi_col = col
-                        break
-                else:
-                    if is_stationary:
-                        any_tnv_nwi = True
-                        tnv_nwi_col = col
-                    else:
-                        any_tv_nwi = True
-                        tv_nwi_col = col
-
-            ## Normalize parameters ##
-            if any_tv_wi:
-                for l in range(nl):
-                    # First period
-                    adj_val_1 = A1[l, min_firm_type]
-                    A1[l, :] -= adj_val_1
-                    A1_cat[tv_wi_col][l, :] += adj_val_1
-                    # Second period
-                    adj_val_2 = A2[l, min_firm_type]
-                    A2[l, :] -= adj_val_2
-                    A2_cat[tv_wi_col][l, :] += adj_val_2
-            else:
-                primary_period_dict = {
-                    'first': 0,
-                    'second': 1,
-                    'all': range(2)
-                }
-                secondary_period_dict = {
-                    'first': 1,
-                    'second': 0,
-                    'all': range(2)
-                }
-                params_dict = {
-                    0: [A1, A1_cat],
-                    1: [A2, A2_cat]
-                }
-                Ap = [params_dict[pp] for pp in to_list(primary_period_dict[params['primary_period']])]
-                As = [params_dict[sp] for sp in to_list(secondary_period_dict[params['primary_period']])]
-                if any_tnv_wi:
-                    ## Normalize primary period ##
-                    for l in range(nl):
-                        # Compute normalization
-                        adj_val_1 = Ap[0][0][l, min_firm_type]
-                        for Ap_sub in Ap[1:]:
-                            adj_val_1 += Ap_sub[0][l, min_firm_type]
-                        adj_val_1 /= len(Ap)
-                        # Normalize
-                        A1[l, :] -= adj_val_1
-                        A1_cat[tnv_wi_col][l, :] += adj_val_1
-                        A2[l, :] -= adj_val_1
-                        A2_cat[tnv_wi_col][l, :] += adj_val_1
-                    if any_tv_nwi:
-                        ## Normalize lowest type pair from secondary period ##
-                        for As_sub in As:
-                            adj_val_2 = As_sub[0][0, min_firm_type]
-                            As_sub[0] -= adj_val_2
-                            As_sub[1][tv_nwi_col] += adj_val_2
-                else:
-                    if any_tv_nwi:
-                        ## Normalize lowest type pair in both periods ##
-                        # First period
-                        adj_val_1 = A1[0, min_firm_type]
-                        A1 -= adj_val_1
-                        A1_cat[tv_nwi_col] += adj_val_1
-                        # Second period
-                        adj_val_2 = A2[0, min_firm_type]
-                        A2 -= adj_val_2
-                        A2_cat[tv_nwi_col] += adj_val_2
-                    elif any_tnv_nwi:
-                        ## Normalize lowest type pair in primary period ##
-                        # Compute normalization
-                        adj_val_1 = Ap[0][0][0, min_firm_type]
-                        for Ap_sub in Ap[1:]:
-                            adj_val_1 += Ap_sub[0][0, min_firm_type]
-                        adj_val_1 /= len(Ap)
-                        # Normalize
-                        A1 -= adj_val_1
-                        A1_cat[tnv_nwi_col] += adj_val_1
-                        A2 -= adj_val_1
-                        A2_cat[tnv_nwi_col] += adj_val_1
-
-        return (A1, A2, A1_cat, A2_cat)
 
     def _sum_by_non_nl(self, ni, C1, C2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, compute_A=True, compute_S=True):
         '''
@@ -1389,7 +1233,7 @@ class BLMModel:
             min_firm_type = min_firm_type
         else:
             # If not forcing minimum firm type
-            prev_min_firm_type = self._min_firm_type(A1, A2)
+            prev_min_firm_type = tw.simblm._min_firm_type(A1, A2, params['primary_period'])
         cons_a, cons_s, cons_a_dict, cons_s_dict = self._gen_constraints(prev_min_firm_type)
 
         for iter in range(params['n_iters_movers']):
@@ -1434,7 +1278,7 @@ class BLMModel:
 
             if not params['force_min_firm_type']:
                 # If not forcing minimum firm type, compute lowest firm type
-                min_firm_type = self._min_firm_type(A1, A2)
+                min_firm_type = tw.simblm._min_firm_type(A1, A2, params['primary_period'])
 
             if ((abs(lik1 - prev_lik) < params['threshold_movers']) and (min_firm_type == prev_min_firm_type)):
                 # Break loop
@@ -1993,17 +1837,8 @@ class BLMModel:
                 # print(S2_cts)
 
         if store_res:
-            if len(cat_cols) > 0:
-                ## Normalize ##
-                # NOTE: normalize here because constraints don't normalize unless categorical controls are using constraints, and even when used, constraints don't always normalize to exactly 0
-                A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat)
-
             ## Sort parameters ##
             A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0 = self._sort_parameters(A1, A2, S1, S2, A1_cat, A2_cat, S1_cat, S2_cat, A1_cts, A2_cts, S1_cts, S2_cts, pk1, self.pk0)
-
-            if len(cat_cols) > 0:
-                ## Normalize again ##
-                A1, A2, A1_cat, A2_cat = self._normalize(A1, A2, A1_cat, A2_cat)
 
             # Store parameters
             self.A1, self.A2, self.S1, self.S2 = A1, A2, S1, S2
@@ -2179,6 +2014,9 @@ class BLMModel:
         self.params['update_a'] = False
         self.params['update_s'] = True
         self.params['update_pk1'] = True
+        if (self.params['categorical_controls'] is not None) and (len(self.params['categorical_controls']) > 0):
+            # Don't normalize until unconstrained, since normalizing can conflict with linear additivity and stationary firm-type variation constraints
+            self.params['normalize'] = False
         if self.params['verbose'] in [1, 2, 3]:
             print('Fitting movers with A fixed')
         self.fit_movers(jdata, compute_NNm=False)
@@ -2206,6 +2044,11 @@ class BLMModel:
                 print('Fitting movers with Stationary Firm Type Variation constraint on A')
             self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 4 #####
+        if (self.params['categorical_controls'] is not None) and (len(self.params['categorical_controls']) > 0):
+            # Can normalize again
+            self.params['normalize'] = user_params['normalize']
+            if self.params['verbose'] in [2, 3]:
+                print(f"Restoring normalize to {user_params['normalize']} - it is recommended to turn off normalization if estimator is not converging")
         # Restore user constraints
         self.params['cons_a_all'] = user_params['cons_a_all']
         if self.params['verbose'] in [1, 2, 3]:

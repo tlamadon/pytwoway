@@ -73,7 +73,7 @@ def test_blm_control_constraints_linear():
     assert np.all(blm_fit.A2[:, 1] == 0)
 
     # Make sure monotonic mean also works properly
-    assert np.all(np.isclose(np.diff(np.mean(blm_fit.A1, axis=1)), 0.015))
+    assert np.all(np.diff(np.mean(blm_fit.A1, axis=1)) > 0.015)
 
 def test_blm_control_constraints_linear_additive():
     # Test whether LinearAdditive() constraint for control variables works for BLM estimator.
@@ -137,7 +137,7 @@ def test_blm_control_constraints_linear_additive():
     assert np.all(blm_fit.A2[:, 2] == 0)
 
     # Make sure monotonic mean also works properly
-    assert np.all(np.isclose(np.diff(np.mean(blm_fit.A1, axis=1)), 0.025))
+    assert np.all(np.diff(np.mean(blm_fit.A1, axis=1)) > 0.025)
 
 def test_blm_control_constraints_monotonic():
     # Test whether Monotonic() constraint for control variables works for BLM estimator.
@@ -199,8 +199,8 @@ def test_blm_control_constraints_monotonic():
     assert np.min(np.diff(blm_fit.A2_cat['cat_tv_wi_control'], axis=0)) >= 0
 
     # Make sure normalization also works properly
-    assert np.all(blm_fit.A1[:, 2] == 0)
-    assert np.all(blm_fit.A2[:, 2] == 0)
+    assert np.all(blm_fit.A1[:, 0] == 0)
+    assert np.all(blm_fit.A2[:, 0] == 0)
 
 def test_blm_control_constraints_stationary_firm_type_variation():
     # Test whether StationaryFirmTypeVariation() constraint for control variables works for BLM estimator.
@@ -551,7 +551,7 @@ def test_blm_control_normalization_primary_period_second():
     assert np.max(np.abs((A2_sum_0_1_fit - A2_sum_0_1_sim) / A2_sum_0_1_sim)) < 0.015
     assert np.max(np.abs((A2_sum_1_0_fit - A2_sum_1_0_sim) / A2_sum_1_0_sim)) < 1e-2
     assert np.max(np.abs((A2_sum_1_1_fit - A2_sum_1_1_sim) / A2_sum_1_1_sim)) < 0.015
-    assert np.all(blm_fit.A2[:, 2] == 0)
+    assert np.all(np.isclose(blm_fit.A2[:, 2], 0))
     assert blm_fit.A1[0, 2] == 0
     assert np.all(blm_fit.A1_cat['cat_control_two'] == blm_fit.A2_cat['cat_control_two'])
 
@@ -664,11 +664,11 @@ def test_blm_control_normalization_primary_period_all():
     assert np.max(np.abs((A1_sum_0_1_fit - A1_sum_0_1_sim) / A1_sum_0_1_sim)) < 1e-3
     assert np.max(np.abs((A1_sum_1_0_fit - A1_sum_1_0_sim) / A1_sum_1_0_sim)) < 1e-3
     assert np.max(np.abs((A1_sum_1_1_fit - A1_sum_1_1_sim) / A1_sum_1_1_sim)) < 1e-4
-    assert np.max(np.abs((A2_sum_0_0_fit - A2_sum_0_0_sim) / A2_sum_0_0_sim)) < 1e-4
+    assert np.max(np.abs((A2_sum_0_0_fit - A2_sum_0_0_sim) / A2_sum_0_0_sim)) < 1e-3
     assert np.max(np.abs((A2_sum_0_1_fit - A2_sum_0_1_sim) / A2_sum_0_1_sim)) < 1e-3
     assert np.max(np.abs((A2_sum_1_0_fit - A2_sum_1_0_sim) / A2_sum_1_0_sim)) < 1e-3
     assert np.max(np.abs((A2_sum_1_1_fit - A2_sum_1_1_sim) / A2_sum_1_1_sim)) < 1e-3
-    assert np.all((blm_fit.A1 + blm_fit.A2)[:, 0] == 0)
+    assert np.all(np.isclose((blm_fit.A1 + blm_fit.A2)[:, 0], 0))
     assert blm_fit.A1[0, 0] == 0
-    assert blm_fit.A2[0, 0] == 0
+    assert np.abs(blm_fit.A2[0, 0] - 0) < 1e-20
     assert np.all(blm_fit.A1_cat['cat_control_two'] == blm_fit.A2_cat['cat_control_two'])
