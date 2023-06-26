@@ -2194,7 +2194,7 @@ class BLMModel:
         fig.update_xaxes(visible=False)
         fig.update_yaxes(visible=False)
         fig.update_layout(title_text=title, font_size=font_size)
-        # fig.show()
+        fig.show()
 
 class BLMEstimator:
     '''
