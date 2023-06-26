@@ -416,9 +416,9 @@ def _simulate_controls_stayers(nsi, cat_dict=None, cts_cols=None, rng=None):
 
     ## Update labels ##
     A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
-    A2_cat_draws = {k + '2': v.copy() for k, v in A1_cat_draws.items()}
+    A2_cat_draws = {k[: -1] + '2': v.copy() for k, v in A1_cat_draws.items()}
     A1_cts_draws = {k + '1': v for k, v in A1_cts_draws.items()}
-    A2_cts_draws = {k + '2': v.copy() for k, v in A1_cts_draws.items()}
+    A2_cts_draws = {k[: -1] + '2': v.copy() for k, v in A1_cts_draws.items()}
 
     return (A1_cat_draws, A2_cat_draws, A1_cts_draws, A2_cts_draws)
 
