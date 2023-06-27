@@ -131,8 +131,8 @@ def test_blm_monotonic_1():
     blm_fit.fit_movers(jdata=jdata)
     blm_fit.fit_stayers(sdata=sdata)
 
-    assert np.min(np.diff(blm_fit.liks1)) > -0.15
-    assert np.min(np.diff(blm_fit.liks0)) > -1e-7
+    assert np.min(np.diff(blm_fit.liks1)) > 0
+    assert np.min(np.diff(blm_fit.liks0)) > 0
 
 # NOTE: this is commented out because it takes so long to run
 # def test_blm_monotonic_2():
