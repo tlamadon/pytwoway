@@ -4552,10 +4552,13 @@ class DynamicBLMEstimator:
 
         model = DynamicBLMModel(self.params, self.rho_0, rng)
         if iter % 4 == 0:
+            # Constrained-unconstrained with static BLM as baseline
             model.fit_movers_cstr_uncstr(jdata, blm_model=blm_model, initialize_all=(iter == 0))
         elif iter % 4 == 1:
+            # Constrained-unconstrained
             model.fit_movers_cstr_uncstr(jdata, blm_model=None, initialize_all=False)
         else:
+            # Unconstrained
             model.fit_movers(jdata)
         return model
 

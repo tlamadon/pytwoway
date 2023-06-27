@@ -1890,12 +1890,12 @@ class BLMModel:
                 print('Fitting movers with Stationary Firm Type Variation constraint on A')
             self.fit_movers(jdata, compute_NNm=False)
         ##### Loop 4 #####
+        ## Restore user constraints ##
         if (self.params['categorical_controls'] is not None) and (len(self.params['categorical_controls']) > 0):
             # Can normalize again
             self.params['normalize'] = user_params['normalize']
             if self.params['verbose'] in [2, 3]:
                 print(f"Restoring normalize to {user_params['normalize']} - it is recommended to turn off normalization if estimator is not converging")
-        # Restore user constraints
         self.params['cons_a_all'] = user_params['cons_a_all']
         if self.params['verbose'] in [1, 2, 3]:
             print('Fitting unconstrained movers')
@@ -2217,19 +2217,25 @@ class BLMEstimator:
         self.connectedness_high = None
         self.connectedness_low = None
 
-    def _fit_model(self, jdata, rng=None):
+    def _fit_model(self, jdata, iter, rng=None):
         '''
         Generate model and run fit_movers_cstr_uncstr() given parameters.
 
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
+            iter (int): iteration
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
         if rng is None:
             rng = np.random.default_rng(None)
 
         model = BLMModel(self.params, rng)
-        model.fit_movers_cstr_uncstr(jdata)
+        if iter % 2 == 0:
+            # Constrained-unconstrained
+            model.fit_movers_cstr_uncstr(jdata)
+        else:
+            # Unconstrained
+            model.fit_movers(jdata)
         return model
 
     def fit(self, jdata, sdata, n_init=20, n_best=5, ncore=1, rng=None):
@@ -2253,11 +2259,11 @@ class BLMEstimator:
         if ncore > 1:
             # Multiprocessing
             with Pool(processes=ncore) as pool:
-                sim_model_lst = list(tqdm(pool.imap(tw.util.f_star, [(self._fit_model, (jdata, np.random.default_rng(seed))) for seed in seeds]), total=n_init))
+                sim_model_lst = list(tqdm(pool.imap(tw.util.f_star, [(self._fit_model, (jdata, i, np.random.default_rng(seed))) for i, seed in enumerate(seeds)]), total=n_init))
                 # sim_model_lst = pool.starmap(self._fit_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
         else:
             # No multiprocessing
-            sim_model_lst = list(tqdm(map(tw.util.f_star, [(self._fit_model, (jdata, np.random.default_rng(seed))) for seed in seeds]), total=n_init))
+            sim_model_lst = list(tqdm(map(tw.util.f_star, [(self._fit_model, (jdata, i, np.random.default_rng(seed))) for i, seed in enumerate(seeds)]), total=n_init))
             # sim_model_lst = itertools.starmap(self._fit_model, tqdm([(jdata, np.random.default_rng(seed)) for seed in seeds], total=n_init))
 
         # Sort by likelihoods FIXME better handling if connectedness is None
