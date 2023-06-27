@@ -252,6 +252,10 @@ dynamic_blm_params = ParamsDict({
         '''
             (default=True) If False, do not update rho32 for movers.
         ''', None),
+    'update_rho_period_movers': (19, 'type_constrained', (int, _gteq1),
+        '''
+            (default=19) Number of iterations between updating rho for movers. Higher values may lead to faster convergence of the EM algorithm.
+        ''', '>= 1'),
     'cons_a': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
             (default=None) Constraint object or list of constraint objects that define constraints on A12/A43/A2ma/A2mb/A2s/A3ma/A3mb/A3s. None is equivalent to [].
@@ -333,6 +337,10 @@ dynamic_blm_params = ParamsDict({
         '''
             (default=True) If False, do not update rho32 for stayers.
         ''', None),
+    'update_rho_period_stayers': (1, 'type_constrained', (int, _gteq1),
+        '''
+            (default=1) Number of iterations between updating rho for stayers. Higher values may lead to faster convergence of the EM algorithm.
+        ''', '>= 1'),
     'd_prior_stayers': (1 + 1e-7, 'type_constrained', ((float, int), _gteq1),
         '''
             (default=1 + 1e-7) Account for probabilities being too small by adding (d_prior - 1) to pk0.
@@ -2142,7 +2150,7 @@ class DynamicBLMModel:
                 # Break loop
                 break
             if iter == (params['n_iters_movers'] - 1):
-                print(f"Maximum iterations reached for movers. It is recommended to increase the value for `n_iters_movers` from its current value of {params['n_iters_movers']}.")
+                print(f"Maximum iterations reached for movers. It is recommended to increase `n_iters_movers` from its current value of {params['n_iters_movers']}.")
             prev_lik = lik1
             prev_min_firm_type = min_firm_type
 
@@ -2175,7 +2183,7 @@ class DynamicBLMModel:
 
             # ---------- M-step ----------
             # Alternate between updating A/S and updating rho
-            if update_rho and ((iter % 2) == 1):
+            if update_rho and ((iter % (params['update_rho_period_movers'] + 1)) == params['update_rho_period_movers']):
                 ## Update rho ##
                 if params['update_rho12']:
                     XX12 = np.zeros(nl * ni)
@@ -3500,7 +3508,7 @@ class DynamicBLMModel:
                 # Break loop
                 break
             if iter == (params['n_iters_stayers'] - 1):
-                print(f"Maximum iterations reached for stayers. It is recommended to increase the value for `n_iters_stayers` from its current value of {params['n_iters_stayers']}.")
+                print(f"Maximum iterations reached for stayers. It is recommended to increase `n_iters_stayers` from its current value of {params['n_iters_stayers']}.")
             prev_lik = lik0
 
             # ---------- Update pk0 ----------
@@ -3517,7 +3525,7 @@ class DynamicBLMModel:
 
             # ---------- M-step ----------
             # Alternate between updating A/S and updating rho
-            if params['update_rho32s'] and ((iter % 2) == 1):
+            if params['update_rho32s'] and ((iter % (params['update_rho_period_stayers'] + 1)) == params['update_rho_period_stayers']):
                 ## Update rho ##
                 XX32s = np.zeros(nl * ni)
                 YY32s = np.zeros(nl * ni)
