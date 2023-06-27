@@ -639,92 +639,95 @@ def test_blm_start_at_truth_cat_tnv_wi():
     assert np.all(np.isclose(blm_fit.A1_cat['cat_tnv_wi_control'], blm_fit.A2_cat['cat_tnv_wi_control']))
     assert np.all(np.isclose(blm_fit.S1_cat['cat_tnv_wi_control'], blm_fit.S2_cat['cat_tnv_wi_control']))
 
-def test_blm_full_estimation_cat_tnv_wi():
-    # Test whether BLM estimator works for full estimation for categorical, time non-varying, worker-interaction control variables.
-    rng = np.random.default_rng(1239)
-    nl = 2 # Number of worker types
-    nk = 3 # Number of firm types
-    n_control = 2 # Number of types for control variable
-    # Define parameter dictionaries
-    sim_cat_tnv_wi_params = tw.sim_categorical_control_params({
-        'n': n_control,
-        'stationary_A': True, 'stationary_S': True,
-        'worker_type_interaction': True,
-        'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
-        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
-    })
-    blm_sim_params = tw.sim_blm_params({
-        'nl': nl, 'nk': nk,
-        'mmult': 100, 'smult': 100,
-        'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
-        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
-        'categorical_controls': {'cat_tnv_wi_control': sim_cat_tnv_wi_params}
-    })
-    cat_tnv_wi_params = tw.categorical_control_params({
-        'n': n_control,
-        'worker_type_interaction': True,
-        'cons_a': cons.Stationary(), 'cons_s': cons.Stationary(),
-        'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
-        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
-    })
-    blm_params = tw.blm_params({
-        'nl': nl, 'nk': nk,
-        'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
-        's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
-        'categorical_controls': {'cat_tnv_wi_control': cat_tnv_wi_params}
-    })
-    # Simulate data
-    blm_true = tw.SimBLM(blm_sim_params)
-    sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
-    jdata, sdata = sim_data['jdata'], sim_data['sdata']
-    # Initialize BLM estimator
-    blm_fit = tw.BLMEstimator(blm_params)
-    # Fit BLM estimator
-    blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
-    blm_fit = blm_fit.model
+# NOTE: this test passes, but it takes over 7 minutes to run so it's commented out for now
+# def test_blm_full_estimation_cat_tnv_wi():
+#     # Test whether BLM estimator works for full estimation for categorical, time non-varying, worker-interaction control variables.
+#     # NOTE: increased n_iters_movers
+#     rng = np.random.default_rng(1239)
+#     nl = 2 # Number of worker types
+#     nk = 3 # Number of firm types
+#     n_control = 2 # Number of types for control variable
+#     # Define parameter dictionaries
+#     sim_cat_tnv_wi_params = tw.sim_categorical_control_params({
+#         'n': n_control,
+#         'stationary_A': True, 'stationary_S': True,
+#         'worker_type_interaction': True,
+#         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
+#         's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
+#     })
+#     blm_sim_params = tw.sim_blm_params({
+#         'nl': nl, 'nk': nk,
+#         'mmult': 100, 'smult': 100,
+#         'a1_mu': -2, 'a1_sig': 0.25, 'a2_mu': 2, 'a2_sig': 0.25,
+#         's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
+#         'categorical_controls': {'cat_tnv_wi_control': sim_cat_tnv_wi_params}
+#     })
+#     cat_tnv_wi_params = tw.categorical_control_params({
+#         'n': n_control,
+#         'worker_type_interaction': True,
+#         'cons_a': cons.Stationary(), 'cons_s': cons.Stationary(),
+#         'a1_mu': 0.5, 'a1_sig': 2.5, 'a2_mu': 0.5, 'a2_sig': 2.5,
+#         's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02
+#     })
+#     blm_params = tw.blm_params({
+#         'nl': nl, 'nk': nk,
+#         'n_iters_movers': 100000,
+#         'a1_mu': -2, 'a1_sig': 0.5, 'a2_mu': 2, 'a2_sig': 0.5,
+#         's1_low': 0.02, 's1_high': 0.02, 's2_low': 0.02, 's2_high': 0.02,
+#         'categorical_controls': {'cat_tnv_wi_control': cat_tnv_wi_params}
+#     })
+#     # Simulate data
+#     blm_true = tw.SimBLM(blm_sim_params)
+#     sim_data, sim_params = blm_true.simulate(return_parameters=True, rng=rng)
+#     jdata, sdata = sim_data['jdata'], sim_data['sdata']
+#     # Initialize BLM estimator
+#     blm_fit = tw.BLMEstimator(blm_params)
+#     # Fit BLM estimator
+#     blm_fit.fit(jdata=jdata, sdata=sdata, n_init=20, n_best=5, ncore=4, rng=rng)
+#     blm_fit = blm_fit.model
 
-    A1_sum_0_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_tnv_wi_control'][:, 0]
-    A1_sum_1_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_tnv_wi_control'][:, 1]
-    A2_sum_0_sim = sim_params['A2'].T + sim_params['A2_cat']['cat_tnv_wi_control'][:, 0]
-    A2_sum_1_sim = sim_params['A2'].T + sim_params['A2_cat']['cat_tnv_wi_control'][:, 1]
-    A1_sum_0_fit = blm_fit.A1.T + blm_fit.A1_cat['cat_tnv_wi_control'][:, 0]
-    A1_sum_1_fit = blm_fit.A1.T + blm_fit.A1_cat['cat_tnv_wi_control'][:, 1]
-    A2_sum_0_fit = blm_fit.A2.T + blm_fit.A2_cat['cat_tnv_wi_control'][:, 0]
-    A2_sum_1_fit = blm_fit.A2.T + blm_fit.A2_cat['cat_tnv_wi_control'][:, 1]
-    S1_sum_0_sim = np.sqrt(sim_params['S1'].T ** 2 + sim_params['S1_cat']['cat_tnv_wi_control'][:, 0] ** 2)
-    S1_sum_1_sim = np.sqrt(sim_params['S1'].T ** 2 + sim_params['S1_cat']['cat_tnv_wi_control'][:, 1] ** 2)
-    S2_sum_0_sim = np.sqrt(sim_params['S2'].T ** 2 + sim_params['S2_cat']['cat_tnv_wi_control'][:, 0] ** 2)
-    S2_sum_1_sim = np.sqrt(sim_params['S2'].T ** 2 + sim_params['S2_cat']['cat_tnv_wi_control'][:, 1] ** 2)
-    S1_sum_0_fit = np.sqrt(blm_fit.S1.T ** 2 + blm_fit.S1_cat['cat_tnv_wi_control'][:, 0] ** 2)
-    S1_sum_1_fit = np.sqrt(blm_fit.S1.T ** 2 + blm_fit.S1_cat['cat_tnv_wi_control'][:, 1] ** 2)
-    S2_sum_0_fit = np.sqrt(blm_fit.S2.T ** 2 + blm_fit.S2_cat['cat_tnv_wi_control'][:, 0] ** 2)
-    S2_sum_1_fit = np.sqrt(blm_fit.S2.T ** 2 + blm_fit.S2_cat['cat_tnv_wi_control'][:, 1] ** 2)
+#     A1_sum_0_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_tnv_wi_control'][:, 0]
+#     A1_sum_1_sim = sim_params['A1'].T + sim_params['A1_cat']['cat_tnv_wi_control'][:, 1]
+#     A2_sum_0_sim = sim_params['A2'].T + sim_params['A2_cat']['cat_tnv_wi_control'][:, 0]
+#     A2_sum_1_sim = sim_params['A2'].T + sim_params['A2_cat']['cat_tnv_wi_control'][:, 1]
+#     A1_sum_0_fit = blm_fit.A1.T + blm_fit.A1_cat['cat_tnv_wi_control'][:, 0]
+#     A1_sum_1_fit = blm_fit.A1.T + blm_fit.A1_cat['cat_tnv_wi_control'][:, 1]
+#     A2_sum_0_fit = blm_fit.A2.T + blm_fit.A2_cat['cat_tnv_wi_control'][:, 0]
+#     A2_sum_1_fit = blm_fit.A2.T + blm_fit.A2_cat['cat_tnv_wi_control'][:, 1]
+#     S1_sum_0_sim = np.sqrt(sim_params['S1'].T ** 2 + sim_params['S1_cat']['cat_tnv_wi_control'][:, 0] ** 2)
+#     S1_sum_1_sim = np.sqrt(sim_params['S1'].T ** 2 + sim_params['S1_cat']['cat_tnv_wi_control'][:, 1] ** 2)
+#     S2_sum_0_sim = np.sqrt(sim_params['S2'].T ** 2 + sim_params['S2_cat']['cat_tnv_wi_control'][:, 0] ** 2)
+#     S2_sum_1_sim = np.sqrt(sim_params['S2'].T ** 2 + sim_params['S2_cat']['cat_tnv_wi_control'][:, 1] ** 2)
+#     S1_sum_0_fit = np.sqrt(blm_fit.S1.T ** 2 + blm_fit.S1_cat['cat_tnv_wi_control'][:, 0] ** 2)
+#     S1_sum_1_fit = np.sqrt(blm_fit.S1.T ** 2 + blm_fit.S1_cat['cat_tnv_wi_control'][:, 1] ** 2)
+#     S2_sum_0_fit = np.sqrt(blm_fit.S2.T ** 2 + blm_fit.S2_cat['cat_tnv_wi_control'][:, 0] ** 2)
+#     S2_sum_1_fit = np.sqrt(blm_fit.S2.T ** 2 + blm_fit.S2_cat['cat_tnv_wi_control'][:, 1] ** 2)
 
-    # Normalization alters worker type order - adjust estimates to make comparable to simulated parameters
-    adj_order = [1, 0]
-    A1_sum_0_fit = A1_sum_0_fit[:, adj_order]
-    A1_sum_1_fit = A1_sum_1_fit[:, adj_order]
-    A2_sum_0_fit = A2_sum_0_fit[:, adj_order]
-    A2_sum_1_fit = A2_sum_1_fit[:, adj_order]
-    S1_sum_0_fit = S1_sum_0_fit[:, adj_order]
-    S1_sum_1_fit = S1_sum_1_fit[:, adj_order]
-    S2_sum_0_fit = S2_sum_0_fit[:, adj_order]
-    S2_sum_1_fit = S2_sum_1_fit[:, adj_order]
-    sorted_pk1 = blm_fit.pk1[:, adj_order]
-    sorted_pk0 = blm_fit.pk0[:, adj_order]
+#     # Normalization alters worker type order - adjust estimates to make comparable to simulated parameters
+#     adj_order = [1, 0]
+#     A1_sum_0_fit = A1_sum_0_fit[:, adj_order]
+#     A1_sum_1_fit = A1_sum_1_fit[:, adj_order]
+#     A2_sum_0_fit = A2_sum_0_fit[:, adj_order]
+#     A2_sum_1_fit = A2_sum_1_fit[:, adj_order]
+#     S1_sum_0_fit = S1_sum_0_fit[:, adj_order]
+#     S1_sum_1_fit = S1_sum_1_fit[:, adj_order]
+#     S2_sum_0_fit = S2_sum_0_fit[:, adj_order]
+#     S2_sum_1_fit = S2_sum_1_fit[:, adj_order]
+#     sorted_pk1 = blm_fit.pk1[:, adj_order]
+#     sorted_pk0 = blm_fit.pk0[:, adj_order]
 
-    assert np.max(np.abs((A1_sum_0_fit - A1_sum_0_sim) / A1_sum_0_sim)) < 1e-2
-    assert np.max(np.abs((A1_sum_1_fit - A1_sum_1_sim) / A1_sum_1_sim)) < 1e-2
-    assert np.max(np.abs((A2_sum_0_fit - A2_sum_0_sim) / A2_sum_0_sim)) < 1e-3
-    assert np.max(np.abs((A2_sum_1_fit - A2_sum_1_sim) / A2_sum_1_sim)) < 1e-2
-    assert np.prod(np.abs((S1_sum_0_fit - S1_sum_0_sim) / S1_sum_0_sim)) ** (1 / S1_sum_0_sim.size) < 0.45
-    assert np.prod(np.abs((S1_sum_1_fit - S1_sum_1_sim) / S1_sum_1_sim)) ** (1 / S1_sum_1_sim.size) < 0.45
-    assert np.prod(np.abs((S2_sum_0_fit - S2_sum_0_sim) / S2_sum_0_sim)) ** (1 / S2_sum_0_sim.size) < 0.45
-    assert np.prod(np.abs((S2_sum_1_fit - S2_sum_1_sim) / S2_sum_1_sim)) ** (1 / S2_sum_1_sim.size) < 0.45
-    assert np.prod(np.abs((sorted_pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.025
-    assert np.prod(np.abs((sorted_pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.023
-    assert np.all(np.isclose(blm_fit.A1_cat['cat_tnv_wi_control'], blm_fit.A2_cat['cat_tnv_wi_control']))
-    assert np.all(np.isclose(blm_fit.S1_cat['cat_tnv_wi_control'], blm_fit.S2_cat['cat_tnv_wi_control']))
+#     assert np.max(np.abs((A1_sum_0_fit - A1_sum_0_sim) / A1_sum_0_sim)) < 1e-2
+#     assert np.max(np.abs((A1_sum_1_fit - A1_sum_1_sim) / A1_sum_1_sim)) < 1e-2
+#     assert np.max(np.abs((A2_sum_0_fit - A2_sum_0_sim) / A2_sum_0_sim)) < 1e-3
+#     assert np.max(np.abs((A2_sum_1_fit - A2_sum_1_sim) / A2_sum_1_sim)) < 1e-2
+#     assert np.prod(np.abs((S1_sum_0_fit - S1_sum_0_sim) / S1_sum_0_sim)) ** (1 / S1_sum_0_sim.size) < 0.45
+#     assert np.prod(np.abs((S1_sum_1_fit - S1_sum_1_sim) / S1_sum_1_sim)) ** (1 / S1_sum_1_sim.size) < 0.45
+#     assert np.prod(np.abs((S2_sum_0_fit - S2_sum_0_sim) / S2_sum_0_sim)) ** (1 / S2_sum_0_sim.size) < 0.45
+#     assert np.prod(np.abs((S2_sum_1_fit - S2_sum_1_sim) / S2_sum_1_sim)) ** (1 / S2_sum_1_sim.size) < 0.45
+#     assert np.prod(np.abs((sorted_pk1 - sim_params['pk1']) / sim_params['pk1'])) ** (1 / sim_params['pk1'].size) < 0.025
+#     assert np.prod(np.abs((sorted_pk0 - sim_params['pk0']) / sim_params['pk0'])) ** (1 / sim_params['pk0'].size) < 0.023
+#     assert np.all(np.isclose(blm_fit.A1_cat['cat_tnv_wi_control'], blm_fit.A2_cat['cat_tnv_wi_control']))
+#     assert np.all(np.isclose(blm_fit.S1_cat['cat_tnv_wi_control'], blm_fit.S2_cat['cat_tnv_wi_control']))
 
 def test_blm_start_at_truth_cat_tv():
     # Test whether BLM estimator works when starting at truth for categorical, time-varying control variables.

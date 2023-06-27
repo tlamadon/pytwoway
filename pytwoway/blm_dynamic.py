@@ -204,12 +204,12 @@ dynamic_blm_params = ParamsDict({
     ## Other ##
     'pk1_prior': (None, 'array_of_type_constrained_none', (('float', 'int'), _min_gt0),
         '''
-            (default=None) Dirichlet prior for pk1 (probability of being at each combination of firm types for movers). Must have length nl. None is equivalent to np.ones(nl).
+            (default=None) Prior for pk1 (probability of being at each combination of firm types for movers). In particular, pk1 now generates as a convex combination of the prior plus a Dirichlet random variable. Must have shape (nk ** 2, nl). None puts all weight on the Dirichlet variable.
         ''', 'min > 0'),
-    # 'pk0_prior': (None, 'array_of_type_constrained_none', (('float', 'int'), _min_gt0),
-    #     '''
-    #         (default=None) Dirichlet prior for pk0 (probability of being at each firm type for stayers). Must have length nl. None is equivalent to np.ones(nl).
-    #     ''', 'min > 0'),
+    'pk0_prior': (None, 'array_of_type_constrained_none', (('float', 'int'), _min_gt0),
+        '''
+            (default=None) Prior for pk0 (probability of being at each firm type for stayers). Must have shape (nk, nl). None is equivalent to np.ones((nk, nl)) / nl.
+        ''', 'min > 0'),
     ## fit_movers() and fit_stayers() parameters ##
     'normalize': (True, 'type', bool,
         '''
@@ -1237,16 +1237,14 @@ class DynamicBLMModel:
             for period in all_periods
         }
         # Model for p(K | l, l') for movers
-        if params['pk1_prior'] is None:
-            pk1_prior = np.ones(nl)
-        else:
-            pk1_prior = params['pk1_prior']
-        self.pk1 = rng.dirichlet(alpha=pk1_prior, size=nk ** 2)
+        self.pk1 = rng.dirichlet(alpha=np.ones(nl), size=nk ** 2)
+        if params['pk1_prior'] is not None:
+            self.pk1 = (self.pk1 + params['pk1_prior']) / 2
         # Model for p(K | l, l') for stayers
-        # if params['pk0_prior'] is None:
-        #     pk0_prior = np.ones(nl)
-        # self.pk0 = rng.dirichlet(alpha=params['pk0_prior'], size=nk)
-        self.pk0 = np.ones((nk, nl)) / nl
+        if params['pk0_prior'] is None:
+            self.pk0 = np.ones((nk, nl)) / nl
+        else:
+            self.pk0 = params['pk0_prior'].copy()
 
         ### Control variables ###
         ## Categorical ##
@@ -4680,11 +4678,12 @@ class DynamicBLMEstimator:
         else:
             warnings.warn('Estimation has not yet been run.')
 
-    def plot_liks_connectedness(self, jitter=False, dpi=None):
+    def plot_liks_connectedness(self, only_n_best=False, jitter=False, dpi=None):
         '''
         Plot likelihoods vs connectedness for the estimations run.
 
         Arguments:
+            only_n_best (bool): if True, only plot the n_best estimates
             jitter (bool): if True, jitter points to prevent overlap
             dpi (float or None): dpi for plot
         '''
@@ -4702,7 +4701,8 @@ class DynamicBLMEstimator:
                 plot = jitter_scatter
             else:
                 plot = plt.scatter
-            plot(self.liks_low, self.connectedness_low, marker='o', facecolors='None', edgecolors='C0')
+            if not only_n_best:
+                plot(self.liks_low, self.connectedness_low, marker='o', facecolors='None', edgecolors='C0')
             plot(liks_high_lst, connectedness_high_lst, marker='^', facecolors='None', edgecolors='C1')
             plt.scatter(self.model.lik1, self.model.connectedness, marker=(6, 2, 45), facecolors='C2')
             plt.xlabel('Likelihood')

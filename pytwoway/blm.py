@@ -101,12 +101,12 @@ blm_params = ParamsDict({
         ''', '>= 0'),
     'pk1_prior': (None, 'array_of_type_constrained_none', (('float', 'int'), _min_gt0),
         '''
-            (default=None) Dirichlet prior for pk1 (probability of being at each combination of firm types for movers). Must have length nl. None is equivalent to np.ones(nl).
+            (default=None) Prior for pk1 (probability of being at each combination of firm types for movers). In particular, pk1 now generates as a convex combination of the prior plus a Dirichlet random variable. Must have shape (nk ** 2, nl). None puts all weight on the Dirichlet variable.
         ''', 'min > 0'),
-    # 'pk0_prior': (None, 'array_of_type_constrained_none', (('float', 'int'), _min_gt0),
-    #     '''
-    #         (default=None) Dirichlet prior for pk0 (probability of being at each firm type for stayers). Must have length nl. None is equivalent to np.ones(nl).
-    #     ''', 'min > 0'),
+    'pk0_prior': (None, 'array_of_type_constrained_none', (('float', 'int'), _min_gt0),
+        '''
+            (default=None) Prior for pk0 (probability of being at each firm type for stayers). Must have shape (nk, nl). None is equivalent to np.ones((nk, nl)) / nl.
+        ''', 'min > 0'),
     ## fit_movers() and fit_stayers() parameters ##
     'weighted': (True, 'type', bool,
         '''
@@ -455,7 +455,7 @@ class BLMModel:
         self.any_non_worker_type_interactions = any([not col_dict['worker_type_interaction'] for col_dict in controls_dict.values()])
 
         ## Generate starting values ##
-        a1_mu, a1_sig, a2_mu, a2_sig, s1_low, s1_high, s2_low, s2_high, pk1_prior = self.params.get_multiple(('a1_mu', 'a1_sig', 'a2_mu', 'a2_sig', 's1_low', 's1_high', 's2_low', 's2_high', 'pk1_prior')) # pk0_prior
+        a1_mu, a1_sig, a2_mu, a2_sig, s1_low, s1_high, s2_low, s2_high, pk1_prior, pk0_prior = self.params.get_multiple(('a1_mu', 'a1_sig', 'a2_mu', 'a2_sig', 's1_low', 's1_high', 's2_low', 's2_high', 'pk1_prior', 'pk0_prior'))
         s_lb = params['s_lower_bound']
         # Model for Y1 | Y2, l, k for movers and stayers
         self.A1 = rng.normal(loc=a1_mu, scale=a1_sig, size=dims)
@@ -464,14 +464,14 @@ class BLMModel:
         self.A2 = rng.normal(loc=a2_mu, scale=a2_sig, size=dims)
         self.S2 = rng.uniform(low=np.maximum(s2_low, s_lb), high=s2_high, size=dims)
         # Model for p(K | l, l') for movers
-        if pk1_prior is None:
-            pk1_prior = np.ones(nl)
-        self.pk1 = rng.dirichlet(alpha=pk1_prior, size=nk ** 2)
+        self.pk1 = rng.dirichlet(alpha=np.ones(nl), size=nk ** 2)
+        if pk1_prior is not None:
+            self.pk1 = (self.pk1 + pk1_prior) / 2
         # Model for p(K | l, l') for stayers
-        # if pk0_prior is None:
-        #     pk0_prior = np.ones(nl)
-        # self.pk0 = rng.dirichlet(alpha=pk0_prior, size=nk)
-        self.pk0 = np.ones((nk, nl)) / nl
+        if pk0_prior is None:
+            self.pk0 = np.ones((nk, nl)) / nl
+        else:
+            self.pk0 = pk0_prior.copy()
 
         ### Control variables ###
         ## Categorical ##
@@ -2363,11 +2363,12 @@ class BLMEstimator:
         else:
             warnings.warn('Estimation has not yet been run.')
 
-    def plot_liks_connectedness(self, jitter=False, dpi=None):
+    def plot_liks_connectedness(self, only_n_best=False, jitter=False, dpi=None):
         '''
         Plot likelihoods vs connectedness for the estimations run.
 
         Arguments:
+            only_n_best (bool): if True, only plot the n_best estimates
             jitter (bool): if True, jitter points to prevent overlap
             dpi (float or None): dpi for plot
         '''
@@ -2385,7 +2386,8 @@ class BLMEstimator:
                 plot = jitter_scatter
             else:
                 plot = plt.scatter
-            plot(self.liks_low, self.connectedness_low, marker='o', facecolors='None', edgecolors='C0')
+            if not only_n_best:
+                plot(self.liks_low, self.connectedness_low, marker='o', facecolors='None', edgecolors='C0')
             plot(liks_high_lst, connectedness_high_lst, marker='^', facecolors='None', edgecolors='C1')
             plt.scatter(self.model.lik1, self.model.connectedness, marker=(6, 2, 45), facecolors='C2')
             plt.xlabel('Likelihood')
