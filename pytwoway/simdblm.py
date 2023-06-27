@@ -741,10 +741,10 @@ class SimDynamicBLM:
                 if period[-1] != 'b':
                     A[period] = (np.mean(A[period], axis=1) + A['12'].T - np.mean(A['12'], axis=1)).T
 
-        # Normalize 2ma and 3ma #
+        # Normalize 2mb and 3mb #
         min_firm_type = np.mean(A['12'], axis=0).argsort()[0]
-        A['2ma'] = (A['2ma'].T - A['2ma'][:, min_firm_type]).T
-        A['3ma'] = (A['3ma'].T - A['3ma'][:, min_firm_type]).T
+        A['2mb'] -= A['2mb'][min_firm_type]
+        A['3mb'] -= A['3mb'][min_firm_type]
 
         if not endogeneity:
             A['2mb'][:] = 0
@@ -792,10 +792,10 @@ class SimDynamicBLM:
                         A_cat[col][period] = (np.mean(A_cat[col][period], axis=1) + A_cat[col]['12'].T - np.mean(A_cat[col]['12'], axis=1)).T
                     else:
                         A_cat[col][period] = np.mean(A_cat[col][period]) + A_cat[col]['12'] - np.mean(A_cat[col]['12'])
-        # Normalize 2ma and 3ma #
+        # Normalize 2mb and 3mb #
         for col in cat_cols:
-            A_cat[col]['2ma'] = (A_cat[col]['2ma'].T - A_cat[col]['2ma'][:, min_firm_type]).T
-            A_cat[col]['3ma'] = (A_cat[col]['3ma'].T - A_cat[col]['3ma'][:, min_firm_type]).T
+            A_cat[col]['2mb'] -= A_cat[col]['2mb'][min_firm_type]
+            A_cat[col]['3mb'] -= A_cat[col]['3mb'][min_firm_type]
         # Endogeneity and state dependence
         for col in cat_cols:
             if not endogeneity:

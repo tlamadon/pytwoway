@@ -252,9 +252,9 @@ dynamic_blm_params = ParamsDict({
         '''
             (default=True) If False, do not update rho32 for movers.
         ''', None),
-    'update_rho_period_movers': (19, 'type_constrained', (int, _gteq1),
+    'update_rho_period_movers': (1, 'type_constrained', (int, _gteq1),
         '''
-            (default=19) Number of iterations between updating rho for movers. Higher values may lead to faster convergence of the EM algorithm.
+            (default=1) Number of iterations between updating rho for movers. Higher values may lead to faster convergence of the EM algorithm.
         ''', '>= 1'),
     'cons_a': (None, 'list_of_type_none', (cons.Linear, cons.Monotonic, cons.Stationary, cons.StationaryFirmTypeVariation, cons.BoundedBelow, cons.BoundedAbove),
         '''
@@ -1376,13 +1376,12 @@ class DynamicBLMModel:
         ## General ##
         cons_a = cons.QPConstrained(nl, nk)
         cons_s = cons.QPConstrained(nl, nk)
-        if for_movers:
-            # Normalize 2ma and 3ma so that for the lowest firm type, each worker type is 0 (otherwise these are free parameters)
-            cons_a.add_constraints(cons.NormalizeAllWorkerTypes(min_firm_type=min_firm_type, nnt=(2, 3), nt=nt, dynamic=True))
         cons_s.add_constraints(cons.BoundedBelow(lb=params['s_lower_bound'], nt=nt_S))
         if constrain_b:
             cons_a.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=nt, dynamic=True))
             # cons_s.add_constraints(cons.NoWorkerTypeInteraction(nnt=nnt_b, nt=4, dynamic=True))
+            # Normalize 2mb and 3mb so that for the lowest firm type, each worker type is 0 (otherwise these are free parameters)
+            cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, nnt=nnt_b, nt=nt, dynamic=True))
 
         if params['cons_a'] is not None:
             cons_a.add_constraints(params['cons_a'])
@@ -2183,7 +2182,7 @@ class DynamicBLMModel:
 
             # ---------- M-step ----------
             # Alternate between updating A/S and updating rho
-            if update_rho and ((iter % (params['update_rho_period_movers'] + 1)) == params['update_rho_period_movers']):
+            if update_rho and ((iter % (params['update_rho_period_movers'] + 1)) == 1):
                 ## Update rho ##
                 if params['update_rho12']:
                     XX12 = np.zeros(nl * ni)
@@ -3525,7 +3524,7 @@ class DynamicBLMModel:
 
             # ---------- M-step ----------
             # Alternate between updating A/S and updating rho
-            if params['update_rho32s'] and ((iter % (params['update_rho_period_stayers'] + 1)) == params['update_rho_period_stayers']):
+            if params['update_rho32s'] and ((iter % (params['update_rho_period_stayers'] + 1)) == 1):
                 ## Update rho ##
                 XX32s = np.zeros(nl * ni)
                 YY32s = np.zeros(nl * ni)
@@ -4200,16 +4199,16 @@ class DynamicBLMModel:
             self.A['12'] = copy.deepcopy(blm_model.A1)
             self.A['43'] = copy.deepcopy(blm_model.A2)
             if initialize_all:
-                self.A['2mb'] = copy.deepcopy(blm_model.A1)
-                self.A['3mb'] = copy.deepcopy(blm_model.A2)
+                self.A['2ma'] = copy.deepcopy(blm_model.A1)
+                self.A['3ma'] = copy.deepcopy(blm_model.A2)
                 self.A['2s'] = copy.deepcopy(blm_model.A1)
                 self.A['3s'] = copy.deepcopy(blm_model.A2)
-                self.A['2ma'][:] = 0
-                self.A['3ma'][:] = 0
-                self.R12 = 0
-                self.R43 = 0
-                self.R32m = 0
-                self.R32s = 0
+                self.A['2mb'][:] = 0
+                self.A['3mb'][:] = 0
+                self.R12 = 0.6
+                self.R43 = 0.6
+                self.R32m = 0.6
+                self.R32s = 0.6
             ##### Loop 1 #####
             # First fix pk and A but update S
             self.params['update_a_movers'] = False
