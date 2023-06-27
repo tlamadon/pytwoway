@@ -4175,12 +4175,13 @@ class DynamicBLMModel:
             NNs.sort_index(inplace=True)
             self.NNs = NNs.to_numpy()
 
-    def fit_movers_cstr_uncstr(self, jdata, compute_NNm=True, blm_model=None, initialize_all=False):
+    def fit_movers_cstr_uncstr(self, jdata, linear_additivity=True, compute_NNm=True, blm_model=None, initialize_all=False):
         '''
         Run fit_movers(), first constrained, then using results as starting values, run unconstrained.
 
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
+            linear_additivity (bool): if True, include the loop with the linear additivity constraint
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
             blm_model (BLMModel or None): already-estimated non-dynamic BLM model. Estimates from this model will be used as a baseline in half the starting values (the other half will be random). If None, all starting values will be random.
             initialize_all (bool): if True, initialize all parameters from blm_model (if blm_model is not None)
@@ -4228,7 +4229,7 @@ class DynamicBLMModel:
         ##### Loop 2 #####
         # Now update A with Linear Additive constraint
         self.params['update_a_movers'] = True
-        if self.nl > 1:
+        if linear_additivity and (self.nl > 1):
             # Set constraints
             if user_params['cons_a_all'] is None:
                 # Linear addivity can't be applied to endogeneity or state dependence terms
@@ -4268,13 +4269,14 @@ class DynamicBLMModel:
         # Restore original parameters
         self.params = user_params
 
-    def fit_stayers_cstr_uncstr(self, sdata, compute_NNs=True):
+    def fit_stayers_cstr_uncstr(self, sdata, linear_additivity=True, compute_NNs=True):
         '''
         Run fit_stayers(), first constrained, then using results as starting values, run unconstrained.
 
         Arguments:
             sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
-            compute_NNm (bool): if True, compute vector giving the number of stayers at each firm type (e.g. entry (1) gives the number of stayers at firm type 1)
+            linear_additivity (bool): if True, include the loop with the linear additivity constraint
+            compute_NNs (bool): if True, compute vector giving the number of stayers at each firm type (e.g. entry (1) gives the number of stayers at firm type 1)
         '''
         ## First, simulate parameters but keep A fixed ##
         ## Second, use estimated parameters as starting point to run with A constrained to be linear ##
@@ -4292,7 +4294,7 @@ class DynamicBLMModel:
         ##### Loop 2 #####
         # Now update A with Linear Additive constraint
         self.params['update_a_stayers'] = True
-        if self.nl > 1:
+        if linear_additivity and (self.nl > 1):
             # Set constraints
             if user_params['cons_a_all'] is None:
                 self.params['cons_a_all'] = cons.LinearAdditive(nt=2, dynamic=True)
@@ -4551,13 +4553,13 @@ class DynamicBLMEstimator:
         model = DynamicBLMModel(self.params, self.rho_0, rng)
         if iter % 4 == 0:
             # Constrained-unconstrained with static BLM as baseline
-            model.fit_movers_cstr_uncstr(jdata, blm_model=blm_model, initialize_all=(iter == 0))
+            model.fit_movers_cstr_uncstr(jdata, linear_additivity=True, blm_model=blm_model, initialize_all=(iter == 0))
         elif iter % 4 == 1:
-            # Constrained-unconstrained
-            model.fit_movers_cstr_uncstr(jdata, blm_model=None, initialize_all=False)
+            # Constrained-unconstrained with linear additivity
+            model.fit_movers_cstr_uncstr(jdata, linear_additivity=True, blm_model=None, initialize_all=False)
         else:
-            # Unconstrained
-            model.fit_movers(jdata)
+            # Constrained-unconstrained without linear additivity
+            model.fit_movers_cstr_uncstr(jdata, linear_additivity=False, blm_model=None, initialize_all=False)
         return model
 
     def fit(self, jdata, sdata, n_init=20, n_best=5, blm_model=None, rho_0=(0.6, 0.6, 0.6), weights=None, diff=False, ncore=1, rng=None):

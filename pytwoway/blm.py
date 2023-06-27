@@ -1842,12 +1842,13 @@ class BLMModel:
             NNs.sort_index(inplace=True)
             self.NNs = NNs.to_numpy()
 
-    def fit_movers_cstr_uncstr(self, jdata, compute_NNm=True):
+    def fit_movers_cstr_uncstr(self, jdata, linear_additivity=True, compute_NNm=True):
         '''
         Run fit_movers(), first constrained, then using results as starting values, run unconstrained.
 
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
+            linear_additivity (bool): if True, include the loop with the linear additivity constraint
             compute_NNm (bool): if True, compute matrix giving the number of movers who transition from one firm type to another (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3)
         '''
         ## First, simulate parameters but keep A fixed ##
@@ -1869,7 +1870,7 @@ class BLMModel:
         ##### Loop 2 #####
         # Now update A with Linear Additive constraint
         self.params['update_a'] = True
-        if self.nl > 1:
+        if linear_additivity and (self.nl > 1):
             # Set constraints
             if user_params['cons_a_all'] is None:
                 self.params['cons_a_all'] = cons.LinearAdditive()
@@ -2231,11 +2232,11 @@ class BLMEstimator:
 
         model = BLMModel(self.params, rng)
         if iter % 2 == 0:
-            # Constrained-unconstrained
-            model.fit_movers_cstr_uncstr(jdata)
+            # Include linear additivity
+            model.fit_movers_cstr_uncstr(jdata, linear_additivity=True)
         else:
-            # Unconstrained
-            model.fit_movers(jdata)
+            # Don't include linear additivity
+            model.fit_movers_cstr_uncstr(jdata, linear_additivity=False)
         return model
 
     def fit(self, jdata, sdata, n_init=20, n_best=5, ncore=1, rng=None):
