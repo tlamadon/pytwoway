@@ -540,23 +540,23 @@ sim_dynamic_continuous_control_params = ParamsDict({
         ''', None)
 })
 
-def _simulate_wages_movers(jdata, L, blm_model=None, A=None, S=None, R12=None, R43=None, R32m=None, A_cat=None, S_cat=None, A_cts=None, S_cts=None, controls_dict=None, cat_cols=None, cts_cols=None, rng=None, **kwargs):
+def _simulate_wages_movers(jdata, L, dynamic_blm_model=None, A=None, S=None, R12=None, R43=None, R32m=None, A_cat=None, S_cat=None, A_cts=None, S_cts=None, controls_dict=None, cat_cols=None, cts_cols=None, rng=None, **kwargs):
     '''
     Simulate wages for movers.
 
     Arguments:
         jdata (BipartitePandas DataFrame): movers data
         L (NumPy Array): worker types for movers
-        blm_model (DynamicBLMModel or None): Dynamic BLM model with estimated parameter values; None if other parameters are not None
-        A (dict of NumPy Arrays or None): dictionary linking periods to the mean of fixed effects in that period; None if blm_model is not None
-        S (dict of NumPy Arrays or None): dictionary linking periods to the standard deviation of fixed effects in that period; None if blm_model is not None
-        R12 (float or None): persistence parameter between periods 1 and 2; None if blm_model is not None
-        R43 (float or None): persistence parameter between periods 3 and 4; None if blm_model is not None
-        R32m (float or None): persistence parameter between periods 2 and 3 for movers; None if blm_model is not None
-        A_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the mean of fixed effects in that period; None if blm_model is not None
-        S_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; None if blm_model is not None
-        A_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the mean of fixed effects in that period; None if blm_model is not None
-        S_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; None if blm_model is not None
+        dynamic_blm_model (DynamicBLMModel or None): Dynamic BLM model with estimated parameter values; None if other parameters are not None
+        A (dict of NumPy Arrays or None): dictionary linking periods to the mean of fixed effects in that period; None if dynamic_blm_model is not None
+        S (dict of NumPy Arrays or None): dictionary linking periods to the standard deviation of fixed effects in that period; None if dynamic_blm_model is not None
+        R12 (float or None): persistence parameter between periods 1 and 2; None if dynamic_blm_model is not None
+        R43 (float or None): persistence parameter between periods 3 and 4; None if dynamic_blm_model is not None
+        R32m (float or None): persistence parameter between periods 2 and 3 for movers; None if dynamic_blm_model is not None
+        A_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the mean of fixed effects in that period; None if dynamic_blm_model is not None
+        S_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; None if dynamic_blm_model is not None
+        A_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the mean of fixed effects in that period; None if dynamic_blm_model is not None
+        S_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; None if dynamic_blm_model is not None
         controls_dict (dict or None): dictionary of all control variables; None if no controls
         cat_cols (list or None): list of categorical controls; None if no categorical controls
         cts_cols (list or None): list of continuous controls; None if no continuous controls
@@ -580,20 +580,20 @@ def _simulate_wages_movers(jdata, L, blm_model=None, A=None, S=None, R12=None, R
     G2 = jdata.loc[:, 'g4'].to_numpy()
     G = [G1, G2]
 
-    if blm_model is not None:
+    if dynamic_blm_model is not None:
         # Unpack DynamicBLMModel
-        A = blm_model.A
-        S = blm_model.S
-        R12 = blm_model.R12
-        R43 = blm_model.R43
-        R32m = blm_model.R32m
-        A_cat = blm_model.A_cat
-        S_cat = blm_model.S_cat
-        A_cts = blm_model.A_cts
-        S_cts = blm_model.S_cts
-        controls_dict = blm_model.controls_dict
-        cat_cols = blm_model.cat_cols
-        cts_cols = blm_model.cts_cols
+        A = dynamic_blm_model.A
+        S = dynamic_blm_model.S
+        R12 = dynamic_blm_model.R12
+        R43 = dynamic_blm_model.R43
+        R32m = dynamic_blm_model.R32m
+        A_cat = dynamic_blm_model.A_cat
+        S_cat = dynamic_blm_model.S_cat
+        A_cts = dynamic_blm_model.A_cts
+        S_cts = dynamic_blm_model.S_cts
+        controls_dict = dynamic_blm_model.controls_dict
+        cat_cols = dynamic_blm_model.cat_cols
+        cts_cols = dynamic_blm_model.cts_cols
 
     ## Draw wages ##
     A_sum = {period:
@@ -704,23 +704,23 @@ def _simulate_wages_movers(jdata, L, blm_model=None, A=None, S=None, R12=None, R
 
     return (Y1, Y2, Y3, Y4)
 
-def _simulate_wages_stayers(sdata, L, blm_model=None, A=None, S=None, R12=None, R43=None, R32s=None, A_cat=None, S_cat=None, A_cts=None, S_cts=None, controls_dict=None, cat_cols=None, cts_cols=None, rng=None, **kwargs):
+def _simulate_wages_stayers(sdata, L, dynamic_blm_model=None, A=None, S=None, R12=None, R43=None, R32s=None, A_cat=None, S_cat=None, A_cts=None, S_cts=None, controls_dict=None, cat_cols=None, cts_cols=None, rng=None, **kwargs):
     '''
     Simulate wages for stayers.
 
     Arguments:
         sdata (BipartitePandas DataFrame): stayers data
         L (NumPy Array): worker types for stayers
-        blm_model (DynamicBLMModel or None): Dynamic BLM model with estimated parameter values; None if other parameters are not None
-        A (dict of NumPy Arrays or None): dictionary linking periods to the mean of fixed effects in that period; None if blm_model is not None
-        S (dict of NumPy Arrays or None): dictionary linking periods to the standard deviation of fixed effects in that period; None if blm_model is not None
-        R12 (float or None): persistence parameter between periods 1 and 2; None if blm_model is not None
-        R43 (float or None): persistence parameter between periods 3 and 4; None if blm_model is not None
-        R32s (float or None): persistence parameter between periods 2 and 3 for stayers; None if blm_model is not None
-        A_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the mean of fixed effects in that period; None if blm_model is not None
-        S_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; None if blm_model is not None
-        A_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the mean of fixed effects in that period; None if blm_model is not None
-        S_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; None if blm_model is not None
+        dynamic_blm_model (DynamicBLMModel or None): Dynamic BLM model with estimated parameter values; None if other parameters are not None
+        A (dict of NumPy Arrays or None): dictionary linking periods to the mean of fixed effects in that period; None if dynamic_blm_model is not None
+        S (dict of NumPy Arrays or None): dictionary linking periods to the standard deviation of fixed effects in that period; None if dynamic_blm_model is not None
+        R12 (float or None): persistence parameter between periods 1 and 2; None if dynamic_blm_model is not None
+        R43 (float or None): persistence parameter between periods 3 and 4; None if dynamic_blm_model is not None
+        R32s (float or None): persistence parameter between periods 2 and 3 for stayers; None if dynamic_blm_model is not None
+        A_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the mean of fixed effects in that period; None if dynamic_blm_model is not None
+        S_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; None if dynamic_blm_model is not None
+        A_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the mean of fixed effects in that period; None if dynamic_blm_model is not None
+        S_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; None if dynamic_blm_model is not None
         controls_dict (dict or None): dictionary of all control variables; None if no controls
         cat_cols (list or None): list of categorical controls; None if no categorical controls
         cts_cols (list or None): list of continuous controls; None if no continuous controls
@@ -742,20 +742,20 @@ def _simulate_wages_stayers(sdata, L, blm_model=None, A=None, S=None, R12=None, 
     nsi = len(sdata)
     G = sdata.loc[:, 'g1'].to_numpy()
 
-    if blm_model is not None:
+    if dynamic_blm_model is not None:
         # Unpack DynamicBLMModel
-        A = blm_model.A
-        S = blm_model.S
-        R12 = blm_model.R12
-        R43 = blm_model.R43
-        R32s = blm_model.R32s
-        A_cat = blm_model.A_cat
-        S_cat = blm_model.S_cat
-        A_cts = blm_model.A_cts
-        S_cts = blm_model.S_cts
-        controls_dict = blm_model.controls_dict
-        cat_cols = blm_model.cat_cols
-        cts_cols = blm_model.cts_cols
+        A = dynamic_blm_model.A
+        S = dynamic_blm_model.S
+        R12 = dynamic_blm_model.R12
+        R43 = dynamic_blm_model.R43
+        R32s = dynamic_blm_model.R32s
+        A_cat = dynamic_blm_model.A_cat
+        S_cat = dynamic_blm_model.S_cat
+        A_cts = dynamic_blm_model.A_cts
+        S_cts = dynamic_blm_model.S_cts
+        controls_dict = dynamic_blm_model.controls_dict
+        cat_cols = dynamic_blm_model.cat_cols
+        cts_cols = dynamic_blm_model.cts_cols
 
     ## Draw wages ##
     A_sum = {period:

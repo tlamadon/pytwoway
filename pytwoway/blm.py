@@ -317,7 +317,7 @@ def _simulate_types_wages(blm_model, jdata, sdata, pk1=None, pk0=None, qi_cum_j=
         wj1 (NumPy Array or None): mover weights for the first period; if None, don't weight
         wj2 (NumPy Array or None): mover weights for the second period; if None, don't weight
         ws (NumPy Array or None): stayer weights; if None, don't weight
-        worker_types_as_ids (bool): if True, regress on true, simulated worker types; if False, regress on worker ids
+        worker_types_as_ids (bool): if True, replace worker ids with simulated worker types
         simulate_wages (bool): if True, also simulate wages
         return_long_df (bool): if True, return data as a long-format BipartitePandas DataFrame; otherwise, return tuple of simulated types and wages
         store_worker_types (bool): if True, and return_long_df is True and worker_types_as_ids is False, then stores simulated worker types in the column labeled 'l'
@@ -2417,7 +2417,7 @@ class BLMBootstrap:
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
-            blm_model (BLMModel or None): BLM model estimated using true data; if None, estimate model inside the method. For use with parametric bootstrap.
+            blm_model (BLMModel or None): estimated BLM model; if None, estimate model inside the method. For use with parametric bootstrap.
             n_samples (int): number of bootstrap samples to estimate
             n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
@@ -2447,6 +2447,7 @@ class BLMBootstrap:
         cluster_params['copy'] = False
 
         if method == 'parametric':
+            ### Parametric bootstrap ###
             ## Copy original wages and firm types ##
             yj = jdata.loc[:, ['y1', 'y2']].to_numpy().copy()
             ys = sdata.loc[:, ['y1', 'y2']].to_numpy().copy()
@@ -2490,7 +2491,6 @@ class BLMBootstrap:
             if reallocate:
                 pk1, pk0 = tw.simblm._reallocate(pk1=pk1, pk0=pk0, NNm=NNm, NNs=NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
 
-            # Run parametric bootstrap
             models = []
             for _ in trange(n_samples):
                 ## Simulate worker types and wages ##
@@ -2519,6 +2519,7 @@ class BLMBootstrap:
                 jdata.loc[:, ['g1', 'g2']] = gj
                 sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
         elif method == 'standard':
+            ### Standard bootstrap ###
             wj = None
             if params['weighted'] and jdata._col_included('w'):
                 wj = jdata['w1'].to_numpy() + jdata['w2'].to_numpy()
@@ -2791,7 +2792,7 @@ class BLMVarianceDecomposition:
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
-            blm_model (BLMModel or None): BLM model estimated using true data; if None, estimate model inside the method
+            blm_model (BLMModel or None): estimated BLM model; if None, estimate model inside the method
             n_samples (int): number of bootstrap samples to estimate
             n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
@@ -2801,8 +2802,8 @@ class BLMVarianceDecomposition:
             Q_var (list of Q variances): list of Q matrices to use when estimating variance term; None is equivalent to tw.Q.VarPsi() without controls, or tw.Q.VarCovariate('psi') with controls
             Q_cov (list of Q covariances): list of Q matrices to use when estimating covariance term; None is equivalent to tw.Q.CovPsiAlpha() without controls, or tw.Q.CovCovariate('psi', 'alpha') with controls
             complementarities (bool): if True, estimate R^2 of regression with complementarities (by adding in all worker-firm interactions). Only allowed when firm_clusters_as_ids=True and worker_types_as_ids=True.
-            firm_clusters_as_ids (bool): if True, regress on firm clusters; if False, regress on firm ids
-            worker_types_as_ids (bool): if True, regress on true, simulated worker types; if False, regress on worker ids
+            firm_clusters_as_ids (bool): if True, replace firm ids with firm clusters
+            worker_types_as_ids (bool): if True, replace worker ids with simulated worker types
             ncore (int): number of cores for multiprocessing
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
@@ -2900,7 +2901,7 @@ class BLMVarianceDecomposition:
         if reallocate:
             pk1, pk0 = tw.simblm._reallocate(pk1=pk1, pk0=pk0, NNm=NNm, NNs=NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
 
-        # Run bootstrap
+        ## Run bootstrap ##
         res_lst = []
         if complementarities:
             res_lst_comp = []
@@ -2916,7 +2917,7 @@ class BLMVarianceDecomposition:
             fe_estimator.fit()
             res_lst.append(fe_estimator.summary)
             if complementarities:
-                # Estimate OLS with complementarities
+                ## Estimate OLS with complementarities ##
                 bdf.loc[:, 'i'] = pd.factorize(bdf.loc[:, 'i'].to_numpy() + nl * bdf.loc[:, 'j'].to_numpy())[0]
                 if no_controls:
                     fe_estimator = tw.FEEstimator(bdf, fe_params_comp)
@@ -2983,7 +2984,7 @@ class BLMReallocation:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
             quantiles (NumPy Array or None): income quantiles to compute; if None, computes percentiles from 1-100 (specifically, np.arange(101) / 100)
-            blm_model (BLMModel or None): BLM model estimated using true data; if None, estimate model inside the method
+            blm_model (BLMModel or None): estimated BLM model; if None, estimate model inside the method
             n_samples (int): number of bootstrap samples to estimate
             n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
@@ -3060,8 +3061,7 @@ class BLMReallocation:
         NNm, NNs = blm_model.NNm, blm_model.NNs
 
         ## Reallocate ##
-        pk1, pk0 = blm_model.pk1, blm_model.pk0
-        pk1, pk0 = tw.simblm._reallocate(pk1=pk1, pk0=pk0, NNm=NNm, NNs=NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
+        pk1, pk0 = tw.simblm._reallocate(pk1=blm_model.pk1, pk0=blm_model.pk0, NNm=NNm, NNs=NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
 
         ## Baseline ##
         res_cat_baseline = {}
@@ -3097,7 +3097,7 @@ class BLMReallocation:
             res_cts_baseline[col_cts] =\
                 np.bincount(quantile_groups, weights=y) / np.bincount(quantile_groups, weights=w)
 
-        # Run bootstrap
+        ## Run bootstrap ##
         res = np.zeros([n_samples, len(quantiles)])
         res_cat = {col: np.zeros([n_samples, n_quantiles]) for col, n_quantiles in categorical_sort_cols.items()}
         res_cts = {col: np.zeros([n_samples, len(quantiles) - 1]) for col, quantiles in continuous_sort_cols.items()}
