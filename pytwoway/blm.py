@@ -1153,7 +1153,7 @@ class BLMModel:
             if params['update_pk1']:
                 # NOTE: add dirichlet prior
                 # NOTE: this is equivalent to pk1 = GG12.T @ (W * (qi.T + d_prior - 1)).T
-                pk1 = np.bincount(KK2, weights=(W * (qi.T + d_prior - 1)).T.flatten(), minlength=(nk ** 2) * nl).reshape(nl, nk ** 2).T
+                pk1 = np.bincount(KK2, weights=(W * (qi.T + d_prior - 1)).T.flatten()).reshape(nl, nk ** 2).T
                 # Normalize rows to sum to 1
                 pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
 
@@ -1217,8 +1217,8 @@ class BLMModel:
 
                     ## Compute XwX_l (equivalent to GG1.T @ weights @ GG1) ##
                     # Use np.bincount to perform groupby-sum (source: https://stackoverflow.com/a/7089540/17333120)
-                    XwX[l_index: r_index] = np.bincount(G1, weights_1, minlength=nk)
-                    XwX[l_index + ts: r_index + ts] = np.bincount(G2, weights_2, minlength=nk)
+                    XwX[l_index: r_index] = np.bincount(G1, weights_1)
+                    XwX[l_index + ts: r_index + ts] = np.bincount(G2, weights_2)
 
                     if params['update_a']:
                         # Update A1_sum and A2_sum to account for worker-interaction terms
@@ -1233,8 +1233,8 @@ class BLMModel:
                             weights_2 *= (Y2_adj - A2_sum_l)
 
                         ## Compute XwY_l (equivalent to GG1.T @ weights @ Y) ##
-                        XwY[l_index: r_index] = np.bincount(G1, weights_1, minlength=nk)
-                        XwY[l_index + ts: r_index + ts] = np.bincount(G2, weights_2, minlength=nk)
+                        XwY[l_index: r_index] = np.bincount(G1, weights_1)
+                        XwY[l_index + ts: r_index + ts] = np.bincount(G2, weights_2)
                         del A1_sum_l, A2_sum_l
                 del weights_1, weights_2
 
@@ -1320,8 +1320,8 @@ class BLMModel:
                             weights2_cat[col].append(weights_2)
 
                         ## Compute XwX_cat_l (equivalent to CC1_cat.T @ weights @ CC1_cat) ##
-                        XwX_cat[col][l_index: r_index] = np.bincount(C1[col], weights_1, minlength=col_n)
-                        XwX_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = np.bincount(C2[col], weights_2, minlength=col_n)
+                        XwX_cat[col][l_index: r_index] = np.bincount(C1[col], weights_1)
+                        XwX_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = np.bincount(C2[col], weights_2)
 
                         if params['update_a']:
                             # Update A1_sum and A2_sum to account for worker-interaction terms
@@ -1340,8 +1340,8 @@ class BLMModel:
                                 weights_2 *= (Y2_adj - A2_sum_l - A2[l, G2])
 
                             ## Compute XwY_cat_l (equivalent to CC1_cat.T @ weights @ Y) ##
-                            XwY_cat[col][l_index: r_index] = np.bincount(C1[col], weights_1, minlength=col_n)
-                            XwY_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = np.bincount(C2[col], weights_2, minlength=col_n)
+                            XwY_cat[col][l_index: r_index] = np.bincount(C1[col], weights_1)
+                            XwY_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = np.bincount(C2[col], weights_2)
                             del A1_sum_l, A2_sum_l
                     del weights_1, weights_2
 
@@ -1501,8 +1501,8 @@ class BLMModel:
                             del S1_sum_sq_l, S2_sum_sq_l
 
                         ## Compute wS_l ##
-                        XwS[l_index: r_index] = np.bincount(G1, weights1[l], minlength=nk)
-                        XwS[l_index + ts: r_index + ts] = np.bincount(G2, weights2[l], minlength=nk)
+                        XwS[l_index: r_index] = np.bincount(G1, weights1[l])
+                        XwS[l_index + ts: r_index + ts] = np.bincount(G2, weights2[l])
 
                         ## Clear weights[l] ##
                         weights1[l] = 0
@@ -1551,8 +1551,8 @@ class BLMModel:
                             del S1_sum_sq_l, S2_sum_sq_l, S1_cat_l, S2_cat_l
 
                             ## XwS_cat_l ##
-                            XwS_cat[col][l_index: r_index] = np.bincount(C1[col], weights1_cat[col][l], minlength=col_n)
-                            XwS_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = np.bincount(C2[col], weights2_cat[col][l], minlength=col_n)
+                            XwS_cat[col][l_index: r_index] = np.bincount(C1[col], weights1_cat[col][l])
+                            XwS_cat[col][l_index + ts_cat[col]: r_index + ts_cat[col]] = np.bincount(C2[col], weights2_cat[col][l])
 
                             ## Clear weights_cat[col][l] ##
                             weights1_cat[col][l] = 0
@@ -1829,7 +1829,7 @@ class BLMModel:
             # ---------- M-step ----------
             # NOTE: add dirichlet prior
             # NOTE: this is equivalent to pk0 = GG1.T @ (W * (qi.T + d_prior - 1)).T
-            pk0 = np.bincount(KK, (W * (qi.T + d_prior - 1)).T.flatten(), minlength=(nl * nk)).reshape(nl, nk).T
+            pk0 = np.bincount(KK, (W * (qi.T + d_prior - 1)).T.flatten()).reshape(nl, nk).T
             # Normalize rows to sum to 1
             pk0 = DxM(1 / np.sum(pk0, axis=1), pk0)
 
@@ -3088,7 +3088,7 @@ class BLMReallocation:
             col = bdf.loc[:, col_cat].to_numpy()
             # Use categories as bins
             res_cat_baseline[col_cat] =\
-                np.bincount(col, weights=y, minlength=col_n) / np.bincount(col, weights=w, minlength=col_n)
+                np.bincount(col, weights=y) / np.bincount(col, weights=w)
         for col_cts, quantiles_cts in continuous_sort_cols.items():
             ## Continuous sorting variables ##
             col = bdf.loc[:, col_cts].to_numpy()
@@ -3096,7 +3096,7 @@ class BLMReallocation:
             col_quantiles = weighted_quantile(values=col, quantiles=quantiles_cts, sample_weight=w)
             quantile_groups = pd.cut(col, col_quantiles, include_lowest=True).codes
             res_cts_baseline[col_cts] =\
-                np.bincount(quantile_groups, weights=y, minlength=len(quantiles_cts)) / np.bincount(quantile_groups, weights=w, minlength=len(quantiles_cts))
+                np.bincount(quantile_groups, weights=y) / np.bincount(quantile_groups, weights=w)
 
         ## Run bootstrap ##
         res = np.zeros([n_samples, len(quantiles)])
@@ -3122,7 +3122,7 @@ class BLMReallocation:
                 col = bdf.loc[:, col_cat].to_numpy()
                 # Use categories as bins
                 res_cat[col_cat][i, :] =\
-                    np.bincount(col, weights=y, minlength=col_n) / np.bincount(col, weights=w, minlength=col_n)
+                    np.bincount(col, weights=y) / np.bincount(col, weights=w)
             for col_cts, quantiles_cts in continuous_sort_cols.items():
                 ## Continuous sorting variables ##
                 col = bdf.loc[:, col_cts].to_numpy()
@@ -3130,7 +3130,7 @@ class BLMReallocation:
                 col_quantiles = weighted_quantile(values=col, quantiles=quantiles_cts, sample_weight=w)
                 quantile_groups = pd.cut(col, col_quantiles, include_lowest=True).codes
                 res_cts[col_cts][i, :] =\
-                    np.bincount(quantile_groups, weights=y, minlength=len(quantiles_cts)) / np.bincount(quantile_groups, weights=w, minlength=len(quantiles_cts))
+                    np.bincount(quantile_groups, weights=y) / np.bincount(quantile_groups, weights=w)
 
         with bpd.util.ChainedAssignment():
             # Restore original wages and optionally ids
