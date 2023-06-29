@@ -644,23 +644,19 @@ dynamic_continuous_control_params = ParamsDict({
         ''', None)
 })
 
-def double_bincount(group1, group2, weights=None):
+def double_bincount(groups, n_groups, weights=None):
     '''
     Perform groupby-sum on 2 groups with given weights and return the corresponding matrix representation.
 
     Arguments:
-        group1 (NumPy Array): first group
-        group2 (NumPy Array): second group
-        weights (NumPy Array or None): weights; None is equivalent to all weights being equal
+        groups (NumPy Array): group1 + n_groups * group2
+        n_groups (int): number of groups
+        weights (NumPy Array or None): weights; None is unweighted
 
     Returns:
         (NumPy Array): groupby-sum matrix representation
     '''
-    if weights is None:
-        df = pd.DataFrame({'g1': group1, 'g2': group2})
-        return df.groupby('g1')['g2'].value_counts().unstack(fill_value=0).to_numpy()
-    df = pd.DataFrame({'g1': group1, 'g2': group2, 'w': weights})
-    return df.groupby(['g1', 'g2'])['w'].sum().unstack(fill_value=0).to_numpy()
+    return np.bincount(groups, weights=weights, minlength=(n_groups ** 2)).reshape((n_groups, n_groups)).T
 
 def _var_stayers(sdata, rho_1, rho_4, rho_t, weights=None, diff=False):
     '''
@@ -1795,9 +1791,14 @@ class DynamicBLMModel:
 
         # Joint firm indicator
         KK = G1 + nk * G2
+        KK2 = np.tile(KK, (nl, 1)).T
+        KK3 = KK2 + nk ** 2 * np.arange(nl)
+        KK2 = KK3.flatten()
+        del KK3
+        KK_dict = {col: C1[col] + col_dict['n'] * C2[col] for col, col_dict in cat_dict.items()}
 
-        # Transition probability matrix
-        GG12 = csc_matrix((np.ones(ni), (range(ni), KK)), shape=(ni, nk ** 2))
+        # # Transition probability matrix
+        # GG12 = csc_matrix((np.ones(ni), (range(ni), KK)), shape=(ni, nk ** 2))
 
         # Matrix of prior probabilities
         pk1 = self.pk1
@@ -1957,7 +1958,8 @@ class DynamicBLMModel:
             # ---------- Update pk1 ----------
             if params['update_pk1']:
                 # NOTE: add dirichlet prior
-                pk1 = GG12.T @ (qi + d_prior - 1)
+                # NOTE: this is equivalent to pk1 = GG12.T @ (qi + d_prior - 1)
+                pk1 = np.bincount(KK2, weights=(qi + d_prior - 1).flatten(), minlength=(nk ** 2) * nl).reshape(nl, nk ** 2).T
                 # Normalize rows to sum to 1
                 pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
 
@@ -2095,17 +2097,17 @@ class DynamicBLMModel:
                     ]
 
                     ## Compute GwG terms ##
-                    G1W1G1 = np.diag(np.bincount(G1, weights_l[0]))
-                    G1W2G1 = np.diag(np.bincount(G1, weights_l[1]))
-                    G2W3G2 = np.diag(np.bincount(G2, weights_l[2]))
-                    G2W4G2 = np.diag(np.bincount(G2, weights_l[3]))
+                    G1W1G1 = np.diag(np.bincount(G1, weights_l[0], minlength=nk))
+                    G1W2G1 = np.diag(np.bincount(G1, weights_l[1], minlength=nk))
+                    G2W3G2 = np.diag(np.bincount(G2, weights_l[2], minlength=nk))
+                    G2W4G2 = np.diag(np.bincount(G2, weights_l[3], minlength=nk))
                     if params['update_a_movers']:
-                        G1W3G1 = np.diag(np.bincount(G1, weights_l[2]))
+                        G1W3G1 = np.diag(np.bincount(G1, weights_l[2], minlength=nk))
                         if endogeneity:
-                            G2W2G2 = np.diag(np.bincount(G2, weights_l[1]))
+                            G2W2G2 = np.diag(np.bincount(G2, weights_l[1], minlength=nk))
                         if endogeneity:
-                            G1W2G2 = double_bincount(G1, G2, weights_l[1])
-                        G1W3G2 = double_bincount(G1, G2, weights_l[2])
+                            G1W2G2 = double_bincount(KK, nk, weights_l[1])
+                        G1W3G2 = double_bincount(KK, nk, weights_l[2])
 
                     if params['update_s_movers']:
                         ## Compute XSwXS_l ##
@@ -2250,22 +2252,22 @@ class DynamicBLMModel:
                         ## Compute XXwY_l ##
                         XXwY_l = np.concatenate(
                             [
-                                np.bincount(G1, weights_l[0] * Yl_1),
-                                np.bincount(G2, weights_l[3] * Yl_4),
-                                np.bincount(G1, - R12 * weights_l[0] * Yl_1 + weights_l[1] * Yl_2 - R32m * weights_l[2] * Yl_3),
-                                np.bincount(G2, weights_l[2] * Yl_3 - R43 * weights_l[3] * Yl_4)
+                                np.bincount(G1, weights_l[0] * Yl_1, minlength=nk),
+                                np.bincount(G2, weights_l[3] * Yl_4, minlength=nk),
+                                np.bincount(G1, - R12 * weights_l[0] * Yl_1 + weights_l[1] * Yl_2 - R32m * weights_l[2] * Yl_3, minlength=nk),
+                                np.bincount(G2, weights_l[2] * Yl_3 - R43 * weights_l[3] * Yl_4, minlength=nk)
                             ]
                         )
                         if endogeneity:
                             XXwY_l = np.concatenate(
                                 [
-                                    XXwY_l, np.bincount(G2, weights_l[1] * Yl_2 - R32m * weights_l[2] * Yl_3)
+                                    XXwY_l, np.bincount(G2, weights_l[1] * Yl_2 - R32m * weights_l[2] * Yl_3, minlength=nk)
                                 ]
                             )
                         if state_dependence:
                             XXwY_l = np.concatenate(
                                 [
-                                    XXwY_l, np.bincount(G1, weights_l[2] * Yl_3)
+                                    XXwY_l, np.bincount(G1, weights_l[2] * Yl_3, minlength=nk)
                                 ]
                             )
                         XXwY[l_index: r_index] = XXwY_l
@@ -2346,17 +2348,17 @@ class DynamicBLMModel:
                         del S_l_dict
 
                         ## Compute CwC terms ##
-                        C1W1C1 = np.diag(np.bincount(C1[col], weights_l[0]))
-                        C1W2C1 = np.diag(np.bincount(C1[col], weights_l[1]))
-                        C2W3C2 = np.diag(np.bincount(C2[col], weights_l[2]))
-                        C2W4C2 = np.diag(np.bincount(C2[col], weights_l[3]))
+                        C1W1C1 = np.diag(np.bincount(C1[col], weights_l[0], minlength=col_n))
+                        C1W2C1 = np.diag(np.bincount(C1[col], weights_l[1], minlength=col_n))
+                        C2W3C2 = np.diag(np.bincount(C2[col], weights_l[2], minlength=col_n))
+                        C2W4C2 = np.diag(np.bincount(C2[col], weights_l[3], minlength=col_n))
                         if params['update_a_movers']:
-                            C1W3C1 = np.diag(np.bincount(C1[col], weights_l[2]))
+                            C1W3C1 = np.diag(np.bincount(C1[col], weights_l[2], minlength=col_n))
                             if endogeneity:
-                                C2W2C2 = np.diag(np.bincount(C2[col], weights_l[1]))
+                                C2W2C2 = np.diag(np.bincount(C2[col], weights_l[1], minlength=col_n))
                             if endogeneity:
-                                C1W2C2 = double_bincount(C1[col], C2[col], weights_l[1])
-                            C1W3C2 = double_bincount(C1[col], C2[col], weights_l[2])
+                                C1W2C2 = double_bincount(KK_dict[col], col_n, weights_l[1])
+                            C1W3C2 = double_bincount(KK_dict[col], col_n, weights_l[2])
 
                         if params['update_s_movers']:
                             ### Compute XSwXS_cat_l ###
@@ -2505,22 +2507,22 @@ class DynamicBLMModel:
                             ## Compute XXwY_cat_l ##
                             XXwY_cat_l = np.concatenate(
                                 [
-                                    np.bincount(C1[col], weights_l[0] * Yl_cat_1),
-                                    np.bincount(C2[col], weights_l[3] * Yl_cat_4),
-                                    np.bincount(C1[col], - R12 * weights_l[0] * Yl_cat_1 + weights_l[1] * Yl_cat_2 - R32m * weights_l[2] * Yl_cat_3),
-                                    np.bincount(C2[col], weights_l[2] * Yl_cat_3 - R43 * weights_l[3] * Yl_cat_4)
+                                    np.bincount(C1[col], weights_l[0] * Yl_cat_1, minlength=col_n),
+                                    np.bincount(C2[col], weights_l[3] * Yl_cat_4, minlength=col_n),
+                                    np.bincount(C1[col], - R12 * weights_l[0] * Yl_cat_1 + weights_l[1] * Yl_cat_2 - R32m * weights_l[2] * Yl_cat_3, minlength=col_n),
+                                    np.bincount(C2[col], weights_l[2] * Yl_cat_3 - R43 * weights_l[3] * Yl_cat_4, minlength=col_n)
                                 ]
                             )
                             if endogeneity:
                                 XXwY_cat_l = np.concatenate(
                                     [
-                                        XXwY_cat_l, np.bincount(C2[col], weights_l[1] * Yl_cat_2 - R32m * weights_l[2] * Yl_cat_3)
+                                        XXwY_cat_l, np.bincount(C2[col], weights_l[1] * Yl_cat_2 - R32m * weights_l[2] * Yl_cat_3, minlength=col_n)
                                     ]
                                 )
                             if state_dependence:
                                 XXwY_cat_l = np.concatenate(
                                     [
-                                        XXwY_cat_l, np.bincount(C1[col], weights_l[2] * Yl_cat_3)
+                                        XXwY_cat_l, np.bincount(C1[col], weights_l[2] * Yl_cat_3, minlength=col_n)
                                     ]
                                 )
                             XXwY_cat[col][l_index: r_index] = XXwY_cat_l
@@ -2870,13 +2872,13 @@ class DynamicBLMModel:
                                 weights[l][t] *= (var_l_numerator[t] / var_l_denominator[t])
 
                         XSwE[l_index + 0 * nk: l_index + 1 * nk] = \
-                            np.bincount(G1, weights=weights[l][0])
+                            np.bincount(G1, weights[l][0], minlength=nk)
                         XSwE[l_index + 1 * nk: l_index + 2 * nk] = \
-                            np.bincount(G2, weights=weights[l][3])
+                            np.bincount(G2, weights[l][3], minlength=nk)
                         XSwE[l_index + 2 * nk: l_index + 3 * nk] = \
-                            np.bincount(G1, weights=weights[l][1])
+                            np.bincount(G1, weights[l][1], minlength=nk)
                         XSwE[l_index + 3 * nk: l_index + 4 * nk] = \
-                            np.bincount(G2, weights=weights[l][2])
+                            np.bincount(G2, weights[l][2], minlength=nk)
 
                         weights[l] = 0
                     del weights
@@ -2942,13 +2944,13 @@ class DynamicBLMModel:
                                 weights_cat[col][l][t] *= ((var_l_numerator[t] / var_l_denominator[t]) * eps_sq[l][t])
 
                             XSwE_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
-                                np.bincount(C1[col], weights=weights_cat[col][l][0])
+                                np.bincount(C1[col], weights_cat[col][l][0], minlength=col_n)
                             XSwE_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
-                                np.bincount(C2[col], weights=weights_cat[col][l][3])
+                                np.bincount(C2[col], weights_cat[col][l][3], minlength=col_n)
                             XSwE_cat[l_index + 2 * col_n: l_index + 3 * col_n] = \
-                                np.bincount(C1[col], weights=weights_cat[col][l][1])
+                                np.bincount(C1[col], weights_cat[col][l][1], minlength=col_n)
                             XSwE_cat[l_index + 3 * col_n: l_index + 4 * col_n] = \
-                                np.bincount(C2[col], weights=weights_cat[col][l][2])
+                                np.bincount(C2[col], weights_cat[col][l][2], minlength=col_n)
 
                             weights_cat[col][l] = 0
                         del weights_cat[col]
@@ -3159,8 +3161,15 @@ class DynamicBLMModel:
         # Dictionary linking periods to vectors
         C_dict = {period: C1 if period in self.first_periods else C2 for period in periods}
 
-        # Transition probability matrix
-        GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
+        # Joint firm indicator
+        KK = G1
+        KK2 = np.tile(KK, (nl, 1)).T
+        KK3 = KK2 + nk * np.arange(nl)
+        KK = KK3.flatten()
+        del KK2, KK3
+
+        # # Transition probability matrix
+        # GG1 = csc_matrix((np.ones(ni), (range(ni), G1)), shape=(ni, nk))
 
         # Matrix of prior probabilities
         pk0 = self.pk0
@@ -3299,7 +3308,8 @@ class DynamicBLMModel:
             # ---------- Update pk0 ----------
             if params['update_pk0']:
                 # NOTE: add dirichlet prior
-                pk0 = GG1.T @ (qi + d_prior - 1)
+                # NOTE: this is equivalent to pk0 = GG1.T @ (qi + d_prior - 1)
+                pk0 = np.bincount(KK, (qi.T + d_prior - 1).flatten(), minlength=(nl * nk)).reshape(nl, nk).T
                 # Normalize rows to sum to 1
                 pk0 = DxM(1 / np.sum(pk0, axis=1), pk0)
 
@@ -3394,8 +3404,8 @@ class DynamicBLMModel:
                     ]
 
                     ## Compute GwG terms ##
-                    G1W1G1 = np.diag(np.bincount(G1, weights_l[0]))
-                    G1W2G1 = np.diag(np.bincount(G1, weights_l[1]))
+                    G1W1G1 = np.diag(np.bincount(G1, weights_l[0], minlength=nk))
+                    G1W2G1 = np.diag(np.bincount(G1, weights_l[1], minlength=nk))
 
                     if params['update_s_stayers']:
                         ## Compute XSwXS_l ##
@@ -3434,8 +3444,8 @@ class DynamicBLMModel:
                         ## Compute XXwY_l ##
                         XXwY[l_index: r_index] = np.concatenate(
                             [
-                                np.bincount(G1, weights_l[0] * Yl_2 - R32s * weights_l[1] * Yl_3),
-                                np.bincount(G1, weights_l[1] * Yl_3)
+                                np.bincount(G1, weights_l[0] * Yl_2 - R32s * weights_l[1] * Yl_3, minlength=nk),
+                                np.bincount(G1, weights_l[1] * Yl_3, minlength=nk)
                             ]
                         )
                         del Yl_2, Yl_3, A_sum_l
@@ -3509,8 +3519,8 @@ class DynamicBLMModel:
                         ]
 
                         ## Compute CwC terms ##
-                        C1W1C1 = np.diag(np.bincount(C1[col], weights_l[0]))
-                        C1W2C1 = np.diag(np.bincount(C1[col], weights_l[1]))
+                        C1W1C1 = np.diag(np.bincount(C1[col], weights_l[0], minlength=col_n))
+                        C1W2C1 = np.diag(np.bincount(C1[col], weights_l[1], minlength=col_n))
 
                         if params['update_s_stayers']:
                             ## Compute XSwXS_cat_l ##
@@ -3553,8 +3563,8 @@ class DynamicBLMModel:
                             ## Compute XXwY_cat_l ##
                             XXwY_cat[col][l_index: r_index] = np.concatenate(
                                 [
-                                    np.bincount(C1[col], weights_l[0] * Yl_cat_2 - R32s * weights_l[1] * Yl_cat_3),
-                                    np.bincount(C1[col], weights_l[1] * Yl_cat_3)
+                                    np.bincount(C1[col], weights_l[0] * Yl_cat_2 - R32s * weights_l[1] * Yl_cat_3, minlength=col_n),
+                                    np.bincount(C1[col], weights_l[1] * Yl_cat_3, minlength=col_n)
                                 ]
                             )
                             del Yl_cat_2, Yl_cat_3, A_sum_l
@@ -3761,9 +3771,9 @@ class DynamicBLMModel:
                             weights[l][1] *= (var_l_numerator[1] / var_l_denominator[1])
 
                         XSwE[l_index + 0 * nk: l_index + 1 * nk] = \
-                            np.bincount(G1, weights=weights[l][0])
+                            np.bincount(G1, weights[l][0], minlength=nk)
                         XSwE[l_index + 1 * nk: l_index + 2 * nk] = \
-                            np.bincount(G1, weights=weights[l][1])
+                            np.bincount(G1, weights[l][1], minlength=nk)
 
                         weights[l] = 0
                     del weights
@@ -3821,9 +3831,9 @@ class DynamicBLMModel:
                             weights_cat[col][l][1] *= ((var_l_numerator[1] / var_l_denominator[1]) * eps_sq[l][1])
 
                             XSwE_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
-                                np.bincount(C1[col], weights=weights_cat[col][l][0])
+                                np.bincount(C1[col], weights_cat[col][l][0], minlength=col_n)
                             XSwE_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
-                                np.bincount(C1[col], weights=weights_cat[col][l][1])
+                                np.bincount(C1[col], weights_cat[col][l][1], minlength=col_n)
 
                             weights_cat[col][l] = 0
                         del weights_cat[col]
@@ -4177,9 +4187,9 @@ class DynamicBLMModel:
         pk1 = np.reshape(self.pk1, (nk, nk, nl))
         pr = (self.NNm.T * pk1.T).T
 
-        for kk in range(nl):
+        for l in range(nl):
             # Compute adjacency matrix
-            A = pr[:, :, kk]
+            A = pr[:, :, l]
             A /= A.sum()
             A = (A + A.T) / 2
             D = np.diag(np.sum(A, axis=1) ** (-0.5))
@@ -4189,7 +4199,7 @@ class DynamicBLMModel:
             except np.linalg.LinAlgError as e:
                 warnings.warn("Linear algebra error encountered when computing connectedness measure. This can likely be corrected by increasing the value of 'd_prior_movers' in tw.dynamic_blm_params().")
                 raise np.linalg.LinAlgError(e)
-            EV[kk] = sorted(evals)[1]
+            EV[l] = sorted(evals)[1]
 
         if all:
             self.connectedness = EV
@@ -5203,11 +5213,12 @@ class DynamicBLMReallocation:
         y = bdf.loc[:, 'y'].to_numpy()
         res_baseline = weighted_quantile(values=y, quantiles=quantiles, sample_weight=None)
         for col_cat in categorical_sort_cols.keys():
+            col_n = self.cat_dict[col_cat]['n']
             ## Categorical sorting variables ##
             col = bdf.loc[:, col_cat].to_numpy()
             # Use categories as bins
             res_cat_baseline[col_cat] =\
-                np.bincount(col, weights=y) / np.bincount(col, weights=None)
+                np.bincount(col, weights=y, minlength=col_n) / np.bincount(col, weights=None, minlength=col_n)
         for col_cts, quantiles_cts in continuous_sort_cols.items():
             ## Continuous sorting variables ##
             col = bdf.loc[:, col_cts].to_numpy()
@@ -5215,7 +5226,7 @@ class DynamicBLMReallocation:
             col_quantiles = weighted_quantile(values=col, quantiles=quantiles_cts, sample_weight=None)
             quantile_groups = pd.cut(col, col_quantiles, include_lowest=True).codes
             res_cts_baseline[col_cts] =\
-                np.bincount(quantile_groups, weights=y) / np.bincount(quantile_groups, weights=None)
+                np.bincount(quantile_groups, weights=y, minlength=len(quantiles_cts)) / np.bincount(quantile_groups, weights=None, minlength=len(quantiles_cts))
 
         ## Run bootstrap ##
         res = np.zeros([n_samples, len(quantiles)])
@@ -5229,11 +5240,12 @@ class DynamicBLMReallocation:
             y = bdf.loc[:, 'y'].to_numpy()
             res[i, :] = weighted_quantile(values=y, quantiles=quantiles, sample_weight=None)
             for col_cat in categorical_sort_cols.keys():
+                col_n = self.cat_dict[col_cat]['n']
                 ## Categorical sorting variables ##
                 col = bdf.loc[:, col_cat].to_numpy()
                 # Use categories as bins
                 res_cat[col_cat][i, :] =\
-                    np.bincount(col, weights=y) / np.bincount(col, weights=None)
+                    np.bincount(col, weights=y, minlength=col_n) / np.bincount(col, weights=None, minlength=col_n)
             for col_cts, quantiles_cts in continuous_sort_cols.items():
                 ## Continuous sorting variables ##
                 col = bdf.loc[:, col_cts].to_numpy()
@@ -5241,7 +5253,7 @@ class DynamicBLMReallocation:
                 col_quantiles = weighted_quantile(values=col, quantiles=quantiles_cts, sample_weight=None)
                 quantile_groups = pd.cut(col, col_quantiles, include_lowest=True).codes
                 res_cts[col_cts][i, :] =\
-                    np.bincount(quantile_groups, weights=y) / np.bincount(quantile_groups, weights=None)
+                    np.bincount(quantile_groups, weights=y, minlength=len(quantiles_cts)) / np.bincount(quantile_groups, weights=None, minlength=len(quantiles_cts))
 
         with bpd.util.ChainedAssignment():
             # Restore original wages and optionally ids
