@@ -358,7 +358,7 @@ def _simulate_worker_types_stayers(nl, nk, NNs=None, G=None, pk0=None, qi_cum=No
 
     return L
 
-def _simulate_controls_movers(nmi, cat_dict=None, cts_cols=None, rng=None):
+def _simulate_controls_movers(nmi, cat_dict=None, cts_cols=None, dynamic=False, rng=None):
     '''
     Simulate controls for movers.
 
@@ -366,6 +366,7 @@ def _simulate_controls_movers(nmi, cat_dict=None, cts_cols=None, rng=None):
         nmi (int): number of mover observations
         cat_dict (dict or None): dictionary linking categorical controls to categorical parameter dictionaries; None is equivalent to {}
         cts_cols (list or None): list of continuous controls; None is equivalent to []
+        dynamic (bool): if False, simulating static BLM; if True, simulating dynamic BLM
         rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
     Returns:
@@ -387,15 +388,28 @@ def _simulate_controls_movers(nmi, cat_dict=None, cts_cols=None, rng=None):
     A1_cts_draws = {col: rng.normal(size=nmi) for col in cts_cols}
     A2_cts_draws = {col: rng.normal(size=nmi) for col in cts_cols}
 
-    ## Update labels ##
-    A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
-    A2_cat_draws = {k + '2': v for k, v in A2_cat_draws.items()}
-    A1_cts_draws = {k + '1': v for k, v in A1_cts_draws.items()}
-    A2_cts_draws = {k + '2': v for k, v in A2_cts_draws.items()}
+    if dynamic:
+        ## Update labels ##
+        A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
+        A3_cat_draws = {k + '3': v for k, v in A2_cat_draws.items()}
+        A2_cat_draws = {k[: -1] + '2': v for k, v in A1_cat_draws.items()}
+        A4_cat_draws = {k[: -1] + '4': v for k, v in A3_cat_draws.items()}
+        A1_cts_draws = {k + '1': v for k, v in A1_cts_draws.items()}
+        A3_cts_draws = {k + '3': v for k, v in A2_cts_draws.items()}
+        A2_cts_draws = {k[: -1] + '2': v for k, v in A1_cts_draws.items()}
+        A4_cts_draws = {k[: -1] + '4': v for k, v in A3_cts_draws.items()}
 
-    return (A1_cat_draws, A2_cat_draws, A1_cts_draws, A2_cts_draws)
+        return (A1_cat_draws, A2_cat_draws, A3_cat_draws, A4_cat_draws, A1_cts_draws, A2_cts_draws, A3_cts_draws, A4_cts_draws)
+    else:
+        ## Update labels ##
+        A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
+        A2_cat_draws = {k + '2': v for k, v in A2_cat_draws.items()}
+        A1_cts_draws = {k + '1': v for k, v in A1_cts_draws.items()}
+        A2_cts_draws = {k + '2': v for k, v in A2_cts_draws.items()}
 
-def _simulate_controls_stayers(nsi, cat_dict=None, cts_cols=None, rng=None):
+        return (A1_cat_draws, A2_cat_draws, A1_cts_draws, A2_cts_draws)
+
+def _simulate_controls_stayers(nsi, cat_dict=None, cts_cols=None, dynamic=False, rng=None):
     '''
     Simulate controls for stayers.
 
@@ -403,6 +417,7 @@ def _simulate_controls_stayers(nsi, cat_dict=None, cts_cols=None, rng=None):
         nsi (int): number of stayers observations
         cat_dict (dict or None): dictionary linking categorical controls to categorical parameter dictionaries; None is equivalent to {}
         cts_cols (list or None): list of continuous controls; None is equivalent to []
+        dynamic (bool): if False, simulating static BLM; if True, simulating dynamic BLM
         rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
     Returns:
@@ -422,15 +437,31 @@ def _simulate_controls_stayers(nsi, cat_dict=None, cts_cols=None, rng=None):
     ## Continuous ##
     A1_cts_draws = {col: rng.normal(size=nsi) for col in cts_cols}
 
-    ## Update labels ##
-    A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
-    A2_cat_draws = {k[: -1] + '2': v.copy() for k, v in A1_cat_draws.items()}
-    A1_cts_draws = {k + '1': v for k, v in A1_cts_draws.items()}
-    A2_cts_draws = {k[: -1] + '2': v.copy() for k, v in A1_cts_draws.items()}
+    if dynamic:
+        ## Draw period 2 ##
+        A2_cat_draws = {col: rng.choice(np.arange(col_dict['n']), size=nsi, replace=True) for col, col_dict in cat_dict.items()}
+        A2_cts_draws = {col: rng.normal(size=nsi) for col in cts_cols}
+        ## Update labels ##
+        A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
+        A3_cat_draws = {k + '3': v for k, v in A2_cat_draws.items()}
+        A2_cat_draws = {k[: -1] + '2': v for k, v in A1_cat_draws.items()}
+        A4_cat_draws = {k[: -1] + '4': v for k, v in A3_cat_draws.items()}
+        A1_cts_draws = {k + '1': v for k, v in A1_cts_draws.items()}
+        A3_cts_draws = {k + '3': v for k, v in A2_cts_draws.items()}
+        A2_cts_draws = {k[: -1] + '2': v for k, v in A1_cts_draws.items()}
+        A4_cts_draws = {k[: -1] + '4': v for k, v in A3_cts_draws.items()}
 
-    return (A1_cat_draws, A2_cat_draws, A1_cts_draws, A2_cts_draws)
+        return (A1_cat_draws, A2_cat_draws, A3_cat_draws, A4_cat_draws, A1_cts_draws, A2_cts_draws, A3_cts_draws, A4_cts_draws)
+    else:
+        ## Update labels ##
+        A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
+        A2_cat_draws = {k[: -1] + '2': v.copy() for k, v in A1_cat_draws.items()}
+        A1_cts_draws = {k + '1': v for k, v in A1_cts_draws.items()}
+        A2_cts_draws = {k[: -1] + '2': v.copy() for k, v in A1_cts_draws.items()}
 
-def _simulate_firms(jdata, sdata, firm_size, rng=None):
+        return (A1_cat_draws, A2_cat_draws, A1_cts_draws, A2_cts_draws)
+
+def _simulate_firms(jdata, sdata, firm_size, dynamic=False, rng=None):
     '''
     Simulate firms in-place.
 
@@ -438,10 +469,18 @@ def _simulate_firms(jdata, sdata, firm_size, rng=None):
         jdata (Pandas DataFrame): data for movers
         sdata (Pandas DataFrame): data for stayers
         firm_size (float): average number of stayers per firm
+        dynamic (bool): if False, simulating static BLM; if True, simulating dynamic BLM
         rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
     '''
     if rng is None:
         rng = np.random.default_rng(None)
+
+    if dynamic:
+        j2 = 'j4'
+        g2 = 'g4'
+    else:
+        j2 = 'j2'
+        g2 = 'g2'
 
     ## Stayers ##
     # Draw firm ids for stayers (note each cluster must link to at least 2 firm ids so that movers are able to move firms within the cluster)
@@ -449,7 +488,10 @@ def _simulate_firms(jdata, sdata, firm_size, rng=None):
 
     # Make firm ids contiguous
     sdata.loc[:, 'j1'] = sdata.groupby(['g1', 'j1']).ngroup()
-    sdata.loc[:, 'j2'] = sdata.loc[:, 'j1']
+    sdata.loc[:, 'j2'] = sdata.loc[:, 'j1'].copy()
+    if dynamic:
+        sdata.loc[:, 'j3'] = sdata.loc[:, 'j1'].copy()
+        sdata.loc[:, 'j4'] = sdata.loc[:, 'j1'].copy()
 
     # Link firm ids to clusters
     j_per_g_dict = sdata.groupby('g1')['j1'].unique().to_dict()
@@ -461,16 +503,21 @@ def _simulate_firms(jdata, sdata, firm_size, rng=None):
     ## Movers ##
     # Draw firm ids for movers
     jdata.loc[:, 'j1'] = np.hstack(jdata.groupby('g1').apply(lambda df: rng.choice(j_per_g_dict[df.iloc[0]['g1']], size=len(df))))
-    groupby_g2 = jdata.groupby('g2')
-    jdata.loc[:, 'j2'] = np.hstack(groupby_g2.apply(lambda df: rng.choice(j_per_g_dict[df.iloc[0]['g2']], size=len(df))))
+    groupby_g2 = jdata.groupby(g2)
+    jdata.loc[:, j2] = np.hstack(groupby_g2.apply(lambda df: rng.choice(j_per_g_dict[df.iloc[0][g2]], size=len(df))))
 
     # Make sure movers actually move
     # FIXME find a deterministic way to do this
-    same_firm_mask = (jdata.loc[:, 'j1'].to_numpy() == jdata.loc[:, 'j2'].to_numpy())
+    same_firm_mask = (jdata.loc[:, 'j1'].to_numpy() == jdata.loc[:, j2].to_numpy())
     while same_firm_mask.any():
         same_firm_rows = jdata.loc[same_firm_mask, :].index
-        jdata.loc[same_firm_rows, 'j2'] = np.hstack(groupby_g2.apply(lambda df: rng.choice(j_per_g_dict[df.iloc[0]['g2']], size=len(df))))[same_firm_rows]
-        same_firm_mask = (jdata.loc[:, 'j1'].to_numpy() == jdata.loc[:, 'j2'].to_numpy())
+        jdata.loc[same_firm_rows, j2] = np.hstack(groupby_g2.apply(lambda df: rng.choice(j_per_g_dict[df.iloc[0][g2]], size=len(df))))[same_firm_rows]
+        same_firm_mask = (jdata.loc[:, 'j1'].to_numpy() == jdata.loc[:, j2].to_numpy())
+
+    if dynamic:
+        # Set 'j2' and 'j3'
+        jdata.loc[:, 'j2'] = jdata.loc[:, 'j1'].copy()
+        jdata.loc[:, 'j3'] = jdata.loc[:, 'j4'].copy()
 
 def _simulate_wages_movers(jdata, L, blm_model=None, A1=None, A2=None, S1=None, S2=None, A1_cat=None, A2_cat=None, S1_cat=None, S2_cat=None, A1_cts=None, A2_cts=None, S1_cts=None, S2_cts=None, controls_dict=None, cat_cols=None, cts_cols=None, w1=None, w2=None, rng=None, **kwargs):
     '''
@@ -479,7 +526,7 @@ def _simulate_wages_movers(jdata, L, blm_model=None, A1=None, A2=None, S1=None, 
     Arguments:
         jdata (BipartitePandas DataFrame): movers data
         L (NumPy Array): worker types for movers
-        blm_model (BLMModel): BLM model with estimated parameter values
+        blm_model (BLMModel or None): BLM model with estimated parameter values; None if other parameters are not None
         A1 (NumPy Array or None): mean of fixed effects in the first period; None if blm_model is not None
         A2 (NumPy Array or None): mean of fixed effects in the second period; None if blm_model is not None
         S1 (NumPy Array or None): standard deviation of fixed effects in the first period; None if blm_model is not None
@@ -534,15 +581,12 @@ def _simulate_wages_movers(jdata, L, blm_model=None, A1=None, A2=None, S1=None, 
         cts_cols = blm_model.cts_cols
 
     ## Draw wages ##
-    A1_sum = A1[L, G1]
-    A2_sum = A2[L, G2]
-    S1_sum = S1[L, G1]
-    S2_sum = S2[L, G2]
-
     if (controls_dict is not None) and (len(controls_dict) > 0):
         #### Simulate control variable wages ####
-        S1_sum_sq = S1_sum ** 2
-        S2_sum_sq = S2_sum ** 2
+        A1_sum = A1[L, G1]
+        A2_sum = A2[L, G2]
+        S1_sum_sq = (S1 ** 2)[L, G1]
+        S2_sum_sq = (S2 ** 2)[L, G2]
         if cat_cols is None:
             cat_cols = []
         if cts_cols is None:
@@ -567,22 +611,22 @@ def _simulate_wages_movers(jdata, L, blm_model=None, A1=None, A2=None, S1=None, 
                     ## Worker-interaction ##
                     A1_sum += A1_cat[col][L, jdata.loc[:, subcol_1]]
                     A2_sum += A2_cat[col][L, jdata.loc[:, subcol_2]]
-                    S1_sum_sq += S1_cat[col][L, jdata.loc[:, subcol_1]] ** 2
-                    S2_sum_sq += S2_cat[col][L, jdata.loc[:, subcol_2]] ** 2
+                    S1_sum_sq += (S1_cat[col] ** 2)[L, jdata.loc[:, subcol_1]]
+                    S2_sum_sq += (S2_cat[col] ** 2)[L, jdata.loc[:, subcol_2]]
                 else:
                     ## Non-worker-interaction ##
                     A1_sum += A1_cat[col][jdata.loc[:, subcol_1]]
                     A2_sum += A2_cat[col][jdata.loc[:, subcol_2]]
-                    S1_sum_sq += S1_cat[col][jdata.loc[:, subcol_1]] ** 2
-                    S2_sum_sq += S2_cat[col][jdata.loc[:, subcol_2]] ** 2
+                    S1_sum_sq += (S1_cat[col] ** 2)[jdata.loc[:, subcol_1]]
+                    S2_sum_sq += (S2_cat[col] ** 2)[jdata.loc[:, subcol_2]]
             else:
                 ### Continuous ###
                 if controls_dict[col]['worker_type_interaction']:
                     ## Worker-interaction ##
                     A1_sum += A1_cts[col][L] * jdata.loc[:, subcol_1]
                     A2_sum += A2_cts[col][L] * jdata.loc[:, subcol_2]
-                    S1_sum_sq += S1_cts[col][L] ** 2
-                    S2_sum_sq += S2_cts[col][L] ** 2
+                    S1_sum_sq += (S1_cts[col] ** 2)[L]
+                    S2_sum_sq += (S2_cts[col] ** 2)[L]
                 else:
                     ## Non-worker-interaction ##
                     A1_sum += A1_cts[col] * jdata.loc[:, subcol_1]
@@ -594,8 +638,8 @@ def _simulate_wages_movers(jdata, L, blm_model=None, A1=None, A2=None, S1=None, 
         Y2 = rng.normal(loc=A2_sum, scale=np.sqrt(S2_sum_sq / w2), size=nmi)
     else:
         #### No control variables ####
-        Y1 = rng.normal(loc=A1_sum, scale=S1_sum / np.sqrt(w1), size=nmi)
-        Y2 = rng.normal(loc=A2_sum, scale=S2_sum / np.sqrt(w2), size=nmi)
+        Y1 = rng.normal(loc=A1[L, G1], scale=S1[L, G1] / np.sqrt(w1), size=nmi)
+        Y2 = rng.normal(loc=A2[L, G2], scale=S2[L, G2] / np.sqrt(w2), size=nmi)
 
     return (Y1, Y2)
 
@@ -621,7 +665,7 @@ def _simulate_wages_stayers(sdata, L, blm_model=None, A1=None, S1=None, A1_cat=N
         kwargs (dict): keyword arguments
 
     Returns:
-        (tuple of NumPy Arrays): wages for movers in the first and second period
+        (NumPy Array): wages for stayers in both periods
     '''
     if rng is None:
         rng = np.random.default_rng(None)
@@ -646,11 +690,9 @@ def _simulate_wages_stayers(sdata, L, blm_model=None, A1=None, S1=None, A1_cat=N
 
     ## Draw wages ##
     A1_sum = A1[L, G]
-    S1_sum = S1[L, G]
-
     if (controls_dict is not None) and (len(controls_dict) > 0):
         #### Simulate control variable wages ####
-        S1_sum_sq = S1_sum ** 2
+        S1_sum_sq = (S1 ** 2)[L, G]
         if cat_cols is None:
             cat_cols = []
         if cts_cols is None:
@@ -663,26 +705,27 @@ def _simulate_wages_stayers(sdata, L, blm_model=None, A1=None, S1=None, A1_cat=N
                 if controls_dict[col]['worker_type_interaction']:
                     ## Worker-interaction ##
                     A1_sum += A1_cat[col][L, sdata.loc[:, subcol_1]]
-                    S1_sum_sq += S1_cat[col][L, sdata.loc[:, subcol_1]] ** 2
+                    S1_sum_sq += (S1_cat[col] ** 2)[L, sdata.loc[:, subcol_1]]
                 else:
                     ## Non-worker-interaction ##
                     A1_sum += A1_cat[col][sdata.loc[:, subcol_1]]
-                    S1_sum_sq += S1_cat[col][sdata.loc[:, subcol_1]] ** 2
+                    S1_sum_sq += (S1_cat[col] ** 2)[sdata.loc[:, subcol_1]]
             else:
                 ### Continuous ###
                 if controls_dict[col]['worker_type_interaction']:
                     ## Worker-interaction ##
                     A1_sum += A1_cts[col][L] * sdata.loc[:, subcol_1]
-                    S1_sum_sq += S1_cts[col][L] ** 2
+                    S1_sum_sq += (S1_cts[col] ** 2)[L]
                 else:
                     ## Non-worker-interaction ##
                     A1_sum += A1_cts[col] * sdata.loc[:, subcol_1]
                     S1_sum_sq += S1_cts[col] ** 2
 
         return rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq / w), size=nsi)
-
-    #### No control variables ####
-    return rng.normal(loc=A1_sum, scale=S1_sum / np.sqrt(w), size=nsi)
+    else:
+        #### No control variables ####
+        S1_sum = S1[L, G]
+        return rng.normal(loc=A1_sum, scale=S1_sum / np.sqrt(w), size=nsi)
 
 def _min_firm_type(A1, A2, primary_period='first'):
         '''
@@ -1156,7 +1199,7 @@ class SimBLM:
 
         ## Control variables ##
         A1_cat_draws, A2_cat_draws, A1_cts_draws, A2_cts_draws = \
-            _simulate_controls_movers(nmi=nmi, cat_dict=cat_dict, cts_cols=cts_cols, rng=rng)
+            _simulate_controls_movers(nmi=nmi, cat_dict=cat_dict, cts_cols=cts_cols, dynamic=False, rng=rng)
 
         ## Convert to DataFrame ##
         return DataFrame(data={'y1': np.zeros(nmi), 'y2': np.zeros(nmi), 'g1': G1, 'g2': G2, 'l': L, 'm': np.ones(nmi, dtype=int), **A1_cat_draws, **A2_cat_draws, **A1_cts_draws, **A2_cts_draws})
@@ -1194,7 +1237,7 @@ class SimBLM:
 
         ## Control variables ##
         A1_cat_draws, A2_cat_draws, A1_cts_draws, A2_cts_draws = \
-            _simulate_controls_stayers(nsi=nsi, cat_dict=cat_dict, cts_cols=cts_cols, rng=rng)
+            _simulate_controls_stayers(nsi=nsi, cat_dict=cat_dict, cts_cols=cts_cols, dynamic=False, rng=rng)
 
         ## Convert to DataFrame ##
         return DataFrame(data={'y1': np.zeros(nsi), 'y2': np.zeros(nsi), 'g1': G, 'g2': G.copy(), 'l': L, 'm': np.zeros(nsi, dtype=int), **A1_cat_draws, **A2_cat_draws, **A1_cts_draws, **A2_cts_draws})
@@ -1209,7 +1252,6 @@ class SimBLM:
 
         Returns:
             (dict or tuple of dicts): sim_data gives {'jdata': movers BipartiteDataFrame, 'sdata': stayers BipartiteDataFrame}, while sim_params gives {'A1': A1, 'A2': A2, 'S1': S1, 'S2': S2, 'pk1': pk1, 'pk0': pk0, 'A1_cat': A1_cat, 'A2_cat': A2_cat, 'S1_cat': S1_cat, 'S2_cat': S2_cat, 'A1_cts': A1_cts, 'A2_cts': A2_cts, 'S1_cts': S1_cts, 'S2_cts': S2_cts}; if return_parameters=True, returns (sim_data, sim_params); if return_parameters=False, returns sim_data
-
         '''
         if rng is None:
             rng = np.random.default_rng(None)
@@ -1222,7 +1264,7 @@ class SimBLM:
         sdata = self._simulate_stayers(pk0=sim_params['pk0'], rng=rng)
 
         ## Simulate firms ##
-        _simulate_firms(jdata, sdata, self.params['firm_size'])
+        _simulate_firms(jdata, sdata, self.params['firm_size'], dynamic=False, rng=rng)
 
         ## Add i column ##
         nm = len(jdata)

@@ -6,7 +6,8 @@ from pandas import DataFrame
 from paramsdict import ParamsDict, ParamsDictBase
 from paramsdict.util import col_type
 from bipartitepandas import BipartiteDataFrame
-from bipartitepandas.util import _sort_cols
+from bipartitepandas.util import to_list, _sort_cols
+from pytwoway import simblm
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq2(a):
@@ -539,6 +540,324 @@ sim_dynamic_continuous_control_params = ParamsDict({
         ''', None)
 })
 
+def _simulate_wages_movers(jdata, L, blm_model=None, A=None, S=None, R12=None, R43=None, R32m=None, A_cat=None, S_cat=None, A_cts=None, S_cts=None, controls_dict=None, cat_cols=None, cts_cols=None, rng=None, **kwargs):
+    '''
+    Simulate wages for movers.
+
+    Arguments:
+        jdata (BipartitePandas DataFrame): movers data
+        L (NumPy Array): worker types for movers
+        blm_model (DynamicBLMModel or None): Dynamic BLM model with estimated parameter values; None if other parameters are not None
+        A (dict of NumPy Arrays or None): dictionary linking periods to the mean of fixed effects in that period; None if blm_model is not None
+        S (dict of NumPy Arrays or None): dictionary linking periods to the standard deviation of fixed effects in that period; None if blm_model is not None
+        R12 (float or None): persistence parameter between periods 1 and 2; None if blm_model is not None
+        R43 (float or None): persistence parameter between periods 3 and 4; None if blm_model is not None
+        R32m (float or None): persistence parameter between periods 2 and 3 for movers; None if blm_model is not None
+        A_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the mean of fixed effects in that period; None if blm_model is not None
+        S_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; None if blm_model is not None
+        A_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the mean of fixed effects in that period; None if blm_model is not None
+        S_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; None if blm_model is not None
+        controls_dict (dict or None): dictionary of all control variables; None if no controls
+        cat_cols (list or None): list of categorical controls; None if no categorical controls
+        cts_cols (list or None): list of continuous controls; None if no continuous controls
+        rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+        kwargs (dict): keyword arguments
+
+    Returns:
+        (tuple of NumPy Arrays): wages for movers in all four periods
+    '''
+    if rng is None:
+        rng = np.random.default_rng(None)
+
+    # Define variables
+    periods_movers = ['12', '43', '2ma', '3ma', '2mb', '3mb']
+    first_periods = ['12', '2ma', '3mb', '2s']
+    periods_movers_dict = {period: 0 if period in first_periods else 1 for period in periods_movers}
+
+    # Unpack values
+    nmi = len(jdata)
+    G1 = jdata.loc[:, 'g1'].to_numpy()
+    G2 = jdata.loc[:, 'g4'].to_numpy()
+    G = [G1, G2]
+
+    if blm_model is not None:
+        # Unpack DynamicBLMModel
+        A = blm_model.A
+        S = blm_model.S
+        R12 = blm_model.R12
+        R43 = blm_model.R43
+        R32m = blm_model.R32m
+        A_cat = blm_model.A_cat
+        S_cat = blm_model.S_cat
+        A_cts = blm_model.A_cts
+        S_cts = blm_model.S_cts
+        controls_dict = blm_model.controls_dict
+        cat_cols = blm_model.cat_cols
+        cts_cols = blm_model.cts_cols
+
+    ## Draw wages ##
+    A_sum = {period:
+                A[period][L, G[periods_movers_dict[period]]]
+                    if period[-1] != 'b' else
+                A[period][G[periods_movers_dict[period]]]
+            for period in periods_movers}
+    if (controls_dict is not None) and (len(controls_dict) > 0):
+        #### Simulate control variable wages ####
+        S_sum_sq = {period:
+                        (S[period] ** 2)[L, G[periods_movers_dict[period]]]
+                            if period[-1] != 'b' else
+                        (S[period] ** 2)[G[periods_movers_dict[period]]]
+                    for period in periods_movers}
+        if cat_cols is None:
+            cat_cols = []
+        if cts_cols is None:
+            cts_cols = []
+        for i, col in enumerate(cat_cols + cts_cols):
+            # Get subcolumns associated with col
+            subcols = to_list(jdata.col_reference_dict[col])
+            n_subcols = len(subcols)
+            if n_subcols == 1:
+                # If column is constant over time
+                subcols = [subcols[0], subcols[0]]
+            elif n_subcols == 4:
+                # If column can change over time
+                subcols = [subcols[0], subcols[3]]
+            else:
+                raise NotImplementedError(f'Column names must have either one or four associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
+            if i < len(cat_cols):
+                ### Categorical ###
+                if controls_dict[col]['worker_type_interaction']:
+                    ## Worker-interaction ##
+                    for period in periods_movers:
+                        subcol = periods_movers_dict[period]
+                        if period[-1] != 'b':
+                            A_sum[period] += A_cat[col][period][L, jdata.loc[:, subcol]]
+                            S_sum_sq[period] += (S_cat[col][period] ** 2)[L, jdata.loc[:, subcol]]
+                        else:
+                            A_sum[period] += A_cat[col][period][jdata.loc[:, subcol]]
+                            S_sum_sq[period] += (S_cat[col][period] ** 2)[jdata.loc[:, subcol]]
+                else:
+                    ## Non-worker-interaction ##
+                    for period in periods_movers:
+                        subcol = periods_movers_dict[period]
+                        A_sum[period] += A_cat[col][period][jdata.loc[:, subcol]]
+                        S_sum_sq[period] += (S_cat[col][period] ** 2)[jdata.loc[:, subcol]]
+            else:
+                ### Continuous ###
+                if controls_dict[col]['worker_type_interaction']:
+                    ## Worker-interaction ##
+                    for period in periods_movers:
+                        subcol = periods_movers_dict[period]
+                        if period[-1] != 'b':
+                            A_sum[period] += A_cts[col][period][L] * jdata.loc[:, subcol]
+                            S_sum_sq[period] += (S_cts[col][period] ** 2)[L]
+                        else:
+                            A_sum[period] += A_cts[col][period] * jdata.loc[:, subcol]
+                            S_sum_sq[period] += S_cts[col][period] ** 2
+                else:
+                    ## Non-worker-interaction ##
+                    for period in periods_movers:
+                        subcol = periods_movers_dict[period]
+                        A_sum[period] += A_cts[col][period] * jdata.loc[:, subcol]
+                        S_sum_sq[period] += S_cts[col][period] ** 2
+
+        Y2 = rng.normal( \
+            loc=A_sum['2ma'] + A_sum['2mb'], \
+            scale=np.sqrt(S_sum_sq['2ma']), \
+            size=nmi)
+        Y1 = rng.normal( \
+            loc=A_sum['12'] + R12 * (Y2 - A_sum['2ma']), \
+            scale=np.sqrt(S_sum_sq['12']), \
+            size=nmi)
+        Y3 = rng.normal( \
+            loc=A_sum['3ma'] + A_sum['3mb'] + R32m * (Y2 - A_sum['2ma'] - A_sum['2mb']), \
+            scale=np.sqrt(S_sum_sq['3ma']), \
+            size=nmi)
+        Y4 = rng.normal( \
+            loc=A_sum['43'] + R43 * (Y3 - A_sum['3ma']), \
+            scale=np.sqrt(S_sum_sq['43']), \
+            size=nmi)
+    else:
+        #### No control variables ####
+        S_sum = {period:
+                    S[period][L, G[periods_movers_dict[period]]]
+                        if period[-1] != 'b' else
+                    S[period][G[periods_movers_dict[period]]]
+                for period in periods_movers}
+
+        Y2 = rng.normal( \
+            loc=A_sum['2ma'] + A_sum['2mb'], \
+            scale=S_sum['2ma'], \
+            size=nmi)
+        Y1 = rng.normal( \
+            loc=A_sum['12'] + R12 * (Y2 - A_sum['2ma']), \
+            scale=S_sum['12'], \
+            size=nmi)
+        Y3 = rng.normal( \
+            loc=A_sum['3ma'] + A_sum['3mb'] + R32m * (Y2 - A_sum['2ma'] - A_sum['2mb']), \
+            scale=S_sum['3ma'], \
+            size=nmi)
+        Y4 = rng.normal( \
+            loc=A_sum['43'] + R43 * (Y3 - A_sum['3ma']), \
+            scale=S_sum['43'], \
+            size=nmi)
+
+    return (Y1, Y2, Y3, Y4)
+
+def _simulate_wages_stayers(sdata, L, blm_model=None, A=None, S=None, R12=None, R43=None, R32s=None, A_cat=None, S_cat=None, A_cts=None, S_cts=None, controls_dict=None, cat_cols=None, cts_cols=None, rng=None, **kwargs):
+    '''
+    Simulate wages for stayers.
+
+    Arguments:
+        sdata (BipartitePandas DataFrame): stayers data
+        L (NumPy Array): worker types for stayers
+        blm_model (DynamicBLMModel or None): Dynamic BLM model with estimated parameter values; None if other parameters are not None
+        A (dict of NumPy Arrays or None): dictionary linking periods to the mean of fixed effects in that period; None if blm_model is not None
+        S (dict of NumPy Arrays or None): dictionary linking periods to the standard deviation of fixed effects in that period; None if blm_model is not None
+        R12 (float or None): persistence parameter between periods 1 and 2; None if blm_model is not None
+        R43 (float or None): persistence parameter between periods 3 and 4; None if blm_model is not None
+        R32s (float or None): persistence parameter between periods 2 and 3 for stayers; None if blm_model is not None
+        A_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the mean of fixed effects in that period; None if blm_model is not None
+        S_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; None if blm_model is not None
+        A_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the mean of fixed effects in that period; None if blm_model is not None
+        S_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the standard deviation of fixed effects in that period; None if blm_model is not None
+        controls_dict (dict or None): dictionary of all control variables; None if no controls
+        cat_cols (list or None): list of categorical controls; None if no categorical controls
+        cts_cols (list or None): list of continuous controls; None if no continuous controls
+        rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+        kwargs (dict): keyword arguments
+
+    Returns:
+        (tuple of NumPy Arrays): wages for stayers in all four periods
+    '''
+    if rng is None:
+        rng = np.random.default_rng(None)
+
+    # Define variables
+    periods_stayers = ['12', '43', '2ma', '3ma', '2s', '3s']
+    first_periods = ['12', '2ma', '3mb', '2s']
+    periods_stayers_dict = {period: 0 if period in first_periods else 1 for period in periods_stayers}
+
+    # Unpack values
+    nsi = len(sdata)
+    G = sdata.loc[:, 'g1'].to_numpy()
+
+    if blm_model is not None:
+        # Unpack DynamicBLMModel
+        A = blm_model.A
+        S = blm_model.S
+        R12 = blm_model.R12
+        R43 = blm_model.R43
+        R32s = blm_model.R32s
+        A_cat = blm_model.A_cat
+        S_cat = blm_model.S_cat
+        A_cts = blm_model.A_cts
+        S_cts = blm_model.S_cts
+        controls_dict = blm_model.controls_dict
+        cat_cols = blm_model.cat_cols
+        cts_cols = blm_model.cts_cols
+
+    ## Draw wages ##
+    A_sum = {period:
+                A[period][L, G]
+                    if period[-1] != 'b' else
+                A[period][G]
+            for period in periods_stayers}
+    if (controls_dict is not None) and (len(controls_dict) > 0):
+        #### Simulate control variable wages ####
+        S_sum_sq = {period:
+                        (S[period] ** 2)[L, G]
+                            if period[-1] != 'b' else
+                        (S[period] ** 2)[G]
+                    for period in periods_stayers}
+        if cat_cols is None:
+            cat_cols = []
+        if cts_cols is None:
+            cts_cols = []
+        for i, col in enumerate(cat_cols + cts_cols):
+            # Get subcolumns associated with col
+            subcols = to_list(sdata.col_reference_dict[col])
+            n_subcols = len(subcols)
+            if n_subcols == 1:
+                # If column is constant over time
+                subcols = [subcols[0], subcols[0]]
+            elif n_subcols == 4:
+                # If column can change over time
+                subcols = [subcols[0], subcols[3]]
+            else:
+                raise NotImplementedError(f'Column names must have either one or four associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
+            if i < len(cat_cols):
+                ### Categorical ###
+                if controls_dict[col]['worker_type_interaction']:
+                    ## Worker-interaction ##
+                    for period in periods_stayers:
+                        subcol = periods_stayers_dict[period]
+                        A_sum[period] += A_cat[col][period][L, sdata.loc[:, subcol]]
+                        S_sum_sq[period] += (S_cat[col][period] ** 2)[L, sdata.loc[:, subcol]]
+                else:
+                    ## Non-worker-interaction ##
+                    for period in periods_stayers:
+                        subcol = periods_stayers_dict[period]
+                        A_sum[period] += A_cat[col][period][sdata.loc[:, subcol]]
+                        S_sum_sq[period] += (S_cat[col][period] ** 2)[sdata.loc[:, subcol]]
+            else:
+                ### Continuous ###
+                if controls_dict[col]['worker_type_interaction']:
+                    ## Worker-interaction ##
+                    for period in periods_stayers:
+                        subcol = periods_stayers_dict[period]
+                        A_sum[period] += A_cts[col][period][L] * sdata.loc[:, subcol]
+                        S_sum_sq[period] += (S_cts[col][period] ** 2)[L]
+                else:
+                    ## Non-worker-interaction ##
+                    for period in periods_stayers:
+                        subcol = periods_stayers_dict[period]
+                        A_sum[period] += A_cts[col][period] * sdata.loc[:, subcol]
+                        S_sum_sq[period] += S_cts[col][period] ** 2
+
+        Y2 = rng.normal( \
+            loc=A_sum['2s'], \
+            scale=np.sqrt(S_sum_sq['2s']), \
+            size=nsi)
+        Y1 = rng.normal( \
+            loc=A_sum['12'] + R12 * (Y2 - A_sum['2ma']), \
+            scale=np.sqrt(S_sum_sq['12']), \
+            size=nsi)
+        Y3 = rng.normal( \
+            loc=A_sum['3s'] + R32s * (Y2 - A_sum['2s']), \
+            scale=np.sqrt(S_sum_sq['3s']), \
+            size=nsi)
+        Y4 = rng.normal( \
+            loc=A_sum['43'] + R43 * (Y3 - A_sum['3ma']), \
+            scale=np.sqrt(S_sum_sq['43']), \
+            size=nsi)
+    else:
+        #### No control variables ####
+        S_sum = {period:
+                    S[period][L, G]
+                        if period[-1] != 'b' else
+                    S[period][G]
+                for period in periods_stayers}
+
+        Y2 = rng.normal( \
+            loc=A_sum['2s'], \
+            scale=S_sum['2s'], \
+            size=nsi)
+        Y1 = rng.normal( \
+            loc=A_sum['12'] + R12 * (Y2 - A_sum['2ma']), \
+            scale=S_sum['12'], \
+            size=nsi)
+        Y3 = rng.normal( \
+            loc=A_sum['3s'] + R32s * (Y2 - A_sum['2s']), \
+            scale=S_sum['3s'], \
+            size=nsi)
+        Y4 = rng.normal( \
+            loc=A_sum['43'] + R43 * (Y3 - A_sum['3ma']), \
+            scale=S_sum['43'], \
+            size=nsi)
+
+    return (Y1, Y2, Y3, Y4)
+
 class SimDynamicBLM:
     '''
     Class for simulating bipartite dynamic BLM networks of firms and workers.
@@ -849,262 +1168,83 @@ class SimDynamicBLM:
 
         return {'A': A, 'S': S, 'pk1': pk1, 'pk0': pk0, 'A_cat': A_cat, 'S_cat': S_cat, 'A_cts': A_cts, 'S_cts': S_cts}
 
-    def _simulate_movers(self, A, S, pk1, pk0, A_cat, S_cat, A_cts, S_cts, rng=None):
+    def _simulate_movers(self, pk1, rng=None):
         '''
         Simulate data for movers (simulates firm types, not firms).
 
         Arguments:
-            A (dict of NumPy Arrays): dictionary linking periods to the mean of fixed effects in that period
-            S (dict of NumPy Arrays or None): dictionary linking periods to the standard deviation of fixed effects in that period
             pk1 (NumPy Array): probability of being at each combination of firm types for movers
-            pk0 (NumPy Array): probability of being at each firm type for stayers (used only for _simulate_stayers)
-            A_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the mean of fixed effects in that period
-            S_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the standard deviation of fixed effects in that period
-            A_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the mean of fixed effects in that period
-            S_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the standard deviation of fixed effects in that period
             rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            (Pandas DataFrame): data for movers (y1/y2/y3/y4: wage; g1/g2/g3/g4: firm type; l: worker type)
+            (Pandas DataFrame): data for movers (y1/y2/y3/y4: wage; g1/g2/g3/g4: firm type; l: worker type; m=1: mover indicator)
         '''
         if rng is None:
             rng = np.random.default_rng(None)
 
         # Extract parameters
         nl, nk, mmult = self.params.get_multiple(('nl', 'nk', 'mmult'))
-        cat_cols, cts_cols = self.cat_cols, self.cts_cols
-        periods_movers, periods_dict = self.periods_movers, self.periods_dict
-        controls_dict = self.controls_dict
-        R12, R43, R32m = self.R12, self.R43, self.R32m
+        cat_dict, cts_cols = self.cat_dict, self.cts_cols
 
         # Number of movers who transition between each combination of firm types
         NNm = mmult * self.NNm
         nmi = np.sum(NNm)
 
-        G1 = np.zeros(shape=nmi, dtype=int)
-        G2 = np.zeros(shape=nmi, dtype=int)
-        L = np.zeros(shape=nmi, dtype=int)
+        ## Firm classes ##
+        G1, G2 = simblm._simulate_firm_classes_movers(nk=nk, NNm=NNm)
 
-        # Worker types
-        worker_types = np.arange(nl)
+        ## Worker types ##
+        L = simblm._simulate_worker_types_movers(
+            nl=nl, nk=nk, NNm=NNm, G1=G1, G2=G2, pk1=pk1,
+            qi_cum=None, simulating_data=True, rng=rng
+        )
 
-        i = 0
-        for k1 in range(nk):
-            for k2 in range(nk):
-                # Iterate over all firm type combinations a worker can transition between
-                ni = NNm[k1, k2]
-                I = np.arange(i, i + ni)
-                jj = k1 + nk * k2
-                G1[I] = k1
-                G2[I] = k2
+        ## Control variables ##
+        A1_cat_draws, A2_cat_draws, A3_cat_draws, A4_cat_draws, \
+            A1_cts_draws, A2_cts_draws, A3_cts_draws, A4_cts_draws \
+            = simblm._simulate_controls_movers(nmi=nmi, cat_dict=cat_dict, cts_cols=cts_cols, dynamic=True, rng=rng)
 
-                # Draw worker types
-                Li = rng.choice(worker_types, size=ni, replace=True, p=pk1[jj, :])
-                L[I] = Li
+        ## Convert to DataFrame ##
+        return DataFrame(data={'y1': np.zeros(nmi), 'y2': np.zeros(nmi), 'y3': np.zeros(nmi), 'y4': np.zeros(nmi), 'g1': G1, 'g2': G1.copy(), 'g3': G2, 'g4': G2.copy(), 'l': L, 'm': np.ones(nmi, dtype=int), **A1_cat_draws, **A2_cat_draws, **A3_cat_draws, **A4_cat_draws, **A1_cts_draws, **A2_cts_draws, **A3_cts_draws, **A4_cts_draws})
 
-                i += ni
-
-        G = [G1, G2]
-        A_sum = {period:
-                    A[period][L, G[periods_dict[period]]]
-                        if period[-1] != 'b' else
-                    A[period][G[periods_dict[period]]]
-                for period in periods_movers}
-        S_sum_sq = {period:
-                        S[period][L, G[periods_dict[period]]] ** 2
-                            if period[-1] != 'b' else
-                        S[period][G[periods_dict[period]]] ** 2
-                    for period in periods_movers}
-
-        ### Draw custom columns ### FIXME add custom probabilities?
-        ## Categorical ##
-        A1_cat_draws = {col: rng.choice(np.arange(col_dict['n']), size=nmi, replace=True) for col, col_dict in self.cat_dict.items()}
-        A2_cat_draws = {col: rng.choice(np.arange(col_dict['n']), size=nmi, replace=True) for col, col_dict in self.cat_dict.items()}
-        A_cat_draws = [A1_cat_draws, A2_cat_draws]
-        # Variances #
-        S_cat_draws = [A1_cat_draws, A2_cat_draws]
-        ## Continuous ##
-        A1_cts_draws = {col: rng.normal(size=nmi) for col in cts_cols}
-        A2_cts_draws = {col: rng.normal(size=nmi) for col in cts_cols}
-        A_cts_draws = [A1_cts_draws, A2_cts_draws]
-
-        #### Simulate control variable wages ####
-        ### Categorical ###
-        for col in cat_cols:
-            for period in periods_movers:
-                if controls_dict[col]['worker_type_interaction'] and (period[-1] != 'b'):
-                    ## Worker-interaction ##
-                    A_sum[period] += A_cat[col][period][L, A_cat_draws[periods_dict[period]][col]]
-                    S_sum_sq[period] += S_cat[col][period][L, S_cat_draws[periods_dict[period]][col]]
-                else:
-                    ## Non-worker-interaction ##
-                    A_sum[period] += A_cat[col][period][A_cat_draws[periods_dict[period]][col]]
-                    S_sum_sq[period] += S_cat[col][period][S_cat_draws[periods_dict[period]][col]]
-        ### Continuous ###
-        for col in cts_cols:
-            for period in periods_movers:
-                if controls_dict[col]['worker_type_interaction'] and (period[-1] != 'b'):
-                    ## Worker-interaction ##
-                    A_sum[period] += A_cts[col][period][L] * A_cts_draws[periods_dict[period]][col]
-                    S_sum_sq[period] += S_cts[col][period][L]
-                else:
-                    ## Non-worker-interaction ##
-                    A_sum[period] += A_cts[col][period] * A_cts_draws[periods_dict[period]][col]
-                    S_sum_sq[period] += S_cts[col][period]
-
-        A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
-        A3_cat_draws = {k + '3': v for k, v in A2_cat_draws.items()}
-        A2_cat_draws = {k[: -1] + '2': v for k, v in A1_cat_draws.items()}
-        A4_cat_draws = {k[: -1] + '4': v for k, v in A3_cat_draws.items()}
-        A1_cts_draws = {k + '1': v for k, v in A1_cts_draws.items()}
-        A3_cts_draws = {k + '3': v for k, v in A2_cts_draws.items()}
-        A2_cts_draws = {k[: -1] + '2': v for k, v in A1_cts_draws.items()}
-        A4_cts_draws = {k[: -1] + '4': v for k, v in A3_cts_draws.items()}
-
-        Y2 = rng.normal( \
-            loc=A_sum['2ma'] + A_sum['2mb'], \
-            scale=np.sqrt(S_sum_sq['2ma']), \
-            size=nmi) # scale=np.sqrt(S_sum_sq['2ma'] + S_sum_sq['2mb']), \
-        Y1 = rng.normal( \
-            loc=A_sum['12'] + R12 * (Y2 - A_sum['2ma']), \
-            scale=np.sqrt(S_sum_sq['12']), \
-            size=nmi) # scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']), \
-        Y3 = rng.normal( \
-            loc=A_sum['3ma'] + A_sum['3mb'] + R32m * (Y2 - A_sum['2ma'] - A_sum['2mb']), \
-            scale=np.sqrt(S_sum_sq['3ma']), \
-            size=nmi) # scale=np.sqrt(S_sum_sq['3ma'] + S_sum_sq['3mb'] + (R32m ** 2) * (S_sum_sq['2ma'] + S_sum_sq['2mb'])), \
-        Y4 = rng.normal( \
-            loc=A_sum['43'] + R43 * (Y3 - A_sum['3ma']), \
-            scale=np.sqrt(S_sum_sq['43']), \
-            size=nmi) # scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']), \
-
-        return DataFrame(data={'y1': Y1, 'y2': Y2, 'y3': Y3, 'y4': Y4, 'g1': G1, 'g2': G1, 'g3': G2, 'g4': G2, 'l': L, **A1_cat_draws, **A2_cat_draws, **A3_cat_draws, **A4_cat_draws, **A1_cts_draws, **A2_cts_draws, **A3_cts_draws, **A4_cts_draws})
-
-    def _simulate_stayers(self, A, S, pk1, pk0, A_cat, S_cat, A_cts, S_cts, rng=None):
+    def _simulate_stayers(self, pk0, rng=None):
         '''
         Simulate data for stayers (simulates firm types, not firms).
 
         Arguments:
-            A (dict of NumPy Arrays): dictionary linking periods to the mean of fixed effects in that period
-            S (dict of NumPy Arrays or None): dictionary linking periods to the standard deviation of fixed effects in that period
-            pk1 (NumPy Array): probability of being at each combination of firm types for movers
-            pk0 (NumPy Array): probability of being at each firm type for stayers (used only for _simulate_stayers)
-            A_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the mean of fixed effects in that period
-            S_cat (dict of dicts of NumPy Arrays or None): dictionary linking each categorical control column name to a dictionary linking periods to the standard deviation of fixed effects in that period
-            A_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the mean of fixed effects in that period
-            S_cts (dict of dicts of NumPy Arrays or None): dictionary linking each continuous control column name to a dictionary linking periods to the standard deviation of fixed effects in that period
+            pk0 (NumPy Array): probability of being at each firm type for stayers
             rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
         Returns:
-            (Pandas DataFrame): data for stayers (y1/y2/y3/y4: wage; g1/g2/g3/g4: firm type; l: worker type)
+            (Pandas DataFrame): data for stayers (y1/y2/y3/y4: wage; g1/g2/g3/g4: firm type; l: worker type; m=0: stayer indicator)
         '''
         if rng is None:
             rng = np.random.default_rng(None)
 
         # Extract parameters
         nl, nk, smult = self.params.get_multiple(('nl', 'nk', 'smult'))
-        cat_cols, cts_cols = self.cat_cols, self.cts_cols
-        periods_stayers, periods_dict = self.periods_stayers, self.periods_dict
-        controls_dict = self.controls_dict
-        R12, R43, R32s = self.R12, self.R43, self.R32s
+        cat_dict, cts_cols = self.cat_dict, self.cts_cols
 
         # Number of stayers at each firm type
         NNs = smult * self.NNs
         nsi = np.sum(NNs)
 
-        G = np.zeros(shape=nsi, dtype=int)
-        L = np.zeros(shape=nsi, dtype=int)
+        ## Firm classes ##
+        G = simblm._simulate_firm_classes_stayers(nk=nk, NNs=NNs)
 
-        # Worker types
-        worker_types = np.arange(nl)
+        ## Worker types ##
+        L = simblm._simulate_worker_types_stayers(
+            nl=nl, nk=nk, NNs=NNs, G=G, pk0=pk0,
+            qi_cum=None, simulating_data=True, rng=rng
+        )
 
-        i = 0
-        for k in range(nk):
-            # Iterate over firm types
-            ni = NNs[k]
-            I = np.arange(i, i + ni)
-            G[I] = k
+        ## Control variables ##
+        A1_cat_draws, A2_cat_draws, A3_cat_draws, A4_cat_draws, \
+            A1_cts_draws, A2_cts_draws, A3_cts_draws, A4_cts_draws \
+            = simblm._simulate_controls_stayers(nsi=nsi, cat_dict=cat_dict, cts_cols=cts_cols, dynamic=True, rng=rng)
 
-            # Draw worker types
-            Li = rng.choice(worker_types, size=ni, replace=True, p=pk0[k, :])
-            L[I] = Li
-
-            i += ni
-
-        A_sum = {period:
-                    A[period][L, G]
-                        if period[-1] != 'b' else
-                    A[period][G]
-                for period in periods_stayers}
-        S_sum_sq = {period:
-                        S[period][L, G] ** 2
-                            if period[-1] != 'b' else
-                        S[period][G] ** 2
-                    for period in periods_stayers}
-
-        ### Draw custom columns ### FIXME add custom probabilities?
-        ## Categorical ##
-        A1_cat_draws = {col: rng.choice(np.arange(col_dict['n']), size=nsi, replace=True) for col, col_dict in self.cat_dict.items()}
-        A2_cat_draws = {col: rng.choice(np.arange(col_dict['n']), size=nsi, replace=True) for col, col_dict in self.cat_dict.items()}
-        A_cat_draws = [A1_cat_draws, A2_cat_draws]
-        # Variances #
-        S_cat_draws = [A1_cat_draws, A2_cat_draws]
-        ## Continuous ##
-        A1_cts_draws = {col: rng.normal(size=nsi) for col in cts_cols}
-        A2_cts_draws = {col: rng.normal(size=nsi) for col in cts_cols}
-        A_cts_draws = [A1_cts_draws, A2_cts_draws]
-
-        #### Simulate control variable wages ####
-        ### Categorical ###
-        for col in cat_cols:
-            for period in periods_stayers:
-                if controls_dict[col]['worker_type_interaction']:
-                    ## Worker-interaction ##
-                    A_sum[period] += A_cat[col][period][L, A_cat_draws[periods_dict[period]][col]]
-                    S_sum_sq[period] += S_cat[col][period][L, S_cat_draws[periods_dict[period]][col]]
-                else:
-                    ## Non-worker-interaction ##
-                    A_sum[period] += A_cat[col][period][A_cat_draws[periods_dict[period]][col]]
-                    S_sum_sq[period] += S_cat[col][period][S_cat_draws[periods_dict[period]][col]]
-        ### Continuous ###
-        for col in cts_cols:
-            for period in periods_stayers:
-                if controls_dict[col]['worker_type_interaction']:
-                    ## Worker-interaction ##
-                    A_sum[period] += A_cts[col][period][L] * A_cts_draws[periods_dict[period]][col]
-                    S_sum_sq[period] += S_cts[col][period][L]
-                else:
-                    ## Non-worker-interaction ##
-                    A_sum[period] += A_cts[col][period] * A_cts_draws[periods_dict[period]][col]
-                    S_sum_sq[period] += S_cts[col][period]
-
-        A1_cat_draws = {k + '1': v for k, v in A1_cat_draws.items()}
-        A3_cat_draws = {k + '3': v for k, v in A2_cat_draws.items()}
-        A2_cat_draws = {k[: -1] + '2': v for k, v in A1_cat_draws.items()}
-        A4_cat_draws = {k[: -1] + '4': v for k, v in A3_cat_draws.items()}
-        A1_cts_draws = {k + '1': v for k, v in A1_cts_draws.items()}
-        A3_cts_draws = {k + '3': v for k, v in A2_cts_draws.items()}
-        A2_cts_draws = {k[: -1] + '2': v for k, v in A1_cts_draws.items()}
-        A4_cts_draws = {k[: -1] + '4': v for k, v in A3_cts_draws.items()}
-
-        Y2 = rng.normal( \
-            loc=A_sum['2s'], \
-            scale=np.sqrt(S_sum_sq['2s']), \
-            size=nsi)
-        Y1 = rng.normal( \
-            loc=A_sum['12'] + R12 * (Y2 - A_sum['2ma']), \
-            scale=np.sqrt(S_sum_sq['12']), \
-            size=nsi) # scale=np.sqrt(S_sum_sq['12'] + (R12 ** 2) * S_sum_sq['2ma']), \
-        Y3 = rng.normal( \
-            loc=A_sum['3s'] + R32s * (Y2 - A_sum['2s']), \
-            scale=np.sqrt(S_sum_sq['3s']), \
-            size=nsi) # scale=np.sqrt(S_sum_sq['3s'] + (R32s ** 2) * S_sum_sq['2s']), \
-        Y4 = rng.normal( \
-            loc=A_sum['43'] + R43 * (Y3 - A_sum['3ma']), \
-            scale=np.sqrt(S_sum_sq['43']), \
-            size=nsi) # scale=np.sqrt(S_sum_sq['43'] + (R43 ** 2) * S_sum_sq['3ma']), \
-
-        return DataFrame(data={'y1': Y1, 'y2': Y2, 'y3': Y3, 'y4': Y4, 'g1': G, 'g2': G, 'g3': G, 'g4': G, 'l': L, **A1_cat_draws, **A2_cat_draws, **A3_cat_draws, **A4_cat_draws, **A1_cts_draws, **A2_cts_draws, **A3_cts_draws, **A4_cts_draws})
+        ## Convert to DataFrame ##
+        return DataFrame(data={'y1': np.zeros(nsi), 'y2': np.zeros(nsi), 'y3': np.zeros(nsi), 'y4': np.zeros(nsi), 'g1': G, 'g2': G.copy(), 'g3': G.copy(), 'g4': G.copy(), 'l': L, 'm': np.zeros(nsi, dtype=int), **A1_cat_draws, **A2_cat_draws, **A3_cat_draws, **A4_cat_draws, **A1_cts_draws, **A2_cts_draws, **A3_cts_draws, **A4_cts_draws})
 
     def simulate(self, return_parameters=False, rng=None):
         '''
@@ -1116,70 +1256,52 @@ class SimDynamicBLM:
 
         Returns:
             (dict or tuple of dicts): sim_data gives {'jdata': movers BipartiteDataFrame, 'sdata': stayers BipartiteDataFrame}, while sim_params gives keys 'A', 'S', 'pk1', 'pk0', 'R12', 'R43', 'R32m', 'R32s', 'A_cat', 'S_cat', 'A_cts', and 'S_cts' ('A' gives mean; 'S' gives standard deviation; 'cat' gives categorical controls; 'cts' gives continuous controls; 'pk1' gives the probability of being at each combination of firm types for movers; 'pk0' gives the probability of being at each firm type for stayers; and the 'R' terms are the persistance parameters). If return_parameters=True, returns (sim_data, sim_params); if return_parameters=False, returns sim_data.
-
         '''
         if rng is None:
             rng = np.random.default_rng(None)
 
+        ## Simulate parameters ##
         sim_params = self._gen_params(rng=rng)
-        jdata = self._simulate_movers(**sim_params, rng=rng)
-        sdata = self._simulate_stayers(**sim_params, rng=rng)
 
-        ## Stayers ##
-        # Draw firm ids for stayers (note each cluster must link to at least 2 firm ids so that movers are able to move firms within the cluster)
-        sdata.loc[:, 'j1'] = np.hstack(sdata.groupby('g1').apply(lambda df: rng.integers(max(2, round(len(df) / self.params['firm_size'])), size=len(df))))
+        ## Simulate movers and stayers data ##
+        jdata = self._simulate_movers(pk1=sim_params['pk1'], rng=rng)
+        sdata = self._simulate_stayers(pk0=sim_params['pk0'], rng=rng)
 
-        # Make firm ids contiguous
-        sdata.loc[:, 'j1'] = sdata.groupby(['g1', 'j1']).ngroup()
-        sdata.loc[:, 'j2'] = sdata.loc[:, 'j1']
-        sdata.loc[:, 'j3'] = sdata.loc[:, 'j1']
-        sdata.loc[:, 'j4'] = sdata.loc[:, 'j1']
+        ## Simulate firms ##
+        simblm._simulate_firms(jdata, sdata, self.params['firm_size'], dynamic=True, rng=rng)
 
-        # Link firm ids to clusters
-        j_per_g_dict = sdata.groupby('g1')['j1'].unique().to_dict()
-        for g, linked_j in j_per_g_dict.items():
-            # Make sure each cluster has at least 2 linked firm ids
-            if len(linked_j) == 1:
-                raise ValueError(f"Cluster {g} has only 1 linked firm. However, each cluster must link to at least 2 firm ids so that movers are able to move firms within the cluster. Please alter parameter values to ensure enough firms can be generated.")
-
-        ## Movers ##
-        # Draw firm ids for movers
-        jdata.loc[:, 'j1'] = np.hstack(jdata.groupby('g1').apply(lambda df: rng.choice(j_per_g_dict[df.iloc[0]['g1']], size=len(df))))
-        groupby_g4 = jdata.groupby('g4')
-        jdata.loc[:, 'j4'] = np.hstack(groupby_g4.apply(lambda df: rng.choice(j_per_g_dict[df.iloc[0]['g4']], size=len(df))))
-
-        # Make sure movers actually move
-        # FIXME find a deterministic way to do this
-        same_firm_mask = (jdata.loc[:, 'j1'].to_numpy() == jdata.loc[:, 'j4'].to_numpy())
-        while same_firm_mask.any():
-            same_firm_rows = jdata.loc[same_firm_mask, :].index
-            jdata.loc[same_firm_rows, 'j4'] = np.hstack(groupby_g4.apply(lambda df: rng.choice(j_per_g_dict[df.iloc[0]['g4']], size=len(df))))[same_firm_rows]
-            same_firm_mask = (jdata.loc[:, 'j1'].to_numpy() == jdata.loc[:, 'j4'].to_numpy())
-
-        # Set 'j2' and 'j3'
-        jdata.loc[:, 'j2'] = jdata.loc[:, 'j1']
-        jdata.loc[:, 'j3'] = jdata.loc[:, 'j4']
-
-        # Add m column
-        jdata.loc[:, 'm'] = 1
-        sdata.loc[:, 'm'] = 0
-
-        # Add i column
+        ## Add i column ##
         nm = len(jdata)
         ns = len(sdata)
         jdata.loc[:, 'i'] = np.arange(nm, dtype=int)
         sdata.loc[:, 'i'] = nm + np.arange(ns, dtype=int)
 
-        # Sort columns
+        ## Sort columns ##
         sorted_cols = _sort_cols(jdata.columns)
         jdata = jdata.reindex(sorted_cols, axis=1, copy=False)
         sdata = sdata.reindex(sorted_cols, axis=1, copy=False)
 
-        # Convert into BipartiteDataFrame
-        jdata = BipartiteDataFrame(jdata, custom_dtype_dict={col: 'categorical' for col in self.cat_cols + ['l']}, custom_how_collapse_dict={col: 'first' for col in self.cat_cols + ['l']}, custom_long_es_split_dict={'l': False})
-        sdata = BipartiteDataFrame(sdata, custom_dtype_dict={col: 'categorical' for col in self.cat_cols + ['l']}, custom_how_collapse_dict={col: 'first' for col in self.cat_cols + ['l']}, custom_long_es_split_dict={'l': False})
+        ## Convert into BipartiteDataFrame ##
+        jdata = BipartiteDataFrame(
+            jdata,
+            custom_dtype_dict={col: 'categorical' for col in self.cat_cols + ['l']},
+            custom_how_collapse_dict={col: 'first' for col in self.cat_cols + ['l']},
+            custom_long_es_split_dict={'l': False}
+        )
+        sdata = BipartiteDataFrame(
+            sdata,
+            custom_dtype_dict={col: 'categorical' for col in self.cat_cols + ['l']},
+            custom_how_collapse_dict={col: 'first' for col in self.cat_cols + ['l']},
+            custom_long_es_split_dict={'l': False}
+        )
 
-        # Combine into dictionary
+        ## Simulate wages ##
+        Y1m, Y2m, Y3m, Y4m = _simulate_wages_movers(jdata, L=jdata.loc[:, 'l'], R12=self.R12, R43=self.R43, R32m=self.R32m, controls_dict=self.controls_dict, cat_cols=self.cat_cols, cts_cols=self.cts_cols, rng=rng, **sim_params)
+        Y1s, Y2s, Y3s, Y4s = _simulate_wages_stayers(sdata, L=sdata.loc[:, 'l'], R12=self.R12, R43=self.R43, R32s=self.R32s, controls_dict=self.controls_dict, cat_cols=self.cat_cols, cts_cols=self.cts_cols, rng=rng, **sim_params)
+        jdata.loc[:, 'y1'], jdata.loc[:, 'y2'], jdata.loc[:, 'y3'], jdata.loc[:, 'y4'] = (Y1m, Y2m, Y3m, Y4m)
+        sdata.loc[:, 'y1'], sdata.loc[:, 'y2'], sdata.loc[:, 'y3'], sdata.loc[:, 'y4'] = (Y1s, Y2s, Y3s, Y4s)
+
+        ## Combine into dictionary ##
         sim_data = {'jdata': jdata, 'sdata': sdata}
 
         if return_parameters:
