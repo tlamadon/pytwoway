@@ -4306,6 +4306,90 @@ class DynamicBLMModel:
         ax.set_title(title)
         plt.show()
 
+    def plot_type_flows(self, title='Worker flows', opacity=0.4, font_size=15):
+        '''
+        Plot flows of worker types between each firm class.
+
+        Arguments:
+            title (str): plot title
+            opacity (float): opacity of flows
+            font_size (float): font size for plot
+        '''
+        if self.NNm is None:
+            raise ValueError('The dynamic BLM estimation must be run on movers (and NNm must be computed) before plotting type flows.')
+        
+        ## Extract parameters ##
+        nl, nk = self.nl, self.nk
+        _, pk1, NNm = self._sort_parameters(self.A, pk1=self.pk1, NNm=self.NNm, sort_firm_types=True)
+        colors = np.array(
+            [
+                [31, 119, 180],
+                [255, 127, 14],
+                [44, 160, 44],
+                [214, 39, 40],
+                [148, 103, 189],
+                [140, 86, 75],
+                [227, 119, 194],
+                [127, 127, 127],
+                [188, 189, 34],
+                [23, 190, 207],
+                [255, 0, 255]
+            ]
+        )
+
+        ## Compute worker flows ##
+        reshaped_pk1 = np.reshape(pk1, (nk, nk, nl))
+        mover_flows = (NNm.T * reshaped_pk1.T).T
+
+        ## Sankey with legend ##
+        # Source: https://stackoverflow.com/a/76223740/17333120
+        sankey = go.Sankey(
+            # Define nodes
+            node=dict(
+                pad=15,
+                thickness=1,
+                line=dict(color='white', width=0),
+                label=[f'k={k + 1}' for k in range(nk)] + [f'k={k + 1}' for k in range(nk)],
+                color='white'
+            ),
+            link=dict(
+                # Source firm
+                source=np.repeat(np.arange(nk), nk * nl),
+                # Destination firm
+                target=np.tile(np.repeat(np.arange(nk), nl), nk) + nk,
+                # Worker type
+                label=[f'l={l + 1}' for _ in range(nk) for _ in range(nk) for l in range(nl)],
+                # Worker flows
+                value=mover_flows.flatten(),
+                # Color (specify mean for each l, and for each k go from -80 below the mean to +80 above the mean)
+                color=[f'rgba({str(list(np.minimum(255, np.maximum(0, colors[l, :] - 80) + 160 * k / (nk - 1))))[1: -1]}, {opacity})' for k in range(nk) for _ in range(nk) for l in range(nl)]
+            )
+        )
+
+        legend = []
+        for l in range(nl):
+            legend.append(
+                go.Scatter(
+                    mode='markers',
+                    x=[None],
+                    y=[None],
+                    marker=dict(color=f'rgba({str(list(colors[l, :]))[1: -1]}, {opacity})', symbol='square'),
+                    name=f'$l={l + 1}$',
+                )
+            )
+
+        traces = [sankey] + legend
+        layout = go.Layout(
+            showlegend=True,
+            plot_bgcolor='rgba(0, 0, 0, 0)',
+        )
+
+        fig = go.Figure(data=traces, layout=layout)
+        fig.update_xaxes(visible=False)
+        fig.update_yaxes(visible=False)
+        fig.update_layout(title_text=title, font_size=font_size)
+        fig.show()
+
 class DynamicBLMEstimator:
     '''
     Class for estimating dynamic BLM using multiple sets of starting values.
@@ -4465,6 +4549,20 @@ class DynamicBLMEstimator:
         '''
         if self.model is not None:
             self.model.plot_type_proportions(period=period, subset=subset, xlabel=xlabel, ylabel=ylabel, title=title, dpi=dpi)
+        else:
+            warnings.warn('Estimation has not yet been run.')
+
+    def plot_type_flows(self, title='Worker flows', opacity=0.4, font_size=15):
+        '''
+        Plot flows of worker types between each firm class.
+
+        Arguments:
+            title (str): plot title
+            opacity (float): opacity of flows
+            font_size (float): font size for plot
+        '''
+        if self.model is not None:
+            self.model.plot_type_flows(title=title, opacity=opacity, font_size=font_size)
         else:
             warnings.warn('Estimation has not yet been run.')
 
@@ -4757,6 +4855,100 @@ class DynamicBLMBootstrap:
             ax.set_ylabel(ylabel)
             ax.set_title(title)
             plt.show()
+
+    def plot_type_flows(self, title='Worker flows', opacity=0.4, font_size=15):
+        '''
+        Plot flows of worker types between each firm class.
+
+        Arguments:
+            title (str): plot title
+            opacity (float): opacity of flows
+            font_size (float): font size for plot
+        '''
+        if self.models is None:
+            warnings.warn('Estimation has not yet been run.')
+        else:
+            ## Extract parameters ##
+            nl, nk = self.nl, self.nk
+
+            # Compute average type proportions
+            pk1_mean = np.zeros((nk, nl))
+            for model in self.models:
+                # Sort by firm effects
+                _, pk1, _, NNm, _ = model._sort_parameters(model.A, pk1=model.pk1, pk0=model.pk0, NNm=model.NNm, NNs=model.NNs, sort_firm_types=True)
+                pk1_mean += pk1
+
+            ## Take mean over all models ##
+            pk1_mean /= len(self.models)
+
+            colors = np.array(
+                [
+                    [31, 119, 180],
+                    [255, 127, 14],
+                    [44, 160, 44],
+                    [214, 39, 40],
+                    [148, 103, 189],
+                    [140, 86, 75],
+                    [227, 119, 194],
+                    [127, 127, 127],
+                    [188, 189, 34],
+                    [23, 190, 207],
+                    [255, 0, 255]
+                ]
+            )
+
+            ## Compute worker flows ##
+            reshaped_pk1 = np.reshape(pk1_mean, (nk, nk, nl))
+            mover_flows = (NNm.T * reshaped_pk1.T).T
+
+            ## Sankey with legend ##
+            # Source: https://stackoverflow.com/a/76223740/17333120
+            sankey = go.Sankey(
+                # Define nodes
+                node=dict(
+                    pad=15,
+                    thickness=1,
+                    line=dict(color='white', width=0),
+                    label=[f'k={k + 1}' for k in range(nk)] + [f'k={k + 1}' for k in range(nk)],
+                    color='white'
+                ),
+                link=dict(
+                    # Source firm
+                    source=np.repeat(np.arange(nk), nk * nl),
+                    # Destination firm
+                    target=np.tile(np.repeat(np.arange(nk), nl), nk) + nk,
+                    # Worker type
+                    label=[f'l={l + 1}' for _ in range(nk) for _ in range(nk) for l in range(nl)],
+                    # Worker flows
+                    value=mover_flows.flatten(),
+                    # Color (specify mean for each l, and for each k go from -80 below the mean to +80 above the mean)
+                    color=[f'rgba({str(list(np.minimum(255, np.maximum(0, colors[l, :] - 80) + 160 * k / (nk - 1))))[1: -1]}, {opacity})' for k in range(nk) for _ in range(nk) for l in range(nl)]
+                )
+            )
+
+            legend = []
+            for l in range(nl):
+                legend.append(
+                    go.Scatter(
+                        mode='markers',
+                        x=[None],
+                        y=[None],
+                        marker=dict(color=f'rgba({str(list(colors[l, :]))[1: -1]}, {opacity})', symbol='square'),
+                        name=f'$l={l + 1}$',
+                    )
+                )
+
+            traces = [sankey] + legend
+            layout = go.Layout(
+                showlegend=True,
+                plot_bgcolor='rgba(0, 0, 0, 0)',
+            )
+
+            fig = go.Figure(data=traces, layout=layout)
+            fig.update_xaxes(visible=False)
+            fig.update_yaxes(visible=False)
+            fig.update_layout(title_text=title, font_size=font_size)
+            fig.show()
 
 class DynamicBLMVarianceDecomposition:
     '''

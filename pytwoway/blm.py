@@ -2055,15 +2055,15 @@ class BLMModel:
         nl, nk = self.nl, self.nk
         if subset == 'movers':
             if self.NNm is None:
-                raise ValueError('The dynamic BLM estimation must be run on movers (and NNm must be computed) before plotting type proportions for movers.')
+                raise ValueError('The BLM estimation must be run on movers (and NNm must be computed) before plotting type proportions for movers.')
             A1, A2, pk1, NNm = self._sort_parameters(self.A1, self.A2, pk1=self.pk1, NNm=self.NNm, sort_firm_types=True)
         elif subset == 'stayers':
             if self.NNs is None:
-                raise ValueError('The dynamic BLM estimation must be run on stayers (and NNs must be computed) before plotting type proportions for stayers.')
+                raise ValueError('The BLM estimation must be run on stayers (and NNs must be computed) before plotting type proportions for stayers.')
             A1, A2, pk0, NNs = self._sort_parameters(self.A1, self.A2, pk0=self.pk0, NNs=self.NNs, sort_firm_types=True)
         elif subset == 'all':
             if (self.NNm is None) or (self.NNs is None):
-                raise ValueError('The dynamic BLM estimation must be run on both movers and stayers (and both NNm and NNs must be computed) before plotting type proportions for all.')
+                raise ValueError('The BLM estimation must be run on both movers and stayers (and both NNm and NNs must be computed) before plotting type proportions for all.')
             A1, A2, pk1, pk0, NNm, NNs = self._sort_parameters(self.A1, self.A2, pk1=self.pk1, pk0=self.pk0, NNm=self.NNm, NNs=self.NNs, sort_firm_types=True)
 
         ## Extract subset(s) ##
@@ -2123,7 +2123,7 @@ class BLMModel:
             font_size (float): font size for plot
         '''
         if self.NNm is None:
-            raise ValueError('The dynamic BLM estimation must be run on movers (and NNm must be computed) before plotting type proportions for movers.')
+            raise ValueError('The BLM estimation must be run on movers (and NNm must be computed) before plotting type flows.')
         
         ## Extract parameters ##
         nl, nk = self.nl, self.nk
