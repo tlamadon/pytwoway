@@ -2129,10 +2129,10 @@ class BLMModel:
         '''
         if self.NNm is None:
             raise ValueError('The BLM estimation must be run on movers (and NNm must be computed) before plotting type flows.')
-        
+
         if method not in ['stacked', 'sankey']:
             raise ValueError(f"`method` must be one of 'stacked' or 'sankey', but input specifies {method!r}.")
-        
+
         ## Extract parameters ##
         nl, nk = self.nl, self.nk
         _, _, pk1, NNm = self._sort_parameters(self.A1, self.A2, pk1=self.pk1, NNm=self.NNm, sort_firm_types=True)
