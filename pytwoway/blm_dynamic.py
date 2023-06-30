@@ -4316,7 +4316,7 @@ class DynamicBLMModel:
         ax.set_title(title)
         plt.show()
 
-    def plot_type_flows(self, method='stacked', title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=100, opacity=0.4, font_size=15):
+    def plot_type_flows(self, method='stacked', title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=1, opacity=0.4, font_size=15):
         '''
         Plot flows of worker types between each firm class.
 
@@ -4603,7 +4603,7 @@ class DynamicBLMEstimator:
         else:
             warnings.warn('Estimation has not yet been run.')
 
-    def plot_type_flows(self, method='stacked', title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=100, opacity=0.4, font_size=15):
+    def plot_type_flows(self, method='stacked', title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=1, opacity=0.4, font_size=15):
         '''
         Plot flows of worker types between each firm class.
 
@@ -4912,7 +4912,7 @@ class DynamicBLMBootstrap:
             ax.set_title(title)
             plt.show()
 
-    def plot_type_flows(self, method='stacked', title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=100, opacity=0.4, font_size=15):
+    def plot_type_flows(self, method='stacked', title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=1, opacity=0.4, font_size=15):
         '''
         Plot flows of worker types between each firm class.
 
