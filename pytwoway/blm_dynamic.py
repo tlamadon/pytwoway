@@ -3309,7 +3309,7 @@ class DynamicBLMModel:
             if params['update_pk0']:
                 # NOTE: add dirichlet prior
                 # NOTE: this is equivalent to pk0 = GG1.T @ (qi + d_prior - 1)
-                pk0 = np.bincount(KK, (qi.T + d_prior - 1).flatten()).reshape(nl, nk).T
+                pk0 = np.bincount(KK, (qi + d_prior - 1).flatten()).reshape(nl, nk).T
                 # Normalize rows to sum to 1
                 pk0 = DxM(1 / np.sum(pk0, axis=1), pk0)
 
@@ -5213,7 +5213,6 @@ class DynamicBLMReallocation:
         y = bdf.loc[:, 'y'].to_numpy()
         res_baseline = weighted_quantile(values=y, quantiles=quantiles, sample_weight=None)
         for col_cat in categorical_sort_cols.keys():
-            col_n = self.cat_dict[col_cat]['n']
             ## Categorical sorting variables ##
             col = bdf.loc[:, col_cat].to_numpy()
             # Use categories as bins
@@ -5240,7 +5239,6 @@ class DynamicBLMReallocation:
             y = bdf.loc[:, 'y'].to_numpy()
             res[i, :] = weighted_quantile(values=y, quantiles=quantiles, sample_weight=None)
             for col_cat in categorical_sort_cols.keys():
-                col_n = self.cat_dict[col_cat]['n']
                 ## Categorical sorting variables ##
                 col = bdf.loc[:, col_cat].to_numpy()
                 # Use categories as bins

@@ -2113,89 +2113,130 @@ class BLMModel:
         ax.set_title(title)
         plt.show()
 
-    def plot_type_flows(self, title='Worker flows', opacity=0.4, font_size=15):
+    def plot_type_flows(self, method='stacked', title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=100, opacity=0.4, font_size=15):
         '''
         Plot flows of worker types between each firm class.
 
         Arguments:
+            method (str): 'stacked' for stacked plot; 'sankey' for Sankey plot
             title (str): plot title
-            opacity (float): opacity of flows
-            font_size (float): font size for plot
+            axis_label (str): label for axes (for stacked)
+            subplot_title (str): label for subplots (for stacked)
+            n_cols (int): number of subplot columns (for stacked)
+            circle_scale (float): size scale for circles (for stacked)
+            opacity (float): opacity of flows (for Sankey)
+            font_size (float): font size for plot (for Sankey)
         '''
         if self.NNm is None:
             raise ValueError('The BLM estimation must be run on movers (and NNm must be computed) before plotting type flows.')
         
+        if method not in ['stacked', 'sankey']:
+            raise ValueError(f"`method` must be one of 'stacked' or 'sankey', but input specifies {method!r}.")
+        
         ## Extract parameters ##
         nl, nk = self.nl, self.nk
         _, _, pk1, NNm = self._sort_parameters(self.A1, self.A2, pk1=self.pk1, NNm=self.NNm, sort_firm_types=True)
-        colors = np.array(
-            [
-                [31, 119, 180],
-                [255, 127, 14],
-                [44, 160, 44],
-                [214, 39, 40],
-                [148, 103, 189],
-                [140, 86, 75],
-                [227, 119, 194],
-                [127, 127, 127],
-                [188, 189, 34],
-                [23, 190, 207],
-                [255, 0, 255]
-            ]
-        )
 
         ## Compute worker flows ##
         reshaped_pk1 = np.reshape(pk1, (nk, nk, nl))
         mover_flows = (NNm.T * reshaped_pk1.T).T
 
-        ## Sankey with legend ##
-        # Source: https://stackoverflow.com/a/76223740/17333120
-        sankey = go.Sankey(
-            # Define nodes
-            node=dict(
-                pad=15,
-                thickness=1,
-                line=dict(color='white', width=0),
-                label=[f'k={k + 1}' for k in range(nk)] + [f'k={k + 1}' for k in range(nk)],
-                color='white'
-            ),
-            link=dict(
-                # Source firm
-                source=np.repeat(np.arange(nk), nk * nl),
-                # Destination firm
-                target=np.tile(np.repeat(np.arange(nk), nl), nk) + nk,
-                # Worker type
-                label=[f'l={l + 1}' for _ in range(nk) for _ in range(nk) for l in range(nl)],
-                # Worker flows
-                value=mover_flows.flatten(),
-                # Color (specify mean for each l, and for each k go from -80 below the mean to +80 above the mean)
-                color=[f'rgba({str(list(np.minimum(255, np.maximum(0, colors[l, :] - 80) + 160 * k / (nk - 1))))[1: -1]}, {opacity})' for k in range(nk) for _ in range(nk) for l in range(nl)]
-            )
-        )
+        if method == 'stacked':
+            ## Compute number of subplot rows ##
+            n_rows = nl // n_cols
+            if n_rows * n_cols < nl:
+                # If the bottom column won't be filled
+                n_rows += 1
 
-        legend = []
-        for l in range(nl):
-            legend.append(
-                go.Scatter(
-                    mode='markers',
-                    x=[None],
-                    y=[None],
-                    marker=dict(color=f'rgba({str(list(colors[l, :]))[1: -1]}, {opacity})', symbol='square'),
-                    name=f'$l={l + 1}$',
+            ## Create subplots ###
+            fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=True, sharey=True)
+
+            ## Create axes ##
+            x_vals, y_vals = np.meshgrid(np.arange(nk) + 1, np.arange(nk) + 1, indexing='ij')
+            x_vals = x_vals.flatten()
+            y_vals = y_vals.flatten()
+
+            ## Generate plots ##
+            l = 0
+            for row in axs:
+                for ax in row:
+                    if l < nl:
+                        ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l].T.flatten()))
+                        ax.set_title(f'{subplot_title} {l + 1}')
+                        ax.grid()
+                        l += 1
+
+            plt.setp(axs, xticks=np.arange(nk) + 1, yticks=np.arange(nk) + 1)
+            fig.supxlabel(f'{axis_label}, period 1')
+            fig.supylabel(f'{axis_label}, period 2')
+            fig.suptitle(f'{title}')
+            plt.tight_layout()
+            plt.show()
+        elif method == 'sankey':
+            colors = np.array(
+                [
+                    [31, 119, 180],
+                    [255, 127, 14],
+                    [44, 160, 44],
+                    [214, 39, 40],
+                    [148, 103, 189],
+                    [140, 86, 75],
+                    [227, 119, 194],
+                    [127, 127, 127],
+                    [188, 189, 34],
+                    [23, 190, 207],
+                    [255, 0, 255]
+                ]
+            )
+
+            ## Sankey with legend ##
+            # Source: https://stackoverflow.com/a/76223740/17333120
+            sankey = go.Sankey(
+                # Define nodes
+                node=dict(
+                    pad=15,
+                    thickness=1,
+                    line=dict(color='white', width=0),
+                    label=[f'k={k + 1}' for k in range(nk)] + [f'k={k + 1}' for k in range(nk)],
+                    color='white'
+                ),
+                link=dict(
+                    # Source firm
+                    source=np.repeat(np.arange(nk), nk * nl),
+                    # Destination firm
+                    target=np.tile(np.repeat(np.arange(nk), nl), nk) + nk,
+                    # Worker type
+                    label=[f'l={l + 1}' for _ in range(nk) for _ in range(nk) for l in range(nl)],
+                    # Worker flows
+                    value=mover_flows.flatten(),
+                    # Color (specify mean for each l, and for each k go from -80 below the mean to +80 above the mean)
+                    color=[f'rgba({str(list(np.minimum(255, np.maximum(0, colors[l, :] - 80) + 160 * k / (nk - 1))))[1: -1]}, {opacity})' for k in range(nk) for _ in range(nk) for l in range(nl)]
                 )
             )
 
-        traces = [sankey] + legend
-        layout = go.Layout(
-            showlegend=True,
-            plot_bgcolor='rgba(0, 0, 0, 0)',
-        )
+            legend = []
+            for l in range(nl):
+                legend.append(
+                    go.Scatter(
+                        mode='markers',
+                        x=[None],
+                        y=[None],
+                        marker=dict(color=f'rgba({str(list(colors[l, :]))[1: -1]}, {opacity})', symbol='square'),
+                        name=f'$l={l + 1}$',
+                    )
+                )
 
-        fig = go.Figure(data=traces, layout=layout)
-        fig.update_xaxes(visible=False)
-        fig.update_yaxes(visible=False)
-        fig.update_layout(title_text=title, font_size=font_size)
-        fig.show()
+            traces = [sankey] + legend
+            layout = go.Layout(
+                showlegend=True,
+                plot_bgcolor='rgba(0, 0, 0, 0)',
+            )
+
+            fig = go.Figure(data=traces, layout=layout)
+            fig.update_xaxes(visible=False)
+            fig.update_yaxes(visible=False)
+            fig.update_layout(title_text=title, font_size=font_size)
+            fig.show()
 
 class BLMEstimator:
     '''
@@ -2350,17 +2391,22 @@ class BLMEstimator:
         else:
             warnings.warn('Estimation has not yet been run.')
 
-    def plot_type_flows(self, title='Worker flows', opacity=0.4, font_size=15):
+    def plot_type_flows(self, method='stacked', title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=100, opacity=0.4, font_size=15):
         '''
         Plot flows of worker types between each firm class.
 
         Arguments:
+            method (str): 'stacked' for stacked plot; 'sankey' for Sankey plot
             title (str): plot title
-            opacity (float): opacity of flows
-            font_size (float): font size for plot
+            axis_label (str): label for axes (for stacked)
+            subplot_title (str): label for subplots (for stacked)
+            n_cols (int): number of subplot columns (for stacked)
+            circle_scale (float): size scale for circles (for stacked)
+            opacity (float): opacity of flows (for Sankey)
+            font_size (float): font size for plot (for Sankey)
         '''
         if self.model is not None:
-            self.model.plot_type_flows(title=title, opacity=opacity, font_size=font_size)
+            self.model.plot_type_flows(method=method, title=title, axis_label=axis_label, subplot_title=subplot_title, n_cols=n_cols, circle_scale=circle_scale, opacity=opacity, font_size=font_size)
         else:
             warnings.warn('Estimation has not yet been run.')
 
@@ -2678,17 +2724,24 @@ class BLMBootstrap:
             ax.set_title(title)
             plt.show()
 
-    def plot_type_flows(self, title='Worker flows', opacity=0.4, font_size=15):
+    def plot_type_flows(self, method='stacked', title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=100, opacity=0.4, font_size=15):
         '''
         Plot flows of worker types between each firm class.
 
         Arguments:
+            method (str): 'stacked' for stacked plot; 'sankey' for Sankey plot
             title (str): plot title
-            opacity (float): opacity of flows
-            font_size (float): font size for plot
+            axis_label (str): label for axes (for stacked)
+            subplot_title (str): label for subplots (for stacked)
+            n_cols (int): number of subplot columns (for stacked)
+            circle_scale (float): size scale for circles (for stacked)
+            opacity (float): opacity of flows (for Sankey)
+            font_size (float): font size for plot (for Sankey)
         '''
         if self.models is None:
             warnings.warn('Estimation has not yet been run.')
+        elif method not in ['stacked', 'sankey']:
+            raise ValueError(f"`method` must be one of 'stacked' or 'sankey', but input specifies {method!r}.")
         else:
             ## Extract parameters ##
             nl, nk = self.nl, self.nk
@@ -2703,74 +2756,106 @@ class BLMBootstrap:
             ## Take mean over all models ##
             pk1_mean /= len(self.models)
 
-            colors = np.array(
-                [
-                    [31, 119, 180],
-                    [255, 127, 14],
-                    [44, 160, 44],
-                    [214, 39, 40],
-                    [148, 103, 189],
-                    [140, 86, 75],
-                    [227, 119, 194],
-                    [127, 127, 127],
-                    [188, 189, 34],
-                    [23, 190, 207],
-                    [255, 0, 255]
-                ]
-            )
-
             ## Compute worker flows ##
             reshaped_pk1 = np.reshape(pk1_mean, (nk, nk, nl))
             mover_flows = (NNm.T * reshaped_pk1.T).T
 
-            ## Sankey with legend ##
-            # Source: https://stackoverflow.com/a/76223740/17333120
-            sankey = go.Sankey(
-                # Define nodes
-                node=dict(
-                    pad=15,
-                    thickness=1,
-                    line=dict(color='white', width=0),
-                    label=[f'k={k + 1}' for k in range(nk)] + [f'k={k + 1}' for k in range(nk)],
-                    color='white'
-                ),
-                link=dict(
-                    # Source firm
-                    source=np.repeat(np.arange(nk), nk * nl),
-                    # Destination firm
-                    target=np.tile(np.repeat(np.arange(nk), nl), nk) + nk,
-                    # Worker type
-                    label=[f'l={l + 1}' for _ in range(nk) for _ in range(nk) for l in range(nl)],
-                    # Worker flows
-                    value=mover_flows.flatten(),
-                    # Color (specify mean for each l, and for each k go from -80 below the mean to +80 above the mean)
-                    color=[f'rgba({str(list(np.minimum(255, np.maximum(0, colors[l, :] - 80) + 160 * k / (nk - 1))))[1: -1]}, {opacity})' for k in range(nk) for _ in range(nk) for l in range(nl)]
-                )
-            )
+            if method == 'stacked':
+                ## Compute number of subplot rows ##
+                n_rows = nl // n_cols
+                if n_rows * n_cols < nl:
+                    # If the bottom column won't be filled
+                    n_rows += 1
 
-            legend = []
-            for l in range(nl):
-                legend.append(
-                    go.Scatter(
-                        mode='markers',
-                        x=[None],
-                        y=[None],
-                        marker=dict(color=f'rgba({str(list(colors[l, :]))[1: -1]}, {opacity})', symbol='square'),
-                        name=f'$l={l + 1}$',
+                ## Create subplots ###
+                fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=True, sharey=True)
+
+                ## Create axes ##
+                x_vals, y_vals = np.meshgrid(np.arange(nk) + 1, np.arange(nk) + 1, indexing='ij')
+                x_vals = x_vals.flatten()
+                y_vals = y_vals.flatten()
+
+                ## Generate plots ##
+                l = 0
+                for row in axs:
+                    for ax in row:
+                        if l < nl:
+                            ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l].T.flatten()))
+                            ax.set_title(f'{subplot_title} {l + 1}')
+                            ax.grid()
+                            l += 1
+
+                plt.setp(axs, xticks=np.arange(nk) + 1, yticks=np.arange(nk) + 1)
+                fig.supxlabel(f'{axis_label}, period 1')
+                fig.supylabel(f'{axis_label}, period 2')
+                fig.suptitle(f'{title}')
+                plt.tight_layout()
+                plt.show()
+            elif method == 'sankey':
+                colors = np.array(
+                    [
+                        [31, 119, 180],
+                        [255, 127, 14],
+                        [44, 160, 44],
+                        [214, 39, 40],
+                        [148, 103, 189],
+                        [140, 86, 75],
+                        [227, 119, 194],
+                        [127, 127, 127],
+                        [188, 189, 34],
+                        [23, 190, 207],
+                        [255, 0, 255]
+                    ]
+                )
+
+                ## Sankey with legend ##
+                # Source: https://stackoverflow.com/a/76223740/17333120
+                sankey = go.Sankey(
+                    # Define nodes
+                    node=dict(
+                        pad=15,
+                        thickness=1,
+                        line=dict(color='white', width=0),
+                        label=[f'k={k + 1}' for k in range(nk)] + [f'k={k + 1}' for k in range(nk)],
+                        color='white'
+                    ),
+                    link=dict(
+                        # Source firm
+                        source=np.repeat(np.arange(nk), nk * nl),
+                        # Destination firm
+                        target=np.tile(np.repeat(np.arange(nk), nl), nk) + nk,
+                        # Worker type
+                        label=[f'l={l + 1}' for _ in range(nk) for _ in range(nk) for l in range(nl)],
+                        # Worker flows
+                        value=mover_flows.flatten(),
+                        # Color (specify mean for each l, and for each k go from -80 below the mean to +80 above the mean)
+                        color=[f'rgba({str(list(np.minimum(255, np.maximum(0, colors[l, :] - 80) + 160 * k / (nk - 1))))[1: -1]}, {opacity})' for k in range(nk) for _ in range(nk) for l in range(nl)]
                     )
                 )
 
-            traces = [sankey] + legend
-            layout = go.Layout(
-                showlegend=True,
-                plot_bgcolor='rgba(0, 0, 0, 0)',
-            )
+                legend = []
+                for l in range(nl):
+                    legend.append(
+                        go.Scatter(
+                            mode='markers',
+                            x=[None],
+                            y=[None],
+                            marker=dict(color=f'rgba({str(list(colors[l, :]))[1: -1]}, {opacity})', symbol='square'),
+                            name=f'$l={l + 1}$',
+                        )
+                    )
 
-            fig = go.Figure(data=traces, layout=layout)
-            fig.update_xaxes(visible=False)
-            fig.update_yaxes(visible=False)
-            fig.update_layout(title_text=title, font_size=font_size)
-            fig.show()
+                traces = [sankey] + legend
+                layout = go.Layout(
+                    showlegend=True,
+                    plot_bgcolor='rgba(0, 0, 0, 0)',
+                )
+
+                fig = go.Figure(data=traces, layout=layout)
+                fig.update_xaxes(visible=False)
+                fig.update_yaxes(visible=False)
+                fig.update_layout(title_text=title, font_size=font_size)
+                fig.show()
 
 class BLMVarianceDecomposition:
     '''
@@ -3083,7 +3168,6 @@ class BLMReallocation:
             # For sorting variables, use weighted y
             y = w * y
         for col_cat in categorical_sort_cols.keys():
-            col_n = self.cat_dict[col_cat]['n']
             ## Categorical sorting variables ##
             col = bdf.loc[:, col_cat].to_numpy()
             # Use categories as bins
@@ -3117,7 +3201,6 @@ class BLMReallocation:
                 # For sorting variables, use weighted y
                 y = w * y
             for col_cat in categorical_sort_cols.keys():
-                col_n = self.cat_dict[col_cat]['n']
                 ## Categorical sorting variables ##
                 col = bdf.loc[:, col_cat].to_numpy()
                 # Use categories as bins
