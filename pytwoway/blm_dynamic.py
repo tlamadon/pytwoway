@@ -2365,13 +2365,13 @@ class DynamicBLMModel:
                             weights_cat[col].append(weights_l)
                             l_index_S = l * col_n * len(periods_var)
 
-                            XSwXS_cat[l_index_S + 0 * col_n: l_index_S + 1 * col_n] = \
+                            XSwXS_cat[col][l_index_S + 0 * col_n: l_index_S + 1 * col_n] = \
                                 np.diag(C1W1C1)
-                            XSwXS_cat[l_index_S + 1 * col_n: l_index_S + 2 * col_n] = \
+                            XSwXS_cat[col][l_index_S + 1 * col_n: l_index_S + 2 * col_n] = \
                                 np.diag(C2W4C2)
-                            XSwXS_cat[l_index_S + 2 * col_n: l_index_S + 3 * col_n] = \
+                            XSwXS_cat[col][l_index_S + 2 * col_n: l_index_S + 3 * col_n] = \
                                 np.diag(C1W2C1)
-                            XSwXS_cat[l_index_S + 3 * col_n: l_index_S + 4 * col_n] = \
+                            XSwXS_cat[col][l_index_S + 3 * col_n: l_index_S + 4 * col_n] = \
                                 np.diag(C2W3C2)
 
                         if params['update_a_movers']:
@@ -2608,10 +2608,10 @@ class DynamicBLMModel:
                             weights_cts[col].append(weights_l)
                             l_index_S = l * len(periods_var)
 
-                            XSwXS_cts[l_index_S + 0] = C1W1C1
-                            XSwXS_cts[l_index_S + 1] = C2W4C2
-                            XSwXS_cts[l_index_S + 2] = C1W2C1
-                            XSwXS_cts[l_index_S + 3] = C2W3C2
+                            XSwXS_cts[col][l_index_S + 0] = C1W1C1
+                            XSwXS_cts[col][l_index_S + 1] = C2W4C2
+                            XSwXS_cts[col][l_index_S + 2] = C1W2C1
+                            XSwXS_cts[col][l_index_S + 3] = C2W3C2
 
                         if params['update_a_movers']:
                         ## Compute XXwXX_cts_l ##
@@ -2943,13 +2943,13 @@ class DynamicBLMModel:
                             for t in range(4):
                                 weights_cat[col][l][t] *= ((var_l_numerator[t] / var_l_denominator[t]) * eps_sq[l][t])
 
-                            XSwE_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
+                            XSwE_cat[col][l_index + 0 * col_n: l_index + 1 * col_n] = \
                                 np.bincount(C1[col], weights_cat[col][l][0])
-                            XSwE_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
+                            XSwE_cat[col][l_index + 1 * col_n: l_index + 2 * col_n] = \
                                 np.bincount(C2[col], weights_cat[col][l][3])
-                            XSwE_cat[l_index + 2 * col_n: l_index + 3 * col_n] = \
+                            XSwE_cat[col][l_index + 2 * col_n: l_index + 3 * col_n] = \
                                 np.bincount(C1[col], weights_cat[col][l][1])
-                            XSwE_cat[l_index + 3 * col_n: l_index + 4 * col_n] = \
+                            XSwE_cat[col][l_index + 3 * col_n: l_index + 4 * col_n] = \
                                 np.bincount(C2[col], weights_cat[col][l][2])
 
                             weights_cat[col][l] = 0
@@ -3024,13 +3024,13 @@ class DynamicBLMModel:
                                 weights_cts[col][l][t] *= ((var_l_numerator[t] / var_l_denominator[t]) * eps_sq[l][t])
 
                             # NOTE: take absolute value
-                            XSwE_cts[l_index + 0] = \
+                            XSwE_cts[col][l_index + 0] = \
                                 np.abs(np.sum(C1[col] * weights_cts[col][l][0]))
-                            XSwE_cts[l_index + 1] = \
+                            XSwE_cts[col][l_index + 1] = \
                                 np.abs(np.sum(C2[col] * weights_cts[col][l][3]))
-                            XSwE_cts[l_index + 2] = \
+                            XSwE_cts[col][l_index + 2] = \
                                 np.abs(np.sum(C1[col] * weights_cts[col][l][1]))
-                            XSwE_cts[l_index + 3] = \
+                            XSwE_cts[col][l_index + 3] = \
                                 np.abs(np.sum(C2[col] * weights_cts[col][l][2]))
 
                             weights_cts[col][l] = 0
@@ -3527,9 +3527,9 @@ class DynamicBLMModel:
                             weights_cat[col].append(weights_l)
                             l_index_S = l * col_n * len(periods_update)
 
-                            XSwXS_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
+                            XSwXS_cat[col][l_index + 0 * col_n: l_index + 1 * col_n] = \
                                 np.diag(C1W1C1)
-                            XSwXS_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
+                            XSwXS_cat[col][l_index + 1 * col_n: l_index + 2 * col_n] = \
                                 np.diag(C1W2C1)
 
                         if params['update_a_stayers']:
@@ -3638,8 +3638,8 @@ class DynamicBLMModel:
                             weights_cts[col].append(weights_l)
                             l_index_S = l * len(periods_update)
 
-                            XSwXS_cts[l_index + 0] = C1W1C1
-                            XSwXS_cts[l_index + 1] = C1W2C1
+                            XSwXS_cts[col][l_index + 0] = C1W1C1
+                            XSwXS_cts[col][l_index + 1] = C1W2C1
 
                         if params['update_a_stayers']:
                             ## Compute XXwXX_cts_l ##
@@ -3830,9 +3830,9 @@ class DynamicBLMModel:
                             weights_cat[col][l][0] *= ((var_l_numerator[0] / var_l_denominator[0]) * eps_sq[l][0])
                             weights_cat[col][l][1] *= ((var_l_numerator[1] / var_l_denominator[1]) * eps_sq[l][1])
 
-                            XSwE_cat[l_index + 0 * col_n: l_index + 1 * col_n] = \
+                            XSwE_cat[col][l_index + 0 * col_n: l_index + 1 * col_n] = \
                                 np.bincount(C1[col], weights_cat[col][l][0])
-                            XSwE_cat[l_index + 1 * col_n: l_index + 2 * col_n] = \
+                            XSwE_cat[col][l_index + 1 * col_n: l_index + 2 * col_n] = \
                                 np.bincount(C1[col], weights_cat[col][l][1])
 
                             weights_cat[col][l] = 0
@@ -3901,9 +3901,9 @@ class DynamicBLMModel:
                             weights_cts[col][l][1] *= ((var_l_numerator[1] / var_l_denominator[1]) * eps_sq[l][1])
 
                             # NOTE: take absolute value
-                            XSwE_cts[l_index + 0] = \
+                            XSwE_cts[col][l_index + 0] = \
                                 np.abs(np.sum(C1[col] * weights_cts[col][l][0]))
-                            XSwE_cts[l_index + 1] = \
+                            XSwE_cts[col][l_index + 1] = \
                                 np.abs(np.sum(C1[col] * weights_cts[col][l][1]))
 
                             weights_cts[col][l] = 0

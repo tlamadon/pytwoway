@@ -629,7 +629,7 @@ def _simulate_wages_movers(jdata, L, dynamic_blm_model=None, A=None, S=None, R12
                 if controls_dict[col]['worker_type_interaction']:
                     ## Worker-interaction ##
                     for period in periods_movers:
-                        subcol = periods_movers_dict[period]
+                        subcol = subcols[periods_movers_dict[period]]
                         if period[-1] != 'b':
                             A_sum[period] += A_cat[col][period][L, jdata.loc[:, subcol]]
                             S_sum_sq[period] += (S_cat[col][period] ** 2)[L, jdata.loc[:, subcol]]
@@ -639,7 +639,7 @@ def _simulate_wages_movers(jdata, L, dynamic_blm_model=None, A=None, S=None, R12
                 else:
                     ## Non-worker-interaction ##
                     for period in periods_movers:
-                        subcol = periods_movers_dict[period]
+                        subcol = subcols[periods_movers_dict[period]]
                         A_sum[period] += A_cat[col][period][jdata.loc[:, subcol]]
                         S_sum_sq[period] += (S_cat[col][period] ** 2)[jdata.loc[:, subcol]]
             else:
@@ -647,7 +647,7 @@ def _simulate_wages_movers(jdata, L, dynamic_blm_model=None, A=None, S=None, R12
                 if controls_dict[col]['worker_type_interaction']:
                     ## Worker-interaction ##
                     for period in periods_movers:
-                        subcol = periods_movers_dict[period]
+                        subcol = subcols[periods_movers_dict[period]]
                         if period[-1] != 'b':
                             A_sum[period] += A_cts[col][period][L] * jdata.loc[:, subcol]
                             S_sum_sq[period] += (S_cts[col][period] ** 2)[L]
@@ -657,7 +657,7 @@ def _simulate_wages_movers(jdata, L, dynamic_blm_model=None, A=None, S=None, R12
                 else:
                     ## Non-worker-interaction ##
                     for period in periods_movers:
-                        subcol = periods_movers_dict[period]
+                        subcol = subcols[periods_movers_dict[period]]
                         A_sum[period] += A_cts[col][period] * jdata.loc[:, subcol]
                         S_sum_sq[period] += S_cts[col][period] ** 2
 
@@ -791,13 +791,13 @@ def _simulate_wages_stayers(sdata, L, dynamic_blm_model=None, A=None, S=None, R1
                 if controls_dict[col]['worker_type_interaction']:
                     ## Worker-interaction ##
                     for period in periods_stayers:
-                        subcol = periods_stayers_dict[period]
+                        subcol = subcols[periods_stayers_dict[period]]
                         A_sum[period] += A_cat[col][period][L, sdata.loc[:, subcol]]
                         S_sum_sq[period] += (S_cat[col][period] ** 2)[L, sdata.loc[:, subcol]]
                 else:
                     ## Non-worker-interaction ##
                     for period in periods_stayers:
-                        subcol = periods_stayers_dict[period]
+                        subcol = subcols[periods_stayers_dict[period]]
                         A_sum[period] += A_cat[col][period][sdata.loc[:, subcol]]
                         S_sum_sq[period] += (S_cat[col][period] ** 2)[sdata.loc[:, subcol]]
             else:
@@ -805,13 +805,13 @@ def _simulate_wages_stayers(sdata, L, dynamic_blm_model=None, A=None, S=None, R1
                 if controls_dict[col]['worker_type_interaction']:
                     ## Worker-interaction ##
                     for period in periods_stayers:
-                        subcol = periods_stayers_dict[period]
+                        subcol = subcols[periods_stayers_dict[period]]
                         A_sum[period] += A_cts[col][period][L] * sdata.loc[:, subcol]
                         S_sum_sq[period] += (S_cts[col][period] ** 2)[L]
                 else:
                     ## Non-worker-interaction ##
                     for period in periods_stayers:
-                        subcol = periods_stayers_dict[period]
+                        subcol = subcols[periods_stayers_dict[period]]
                         A_sum[period] += A_cts[col][period] * sdata.loc[:, subcol]
                         S_sum_sq[period] += S_cts[col][period] ** 2
 
