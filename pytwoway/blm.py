@@ -2161,7 +2161,7 @@ class BLMModel:
             for row in axs:
                 for ax in row:
                     if l < nl:
-                        ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l].T.flatten()))
+                        ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l].flatten()))
                         ax.set_title(f'{subplot_title} {l + 1}')
                         ax.grid()
                         l += 1
@@ -2780,7 +2780,7 @@ class BLMBootstrap:
                 for row in axs:
                     for ax in row:
                         if l < nl:
-                            ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l].T.flatten()))
+                            ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l].flatten()))
                             ax.set_title(f'{subplot_title} {l + 1}')
                             ax.grid()
                             l += 1
