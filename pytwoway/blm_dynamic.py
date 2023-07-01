@@ -1361,16 +1361,15 @@ class DynamicBLMModel:
                 if pk0 is not None:
                     pk0 = pk0[firm_type_order, :]
                 if pk1 is not None:
-                    # Reorder part 1: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 1, 0, 3, 2 (i.e. reorder within groups)
-                    pk1_order_1 = np.tile(firm_type_order, nk) + nk * np.repeat(range(nk), nk)
-                    pk1 = pk1[pk1_order_1, :]
-                    # Reorder part 2: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 2, 3, 0, 1 (i.e. reorder between groups)
-                    pk1_order_2 = nk * np.repeat(firm_type_order, nk) + np.tile(range(nk), nk)
-                    pk1 = pk1[pk1_order_2, :]
-                    # adj_pk1 = np.reshape(pk1, (nk, nk, nl))
-                    # adj_pk1 = adj_pk1[firm_type_order, :, :]
-                    # adj_pk1 = adj_pk1[:, firm_type_order, :]
-                    # pk1 = np.reshape(adj_pk1, (nk * nk, nl))
+                    # # Reorder part 1: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 1, 0, 3, 2 (i.e. reorder within groups)
+                    # pk1_order_1 = np.tile(firm_type_order, nk) + nk * np.repeat(range(nk), nk)
+                    # pk1 = pk1[pk1_order_1, :]
+                    # # Reorder part 2: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 2, 3, 0, 1 (i.e. reorder between groups)
+                    # pk1_order_2 = nk * np.repeat(firm_type_order, nk) + np.tile(range(nk), nk)
+                    # pk1 = pk1[pk1_order_2, :]
+                    adj_pk1 = np.reshape(pk1, (nk, nk, nl))
+                    adj_pk1 = adj_pk1[firm_type_order, :, :][:, firm_type_order, :]
+                    pk1 = np.reshape(adj_pk1, (nk * nk, nl))
                 if NNm is not None:
                     NNm = NNm[firm_type_order, :]
                     NNm = NNm[:, firm_type_order]

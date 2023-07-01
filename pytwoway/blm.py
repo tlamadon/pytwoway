@@ -861,16 +861,15 @@ class BLMModel:
                 if pk0 is not None:
                     pk0 = pk0[firm_type_order, :]
                 if pk1 is not None:
-                    # Reorder part 1: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 1, 0, 3, 2 (i.e. reorder within groups)
-                    pk1_order_1 = np.tile(firm_type_order, nk) + nk * np.repeat(range(nk), nk)
-                    pk1 = pk1[pk1_order_1, :]
-                    # Reorder part 2: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 2, 3, 0, 1 (i.e. reorder between groups)
-                    pk1_order_2 = nk * np.repeat(firm_type_order, nk) + np.tile(range(nk), nk)
-                    pk1 = pk1[pk1_order_2, :]
-                    # adj_pk1 = np.reshape(pk1, (nk, nk, nl))
-                    # adj_pk1 = adj_pk1[firm_type_order, :, :]
-                    # adj_pk1 = adj_pk1[:, firm_type_order, :]
-                    # pk1 = np.reshape(adj_pk1, (nk * nk, nl))
+                    # # Reorder part 1: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 1, 0, 3, 2 (i.e. reorder within groups)
+                    # pk1_order_1 = np.tile(firm_type_order, nk) + nk * np.repeat(range(nk), nk)
+                    # pk1 = pk1[pk1_order_1, :]
+                    # # Reorder part 2: e.g. nk=2, and type 0 > type 1, then 0, 1, 2, 3 would reorder to 2, 3, 0, 1 (i.e. reorder between groups)
+                    # pk1_order_2 = nk * np.repeat(firm_type_order, nk) + np.tile(range(nk), nk)
+                    # pk1 = pk1[pk1_order_2, :]
+                    adj_pk1 = np.reshape(pk1, (nk, nk, nl))
+                    adj_pk1 = adj_pk1[firm_type_order, :, :][:, firm_type_order, :]
+                    pk1 = np.reshape(adj_pk1, (nk * nk, nl))
                 if NNm is not None:
                     NNm = NNm[firm_type_order, :]
                     NNm = NNm[:, firm_type_order]
@@ -3292,7 +3291,7 @@ class BLMReallocation:
             bdf = bdf.to_eventstudy(is_sorted=True, copy=False)
             # NOTE: unweighted
             m = bdf.loc[:, 'm'] > 0
-            
+
             if not optimal_reallocation:
                 # Compute pk1
                 pk1_i = bdf.loc[m, ['g1', 'g2', 'l']].groupby(['g1', 'g2'])['l'].value_counts().unstack(fill_value=0).to_numpy().reshape((nk * nk, nl))
@@ -3322,7 +3321,7 @@ class BLMReallocation:
             sdata.loc[:, 'j1'], sdata.loc[:, 'j2'] = (js, js)
             jdata.loc[:, ['g1', 'g2']] = gj
             sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
-            
+
 
         # Drop time column
         if tj:
