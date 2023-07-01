@@ -402,6 +402,7 @@ def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, p
 
         ### Apply optimal allocations (make everyone a stayer) ###
         Ls = np.append(Lm, Ls)
+        Lm = np.array([], dtype=int)
         gs = np.zeros(len(Ls), dtype=int)
         # gj = np.zeros((0, 0), dtype=int)
         idx = np.arange(len(Ls))
@@ -420,6 +421,9 @@ def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, p
         sdata = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
         # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
         sdata._set_attributes(jdata)
+        # Set G1 and G2, and J1 and J2
+        sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
+        sdata.loc[:, 'j1'], sdata.loc[:, 'j2'] = (gs, gs)
         # Set m
         sdata.loc[:, 'm'] = 0
         # Clear jdata
@@ -451,7 +455,13 @@ def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, p
             ## Update worker types ##
             bdf.loc[:, 'i'] = np.append(Lm, Ls)
         elif store_worker_types:
-            bdf = bdf.add_column('l', np.append(Lm, Ls), is_categorical=True, dtype='categorical')
+            bdf = bdf.add_column(
+                'l',
+                [np.append(Lm, Ls)],
+                is_categorical=True,
+                dtype='categorical',
+                long_es_split=False,
+                copy=False)
         if simulate_wages:
             ## Update wages ##
             bdf.loc[:, 'y1'] = np.append(yj[0], ys[0])
@@ -3040,18 +3050,6 @@ class BLMVarianceDecomposition:
             blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
             blm_model = blm_fit_init.model
 
-            ## Update parameters ##
-            params = copy.deepcopy(self.params)
-            params['a1_mu'] = blm_model.A1
-            params['a1_sig'] = blm_model.A1.std() / nl
-            params['a2_mu'] = blm_model.A2
-            params['a2_sig'] = blm_model.A2.std() / nl
-            params['s1_low'] = blm_model.S1
-            params['s1_high'] = blm_model.S1
-            params['s2_low'] = blm_model.S2
-            params['s2_high'] = blm_model.S2
-            # TODO: add control variables
-
         ## Unpack parameters ##
         NNm, NNs = blm_model.NNm, blm_model.NNs
 
@@ -3124,7 +3122,7 @@ class BLMVarianceDecomposition:
 
 class BLMReallocation:
     '''
-    Class for estimating BLM reallocation exercise using bootstrapping. Results are stored in class attribute .res, which gives a dictionary with the following structure: baseline results are stored in key 'baseline'. Reallocation results are stored in key 'reallocation'. Within each sub-dictionary, primary outcome results are stored in the key 'outcome', categorical results are stored in the key 'cat', and continuous results are stored in the key 'cts'.
+    Class for estimating BLM reallocation exercise using bootstrapping. Results are stored in class attribute .res, which gives a dictionary with the following structure: baseline results are stored in key 'baseline'. Reallocation results are stored in key 'reallocation'. Within each sub-dictionary, primary outcome results are stored in the key 'outcome', categorical results are stored in the key 'cat', continuous results are stored in the key 'cts', type proportions for movers are stored in the key 'pk1', type proportions for stayers are stored in the key 'pk0', firm-level mover flow counts are stored in the key 'NNm', and firm-level stayer counts are stored in the key 'NNs'.
 
     Arguments:
         params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
@@ -3134,6 +3132,8 @@ class BLMReallocation:
         self.params = params
         # No initial results
         self.res = None
+        # No model
+        self.model = None
 
     def fit(self, jdata, sdata, quantiles=None, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, optimal_reallocation=False, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, ncore=1, weighted=True, rng=None):
         '''
@@ -3182,9 +3182,11 @@ class BLMReallocation:
             elif quantiles_cts[-1] != 1:
                 raise ValueError(f'Highest quantile associated with continuous column {col_cts} must be 1.')
 
-        # Copy original wages, firm types, and optionally ids
+        # Copy original wages, firm ids, firm types, and optionally ids
         yj = jdata.loc[:, ['y1', 'y2']].to_numpy().copy()
         ys = sdata.loc[:, ['y1', 'y2']].to_numpy().copy()
+        jj = jdata.loc[:, ['j1', 'j2']].to_numpy().copy()
+        js = sdata.loc[:, 'j1'].to_numpy().copy()
         gj = jdata.loc[:, ['g1', 'g2']].to_numpy().astype(int, copy=True)
         gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
         tj = False
@@ -3204,6 +3206,7 @@ class BLMReallocation:
             blm_fit_init = BLMEstimator(params)
             blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
             blm_model = blm_fit_init.model
+        self.model = blm_model
 
         ## Unpack parameters ##
         NNm, NNs = blm_model.NNm, blm_model.NNs
@@ -3252,9 +3255,13 @@ class BLMReallocation:
         res = np.zeros([n_samples, len(quantiles)])
         res_cat = {col: np.zeros([n_samples, n_quantiles]) for col, n_quantiles in categorical_sort_cols.items()}
         res_cts = {col: np.zeros([n_samples, len(quantiles) - 1]) for col, quantiles in continuous_sort_cols.items()}
+        pk1_res = np.zeros([n_samples, nk * nk, nl])
+        pk0_res = np.zeros([n_samples, nk, nl])
+        NNm_res = np.zeros([n_samples, nk, nk])
+        NNs_res = np.zeros([n_samples, nk])
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
-            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=qi_j, qi_s=qi_s, qi_cum_j=qi_cum_j, qi_cum_s=qi_cum_s, optimal_reallocation=optimal_reallocation, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=weighted, rng=rng)
+            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=qi_j, qi_s=qi_s, qi_cum_j=qi_cum_j, qi_cum_s=qi_cum_s, optimal_reallocation=optimal_reallocation, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=True, weighted=weighted, rng=rng)
 
             ## Compute quantiles ##
             y = bdf.loc[:, 'y'].to_numpy()
@@ -3281,10 +3288,41 @@ class BLMReallocation:
                 res_cts[col_cts][i, :] =\
                     np.bincount(quantile_groups, weights=y) / np.bincount(quantile_groups, weights=w)
 
+            ## Compute type proportions ##
+            bdf = bdf.to_eventstudy(is_sorted=True, copy=False)
+            # NOTE: unweighted
+            m = bdf.loc[:, 'm'] > 0
+            
+            if not optimal_reallocation:
+                # Compute pk1
+                pk1_i = bdf.loc[m, ['g1', 'g2', 'l']].groupby(['g1', 'g2'])['l'].value_counts().unstack(fill_value=0).to_numpy().reshape((nk * nk, nl))
+                # Normalize rows to sum to 1
+                pk1_i = DxM(1 / np.sum(pk1_i, axis=1), pk1_i)
+                # Store
+                pk1_res[i, :, :] = pk1_i
+            # Compute pk0
+            pk0_i = bdf.loc[~m, ['g1', 'l']].groupby('g1')['l'].value_counts().unstack(fill_value=0).to_numpy().reshape((nk, nl))
+            # Normalize rows to sum to 1
+            pk0_i = DxM(1 / np.sum(pk0_i, axis=1), pk0_i)
+            # Store
+            pk0_res[i, :, :] = pk0_i
+
+            ## Compute firm-level worker counts ##
+            if not optimal_reallocation:
+                NNm_res[i, :, :] = bdf.loc[m, ['g1', 'g2']].groupby('g1')['g2'].value_counts().unstack(fill_value=0).to_numpy()
+            NNs_i = bdf.loc[~m, 'g1'].value_counts(sort=False)
+            NNs_i.sort_index(inplace=True)
+            NNs_res[i, :] = NNs_i.to_numpy()
+
         with bpd.util.ChainedAssignment():
-            # Restore original wages and optionally ids
+            # Restore original wages, firm ids, and firm types
             jdata.loc[:, ['y1', 'y2']] = yj
             sdata.loc[:, ['y1', 'y2']] = ys
+            jdata.loc[:, ['j1', 'j2']] = jj
+            sdata.loc[:, 'j1'], sdata.loc[:, 'j2'] = (js, js)
+            jdata.loc[:, ['g1', 'g2']] = gj
+            sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
+            
 
         # Drop time column
         if tj:
@@ -3302,6 +3340,88 @@ class BLMReallocation:
             'reallocation': {
                 'outcome': res,
                 'cat': res_cat,
-                'cts': res_cts
+                'cts': res_cts,
+                'pk1': pk1_res,
+                'pk0': pk0_res,
+                'NNm': NNm_res,
+                'NNs': NNs_res
                 }
         }
+
+    def plot_type_proportions(self, period='first', subset='stayers', xlabel='firm class k', ylabel='type proportions', title='Proportions of worker types', dpi=None):
+        '''
+        Plot proportions of worker types at each firm class.
+
+        Arguments:
+            period (str): 'first' plots type proportions in the first period; 'second' plots type proportions in the second period; 'all' plots the average over type proportions in the first and second periods
+            subset (str): 'all' plots a weighted average over movers and stayers; 'movers' plots movers; 'stayers' plots stayers (for optimal reallocation, all observations are stayers, so only 'stayers' will run)
+            xlabel (str): label for x-axis
+            ylabel (str): label for y-axis
+            title (str): plot title
+            dpi (float or None): dpi for plot
+        '''
+        if self.res is None:
+            warnings.warn('Estimation has not yet been run.')
+        else:
+            nl, nk = self.params.get_multiple(('nl', 'nk'))
+            model = self.model
+            pk1_res = self.res['reallocation']['pk1']
+            pk0_res = self.res['reallocation']['pk0']
+            NNm_res = self.res['reallocation']['NNm']
+            NNs_res = self.res['reallocation']['pk0']
+
+            ## Compute average type proportions ##
+            pk_mean = np.zeros((nk, nl))
+            for i in range(pk1_res.shape[0]):
+                # Sort by firm effects
+                A1, A2, pk1, pk0, NNm, NNs = model._sort_parameters(model.A1, model.A2, pk1=pk1_res[i, :, :], pk0=pk0_res[i, :, :], NNm=NNm_res[i, :, :], NNs=NNs_res[i, :], sort_firm_types=True)
+
+                ## Extract subset(s) ##
+                if subset == 'movers':
+                    NNm_1 = np.sum(NNm, axis=1)
+                    NNm_2 = np.sum(NNm, axis=0)
+                    reshaped_pk1 = np.reshape(pk1, (nk, nk, nl))
+                    pk_period1 = (np.sum((NNm.T * reshaped_pk1.T).T, axis=1).T / NNm_1).T
+                    pk_period2 = (np.sum((NNm.T * reshaped_pk1.T).T, axis=0).T / NNm_2).T
+                elif subset == 'stayers':
+                    pk_period1 = pk0
+                    pk_period2 = pk0
+                elif subset == 'all':
+                    NNm_1 = np.sum(NNm, axis=1)
+                    NNm_2 = np.sum(NNm, axis=0)
+                    # First, pk1 #
+                    reshaped_pk1 = np.reshape(pk1, (nk, nk, nl))
+                    pk1_period1 = (np.sum((NNm.T * reshaped_pk1.T).T, axis=1).T / NNm_1).T
+                    pk1_period2 = (np.sum((NNm.T * reshaped_pk1.T).T, axis=0).T / NNm_2).T
+                    # Second, take weighted average over pk1 and pk0 #
+                    pk_period1 = ((NNm_1 * pk1_period1.T + NNs * pk0.T) / (NNm_1 + NNs)).T
+                    pk_period2 = ((NNm_2 * pk1_period2.T + NNs * pk0.T) / (NNm_2 + NNs)).T
+                else:
+                    raise ValueError(f"`subset` must be one of 'all', 'movers' or 'stayers', but input specifies {subset!r}.")
+
+                ## Consider correct period(s) ##
+                if period == 'first':
+                    pk_mean += pk_period1
+                elif period == 'second':
+                    pk_mean += pk_period2
+                elif period == 'all':
+                    pk_mean += (pk_period1 + pk_period2) / 2
+                else:
+                    raise ValueError(f"`period` must be one of 'first', 'second' or 'all', but input specifies {period!r}.")
+
+            ## Take mean over all models ##
+            pk_mean /= pk1_res.shape[0]
+
+            ## Compute cumulative sum ##
+            pk_cumsum = np.cumsum(pk_mean, axis=1)
+
+            ## Plot ##
+            fig, ax = plt.subplots(dpi=dpi)
+            x_axis = np.arange(1, nk + 1).astype(str)
+            ax.bar(x_axis, pk_mean[:, 0])
+            for l in range(1, nl):
+                ax.bar(x_axis, pk_mean[:, l], bottom=pk_cumsum[:, l - 1])
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel)
+            ax.set_title(title)
+            plt.show()
