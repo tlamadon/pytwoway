@@ -576,7 +576,7 @@ def _simulate_wages_movers(jdata, L, blm_model=None, A1=None, A2=None, S1=None, 
         w2 = 1
 
     # Unpack values
-    nmi = len(L)
+    nmi = len(jdata)
     if G1 is None:
         G1 = jdata.loc[:, 'g1'].to_numpy()
     if G2 is None:
@@ -694,7 +694,7 @@ def _simulate_wages_stayers(sdata, L, blm_model=None, A1=None, S1=None, A1_cat=N
         w = 1
 
     # Unpack values
-    nsi = len(L)
+    nsi = len(sdata)
     if G is None:
         G = sdata.loc[:, 'g1'].to_numpy()
 

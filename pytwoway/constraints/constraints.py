@@ -1077,14 +1077,16 @@ class FirmSum():
 
     Arguments:
         b (float): equality bound
-        nnt (list of lists of ints or None): time periods to constrain together; None is equivalent to [[period] for period in range(nt)]
+        cross_period_sum (bool): if True, rather than constraining sums for each period separately, constrain the sum over all periods jointly
+        nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
         nt (int): number of time periods
     '''
 
-    def __init__(self, b=0, nnt=None, nt=2):
+    def __init__(self, b=0, cross_period_sum=False, nnt=None, nt=2):
         self.b = b
+        self.cross_period_sum = cross_period_sum
         if nnt is None:
-            self.nnt = [[period] for period in range(nt)]
+            self.nnt = range(nt)
         else:
             self.nnt = to_list(nnt)
         self.nt = nt
@@ -1101,27 +1103,34 @@ class FirmSum():
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
         ## Unpack parameters ##
-        b, nnt, nt = self.b, self.nnt, self.nt
+        b, cross_period_sum, nnt, nt = self.b, self.cross_period_sum, self.nnt, self.nt
 
         ## Initialize variables ##
         # A starts with 4 dimensions
-        A = np.zeros(shape=(len(nnt) * nk, nt, nl, nk))
+        if cross_period_sum:
+            A = np.zeros(shape=(nk, nt, nl, nk))
+        else:
+            A = np.zeros(shape=(len(nnt) * nk, nt, nl, nk))
         i = 0
 
         ## Generate constraints ##
-        for period in range(len(nnt)):
+        for period in nnt:
             ## Iterate over periods ##
             for k in range(nk):
                 ## Iterate over firm types ##
                 for l in range(nl):
                     ## Iterate over worker types ##
-                    for subperiod in nnt[period]:
-                        ## Iterate over subperiods ##
-                        A[i, subperiod, l, k] = 1
+                    if cross_period_sum:
+                        A[k, period, l, k] = 1
+                    else:
+                        A[i, period, l, k] = 1
                 i += 1
 
         # Reshape A to 2 dimensions
-        A = A.reshape((len(nnt) * nk, nt * nl * nk))
+        if cross_period_sum:
+            A = A.reshape((nk, nt * nl * nk))
+        else:
+            A = A.reshape((len(nnt) * nk, nt * nl * nk))
 
         return {'G': None, 'h': None, 'A': A, 'b': b}
 
@@ -1131,14 +1140,16 @@ class WorkerSum():
 
     Arguments:
         b (float): equality bound
-        nnt (list of lists of ints or None): time periods to constrain together; None is equivalent to [[period] for period in range(nt)]
+        cross_period_sum (bool): if True, rather than constraining sums for each period separately, constrain the sum over all periods jointly
+        nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
         nt (int): number of time periods
     '''
 
-    def __init__(self, b=0, nnt=None, nt=2):
+    def __init__(self, b=0, cross_period_sum=False, nnt=None, nt=2):
         self.b = b
+        self.cross_period_sum = cross_period_sum
         if nnt is None:
-            self.nnt = [[period] for period in range(nt)]
+            self.nnt = range(nt)
         else:
             self.nnt = to_list(nnt)
         self.nt = nt
@@ -1155,27 +1166,34 @@ class WorkerSum():
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
         ## Unpack parameters ##
-        b, nnt, nt = self.b, self.nnt, self.nt
+        b, cross_period_sum, nnt, nt = self.b, self.cross_period_sum, self.nnt, self.nt
 
         ## Initialize variables ##
         # A starts with 4 dimensions
-        A = np.zeros(shape=(len(nnt) * nl, nt, nl, nk))
+        if cross_period_sum:
+            A = np.zeros(shape=(nl, nt, nl, nk))
+        else:
+            A = np.zeros(shape=(len(nnt) * nl, nt, nl, nk))
         i = 0
 
         ## Generate constraints ##
-        for period in range(len(nnt)):
+        for period in nnt:
             ## Iterate over periods ##
             for l in range(nl):
                 ## Iterate over worker types ##
                 for k in range(nk):
                     ## Iterate over firm types ##
-                    for subperiod in nnt[period]:
-                        ## Iterate over subperiods ##
-                        A[i, subperiod, l, k] = 1
+                    if cross_period_sum:
+                        A[l, period, l, k] = 1
+                    else:
+                        A[i, period, l, k] = 1
                 i += 1
 
         # Reshape A to 2 dimensions
-        A = A.reshape((len(nnt) * nl, nt * nl * nk))
+        if cross_period_sum:
+            A = A.reshape((nl, nt * nl * nk))
+        else:
+            A = A.reshape((len(nnt) * nl, nt * nl * nk))
 
         return {'G': None, 'h': None, 'A': A, 'b': b}
 
