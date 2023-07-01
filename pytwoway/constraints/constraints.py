@@ -878,14 +878,19 @@ class Stationary():
 
     Arguments:
         nwt (int): number of worker types to constrain. This is used in conjunction with Linear(), as only two worker types are required to be constrained in this case; or in conjunction with NoWorkerTypeInteraction(), as only one worker type is required to be constrained in this case. Setting nwt=-1 constrains all worker types.
+        nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
         nt (int): number of time periods
         dynamic (bool): if True, using dynamic BLM estimator
     '''
 
-    def __init__(self, nwt=-1, nt=2, dynamic=False):
+    def __init__(self, nwt=-1, nnt=None, nt=2, dynamic=False):
         self.nwt = nwt
         if (nwt < -1) or (nwt == 0):
             raise NotImplementedError(f'nwt must equal -1 or be positive, but input specifies nwt={nwt}.')
+        if nnt is None:
+            self.nnt = range(nt)
+        else:
+            self.nnt = to_list(nnt)
         self.nt = nt
         self.dynamic = dynamic
 
@@ -901,7 +906,7 @@ class Stationary():
             (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
         '''
         ## Unpack parameters ##
-        nt, nwt, dynamic = self.nt, self.nwt, self.dynamic
+        nwt, nnt, nt, dynamic = self.nwt, self.nnt, self.nt, self.dynamic
 
         ## Initialize variables ##
         if nwt == -1:
@@ -909,18 +914,20 @@ class Stationary():
         else:
             nl_adj = min(nl, nwt)
         # A starts with 4 dimensions
-        A = np.zeros(shape=((nt - 1) * nl_adj * nk, nt, nl, nk))
+        A = np.zeros(shape=((len(nnt) - 1) * nl_adj * nk, nt, nl, nk))
         i = 0
 
         ## Generate constraints ##
-        for period in range(nt - 1):
+        for period in nnt[1:]:
             ## Iterate over periods ##
             for l in range(nl_adj):
                 ## Iterate over worker types ##
                 for k in range(nk):
                     ## Iterate over firm types ##
-                    A[i, period, l, k] = 1
-                    A[i, period + 1, l, k] = -1
+                    # Baseline is first period in nnt
+                    A[i, nnt[0], l, k] = 1
+                    # Comparisons are remaining periods in nnt
+                    A[i, period, l, k] = -1
                     i += 1
 
         if dynamic:
@@ -928,7 +935,7 @@ class Stationary():
             A = A.transpose((0, 2, 1, 3))
 
         # Reshape A to 2 dimensions
-        A = A.reshape(((nt - 1) * nl_adj * nk, nt * nl * nk))
+        A = A.reshape(((len(nnt) - 1) * nl_adj * nk, nt * nl * nk))
 
         b = - np.zeros(shape=A.shape[0])
 
@@ -1022,6 +1029,114 @@ class StationaryFirmTypeVariation():
             A = A.reshape((A.shape[0], nt * nl * nk))
 
         b = - np.zeros(shape=A.shape[0])
+
+        return {'G': None, 'h': None, 'A': A, 'b': b}
+
+class FirmSum():
+    '''
+    Generate BLM constraints that constrain the sum of all firm effects.
+
+    Arguments:
+        b (float): equality bound
+        nnt (list of lists of ints or None): time periods to constrain together; None is equivalent to [[period] for period in range(nt)]
+        nt (int): number of time periods
+    '''
+
+    def __init__(self, b=0, nnt=None, nt=2):
+        self.b = b
+        if nnt is None:
+            self.nnt = [[period] for period in range(nt)]
+        else:
+            self.nnt = to_list(nnt)
+        self.nt = nt
+
+    def _get_constraints(self, nl, nk):
+        '''
+        Generate constraint arrays.
+
+        Arguments:
+            nl (int): number of worker types
+            nk (int): number of firm types
+
+        Returns:
+            (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
+        '''
+        ## Unpack parameters ##
+        b, nnt, nt = self.b, self.nnt, self.nt
+
+        ## Initialize variables ##
+        # A starts with 4 dimensions
+        A = np.zeros(shape=(len(nnt) * nk, nt, nl, nk))
+        i = 0
+
+        ## Generate constraints ##
+        for period in range(len(nnt)):
+            ## Iterate over periods ##
+            for k in range(nk):
+                ## Iterate over firm types ##
+                for l in range(nl):
+                    ## Iterate over worker types ##
+                    for subperiod in nnt[period]:
+                        ## Iterate over subperiods ##
+                        A[i, subperiod, l, k] = 1
+                i += 1
+
+        # Reshape A to 2 dimensions
+        A = A.reshape((len(nnt) * nk, nt * nl * nk))
+
+        return {'G': None, 'h': None, 'A': A, 'b': b}
+
+class WorkerSum():
+    '''
+    Generate BLM constraints that constrain the sum of all worker effects.
+
+    Arguments:
+        b (float): equality bound
+        nnt (list of lists of ints or None): time periods to constrain together; None is equivalent to [[period] for period in range(nt)]
+        nt (int): number of time periods
+    '''
+
+    def __init__(self, b=0, nnt=None, nt=2):
+        self.b = b
+        if nnt is None:
+            self.nnt = [[period] for period in range(nt)]
+        else:
+            self.nnt = to_list(nnt)
+        self.nt = nt
+
+    def _get_constraints(self, nl, nk):
+        '''
+        Generate constraint arrays.
+
+        Arguments:
+            nl (int): number of worker types
+            nk (int): number of firm types
+
+        Returns:
+            (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
+        '''
+        ## Unpack parameters ##
+        b, nnt, nt = self.b, self.nnt, self.nt
+
+        ## Initialize variables ##
+        # A starts with 4 dimensions
+        A = np.zeros(shape=(len(nnt) * nl, nt, nl, nk))
+        i = 0
+
+        ## Generate constraints ##
+        for period in range(len(nnt)):
+            ## Iterate over periods ##
+            for l in range(nl):
+                ## Iterate over worker types ##
+                for k in range(nk):
+                    ## Iterate over firm types ##
+                    for subperiod in nnt[period]:
+                        ## Iterate over subperiods ##
+                        A[i, subperiod, l, k] = 1
+                i += 1
+
+        # Reshape A to 2 dimensions
+        A = A.reshape((len(nnt) * nl, nt * nl * nk))
 
         return {'G': None, 'h': None, 'A': A, 'b': b}
 

@@ -302,7 +302,7 @@ continuous_control_params = ParamsDict({
         ''', None)
 })
 
-def _simulate_types_wages(blm_model, jdata, sdata, pk1=None, pk0=None, qi_cum_j=None, qi_cum_s=None, wj1=None, wj2=None, ws=None, worker_types_as_ids=True, simulate_wages=True, return_long_df=True, store_worker_types=True, rng=None):
+def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, pk0=None, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, worker_types_as_ids=True, simulate_wages=True, return_long_df=True, store_worker_types=True, weighted=True, rng=None):
     '''
     Using data and estimated BLM parameters, simulate worker types (and optionally wages).
 
@@ -310,65 +310,157 @@ def _simulate_types_wages(blm_model, jdata, sdata, pk1=None, pk0=None, qi_cum_j=
         blm_model (BLMModel): BLM model with estimated parameters
         jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
         sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
-        pk1 (NumPy Array or None): probability of being at each combination of firm types for movers; None if qi_cum_j is not None
-        pk0 (NumPy Array or None): probability of being at each firm type for stayers; None if qi_cum_s is not None
-        qi_cum_j (NumPy Array or None): cumulative probabilities for each mover observation to be each worker type; None if pk1 is not None
-        qi_cum_s (NumPy Array or None): cumulative probabilities for each stayer observation to be each worker type; None if pk0 is not None
+        gj (NumPy Array or None): firm classes for movers in the first and second periods; if None, extract from jdata
+        gs (NumPy Array or None): firm classes for stayers; if None, extract from sdata
+        pk1 (NumPy Array or None): (use to assign workers to worker types probabilistically based on dgp-level probabilities) probability of being at each combination of firm types for movers; None if qi_j or qi_cum_j is not None
+        pk0 (NumPy Array or None): (use to assign workers to worker types probabilistically based on dgp-level probabilities) probability of being at each firm type for stayers; None if qi_s or qi_cum_s is not None
+        qi_j (NumPy Array or None): (use to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if pk1 or qi_cum_j is not None
+        qi_s (NumPy Array or None): (use to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each stayer observation to be each worker type; None if pk0 or qi_cum_s is not None
+        qi_cum_j (NumPy Array or None): (use to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if pk1 or qi_j is not None
+        qi_cum_s (NumPy Array or None): (use to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each stayer observation to be each worker type; None if pk0 or qi_s is not None
         wj1 (NumPy Array or None): mover weights for the first period; if None, don't weight
         wj2 (NumPy Array or None): mover weights for the second period; if None, don't weight
         ws (NumPy Array or None): stayer weights; if None, don't weight
+        optimal_reallocation (bool): if True, reallocate workers to new firms to maximize total output
         worker_types_as_ids (bool): if True, replace worker ids with simulated worker types
         simulate_wages (bool): if True, also simulate wages
         return_long_df (bool): if True, return data as a long-format BipartitePandas DataFrame; otherwise, return tuple of simulated types and wages
         store_worker_types (bool): if True, and return_long_df is True and worker_types_as_ids is False, then stores simulated worker types in the column labeled 'l'
+        weighted (bool): if True, simulate using weights
         rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
     Returns:
         (BipartitePandas DataFrame or tuple of NumPy Arrays): if return_long_df is True, return BipartitePandas DataFrame with simulated data; if False, return tuple of (Lm --> vector of mover types; Ls --> vector of stayer types; yj --> tuple of wages for movers, where first element in first period wages and second element is second period wages; ys --> wages for stayers) if simulating wages; otherwise, (Lm, Ls)
     '''
+    if optimal_reallocation and ((pk1 is not None) or (pk0 is not None)):
+        raise ValueError('Cannot specify `optimal_reallocation` with `pk1` and `pk0`.')
+    if optimal_reallocation and weighted:
+        raise ValueError('Cannot specify `optimal_reallocation` with `weighted`.')
+
     if rng is None:
         rng = np.random.default_rng(None)
 
     ## Unpack parameters ##
     nl, nk = blm_model.nl, blm_model.nk
 
-    ## Correct datatype for gj and gs ##
-    gj = jdata.loc[:, ['g1', 'g2']].to_numpy().astype(int, copy=False)
-    gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=False)
+    ## Firm classes ##
+    if gj is None:
+        gj = jdata.loc[:, ['g1', 'g2']].to_numpy().astype(int, copy=True)
+    if gs is None:
+        gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
+
+    ## Weights ##
+    wj1, wj2 = None, None
+    ws = None
+    if weighted:
+        if jdata._col_included('w'):
+            wj1, wj2 = jdata.loc[:, 'w1'].to_numpy(), jdata.loc[:, 'w2'].to_numpy()
+        if sdata._col_included('w'):
+            ws = sdata.loc[:, 'w1'].to_numpy()
 
     ## Simulate worker types ##
-    Lm = tw.simblm._simulate_worker_types_movers(nl=nl, nk=nk, NNm=None, G1=gj[:, 0], G2=gj[:, 1], pk1=pk1, qi_cum=qi_cum_j, simulating_data=False, rng=rng)
-    Ls = tw.simblm._simulate_worker_types_stayers(nl=nl, nk=nk, NNs=None, G=gs, pk0=pk0, qi_cum=qi_cum_s, simulating_data=False, rng=rng)
+    Lm = tw.simblm._simulate_worker_types_movers(nl=nl, nk=nk, NNm=None, G1=gj[:, 0], G2=gj[:, 1], pk1=pk1, qi=qi_j, qi_cum=qi_cum_j, simulating_data=False, rng=rng)
+    Ls = tw.simblm._simulate_worker_types_stayers(nl=nl, nk=nk, NNs=None, G=gs, pk0=pk0, qi=qi_s, qi_cum=qi_cum_s, simulating_data=False, rng=rng)
+
+    if optimal_reallocation:
+        ### Reallocate workers ###
+        ## Firm sizes ##
+        firm_sizes_s = np.bincount(gs)
+        firm_sizes_1 = np.bincount(gj[:, 0]) + firm_sizes_s
+        firm_sizes_2 = np.bincount(gj[:, 1]) + firm_sizes_s
+        del firm_sizes_s
+
+        ## Worker type sizes ##
+        worker_sizes_s = np.bincount(Ls)
+        worker_sizes_1 = np.bincount(Lm) + worker_sizes_s
+        worker_sizes_2 = np.bincount(Lm) + worker_sizes_s
+        del worker_sizes_s
+
+        ### Set up quadratic programming solver ###
+        ## X'X and X'Y ##
+        XX = csc_matrix((4 * nl * nk, 4 * nl * nk))
+        XY = np.concatenate(
+            [
+                blm_model.A1.flatten(),
+                blm_model.A2.flatten(),
+                blm_model.A1.flatten(),
+                blm_model.A1.flatten()
+            ]
+        )
+
+        ## Constraints ##
+        cons_a = cons.QPConstrained(nl, nk)
+        cons_a.add_constraints(cons.FirmSum(b=np.concatenate([firm_sizes_1, firm_sizes_2]), nnt=[[0, 2], [1, 3]], nt=4))
+        cons_a.add_constraints(cons.WorkerSum(b=np.concatenate([worker_sizes_1, worker_sizes_2]), nnt=[[0, 2], [1, 3]], nt=4))
+        # Require the same number of stayers in periods 1 and 2
+        cons_a.add_constraints(cons.Stationary(nnt=[2, 3], nt=4))
+        # Bound below at 25 since solver is approximate, otherwise estimates become negative
+        cons_a.add_constraints(cons.BoundedBelow(lb=25, nt=4))
+
+        ### Solve ###
+        # NOTE: quadprog doesn't work for some reason
+        cons_a.solve(XX, -XY, solver='osqp')
+
+        ## Extract optimal allocations ##
+        allocs = np.reshape(np.round(cons_a.res, 0).astype(int), (4, nl, nk))
+        alloc1m, alloc2m = allocs[0, :, :], allocs[1, :, :]
+        alloc1s, alloc2s = allocs[2, :, :], allocs[3, :, :]
+
+        ### Fix slight numerical errors ###
+        ## Movers ##
+        am1_sum = alloc1m.sum()
+        am2_sum = alloc2m.sum()
+        if am1_sum > am2_sum:
+            # Souce: https://stackoverflow.com/a/13535599/17333120
+            alloc1m[np.unravel_index(alloc1m.argmax(), alloc1m.shape)] -= (am1_sum - am2_sum)
+        else:
+            alloc2m[np.unravel_index(alloc2m.argmax(), alloc2m.shape)] -= (am2_sum - am1_sum)
+        am_sum = alloc1m.sum()
+
+        ## Stayers ##
+        true_sum = firm_sizes_1.sum()
+        as_sum = alloc1s.sum()
+        alloc1s[np.unravel_index(alloc1s.argmax(), alloc1s.shape)] += (true_sum - am_sum - as_sum)
+
+        ### Apply optimal allocations ###
+        ## Movers ##
+        Lm = np.repeat(np.arange(nl), np.sum(alloc1m, axis=1))
+        gj1 = np.repeat(np.tile(np.arange(nk), nl), alloc1m.flatten())
+        gj2 = np.repeat(np.tile(np.arange(nk), nl), alloc2m.flatten())
+        gj = np.concatenate([gj1[:, None], gj2[:, None]], axis=1)
+
+        ## Stayers ##
+        Ls = np.repeat(np.arange(nl), np.sum(alloc1s, axis=1))
+        gs = np.repeat(np.tile(np.arange(nk), nl), alloc1s.flatten())
 
     if simulate_wages:
         ## Simulate wages ##
-        yj = tw.simblm._simulate_wages_movers(jdata, Lm, blm_model=blm_model, w1=wj1, w2=wj2, rng=rng)
-        ys = tw.simblm._simulate_wages_stayers(sdata, Ls, blm_model=blm_model, w=ws, rng=rng)
+        yj = tw.simblm._simulate_wages_movers(jdata, Lm, blm_model=blm_model, G1=gj[:, 0], G2=gj[:, 1], w1=wj1, w2=wj2, rng=rng)
+        ys = tw.simblm._simulate_wages_stayers(sdata, Ls, blm_model=blm_model, G=gs, w=ws, rng=rng)
 
     if not return_long_df:
         if simulate_wages:
             return (Lm, Ls, yj, ys)
         return (Lm, Ls)
 
-    with bpd.util.ChainedAssignment():
-        if worker_types_as_ids:
-            ## Update worker types ##
-            jdata.loc[:, 'i'] = Lm
-            sdata.loc[:, 'i'] = Ls
-        elif store_worker_types:
-            jdata = jdata.add_column('l', Lm, is_categorical=True, dtype='categorical')
-            sdata = sdata.add_column('l', Ls, is_categorical=True, dtype='categorical')
-        if simulate_wages:
-            ## Update wages ##
-            jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = yj
-            sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (ys, ys)
-            del yj, ys
-        del Lm, Ls
-
     ## Convert to BipartitePandas DataFrame ##
     bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
     # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
     bdf._set_attributes(jdata)
+
+    with bpd.util.ChainedAssignment():
+        if worker_types_as_ids:
+            ## Update worker types ##
+            bdf.loc[:, 'i'] = np.append(Lm, Ls)
+        elif store_worker_types:
+            bdf = bdf.add_column('l', np.append(Lm, Ls), is_categorical=True, dtype='categorical')
+        if simulate_wages:
+            ## Update wages ##
+            bdf.loc[:, 'y1'] = np.append(yj[0], ys[0])
+            bdf.loc[:, 'y2'] = np.append(yj[1], ys[1])
+            del yj, ys
+        del Lm, Ls
+
     # If simulating worker types, data is not sorted
     bdf = bdf.to_long(is_sorted=(not worker_types_as_ids), copy=False)
 
@@ -2497,16 +2589,8 @@ class BLMBootstrap:
             ## Copy original wages and firm types ##
             yj = jdata.loc[:, ['y1', 'y2']].to_numpy().copy()
             ys = sdata.loc[:, ['y1', 'y2']].to_numpy().copy()
-            gj = jdata.loc[:, ['g1', 'g2']].to_numpy().copy()
-            gs = sdata.loc[:, 'g1'].to_numpy().copy()
-
-            ## Weights ##
-            wj1, wj2 = None, None
-            ws = None
-            if jdata._col_included('w'):
-                wj1, wj2 = jdata.loc[:, 'w1'].to_numpy(), jdata.loc[:, 'w2'].to_numpy()
-            if sdata._col_included('w'):
-                ws = sdata.loc[:, 'w1'].to_numpy()
+            gj = jdata.loc[:, ['g1', 'g2']].to_numpy().astype(int, copy=True)
+            gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
 
             ## Unpack parameters ##
             nl, nk = params.get_multiple(('nl', 'nk'))
@@ -2540,7 +2624,7 @@ class BLMBootstrap:
             models = []
             for _ in trange(n_samples):
                 ## Simulate worker types and wages ##
-                bdf = _simulate_types_wages(blm_model, jdata, sdata, pk1=pk1, pk0=pk0, qi_cum_j=None, qi_cum_s=None, wj1=wj1, wj2=wj2, ws=ws, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
+                bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=True, rng=rng)
 
                 ## Cluster ##
                 bdf = bdf.cluster(cluster_params, rng=rng)
@@ -2929,8 +3013,8 @@ class BLMVarianceDecomposition:
         # Copy original wages, firm types, and optionally ids
         yj = jdata.loc[:, ['y1', 'y2']].to_numpy().copy()
         ys = sdata.loc[:, ['y1', 'y2']].to_numpy().copy()
-        gj = jdata.loc[:, ['g1', 'g2']].to_numpy()
-        gs = sdata.loc[:, 'g1'].to_numpy()
+        gj = jdata.loc[:, ['g1', 'g2']].to_numpy().astype(int, copy=True)
+        gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
         if firm_clusters_as_ids:
             jj = jdata.loc[:, ['j1', 'j2']].to_numpy().copy()
             js = sdata.loc[:, 'j1'].to_numpy().copy()
@@ -2948,14 +3032,6 @@ class BLMVarianceDecomposition:
         if not sdata._col_included('t'):
             sdata = sdata.construct_artificial_time(is_sorted=True, copy=False)
             ts = True
-
-        ## Weights ##
-        wj1, wj2 = None, None
-        ws = None
-        # if jdata._col_included('w'):
-        #     wj1, wj2 = jdata.loc[:, 'w1'].to_numpy(), jdata.loc[:, 'w2'].to_numpy()
-        # if sdata._col_included('w'):
-        #     ws = sdata.loc[:, 'w1'].to_numpy()
 
         ## Unpack parameters ##
         nl, nk = params.get_multiple(('nl', 'nk'))
@@ -2993,7 +3069,7 @@ class BLMVarianceDecomposition:
             nl = blm_model.nl
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
-            bdf = _simulate_types_wages(blm_model, jdata, sdata, pk1=pk1, pk0=pk0, qi_cum_j=None, qi_cum_s=None, wj1=wj1, wj2=wj2, ws=ws, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
+            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=True, rng=rng)
             ## Estimate OLS ##
             if no_controls:
                 fe_estimator = tw.FEEstimator(bdf, fe_params)
@@ -3061,7 +3137,7 @@ class BLMReallocation:
         # No initial results
         self.res = None
 
-    def fit(self, jdata, sdata, quantiles=None, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, ncore=1, rng=None):
+    def fit(self, jdata, sdata, quantiles=None, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, optimal_reallocation=False, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, ncore=1, weighted=True, rng=None):
         '''
         Estimate reallocation exercise.
 
@@ -3077,9 +3153,18 @@ class BLMReallocation:
             reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
             categorical_sort_cols (dict or None): in addition to standard quantiles results, return average income grouped by the alternative column(s) given (which are represented by the dictionary {column: number of quantiles to compute}). For categorical variables, use each group as a bin and take the average income within that bin. None is equivalent to {}.
             continuous_sort_cols (dict or None): in addition to standard quantiles results, return average income grouped by the alternative column(s) given (which are represented by the dictionary {column: list of quantiles to compute}). For continuous variables, create bins based on the list of quantiles given in the dictionary. The list of quantiles must start at 0 and end at 1. None is equivalent to {}.
+            optimal_reallocation (bool): if True, reallocate workers to new firms to maximize total output
+            qi_j (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if pk1 or qi_cum_j is not None
+            qi_s (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each stayer observation to be each worker type; None if pk0 or qi_cum_s is not None
+            qi_cum_j (NumPy Array or None): (use with optimal_reallocation to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if pk1 or qi_j is not None
+            qi_cum_s (NumPy Array or None): (use with optimal_reallocation to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each stayer observation to be each worker type; None if pk0 or qi_s is not None
             ncore (int): number of cores for multiprocessing
+            weighted (bool): if True, use weights
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
+        if optimal_reallocation and ((qi_j is None) + (qi_s is None) + (qi_cum_j is None) + (qi_cum_s is None) != 2):
+            raise ValueError('With `optimal_reallocation`, must specify one of `qi_j` or `qi_cum_j` for movers and `qi_s` or `qi_cum_s` for stayers.')
+
         if quantiles is None:
             quantiles = np.arange(101) / 100
         if categorical_sort_cols is None:
@@ -3102,8 +3187,8 @@ class BLMReallocation:
         # Copy original wages, firm types, and optionally ids
         yj = jdata.loc[:, ['y1', 'y2']].to_numpy().copy()
         ys = sdata.loc[:, ['y1', 'y2']].to_numpy().copy()
-        gj = jdata.loc[:, ['g1', 'g2']].to_numpy()
-        gs = sdata.loc[:, 'g1'].to_numpy()
+        gj = jdata.loc[:, ['g1', 'g2']].to_numpy().astype(int, copy=True)
+        gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
         tj = False
         ts = False
         if not jdata._col_included('t'):
@@ -3112,14 +3197,6 @@ class BLMReallocation:
         if not sdata._col_included('t'):
             sdata = sdata.construct_artificial_time(is_sorted=True, copy=False)
             ts = True
-
-        ## Weights ##
-        wj1, wj2 = None, None
-        ws = None
-        # if jdata._col_included('w'):
-        #     wj1, wj2 = jdata.loc[:, 'w1'].to_numpy(), jdata.loc[:, 'w2'].to_numpy()
-        # if sdata._col_included('w'):
-        #     ws = sdata.loc[:, 'w1'].to_numpy()
 
         ## Unpack parameters ##
         nl, nk = params.get_multiple(('nl', 'nk'))
@@ -3130,23 +3207,14 @@ class BLMReallocation:
             blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
             blm_model = blm_fit_init.model
 
-            ## Update parameters ##
-            params = copy.deepcopy(self.params)
-            params['a1_mu'] = blm_model.A1
-            params['a1_sig'] = blm_model.A1.std() / nl
-            params['a2_mu'] = blm_model.A2
-            params['a2_sig'] = blm_model.A2.std() / nl
-            params['s1_low'] = blm_model.S1
-            params['s1_high'] = blm_model.S1
-            params['s2_low'] = blm_model.S2
-            params['s2_high'] = blm_model.S2
-            # TODO: add control variables
-
         ## Unpack parameters ##
         NNm, NNs = blm_model.NNm, blm_model.NNs
 
         ## Reallocate ##
-        pk1, pk0 = tw.simblm._reallocate(pk1=blm_model.pk1, pk0=blm_model.pk0, NNm=NNm, NNs=NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
+        if optimal_reallocation:
+            pk1, pk0 = None, None
+        else:
+            pk1, pk0 = tw.simblm._reallocate(pk1=blm_model.pk1, pk0=blm_model.pk0, NNm=NNm, NNs=NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
 
         ## Baseline ##
         res_cat_baseline = {}
@@ -3159,7 +3227,7 @@ class BLMReallocation:
         bdf = bdf.to_long(is_sorted=True, copy=False)
         # Compute quantiles
         y = bdf.loc[:, 'y'].to_numpy()
-        if bdf._col_included('w'):
+        if weighted and bdf._col_included('w'):
             w = bdf.loc[:, 'w'].to_numpy()
         else:
             w = None
@@ -3188,11 +3256,11 @@ class BLMReallocation:
         res_cts = {col: np.zeros([n_samples, len(quantiles) - 1]) for col, quantiles in continuous_sort_cols.items()}
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
-            bdf = _simulate_types_wages(blm_model, jdata, sdata, pk1=pk1, pk0=pk0, qi_cum_j=None, qi_cum_s=None, wj1=wj1, wj2=wj2, ws=ws, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
+            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=qi_j, qi_s=qi_s, qi_cum_j=qi_cum_j, qi_cum_s=qi_cum_s, optimal_reallocation=optimal_reallocation, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=weighted, rng=rng)
 
             ## Compute quantiles ##
             y = bdf.loc[:, 'y'].to_numpy()
-            if bdf._col_included('w'):
+            if weighted and bdf._col_included('w'):
                 w = bdf.loc[:, 'w'].to_numpy()
             else:
                 w = None

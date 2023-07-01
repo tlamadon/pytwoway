@@ -254,7 +254,7 @@ def _simulate_firm_classes_stayers(nk, NNs):
     '''
     return np.repeat(np.arange(nk), NNs)
 
-def _simulate_worker_types_movers(nl, nk, NNm=None, G1=None, G2=None, pk1=None, qi_cum=None, simulating_data=False, rng=None):
+def _simulate_worker_types_movers(nl, nk, NNm=None, G1=None, G2=None, pk1=None, qi=None, qi_cum=None, simulating_data=False, rng=None):
     '''
     Simulate worker types for movers.
 
@@ -264,14 +264,22 @@ def _simulate_worker_types_movers(nl, nk, NNm=None, G1=None, G2=None, pk1=None, 
         NNm (NumPy Array or None): matrix giving the number of movers who transition between each combination of firm types (e.g. entry (1, 3) gives the number of movers who transition from firm type 1 to firm type 3); None if using real data
         G1 (NumPy Array or None): first period firm classes for movers; None if using simulated data
         G2 (NumPy Array or None): second period firm classes for movers; None if using simulated data
-        pk1 (NumPy Array or None): probability of being at each combination of firm types for movers; None if qi_cum is not None
-        qi_cum (NumPy Array or None): cumulative probabilities for each mover observation to be each worker type; None if pk1 is not None
+        pk1 (NumPy Array or None): (use to assign workers to worker types probabilistically based on dgp-level probabilities) probability of being at each combination of firm types for movers; None if qi or qi_cum is not None
+        qi (NumPy Array or None): (use to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each stayer observation to be each worker type; None if pk1 or qi_cum is not None
+        qi_cum (NumPy Array or None): (use to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if pk1 or qi is not None
         simulating_data (bool): set to True if simulating data from SimBLM class
         rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
     Returns:
         (NumPy Array): worker types for movers
     '''
+    if ((pk1 is None) + (qi is None) + (qi_cum is None)) != 2:
+        raise ValueError('Only one of `pk1`, `qi`, and `qi_cum` can be used as input.')
+
+    if qi is not None:
+        ## Assign workers to max worker type ##
+        return np.argmax(qi, axis=1)
+
     if rng is None:
         rng = np.random.default_rng(None)
 
@@ -307,7 +315,7 @@ def _simulate_worker_types_movers(nl, nk, NNm=None, G1=None, G2=None, pk1=None, 
 
     return L
 
-def _simulate_worker_types_stayers(nl, nk, NNs=None, G=None, pk0=None, qi_cum=None, simulating_data=False, rng=None):
+def _simulate_worker_types_stayers(nl, nk, NNs=None, G=None, pk0=None, qi=None, qi_cum=None, simulating_data=False, rng=None):
     '''
     Simulate worker types for stayers.
 
@@ -316,14 +324,22 @@ def _simulate_worker_types_stayers(nl, nk, NNs=None, G=None, pk0=None, qi_cum=No
         nk (int): number of firm types
         NNs (NumPy Array): vector giving the number of stayers at each firm type (e.g. entry (1) gives the number of stayers at firm type 1); None if using real data
         G (NumPy Array or None): firm classes for stayers; None if using simulated data
+        pk0 (NumPy Array or None): (use to assign workers to worker types probabilistically based on dgp-level probabilities) probability of being at each firm type for stayers; None if qi or qi_cum is not None
+        qi (NumPy Array or None): (use to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each stayer observation to be each worker type; None if pk0 or qi_cum is not None
+        qi_cum (NumPy Array or None): (use to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each stayer observation to be each worker type; None if pk0 or qi is not None
         simulating_data (bool): set to True if simulating data from SimBLM class
-        pk0 (NumPy Array or None): probability of being at each firm type for stayers; None if qi_cum is not None
-        qi_cum (NumPy Array or None): cumulative probabilities for each stayer observation to be each worker type; None if pk0 is not None
         rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
     Returns:
         (NumPy Array): worker types for stayers
     '''
+    if ((pk0 is None) + (qi is None) + (qi_cum is None)) != 2:
+        raise ValueError('Only one of `pk0`, `qi`, and `qi_cum` can be used as input.')
+
+    if qi is not None:
+        ## Assign workers to max worker type ##
+        return np.argmax(qi, axis=1)
+
     if rng is None:
         rng = np.random.default_rng(None)
 
@@ -519,7 +535,7 @@ def _simulate_firms(jdata, sdata, firm_size, dynamic=False, rng=None):
         jdata.loc[:, 'j2'] = jdata.loc[:, 'j1'].copy()
         jdata.loc[:, 'j3'] = jdata.loc[:, 'j4'].copy()
 
-def _simulate_wages_movers(jdata, L, blm_model=None, A1=None, A2=None, S1=None, S2=None, A1_cat=None, A2_cat=None, S1_cat=None, S2_cat=None, A1_cts=None, A2_cts=None, S1_cts=None, S2_cts=None, controls_dict=None, cat_cols=None, cts_cols=None, w1=None, w2=None, rng=None, **kwargs):
+def _simulate_wages_movers(jdata, L, blm_model=None, A1=None, A2=None, S1=None, S2=None, A1_cat=None, A2_cat=None, S1_cat=None, S2_cat=None, A1_cts=None, A2_cts=None, S1_cts=None, S2_cts=None, controls_dict=None, cat_cols=None, cts_cols=None, G1=None, G2=None, w1=None, w2=None, rng=None, **kwargs):
     '''
     Simulate wages for movers.
 
@@ -542,13 +558,15 @@ def _simulate_wages_movers(jdata, L, blm_model=None, A1=None, A2=None, S1=None, 
         controls_dict (dict or None): dictionary of all control variables; None if no controls
         cat_cols (list or None): list of categorical controls; None if no categorical controls
         cts_cols (list or None): list of continuous controls; None if no continuous controls
+        G1 (NumPy Array or None): firm classes for movers in the first period; if None, extract from jdata
+        G2 (NumPy Array or None): firm classes for movers in the second period; if None, extract from jdata
         w1 (NumPy Array or None): mover weights for the first period; if None, don't weight
         w2 (NumPy Array or None): mover weights for the second period; if None, don't weight
         rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         kwargs (dict): keyword arguments
 
     Returns:
-        (tuple of NumPy Arrays): wages for movers in the first and second period
+        (tuple of NumPy Arrays): wages for movers in the first and second periods
     '''
     if rng is None:
         rng = np.random.default_rng(None)
@@ -558,9 +576,11 @@ def _simulate_wages_movers(jdata, L, blm_model=None, A1=None, A2=None, S1=None, 
         w2 = 1
 
     # Unpack values
-    nmi = len(jdata)
-    G1 = jdata.loc[:, 'g1'].to_numpy()
-    G2 = jdata.loc[:, 'g2'].to_numpy()
+    nmi = len(L)
+    if G1 is None:
+        G1 = jdata.loc[:, 'g1'].to_numpy()
+    if G2 is None:
+        G2 = jdata.loc[:, 'g2'].to_numpy()
 
     if blm_model is not None:
         # Unpack BLMModel
@@ -643,7 +663,7 @@ def _simulate_wages_movers(jdata, L, blm_model=None, A1=None, A2=None, S1=None, 
 
     return (Y1, Y2)
 
-def _simulate_wages_stayers(sdata, L, blm_model=None, A1=None, S1=None, A1_cat=None, S1_cat=None, A1_cts=None, S1_cts=None, controls_dict=None, cat_cols=None, cts_cols=None, w=None, rng=None, **kwargs):
+def _simulate_wages_stayers(sdata, L, blm_model=None, A1=None, S1=None, A1_cat=None, S1_cat=None, A1_cts=None, S1_cts=None, controls_dict=None, cat_cols=None, cts_cols=None, G=None, w=None, rng=None, **kwargs):
     '''
     Simulate wages for stayers.
 
@@ -660,12 +680,13 @@ def _simulate_wages_stayers(sdata, L, blm_model=None, A1=None, S1=None, A1_cat=N
         controls_dict (dict or None): dictionary of all control variables; None if no controls
         cat_cols (list or None): list of categorical controls; None if no categorical controls
         cts_cols (list or None): list of continuous controls; None if no continuous controls
+        G (NumPy Array or None): firm classes for stayers; if None, extract from sdata
         w (NumPy Array or None): mover weights; if None, don't weight
         rng (np.random.Generator): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         kwargs (dict): keyword arguments
 
     Returns:
-        (NumPy Array): wages for stayers in both periods
+        (tuple of NumPy Arrays): wages for stayers in the first and second periods
     '''
     if rng is None:
         rng = np.random.default_rng(None)
@@ -673,8 +694,9 @@ def _simulate_wages_stayers(sdata, L, blm_model=None, A1=None, S1=None, A1_cat=N
         w = 1
 
     # Unpack values
-    nsi = len(sdata)
-    G = sdata.loc[:, 'g1'].to_numpy()
+    nsi = len(L)
+    if G is None:
+        G = sdata.loc[:, 'g1'].to_numpy()
 
     if blm_model is not None:
         # Unpack BLMModel
@@ -721,11 +743,15 @@ def _simulate_wages_stayers(sdata, L, blm_model=None, A1=None, S1=None, A1_cat=N
                     A1_sum += A1_cts[col] * sdata.loc[:, subcol_1]
                     S1_sum_sq += S1_cts[col] ** 2
 
-        return rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq / w), size=nsi)
+        Y1 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq / w), size=nsi)
+        Y2 = rng.normal(loc=A1_sum, scale=np.sqrt(S1_sum_sq / w), size=nsi)
     else:
         #### No control variables ####
         S1_sum = S1[L, G]
-        return rng.normal(loc=A1_sum, scale=S1_sum / np.sqrt(w), size=nsi)
+        Y1 = rng.normal(loc=A1_sum, scale=S1_sum / np.sqrt(w), size=nsi)
+        Y2 = rng.normal(loc=A1_sum, scale=S1_sum / np.sqrt(w), size=nsi)
+
+    return (Y1, Y2)
 
 def _min_firm_type(A1, A2, primary_period='first'):
         '''
@@ -1194,7 +1220,7 @@ class SimBLM:
         ## Worker types ##
         L = _simulate_worker_types_movers(
             nl=nl, nk=nk, NNm=NNm, G1=G1, G2=G2, pk1=pk1,
-            qi_cum=None, simulating_data=True, rng=rng
+            qi=None, qi_cum=None, simulating_data=True, rng=rng
         )
 
         ## Control variables ##
@@ -1232,7 +1258,7 @@ class SimBLM:
         ## Worker types ##
         L = _simulate_worker_types_stayers(
             nl=nl, nk=nk, NNs=NNs, G=G, pk0=pk0,
-            qi_cum=None, simulating_data=True, rng=rng
+            qi=None, qi_cum=None, simulating_data=True, rng=rng
         )
 
         ## Control variables ##
@@ -1293,9 +1319,9 @@ class SimBLM:
 
         ## Simulate wages ##
         Y1m, Y2m = _simulate_wages_movers(jdata, L=jdata.loc[:, 'l'], controls_dict=self.controls_dict, cat_cols=self.cat_cols, cts_cols=self.cts_cols, rng=rng, **sim_params)
-        Ys = _simulate_wages_stayers(sdata, L=sdata.loc[:, 'l'], controls_dict=self.controls_dict, cat_cols=self.cat_cols, cts_cols=self.cts_cols, rng=rng, **sim_params)
+        Y1s, Y2s = _simulate_wages_stayers(sdata, L=sdata.loc[:, 'l'], controls_dict=self.controls_dict, cat_cols=self.cat_cols, cts_cols=self.cts_cols, rng=rng, **sim_params)
         jdata.loc[:, 'y1'], jdata.loc[:, 'y2'] = (Y1m, Y2m)
-        sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (Ys, Ys.copy())
+        sdata.loc[:, 'y1'], sdata.loc[:, 'y2'] = (Y1s, Y2s)
 
         ## Combine into dictionary ##
         sim_data = {'jdata': jdata, 'sdata': sdata}

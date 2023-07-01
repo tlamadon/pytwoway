@@ -1196,7 +1196,7 @@ class SimDynamicBLM:
         ## Worker types ##
         L = simblm._simulate_worker_types_movers(
             nl=nl, nk=nk, NNm=NNm, G1=G1, G2=G2, pk1=pk1,
-            qi_cum=None, simulating_data=True, rng=rng
+            qi=None, qi_cum=None, simulating_data=True, rng=rng
         )
 
         ## Control variables ##
@@ -1235,7 +1235,7 @@ class SimDynamicBLM:
         ## Worker types ##
         L = simblm._simulate_worker_types_stayers(
             nl=nl, nk=nk, NNs=NNs, G=G, pk0=pk0,
-            qi_cum=None, simulating_data=True, rng=rng
+            qi=None, qi_cum=None, simulating_data=True, rng=rng
         )
 
         ## Control variables ##

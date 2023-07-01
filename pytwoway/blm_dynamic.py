@@ -835,7 +835,7 @@ def rho_init(sdata, rho_0=(0.6, 0.6, 0.6), weights=None, diff=False):
     # Run _var_stayers with optimal rho
     return _var_stayers(sdata, *rho_optim, weights=weights, diff=diff)
 
-def _simulate_types_wages(dynamic_blm_model, jdata, sdata, pk1=None, pk0=None, qi_cum_j=None, qi_cum_s=None, worker_types_as_ids=True, simulate_wages=True, return_long_df=True, store_worker_types=True, rng=None):
+def _simulate_types_wages(dynamic_blm_model, jdata, sdata, gj=None, gs=None, pk1=None, pk0=None, qi_cum_j=None, qi_cum_s=None, worker_types_as_ids=True, simulate_wages=True, return_long_df=True, store_worker_types=True, rng=None):
     '''
     Using data and estimated BLM parameters, simulate worker types (and optionally wages).
 
@@ -843,6 +843,8 @@ def _simulate_types_wages(dynamic_blm_model, jdata, sdata, pk1=None, pk0=None, q
         dynamic_blm_model (DynamicBLMModel): dynamic BLM model with estimated parameters
         jdata (BipartitePandas DataFrame): extended event study format labor data for movers
         sdata (BipartitePandas DataFrame): extended event study format labor data for stayers
+        gj (NumPy Array or None): firm classes for movers in the first and last periods; if None, extract from jdata
+        gs (NumPy Array or None): firm classes for stayers; if None, extract from sdata
         pk1 (NumPy Array or None): probability of being at each combination of firm types for movers; None if qi_cum_j is not None
         pk0 (NumPy Array or None): probability of being at each firm type for stayers; None if qi_cum_s is not None
         qi_cum_j (NumPy Array or None): cumulative probabilities for each mover observation to be each worker type; None if pk1 is not None
@@ -862,9 +864,11 @@ def _simulate_types_wages(dynamic_blm_model, jdata, sdata, pk1=None, pk0=None, q
     ## Unpack parameters ##
     nl, nk = dynamic_blm_model.nl, dynamic_blm_model.nk
 
-    ## Correct datatype for gj and gs ##
-    gj = jdata.loc[:, ['g1', 'g4']].to_numpy().astype(int, copy=False)
-    gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=False)
+    ## Firm classes ##
+    if gj is None:
+        gj = jdata.loc[:, ['g1', 'g4']].to_numpy().astype(int, copy=True)
+    if gs is None:
+        gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
 
     ## Simulate worker types ##
     Lm = tw.simblm._simulate_worker_types_movers(nl=nl, nk=nk, NNm=None, G1=gj[:, 0], G2=gj[:, 1], pk1=pk1, qi_cum=qi_cum_j, simulating_data=False, rng=rng)
@@ -4707,8 +4711,8 @@ class DynamicBLMBootstrap:
             # Copy original wages and firm types
             yj = jdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
             ys = sdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
-            gj = jdata.loc[:, ['g1', 'g4']].to_numpy().copy()
-            gs = sdata.loc[:, 'g1'].to_numpy().copy()
+            gj = jdata.loc[:, ['g1', 'g4']].to_numpy().astype(int, copy=True)
+            gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
 
             if dynamic_blm_model is None:
                 # Run initial BLM estimator
@@ -4727,7 +4731,7 @@ class DynamicBLMBootstrap:
             models = []
             for _ in trange(n_samples):
                 ## Simulate worker types and wages ##
-                bdf = _simulate_types_wages(dynamic_blm_model, jdata, sdata, pk1=pk1, pk0=pk0, qi_cum_j=None, qi_cum_s=None, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
+                bdf = _simulate_types_wages(dynamic_blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_cum_j=None, qi_cum_s=None, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
 
                 ## Cluster ##
                 bdf = bdf.cluster(cluster_params, rng=rng)
@@ -5114,8 +5118,8 @@ class DynamicBLMVarianceDecomposition:
         # Copy original wages, firm types, and optionally ids
         yj = jdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
         ys = sdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
-        gj = jdata.loc[:, ['g1', 'g4']].to_numpy()
-        gs = sdata.loc[:, 'g1'].to_numpy()
+        gj = jdata.loc[:, ['g1', 'g4']].to_numpy().astype(int, copy=True)
+        gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
         if firm_clusters_as_ids:
             jj = jdata.loc[:, ['j1', 'j4']].to_numpy().copy()
             js = sdata.loc[:, 'j1'].to_numpy().copy()
@@ -5155,7 +5159,7 @@ class DynamicBLMVarianceDecomposition:
             nl = dynamic_blm_model.nl
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
-            bdf = _simulate_types_wages(dynamic_blm_model, jdata, sdata, pk1=pk1, pk0=pk0, qi_cum_j=None, qi_cum_s=None, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
+            bdf = _simulate_types_wages(dynamic_blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_cum_j=None, qi_cum_s=None, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
 
             ## Estimate OLS ##
             if no_controls:
@@ -5262,8 +5266,8 @@ class DynamicBLMReallocation:
         # Copy original wages and firm types
         yj = jdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
         ys = sdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
-        gj = jdata.loc[:, ['g1', 'g4']].to_numpy()
-        gs = sdata.loc[:, 'g1'].to_numpy()
+        gj = jdata.loc[:, ['g1', 'g4']].to_numpy().astype(int, copy=True)
+        gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
         tj = False
         ts = False
         if not jdata._col_included('t'):
@@ -5318,7 +5322,7 @@ class DynamicBLMReallocation:
         res_cts = {col: np.zeros([n_samples, len(quantiles) - 1]) for col, quantiles in continuous_sort_cols.items()}
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
-            bdf = _simulate_types_wages(dynamic_blm_model, jdata, sdata, pk1=pk1, pk0=pk0, qi_cum_j=None, qi_cum_s=None, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
+            bdf = _simulate_types_wages(dynamic_blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_cum_j=None, qi_cum_s=None, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
 
             ## Compute quantiles (no weights for dynamic BLM) ##
             y = bdf.loc[:, 'y'].to_numpy()
@@ -5414,8 +5418,8 @@ class DynamicBLMTransitions:
         # Copy original wages, firm types, and ids
         yj = jdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
         ys = sdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
-        gj = jdata.loc[:, ['g1', 'g4']].to_numpy()
-        gs = sdata.loc[:, 'g1'].to_numpy()
+        gj = jdata.loc[:, ['g1', 'g4']].to_numpy().astype(int, copy=True)
+        gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
         ij = jdata.loc[:, 'i'].to_numpy().copy()
         is_ = sdata.loc[:, 'i'].to_numpy().copy()
         tj = False
@@ -5437,7 +5441,7 @@ class DynamicBLMTransitions:
         res = np.zeros([n_samples, 3, len(cluster_groups), len(cluster_groups) + 1])
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
-            Lm_i, Ls_i, yj_i, ys_i = _simulate_types_wages(dynamic_blm_model, jdata, sdata, pk1=dynamic_blm_model.pk1, pk0=dynamic_blm_model.pk0, qi_cum_j=None, qi_cum_s=None, worker_types_as_ids=False, simulate_wages=True, return_long_df=False, store_worker_types=False, rng=rng)
+            Lm_i, Ls_i, yj_i, ys_i = _simulate_types_wages(dynamic_blm_model, jdata, sdata, gj=gj, gs=gs, pk1=dynamic_blm_model.pk1, pk0=dynamic_blm_model.pk0, qi_cum_j=None, qi_cum_s=None, worker_types_as_ids=False, simulate_wages=True, return_long_df=False, store_worker_types=False, rng=rng)
 
             with bpd.util.ChainedAssignment():
                 ## Update jdata and sdata ##
