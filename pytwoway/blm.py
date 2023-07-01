@@ -394,33 +394,17 @@ def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, p
         cons_a.add_constraints(cons.WorkerSum(b=np.concatenate([worker_sizes_1, worker_sizes_2]), nnt=[[0, 2], [1, 3]], nt=4))
         # Require the same number of stayers in periods 1 and 2
         cons_a.add_constraints(cons.Stationary(nnt=[2, 3], nt=4))
-        # Bound below at 25 since solver is approximate, otherwise estimates become negative
-        cons_a.add_constraints(cons.BoundedBelow(lb=25, nt=4))
+        # Bound below at 0
+        cons_a.add_constraints(cons.BoundedBelow(lb=0, nt=4))
 
         ### Solve ###
-        # NOTE: quadprog doesn't work for some reason
-        cons_a.solve(XX, -XY, solver='osqp')
+        # NOTE: use linear programming solver
+        cons_a.solve(XX, -XY, solver='linprog', integrality=np.array([1]))
 
         ## Extract optimal allocations ##
         allocs = np.reshape(np.round(cons_a.res, 0).astype(int), (4, nl, nk))
         alloc1m, alloc2m = allocs[0, :, :], allocs[1, :, :]
         alloc1s, alloc2s = allocs[2, :, :], allocs[3, :, :]
-
-        ### Fix slight numerical errors ###
-        ## Movers ##
-        am1_sum = alloc1m.sum()
-        am2_sum = alloc2m.sum()
-        if am1_sum > am2_sum:
-            # Souce: https://stackoverflow.com/a/13535599/17333120
-            alloc1m[np.unravel_index(alloc1m.argmax(), alloc1m.shape)] -= (am1_sum - am2_sum)
-        else:
-            alloc2m[np.unravel_index(alloc2m.argmax(), alloc2m.shape)] -= (am2_sum - am1_sum)
-        am_sum = alloc1m.sum()
-
-        ## Stayers ##
-        true_sum = firm_sizes_1.sum()
-        as_sum = alloc1s.sum()
-        alloc1s[np.unravel_index(alloc1s.argmax(), alloc1s.shape)] += (true_sum - am_sum - as_sum)
 
         ### Apply optimal allocations ###
         ## Movers ##

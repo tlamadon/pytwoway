@@ -14,6 +14,7 @@ NOTE: parameters are ordered with precedence of (time, worker type, firm type). 
 '''
 import numpy as np
 from qpsolvers import solve_qp
+from scipy.optimize import linprog
 from scipy.sparse import csc_matrix
 from bipartitepandas.util import to_list
 
@@ -35,16 +36,22 @@ class QPConstrained:
         self.nk = nk
 
         # Inequality constraint matrix
-        self.G = np.array([])
+        self.G = None
         # Inequality constraint bound
-        self.h = np.array([])
+        self.h = None
         # Equality constraint matrix
-        self.A = np.array([])
+        self.A = None
         # Equality constraint bound
-        self.b = np.array([])
+        self.b = None
+        # Lower bound
+        self.lb = None
+        # Upper bound
+        self.ub = None
         # Columns to drop (these columns are normalized to 0)
-        self.drop_cols = []
+        self.drop_cols = None
         self.drop_cols_mask = None
+        # Bounds (for linprog)
+        self.bounds = None
 
     def add_constraints(self, constraints):
         '''
@@ -56,44 +63,53 @@ class QPConstrained:
         for constraint in to_list(constraints):
             self._add_constraint(**constraint._get_constraints(nl=self.nl, nk=self.nk))
 
-    def _add_constraint(self, G=None, h=None, A=None, b=None, drop_cols=None):
+    def _add_constraint(self, G=None, h=None, A=None, b=None, lb=None, ub=None, drop_cols=None):
         '''
         Manually add a constraint. If setting inequality constraints, must set both G and h to have the same dimension 0. If setting equality constraints, must set both A and b to have the same dimension 0.
 
         Arguments:
-            G (NumPy Array): inequality constraint matrix; None is equivalent to np.array([])
-            h (NumPy Array): inequality constraint bound; None is equivalent to np.array([])
-            A (NumPy Array): equality constraint matrix; None is equivalent to np.array([])
-            b (NumPy Array): equality constraint bound; None is equivalent to np.array([])
-            drop_cols (list of int): indices of columns to drop (these columns are normalized to 0)
+            G (NumPy Array or None): inequality constraint matrix; None is equivalent to np.array([])
+            h (NumPy Array or None): inequality constraint bound; None is equivalent to np.array([])
+            A (NumPy Array or None): equality constraint matrix; None is equivalent to np.array([])
+            b (NumPy Array or None): equality constraint bound; None is equivalent to np.array([])
+            lb (NumPy Array or None): lower bound; None means there is no lower bound
+            ub (NumPy Array or None): upper bound; None means there is no upper bound
+            drop_cols (list of int or None): indices of columns to drop (these columns are normalized to 0); None is equivalent to []
         '''
-        if G is None:
-            G = np.array([])
-        if h is None:
-            h = np.array([])
-        if A is None:
-            A = np.array([])
-        if b is None:
-            b = np.array([])
-
-        if len(G) > 0:
+        if G is not None:
             # If inequality constraints
-            if len(self.G) > 0:
+            if self.G is not None:
                 self.G = np.concatenate((self.G, G), axis=0)
                 self.h = np.concatenate((self.h, h), axis=0)
             else:
                 self.G = G
                 self.h = h
-        elif len(A) > 0:
+        if A is not None:
             # If equality constraints
-            if len(self.A) > 0:
+            if self.A is not None:
                 self.A = np.concatenate((self.A, A), axis=0)
                 self.b = np.concatenate((self.b, b), axis=0)
             else:
                 self.A = A
                 self.b = b
-        elif drop_cols is not None:
-            self.drop_cols += drop_cols
+        if lb is not None:
+            # If lower bound constraints
+            if self.lb is not None:
+                self.lb = np.maximum(self.lb, lb)
+            else:
+                self.lb = lb
+        if ub is not None:
+            # If upper bound constraints
+            if self.ub is not None:
+                self.ub = np.minimum(self.ub, ub)
+            else:
+                self.ub = ub
+        if drop_cols is not None:
+            # If columns to normalize
+            if self.drop_cols is not None:
+                self.drop_cols += drop_cols
+            else:
+                self.drop_cols = drop_cols
             # np.unique also sorts
             self.drop_cols = list(np.unique(self.drop_cols))
 
@@ -105,7 +121,7 @@ class QPConstrained:
             l (int): how many columns to add on left
             r (int): how many columns to add on right
         '''
-        if len(self.G) > 0:
+        if self.G is not None:
             self.G = np.concatenate((
                     np.zeros(shape=(self.G.shape[0], l)),
                     self.G,
@@ -113,7 +129,7 @@ class QPConstrained:
                 ), axis=1)
         else:
             self.G = np.zeros(shape=l + r)
-        if len(self.A) > 0:
+        if self.A is not None:
             self.A = np.concatenate((
                     np.zeros(shape=(self.A.shape[0], l)),
                     self.A,
@@ -121,27 +137,33 @@ class QPConstrained:
                 ), axis=1)
         else:
             self.A = np.zeros(shape=l + r)
-        for i in range(len(self.drop_cols)):
-            self.drop_cols[i] += l
+        if self.drop_cols is not None:
+            for i in range(len(self.drop_cols)):
+                self.drop_cols[i] += l
 
-    def clear_constraints(self, inequality=True, equality=True, drop_cols=True, drop_cols_mask=True):
+    def clear_constraints(self, inequality=True, equality=True, bounds=True, drop_cols=True, drop_cols_mask=True):
         '''
         Clear constraints.
 
         Arguments:
             inequality (bool): if True, clear inequality constraints
             equality (bool): if True, clear equality constraints
+            bounds (bool): if True, clear lower and upper bound constraints
             drop_cols (bool): if True, clear columns to normalize to 0
             drop_cols_mask (bool): if True, clear mask for columns to normalize to 0
         '''
         if inequality:
-            self.G = np.array([])
-            self.h = np.array([])
+            self.G = None
+            self.h = None
         if equality:
-            self.A = np.array([])
-            self.b = np.array([])
+            self.A = None
+            self.b = None
+        if bounds:
+            self.lb = None
+            self.ub = None
+            self.bounds = None
         if drop_cols:
-            self.drop_cols = []
+            self.drop_cols = None
         if drop_cols_mask:
             self.drop_cols_mask = None
 
@@ -169,6 +191,10 @@ class QPConstrained:
         cons.h = self.h
         cons.A = self.A
         cons.b = self.b
+        cons.lb = self.lb
+        cons.ub = self.ub
+        cons.drop_cols = self.drop_cols
+        cons.drop_cols_mask = self.drop_cols_mask
 
         # ----- Map to qpsolvers -----
         P = M.T @ M
@@ -179,7 +205,7 @@ class QPConstrained:
 
         return cons.res is not None
 
-    def solve(self, P, q, solver='quadprog', verbose=False, **kwargs):
+    def solve(self, P, q, solver='quadprog', integrality=0, verbose=False, **kwargs):
         '''
         Solve a quadratic programming model of the following form:
             min_x(1/2 x.T @ P @ x + q.T @ x)
@@ -190,6 +216,7 @@ class QPConstrained:
             P (NumPy Array): P in quadratic programming problem
             q (NumPy Array): q in quadratic programming problem
             solver (str): solver to use
+            integrality (int): (for use with linprog) indicates the type of integrality constraint on each decision variable. 0: Continuous variable, no integrality constraint; 1: Integer variable, decision variable must be an integer within bounds; 2: Semi-continuous variable, decision variable must be within bounds or take value 0; 3: Semi-integer variable, decision variable must be an integer within bounds or take value 0.
             verbose (bool): if True, print extra output
             **kwargs: parameters for solver
 
@@ -198,18 +225,19 @@ class QPConstrained:
         '''
         G, h = self.G, self.h
         A, b = self.A, self.b
+        lb, ub = self.lb, self.ub
         drop_cols, drop_cols_mask = self.drop_cols, self.drop_cols_mask
 
         if solver in ['ecos', 'gurobi', 'mosek', 'osqp', 'qpswift', 'scs']:
-            # If using sparse solver
-            if (G.shape[0] > 0) and not isinstance(G, csc_matrix):
+            ## Make matrices sparse (if using sparse solver) ##
+            if (G is not None) and not isinstance(G, csc_matrix):
                 G = csc_matrix(G)
                 self.G = G
-            if (A.shape[0] > 0) and not isinstance(A, csc_matrix):
+            if (A is not None) and not isinstance(A, csc_matrix):
                 A = csc_matrix(A)
                 self.A = A
 
-        if len(drop_cols) > 0:
+        if drop_cols is not None:
             # Drop columns that will be normalized to 0
             n_params = P.shape[0]
             if drop_cols_mask is None:
@@ -219,21 +247,32 @@ class QPConstrained:
                 drop_cols_mask = drop_cols_mask.astype(bool)
             P = P[~drop_cols_mask, :][:, ~drop_cols_mask]
             q = q[~drop_cols_mask]
-            if G.shape[0] > 0:
+            if G is not None:
                 G = G[:, ~drop_cols_mask]
-            if A.shape[0] > 0:
+            if A is not None:
                 A = A[:, ~drop_cols_mask]
+            if lb is not None:
+                lb = lb[~drop_cols_mask]
+            if ub is not None:
+                ub = ub[~drop_cols_mask]
 
-        if (G.shape[0] > 0) and (A.shape[0] > 0):
-            self.res = solve_qp(P=P, q=q, G=G, h=h, A=A, b=b, solver=solver, verbose=verbose, **kwargs)
-        elif G.shape[0] > 0:
-            self.res = solve_qp(P=P, q=q, G=G, h=h, solver=solver, verbose=verbose, **kwargs)
-        elif A.shape[0] > 0:
-            self.res = solve_qp(P=P, q=q, A=A, b=b, solver=solver, verbose=verbose, **kwargs)
+        if solver == 'linprog':
+            bounds = self.bounds
+            if bounds is None:
+                if (lb is None) and (ub is None):
+                    bounds = (None, None)
+                elif lb is not None:
+                    bounds = list(zip(lb, [None] * len(lb)))
+                elif ub is not None:
+                    bounds = list(zip([None] * len(ub), ub))
+                else:
+                    bounds = list(zip(lb, ub))
+                self.bounds = bounds
+            self.res = linprog(c=q, A_ub=G, b_ub=h, A_eq=A, b_eq=b, bounds=bounds, integrality=integrality).x
         else:
-            self.res = solve_qp(P=P, q=q, solver=solver, verbose=verbose, **kwargs)
+            self.res = solve_qp(P=P, q=q, G=G, h=h, A=A, b=b, lb=lb, ub=ub, solver=solver, verbose=verbose, **kwargs)
 
-        if len(drop_cols) > 0:
+        if drop_cols is not None:
             # Add back in zeros for normalized parameters
             res = np.zeros(n_params)
             res[~drop_cols_mask] = self.res
@@ -1145,7 +1184,7 @@ class BoundedBelow():
     Generate BLM constraints so that worker-firm pair effects are bounded below.
 
     Arguments:
-        lb (float): lower bound
+        lb (float or NumPy Array): lower bound
         nt (int): number of time periods
     '''
 
@@ -1165,17 +1204,16 @@ class BoundedBelow():
             (dict of NumPy Arrays): {'G': G, 'h': h, 'A': None, 'b': None}, where G, h, A, and b are defined in the quadratic programming model
         '''
         nt, lb = self.nt, self.lb
-        G = - np.eye(nt * nl * nk)
-        h = - lb * np.ones(shape=nt * nl * nk)
+        h = lb * np.ones(shape=nt * nl * nk)
 
-        return {'G': G, 'h': h, 'A': None, 'b': None}
+        return {'G': None, 'h': None, 'A': None, 'b': None, 'lb': h, 'ub': None}
 
 class BoundedAbove():
     '''
     Generate BLM constraints so that worker-firm pair effects are bounded above.
 
     Arguments:
-        ub (float): upper bound
+        ub (float or NumPy Array): upper bound
         nt (int): number of time periods
     '''
 
@@ -1195,7 +1233,6 @@ class BoundedAbove():
             (dict of NumPy Arrays): {'G': G, 'h': h, 'A': None, 'b': None}, where G, h, A, and b are defined in the quadratic programming model
         '''
         nt, ub = self.nt, self.ub
-        G = np.eye(nt * nl * nk)
         h = ub * np.ones(shape=nt * nl * nk)
 
-        return {'G': G, 'h': h, 'A': None, 'b': None}
+        return {'G': None, 'h': None, 'A': None, 'b': None, 'lb': None, 'ub': h}
