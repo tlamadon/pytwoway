@@ -2455,6 +2455,14 @@ class BLMEstimator:
         # Using best estimated parameters from fit_movers(), run fit_stayers()
         if self.params['verbose'] in [1, 2, 3]:
             print('Fitting stayers')
+        ## Set pk0 based on pk1 ##
+        nl, nk, pk1, NNm = self.model.nl, self.model.nk, self.model.pk1, self.model.NNm
+        NNm_1 = np.sum(NNm, axis=1)
+        NNm_2 = np.sum(NNm, axis=0)
+        reshaped_pk1 = np.reshape(pk1, (nk, nk, nl))
+        pk_period1 = (np.sum((NNm.T * reshaped_pk1.T).T, axis=1).T / NNm_1).T
+        pk_period2 = (np.sum((NNm.T * reshaped_pk1.T).T, axis=0).T / NNm_2).T
+        self.model.pk0 = (pk_period1 + pk_period2) / 2
         self.model.fit_stayers(sdata)
 
     def plot_log_earnings(self, period='first', xlabel='firm class k', ylabel='log-earnings', grid=True, dpi=None):
