@@ -5235,7 +5235,7 @@ class DynamicBLMReallocation:
         # No initial results
         self.res = None
 
-    def fit(self, jdata, sdata, quantiles=None, dynamic_blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, ncore=1, rng=None):
+    def fit(self, jdata, sdata, quantiles=None, dynamic_blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, unresidualize_col=None, ncore=1, rng=None):
         '''
         Estimate variance decomposition.
 
@@ -5251,6 +5251,7 @@ class DynamicBLMReallocation:
             reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
             categorical_sort_cols (dict or None): in addition to standard quantiles results, return average income grouped by the alternative column(s) given (which are represented by the dictionary {column: number of quantiles to compute}). For categorical variables, use each group as a bin and take the average income within that bin. None is equivalent to {}.
             continuous_sort_cols (dict or None): in addition to standard quantiles results, return average income grouped by the alternative column(s) given (which are represented by the dictionary {column: list of quantiles to compute}). For continuous variables, create bins based on the list of quantiles given in the dictionary. The list of quantiles must start at 0 and end at 1. None is equivalent to {}.
+            unresidualize_col (str or None): column with predicted values that are residualized out, which will be added back in before computing outcomes in order to unresidualize the values; None leaves outcome unchanged
             ncore (int): number of cores for multiprocessing
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
@@ -5307,6 +5308,8 @@ class DynamicBLMReallocation:
         bdf = bdf.to_long(is_sorted=True, copy=False)
         # Compute quantiles (no weights for dynamic BLM)
         y = bdf.loc[:, 'y'].to_numpy()
+        if unresidualize_col is not None:
+            y += bdf.loc[:, unresidualize_col]
         res_baseline = weighted_quantile(values=y, quantiles=quantiles, sample_weight=None)
         for col_cat in categorical_sort_cols.keys():
             ## Categorical sorting variables ##
@@ -5333,6 +5336,8 @@ class DynamicBLMReallocation:
 
             ## Compute quantiles (no weights for dynamic BLM) ##
             y = bdf.loc[:, 'y'].to_numpy()
+            if unresidualize_col is not None:
+                y += bdf.loc[:, unresidualize_col]
             res[i, :] = weighted_quantile(values=y, quantiles=quantiles, sample_weight=None)
             for col_cat in categorical_sort_cols.keys():
                 ## Categorical sorting variables ##

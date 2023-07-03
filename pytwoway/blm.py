@@ -3142,7 +3142,7 @@ class BLMReallocation:
         # No model
         self.model = None
 
-    def fit(self, jdata, sdata, quantiles=None, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, optimal_reallocation=False, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, ncore=1, weighted=True, rng=None):
+    def fit(self, jdata, sdata, quantiles=None, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, unresidualize_col=None, optimal_reallocation=False, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, ncore=1, weighted=True, rng=None):
         '''
         Estimate reallocation exercise.
 
@@ -3158,6 +3158,7 @@ class BLMReallocation:
             reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
             categorical_sort_cols (dict or None): in addition to standard quantiles results, return average income grouped by the alternative column(s) given (which are represented by the dictionary {column: number of quantiles to compute}). For categorical variables, use each group as a bin and take the average income within that bin. None is equivalent to {}.
             continuous_sort_cols (dict or None): in addition to standard quantiles results, return average income grouped by the alternative column(s) given (which are represented by the dictionary {column: list of quantiles to compute}). For continuous variables, create bins based on the list of quantiles given in the dictionary. The list of quantiles must start at 0 and end at 1. None is equivalent to {}.
+            unresidualize_col (str or None): column with predicted values that are residualized out, which will be added back in before computing outcomes in order to unresidualize the values; None leaves outcome unchanged
             optimal_reallocation (bool or str): if not False, reallocate workers to new firms to maximize ('max') or minimize ('min') total output
             qi_j (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if pk1 or qi_cum_j is not None
             qi_s (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each stayer observation to be each worker type; None if pk0 or qi_cum_s is not None
@@ -3235,6 +3236,8 @@ class BLMReallocation:
         bdf = bdf.to_long(is_sorted=True, copy=False)
         # Compute quantiles
         y = bdf.loc[:, 'y'].to_numpy()
+        if unresidualize_col is not None:
+            y += bdf.loc[:, unresidualize_col]
         if weighted and bdf._col_included('w'):
             w = bdf.loc[:, 'w'].to_numpy()
         else:
@@ -3272,6 +3275,8 @@ class BLMReallocation:
 
             ## Compute quantiles ##
             y = bdf.loc[:, 'y'].to_numpy()
+            if unresidualize_col is not None:
+                y += bdf.loc[:, unresidualize_col]
             if weighted and bdf._col_included('w'):
                 w = bdf.loc[:, 'w'].to_numpy()
             else:
