@@ -835,7 +835,7 @@ def rho_init(sdata, rho_0=(0.6, 0.6, 0.6), weights=None, diff=False):
     # Run _var_stayers with optimal rho
     return _var_stayers(sdata, *rho_optim, weights=weights, diff=diff)
 
-def _simulate_types_wages(dynamic_blm_model, jdata, sdata, gj=None, gs=None, pk1=None, pk0=None, qi_cum_j=None, qi_cum_s=None, worker_types_as_ids=True, simulate_wages=True, return_long_df=True, store_worker_types=True, rng=None):
+def _simulate_types_wages(dynamic_blm_model, jdata, sdata, gj=None, gs=None, pk1=None, pk0=None, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, worker_types_as_ids=True, simulate_wages=True, return_long_df=True, store_worker_types=True, rng=None):
     '''
     Using data and estimated BLM parameters, simulate worker types (and optionally wages).
 
@@ -845,10 +845,13 @@ def _simulate_types_wages(dynamic_blm_model, jdata, sdata, gj=None, gs=None, pk1
         sdata (BipartitePandas DataFrame): extended event study format labor data for stayers
         gj (NumPy Array or None): firm classes for movers in the first and last periods; if None, extract from jdata
         gs (NumPy Array or None): firm classes for stayers; if None, extract from sdata
-        pk1 (NumPy Array or None): probability of being at each combination of firm types for movers; None if qi_cum_j is not None
-        pk0 (NumPy Array or None): probability of being at each firm type for stayers; None if qi_cum_s is not None
-        qi_cum_j (NumPy Array or None): cumulative probabilities for each mover observation to be each worker type; None if pk1 is not None
-        qi_cum_s (NumPy Array or None): cumulative probabilities for each stayer observation to be each worker type; None if pk0 is not None
+        pk1 (NumPy Array or None): (use to assign workers to worker types probabilistically based on dgp-level probabilities) probability of being at each combination of firm types for movers; None if qi_j or qi_cum_j is not None
+        pk0 (NumPy Array or None): (use to assign workers to worker types probabilistically based on dgp-level probabilities) probability of being at each firm type for stayers; None if qi_s or qi_cum_s is not None
+        qi_j (NumPy Array or None): (use to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if pk1 or qi_cum_j is not None
+        qi_s (NumPy Array or None): (use to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each stayer observation to be each worker type; None if pk0 or qi_cum_s is not None
+        qi_cum_j (NumPy Array or None): (use to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if pk1 or qi_j is not None
+        qi_cum_s (NumPy Array or None): (use to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each stayer observation to be each worker type; None if pk0 or qi_s is not None
+        optimal_reallocation (bool or str): if not False, reallocate workers to new firms to maximize ('max') or minimize ('min') total output
         worker_types_as_ids (bool): if True, replace worker ids with simulated worker types
         simulate_wages (bool): if True, also simulate wages
         return_long_df (bool): if True, return data as a long-format BipartitePandas DataFrame; otherwise, return tuple of simulated types and wages
@@ -858,6 +861,11 @@ def _simulate_types_wages(dynamic_blm_model, jdata, sdata, gj=None, gs=None, pk1
     Returns:
         (BipartitePandas DataFrame or tuple of NumPy Arrays): if return_long_df is True, return BipartitePandas DataFrame with simulated data; if False, return tuple of (Lm --> vector of mover types; Ls --> vector of stayer types; yj --> tuple of wages for movers for all four periods; ys --> tuple of wages for stayers for all four periods) if simulating wages; otherwise, (Lm, Ls)
     '''
+    if optimal_reallocation and ((pk1 is not None) or (pk0 is not None)):
+        raise ValueError('Cannot specify `optimal_reallocation` with `pk1` and `pk0`.')
+    if optimal_reallocation and (optimal_reallocation not in ['max', 'min']):
+        raise ValueError(f"`optimal_reallocation` must be one of False, 'max', or 'min', but input specifies {optimal_reallocation!r}.")
+
     if rng is None:
         rng = np.random.default_rng(None)
 
@@ -871,38 +879,120 @@ def _simulate_types_wages(dynamic_blm_model, jdata, sdata, gj=None, gs=None, pk1
         gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
 
     ## Simulate worker types ##
-    Lm = tw.simblm._simulate_worker_types_movers(nl=nl, nk=nk, NNm=None, G1=gj[:, 0], G2=gj[:, 1], pk1=pk1, qi_cum=qi_cum_j, simulating_data=False, rng=rng)
-    Ls = tw.simblm._simulate_worker_types_stayers(nl=nl, nk=nk, NNs=None, G=gs, pk0=pk0, qi_cum=qi_cum_s, simulating_data=False, rng=rng)
+    Lm = tw.simblm._simulate_worker_types_movers(nl=nl, nk=nk, NNm=None, G1=gj[:, 0], G2=gj[:, 1], pk1=pk1, qi=qi_j, qi_cum=qi_cum_j, simulating_data=False, rng=rng)
+    Ls = tw.simblm._simulate_worker_types_stayers(nl=nl, nk=nk, NNs=None, G=gs, pk0=pk0, qi=qi_s, qi_cum=qi_cum_s, simulating_data=False, rng=rng)
+
+    if optimal_reallocation:
+        ### Reallocate workers ###
+        ## Firm sizes ##
+        firm_sizes_s = np.bincount(gs)
+        firm_sizes_1 = np.bincount(gj[:, 0]) + firm_sizes_s
+        firm_sizes_2 = np.bincount(gj[:, 1]) + firm_sizes_s
+        del firm_sizes_s
+
+        ## Worker type sizes ##
+        worker_sizes_s = np.bincount(Ls)
+        worker_sizes_1 = np.bincount(Lm) + worker_sizes_s
+        worker_sizes_2 = np.bincount(Lm) + worker_sizes_s
+        del worker_sizes_s
+
+        ### Set up linear programming solver ###
+        # NOTE: Force everybody to become a stayer
+        ## Y ##
+        Y = (
+                dynamic_blm_model.A['12'] + dynamic_blm_model.R12 * (dynamic_blm_model.A['2s'] - dynamic_blm_model.A['2ma']) \
+                + dynamic_blm_model.A['2s'] \
+                + dynamic_blm_model.A['3s'] \
+                + dynamic_blm_model.A['43'] + dynamic_blm_model.R43 * (dynamic_blm_model.A['3s'] - dynamic_blm_model.A['3ma'])
+            ).flatten()
+        if optimal_reallocation == 'min':
+            Y *= -1
+
+        ## Constraints ##
+        cons_a = cons.QPConstrained(nl, nk)
+        cons_a.add_constraints(cons.FirmSum(b=firm_sizes_1, nt=1))
+        cons_a.add_constraints(cons.WorkerSum(b=worker_sizes_1, nt=1))
+        # Bound below at 0
+        cons_a.add_constraints(cons.BoundedBelow(lb=0, nt=1))
+
+        ### Solve ###
+        # NOTE: don't need to constrain to be integers, because will become integers anyway
+        cons_a.solve(Y, -Y, solver='linprog') # , integrality=np.array([1])
+
+        ## Extract optimal allocations ##
+        alloc = np.reshape(np.round(cons_a.res, 0).astype(int, copy=False), (nl, nk))
+
+        ### Apply optimal allocations (make everyone a stayer) ###
+        Ls = np.append(Lm, Ls)
+        Lm = np.array([], dtype=int)
+        gs = np.zeros(len(Ls), dtype=int)
+        # gj = np.zeros((0, 0), dtype=int)
+        idx = np.arange(len(Ls))
+        for l in range(nl):
+            ## Iterate over worker types ##
+            idx_l = idx[Ls == l]
+            # Use a random index so that the same workers aren't always given the same firms (important with control variables)
+            rng.shuffle(idx_l)
+            cum_firms_l = 0
+            for k in range(nk):
+                ## Iterate over firm classes ##
+                gs[idx_l[cum_firms_l: cum_firms_l + alloc[l, k]]] = k
+                cum_firms_l += alloc[l, k]
+
+        ## Convert everyone to stayers ##
+        sdata = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
+        # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
+        sdata._set_attributes(jdata)
+        # Set G1/G2/G3/G4 and J1/J2/J3/J4
+        sdata.loc[:, 'g1'], sdata.loc[:, 'g2'], sdata.loc[:, 'g3'], sdata.loc[:, 'g4'] = (gs, gs, gs, gs)
+        sdata.loc[:, 'j1'], sdata.loc[:, 'j2'], sdata.loc[:, 'j3'], sdata.loc[:, 'j4'] = (gs, gs, gs, gs)
+        # Set m
+        sdata.loc[:, 'm'] = 0
+        # Clear jdata
+        jdata = pd.DataFrame()
 
     if simulate_wages:
         ## Simulate wages ##
-        yj = tw.simdblm._simulate_wages_movers(jdata, Lm, dynamic_blm_model=dynamic_blm_model, rng=rng)
-        ys = tw.simdblm._simulate_wages_stayers(sdata, Ls, dynamic_blm_model=dynamic_blm_model, rng=rng)
+        if len(jdata) > 0:
+            yj = tw.simdblm._simulate_wages_movers(jdata, Lm, dynamic_blm_model=dynamic_blm_model, G1=gj[:, 0], G2=gj[:, 1], rng=rng)
+        else:
+            yj = (np.array([]), np.array([]), np.array([]), np.array([]))
+        if len(sdata) > 0:
+            ys = tw.simdblm._simulate_wages_stayers(sdata, Ls, dynamic_blm_model=dynamic_blm_model, G=gs, rng=rng)
+        else:
+            ys = (np.array([]), np.array([]), np.array([]), np.array([]))
 
     if not return_long_df:
         if simulate_wages:
             return (Lm, Ls, yj, ys)
         return (Lm, Ls)
 
+    ## Convert to BipartitePandas DataFrame ##
+    bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
+    # Set attributes from sdata, so that conversion to long works (since pd.concat drops attributes)
+    bdf._set_attributes(sdata)
+
     with bpd.util.ChainedAssignment():
         if worker_types_as_ids:
             ## Update worker types ##
-            jdata.loc[:, 'i'] = Lm
-            sdata.loc[:, 'i'] = Ls
+            bdf.loc[:, 'i'] = np.append(Lm, Ls)
         elif store_worker_types:
-            jdata = jdata.add_column('l', Lm, is_categorical=True, dtype='categorical')
-            sdata = sdata.add_column('l', Ls, is_categorical=True, dtype='categorical')
+            bdf = bdf.add_column(
+                'l',
+                [np.append(Lm, Ls)],
+                is_categorical=True,
+                dtype='categorical',
+                long_es_split=False,
+                copy=False)
         if simulate_wages:
             ## Update wages ##
-            jdata.loc[:, 'y1'], jdata.loc[:, 'y2'], jdata.loc[:, 'y3'], jdata.loc[:, 'y4'] = yj
-            sdata.loc[:, 'y1'], sdata.loc[:, 'y2'], sdata.loc[:, 'y3'], sdata.loc[:, 'y4'] = ys
+            bdf.loc[:, 'y1'] = np.append(yj[0], ys[0])
+            bdf.loc[:, 'y2'] = np.append(yj[1], ys[1])
+            bdf.loc[:, 'y3'] = np.append(yj[2], ys[2])
+            bdf.loc[:, 'y4'] = np.append(yj[3], ys[3])
             del yj, ys
         del Lm, Ls
 
-    ## Convert to BipartitePandas DataFrame ##
-    bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
-    # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
-    bdf._set_attributes(jdata)
     # If simulating worker types, data is not sorted
     bdf = bdf.to_long(is_sorted=(not worker_types_as_ids), copy=False)
 
@@ -1286,6 +1376,27 @@ class DynamicBLMModel:
                                 cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp, nt=nt, dynamic=True))
 
         return (cons_a, cons_s, cons_a_dict, cons_s_dict)
+
+    def sorted_firm_classes(self):
+        '''
+        Return list of sorted firm classes based on estimated parameters.
+
+        Returns:
+            (NumPy Array): new firm class order
+        '''
+        ## Unpack attributes ##
+        params = self.params
+        A = self.A
+
+        ## Primary period ##
+        if params['primary_period'] == 'first':
+            A_mean = A['12']
+        elif params['primary_period'] == 'second':
+            A_mean = A['43']
+        elif params['primary_period'] == 'all':
+            A_mean = (A['12'] + A['43']) / 2
+
+        return np.mean(A_mean, axis=0).argsort()
 
     def _sort_parameters(self, A, S=None, A_cat=None, S_cat=None, A_cts=None, S_cts=None, pk1=None, pk0=None, NNm=None, NNs=None, sort_firm_types=False, reverse=False):
         '''
@@ -5058,7 +5169,7 @@ class DynamicBLMBootstrap:
 
 class DynamicBLMVarianceDecomposition:
     '''
-    Class for estimating dynamic BLM variance decomposition using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'var_decomp' gives the results for the variance decomposition, and the key 'var_decomp_comp' optionally gives the results for the variance decomposition with complementarities.
+    Class for estimating dynamic BLM variance decomposition using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'var_decomp' gives the results for the variance decomposition, the key 'var_decomp_comp' optionally gives the results for the variance decomposition with complementarities, and the key 'var_decomp_comp_t' optionally gives the results for the variance decomposition with time-varying complementarities.
 
     Arguments:
         params (ParamsDict): dictionary of parameters for dynamic BLM estimation. Run tw.dynamic_blm_params().describe_all() for descriptions of all valid parameters.
@@ -5069,7 +5180,7 @@ class DynamicBLMVarianceDecomposition:
         # No initial results
         self.res = None
 
-    def fit(self, jdata, sdata, dynamic_blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', Q_var=None, Q_cov=None, complementarities=True, firm_clusters_as_ids=True, worker_types_as_ids=True, ncore=1, rng=None):
+    def fit(self, jdata, sdata, dynamic_blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', Q_var=None, Q_cov=None, complementarities=True, time_varying_complementarities=False, firm_clusters_as_ids=True, worker_types_as_ids=True, ncore=1, rng=None):
         '''
         Estimate variance decomposition.
 
@@ -5086,6 +5197,7 @@ class DynamicBLMVarianceDecomposition:
             Q_var (list of Q variances): list of Q matrices to use when estimating variance term; None is equivalent to tw.Q.VarPsi() without controls, or tw.Q.VarCovariate('psi') with controls
             Q_cov (list of Q covariances): list of Q matrices to use when estimating covariance term; None is equivalent to tw.Q.CovPsiAlpha() without controls, or tw.Q.CovCovariate('psi', 'alpha') with controls
             complementarities (bool): if True, also estimate R^2 of regression with complementarities (by adding in all worker-firm interactions). Only allowed when firm_clusters_as_ids=True and worker_types_as_ids=True.
+            time_varying_complementarities (bool): if True, estimate R^2 of regression with time-varying complementarities (by adding in all worker-firm-time interactions). Only allowed when firm_clusters_as_ids=True and worker_types_as_ids=True.
             firm_clusters_as_ids (bool): if True, replace firm ids with firm clusters
             worker_types_as_ids (bool): if True, replace worker ids with simulated worker types
             ncore (int): number of cores for multiprocessing
@@ -5093,9 +5205,16 @@ class DynamicBLMVarianceDecomposition:
         '''
         if complementarities and ((not firm_clusters_as_ids) or (not worker_types_as_ids)):
             raise ValueError('If `complementarities=True`, then must also set `firm_clusters_as_ids=True` and `worker_types_as_ids=True`.')
+        if time_varying_complementarities and ((not firm_clusters_as_ids) or (not worker_types_as_ids)):
+            raise ValueError('If `time_varying_complementarities=True`, then must also set `firm_clusters_as_ids=True` and `worker_types_as_ids=True`.')
+        if time_varying_complementarities and ((not jdata._col_included('t')) or (not sdata._col_included('t'))):
+            raise ValueError('If `time_varying_complementarities=True`, then jdata and sdata must include time data.')
 
         if rng is None:
             rng = np.random.default_rng(None)
+
+        # Parameter dictionary
+        params = self.params
 
         # FE parameters
         no_cat_controls = (self.params['categorical_controls'] is None) or (len(self.params['categorical_controls']) == 0)
@@ -5145,6 +5264,9 @@ class DynamicBLMVarianceDecomposition:
             sdata = sdata.construct_artificial_time(is_sorted=True, copy=False)
             ts = True
 
+        ## Unpack parameters ##
+        nl, nk = params.get_multiple(('nl', 'nk'))
+
         if dynamic_blm_model is None:
             # Run initial BLM estimator
             blm_fit_init = DynamicBLMEstimator(self.params)
@@ -5163,7 +5285,8 @@ class DynamicBLMVarianceDecomposition:
         res_lst = []
         if complementarities:
             res_lst_comp = []
-            nl = dynamic_blm_model.nl
+        if time_varying_complementarities:
+            res_lst_comp_t = []
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
             bdf = _simulate_types_wages(dynamic_blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_cum_j=None, qi_cum_s=None, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
@@ -5184,6 +5307,18 @@ class DynamicBLMVarianceDecomposition:
                     fe_estimator = tw.FEControlEstimator(bdf, fe_params_comp)
                 fe_estimator.fit()
                 res_lst_comp.append(fe_estimator.summary)
+            if time_varying_complementarities:
+                ## Estimate OLS with time-varying complementarities ##
+                if complementarities:
+                    bdf.loc[:, 'i'] = pd.factorize(bdf.loc[:, 'i'].to_numpy() + nl * nk * bdf.loc[:, 't'].to_numpy())[0]
+                else:
+                    bdf.loc[:, 'i'] = pd.factorize(bdf.loc[:, 'i'].to_numpy() + nl * bdf.loc[:, 'j'].to_numpy() + nl * nk * bdf.loc[:, 't'].to_numpy())[0]
+                if no_controls:
+                    fe_estimator = tw.FEEstimator(bdf, fe_params_comp)
+                else:
+                    fe_estimator = tw.FEControlEstimator(bdf, fe_params_comp)
+                fe_estimator.fit()
+                res_lst_comp_t.append(fe_estimator.summary)
 
         with bpd.util.ChainedAssignment():
             # Restore original wages and optionally ids
@@ -5206,11 +5341,18 @@ class DynamicBLMVarianceDecomposition:
             for i in range(n_samples):
                 for k, v in res_lst_comp[i].items():
                     res_comp[k][i] = v
+        if time_varying_complementarities:
+            res_comp_t = {k: np.zeros(n_samples) for k in res_lst_comp_t[0].keys()}
+            for i in range(n_samples):
+                for k, v in res_lst_comp_t[i].items():
+                    res_comp_t[k][i] = v
 
         # Remove '_fe' from result names
         res = {k.replace('_fe', ''): v for k, v in res.items()}
         if complementarities:
             res_comp = {k.replace('_fe', ''): v for k, v in res_comp.items()}
+        if time_varying_complementarities:
+            res_comp_t = {k.replace('_fe', ''): v for k, v in res_comp_t.items()}
 
         # Drop time column
         if tj:
@@ -5218,13 +5360,15 @@ class DynamicBLMVarianceDecomposition:
         if ts:
             sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
 
-        self.res = {'var_decomp': res, 'var_decomp_comp': None}
+        self.res = {'var_decomp': res, 'var_decomp_comp': None, 'var_decomp_comp_t': None}
         if complementarities:
             self.res['var_decomp_comp'] = res_comp
+        if time_varying_complementarities:
+            self.res['var_decomp_comp_t'] = res_comp_t
 
 class DynamicBLMReallocation:
     '''
-    Class for estimating dynamic BLM reallocation exercise using bootstrapping. Results are stored in class attribute .res, which gives a dictionary with the following structure: baseline results are stored in key 'baseline'. Reallocation results are stored in key 'reallocation'. Within each sub-dictionary, primary outcome results are stored in the key 'outcome', categorical results are stored in the key 'cat', and continuous results are stored in the key 'cts'.
+    Class for estimating dynamic BLM reallocation exercise using bootstrapping. Results are stored in class attribute .res, which gives a dictionary with the following structure: baseline results are stored in key 'baseline'. Reallocation results are stored in key 'reallocation'. Within each sub-dictionary, primary outcome results are stored in the key 'outcome', categorical results are stored in the key 'cat', continuous results are stored in the key 'cts', type proportions for movers are stored in the key 'pk1', type proportions for stayers are stored in the key 'pk0', firm-level mover flow counts are stored in the key 'NNm', and firm-level stayer counts are stored in the key 'NNs'.
 
     Arguments:
         params (ParamsDict): dictionary of parameters for dynamic BLM estimation. Run tw.dynamic_blm_params().describe_all() for descriptions of all valid parameters.
@@ -5234,8 +5378,10 @@ class DynamicBLMReallocation:
         self.params = params
         # No initial results
         self.res = None
+        # No model
+        self.model = None
 
-    def fit(self, jdata, sdata, quantiles=None, dynamic_blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, unresidualize_col=None, ncore=1, rng=None):
+    def fit(self, jdata, sdata, quantiles=None, dynamic_blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, unresidualize_col=None, optimal_reallocation=False, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, ncore=1, rng=None):
         '''
         Estimate variance decomposition.
 
@@ -5252,9 +5398,17 @@ class DynamicBLMReallocation:
             categorical_sort_cols (dict or None): in addition to standard quantiles results, return average income grouped by the alternative column(s) given (which are represented by the dictionary {column: number of quantiles to compute}). For categorical variables, use each group as a bin and take the average income within that bin. None is equivalent to {}.
             continuous_sort_cols (dict or None): in addition to standard quantiles results, return average income grouped by the alternative column(s) given (which are represented by the dictionary {column: list of quantiles to compute}). For continuous variables, create bins based on the list of quantiles given in the dictionary. The list of quantiles must start at 0 and end at 1. None is equivalent to {}.
             unresidualize_col (str or None): column with predicted values that are residualized out, which will be added back in before computing outcomes in order to unresidualize the values; None leaves outcome unchanged
+            optimal_reallocation (bool or str): if not False, reallocate workers to new firms to maximize ('max') or minimize ('min') total output
+            qi_j (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if pk1 or qi_cum_j is not None
+            qi_s (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each stayer observation to be each worker type; None if pk0 or qi_cum_s is not None
+            qi_cum_j (NumPy Array or None): (use with optimal_reallocation to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if pk1 or qi_j is not None
+            qi_cum_s (NumPy Array or None): (use with optimal_reallocation to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each stayer observation to be each worker type; None if pk0 or qi_s is not None
             ncore (int): number of cores for multiprocessing
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
+        if optimal_reallocation and ((qi_j is None) + (qi_s is None) + (qi_cum_j is None) + (qi_cum_s is None) != 2):
+            raise ValueError('With `optimal_reallocation`, must specify one of `qi_j` or `qi_cum_j` for movers and `qi_s` or `qi_cum_s` for stayers.')
+
         if quantiles is None:
             quantiles = np.arange(101) / 100
         if categorical_sort_cols is None:
@@ -5264,6 +5418,9 @@ class DynamicBLMReallocation:
         if rng is None:
             rng = np.random.default_rng(None)
 
+        # Parameter dictionary
+        params = self.params
+
         # Make sure continuous quantiles start at 0 and end at 1
         for col_cts, quantiles_cts in continuous_sort_cols.items():
             if quantiles_cts[0] != 0:
@@ -5271,9 +5428,11 @@ class DynamicBLMReallocation:
             elif quantiles_cts[-1] != 1:
                 raise ValueError(f'Highest quantile associated with continuous column {col_cts} must be 1.')
 
-        # Copy original wages and firm types
+        # Copy original wages, firm ids, and firm types
         yj = jdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
         ys = sdata.loc[:, ['y1', 'y2', 'y3', 'y4']].to_numpy().copy()
+        jj = jdata.loc[:, ['j1', 'j4']].to_numpy().copy()
+        js = sdata.loc[:, 'j1'].to_numpy().copy()
         gj = jdata.loc[:, ['g1', 'g4']].to_numpy().astype(int, copy=True)
         gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
         tj = False
@@ -5285,17 +5444,24 @@ class DynamicBLMReallocation:
             sdata = sdata.construct_artificial_time(is_sorted=True, copy=False)
             ts = True
 
+        ## Unpack parameters ##
+        nl, nk = params.get_multiple(('nl', 'nk'))
+
         if dynamic_blm_model is None:
-            # Run initial BLM estimator
+            ## Run initial BLM estimator ##
             blm_fit_init = DynamicBLMEstimator(self.params)
             blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
             dynamic_blm_model = blm_fit_init.model
+        self.model = dynamic_blm_model
 
         ## Unpack parameters ##
         NNm, NNs = dynamic_blm_model.NNm, dynamic_blm_model.NNs
 
         ## Reallocate ##
-        pk1, pk0 = tw.simblm._reallocate(pk1=dynamic_blm_model.pk1, pk0=dynamic_blm_model.pk0, NNm=NNm, NNs=NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
+        if optimal_reallocation:
+            pk1, pk0 = None, None
+        else:
+            pk1, pk0 = tw.simblm._reallocate(pk1=dynamic_blm_model.pk1, pk0=dynamic_blm_model.pk0, NNm=NNm, NNs=NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
 
         ## Baseline ##
         res_cat_baseline = {}
@@ -5330,9 +5496,13 @@ class DynamicBLMReallocation:
         res = np.zeros([n_samples, len(quantiles)])
         res_cat = {col: np.zeros([n_samples, n_quantiles]) for col, n_quantiles in categorical_sort_cols.items()}
         res_cts = {col: np.zeros([n_samples, len(quantiles) - 1]) for col, quantiles in continuous_sort_cols.items()}
+        pk1_res = np.zeros([n_samples, nk * nk, nl])
+        pk0_res = np.zeros([n_samples, nk, nl])
+        NNm_res = np.zeros([n_samples, nk, nk])
+        NNs_res = np.zeros([n_samples, nk])
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
-            bdf = _simulate_types_wages(dynamic_blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_cum_j=None, qi_cum_s=None, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
+            bdf = _simulate_types_wages(dynamic_blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=qi_j, qi_s=qi_s, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=optimal_reallocation, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=True, rng=rng)
 
             ## Compute quantiles (no weights for dynamic BLM) ##
             y = bdf.loc[:, 'y'].to_numpy()
@@ -5354,10 +5524,40 @@ class DynamicBLMReallocation:
                 res_cts[col_cts][i, :] =\
                     np.bincount(quantile_groups, weights=y) / np.bincount(quantile_groups, weights=None)
 
+            ## Compute type proportions ##
+            bdf = bdf.to_extendedeventstudy(is_sorted=True, copy=False)
+            # NOTE: unweighted
+            m = (bdf.loc[:, 'm'] > 0)
+
+            if not optimal_reallocation:
+                # Compute pk1
+                pk1_i = bdf.loc[m, ['g1', 'g4', 'l']].groupby(['g1', 'g4'])['l'].value_counts().unstack(fill_value=0).to_numpy().reshape((nk * nk, nl))
+                # Normalize rows to sum to 1
+                pk1_i = DxM(1 / np.sum(pk1_i, axis=1), pk1_i)
+                # Store
+                pk1_res[i, :, :] = pk1_i
+            # Compute pk0
+            pk0_i = bdf.loc[~m, ['g1', 'l']].groupby('g1')['l'].value_counts().unstack(fill_value=0).to_numpy().reshape((nk, nl))
+            # Normalize rows to sum to 1
+            pk0_i = DxM(1 / np.sum(pk0_i, axis=1), pk0_i)
+            # Store
+            pk0_res[i, :, :] = pk0_i
+
+            ## Compute firm-level worker counts ##
+            if not optimal_reallocation:
+                NNm_res[i, :, :] = bdf.loc[m, ['g1', 'g4']].groupby('g1')['g4'].value_counts().unstack(fill_value=0).to_numpy()
+            NNs_i = bdf.loc[~m, 'g1'].value_counts(sort=False)
+            NNs_i.sort_index(inplace=True)
+            NNs_res[i, :] = NNs_i.to_numpy()
+
         with bpd.util.ChainedAssignment():
-            # Restore original wages and optionally ids
+            # Restore original wages, firm ids, and firm types
             jdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = yj
             sdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = ys
+            jdata.loc[:, ['j1', 'j3']], jdata.loc[:, ['j2', 'j4']] = (jj, jj)
+            sdata.loc[:, 'j1'], sdata.loc[:, 'j2'], sdata.loc[:, 'j3'], sdata.loc[:, 'j4'] = (js, js, js, js)
+            jdata.loc[:, ['g1', 'g3']], jdata.loc[:, ['g2', 'g4']] = (gj, gj)
+            sdata.loc[:, 'g1'], sdata.loc[:, 'g2'], sdata.loc[:, 'g3'], sdata.loc[:, 'g4'] = (gs, gs, gs, gs)
 
         # Drop time column
         if tj:
@@ -5375,9 +5575,91 @@ class DynamicBLMReallocation:
             'reallocation': {
                 'outcome': res,
                 'cat': res_cat,
-                'cts': res_cts
+                'cts': res_cts,
+                'pk1': pk1_res,
+                'pk0': pk0_res,
+                'NNm': NNm_res,
+                'NNs': NNs_res
                 }
         }
+
+    def plot_type_proportions(self, period='first', subset='stayers', xlabel='firm class k', ylabel='type proportions', title='Proportions of worker types', dpi=None):
+        '''
+        Plot proportions of worker types at each firm class.
+
+        Arguments:
+            period (str): 'first' plots type proportions in the first period; 'second' plots type proportions in the second period; 'all' plots the average over type proportions in the first and second periods
+            subset (str): 'all' plots a weighted average over movers and stayers; 'movers' plots movers; 'stayers' plots stayers (for optimal reallocation, all observations are stayers, so only 'stayers' will run)
+            xlabel (str): label for x-axis
+            ylabel (str): label for y-axis
+            title (str): plot title
+            dpi (float or None): dpi for plot
+        '''
+        if self.res is None:
+            warnings.warn('Estimation has not yet been run.')
+        else:
+            nl, nk = self.params.get_multiple(('nl', 'nk'))
+            model = self.model
+            pk1_res = self.res['reallocation']['pk1']
+            pk0_res = self.res['reallocation']['pk0']
+            NNm_res = self.res['reallocation']['NNm']
+            NNs_res = self.res['reallocation']['pk0']
+
+            ## Compute average type proportions ##
+            pk_mean = np.zeros((nk, nl))
+            for i in range(pk1_res.shape[0]):
+                # Sort by firm effects
+                A, pk1, pk0, NNm, NNs = model._sort_parameters(model.A, pk1=pk1_res[i, :, :], pk0=pk0_res[i, :, :], NNm=NNm_res[i, :, :], NNs=NNs_res[i, :], sort_firm_types=True)
+
+                ## Extract subset(s) ##
+                if subset == 'movers':
+                    NNm_1 = np.sum(NNm, axis=1)
+                    NNm_2 = np.sum(NNm, axis=0)
+                    reshaped_pk1 = np.reshape(pk1, (nk, nk, nl))
+                    pk_period1 = (np.sum((NNm.T * reshaped_pk1.T).T, axis=1).T / NNm_1).T
+                    pk_period2 = (np.sum((NNm.T * reshaped_pk1.T).T, axis=0).T / NNm_2).T
+                elif subset == 'stayers':
+                    pk_period1 = pk0
+                    pk_period2 = pk0
+                elif subset == 'all':
+                    NNm_1 = np.sum(NNm, axis=1)
+                    NNm_2 = np.sum(NNm, axis=0)
+                    # First, pk1 #
+                    reshaped_pk1 = np.reshape(pk1, (nk, nk, nl))
+                    pk1_period1 = (np.sum((NNm.T * reshaped_pk1.T).T, axis=1).T / NNm_1).T
+                    pk1_period2 = (np.sum((NNm.T * reshaped_pk1.T).T, axis=0).T / NNm_2).T
+                    # Second, take weighted average over pk1 and pk0 #
+                    pk_period1 = ((NNm_1 * pk1_period1.T + NNs * pk0.T) / (NNm_1 + NNs)).T
+                    pk_period2 = ((NNm_2 * pk1_period2.T + NNs * pk0.T) / (NNm_2 + NNs)).T
+                else:
+                    raise ValueError(f"`subset` must be one of 'all', 'movers' or 'stayers', but input specifies {subset!r}.")
+
+                ## Consider correct period(s) ##
+                if period == 'first':
+                    pk_mean += pk_period1
+                elif period == 'second':
+                    pk_mean += pk_period2
+                elif period == 'all':
+                    pk_mean += (pk_period1 + pk_period2) / 2
+                else:
+                    raise ValueError(f"`period` must be one of 'first', 'second' or 'all', but input specifies {period!r}.")
+
+            ## Take mean over all models ##
+            pk_mean /= pk1_res.shape[0]
+
+            ## Compute cumulative sum ##
+            pk_cumsum = np.cumsum(pk_mean, axis=1)
+
+            ## Plot ##
+            fig, ax = plt.subplots(dpi=dpi)
+            x_axis = np.arange(1, nk + 1).astype(str)
+            ax.bar(x_axis, pk_mean[:, 0])
+            for l in range(1, nl):
+                ax.bar(x_axis, pk_mean[:, l], bottom=pk_cumsum[:, l - 1])
+            ax.set_xlabel(xlabel)
+            ax.set_ylabel(ylabel)
+            ax.set_title(title)
+            plt.show()
 
 class DynamicBLMTransitions:
     '''

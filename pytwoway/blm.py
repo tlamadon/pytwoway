@@ -21,7 +21,7 @@ import bipartitepandas as bpd
 from bipartitepandas.util import to_list, HiddenPrints # , _is_subtype
 import pytwoway as tw
 from pytwoway import constraints as cons
-from pytwoway.util import weighted_quantile, DxSP, DxM, diag_of_sp_prod, jitter_scatter, exp_, log_, logsumexp, lognormpdf, fast_lognormpdf
+from pytwoway.util import weighted_mean, weighted_quantile, DxSP, DxM, diag_of_sp_prod, jitter_scatter, exp_, log_, logsumexp, lognormpdf, fast_lognormpdf
 
 # NOTE: multiprocessing isn't compatible with lambda functions
 def _gteq2(a):
@@ -318,9 +318,6 @@ def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, p
         qi_s (NumPy Array or None): (use to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each stayer observation to be each worker type; None if pk0 or qi_cum_s is not None
         qi_cum_j (NumPy Array or None): (use to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if pk1 or qi_j is not None
         qi_cum_s (NumPy Array or None): (use to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each stayer observation to be each worker type; None if pk0 or qi_s is not None
-        wj1 (NumPy Array or None): mover weights for the first period; if None, don't weight
-        wj2 (NumPy Array or None): mover weights for the second period; if None, don't weight
-        ws (NumPy Array or None): stayer weights; if None, don't weight
         optimal_reallocation (bool or str): if not False, reallocate workers to new firms to maximize ('max') or minimize ('min') total output
         worker_types_as_ids (bool): if True, replace worker ids with simulated worker types
         simulate_wages (bool): if True, also simulate wages
@@ -421,7 +418,7 @@ def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, p
         sdata = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
         # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
         sdata._set_attributes(jdata)
-        # Set G1 and G2, and J1 and J2
+        # Set G1/G2 and J1/J2
         sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
         sdata.loc[:, 'j1'], sdata.loc[:, 'j2'] = (gs, gs)
         # Set m
@@ -473,6 +470,84 @@ def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, p
     bdf = bdf.to_long(is_sorted=(not worker_types_as_ids), copy=False)
 
     return bdf
+
+def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, subset='all', xlabel='year', ylabel='type proportions', title='Worker type proportions over time', dpi=None):
+    '''
+    Plot worker type proportions over time.
+
+    Arguments:
+        jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
+        sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
+        qi_j (NumPy Array): probabilities for each mover observation to be each worker type
+        qi_s (NumPy Array): probabilities for each stayer observation to be each worker type
+        dynamic (bool): if False, plotting estimates from static BLM; if True, plotting estimates from dynamic BLM
+        subset (str): 'all' plots a weighted average over movers and stayers; 'movers' plots movers; 'stayers' plots stayers
+        xlabel (str): label for x-axis
+        ylabel (str): label for y-axis
+        title (str): plot title
+        dpi (float or None): dpi for plot
+    '''
+    if (not jdata._col_included('t')) or (not sdata._col_included('t')):
+        raise ValueError('jdata and sdata must include time data.')
+
+    ## Unpack parameters ##
+    nl = qi_j.shape[1]
+    if not dynamic:
+        nt = 2
+    else:
+        nt = 4
+    weighted = jdata._col_included('w')
+
+    ## Add qi probabilities to dataframes ##
+    qi_cols_es = [f'qi{t + 1}{l + 1}' for t in range(nt) for l in range(nl)]
+    qi_cols_long = [f'qi{l + 1}' for l in range(nl)]
+    if subset in ['movers', 'all']:
+        jdata = jdata.add_column('qi', [qi_j[:, l] for l in range(nl)] * 2, col_reference=qi_cols_es, long_es_split=True, copy=True)
+    if subset in ['stayers', 'all']:
+        sdata = sdata.add_column('qi', [qi_s[:, l] for l in range(nl)] * 2, col_reference=qi_cols_es, long_es_split=True, copy=True)
+    ## Convert to BipartitePandas DataFrame ##
+    if subset == 'movers':
+        bdf = jdata
+    elif subset == 'stayers':
+        bdf = sdata
+    elif subset == 'all':
+        bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
+        # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
+        bdf._set_attributes(jdata)
+
+    bdf = bdf.to_long(is_sorted=True, copy=False)
+    if isinstance(bdf, bpd.BipartiteLongCollapsed):
+        bdf = bdf.uncollapse(is_sorted=True, copy=False)
+
+    ## Plot over time ##
+    t_col = bdf.loc[:, 't'].to_numpy()
+    all_t = np.unique(t_col)
+    type_proportions = np.zeros([len(all_t), nl])
+    for t in all_t:
+        bdf_t = bdf.loc[t_col == t, :]
+        if weighted:
+            w_t = bdf_t.loc[:, 'w'].to_numpy()
+            # Number of observations per firm class per period
+            type_proportions[t, :] = np.sum(w_t[:, None] * bdf_t.loc[:, qi_cols_long].to_numpy(), axis=0)
+        else:
+            # Number of observations per firm class per period
+            type_proportions[t, :] = np.sum(bdf_t.loc[:, qi_cols_long].to_numpy(), axis=0)
+        # Normalize to proportions
+        type_proportions[t, :] /= type_proportions[t, :].sum()
+
+    ## Compute cumulative sum ##
+    type_props_cumsum = np.cumsum(type_proportions, axis=1)
+
+    ## Plot ##
+    fig, ax = plt.subplots(dpi=dpi)
+    x_axis = all_t.astype(str)
+    ax.bar(x_axis, type_proportions[:, 0])
+    for t in range(1, len(all_t)):
+        ax.bar(x_axis, type_proportions[:, t], bottom=type_props_cumsum[:, t - 1])
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    plt.show()
 
 class BLMModel:
     '''
@@ -770,6 +845,27 @@ class BLMModel:
                             cons_a.add_constraints(cons.NormalizeLowest(min_firm_type=min_firm_type, cross_period_normalize=True, nnt=pp))
 
         return (cons_a, cons_s, cons_a_dict, cons_s_dict)
+
+    def sorted_firm_classes(self):
+        '''
+        Return list of sorted firm classes based on estimated parameters.
+
+        Returns:
+            (NumPy Array): new firm class order
+        '''
+        ## Unpack attributes ##
+        params = self.params
+        A1, A2 = self.A1, self.A2
+
+        ## Primary period ##
+        if params['primary_period'] == 'first':
+            A_mean = A1
+        elif params['primary_period'] == 'second':
+            A_mean = A2
+        elif params['primary_period'] == 'all':
+            A_mean = (A1 + A2) / 2
+
+        return np.mean(A_mean, axis=0).argsort()
 
     def _sort_parameters(self, A1, A2, S1=None, S2=None, A1_cat=None, A2_cat=None, S1_cat=None, S2_cat=None, A1_cts=None, A2_cts=None, S1_cts=None, S2_cts=None, pk1=None, pk0=None, NNm=None, NNs=None, sort_firm_types=False, reverse=False):
         '''
@@ -2969,7 +3065,7 @@ class BLMVarianceDecomposition:
         # No initial results
         self.res = None
 
-    def fit(self, jdata, sdata, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', Q_var=None, Q_cov=None, complementarities=True, firm_clusters_as_ids=True, worker_types_as_ids=True, ncore=1, rng=None):
+    def fit(self, jdata, sdata, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', Q_var=None, Q_cov=None, complementarities=True, time_varying_complementarities=False, firm_clusters_as_ids=True, worker_types_as_ids=True, ncore=1, rng=None):
         '''
         Estimate variance decomposition.
 
@@ -2986,6 +3082,7 @@ class BLMVarianceDecomposition:
             Q_var (list of Q variances): list of Q matrices to use when estimating variance term; None is equivalent to tw.Q.VarPsi() without controls, or tw.Q.VarCovariate('psi') with controls
             Q_cov (list of Q covariances): list of Q matrices to use when estimating covariance term; None is equivalent to tw.Q.CovPsiAlpha() without controls, or tw.Q.CovCovariate('psi', 'alpha') with controls
             complementarities (bool): if True, estimate R^2 of regression with complementarities (by adding in all worker-firm interactions). Only allowed when firm_clusters_as_ids=True and worker_types_as_ids=True.
+            time_varying_complementarities (bool): if True, estimate R^2 of regression with time-varying complementarities (by adding in all worker-firm-time interactions). Only allowed when firm_clusters_as_ids=True and worker_types_as_ids=True.
             firm_clusters_as_ids (bool): if True, replace firm ids with firm clusters
             worker_types_as_ids (bool): if True, replace worker ids with simulated worker types
             ncore (int): number of cores for multiprocessing
@@ -2993,6 +3090,10 @@ class BLMVarianceDecomposition:
         '''
         if complementarities and ((not firm_clusters_as_ids) or (not worker_types_as_ids)):
             raise ValueError('If `complementarities=True`, then must also set `firm_clusters_as_ids=True` and `worker_types_as_ids=True`.')
+        if time_varying_complementarities and ((not firm_clusters_as_ids) or (not worker_types_as_ids)):
+            raise ValueError('If `time_varying_complementarities=True`, then must also set `firm_clusters_as_ids=True` and `worker_types_as_ids=True`.')
+        if time_varying_complementarities and ((not jdata._col_included('t')) or (not sdata._col_included('t'))):
+            raise ValueError('If `time_varying_complementarities=True`, then jdata and sdata must include time data.')
 
         if rng is None:
             rng = np.random.default_rng(None)
@@ -3069,7 +3170,8 @@ class BLMVarianceDecomposition:
         res_lst = []
         if complementarities:
             res_lst_comp = []
-            nl = blm_model.nl
+        if time_varying_complementarities:
+            res_lst_comp_t = []
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
             bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=True, rng=rng)
@@ -3089,6 +3191,18 @@ class BLMVarianceDecomposition:
                     fe_estimator = tw.FEControlEstimator(bdf, fe_params_comp)
                 fe_estimator.fit()
                 res_lst_comp.append(fe_estimator.summary)
+            if time_varying_complementarities:
+                ## Estimate OLS with time-varying complementarities ##
+                if complementarities:
+                    bdf.loc[:, 'i'] = pd.factorize(bdf.loc[:, 'i'].to_numpy() + nl * nk * bdf.loc[:, 't'].to_numpy())[0]
+                else:
+                    bdf.loc[:, 'i'] = pd.factorize(bdf.loc[:, 'i'].to_numpy() + nl * bdf.loc[:, 'j'].to_numpy() + nl * nk * bdf.loc[:, 't'].to_numpy())[0]
+                if no_controls:
+                    fe_estimator = tw.FEEstimator(bdf, fe_params_comp)
+                else:
+                    fe_estimator = tw.FEControlEstimator(bdf, fe_params_comp)
+                fe_estimator.fit()
+                res_lst_comp_t.append(fe_estimator.summary)
 
         with bpd.util.ChainedAssignment():
             # Restore original wages and optionally ids
@@ -3111,11 +3225,18 @@ class BLMVarianceDecomposition:
             for i in range(n_samples):
                 for k, v in res_lst_comp[i].items():
                     res_comp[k][i] = v
+        if time_varying_complementarities:
+            res_comp_t = {k: np.zeros(n_samples) for k in res_lst_comp_t[0].keys()}
+            for i in range(n_samples):
+                for k, v in res_lst_comp_t[i].items():
+                    res_comp_t[k][i] = v
 
         # Remove '_fe' from result names
         res = {k.replace('_fe', ''): v for k, v in res.items()}
         if complementarities:
             res_comp = {k.replace('_fe', ''): v for k, v in res_comp.items()}
+        if time_varying_complementarities:
+            res_comp_t = {k.replace('_fe', ''): v for k, v in res_comp_t.items()}
 
         # Drop time column
         if tj:
@@ -3123,9 +3244,11 @@ class BLMVarianceDecomposition:
         if ts:
             sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
 
-        self.res = {'var_decomp': res, 'var_decomp_comp': None}
+        self.res = {'var_decomp': res, 'var_decomp_comp': None, 'var_decomp_comp_t': None}
         if complementarities:
             self.res['var_decomp_comp'] = res_comp
+        if time_varying_complementarities:
+            self.res['var_decomp_comp_t'] = res_comp_t
 
 class BLMReallocation:
     '''
@@ -3190,7 +3313,7 @@ class BLMReallocation:
             elif quantiles_cts[-1] != 1:
                 raise ValueError(f'Highest quantile associated with continuous column {col_cts} must be 1.')
 
-        # Copy original wages, firm ids, firm types, and optionally ids
+        # Copy original wages, firm ids, and firm types
         yj = jdata.loc[:, ['y1', 'y2']].to_numpy().copy()
         ys = sdata.loc[:, ['y1', 'y2']].to_numpy().copy()
         jj = jdata.loc[:, ['j1', 'j2']].to_numpy().copy()
@@ -3303,7 +3426,7 @@ class BLMReallocation:
             ## Compute type proportions ##
             bdf = bdf.to_eventstudy(is_sorted=True, copy=False)
             # NOTE: unweighted
-            m = bdf.loc[:, 'm'] > 0
+            m = (bdf.loc[:, 'm'] > 0)
 
             if not optimal_reallocation:
                 # Compute pk1

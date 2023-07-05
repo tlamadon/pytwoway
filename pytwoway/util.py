@@ -7,28 +7,28 @@ from bipartitepandas.util import to_list
 from scipy.sparse import csc_matrix
 from matplotlib import pyplot as plt
 
-def weighted_mean(v, w=1):
+def weighted_mean(v, w=None):
     '''
     Compute weighted mean.
 
     Arguments:
         v (NumPy Array): vector to weight
-        w (NumPy Array or float): weights
+        w (NumPy Array or float or None): weights; None is equivalent to no weights
 
     Returns:
         (NumPy Array): weighted mean
     '''
-    if isinstance(w, (float, int)):
+    if (w is None) or isinstance(w, (float, int)):
         return np.mean(v)
     return np.sum(w * v) / np.sum(w)
 
-def weighted_var(v, w=1, dof=0):
+def weighted_var(v, w=None, dof=0):
     '''
     Compute weighted variance.
 
     Arguments:
         v (NumPy Array): vector to weight
-        w (NumPy Array or float): weights
+        w (NumPy Array or float or None): weights; None is equivalent to no weights
         dof (int): degrees of freedom
 
     Returns:
@@ -36,7 +36,7 @@ def weighted_var(v, w=1, dof=0):
     '''
     m0 = weighted_mean(v, w)
 
-    if isinstance(w, (float, int)):
+    if (w is None) or isinstance(w, (float, int)):
         n = len(v)
         return np.sum((v - m0) ** 2) / (n - dof)
 

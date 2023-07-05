@@ -1,5 +1,5 @@
 '''
-Diagnostic functions.
+Plot extended event study.
 '''
 from paramsdict import ParamsDict
 import numpy as np
