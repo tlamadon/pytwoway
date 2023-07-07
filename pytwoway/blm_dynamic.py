@@ -2449,9 +2449,9 @@ class DynamicBLMModel:
 
                         ## Compute weights_l ##
                         if cat_dict[col]['worker_type_interaction']:
-                            S_l_dict = {period: S_cat[col][period][l, C_dict[period][col]] for period in periods}
+                            S_l_dict = {period: S_cat[col][period][l, C_dict[period][col]] for period in periods_var}
                         else:
-                            S_l_dict = {period: S_cat[col][period][C_dict[period][col]] for period in periods}
+                            S_l_dict = {period: S_cat[col][period][C_dict[period][col]] for period in periods_var}
 
                         weights_l = [
                             qi[:, l] / S_l_dict['12'],
@@ -2592,7 +2592,10 @@ class DynamicBLMModel:
                             if cat_dict[col]['worker_type_interaction']:
                                 # Adjust A_sum
                                 for period in periods:
-                                    A_sum_l[period] -= A_cat[col][period][l, C_dict[period][col]]
+                                    if period[-1] != 'b':
+                                        A_sum_l[period] -= A_cat[col][period][l, C_dict[period][col]]
+                                    else:
+                                        A_sum_l[period] -= A_cat[col][period][C_dict[period][col]]
 
                             # Yl_cat_1
                             Yl_cat_1 = \
@@ -3031,9 +3034,9 @@ class DynamicBLMModel:
 
                             ## Compute var_l_cat ##
                             if cat_dict[col]['worker_type_interaction']:
-                                S_l_dict = {period: (S_cat[col][period][l, :] ** 2)[C_dict[period][col]] for period in periods}
+                                S_l_dict = {period: (S_cat[col][period][l, :] ** 2)[C_dict[period][col]] for period in periods_var}
                             else:
-                                S_l_dict = {period: (S_cat[col][period] ** 2)[C_dict[period][col]] for period in periods}
+                                S_l_dict = {period: (S_cat[col][period] ** 2)[C_dict[period][col]] for period in periods_var}
 
                             ## Account for other variables' contribution to variance ##
                             var_l_numerator = [
