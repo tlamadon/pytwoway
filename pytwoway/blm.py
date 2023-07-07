@@ -3193,6 +3193,8 @@ class BLMVarianceDecomposition:
                 res_lst_comp.append(fe_estimator.summary)
             if time_varying_complementarities:
                 ## Estimate OLS with time-varying complementarities ##
+                if isinstance(bdf, bpd.BipartiteLongCollapsed):
+                    bdf = bdf.uncollapse(is_sorted=True, copy=False)
                 if complementarities:
                     bdf.loc[:, 'i'] = pd.factorize(bdf.loc[:, 'i'].to_numpy() + nl * nk * bdf.loc[:, 't'].to_numpy())[0]
                 else:
