@@ -67,8 +67,8 @@ def plot_firm_classes_over_time(jdata, sdata, subset='all', firm_order=None, xla
     fig, ax = plt.subplots(dpi=dpi)
     x_axis = all_t.astype(str)
     ax.bar(x_axis, class_proportions[:, 0])
-    for t in range(1, len(all_t)):
-        ax.bar(x_axis, class_proportions[:, t], bottom=class_props_cumsum[:, t - 1])
+    for k in range(1, nk):
+        ax.bar(x_axis, class_proportions[:, k], bottom=class_props_cumsum[:, k - 1])
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title)

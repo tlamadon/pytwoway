@@ -499,12 +499,12 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, subset=
     weighted = jdata._col_included('w')
 
     ## Add qi probabilities to dataframes ##
-    qi_cols_es = [f'qi{t + 1}{l + 1}' for t in range(nt) for l in range(nl)]
-    qi_cols_long = [f'qi{l + 1}' for l in range(nl)]
     if subset in ['movers', 'all']:
-        jdata = jdata.add_column('qi', [qi_j[:, l] for l in range(nl)] * 2, col_reference=qi_cols_es, long_es_split=True, copy=True)
+        for l in range(nl):
+            jdata = jdata.add_column('qi_' + 'i' * (l + 1), [qi_j[:, l]] * nt, long_es_split=True, copy=True)
     if subset in ['stayers', 'all']:
-        sdata = sdata.add_column('qi', [qi_s[:, l] for l in range(nl)] * 2, col_reference=qi_cols_es, long_es_split=True, copy=True)
+        for l in range(nl):
+            sdata = sdata.add_column('qi_' + 'i' * (l + 1), [qi_s[:, l]] * nt, long_es_split=True, copy=True)
     ## Convert to BipartitePandas DataFrame ##
     if subset == 'movers':
         bdf = jdata
@@ -520,6 +520,7 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, subset=
         bdf = bdf.uncollapse(is_sorted=True, copy=False)
 
     ## Plot over time ##
+    qi_cols = [f'qi_' + 'i' * (l + 1) for l in range(nl)]
     t_col = bdf.loc[:, 't'].to_numpy()
     all_t = np.unique(t_col)
     type_proportions = np.zeros([len(all_t), nl])
@@ -528,10 +529,10 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, subset=
         if weighted:
             w_t = bdf_t.loc[:, 'w'].to_numpy()
             # Number of observations per firm class per period
-            type_proportions[t, :] = np.sum(w_t[:, None] * bdf_t.loc[:, qi_cols_long].to_numpy(), axis=0)
+            type_proportions[t, :] = np.sum(w_t[:, None] * bdf_t.loc[:, qi_cols].to_numpy(), axis=0)
         else:
             # Number of observations per firm class per period
-            type_proportions[t, :] = np.sum(bdf_t.loc[:, qi_cols_long].to_numpy(), axis=0)
+            type_proportions[t, :] = np.sum(bdf_t.loc[:, qi_cols].to_numpy(), axis=0)
         # Normalize to proportions
         type_proportions[t, :] /= type_proportions[t, :].sum()
 
@@ -542,8 +543,8 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, subset=
     fig, ax = plt.subplots(dpi=dpi)
     x_axis = all_t.astype(str)
     ax.bar(x_axis, type_proportions[:, 0])
-    for t in range(1, len(all_t)):
-        ax.bar(x_axis, type_proportions[:, t], bottom=type_props_cumsum[:, t - 1])
+    for l in range(1, nl):
+        ax.bar(x_axis, type_proportions[:, l], bottom=type_props_cumsum[:, l - 1])
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
