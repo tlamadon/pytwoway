@@ -3366,7 +3366,7 @@ class BLMVarianceDecomposition:
                 fe_params['categorical_controls'] = params['categorical_controls'].keys()
             if not no_cts_controls:
                 fe_params['continuous_controls'] = params['continuous_controls'].keys()
-        fe_params['weighted'] = False
+        fe_params['weighted'] = True
         fe_params['ho'] = False
         if Q_var is not None:
             fe_params['Q_var'] = Q_var
