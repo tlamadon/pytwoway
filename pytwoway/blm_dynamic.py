@@ -4485,6 +4485,8 @@ class DynamicBLMModel:
                         ax.set_title(f'{subplot_title} {l + 1}')
                         ax.grid()
                         l += 1
+                    else:
+                        fig.delaxes(ax)
 
             plt.setp(axs, xticks=np.arange(nk) + 1, yticks=np.arange(nk) + 1)
             fig.supxlabel(f'{axis_label}, period 1')
@@ -5097,6 +5099,8 @@ class DynamicBLMBootstrap:
                             ax.set_title(f'{subplot_title} {l + 1}')
                             ax.grid()
                             l += 1
+                        else:
+                            fig.delaxes(ax)
 
                 plt.setp(axs, xticks=np.arange(nk) + 1, yticks=np.arange(nk) + 1)
                 fig.supxlabel(f'{axis_label}, period 1')
