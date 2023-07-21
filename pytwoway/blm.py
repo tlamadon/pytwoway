@@ -510,7 +510,7 @@ def _plot_worker_types_over_time(bdf, subplot, nl, subplot_title=''):
         subplot.bar(x_axis, type_proportions[:, l], bottom=type_props_cumsum[:, l - 1])
     subplot.set_title(subplot_title)
 
-def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdown_category=None, n_cols=3, category_labels=None, subset='all', xlabel='year', ylabel='type proportions', title='Worker type proportions over time', subplot_title='', dpi=None):
+def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdown_category=None, n_cols=3, category_labels=None, subset='all', xlabel='year', ylabel='type proportions', title='Worker type proportions over time', subplot_title=''):
     '''
     Plot worker type proportions over time.
 
@@ -528,7 +528,6 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdo
         ylabel (str): label for y-axis
         title (str): plot title
         subplot_title (str): (if breakdown_category is specified) subplot title (subplots will be titled `subplot_title` + category, e.g. if `subplot_title`='k=', then subplots will be titled 'k=1', 'k=2', etc., or if `subplot_title`='', then subplots will be titled '1', '2', etc.)
-        dpi (float or None): dpi for plot
     '''
     if (not jdata._col_included('t')) or (not sdata._col_included('t')):
         raise ValueError('jdata and sdata must include time data.')
@@ -567,7 +566,10 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdo
         n_cols = 1
     else:
         unique_cat = np.array(sorted(bdf.unique_ids(breakdown_category)))
-        category_labels = np.array(category_labels)
+        if category_labels is None:
+            category_labels = unique_cat
+        else:
+            category_labels = np.array(category_labels)
         if category_labels is not None:
             cat_order = np.argsort(category_labels)
             unique_cat = unique_cat[cat_order]
@@ -600,12 +602,13 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdo
                     n_plots += 1
                 else:
                     fig.delaxes(ax)
+
     fig.supxlabel(xlabel)
     fig.supylabel(ylabel)
     fig.suptitle(title)
     plt.tight_layout()
     plt.show()
-    
+
 
 class BLMModel:
     '''
