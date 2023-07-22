@@ -5176,7 +5176,7 @@ class DynamicBLMBootstrap:
 
 class DynamicBLMVarianceDecomposition:
     '''
-    Class for estimating dynamic BLM variance decomposition using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'var_decomp' gives the results for the variance decomposition, the key 'var_decomp_comp' optionally gives the results for the variance decomposition with complementarities, and the key 'var_decomp_comp_t' optionally gives the results for the variance decomposition with time-varying complementarities.
+    Class for estimating dynamic BLM variance decomposition using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'var_decomp' gives the results for the variance decomposition, and the key 'var_decomp_comp' optionally gives the results for the variance decomposition with complementarities.
 
     Arguments:
         params (ParamsDict): dictionary of parameters for dynamic BLM estimation. Run tw.dynamic_blm_params().describe_all() for descriptions of all valid parameters.
@@ -5187,7 +5187,7 @@ class DynamicBLMVarianceDecomposition:
         # No initial results
         self.res = None
 
-    def fit(self, jdata, sdata, dynamic_blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', Q_var=None, Q_cov=None, complementarities=True, time_varying_complementarities=False, firm_clusters_as_ids=True, worker_types_as_ids=True, ncore=1, rng=None):
+    def fit(self, jdata, sdata, dynamic_blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', Q_var=None, Q_cov=None, complementarities=True, firm_clusters_as_ids=True, worker_types_as_ids=True, ncore=1, rng=None):
         '''
         Estimate variance decomposition.
 
@@ -5204,7 +5204,6 @@ class DynamicBLMVarianceDecomposition:
             Q_var (list of Q variances): list of Q matrices to use when estimating variance term; None is equivalent to tw.Q.VarPsi() without controls, or tw.Q.VarCovariate('psi') with controls
             Q_cov (list of Q covariances): list of Q matrices to use when estimating covariance term; None is equivalent to tw.Q.CovPsiAlpha() without controls, or tw.Q.CovCovariate('psi', 'alpha') with controls
             complementarities (bool): if True, also estimate R^2 of regression with complementarities (by adding in all worker-firm interactions). Only allowed when firm_clusters_as_ids=True and worker_types_as_ids=True.
-            time_varying_complementarities (bool): if True, estimate R^2 of regression with time-varying complementarities (by adding in all worker-firm-time interactions). Only allowed when firm_clusters_as_ids=True and worker_types_as_ids=True.
             firm_clusters_as_ids (bool): if True, replace firm ids with firm clusters
             worker_types_as_ids (bool): if True, replace worker ids with simulated worker types
             ncore (int): number of cores for multiprocessing
@@ -5212,10 +5211,6 @@ class DynamicBLMVarianceDecomposition:
         '''
         if complementarities and ((not firm_clusters_as_ids) or (not worker_types_as_ids)):
             raise ValueError('If `complementarities=True`, then must also set `firm_clusters_as_ids=True` and `worker_types_as_ids=True`.')
-        if time_varying_complementarities and ((not firm_clusters_as_ids) or (not worker_types_as_ids)):
-            raise ValueError('If `time_varying_complementarities=True`, then must also set `firm_clusters_as_ids=True` and `worker_types_as_ids=True`.')
-        if time_varying_complementarities and ((not jdata._col_included('t')) or (not sdata._col_included('t'))):
-            raise ValueError('If `time_varying_complementarities=True`, then jdata and sdata must include time data.')
 
         if rng is None:
             rng = np.random.default_rng(None)
@@ -5292,8 +5287,6 @@ class DynamicBLMVarianceDecomposition:
         res_lst = []
         if complementarities:
             res_lst_comp = []
-        if time_varying_complementarities:
-            res_lst_comp_t = []
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
             bdf = _simulate_types_wages(dynamic_blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_cum_j=None, qi_cum_s=None, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
@@ -5314,18 +5307,6 @@ class DynamicBLMVarianceDecomposition:
                     fe_estimator = tw.FEControlEstimator(bdf, fe_params_comp)
                 fe_estimator.fit()
                 res_lst_comp.append(fe_estimator.summary)
-            if time_varying_complementarities:
-                ## Estimate OLS with time-varying complementarities ##
-                if complementarities:
-                    bdf.loc[:, 'i'] = pd.factorize(bdf.loc[:, 'i'].to_numpy() + nl * nk * bdf.loc[:, 't'].to_numpy())[0]
-                else:
-                    bdf.loc[:, 'i'] = pd.factorize(bdf.loc[:, 'i'].to_numpy() + nl * bdf.loc[:, 'j'].to_numpy() + nl * nk * bdf.loc[:, 't'].to_numpy())[0]
-                if no_controls:
-                    fe_estimator = tw.FEEstimator(bdf, fe_params_comp)
-                else:
-                    fe_estimator = tw.FEControlEstimator(bdf, fe_params_comp)
-                fe_estimator.fit()
-                res_lst_comp_t.append(fe_estimator.summary)
 
         with bpd.util.ChainedAssignment():
             # Restore original wages and optionally ids
@@ -5348,18 +5329,11 @@ class DynamicBLMVarianceDecomposition:
             for i in range(n_samples):
                 for k, v in res_lst_comp[i].items():
                     res_comp[k][i] = v
-        if time_varying_complementarities:
-            res_comp_t = {k: np.zeros(n_samples) for k in res_lst_comp_t[0].keys()}
-            for i in range(n_samples):
-                for k, v in res_lst_comp_t[i].items():
-                    res_comp_t[k][i] = v
 
         # Remove '_fe' from result names
         res = {k.replace('_fe', ''): v for k, v in res.items()}
         if complementarities:
             res_comp = {k.replace('_fe', ''): v for k, v in res_comp.items()}
-        if time_varying_complementarities:
-            res_comp_t = {k.replace('_fe', ''): v for k, v in res_comp_t.items()}
 
         # Drop time column
         if tj:
@@ -5370,8 +5344,6 @@ class DynamicBLMVarianceDecomposition:
         self.res = {'var_decomp': res, 'var_decomp_comp': None, 'var_decomp_comp_t': None}
         if complementarities:
             self.res['var_decomp_comp'] = res_comp
-        if time_varying_complementarities:
-            self.res['var_decomp_comp_t'] = res_comp_t
 
 class DynamicBLMReallocation:
     '''

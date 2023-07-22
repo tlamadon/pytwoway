@@ -471,7 +471,7 @@ def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, p
 
     return bdf
 
-def _plot_worker_types_over_time(bdf, subplot, nl, subplot_title=''):
+def _plot_worker_types_over_time(bdf, subplot, nl, subplot_title='', weighted=True):
     '''
     Generate a subplot for plot_worker_types_over_time().
 
@@ -480,8 +480,9 @@ def _plot_worker_types_over_time(bdf, subplot, nl, subplot_title=''):
         subplot (MatPlotLib Subplot): subplot
         nl (int): number of worker types
         subplot_title (str): subplot title
+        weighted (bool): if True, use weights
     '''
-    weighted = bdf._col_included('w')
+    weighted = weighted and bdf._col_included('w')
     qi_cols = [f'qi_' + 'i' * (l + 1) for l in range(nl)]
 
     ## Plot over time ##
@@ -583,7 +584,7 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdo
     ## Create subplots ##
     fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=False, sharey=True, dpi=dpi)
     if breakdown_category is None:
-        _plot_worker_types_over_time(bdf=bdf, subplot=axs, nl=nl, subplot_title='')
+        _plot_worker_types_over_time(bdf=bdf, subplot=axs, nl=nl, subplot_title='', weighted=(not dynamic))
         axs.set_xlabel(xlabel)
         axs.set_ylabel(ylabel)
         axs.set_title(title)
@@ -600,7 +601,8 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdo
                         subplot_title_ij = subplot_title + str(category_labels[i * n_cols + j])
                     _plot_worker_types_over_time(
                         bdf=bdf.loc[bdf.loc[:, breakdown_category].to_numpy() == cat_ij, :],
-                        subplot=ax, nl=nl, subplot_title=subplot_title_ij
+                        subplot=ax, nl=nl, subplot_title=subplot_title_ij,
+                        weighted=(not dynamic)
                     )
                     n_plots += 1
                 else:
@@ -622,7 +624,7 @@ def plot_worker_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown
         qi_j (NumPy Array): probabilities for each mover observation to be each worker type
         qi_s (NumPy Array): probabilities for each stayer observation to be each worker type
         breakdown_category (str): categorical column, where worker type proportions are plotted for each group within the category
-        category_labels (list or None): (if breakdown_category is specified) specify labels for each category, where label indices should be based on sorted categories; if None, use values stored in data
+        category_labels (list or None): specify labels for each category, where label indices should be based on sorted categories; if None, use values stored in data
         dynamic (bool): if False, plotting estimates from static BLM; if True, plotting estimates from dynamic BLM
         subset (str): 'all' plots a weighted average over movers and stayers; 'movers' plots movers; 'stayers' plots stayers
         xlabel (str): label for x-axis
@@ -634,10 +636,11 @@ def plot_worker_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown
     nl = qi_j.shape[1]
     if not dynamic:
         nt = 2
+        weighted = jdata._col_included('w')
     else:
         nt = 4
+        weighted = False
     cat_groups = np.array(sorted(jdata.unique_ids(breakdown_category)))
-    weighted = jdata._col_included('w')
 
     ## Add qi probabilities to dataframes ##
     if subset in ['movers', 'all']:
@@ -695,7 +698,7 @@ def plot_worker_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown
     ax.set_title(title)
     plt.show()
 
-def _plot_type_proportions_by_category(bdf, subplot, nl, nk, firm_order=None, subplot_title=''):
+def _plot_type_proportions_by_category(bdf, subplot, nl, nk, firm_order=None, subplot_title='', weighted=True):
     '''
     Generate a subplot for plot_type_proportions_by_category().
 
@@ -706,8 +709,9 @@ def _plot_type_proportions_by_category(bdf, subplot, nl, nk, firm_order=None, su
         nk (int): number of firm classes
         firm_order (NumPy Array or None): sorted firm class order; None keeps the original firm order
         subplot_title (str): subplot title
+        weighted (bool): if True, use weights
     '''
-    weighted = bdf._col_included('w')
+    weighted = weighted and bdf._col_included('w')
     qi_cols = [f'qi_' + 'i' * (l + 1) for l in range(nl)]
 
     ## Plot type proportions ##
@@ -739,7 +743,7 @@ def _plot_type_proportions_by_category(bdf, subplot, nl, nk, firm_order=None, su
         subplot.bar(x_axis, type_proportions[:, l], bottom=type_props_cumsum[:, l - 1])
     subplot.set_title(subplot_title)
 
-def plot_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown_category, n_cols=3, category_labels=None, dynamic=False, subset='all', firm_order=None, xlabel='firm class', ylabel='type proportions', title='Type proportions by category', subplot_title='category ', dpi=None):
+def plot_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown_category, n_cols=3, category_labels=None, dynamic=False, subset='all', firm_order=None, xlabel='firm class k', ylabel='type proportions', title='Type proportions by category', subplot_title='category ', dpi=None):
     '''
     Plot worker-firm type proportions broken down by the given category.
 
@@ -750,14 +754,14 @@ def plot_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown_catego
         qi_s (NumPy Array): probabilities for each stayer observation to be each worker type
         breakdown_category (str): categorical column, where worker type proportions are plotted for each group within the category
         n_cols (int): number of subplot columns
-        category_labels (list or None): (if breakdown_category is specified) specify labels for each category, where label indices should be based on sorted categories; if None, use values stored in data
+        category_labels (list or None): specify labels for each category, where label indices should be based on sorted categories; if None, use values stored in data
         dynamic (bool): if False, plotting estimates from static BLM; if True, plotting estimates from dynamic BLM
         subset (str): 'all' plots a weighted average over movers and stayers; 'movers' plots movers; 'stayers' plots stayers
         firm_order (NumPy Array or None): sorted firm class order; None keeps the original firm order
         xlabel (str): label for x-axis
         ylabel (str): label for y-axis
         title (str): plot title
-        subplot_title (str): (if breakdown_category is specified) subplot title (subplots will be titled `subplot_title` + category, e.g. if `subplot_title`='k=', then subplots will be titled 'k=1', 'k=2', etc., or if `subplot_title`='', then subplots will be titled '1', '2', etc.)
+        subplot_title (str): subplot title (subplots will be titled `subplot_title` + category, e.g. if `subplot_title`='k=', then subplots will be titled 'k=1', 'k=2', etc., or if `subplot_title`='', then subplots will be titled '1', '2', etc.)
         dpi (float or None): dpi for plot
     '''
     ## Unpack parameters ##
@@ -817,7 +821,7 @@ def plot_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown_catego
                 _plot_type_proportions_by_category(
                     bdf=bdf.loc[bdf.loc[:, breakdown_category].to_numpy() == cat_ij, :],
                     subplot=ax, nl=nl, nk=nk, firm_order=firm_order,
-                    subplot_title=subplot_title_ij
+                    subplot_title=subplot_title_ij, weighted=(not dynamic)
                 )
                 n_plots += 1
             else:
@@ -828,6 +832,168 @@ def plot_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown_catego
     fig.suptitle(title)
     plt.tight_layout()
     plt.show()
+
+def plot_type_flows(jdata, qi_j, breakdown_category, method='stacked', category_labels=None, dynamic=False, title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=1, opacity=0.4, font_size=15):
+    '''
+    Plot flows of worker types between each firm class.
+
+    Arguments:
+        jdata (BipartitePandas DataFrame): event study, collapsed event study, or extended event study format labor data for movers
+        qi_j (NumPy Array): probabilities for each mover observation to be each worker type
+        breakdown_category (str): categorical column, where worker type proportions are plotted for each group within the category
+        method (str): 'stacked' for stacked plot; 'sankey' for Sankey plot
+        category_labels (list or None): specify labels for each category, where label indices should be based on sorted categories; if None, use values stored in data
+        dynamic (bool): if False, plotting estimates from static BLM; if True, plotting estimates from dynamic BLM
+        title (str): plot title
+        axis_label (str): label for axes (for stacked)
+        subplot_title (str): label for subplots (for stacked)
+        n_cols (int): number of subplot columns (for stacked)
+        circle_scale (float): size scale for circles (for stacked)
+        opacity (float): opacity of flows (for Sankey)
+        font_size (float): font size for plot (for Sankey)
+    '''
+    if method not in ['stacked', 'sankey']:
+        raise ValueError(f"`method` must be one of 'stacked' or 'sankey', but input specifies {method!r}.")
+
+    ## Extract parameters ##
+    cat_groups = np.array(sorted(jdata.unique_ids(breakdown_category)))
+    n_cat = len(cat_groups)
+    nk = jdata.n_clusters()
+    nl = qi_j.shape[1]
+    g1 = f'{breakdown_category}1'
+    g2 = f'{breakdown_category}'
+    w = None
+    if not dynamic:
+        g2 += '2'
+        weighted = jdata._col_included('w')
+        if weighted:
+            w = np.sqrt(jdata.loc[:, 'w1'].to_numpy() * jdata.loc[:, 'w2'].to_numpy())
+    else:
+        g2 += '4'
+        weighted = False
+    G1 = jdata.loc[:, g1].to_numpy()
+    G2 = jdata.loc[:, g2].to_numpy()
+    NNm = jdata.groupby(g1)[g2].value_counts().unstack(fill_value=0).to_numpy()
+
+    ## Compute pk1 ##
+    type_proportions = np.zeros([n_cat, n_cat, nl])
+    for i, cat_group_i in enumerate(cat_groups):
+        G1_i = (G1 == cat_group_i)
+        for j, cat_group_j in enumerate(cat_groups):
+            G2_j = (G2 == cat_group_j)
+            jdata_ij = jdata.loc[G1_i & G2_j, :]
+            if weighted:
+                w_k = bdf_k.loc[:, 'w'].to_numpy()
+                # Number of observations per worker type per firm class
+                type_proportions[k, :] = np.sum(w_k[:, None] * bdf_k.loc[:, qi_cols].to_numpy(), axis=0)
+            else:
+                # Number of observations per worker type per firm class
+                type_proportions[k, :] = np.sum(bdf_k.loc[:, qi_cols].to_numpy(), axis=0)
+            # Normalize to proportions
+            type_proportions[k, :] /= type_proportions[k, :].sum()
+
+    ## Compute worker flows ##
+    reshaped_pk1 = np.reshape(pk1, (nk, nk, nl))
+    mover_flows = (NNm.T * reshaped_pk1.T).T
+
+    if method == 'stacked':
+        ## Compute number of subplot rows ##
+        n_rows = nl // n_cols
+        if n_rows * n_cols < nl:
+            # If the bottom column won't be filled
+            n_rows += 1
+
+        ## Create subplots ###
+        fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=True, sharey=True)
+
+        ## Create axes ##
+        x_vals, y_vals = np.meshgrid(np.arange(nk) + 1, np.arange(nk) + 1, indexing='ij')
+        x_vals = x_vals.flatten()
+        y_vals = y_vals.flatten()
+
+        ## Generate plots ##
+        l = 0
+        for row in axs:
+            for ax in row:
+                if l < nl:
+                    ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l].flatten()))
+                    ax.set_title(f'{subplot_title} {l + 1}')
+                    ax.grid()
+                    l += 1
+                else:
+                    fig.delaxes(ax)
+
+        plt.setp(axs, xticks=np.arange(nk) + 1, yticks=np.arange(nk) + 1)
+        fig.supxlabel(f'{axis_label}, period 1')
+        fig.supylabel(f'{axis_label}, period 2')
+        fig.suptitle(f'{title}')
+        plt.tight_layout()
+        plt.show()
+    elif method == 'sankey':
+        colors = np.array(
+            [
+                [31, 119, 180],
+                [255, 127, 14],
+                [44, 160, 44],
+                [214, 39, 40],
+                [148, 103, 189],
+                [140, 86, 75],
+                [227, 119, 194],
+                [127, 127, 127],
+                [188, 189, 34],
+                [23, 190, 207],
+                [255, 0, 255]
+            ]
+        )
+
+        ## Sankey with legend ##
+        # Source: https://stackoverflow.com/a/76223740/17333120
+        sankey = go.Sankey(
+            # Define nodes
+            node=dict(
+                pad=15,
+                thickness=1,
+                line=dict(color='white', width=0),
+                label=[f'k={k + 1}' for k in range(nk)] + [f'k={k + 1}' for k in range(nk)],
+                color='white'
+            ),
+            link=dict(
+                # Source firm
+                source=np.repeat(np.arange(nk), nk * nl),
+                # Destination firm
+                target=np.tile(np.repeat(np.arange(nk), nl), nk) + nk,
+                # Worker type
+                label=[f'l={l + 1}' for _ in range(nk) for _ in range(nk) for l in range(nl)],
+                # Worker flows
+                value=mover_flows.flatten(),
+                # Color (specify mean for each l, and for each k go from -80 below the mean to +80 above the mean)
+                color=[f'rgba({str(list(np.minimum(255, np.maximum(0, colors[l, :] - 80) + 160 * k / (nk - 1))))[1: -1]}, {opacity})' for k in range(nk) for _ in range(nk) for l in range(nl)]
+            )
+        )
+
+        legend = []
+        for l in range(nl):
+            legend.append(
+                go.Scatter(
+                    mode='markers',
+                    x=[None],
+                    y=[None],
+                    marker=dict(color=f'rgba({str(list(colors[l, :]))[1: -1]}, {opacity})', symbol='square'),
+                    name=f'$l={l + 1}$',
+                )
+            )
+
+        traces = [sankey] + legend
+        layout = go.Layout(
+            showlegend=True,
+            plot_bgcolor='rgba(0, 0, 0, 0)',
+        )
+
+        fig = go.Figure(data=traces, layout=layout)
+        fig.update_xaxes(visible=False)
+        fig.update_yaxes(visible=False)
+        fig.update_layout(title_text=title, font_size=font_size)
+        fig.show()
 
 class BLMModel:
     '''
@@ -3538,7 +3704,7 @@ class BLMVarianceDecomposition:
         # No initial results
         self.res = None
 
-    def fit(self, jdata, sdata, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', Q_var=None, Q_cov=None, complementarities=True, time_varying_complementarities=False, firm_clusters_as_ids=True, worker_types_as_ids=True, weighted=True, ncore=1, rng=None):
+    def fit(self, jdata, sdata, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', Q_var=None, Q_cov=None, complementarities=True, firm_clusters_as_ids=True, worker_types_as_ids=True, weighted=True, ncore=1, rng=None):
         '''
         Estimate variance decomposition.
 
@@ -3555,7 +3721,6 @@ class BLMVarianceDecomposition:
             Q_var (list of Q variances): list of Q matrices to use when estimating variance term; None is equivalent to tw.Q.VarPsi() without controls, or tw.Q.VarCovariate('psi') with controls
             Q_cov (list of Q covariances): list of Q matrices to use when estimating covariance term; None is equivalent to tw.Q.CovPsiAlpha() without controls, or tw.Q.CovCovariate('psi', 'alpha') with controls
             complementarities (bool): if True, estimate R^2 of regression with complementarities (by adding in all worker-firm interactions). Only allowed when firm_clusters_as_ids=True and worker_types_as_ids=True.
-            time_varying_complementarities (bool): if True, estimate R^2 of regression with time-varying complementarities (by adding in all worker-firm-time interactions). Only allowed when firm_clusters_as_ids=True and worker_types_as_ids=True.
             firm_clusters_as_ids (bool): if True, replace firm ids with firm clusters
             worker_types_as_ids (bool): if True, replace worker ids with simulated worker types
             weighted (bool): if True, use weighted estimators
@@ -3564,10 +3729,6 @@ class BLMVarianceDecomposition:
         '''
         if complementarities and ((not firm_clusters_as_ids) or (not worker_types_as_ids)):
             raise ValueError('If `complementarities=True`, then must also set `firm_clusters_as_ids=True` and `worker_types_as_ids=True`.')
-        if time_varying_complementarities and ((not firm_clusters_as_ids) or (not worker_types_as_ids)):
-            raise ValueError('If `time_varying_complementarities=True`, then must also set `firm_clusters_as_ids=True` and `worker_types_as_ids=True`.')
-        if time_varying_complementarities and ((not jdata._col_included('t')) or (not sdata._col_included('t'))):
-            raise ValueError('If `time_varying_complementarities=True`, then jdata and sdata must include time data.')
 
         if rng is None:
             rng = np.random.default_rng(None)
@@ -3644,8 +3805,6 @@ class BLMVarianceDecomposition:
         res_lst = []
         if complementarities:
             res_lst_comp = []
-        if time_varying_complementarities:
-            res_lst_comp_t = []
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
             bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=weighted, rng=rng)
@@ -3665,20 +3824,6 @@ class BLMVarianceDecomposition:
                     fe_estimator = tw.FEControlEstimator(bdf, fe_params_comp)
                 fe_estimator.fit()
                 res_lst_comp.append(fe_estimator.summary)
-            if time_varying_complementarities:
-                ## Estimate OLS with time-varying complementarities ##
-                if isinstance(bdf, bpd.BipartiteLongCollapsed):
-                    bdf = bdf.uncollapse(is_sorted=True, copy=False)
-                if complementarities:
-                    bdf.loc[:, 'i'] = pd.factorize(bdf.loc[:, 'i'].to_numpy() + nl * nk * bdf.loc[:, 't'].to_numpy())[0]
-                else:
-                    bdf.loc[:, 'i'] = pd.factorize(bdf.loc[:, 'i'].to_numpy() + nl * bdf.loc[:, 'j'].to_numpy() + nl * nk * bdf.loc[:, 't'].to_numpy())[0]
-                if no_controls:
-                    fe_estimator = tw.FEEstimator(bdf, fe_params_comp)
-                else:
-                    fe_estimator = tw.FEControlEstimator(bdf, fe_params_comp)
-                fe_estimator.fit()
-                res_lst_comp_t.append(fe_estimator.summary)
 
         with bpd.util.ChainedAssignment():
             # Restore original wages and optionally ids
@@ -3701,18 +3846,11 @@ class BLMVarianceDecomposition:
             for i in range(n_samples):
                 for k, v in res_lst_comp[i].items():
                     res_comp[k][i] = v
-        if time_varying_complementarities:
-            res_comp_t = {k: np.zeros(n_samples) for k in res_lst_comp_t[0].keys()}
-            for i in range(n_samples):
-                for k, v in res_lst_comp_t[i].items():
-                    res_comp_t[k][i] = v
 
         # Remove '_fe' from result names
         res = {k.replace('_fe', ''): v for k, v in res.items()}
         if complementarities:
             res_comp = {k.replace('_fe', ''): v for k, v in res_comp.items()}
-        if time_varying_complementarities:
-            res_comp_t = {k.replace('_fe', ''): v for k, v in res_comp_t.items()}
 
         # Drop time column
         if tj:
@@ -3723,8 +3861,6 @@ class BLMVarianceDecomposition:
         self.res = {'var_decomp': res, 'var_decomp_comp': None, 'var_decomp_comp_t': None}
         if complementarities:
             self.res['var_decomp_comp'] = res_comp
-        if time_varying_complementarities:
-            self.res['var_decomp_comp_t'] = res_comp_t
 
 class BLMReallocation:
     '''
