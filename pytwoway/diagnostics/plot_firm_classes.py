@@ -23,16 +23,16 @@ def _plot_worker_types_over_time(bdf, subplot, nk, firm_order=None, subplot_titl
     t_col = bdf.loc[:, 't'].to_numpy()
     all_t = np.unique(t_col)
     class_proportions = np.zeros([len(all_t), nk])
-    for t in all_t:
-        bdf_t = bdf.loc[t_col == t, :]
+    for t_int, t_str in all_t:
+        bdf_t = bdf.loc[t_col == t_str, :]
         if weighted:
             w_t = bdf_t.loc[:, 'w'].to_numpy()
         else:
             w_t = None
         # Number of observations per firm class per period
-        class_proportions[t, :] = np.bincount(bdf_t.loc[:, 'g'], w_t)
+        class_proportions[t_int, :] = np.bincount(bdf_t.loc[:, 'g'], w_t)
         # Normalize to proportions
-        class_proportions[t, :] /= class_proportions[t, :].sum()
+        class_proportions[t_int, :] /= class_proportions[t_int, :].sum()
 
     if firm_order is not None:
         ## Reorder firms ##
@@ -90,16 +90,16 @@ def plot_firm_class_proportions_over_time(jdata, sdata, breakdown_category=None,
         n_rows = 1
         n_cols = 1
     else:
-        unique_cat = np.array(sorted(bdf.unique_ids(breakdown_category)))
+        cat_groups = np.array(sorted(bdf.unique_ids(breakdown_category)))
         if category_labels is None:
-            category_labels = unique_cat
+            category_labels = cat_groups
         else:
             category_labels = np.array(category_labels)
         if category_labels is not None:
             cat_order = np.argsort(category_labels)
-            unique_cat = unique_cat[cat_order]
+            cat_groups = cat_groups[cat_order]
             category_labels = category_labels[cat_order]
-        n_cat = len(unique_cat)
+        n_cat = len(cat_groups)
         n_rows = n_cat // n_cols
         if n_rows * n_cols < n_cat:
             # If the bottom column won't be filled
@@ -109,15 +109,18 @@ def plot_firm_class_proportions_over_time(jdata, sdata, breakdown_category=None,
     fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=False, sharey=True)
     if breakdown_category is None:
         _plot_worker_types_over_time(bdf=bdf, subplot=axs, nk=nk, firm_order=firm_order, subplot_title='')
+        axs.set_xlabel(xlabel)
+        axs.set_ylabel(ylabel)
+        axs.set_title(title)
     else:
         n_plots = 0
         for i, row in enumerate(axs):
             for j, ax in enumerate(row):
                 if i * n_cols + j < n_cat:
                     # Keep category i * n_cols + j
-                    cat_ij = unique_cat[i * n_cols + j]
+                    cat_ij = cat_groups[i * n_cols + j]
                     if category_labels is None:
-                        subplot_title_ij = subplot_title + str(unique_cat[i * n_cols + j])
+                        subplot_title_ij = subplot_title + str(cat_groups[i * n_cols + j])
                     else:
                         subplot_title_ij = subplot_title + str(category_labels[i * n_cols + j])
                     _plot_worker_types_over_time(
@@ -128,9 +131,9 @@ def plot_firm_class_proportions_over_time(jdata, sdata, breakdown_category=None,
                 else:
                     fig.delaxes(ax)
 
-    fig.supxlabel(xlabel)
-    fig.supylabel(ylabel)
-    fig.suptitle(title)
+        fig.supxlabel(xlabel)
+        fig.supylabel(ylabel)
+        fig.suptitle(title)
     plt.tight_layout()
     plt.show()
 
@@ -152,8 +155,8 @@ def plot_firm_class_proportions_by_category(jdata, sdata, breakdown_category, ca
     '''
     ## Unpack parameters ##
     nk = jdata.n_clusters()
-    unique_cat = np.array(sorted(jdata.unique_ids(breakdown_category)))
-    n_cat = len(unique_cat)
+    cat_groups = np.array(sorted(jdata.unique_ids(breakdown_category)))
+    n_cat = len(cat_groups)
     weighted = jdata._col_included('w')
 
     ## Convert to BipartitePandas DataFrame ##
@@ -192,7 +195,7 @@ def plot_firm_class_proportions_by_category(jdata, sdata, breakdown_category, ca
     ## Plot ##
     fig, ax = plt.subplots(dpi=dpi)
     if category_labels is None:
-        x_axis = unique_cat.astype(str)
+        x_axis = cat_groups.astype(str)
     else:
         x_axis = sorted(category_labels)
     ax.bar(x_axis, class_proportions[:, 0])
