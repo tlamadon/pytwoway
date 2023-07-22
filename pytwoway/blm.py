@@ -3319,7 +3319,7 @@ class BLMVarianceDecomposition:
         # No initial results
         self.res = None
 
-    def fit(self, jdata, sdata, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', Q_var=None, Q_cov=None, complementarities=True, time_varying_complementarities=False, firm_clusters_as_ids=True, worker_types_as_ids=True, ncore=1, rng=None):
+    def fit(self, jdata, sdata, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', Q_var=None, Q_cov=None, complementarities=True, time_varying_complementarities=False, firm_clusters_as_ids=True, worker_types_as_ids=True, weighted=True, ncore=1, rng=None):
         '''
         Estimate variance decomposition.
 
@@ -3339,6 +3339,7 @@ class BLMVarianceDecomposition:
             time_varying_complementarities (bool): if True, estimate R^2 of regression with time-varying complementarities (by adding in all worker-firm-time interactions). Only allowed when firm_clusters_as_ids=True and worker_types_as_ids=True.
             firm_clusters_as_ids (bool): if True, replace firm ids with firm clusters
             worker_types_as_ids (bool): if True, replace worker ids with simulated worker types
+            weighted (bool): if True, use weighted estimators
             ncore (int): number of cores for multiprocessing
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
@@ -3369,7 +3370,7 @@ class BLMVarianceDecomposition:
                 fe_params['categorical_controls'] = params['categorical_controls'].keys()
             if not no_cts_controls:
                 fe_params['continuous_controls'] = params['continuous_controls'].keys()
-        fe_params['weighted'] = True
+        fe_params['weighted'] = weighted
         fe_params['ho'] = False
         if Q_var is not None:
             fe_params['Q_var'] = Q_var
@@ -3428,7 +3429,7 @@ class BLMVarianceDecomposition:
             res_lst_comp_t = []
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
-            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=True, rng=rng)
+            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=weighted, rng=rng)
             ## Estimate OLS ##
             if no_controls:
                 fe_estimator = tw.FEEstimator(bdf, fe_params)
