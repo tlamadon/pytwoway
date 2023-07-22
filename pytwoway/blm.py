@@ -1787,8 +1787,9 @@ class BLMModel:
             # ---------- Update pk1 ----------
             if params['update_pk1']:
                 # NOTE: add dirichlet prior
-                # NOTE: this is equivalent to pk1 = GG12.T @ (W * (qi.T + d_prior - 1)).T
-                pk1 = np.bincount(KK2, weights=(W * (qi.T + d_prior - 1)).T.flatten()).reshape(nl, nk ** 2).T
+                # NOTE: this is equivalent to pk1 = GG12.T @ (qi + d_prior - 1)
+                # NOTE: don't use weights here, since type probabilities are unrelated to length of spell
+                pk1 = np.bincount(KK2, weights=(qi + d_prior - 1).flatten()).reshape(nl, nk ** 2).T
                 # Normalize rows to sum to 1
                 pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
 
@@ -2464,8 +2465,9 @@ class BLMModel:
 
             # ---------- M-step ----------
             # NOTE: add dirichlet prior
-            # NOTE: this is equivalent to pk0 = GG1.T @ (W * (qi.T + d_prior - 1)).T
-            pk0 = np.bincount(KK, (W * (qi.T + d_prior - 1)).T.flatten()).reshape(nl, nk).T
+            # NOTE: this is equivalent to pk0 = GG1.T @ (qi + d_prior - 1)
+            # NOTE: don't use weights here, since type probabilities are unrelated to length of spell
+            pk0 = np.bincount(KK, (qi + d_prior - 1).flatten()).reshape(nl, nk).T
             # Normalize rows to sum to 1
             pk0 = DxM(1 / np.sum(pk0, axis=1), pk0)
 
