@@ -568,13 +568,11 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdo
     else:
         cat_groups = np.array(sorted(bdf.unique_ids(breakdown_category)))
         if category_labels is None:
-            category_labels = cat_groups
+            category_labels = cat_groups + 1
         else:
-            category_labels = np.array(category_labels)
-        if category_labels is not None:
             cat_order = np.argsort(category_labels)
             cat_groups = cat_groups[cat_order]
-            category_labels = category_labels[cat_order]
+            category_labels = np.array(category_labels)[cat_order]
         n_cat = len(cat_groups)
         n_rows = n_cat // n_cols
         if n_rows * n_cols < n_cat:
@@ -595,10 +593,7 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdo
                 if i * n_cols + j < n_cat:
                     # Keep category i * n_cols + j
                     cat_ij = cat_groups[i * n_cols + j]
-                    if category_labels is None:
-                        subplot_title_ij = subplot_title + str(cat_groups[i * n_cols + j])
-                    else:
-                        subplot_title_ij = subplot_title + str(category_labels[i * n_cols + j])
+                    subplot_title_ij = subplot_title + str(category_labels[i * n_cols + j])
                     _plot_worker_types_over_time(
                         bdf=bdf.loc[bdf.loc[:, breakdown_category].to_numpy() == cat_ij, :],
                         subplot=ax, nl=nl, subplot_title=subplot_title_ij,
@@ -793,13 +788,11 @@ def plot_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown_catego
     ## Plot ##
     cat_groups = np.array(sorted(jdata.unique_ids(breakdown_category)))
     if category_labels is None:
-        category_labels = cat_groups
+        category_labels = cat_groups + 1
     else:
-        category_labels = np.array(category_labels)
-    if category_labels is not None:
         cat_order = np.argsort(category_labels)
         cat_groups = cat_groups[cat_order]
-        category_labels = category_labels[cat_order]
+        category_labels = np.array(category_labels)[cat_order]
     n_cat = len(cat_groups)
     n_rows = n_cat // n_cols
     if n_rows * n_cols < n_cat:
@@ -814,10 +807,7 @@ def plot_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown_catego
             if i * n_cols + j < n_cat:
                 # Keep category i * n_cols + j
                 cat_ij = cat_groups[i * n_cols + j]
-                if category_labels is None:
-                    subplot_title_ij = subplot_title + str(cat_groups[i * n_cols + j])
-                else:
-                    subplot_title_ij = subplot_title + str(category_labels[i * n_cols + j])
+                subplot_title_ij = subplot_title + str(category_labels[i * n_cols + j])
                 _plot_type_proportions_by_category(
                     bdf=bdf.loc[bdf.loc[:, breakdown_category].to_numpy() == cat_ij, :],
                     subplot=ax, nl=nl, nk=nk, firm_order=firm_order,
@@ -833,9 +823,9 @@ def plot_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown_catego
     plt.tight_layout()
     plt.show()
 
-def plot_type_flows(jdata, qi_j, breakdown_category, method='stacked', category_labels=None, dynamic=False, title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=1, opacity=0.4, font_size=15):
+def plot_type_flows_between_categories(jdata, qi_j, breakdown_category, method='stacked', category_labels=None, dynamic=False, title='Worker flows', axis_label='category', subplot_title='worker type', n_cols=3, circle_scale=1, opacity=0.4, font_size=15):
     '''
-    Plot flows of worker types between each firm class.
+    Plot flows of worker types between each group in a given category.
 
     Arguments:
         jdata (BipartitePandas DataFrame): event study, collapsed event study, or extended event study format labor data for movers
@@ -862,39 +852,36 @@ def plot_type_flows(jdata, qi_j, breakdown_category, method='stacked', category_
     nl = qi_j.shape[1]
     g1 = f'{breakdown_category}1'
     g2 = f'{breakdown_category}'
-    w = None
     if not dynamic:
         g2 += '2'
-        weighted = jdata._col_included('w')
-        if weighted:
-            w = np.sqrt(jdata.loc[:, 'w1'].to_numpy() * jdata.loc[:, 'w2'].to_numpy())
     else:
         g2 += '4'
-        weighted = False
-    G1 = jdata.loc[:, g1].to_numpy()
-    G2 = jdata.loc[:, g2].to_numpy()
+    G1 = jdata.loc[:, g1].to_numpy().astype(int, copy=False)
+    G2 = jdata.loc[:, g2].to_numpy().astype(int, copy=False)
     NNm = jdata.groupby(g1)[g2].value_counts().unstack(fill_value=0).to_numpy()
 
-    ## Compute pk1 ##
-    type_proportions = np.zeros([n_cat, n_cat, nl])
-    for i, cat_group_i in enumerate(cat_groups):
-        G1_i = (G1 == cat_group_i)
-        for j, cat_group_j in enumerate(cat_groups):
-            G2_j = (G2 == cat_group_j)
-            jdata_ij = jdata.loc[G1_i & G2_j, :]
-            if weighted:
-                w_k = bdf_k.loc[:, 'w'].to_numpy()
-                # Number of observations per worker type per firm class
-                type_proportions[k, :] = np.sum(w_k[:, None] * bdf_k.loc[:, qi_cols].to_numpy(), axis=0)
-            else:
-                # Number of observations per worker type per firm class
-                type_proportions[k, :] = np.sum(bdf_k.loc[:, qi_cols].to_numpy(), axis=0)
-            # Normalize to proportions
-            type_proportions[k, :] /= type_proportions[k, :].sum()
+    ### Compute pk1 ###
+    ## Joint firm indicator ##
+    KK = G1 + n_cat * G2
+    KK2 = np.tile(KK, (nl, 1)).T
+    KK3 = KK2 + n_cat ** 2 * np.arange(nl)
+    KK2 = KK3.flatten()
+    del KK3
+    ## pk1 ##
+    pk1 = np.bincount(KK2, weights=qi_j.flatten()).reshape(nl, n_cat ** 2).T
+    # Normalize rows to sum to 1
+    pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
 
     ## Compute worker flows ##
     reshaped_pk1 = np.reshape(pk1, (nk, nk, nl))
     mover_flows = (NNm.T * reshaped_pk1.T).T
+    
+    if category_labels is None:
+        category_labels = cat_groups + 1
+    else:
+        cat_order = np.argsort(category_labels)
+        mover_flows = mover_flows[cat_order, :, :][:, cat_order, :]
+        category_labels = np.array(category_labels)[cat_order]
 
     if method == 'stacked':
         ## Compute number of subplot rows ##
@@ -907,7 +894,7 @@ def plot_type_flows(jdata, qi_j, breakdown_category, method='stacked', category_
         fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=True, sharey=True)
 
         ## Create axes ##
-        x_vals, y_vals = np.meshgrid(np.arange(nk) + 1, np.arange(nk) + 1, indexing='ij')
+        x_vals, y_vals = np.meshgrid(np.arange(n_cat) + 1, np.arange(n_cat) + 1, indexing='ij')
         x_vals = x_vals.flatten()
         y_vals = y_vals.flatten()
 
@@ -923,7 +910,7 @@ def plot_type_flows(jdata, qi_j, breakdown_category, method='stacked', category_
                 else:
                     fig.delaxes(ax)
 
-        plt.setp(axs, xticks=np.arange(nk) + 1, yticks=np.arange(nk) + 1)
+        plt.setp(axs, xticks=category_labels, yticks=category_labels)
         fig.supxlabel(f'{axis_label}, period 1')
         fig.supylabel(f'{axis_label}, period 2')
         fig.suptitle(f'{title}')
