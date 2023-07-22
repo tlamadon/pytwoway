@@ -3430,6 +3430,9 @@ class BLMVarianceDecomposition:
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
             bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=weighted, rng=rng)
+            if isinstance(bdf, bpd.BipartiteLongCollapsed):
+                ## Uncollapse ##
+                bdf = bdf.uncollapse(is_sorted=True, copy=False)
             ## Estimate OLS ##
             if no_controls:
                 fe_estimator = tw.FEEstimator(bdf, fe_params)
@@ -3448,8 +3451,6 @@ class BLMVarianceDecomposition:
                 res_lst_comp.append(fe_estimator.summary)
             if time_varying_complementarities:
                 ## Estimate OLS with time-varying complementarities ##
-                if isinstance(bdf, bpd.BipartiteLongCollapsed):
-                    bdf = bdf.uncollapse(is_sorted=True, copy=False)
                 if complementarities:
                     bdf.loc[:, 'i'] = pd.factorize(bdf.loc[:, 'i'].to_numpy() + nl * nk * bdf.loc[:, 't'].to_numpy())[0]
                 else:
