@@ -492,10 +492,10 @@ def _plot_worker_types_over_time(bdf, subplot, nl, subplot_title=''):
         bdf_t = bdf.loc[t_col == t_str, :]
         if weighted:
             w_t = bdf_t.loc[:, 'w'].to_numpy()
-            # Number of observations per firm class per period
+            # Number of observations per worker type per period
             type_proportions[t_int, :] = np.sum(w_t[:, None] * bdf_t.loc[:, qi_cols].to_numpy(), axis=0)
         else:
-            # Number of observations per firm class per period
+            # Number of observations per worker type per period
             type_proportions[t_int, :] = np.sum(bdf_t.loc[:, qi_cols].to_numpy(), axis=0)
         # Normalize to proportions
         type_proportions[t_int, :] /= type_proportions[t_int, :].sum()
@@ -510,7 +510,7 @@ def _plot_worker_types_over_time(bdf, subplot, nl, subplot_title=''):
         subplot.bar(x_axis, type_proportions[:, l], bottom=type_props_cumsum[:, l - 1])
     subplot.set_title(subplot_title)
 
-def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdown_category=None, n_cols=3, category_labels=None, subset='all', xlabel='year', ylabel='type proportions', title='Worker type proportions over time', subplot_title=''):
+def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdown_category=None, n_cols=3, category_labels=None, subset='all', xlabel='year', ylabel='type proportions', title='Worker type proportions over time', subplot_title='', dpi=None):
     '''
     Plot worker type proportions over time.
 
@@ -528,6 +528,7 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdo
         ylabel (str): label for y-axis
         title (str): plot title
         subplot_title (str): (if breakdown_category is specified) subplot title (subplots will be titled `subplot_title` + category, e.g. if `subplot_title`='k=', then subplots will be titled 'k=1', 'k=2', etc., or if `subplot_title`='', then subplots will be titled '1', '2', etc.)
+        dpi (float or None): dpi for plot
     '''
     if (not jdata._col_included('t')) or (not sdata._col_included('t')):
         raise ValueError('jdata and sdata must include time data.')
@@ -579,8 +580,8 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdo
             # If the bottom column won't be filled
             n_rows += 1
 
-    ## Create subplots ###
-    fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=False, sharey=True)
+    ## Create subplots ##
+    fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=False, sharey=True, dpi=dpi)
     if breakdown_category is None:
         _plot_worker_types_over_time(bdf=bdf, subplot=axs, nl=nl, subplot_title='')
         axs.set_xlabel(xlabel)
@@ -692,6 +693,140 @@ def plot_worker_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(title)
+    plt.show()
+
+def _plot_type_proportions_by_category(bdf, subplot, nl, nk, firm_order=None, subplot_title=''):
+    '''
+    Generate a subplot for plot_type_proportions_by_category().
+
+    Arguments:
+        bdf (BipartitePandas DataFrame): long format data
+        subplot (MatPlotLib Subplot): subplot
+        nl (int): number of worker types
+        nk (int): number of firm classes
+        firm_order (NumPy Array or None): sorted firm class order; None keeps the original firm order
+        subplot_title (str): subplot title
+    '''
+    weighted = bdf._col_included('w')
+    qi_cols = [f'qi_' + 'i' * (l + 1) for l in range(nl)]
+
+    ## Plot type proportions ##
+    GG = bdf.loc[:, 'g'].to_numpy()
+    type_proportions = np.zeros([nk, nl])
+    for k in range(nk):
+        bdf_k = bdf.loc[GG == k, :]
+        if weighted:
+            w_k = bdf_k.loc[:, 'w'].to_numpy()
+            # Number of observations per worker type per firm class
+            type_proportions[k, :] = np.sum(w_k[:, None] * bdf_k.loc[:, qi_cols].to_numpy(), axis=0)
+        else:
+            # Number of observations per worker type per firm class
+            type_proportions[k, :] = np.sum(bdf_k.loc[:, qi_cols].to_numpy(), axis=0)
+        # Normalize to proportions
+        type_proportions[k, :] /= type_proportions[k, :].sum()
+
+    if firm_order is not None:
+        ## Reorder firms ##
+        type_proportions = type_proportions[firm_order, :]
+
+    ## Compute cumulative sum ##
+    type_props_cumsum = np.cumsum(type_proportions, axis=1)
+
+    ## Plot ##
+    x_axis = np.arange(1, nk + 1).astype(str)
+    subplot.bar(x_axis, type_proportions[:, 0])
+    for l in range(1, nl):
+        subplot.bar(x_axis, type_proportions[:, l], bottom=type_props_cumsum[:, l - 1])
+    subplot.set_title(subplot_title)
+
+def plot_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown_category, n_cols=3, category_labels=None, dynamic=False, subset='all', firm_order=None, xlabel='firm class', ylabel='type proportions', title='Type proportions by category', subplot_title='category ', dpi=None):
+    '''
+    Plot worker-firm type proportions broken down by the given category.
+
+    Arguments:
+        jdata (BipartitePandas DataFrame): event study, collapsed event study, or extended event study format labor data for movers
+        sdata (BipartitePandas DataFrame): event study, collapsed event study, or extended event study format labor data for stayers
+        qi_j (NumPy Array): probabilities for each mover observation to be each worker type
+        qi_s (NumPy Array): probabilities for each stayer observation to be each worker type
+        breakdown_category (str): categorical column, where worker type proportions are plotted for each group within the category
+        n_cols (int): number of subplot columns
+        category_labels (list or None): (if breakdown_category is specified) specify labels for each category, where label indices should be based on sorted categories; if None, use values stored in data
+        dynamic (bool): if False, plotting estimates from static BLM; if True, plotting estimates from dynamic BLM
+        subset (str): 'all' plots a weighted average over movers and stayers; 'movers' plots movers; 'stayers' plots stayers
+        firm_order (NumPy Array or None): sorted firm class order; None keeps the original firm order
+        xlabel (str): label for x-axis
+        ylabel (str): label for y-axis
+        title (str): plot title
+        subplot_title (str): (if breakdown_category is specified) subplot title (subplots will be titled `subplot_title` + category, e.g. if `subplot_title`='k=', then subplots will be titled 'k=1', 'k=2', etc., or if `subplot_title`='', then subplots will be titled '1', '2', etc.)
+        dpi (float or None): dpi for plot
+    '''
+    ## Unpack parameters ##
+    nk = jdata.n_clusters()
+    nl = qi_j.shape[1]
+    if not dynamic:
+        nt = 2
+    else:
+        nt = 4
+
+    ## Add qi probabilities to dataframes ##
+    if subset in ['movers', 'all']:
+        for l in range(nl):
+            jdata = jdata.add_column('qi_' + 'i' * (l + 1), [qi_j[:, l]] * nt, long_es_split=True, copy=True)
+    if subset in ['stayers', 'all']:
+        for l in range(nl):
+            sdata = sdata.add_column('qi_' + 'i' * (l + 1), [qi_s[:, l]] * nt, long_es_split=True, copy=True)
+    ## Convert to BipartitePandas DataFrame ##
+    if subset == 'movers':
+        bdf = jdata
+    elif subset == 'stayers':
+        bdf = sdata
+    elif subset == 'all':
+        bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
+        # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
+        bdf._set_attributes(jdata)
+    bdf = bdf.to_long(is_sorted=True, copy=False)
+
+    ## Plot ##
+    cat_groups = np.array(sorted(jdata.unique_ids(breakdown_category)))
+    if category_labels is None:
+        category_labels = cat_groups
+    else:
+        category_labels = np.array(category_labels)
+    if category_labels is not None:
+        cat_order = np.argsort(category_labels)
+        cat_groups = cat_groups[cat_order]
+        category_labels = category_labels[cat_order]
+    n_cat = len(cat_groups)
+    n_rows = n_cat // n_cols
+    if n_rows * n_cols < n_cat:
+        # If the bottom column won't be filled
+        n_rows += 1
+
+    ## Create subplots ##
+    fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=False, sharey=True, dpi=dpi)
+    n_plots = 0
+    for i, row in enumerate(axs):
+        for j, ax in enumerate(row):
+            if i * n_cols + j < n_cat:
+                # Keep category i * n_cols + j
+                cat_ij = cat_groups[i * n_cols + j]
+                if category_labels is None:
+                    subplot_title_ij = subplot_title + str(cat_groups[i * n_cols + j])
+                else:
+                    subplot_title_ij = subplot_title + str(category_labels[i * n_cols + j])
+                _plot_type_proportions_by_category(
+                    bdf=bdf.loc[bdf.loc[:, breakdown_category].to_numpy() == cat_ij, :],
+                    subplot=ax, nl=nl, nk=nk, firm_order=firm_order,
+                    subplot_title=subplot_title_ij
+                )
+                n_plots += 1
+            else:
+                fig.delaxes(ax)
+
+    fig.supxlabel(xlabel)
+    fig.supylabel(ylabel)
+    fig.suptitle(title)
+    plt.tight_layout()
     plt.show()
 
 class BLMModel:

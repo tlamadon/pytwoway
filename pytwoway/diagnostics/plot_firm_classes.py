@@ -48,7 +48,7 @@ def _plot_worker_types_over_time(bdf, subplot, nk, firm_order=None, subplot_titl
         subplot.bar(x_axis, class_proportions[:, k], bottom=class_props_cumsum[:, k - 1])
     subplot.set_title(subplot_title)
 
-def plot_firm_class_proportions_over_time(jdata, sdata, breakdown_category=None, n_cols=3, category_labels=None, subset='all', firm_order=None, xlabel='year', ylabel='class proportions', title='Firm class proportions over time', subplot_title=''):
+def plot_firm_class_proportions_over_time(jdata, sdata, breakdown_category=None, n_cols=3, category_labels=None, subset='all', firm_order=None, xlabel='year', ylabel='class proportions', title='Firm class proportions over time', subplot_title='', dpi=None):
     '''
     Plot firm class proportions over time.
 
@@ -64,6 +64,7 @@ def plot_firm_class_proportions_over_time(jdata, sdata, breakdown_category=None,
         ylabel (str): label for y-axis
         title (str): plot title
         subplot_title (str): (if breakdown_category is specified) subplot title (subplots will be titled `subplot_title` + category, e.g. if `subplot_title`='k=', then subplots will be titled 'k=1', 'k=2', etc., or if `subplot_title`='', then subplots will be titled '1', '2', etc.)
+        dpi (float or None): dpi for plot
     '''
     if (not jdata._col_included('t')) or (not sdata._col_included('t')):
         raise ValueError('jdata and sdata must include time data.')
@@ -105,8 +106,8 @@ def plot_firm_class_proportions_over_time(jdata, sdata, breakdown_category=None,
             # If the bottom column won't be filled
             n_rows += 1
 
-    ## Create subplots ###
-    fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=False, sharey=True)
+    ## Create subplots ##
+    fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=False, sharey=True, dpi=dpi)
     if breakdown_category is None:
         _plot_worker_types_over_time(bdf=bdf, subplot=axs, nk=nk, firm_order=firm_order, subplot_title='')
         axs.set_xlabel(xlabel)
