@@ -44,7 +44,7 @@ def test_fe_estimator_full_novar():
     a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False}))
     b = a.collapse()
 
-    fe_params = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True, 'attach_fe_estimates': True})
+    fe_params = tw.fe_params({'he': True, 'uncorrelated_errors': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True, 'attach_fe_estimates': True})
     fe_solver = tw.FEEstimator(b, fe_params)
     fe_solver.fit(np.random.default_rng(1234))
 
@@ -136,7 +136,7 @@ def test_fe_estimator_full_var_collapsed():
     a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False}))
     b = a.collapse()
 
-    fe_params = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True, 'attach_fe_estimates': True})
+    fe_params = tw.fe_params({'he': True, 'uncorrelated_errors': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True, 'attach_fe_estimates': True})
     fe_solver = tw.FEEstimator(b, fe_params)
     fe_solver.fit(np.random.default_rng(1234))
 
@@ -234,10 +234,10 @@ def test_fe_estimator_full_approx_analytical_collapsed():
     a = bpd.SimBipartite(sim_params).simulate(np.random.default_rng(1236))
     a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False})).collapse()
 
-    fe_params_a = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True})
+    fe_params_a = tw.fe_params({'he': True, 'uncorrelated_errors': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True})
     fe_solver_a = tw.FEEstimator(a, fe_params_a)
     fe_solver_a.fit(np.random.default_rng(1237))
-    fe_params_b = tw.fe_params({'he': True, 'exact_trace_sigma_2': False, 'exact_trace_ho': False, 'exact_trace_he': False, 'exact_lev_he': False})
+    fe_params_b = tw.fe_params({'he': True, 'uncorrelated_errors': True, 'exact_trace_sigma_2': False, 'exact_trace_ho': False, 'exact_trace_he': False, 'exact_lev_he': False})
     fe_solver_b = tw.FEEstimator(a, fe_params_b)
     fe_solver_b.fit(np.random.default_rng(1238))
 
@@ -288,7 +288,7 @@ def test_fe_estimator_full_Q():
     a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False}))
     b = a.collapse()
 
-    fe_params = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True, 'attach_fe_estimates': True, 'Q_var': [tw.Q.VarPsi(), tw.Q.VarAlpha()], 'Q_cov': [tw.Q.CovPsiAlpha(), tw.Q.CovPsiPrevPsiNext()]})
+    fe_params = tw.fe_params({'he': True, 'uncorrelated_errors': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True, 'attach_fe_estimates': True, 'Q_var': [tw.Q.VarPsi(), tw.Q.VarAlpha()], 'Q_cov': [tw.Q.CovPsiAlpha(), tw.Q.CovPsiPrevPsiNext()]})
     fe_solver = tw.FEEstimator(b, fe_params)
     fe_solver.fit(np.random.default_rng(1234))
 
@@ -356,7 +356,7 @@ def test_fe_estimator_full_Q_2():
     a = bpd.BipartiteDataFrame(a, log=False).clean()
     b = a.collapse()
 
-    fe_params = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': False, 'exact_trace_he': False, 'exact_lev_he': True, 'attach_fe_estimates': True, 'Q_var': tw.Q.VarPsiPlusAlpha(), 'Q_cov': tw.Q.CovPsiAlpha()})
+    fe_params = tw.fe_params({'he': True, 'uncorrelated_errors': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': False, 'exact_trace_he': False, 'exact_lev_he': True, 'attach_fe_estimates': True, 'Q_var': tw.Q.VarPsiPlusAlpha(), 'Q_cov': tw.Q.CovPsiAlpha()})
     fe_solver = tw.FEEstimator(b, fe_params)
     fe_solver.fit(np.random.default_rng(1234))
 
@@ -391,9 +391,9 @@ def test_fe_Pii():
     a = bpd.SimBipartite(sim_params).simulate(np.random.default_rng(1239))
     a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False})).collapse()
 
-    fe_params_a = tw.fe_params({'ho': False, 'he': True, 'exact_trace_he': True, 'exact_lev_he': True})
+    fe_params_a = tw.fe_params({'ho': False, 'he': True, 'uncorrelated_errors': True, 'exact_trace_he': True, 'exact_lev_he': True})
     fe_solver_a = tw.FEEstimator(a, fe_params_a)
-    fe_params_b = tw.fe_params({'ho': False, 'he': True, 'exact_trace_he': False, 'exact_lev_he': False})
+    fe_params_b = tw.fe_params({'ho': False, 'he': True, 'uncorrelated_errors': True, 'exact_trace_he': False, 'exact_lev_he': False})
     fe_solver_b = tw.FEEstimator(a, fe_params_b)
 
     # Run estimators
@@ -418,7 +418,7 @@ def test_fe_weights():
     a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False}))
     b = a.collapse()
 
-    fe_params = tw.fe_params({'he': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True, 'attach_fe_estimates': True})
+    fe_params = tw.fe_params({'he': True, 'uncorrelated_errors': True, 'exact_trace_sigma_2': True, 'exact_trace_ho': True, 'exact_trace_he': True, 'exact_lev_he': True, 'attach_fe_estimates': True})
     fe_solver_a = tw.FEEstimator(a, fe_params)
     fe_solver_a.fit(np.random.default_rng(1241))
     fe_solver_b = tw.FEEstimator(b, fe_params)

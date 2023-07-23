@@ -45,7 +45,7 @@ def test_fe_estimator_full_novar():
     a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False}))
     b = a.collapse()
 
-    fe_params = tw.fecontrol_params({'he': True, 'attach_fe_estimates': True})
+    fe_params = tw.fecontrol_params({'he': True, 'uncorrelated_errors': True, 'attach_fe_estimates': True})
     fe_solver = tw.FEControlEstimator(b, fe_params)
     fe_solver.fit(np.random.default_rng(1234))
 
@@ -137,7 +137,7 @@ def test_fe_estimator_full_var_collapsed():
     a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False}))
     b = a.collapse()
 
-    fe_params = tw.fecontrol_params({'he': True, 'attach_fe_estimates': True})
+    fe_params = tw.fecontrol_params({'he': True, 'uncorrelated_errors': True, 'attach_fe_estimates': True})
     fe_solver = tw.FEControlEstimator(b, fe_params)
     fe_solver.fit(np.random.default_rng(1234))
 
@@ -183,7 +183,7 @@ def test_fe_estimator_full_Q():
     a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False}))
     b = a.collapse()
 
-    fe_params = tw.fecontrol_params({'he': True, 'attach_fe_estimates': True, 'Q_var': [tw.Q.VarCovariate('psi'), tw.Q.VarCovariate('alpha'), tw.Q.VarCovariate(['psi', 'alpha'])], 'Q_cov': [tw.Q.CovCovariate('psi', 'alpha'), tw.Q.CovCovariate(['psi', 'alpha'], 'alpha')]})
+    fe_params = tw.fecontrol_params({'he': True, 'uncorrelated_errors': True, 'attach_fe_estimates': True, 'Q_var': [tw.Q.VarCovariate('psi'), tw.Q.VarCovariate('alpha'), tw.Q.VarCovariate(['psi', 'alpha'])], 'Q_cov': [tw.Q.CovCovariate('psi', 'alpha'), tw.Q.CovCovariate(['psi', 'alpha'], 'alpha')]})
     fe_solver = tw.FEControlEstimator(b, fe_params)
     fe_solver.fit(np.random.default_rng(1234))
 
@@ -254,7 +254,7 @@ def test_fe_weights():
     a = bpd.BipartiteDataFrame(a, log=False).clean(bpd.clean_params({'verbose': False}))
     b = a.collapse()
 
-    fe_params = tw.fecontrol_params({'he': True, 'attach_fe_estimates': True})
+    fe_params = tw.fecontrol_params({'he': True, 'uncorrelated_errors': True, 'attach_fe_estimates': True})
     fe_solver_a = tw.FEControlEstimator(a, fe_params)
     fe_solver_a.fit(np.random.default_rng(1241))
     fe_solver_b = tw.FEControlEstimator(b, fe_params)
