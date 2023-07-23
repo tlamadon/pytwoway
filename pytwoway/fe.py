@@ -569,7 +569,7 @@ class FEEstimator:
         # self.res['movers_per_firm'] = self.adata.loc[self.adata.loc[:, 'm'] > 0, :].groupby('j')['i'].nunique().mean()
         self.res['between_firm_var'] = weighted_var(fy, fi)
         # NOTE: set duplicated_values=False, because each observation's variance is divided by Dp and we need to undo that
-        self.res['var(y)'] = weighted_var(self.Y, self.Dp, duplicated_values=False)
+        self.res['var(y)'] = weighted_var(self.Y, self.Dp, duplicated_values=True)
         self.logger.info(f"total variance: {self.res['var(y)']:2.4f}")
 
         # extract woodcock moments using sdata and jdata

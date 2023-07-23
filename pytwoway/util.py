@@ -47,7 +47,7 @@ def weighted_var(v, w=None, duplicated_values=True, dof=0):
     if duplicated_values:
         w2 = w
     else:
-        w2 = w ** 2
+        w2 = w ** (3 / 2)
     return np.sum(w2 * (v - m0) ** 2) / (np.sum(w) - dof)
 
 def weighted_cov(v1, v2, w1=1, w2=1, duplicated_values=True, dof=0):
@@ -76,8 +76,8 @@ def weighted_cov(v1, v2, w1=1, w2=1, duplicated_values=True, dof=0):
         w3 = np.sqrt(w1 * w2)
         w4 = w3
     else:
-        w4 = w1 * w2
-        w3 = np.sqrt(w4)
+        w3 = np.sqrt(w1 * w2)
+        w4 = (w1 * w2) ** (3 / 4)
 
     return np.sum(w4 * (v1 - m1) * (v2 - m2)) / (np.sum(w3) - dof)
 
