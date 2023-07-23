@@ -71,6 +71,10 @@ fe_params = ParamsDict({
         '''
             (default=False) If True, estimate heteroskedastic correction.
         ''', None),
+    'uncorrelated_errors': (False, 'type', bool,
+        '''
+            (default=False) Set to True if using weighted estimator and errors are assumed to be uncorrelated within job spells.
+        ''', None),
     'Q_var': (None, 'list_of_type_none', (Q.VarPsi, Q.VarAlpha, Q.VarPsiPlusAlpha),
         '''
             (default=None) List of Q matrices to use when estimating variance term; None is equivalent to tw.Q.VarPsi().
@@ -568,8 +572,8 @@ class FEEstimator:
         self.res['size_quantiles'] = weighted_quantile(fi, ls, fi).tolist()
         # self.res['movers_per_firm'] = self.adata.loc[self.adata.loc[:, 'm'] > 0, :].groupby('j')['i'].nunique().mean()
         self.res['between_firm_var'] = weighted_var(fy, fi)
-        # NOTE: set duplicated_values=False, because each observation's variance is divided by Dp and we need to undo that
-        self.res['var(y)'] = weighted_var(self.Y, self.Dp, duplicated_values=True)
+        # NOTE: set duplicated_values=False for uncorrelated errors, because each observation's variance is divided by Dp and we need to undo that
+        self.res['var(y)'] = weighted_var(self.Y, self.Dp, duplicated_values=(not self.params['uncorrelated_errors']))
         self.logger.info(f"total variance: {self.res['var(y)']:2.4f}")
 
         # extract woodcock moments using sdata and jdata
@@ -626,8 +630,8 @@ class FEEstimator:
         self.E = self.Y - self._mult_A(self.psi_hat, self.alpha_hat, weighted=False)
 
         ## Estimate variance of residuals (DON'T DEMEAN) ##
-        # NOTE: set duplicated_values=False, because each observation's variance is divided by Dp and we need to undo that
-        self.sigma_2_fe = weighted_mean(self.E ** 2, self.Dp, duplicated_values=False)
+        # NOTE: set duplicated_values=False for uncorrelated errors, because each observation's variance is divided by Dp and we need to undo that
+        self.sigma_2_fe = weighted_mean(self.E ** 2, self.Dp, duplicated_values=(not self.params['uncorrelated_errors']))
 
         ## Estimate R^2 ##
         fe_rsq = 1 - self.sigma_2_fe / self.res['var(y)']
@@ -1716,8 +1720,8 @@ class FEEstimator:
                     Sii *= jla_factor
 
         # Compute sigma^2 HE
-        # NOTE: set duplicated_values=False, because each observation's variance is divided by Dp and we need to undo that
-        self.res['var(eps)_he'] = weighted_mean(Sii, w, duplicated_values=False)
+        # NOTE: set duplicated_values=False for uncorrelated errors, because each observation's variance is divided by Dp and we need to undo that
+        self.res['var(eps)_he'] = weighted_mean(Sii, w, duplicated_values=(not self.params['uncorrelated_errors']))
 
         self.logger.info(f"[he] variance of residuals {self.res['var(eps)_he']:2.4f}")
 
