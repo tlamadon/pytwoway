@@ -810,7 +810,7 @@ def plot_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown_catego
     plt.tight_layout()
     plt.show()
 
-def plot_type_flows_between_categories(jdata, qi_j, breakdown_category, method='stacked', category_labels=None, dynamic=False, title='Worker flows', axis_label='category', subplot_title='worker type', n_cols=3, circle_scale=1, opacity=0.4, font_size=15):
+def plot_type_flows_between_categories(jdata, qi_j, breakdown_category, method='stacked', category_labels=None, dynamic=False, title='Worker flows', axis_label='category', subplot_title='worker type', n_cols=3, circle_scale=1, dpi=None, opacity=0.4, font_size=15):
     '''
     Plot flows of worker types between each group in a given category.
 
@@ -826,6 +826,7 @@ def plot_type_flows_between_categories(jdata, qi_j, breakdown_category, method='
         subplot_title (str): label for subplots (for stacked)
         n_cols (int): number of subplot columns (for stacked)
         circle_scale (float): size scale for circles (for stacked)
+        dpi (float or None): dpi for plot (for stacked)
         opacity (float): opacity of flows (for Sankey)
         font_size (float): font size for plot (for Sankey)
     '''
@@ -862,10 +863,11 @@ def plot_type_flows_between_categories(jdata, qi_j, breakdown_category, method='
     ## Compute worker flows ##
     reshaped_pk1 = np.reshape(pk1, (nk, nk, nl))
     mover_flows = (NNm.T * reshaped_pk1.T).T
-    
+
     if category_labels is None:
         category_labels = cat_groups + 1
     else:
+        ## Sort categories ##
         cat_order = np.argsort(category_labels)
         mover_flows = mover_flows[cat_order, :, :][:, cat_order, :]
         category_labels = np.array(category_labels)[cat_order]
@@ -877,8 +879,8 @@ def plot_type_flows_between_categories(jdata, qi_j, breakdown_category, method='
             # If the bottom column won't be filled
             n_rows += 1
 
-        ## Create subplots ###
-        fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=True, sharey=True)
+        ## Create subplots ##
+        fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=True, sharey=True, dpi=dpi)
 
         ## Create axes ##
         x_vals, y_vals = np.meshgrid(np.arange(n_cat) + 1, np.arange(n_cat) + 1, indexing='ij')
@@ -2919,7 +2921,7 @@ class BLMModel:
         ax.set_title(title)
         plt.show()
 
-    def plot_type_flows(self, method='stacked', title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=1, opacity=0.4, font_size=15):
+    def plot_type_flows(self, method='stacked', title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=1, dpi=None, opacity=0.4, font_size=15):
         '''
         Plot flows of worker types between each firm class.
 
@@ -2930,6 +2932,7 @@ class BLMModel:
             subplot_title (str): label for subplots (for stacked)
             n_cols (int): number of subplot columns (for stacked)
             circle_scale (float): size scale for circles (for stacked)
+            dpi (float or None): dpi for plot (for stacked)
             opacity (float): opacity of flows (for Sankey)
             font_size (float): font size for plot (for Sankey)
         '''
@@ -2954,8 +2957,8 @@ class BLMModel:
                 # If the bottom column won't be filled
                 n_rows += 1
 
-            ## Create subplots ###
-            fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=True, sharey=True)
+            ## Create subplots ##
+            fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=True, sharey=True, dpi=dpi)
 
             ## Create axes ##
             x_vals, y_vals = np.meshgrid(np.arange(nk) + 1, np.arange(nk) + 1, indexing='ij')
@@ -3207,7 +3210,7 @@ class BLMEstimator:
         else:
             warnings.warn('Estimation has not yet been run.')
 
-    def plot_type_flows(self, method='stacked', title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=1, opacity=0.4, font_size=15):
+    def plot_type_flows(self, method='stacked', title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=1, dpi=None, opacity=0.4, font_size=15):
         '''
         Plot flows of worker types between each firm class.
 
@@ -3218,11 +3221,12 @@ class BLMEstimator:
             subplot_title (str): label for subplots (for stacked)
             n_cols (int): number of subplot columns (for stacked)
             circle_scale (float): size scale for circles (for stacked)
+            dpi (float or None): dpi for plot (for stacked)
             opacity (float): opacity of flows (for Sankey)
             font_size (float): font size for plot (for Sankey)
         '''
         if self.model is not None:
-            self.model.plot_type_flows(method=method, title=title, axis_label=axis_label, subplot_title=subplot_title, n_cols=n_cols, circle_scale=circle_scale, opacity=opacity, font_size=font_size)
+            self.model.plot_type_flows(method=method, title=title, axis_label=axis_label, subplot_title=subplot_title, n_cols=n_cols, circle_scale=circle_scale, dpi=dpi, opacity=opacity, font_size=font_size)
         else:
             warnings.warn('Estimation has not yet been run.')
 
@@ -3532,7 +3536,7 @@ class BLMBootstrap:
             ax.set_title(title)
             plt.show()
 
-    def plot_type_flows(self, method='stacked', title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=1, opacity=0.4, font_size=15):
+    def plot_type_flows(self, method='stacked', title='Worker flows', axis_label='firm class k', subplot_title='worker type', n_cols=3, circle_scale=1, dpi=None, opacity=0.4, font_size=15):
         '''
         Plot flows of worker types between each firm class.
 
@@ -3543,6 +3547,7 @@ class BLMBootstrap:
             subplot_title (str): label for subplots (for stacked)
             n_cols (int): number of subplot columns (for stacked)
             circle_scale (float): size scale for circles (for stacked)
+            dpi (float or None): dpi for plot (for stacked)
             opacity (float): opacity of flows (for Sankey)
             font_size (float): font size for plot (for Sankey)
         '''
@@ -3575,8 +3580,8 @@ class BLMBootstrap:
                     # If the bottom column won't be filled
                     n_rows += 1
 
-                ## Create subplots ###
-                fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=True, sharey=True)
+                ## Create subplots ##
+                fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=True, sharey=True, dpi=dpi)
 
                 ## Create axes ##
                 x_vals, y_vals = np.meshgrid(np.arange(nk) + 1, np.arange(nk) + 1, indexing='ij')

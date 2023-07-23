@@ -4,7 +4,9 @@ Plots related to firm classes.
 import numpy as np
 import pandas as pd
 import bipartitepandas as bpd
+from pytwoway.util import DxM
 from matplotlib import pyplot as plt
+import plotly.graph_objects as go
 
 def _plot_worker_types_over_time(bdf, subplot, nk, firm_order=None, subplot_title=''):
     '''
@@ -206,3 +208,107 @@ def plot_firm_class_proportions_by_category(jdata, sdata, breakdown_category, ca
     ax.set_ylabel(ylabel)
     ax.set_title(title)
     plt.show()
+
+def plot_class_flows(jdata, breakdown_category, method='stacked', category_labels=None, dynamic=False, title='Worker flows', axis_label='category', circle_scale=1, dpi=None, opacity=0.4, font_size=15):
+    '''
+    Plot flows of workers between each group in a given category.
+
+    Arguments:
+        jdata (BipartitePandas DataFrame): event study, collapsed event study, or extended event study format labor data for movers
+        breakdown_category (str): categorical column, where worker proportions are plotted for each group within the category
+        method (str): 'stacked' for stacked plot; 'sankey' for Sankey plot
+        category_labels (list or None): specify labels for each category, where label indices should be based on sorted categories; if None, use values stored in data
+        dynamic (bool): if False, plotting estimates from static BLM; if True, plotting estimates from dynamic BLM
+        title (str): plot title
+        axis_label (str): label for axes (for stacked)
+        circle_scale (float): size scale for circles (for stacked)
+        dpi (float or None): dpi for plot (for stacked)
+        opacity (float): opacity of flows (for Sankey)
+        font_size (float): font size for plot (for Sankey)
+    '''
+    if method not in ['stacked', 'sankey']:
+        raise ValueError(f"`method` must be one of 'stacked' or 'sankey', but input specifies {method!r}.")
+
+    ## Extract parameters ##
+    cat_groups = np.array(sorted(jdata.unique_ids(breakdown_category)))
+    n_cat = len(cat_groups)
+    g1 = f'{breakdown_category}1'
+    g2 = f'{breakdown_category}'
+    if not dynamic:
+        g2 += '2'
+    else:
+        g2 += '4'
+
+    ### Compute NNm ###
+    NNm = jdata.groupby(g1)[g2].value_counts().unstack(fill_value=0).to_numpy()
+    mover_flows = NNm
+
+    if category_labels is None:
+        category_labels = cat_groups + 1
+    else:
+        ## Sort categories ##
+        cat_order = np.argsort(category_labels)
+        mover_flows = mover_flows[cat_order, :][:, cat_order]
+        category_labels = np.array(category_labels)[cat_order]
+
+    if method == 'stacked':
+        ## Plot ##
+        fig, ax = plt.subplots(dpi=dpi)
+
+        ## Create axes ##
+        x_vals, y_vals = np.meshgrid(np.arange(n_cat) + 1, np.arange(n_cat) + 1, indexing='ij')
+        x_vals = x_vals.flatten()
+        y_vals = y_vals.flatten()
+
+        ## Generate plot ##
+        ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows.flatten()))
+        plt.setp(ax, xticks=category_labels, yticks=category_labels)
+        ax.set_xlabel(f'{axis_label}, period 1')
+        ax.set_ylabel(f'{axis_label}, period 2')
+        ax.set_title(title)
+        ax.grid()
+        plt.show()
+    elif method == 'sankey':
+        colors = np.array(
+            [
+                [31, 119, 180],
+                [255, 127, 14],
+                [44, 160, 44],
+                [214, 39, 40],
+                [148, 103, 189],
+                [140, 86, 75],
+                [227, 119, 194],
+                [127, 127, 127],
+                [188, 189, 34],
+                [23, 190, 207],
+                [255, 0, 255]
+            ]
+        )
+
+        ## Sankey ##
+        sankey = go.Sankey(
+            # Define nodes
+            node=dict(
+                pad=15,
+                thickness=1,
+                line=dict(color='white', width=0),
+                label=[f'{axis_label}={category_label}' for category_label in category_labels] + [f'{axis_label}={category_label}' for category_label in category_labels],
+                color='white'
+            ),
+            link=dict(
+                # Source firm
+                source=np.repeat(np.arange(n_cat), n_cat),
+                # Destination firm
+                target=np.tile(np.arange(n_cat), n_cat),
+                # Worker flows
+                value=mover_flows.flatten(),
+                # Color
+                color=[f'rgba({str(list(colors[i, :]))[1: -1]}, {opacity})' for i in range(n_cat)]
+            )
+        )
+
+        fig = go.Figure(data=sankey)
+        fig.update_xaxes(visible=False)
+        fig.update_yaxes(visible=False)
+        fig.update_layout(title_text=title, font_size=font_size)
+        fig.show()
