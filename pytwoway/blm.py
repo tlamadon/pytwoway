@@ -884,15 +884,13 @@ def plot_type_flows_between_categories(jdata, qi_j, breakdown_category, method='
 
         ## Create axes ##
         x_vals, y_vals = np.meshgrid(np.arange(n_cat) + 1, np.arange(n_cat) + 1, indexing='ij')
-        x_vals = x_vals.flatten()
-        y_vals = y_vals.flatten()
 
         ## Generate plots ##
         l = 0
         for row in axs:
             for ax in row:
                 if l < nl:
-                    ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l].flatten()))
+                    ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l]))
                     ax.set_title(f'{subplot_title} {l + 1}')
                     ax.grid()
                     l += 1
@@ -2962,15 +2960,13 @@ class BLMModel:
 
             ## Create axes ##
             x_vals, y_vals = np.meshgrid(np.arange(nk) + 1, np.arange(nk) + 1, indexing='ij')
-            x_vals = x_vals.flatten()
-            y_vals = y_vals.flatten()
 
             ## Generate plots ##
             l = 0
             for row in axs:
                 for ax in row:
                     if l < nl:
-                        ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l].flatten()))
+                        ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l]))
                         ax.set_title(f'{subplot_title} {l + 1}')
                         ax.grid()
                         l += 1
@@ -3585,15 +3581,13 @@ class BLMBootstrap:
 
                 ## Create axes ##
                 x_vals, y_vals = np.meshgrid(np.arange(nk) + 1, np.arange(nk) + 1, indexing='ij')
-                x_vals = x_vals.flatten()
-                y_vals = y_vals.flatten()
 
                 ## Generate plots ##
                 l = 0
                 for row in axs:
                     for ax in row:
                         if l < nl:
-                            ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l].flatten()))
+                            ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l]))
                             ax.set_title(f'{subplot_title} {l + 1}')
                             ax.grid()
                             l += 1

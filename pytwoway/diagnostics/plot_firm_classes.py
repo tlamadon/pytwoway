@@ -251,17 +251,15 @@ def plot_class_flows(jdata, breakdown_category, method='stacked', category_label
         mover_flows = mover_flows[cat_order, :][:, cat_order]
         category_labels = np.array(category_labels)[cat_order]
 
+    ## Create axes ##
+    x_vals, y_vals = np.meshgrid(np.arange(n_cat) + 1, np.arange(n_cat) + 1, indexing='ij')
+
     if method == 'stacked':
         ## Plot ##
         fig, ax = plt.subplots(dpi=dpi)
 
-        ## Create axes ##
-        x_vals, y_vals = np.meshgrid(np.arange(n_cat) + 1, np.arange(n_cat) + 1, indexing='ij')
-        x_vals = x_vals.flatten()
-        y_vals = y_vals.flatten()
-
         ## Generate plot ##
-        ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows.flatten()))
+        ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows))
         plt.setp(ax, xticks=category_labels, yticks=category_labels)
         ax.set_xlabel(f'{axis_label}, period 1')
         ax.set_ylabel(f'{axis_label}, period 2')
@@ -297,18 +295,16 @@ def plot_class_flows(jdata, breakdown_category, method='stacked', category_label
             ),
             link=dict(
                 # Source firm
-                source=np.repeat(np.arange(n_cat), n_cat),
+                source=(x_vals - 1).flatten(),
                 # Destination firm
-                target=np.tile(np.arange(n_cat), n_cat),
+                target=(y_vals + n_cat - 1).flatten(),
                 # Worker flows
                 value=mover_flows.flatten(),
                 # Color
-                color=[f'rgba({str(list(colors[i, :]))[1: -1]}, {opacity})' for i in range(n_cat)]
+                color=[f'rgba({str(list(colors[i, :]))[1: -1]}, {opacity})' for i in range(n_cat) for _ in range(n_cat)]
             )
         )
 
         fig = go.Figure(data=sankey)
-        fig.update_xaxes(visible=False)
-        fig.update_yaxes(visible=False)
         fig.update_layout(title_text=title, font_size=font_size)
         fig.show()

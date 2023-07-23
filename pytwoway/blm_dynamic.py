@@ -4474,15 +4474,13 @@ class DynamicBLMModel:
 
             ## Create axes ##
             x_vals, y_vals = np.meshgrid(np.arange(nk) + 1, np.arange(nk) + 1, indexing='ij')
-            x_vals = x_vals.flatten()
-            y_vals = y_vals.flatten()
 
             ## Generate plots ##
             l = 0
             for row in axs:
                 for ax in row:
                     if l < nl:
-                        ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l].flatten()))
+                        ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l]))
                         ax.set_title(f'{subplot_title} {l + 1}')
                         ax.grid()
                         l += 1
@@ -5090,15 +5088,13 @@ class DynamicBLMBootstrap:
 
                 ## Create axes ##
                 x_vals, y_vals = np.meshgrid(np.arange(nk) + 1, np.arange(nk) + 1, indexing='ij')
-                x_vals = x_vals.flatten()
-                y_vals = y_vals.flatten()
 
                 ## Generate plots ##
                 l = 0
                 for row in axs:
                     for ax in row:
                         if l < nl:
-                            ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l].flatten()))
+                            ax.scatter(x_vals, y_vals, s=(circle_scale * mover_flows[:, :, l]))
                             ax.set_title(f'{subplot_title} {l + 1}')
                             ax.grid()
                             l += 1
