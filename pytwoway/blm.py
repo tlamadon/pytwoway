@@ -3847,7 +3847,7 @@ class BLMVarianceDecomposition:
         if ts:
             sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
 
-        self.res = {'var_decomp': res, 'var_decomp_comp': None, 'var_decomp_comp_t': None}
+        self.res = {'var_decomp': res, 'var_decomp_comp': None}
         if complementarities:
             self.res['var_decomp_comp'] = res_comp
 
