@@ -402,7 +402,7 @@ def test_fe_controls_novar():
     cat = sim_params['A1_cat']['cat_tnv_control'][a.loc[:, 'cat_tnv_control'].to_numpy()]
     cts = sim_params['A1_cts']['cts_tnv_control'][0] * a.loc[:, 'cts_tnv_control'].to_numpy()
 
-    true_sigma_2 = weighted_var(a.loc[:, 'y'].to_numpy() - psi_alpha - cat - cts)
+    true_sigma_2 = weighted_var(a.loc[:, 'y'].to_numpy() - psi_alpha - cat - cts, duplicated_values=False)
     true_var_psi_alpha = weighted_var(psi_alpha)
     true_var_cat = weighted_var(cat)
     true_var_cts = weighted_var(cts)
@@ -540,7 +540,7 @@ def test_fe_controls_var():
     cat = sim_params['A1_cat']['cat_tnv_control'][a.loc[:, 'cat_tnv_control'].to_numpy()]
     cts = sim_params['A1_cts']['cts_tnv_control'][0] * a.loc[:, 'cts_tnv_control'].to_numpy()
 
-    true_sigma_2 = weighted_var(a.loc[:, 'y'].to_numpy() - psi_alpha - cat - cts)
+    true_sigma_2 = weighted_var(a.loc[:, 'y'].to_numpy() - psi_alpha - cat - cts, duplicated_values=False)
     true_var_psi_alpha = weighted_var(psi_alpha)
     true_var_cat = weighted_var(cat)
     true_var_cts = weighted_var(cts)

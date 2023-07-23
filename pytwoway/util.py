@@ -7,28 +7,32 @@ from bipartitepandas.util import to_list
 from scipy.sparse import csc_matrix
 from matplotlib import pyplot as plt
 
-def weighted_mean(v, w=None):
+def weighted_mean(v, w=None, duplicated_values=True):
     '''
     Compute weighted mean.
 
     Arguments:
         v (NumPy Array): vector to weight
         w (NumPy Array or float or None): weights; None is equivalent to no weights
+        duplicated_values (bool): if True, weights indicate duplicated values (standard weighted mean); otherwise, weights indicate a weighted average over multiple observations
 
     Returns:
         (NumPy Array): weighted mean
     '''
     if (w is None) or isinstance(w, (float, int)):
         return np.mean(v)
-    return np.sum(w * v) / np.sum(w)
+    if duplicated_values:
+        return np.sum(w * v) / np.sum(w)
+    return np.sum((w ** 2) * v) / np.sum(w)
 
-def weighted_var(v, w=None, dof=0):
+def weighted_var(v, w=None, duplicated_values=True, dof=0):
     '''
     Compute weighted variance.
 
     Arguments:
         v (NumPy Array): vector to weight
         w (NumPy Array or float or None): weights; None is equivalent to no weights
+        duplicated_values (bool): if True, weights indicate duplicated values (standard weighted variance); otherwise, weights indicate a weighted average over multiple observations
         dof (int): degrees of freedom
 
     Returns:
@@ -40,9 +44,13 @@ def weighted_var(v, w=None, dof=0):
         n = len(v)
         return np.sum((v - m0) ** 2) / (n - dof)
 
-    return np.sum(w * (v - m0) ** 2) / (np.sum(w) - dof)
+    if duplicated_values:
+        w2 = w
+    else:
+        w2 = w ** 2
+    return np.sum(w2 * (v - m0) ** 2) / (np.sum(w) - dof)
 
-def weighted_cov(v1, v2, w1=1, w2=1, dof=0):
+def weighted_cov(v1, v2, w1=1, w2=1, duplicated_values=True, dof=0):
     '''
     Compute weighted covariance.
 
@@ -51,6 +59,7 @@ def weighted_cov(v1, v2, w1=1, w2=1, dof=0):
         v2 (NumPy Array): vector to weight
         w1 (NumPy Array or float): weights for v1
         w2 (NumPy Array or float): weights for v2
+        duplicated_values (bool): if True, weights indicate duplicated values (standard weighted covariance); otherwise, weights indicate a weighted average over multiple observations
         dof (int): degrees of freedom
 
     Returns:
@@ -63,9 +72,14 @@ def weighted_cov(v1, v2, w1=1, w2=1, dof=0):
         n = len(v1)
         return np.sum((v1 - m1) * (v2 - m2)) / (n - dof)
 
-    w3 = np.sqrt(w1 * w2)
+    if duplicated_values:
+        w3 = np.sqrt(w1 * w2)
+        w4 = w3
+    else:
+        w4 = w1 * w2
+        w3 = np.sqrt(w4)
 
-    return np.sum(w3 * (v1 - m1) * (v2 - m2)) / (np.sum(w3) - dof)
+    return np.sum(w4 * (v1 - m1) * (v2 - m2)) / (np.sum(w3) - dof)
 
 def weighted_quantile(values, quantiles, sample_weight=None, values_sorted=False, old_style=False):
     '''

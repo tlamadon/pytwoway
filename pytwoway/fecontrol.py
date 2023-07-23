@@ -653,7 +653,8 @@ class FEControlEstimator:
         self.res['size_quantiles'] = weighted_quantile(fi, ls, fi).tolist()
         # self.res['movers_per_firm'] = self.adata.loc[self.adata.loc[:, 'm'] > 0, :].groupby('j')['i'].nunique().mean()
         self.res['between_firm_var'] = weighted_var(fy, fi)
-        self.res['var(y)'] = weighted_var(self.Y, self.Dp)
+        # NOTE: set duplicated_values=False, because each observation's variance is divided by Dp and we need to undo that
+        self.res['var(y)'] = weighted_var(self.Y, self.Dp, duplicated_values=False)
         self.logger.info(f"total variance: {self.res['var(y)']:2.4f}")
 
         # extract woodcock moments using sdata and jdata
@@ -841,18 +842,16 @@ class FEControlEstimator:
         '''
         Estimate residuals and sigma^2 (variance of residuals) for plug-in (biased) FE model.
         '''
-        Dp = self.Dp
-
         ## Estimate residuals ##
         self.E = self.Y - self._mult_A(self.gamma_hat, weighted=False)
 
-        ## Estimate R^2 ##
-        fe_rsq = 1 - (Dp * (self.E ** 2)).sum() / (Dp * (self.Y ** 2)).sum()
-        self.logger.info(f'fixed effect R-square {fe_rsq:2.4f}')
-
         ## Estimate variance of residuals (DON'T DEMEAN) ##
-        # NOTE: multiply by Dp, because each observation's variance is divided by Dp and we need to undo that
-        self.sigma_2_fe = weighted_mean(Dp * (self.E ** 2), Dp)
+        # NOTE: set duplicated_values=False, because each observation's variance is divided by Dp and we need to undo that
+        self.sigma_2_fe = weighted_mean(self.E ** 2, self.Dp, duplicated_values=False)
+
+        ## Estimate R^2 ##
+        fe_rsq = 1 - self.sigma_2_fe / self.res['var(y)']
+        self.logger.info(f'fixed effect R-square {fe_rsq:2.4f}')
 
         self.logger.info(f'[fe] variance of residuals {self.sigma_2_fe:2.4f}')
 
@@ -1618,8 +1617,9 @@ class FEControlEstimator:
                     # Multiply by bias correction factor
                     Sii *= jla_factor
 
-        # Compute sigma^2 HE (multiply by Dp, because each observation's variance is divided by Dp and we need to undo that)
-        self.res['var(eps)_he'] = np.average(w * Sii, weights=w)
+        # Compute sigma^2 HE
+        # NOTE: set duplicated_values=False, because each observation's variance is divided by Dp and we need to undo that
+        self.res['var(eps)_he'] = weighted_mean(Sii, w, duplicated_values=False)
 
         self.logger.info(f"[he] variance of residuals {self.res['var(eps)_he']:2.4f}")
 

@@ -511,7 +511,7 @@ def _plot_worker_types_over_time(bdf, subplot, nl, subplot_title='', weighted=Tr
         subplot.bar(x_axis, type_proportions[:, l], bottom=type_props_cumsum[:, l - 1])
     subplot.set_title(subplot_title)
 
-def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdown_category=None, n_cols=3, category_labels=None, subset='all', xlabel='year', ylabel='type proportions', title='Worker type proportions over time', subplot_title='', dpi=None):
+def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdown_category=None, n_cols=3, category_labels=None, subset='all', xlabel='year', ylabel='type proportions', title='Worker type proportions over time', subplot_title='', weighted=True, dpi=None):
     '''
     Plot worker type proportions over time.
 
@@ -529,6 +529,7 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdo
         ylabel (str): label for y-axis
         title (str): plot title
         subplot_title (str): (if breakdown_category is specified) subplot title (subplots will be titled `subplot_title` + category, e.g. if `subplot_title`='k=', then subplots will be titled 'k=1', 'k=2', etc., or if `subplot_title`='', then subplots will be titled '1', '2', etc.)
+        weighted (bool): if True, use weights
         dpi (float or None): dpi for plot
     '''
     if (not jdata._col_included('t')) or (not sdata._col_included('t')):
@@ -582,7 +583,7 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdo
     ## Create subplots ##
     fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, sharex=False, sharey=True, dpi=dpi)
     if breakdown_category is None:
-        _plot_worker_types_over_time(bdf=bdf, subplot=axs, nl=nl, subplot_title='', weighted=(not dynamic))
+        _plot_worker_types_over_time(bdf=bdf, subplot=axs, nl=nl, subplot_title='', weighted=(weighted and (not dynamic)))
         axs.set_xlabel(xlabel)
         axs.set_ylabel(ylabel)
         axs.set_title(title)
@@ -597,7 +598,7 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdo
                     _plot_worker_types_over_time(
                         bdf=bdf.loc[bdf.loc[:, breakdown_category].to_numpy() == cat_ij, :],
                         subplot=ax, nl=nl, subplot_title=subplot_title_ij,
-                        weighted=(not dynamic)
+                        weighted=(weighted and (not dynamic))
                     )
                     n_plots += 1
                 else:
@@ -611,7 +612,7 @@ def plot_worker_types_over_time(jdata, sdata, qi_j, qi_s, dynamic=False, breakdo
 
 def plot_worker_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown_category, category_labels=None, dynamic=False, subset='all', xlabel='category', ylabel='type proportions', title='Worker type proportions by category', dpi=None):
     '''
-    Plot worker type proportions broken down by the given category.
+    Plot worker type proportions broken down by the given category. NOTE: should not use weights.
 
     Arguments:
         jdata (BipartitePandas DataFrame): event study, collapsed event study, or extended event study format labor data for movers
@@ -631,10 +632,8 @@ def plot_worker_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown
     nl = qi_j.shape[1]
     if not dynamic:
         nt = 2
-        weighted = jdata._col_included('w')
     else:
         nt = 4
-        weighted = False
     cat_groups = np.array(sorted(jdata.unique_ids(breakdown_category)))
 
     ## Add qi probabilities to dataframes ##
@@ -661,13 +660,8 @@ def plot_worker_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown
     type_proportions = np.zeros([len(cat_groups), nl])
     for i, cat_group in enumerate(cat_groups):
         bdf_i = bdf.loc[cat_col == cat_group, :]
-        if weighted:
-            w_i = bdf_i.loc[:, 'w'].to_numpy()
-            # Number of observations per worker type per group
-            type_proportions[i, :] = np.sum(w_i[:, None] * bdf_i.loc[:, qi_cols].to_numpy(), axis=0)
-        else:
-            # Number of observations per worker type per group
-            type_proportions[i, :] = np.sum(bdf_i.loc[:, qi_cols].to_numpy(), axis=0)
+        # Number of observations per worker type per group
+        type_proportions[i, :] = np.sum(bdf_i.loc[:, qi_cols].to_numpy(), axis=0)
         # Normalize to proportions
         type_proportions[i, :] /= type_proportions[i, :].sum()
 
@@ -693,9 +687,9 @@ def plot_worker_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown
     ax.set_title(title)
     plt.show()
 
-def _plot_type_proportions_by_category(bdf, subplot, nl, nk, firm_order=None, subplot_title='', weighted=True):
+def _plot_type_proportions_by_category(bdf, subplot, nl, nk, firm_order=None, subplot_title=''):
     '''
-    Generate a subplot for plot_type_proportions_by_category().
+    Generate a subplot for plot_type_proportions_by_category(). NOTE: should not use weights.
 
     Arguments:
         bdf (BipartitePandas DataFrame): long format data
@@ -704,9 +698,7 @@ def _plot_type_proportions_by_category(bdf, subplot, nl, nk, firm_order=None, su
         nk (int): number of firm classes
         firm_order (NumPy Array or None): sorted firm class order; None keeps the original firm order
         subplot_title (str): subplot title
-        weighted (bool): if True, use weights
     '''
-    weighted = weighted and bdf._col_included('w')
     qi_cols = [f'qi_' + 'i' * (l + 1) for l in range(nl)]
 
     ## Plot type proportions ##
@@ -714,13 +706,8 @@ def _plot_type_proportions_by_category(bdf, subplot, nl, nk, firm_order=None, su
     type_proportions = np.zeros([nk, nl])
     for k in range(nk):
         bdf_k = bdf.loc[GG == k, :]
-        if weighted:
-            w_k = bdf_k.loc[:, 'w'].to_numpy()
-            # Number of observations per worker type per firm class
-            type_proportions[k, :] = np.sum(w_k[:, None] * bdf_k.loc[:, qi_cols].to_numpy(), axis=0)
-        else:
-            # Number of observations per worker type per firm class
-            type_proportions[k, :] = np.sum(bdf_k.loc[:, qi_cols].to_numpy(), axis=0)
+        # Number of observations per worker type per firm class
+        type_proportions[k, :] = np.sum(bdf_k.loc[:, qi_cols].to_numpy(), axis=0)
         # Normalize to proportions
         type_proportions[k, :] /= type_proportions[k, :].sum()
 
@@ -740,7 +727,7 @@ def _plot_type_proportions_by_category(bdf, subplot, nl, nk, firm_order=None, su
 
 def plot_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown_category, n_cols=3, category_labels=None, dynamic=False, subset='all', firm_order=None, xlabel='firm class k', ylabel='type proportions', title='Type proportions by category', subplot_title='category ', dpi=None):
     '''
-    Plot worker-firm type proportions broken down by the given category.
+    Plot worker-firm type proportions broken down by the given category. NOTE: should not use weights.
 
     Arguments:
         jdata (BipartitePandas DataFrame): event study, collapsed event study, or extended event study format labor data for movers
@@ -811,7 +798,7 @@ def plot_type_proportions_by_category(jdata, sdata, qi_j, qi_s, breakdown_catego
                 _plot_type_proportions_by_category(
                     bdf=bdf.loc[bdf.loc[:, breakdown_category].to_numpy() == cat_ij, :],
                     subplot=ax, nl=nl, nk=nk, firm_order=firm_order,
-                    subplot_title=subplot_title_ij, weighted=(not dynamic)
+                    subplot_title=subplot_title_ij
                 )
                 n_plots += 1
             else:
