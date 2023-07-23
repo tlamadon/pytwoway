@@ -3727,7 +3727,6 @@ class BLMVarianceDecomposition:
             if not no_cts_controls:
                 fe_params['continuous_controls'] = params['continuous_controls'].keys()
         fe_params['weighted'] = weighted
-        fe_params['uncorrelated_errors'] = True
         fe_params['ho'] = False
         if Q_var is not None:
             fe_params['Q_var'] = Q_var
@@ -3784,7 +3783,8 @@ class BLMVarianceDecomposition:
             res_lst_comp = []
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
-            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=weighted, rng=rng)
+            # Don't weight here, and assume errors are correlated within spell
+            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=False, rng=rng)
             ## Estimate OLS ##
             if no_controls:
                 fe_estimator = tw.FEEstimator(bdf, fe_params)
