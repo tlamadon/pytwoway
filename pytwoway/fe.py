@@ -629,11 +629,12 @@ class FEEstimator:
         ## Estimate residuals ##
         self.E = self.Y - self._mult_A(self.psi_hat, self.alpha_hat, weighted=False)
 
-        ## Estimate variance of residuals (DON'T DEMEAN) (USE WEIGHT ONLY FOR SCALING) ##
+        ## Estimate variance of residuals (DON'T DEMEAN) ##
         if not self.params['uncorrelated_errors']:
-            self.sigma_2_fe = np.mean(self.E ** 2)
+            self.sigma_2_fe = weighted_mean(self.E ** 2, self.Dp)
         else:
             # NOTE: multiply by Dp for uncorrelated errors, because each observation's variance is divided by Dp and we need to undo that
+            # NOTE: use weights only for scaling
             self.sigma_2_fe = np.mean(self.Dp * (self.E ** 2))
 
         ## Estimate R^2 ##
@@ -1722,11 +1723,12 @@ class FEEstimator:
                     # Multiply by bias correction factor
                     Sii *= jla_factor
 
-        # Compute sigma^2 HE (DON'T DEMEAN) (USE WEIGHT ONLY FOR SCALING)
+        # Compute sigma^2 HE (DON'T DEMEAN)
         if not self.params['uncorrelated_errors']:
-            self.res['var(eps)_he'] = np.mean(Sii)
+            self.res['var(eps)_he'] = weighted_mean(Sii, w)
         else:
             # NOTE: multiply by w for uncorrelated errors, because each observation's variance is divided by w and we need to undo that
+            # NOTE: use weights only for scaling
             self.res['var(eps)_he'] = np.mean(w * Sii)
 
         self.logger.info(f"[he] variance of residuals {self.res['var(eps)_he']:2.4f}")
