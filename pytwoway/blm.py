@@ -365,6 +365,8 @@ def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, p
     if optimal_reallocation:
         ### Reallocate workers ###
         if reallocation_constraint_category is None:
+            nt = 1
+
             ## Firm sizes ##
             firm_sizes_s = np.bincount(gs)
             firm_sizes_1 = np.bincount(gj[:, 0]) + firm_sizes_s
@@ -375,19 +377,23 @@ def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, p
             worker_sizes_1 = np.bincount(Lm) + worker_sizes_s
             # worker_sizes_2 = np.bincount(Lm) + worker_sizes_s
         else:
-            cons_col_s = sdata.loc[:, bpd.to_list(sdata.col_reference_dict(reallocation_constraint_category))[0]].to_numpy()
-            cons_col_j = jdata.loc[:, bpd.to_list(jdata.col_reference_dict(reallocation_constraint_category))[0]].to_numpy()
+            cat_cons_col = to_list(sdata.col_reference_dict[reallocation_constraint_category])[0]
+            cat_cons_col_s = sdata.loc[:, cat_cons_col].to_numpy()
+            cat_cons_col_j = jdata.loc[:, cat_cons_col].to_numpy()
+            # Number of categories (movers and stayers don't necessarily have the same categories)
+            n_cat = max(cat_cons_col_s.max(), cat_cons_col_j.max()) + 1
+            nt = n_cat
 
             ## Firm sizes ##
-            firm_sizes_s = np.bincount(gs + nk * cons_col_s)
-            firm_sizes_1 = np.bincount(gj[:, 0] + nk * cons_col_j) + firm_sizes_s
-            # firm_sizes_2 = np.bincount(gj[:, 1] + nk * cons_col_j) + firm_sizes_s
+            firm_sizes_s = np.bincount(gs + nk * cat_cons_col_s, minlength=(nk * n_cat))
+            firm_sizes_1 = np.bincount(gj[:, 0] + nk * cat_cons_col_j, minlength=(nk * n_cat)) + firm_sizes_s
+            # firm_sizes_2 = np.bincount(gj[:, 1] + nk * cat_cons_col_j, minlength=(nk * n_cat)) + firm_sizes_s
 
             ## Worker type sizes ##
-            worker_sizes_s = np.bincount(Ls + nl * cons_col_s)
-            worker_sizes_1 = np.bincount(Lm + nl * cons_col_j) + worker_sizes_s
-            # worker_sizes_2 = np.bincount(Lm + nl * cons_col_j) + worker_sizes_s
-            del cons_col_s, cons_col_j
+            worker_sizes_s = np.bincount(Ls + nl * cat_cons_col_s, minlength=(nl * n_cat))
+            worker_sizes_1 = np.bincount(Lm + nl * cat_cons_col_j, minlength=(nl * n_cat)) + worker_sizes_s
+            # worker_sizes_2 = np.bincount(Lm + nl * cat_cons_col_j, minlength=(nl * n_cat)) + worker_sizes_s
+            del cat_cons_col_s, cat_cons_col_j
         del firm_sizes_s, worker_sizes_s
 
         ### Set up linear programming solver ###
@@ -398,15 +404,14 @@ def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, p
         elif optimal_reallocation == 'min':
             Y = -blm_model.A1.flatten()
         if reallocation_constraint_category is not None:
-            n_cat = worker_sizes_s // nl
             Y = np.tile(Y, n_cat)
 
         ## Constraints ##
-        cons_a = cons.QPConstrained(len(worker_sizes_1), len(firm_sizes_1)) # nl, nk
-        cons_a.add_constraints(cons.FirmSum(b=firm_sizes_1, nt=1))
-        cons_a.add_constraints(cons.WorkerSum(b=worker_sizes_1, nt=1))
+        cons_a = cons.QPConstrained(nl, nk)
+        cons_a.add_constraints(cons.FirmSum(b=firm_sizes_1, nt=nt))
+        cons_a.add_constraints(cons.WorkerSum(b=worker_sizes_1, nt=nt))
         # Bound below at 0
-        cons_a.add_constraints(cons.BoundedBelow(lb=0, nt=1))
+        cons_a.add_constraints(cons.BoundedBelow(lb=0, nt=nt))
 
         ### Solve ###
         # NOTE: don't need to constrain to be integers, because will become integers anyway
@@ -3367,7 +3372,7 @@ class BLMBootstrap:
             models = []
             for _ in trange(n_samples):
                 ## Simulate worker types and wages ##
-                bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=True, rng=rng)
+                bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, reallocation_constraint_category=None, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=True, rng=rng)
 
                 ## Cluster ##
                 bdf = bdf.cluster(cluster_params, rng=rng)
@@ -3803,7 +3808,7 @@ class BLMVarianceDecomposition:
             res_lst_comp = []
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
-            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=(weighted and uncorrelated_errors), rng=rng)
+            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, reallocation_constraint_category=None, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=(weighted and uncorrelated_errors), rng=rng)
             ## Estimate OLS ##
             if no_controls:
                 fe_estimator = tw.FEEstimator(bdf, fe_params)
@@ -3873,7 +3878,7 @@ class BLMReallocation:
         # No model
         self.model = None
 
-    def fit(self, jdata, sdata, quantiles=None, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, unresidualize_col=None, optimal_reallocation=False, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, ncore=1, weighted=True, rng=None):
+    def fit(self, jdata, sdata, quantiles=None, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, unresidualize_col=None, optimal_reallocation=False, reallocation_constraint_category=None, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, ncore=1, weighted=True, rng=None):
         '''
         Estimate reallocation exercise.
 
@@ -3891,6 +3896,7 @@ class BLMReallocation:
             continuous_sort_cols (dict or None): in addition to standard quantiles results, return average income grouped by the alternative column(s) given (which are represented by the dictionary {column: list of quantiles to compute}). For continuous variables, create bins based on the list of quantiles given in the dictionary. The list of quantiles must start at 0 and end at 1. None is equivalent to {}.
             unresidualize_col (str or None): column with predicted values that are residualized out, which will be added back in before computing outcomes in order to unresidualize the values; None leaves outcome unchanged
             optimal_reallocation (bool or str): if not False, reallocate workers to new firms to maximize ('max') or minimize ('min') total output
+            reallocation_constraint_category (str or None): specify categorical column to constrain reallocation so that workers must reallocate within their own category; if None, no constraints on how workers can reallocate
             qi_j (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if pk1 or qi_cum_j is not None
             qi_s (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each stayer observation to be each worker type; None if pk0 or qi_cum_s is not None
             qi_cum_j (NumPy Array or None): (use with optimal_reallocation to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if pk1 or qi_j is not None
@@ -4002,7 +4008,7 @@ class BLMReallocation:
         NNs_res = np.zeros([n_samples, nk])
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
-            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=qi_j, qi_s=qi_s, qi_cum_j=qi_cum_j, qi_cum_s=qi_cum_s, optimal_reallocation=optimal_reallocation, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=True, weighted=weighted, rng=rng)
+            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=qi_j, qi_s=qi_s, qi_cum_j=qi_cum_j, qi_cum_s=qi_cum_s, optimal_reallocation=optimal_reallocation, reallocation_constraint_category=reallocation_constraint_category, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=True, weighted=weighted, rng=rng)
 
             ## Compute quantiles ##
             y = bdf.loc[:, 'y'].to_numpy()
