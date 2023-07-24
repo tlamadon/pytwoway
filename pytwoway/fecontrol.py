@@ -86,7 +86,7 @@ fecontrol_params = ParamsDict({
         ''', None),
     'uncorrelated_errors': (False, 'type', bool,
         '''
-            (default=False) Set to True if using weighted estimator and errors are assumed to be uncorrelated within job spells.
+            (default=False) Set to True if using weighted estimator and errors are assumed to be uncorrelated within job spells. Set to False if using weighted estimator and errors are assumed to be perfectly correlated within job spells.
         ''', None),
     'Q_var': (None, 'list_of_type_none', Q.VarCovariate,
         '''
@@ -658,7 +658,7 @@ class FEControlEstimator:
         # self.res['movers_per_firm'] = self.adata.loc[self.adata.loc[:, 'm'] > 0, :].groupby('j')['i'].nunique().mean()
         self.res['between_firm_var'] = weighted_var(fy, fi)
         # NOTE: set duplicated_values=False for uncorrelated errors, because each observation's variance is divided by Dp and we need to undo that
-        self.res['var(y)'] = weighted_var(self.Y, self.Dp, duplicated_values=(not self.params['uncorrelated_errors']))
+        self.res['var(y)'] = weighted_var(self.Y, self.Dp)
         self.logger.info(f"total variance: {self.res['var(y)']:2.4f}")
 
         # extract woodcock moments using sdata and jdata
@@ -849,9 +849,12 @@ class FEControlEstimator:
         ## Estimate residuals ##
         self.E = self.Y - self._mult_A(self.gamma_hat, weighted=False)
 
-        ## Estimate variance of residuals (DON'T DEMEAN) ##
-        # NOTE: set duplicated_values=False for uncorrelated errors, because each observation's variance is divided by Dp and we need to undo that
-        self.sigma_2_fe = weighted_mean(self.E ** 2, self.Dp, duplicated_values=(not self.params['uncorrelated_errors']))
+        ## Estimate variance of residuals (DON'T DEMEAN) (USE WEIGHT ONLY FOR SCALING) ##
+        if not self.params['uncorrelated_errors']:
+            self.sigma_2_fe = np.mean(self.E ** 2)
+        else:
+            # NOTE: multiply by Dp for uncorrelated errors, because each observation's variance is divided by Dp and we need to undo that
+            self.sigma_2_fe = np.mean(self.Dp * (self.E ** 2))
 
         ## Estimate R^2 ##
         fe_rsq = 1 - self.sigma_2_fe / self.res['var(y)']
@@ -1621,9 +1624,12 @@ class FEControlEstimator:
                     # Multiply by bias correction factor
                     Sii *= jla_factor
 
-        # Compute sigma^2 HE
-        # NOTE: set duplicated_values=False for uncorrelated errors, because each observation's variance is divided by Dp and we need to undo that
-        self.res['var(eps)_he'] = weighted_mean(Sii, w, duplicated_values=(not self.params['uncorrelated_errors']))
+        # Compute sigma^2 HE (DON'T DEMEAN) (USE WEIGHT ONLY FOR SCALING)
+        if not self.params['uncorrelated_errors']:
+            self.res['var(eps)_he'] = np.mean(Sii)
+        else:
+            # NOTE: multiply by w for uncorrelated errors, because each observation's variance is divided by w and we need to undo that
+            self.res['var(eps)_he'] = np.mean(w * Sii)
 
         self.logger.info(f"[he] variance of residuals {self.res['var(eps)_he']:2.4f}")
 

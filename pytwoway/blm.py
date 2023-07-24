@@ -3679,7 +3679,7 @@ class BLMVarianceDecomposition:
         # No initial results
         self.res = None
 
-    def fit(self, jdata, sdata, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', Q_var=None, Q_cov=None, complementarities=True, firm_clusters_as_ids=True, worker_types_as_ids=True, weighted=True, ncore=1, rng=None):
+    def fit(self, jdata, sdata, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', uncorrelated_errors=True, Q_var=None, Q_cov=None, complementarities=True, firm_clusters_as_ids=True, worker_types_as_ids=True, weighted=True, ncore=1, rng=None):
         '''
         Estimate variance decomposition.
 
@@ -3693,6 +3693,7 @@ class BLMVarianceDecomposition:
             reallocate (bool): if True, draw worker type proportions independently of firm type; if False, uses worker type proportions that are conditional on firm type
             reallocate_jointly (bool): if True, worker type proportions take the average over movers and stayers (i.e. all workers use the same type proportions); if False, consider movers and stayers separately
             reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
+            uncorrelated_errors (bool): set to True if using weighted estimator and errors are assumed to be uncorrelated within job spells. Set to False if using weighted estimator and errors are assumed to be perfectly correlated within job spells.
             Q_var (list of Q variances): list of Q matrices to use when estimating variance term; None is equivalent to tw.Q.VarPsi() without controls, or tw.Q.VarCovariate('psi') with controls
             Q_cov (list of Q covariances): list of Q matrices to use when estimating covariance term; None is equivalent to tw.Q.CovPsiAlpha() without controls, or tw.Q.CovCovariate('psi', 'alpha') with controls
             complementarities (bool): if True, estimate R^2 of regression with complementarities (by adding in all worker-firm interactions). Only allowed when firm_clusters_as_ids=True and worker_types_as_ids=True.
@@ -3727,6 +3728,7 @@ class BLMVarianceDecomposition:
                 fe_params['continuous_controls'] = params['continuous_controls'].keys()
         fe_params['weighted'] = weighted
         fe_params['ho'] = False
+        fe_params['uncorrelated_errors'] = uncorrelated_errors
         if Q_var is not None:
             fe_params['Q_var'] = Q_var
         if Q_cov is not None:
@@ -3782,8 +3784,7 @@ class BLMVarianceDecomposition:
             res_lst_comp = []
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
-            # Don't weight here, and assume errors are correlated within spell
-            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=False, rng=rng)
+            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=(weighted and uncorrelated_errors), rng=rng)
             ## Estimate OLS ##
             if no_controls:
                 fe_estimator = tw.FEEstimator(bdf, fe_params)

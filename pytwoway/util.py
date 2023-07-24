@@ -7,23 +7,20 @@ from bipartitepandas.util import to_list
 from scipy.sparse import csc_matrix
 from matplotlib import pyplot as plt
 
-def weighted_mean(v, w=None, duplicated_values=True):
+def weighted_mean(v, w=None):
     '''
     Compute weighted mean.
 
     Arguments:
         v (NumPy Array): vector to weight
         w (NumPy Array or float or None): weights; None is equivalent to no weights
-        duplicated_values (bool): if True, weights indicate duplicated values (standard weighted mean); otherwise, weights indicate a weighted average over multiple observations
 
     Returns:
         (NumPy Array): weighted mean
     '''
     if (w is None) or isinstance(w, (float, int)):
         return np.mean(v)
-    if duplicated_values:
-        return np.sum(w * v) / np.sum(w)
-    return np.sum((w ** 2) * v) / np.sum(w)
+    return np.sum(w * v) / np.sum(w)
 
 def weighted_var(v, w=None, duplicated_values=True, dof=0):
     '''
@@ -45,10 +42,10 @@ def weighted_var(v, w=None, duplicated_values=True, dof=0):
         return np.sum((v - m0) ** 2) / (n - dof)
 
     if duplicated_values:
-        w2 = w
+        return np.sum(w * (v - m0) ** 2) / (np.sum(w) - dof)
     else:
-        w2 = w ** (3 / 2)
-    return np.sum(w2 * (v - m0) ** 2) / (np.sum(w) - dof)
+        # NOTE: use weights only to scale
+        return np.sum(w * (v - m0) ** 2) / (len(v) - dof)
 
 def weighted_cov(v1, v2, w1=1, w2=1, duplicated_values=True, dof=0):
     '''
@@ -72,14 +69,12 @@ def weighted_cov(v1, v2, w1=1, w2=1, duplicated_values=True, dof=0):
         n = len(v1)
         return np.sum((v1 - m1) * (v2 - m2)) / (n - dof)
 
+    w3 = np.sqrt(w1 * w2)
     if duplicated_values:
-        w3 = np.sqrt(w1 * w2)
-        w4 = w3
+        return np.sum(w3 * (v1 - m1) * (v2 - m2)) / (np.sum(w3) - dof)
     else:
-        w3 = np.sqrt(w1 * w2)
-        w4 = (w1 * w2) ** (3 / 4)
-
-    return np.sum(w4 * (v1 - m1) * (v2 - m2)) / (np.sum(w3) - dof)
+        # NOTE: use weights only to scale
+        return np.sum(w3 * (v1 - m1) * (v2 - m2)) / (len(v1) - dof)
 
 def weighted_quantile(values, quantiles, sample_weight=None, values_sorted=False, old_style=False):
     '''
