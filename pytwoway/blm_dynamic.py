@@ -4497,8 +4497,8 @@ class DynamicBLMModel:
         del log_pk1, lp1_curr, lp4_curr, lp1_adj, lp4_adj, lp2_adj_1, lp2_adj_2, lp3_adj_1, lp3_adj_2
 
         ## Convert to log-sum-exp form ##
-        lse_lp_adj_first = np.apply_along_axis(lambda a: logsumexp(a.reshape(nij, nl), axis=1, gpu=self.gpu), axis=1, arr=lp_adj_first.reshape(nk, nij * nl))
-        lse_lp_adj_second = np.apply_along_axis(lambda a: logsumexp(a.reshape(nij, nl), axis=1, gpu=self.gpu), axis=1, arr=lp_adj_second.reshape(nk, nij * nl))
+        lse_lp_adj_first = np.apply_along_axis(lambda a: logsumexp(a.reshape(nij, nl), axis=1), axis=1, arr=lp_adj_first.reshape(nk, nij * nl))
+        lse_lp_adj_second = np.apply_along_axis(lambda a: logsumexp(a.reshape(nij, nl), axis=1), axis=1, arr=lp_adj_second.reshape(nk, nij * nl))
 
         ## Firm-level probabilities ##
         firm_level_lp_adj_first = np.apply_along_axis(lambda a: np.bincount(J1, a, minlength=nf), axis=1, arr=lse_lp_adj_first).T
@@ -4616,7 +4616,7 @@ class DynamicBLMModel:
         del log_pk0, lp1_adj, lp2_adj, lp3_adj, lp4_adj
 
         ## Convert to log-sum-exp form ##
-        lse_lp_adj = np.apply_along_axis(lambda a: logsumexp(a.reshape(nis, nl), axis=1, gpu=self.gpu), axis=1, arr=lp_adj.reshape(nk, nis * nl))
+        lse_lp_adj = np.apply_along_axis(lambda a: logsumexp(a.reshape(nis, nl), axis=1), axis=1, arr=lp_adj.reshape(nk, nis * nl))
 
         ## Firm-level probabilities ##
         firm_level_lp_adj_both = np.apply_along_axis(lambda a: np.bincount(J1, a, minlength=nf), axis=1, arr=lse_lp_adj).T
