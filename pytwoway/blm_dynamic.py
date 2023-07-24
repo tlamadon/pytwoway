@@ -1861,7 +1861,6 @@ class DynamicBLMModel:
         S, S_cat, S_cts = self.S, self.S_cat, self.S_cts
         cat_cols, cts_cols = self.cat_cols, self.cts_cols
         cat_dict, cts_dict = self.cat_dict, self.cts_dict
-        controls_dict = self.controls_dict
         any_controls = self.any_controls
         endogeneity, state_dependence = params.get_multiple(('endogeneity', 'state_dependence'))
         update_rho = (params['update_rho12'] or params['update_rho43'] or params['update_rho32m'])
@@ -3239,7 +3238,6 @@ class DynamicBLMModel:
         S, S_cat, S_cts = self.S, self.S_cat, self.S_cts
         cat_cols, cts_cols = self.cat_cols, self.cts_cols
         cat_dict, cts_dict = self.cat_dict, self.cts_dict
-        controls_dict = self.controls_dict
         any_controls = self.any_controls
 
         # Store wage outcomes and groups
@@ -4291,6 +4289,340 @@ class DynamicBLMModel:
         self.fit_movers(jdata, compute_NNm=compute_NNm)
         # Restore original parameters
         self.params = user_params
+
+    def reclassify_firms(self, jdata, sdata):
+        '''
+        Reclassify firms.
+
+        Arguments:
+            jdata (BipartitePandas DataFrame): extended event study format labor data for movers
+            sdata (BipartitePandas DataFrame): extended event study format labor data for stayers
+
+        Returns:
+            (NumPy Array): new firm classes (index corresponds to firm id)
+        '''
+        # Unpack parameters
+        params = self.params
+        nl, nk, nij, nis = self.nl, self.nk, jdata.shape[0], sdata.shape[0]
+        R12, R43, R32m, R32s = self.R12, self.R43, self.R32m, self.R32s
+        A, A_cat, A_cts = self.A, self.A_cat, self.A_cts
+        S, S_cat, S_cts = self.S, self.S_cat, self.S_cts
+        pk1, pk0 = self.pk1, self.pk0
+        cat_cols, cts_cols = self.cat_cols, self.cts_cols
+        cat_dict, cts_dict = self.cat_dict, self.cts_dict
+        any_controls = self.any_controls
+
+        # Number of firms (movers and stayers don't necessarily have the same firms)
+        nf = max(jdata.loc[:, 'j1'].to_numpy().max(), jdata.loc[:, 'j4'].to_numpy().max(), sdata.loc[:, 'j1'].to_numpy().max()) + 1
+
+        ### Movers ###
+        # Unpack parameters
+        periods, periods_var = self.periods_movers, self.periods_variance
+        # Store wage outcomes and groups
+        Y1 = jdata.loc[:, 'y1'].to_numpy()
+        Y2 = jdata.loc[:, 'y2'].to_numpy()
+        Y3 = jdata.loc[:, 'y3'].to_numpy()
+        Y4 = jdata.loc[:, 'y4'].to_numpy()
+        J1 = jdata.loc[:, 'j1'].to_numpy()
+        J2 = jdata.loc[:, 'j4'].to_numpy()
+        G1 = jdata.loc[:, 'g1'].to_numpy().astype(int, copy=False)
+        G2 = jdata.loc[:, 'g4'].to_numpy().astype(int, copy=False)
+
+        ## Control variables ##
+        C1 = {}
+        C2 = {}
+        for i, col in enumerate(cat_cols + cts_cols):
+            # Get subcolumns associated with col
+            subcols = to_list(jdata.col_reference_dict[col])
+            n_subcols = len(subcols)
+            if n_subcols == 1:
+                # If column is constant over time
+                subcol_1 = subcols[0]
+                subcol_2 = subcols[0]
+            elif n_subcols == 4:
+                # If column can change over time
+                subcol_1 = subcols[0]
+                subcol_2 = subcols[3]
+            else:
+                raise NotImplementedError(f'Column names must have either one or four associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
+            if i < len(cat_cols):
+                # Categorical
+                C1[col] = jdata.loc[:, subcol_1].to_numpy().astype(int, copy=False)
+                C2[col] = jdata.loc[:, subcol_2].to_numpy().astype(int, copy=False)
+            else:
+                # Continuous
+                C1[col] = jdata.loc[:, subcol_1].to_numpy()
+                C2[col] = jdata.loc[:, subcol_2].to_numpy()
+
+        # Dictionary linking periods to vectors
+        C_dict = {period: C1 if period in self.first_periods else C2 for period in periods}
+
+        ## Joint firm indicator ##
+        nkG2 = nk * G2
+
+        ## Compute log-likelihood ##
+        # Log pdfs
+        lp_adj_first = np.zeros(shape=(nk, nij, nl))
+        lp_adj_second = np.zeros(shape=(nk, nij, nl))
+        log_pk1 = np.log(pk1)
+        if any_controls:
+            ## Account for control variables ##
+            A_sum, S_sum_sq = self._sum_by_non_nl(ni=nij, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, periods=periods)
+
+            for l in range(nl):
+                # Update A_sum/S_sum_sq to account for worker-interaction terms
+                A_sum_l, S_sum_sq_l = self._sum_by_nl_l(ni=nij, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, periods=periods)
+                ## Current firm classes ##
+                lp1_curr = lognormpdf(
+                    Y1 - R12 * (Y2 - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma'])),
+                    A['12'][l, G1] + A_sum['12'] + A_sum_l['12'],
+                    var=\
+                        (S['12'][l, :] ** 2)[G1] + S_sum_sq['12'] + S_sum_sq_l['12']
+                )
+                lp4_curr = lognormpdf(
+                    Y4 - R43 * (Y3 - (A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma'])),
+                    A['43'][l, G2] + A_sum['43'] + A_sum_l['43'],
+                    var=\
+                        (S['43'][l, :] ** 2)[G2] + S_sum_sq['43'] + S_sum_sq_l['43']
+                )
+                for k in range(nk):
+                    ## New firm classes ##
+                    lp1_adj = lognormpdf(
+                        Y1 - R12 * (Y2 - (A['2ma'][l, k] + A_sum['2ma'] + A_sum_l['2ma'])),
+                        A['12'][l, k] + A_sum['12'] + A_sum_l['12'],
+                        var=\
+                            (S['12'][l, :] ** 2)[k] + S_sum_sq['12'] + S_sum_sq_l['12']
+                    )
+                    lp2_adj_1 = lognormpdf(
+                        Y2 - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb']),
+                        (A['2ma'][l, k] + A_sum['2ma'] + A_sum_l['2ma']),
+                        var=\
+                            ((S['2ma'][l, :] ** 2)[k] + S_sum_sq['2ma'] + S_sum_sq_l['2ma'])
+                    )
+                    lp2_adj_2 = lognormpdf(
+                        Y2 - (A['2mb'][k] + A_sum['2mb'] + A_sum_l['2mb']),
+                        (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']),
+                        var=\
+                            ((S['2ma'][l, :] ** 2)[G1] + S_sum_sq['2ma'] + S_sum_sq_l['2ma'])
+                    )
+                    lp3_adj_1 = lognormpdf(
+                        Y3 - (A['3mb'][k] + A_sum['3mb'] + A_sum_l['3mb']) \
+                            - R32m * (Y2 \
+                                - (A['2ma'][l, k] + A_sum['2ma'] + A_sum_l['2ma']) \
+                                - (A['2mb'][G2] + A_sum['2mb'] + A_sum_l['2mb'])),
+                        A['3ma'][l, G2] + A_sum['3ma'] + A_sum_l['3ma'],
+                        var=\
+                            (S['3ma'][l, :] ** 2)[G2] + S_sum_sq['3ma'] + S_sum_sq_l['3ma']
+                    )
+                    lp3_adj_2 = lognormpdf(
+                        Y3 - (A['3mb'][G1] + A_sum['3mb'] + A_sum_l['3mb']) \
+                            - R32m * (Y2 \
+                                - (A['2ma'][l, G1] + A_sum['2ma'] + A_sum_l['2ma']) \
+                                - (A['2mb'][k] + A_sum['2mb'] + A_sum_l['2mb'])),
+                        A['3ma'][l, k] + A_sum['3ma'] + A_sum_l['3ma'],
+                        var=\
+                            (S['3ma'][l, :] ** 2)[k] + S_sum_sq['3ma'] + S_sum_sq_l['3ma']
+                    )
+                    lp4_adj = lognormpdf(
+                        Y4 - R43 * (Y3 - (A['3ma'][l, k] + A_sum['3ma'] + A_sum_l['3ma'])),
+                        A['43'][l, k] + A_sum['43'] + A_sum_l['43'],
+                        var=\
+                            (S['43'][l, :] ** 2)[k] + S_sum_sq['43'] + S_sum_sq_l['43']
+                    )
+                    ## Log probability ##
+                    lp_adj_first[k, :, l] = log_pk1[k + nkG2, l] + lp1_adj + lp2_adj_1 + lp3_adj_1 + lp4_curr
+                    lp_adj_second[k, :, l] = log_pk1[G1 + nk * k, l] + lp1_curr + lp2_adj_2 + lp3_adj_2 + lp4_adj
+        else:
+            # Loop over firm classes so means/variances are single values rather than vectors (computing log/square is faster this way)
+            for g1 in range(nk):
+                for g2 in range(nk):
+                    I = (G1 == g1) & (G2 == g2)
+                    for l in range(nl):
+                        ## Current firm classes ##
+                        lp1_curr = lognormpdf(
+                            Y1[I] \
+                                - R12 * (Y2[I] - A['2ma'][l, g1]),
+                            A['12'][l, g1],
+                            var=S['12'][l, g1] ** 2
+                        )
+                        lp4_curr = lognormpdf(
+                            Y4[I] \
+                                - R43 * (Y3[I] - A['3ma'][l, g2]),
+                            A['43'][l, g2],
+                            var=S['43'][l, g2] ** 2
+                        )
+                        for k in range(nk):
+                            ## New firm classes ##
+                            lp1_adj = lognormpdf(
+                                Y1[I] \
+                                    - R12 * (Y2[I] - A['2ma'][l, k]),
+                                A['12'][l, k],
+                                var=S['12'][l, k] ** 2
+                            )
+                            lp2_adj_1 = lognormpdf(
+                                Y2[I] \
+                                    - A['2mb'][g2],
+                                A['2ma'][l, k],
+                                var=S['2ma'][l, k] ** 2
+                            )
+                            lp2_adj_2 = lognormpdf(
+                                Y2[I] \
+                                    - A['2mb'][k],
+                                A['2ma'][l, g1],
+                                var=S['2ma'][l, g1] ** 2
+                            )
+                            lp3_adj_1 = lognormpdf(
+                                Y3[I] \
+                                    - A['3mb'][k] \
+                                    - R32m * (Y2[I] - (A['2ma'][l, k] + A['2mb'][g2])),
+                                A['3ma'][l, g2],
+                                var=S['3ma'][l, g2] ** 2
+                            )
+                            lp3_adj_2 = lognormpdf(
+                                Y3[I] \
+                                    - A['3mb'][g1] \
+                                    - R32m * (Y2[I] - (A['2ma'][l, g1] + A['2mb'][k])),
+                                A['3ma'][l, k],
+                                var=S['3ma'][l, k] ** 2
+                            )
+                            lp4_adj = lognormpdf(
+                                Y4[I] \
+                                    - R43 * (Y3[I] - A['3ma'][l, k]),
+                                A['43'][l, k],
+                                var=S['43'][l, k] ** 2
+                            )
+                            ## Log probability ##
+                            lp_adj_first[k, I, l] = log_pk1[k + nkG2[I], l] + lp1_adj + lp2_adj_1 + lp3_adj_1 + lp4_curr
+                            lp_adj_second[k, I, l] = log_pk1[G1[I] + nk * k, l] + lp1_curr + lp2_adj_2 + lp3_adj_2 + lp4_adj
+        del log_pk1, lp1_curr, lp4_curr, lp1_adj, lp4_adj, lp2_adj_1, lp2_adj_2, lp3_adj_1, lp3_adj_2
+
+        ## Convert to log-sum-exp form ##
+        lse_lp_adj_first = np.apply_along_axis(lambda a: logsumexp(a.reshape(nij, nl), axis=1, gpu=self.gpu), axis=1, arr=lp_adj_first.reshape(nk, nij * nl))
+        lse_lp_adj_second = np.apply_along_axis(lambda a: logsumexp(a.reshape(nij, nl), axis=1, gpu=self.gpu), axis=1, arr=lp_adj_second.reshape(nk, nij * nl))
+
+        ## Firm-level probabilities ##
+        firm_level_lp_adj_first = np.apply_along_axis(lambda a: np.bincount(J1, a, minlength=nf), axis=1, arr=lse_lp_adj_first).T
+        firm_level_lp_adj_second = np.apply_along_axis(lambda a: np.bincount(J2, a, minlength=nf), axis=1, arr=lse_lp_adj_second).T
+
+        ### Stayers ###
+        # Unpack parameters
+        periods, periods_update = self.periods_stayers, self.periods_update_stayers
+
+        # Store wage outcomes and groups
+        Y1 = sdata['y1'].to_numpy()
+        Y2 = sdata['y2'].to_numpy()
+        Y3 = sdata['y3'].to_numpy()
+        Y4 = sdata['y4'].to_numpy()
+        J1 = sdata.loc[:, 'j1'].to_numpy()
+        # J2 = sdata.loc[:, 'j4'].to_numpy()
+        G1 = sdata['g1'].to_numpy().astype(int, copy=False)
+        # G2 = sdata['g4'].to_numpy().astype(int, copy=False)
+
+        ## Control variables ##
+        C1 = {}
+        C2 = {}
+        for i, col in enumerate(cat_cols + cts_cols):
+            # Get subcolumns associated with col
+            subcols = to_list(sdata.col_reference_dict[col])
+            n_subcols = len(subcols)
+            if n_subcols == 1:
+                # If column is constant over time
+                subcol_1 = subcols[0]
+                subcol_2 = subcols[0]
+            elif n_subcols == 4:
+                # If column can change over time
+                subcol_1 = subcols[0]
+                subcol_2 = subcols[3]
+            else:
+                raise NotImplementedError(f'Column names must have either one or four associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
+            if i < len(cat_cols):
+                # Categorical
+                C1[col] = sdata.loc[:, subcol_1].to_numpy().astype(int, copy=False)
+                C2[col] = sdata.loc[:, subcol_2].to_numpy().astype(int, copy=False)
+            else:
+                # Continuous
+                C1[col] = sdata.loc[:, subcol_1].to_numpy()
+                C2[col] = sdata.loc[:, subcol_2].to_numpy()
+
+        # Dictionary linking periods to vectors
+        C_dict = {period: C1 if period in self.first_periods else C2 for period in periods}
+
+        ## Compute log-likelihood ##
+        # Log pdfs
+        lp_adj = np.zeros(shape=(nk, nis, nl))
+        log_pk0 = np.log(pk0)
+        if any_controls:
+            ## Account for control variables ##
+            A_sum, S_sum_sq = self._sum_by_non_nl(ni=nis, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, periods=periods)
+
+            for l in range(nl):
+                # Update A_sum/S_sum_sq to account for worker-interaction terms
+                A_sum_l, S_sum_sq_l = self._sum_by_nl_l(ni=nis, l=l, C_dict=C_dict, A_cat=A_cat, S_cat=S_cat, A_cts=A_cts, S_cts=S_cts, periods=periods)
+                for k in range(nk):
+                    ## New firm classes ##
+                    lp1_adj = lognormpdf(
+                        Y1 - R12 * (Y2 - (A['2ma'][l, k] + A_sum['2ma'] + A_sum_l['2ma'])),
+                        A['12'][l, k] + A_sum['12'] + A_sum_l['12'],
+                        var=\
+                            (S['12'][l, :] ** 2)[k] + S_sum_sq['12'] + S_sum_sq_l['12']
+                    )
+                    lp2_adj = lognormpdf(
+                        Y2,
+                        A['2s'][l, k] + A_sum['2s'] + A_sum_l['2s'],
+                        var=\
+                            (S['2s'][l, :] ** 2)[k] + S_sum_sq['2s'] + S_sum_sq_l['2s']
+                    )
+                    lp3_adj = lognormpdf(
+                        Y3 - R32s * (Y2 - (A['2s'][l, k] + A_sum['2s'] + A_sum_l['2s'])),
+                        A['3s'][l, k] + A_sum['3s'] + A_sum_l['3s'],
+                        var=\
+                            (S['3s'][l, :] ** 2)[k] + S_sum_sq['3s'] + S_sum_sq_l['3s']
+                    )
+                    lp4_adj = lognormpdf(
+                        Y4 - R43 * (Y3 - (A['3ma'][l, k] + A_sum['3ma'] + A_sum_l['3ma'])),
+                        A['43'][l, k] + A_sum['43'] + A_sum_l['43'],
+                        var=\
+                            (S['43'][l, :] ** 2)[k] + S_sum_sq['43'] + S_sum_sq_l['43']
+                    )
+                    ## Log probability ##
+                    lp_adj[k, :, l] = log_pk0[k, l] + lp1_adj + lp2_adj + lp3_adj + lp4_adj
+        else:
+            # Loop over firm classes so means/variances are single values rather than vectors (computing log/square is faster this way)
+            for l in range(nl):
+                for k in range(nk):
+                    ## New firm classes ##
+                    lp1_adj = lognormpdf(
+                        Y1 - R12 * (Y2 - A['2ma'][l, k]),
+                        A['12'][l, k],
+                        var=S['12'][l, k] ** 2
+                    )
+                    lp2_adj = lognormpdf(
+                        Y2,
+                        A['2s'][l, k],
+                        sd=S['2s'][l, k]
+                    )
+                    lp3_adj = lognormpdf(
+                        Y3 - R32s * (Y2 - A['2s'][l, k]),
+                        A['3s'][l, k],
+                        var=S['3s'][l, k] ** 2
+                    )
+                    lp4_adj = lognormpdf(
+                        Y4 - R43 * (Y3 - A['3ma'][l, k]),
+                        A['43'][l, k],
+                        var=S['43'][l, k] ** 2
+                    )
+                    ## Log probability ##
+                    lp_adj[k, :, l] = log_pk0[k, l] + lp1_adj + lp2_adj + lp3_adj + lp4_adj
+        del log_pk0, lp1_adj, lp2_adj, lp3_adj, lp4_adj
+
+        ## Convert to log-sum-exp form ##
+        lse_lp_adj = np.apply_along_axis(lambda a: logsumexp(a.reshape(nis, nl), axis=1, gpu=self.gpu), axis=1, arr=lp_adj.reshape(nk, nis * nl))
+
+        ## Firm-level probabilities ##
+        firm_level_lp_adj_both = np.apply_along_axis(lambda a: np.bincount(J1, a, minlength=nf), axis=1, arr=lse_lp_adj).T
+
+        ### Take firm-level argmax ###
+        return np.argmax(firm_level_lp_adj_first + firm_level_lp_adj_second + firm_level_lp_adj_both, axis=1)
 
     def compute_connectedness_measure(self, all=False):
         '''

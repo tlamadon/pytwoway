@@ -1627,7 +1627,7 @@ class BLMModel:
             W2 = 1
         W = np.sqrt(W1 * W2)
 
-        # Control variables
+        ## Control variables ##
         C1 = {}
         C2 = {}
         for i, col in enumerate(cat_cols + cts_cols):
@@ -2337,32 +2337,31 @@ class BLMModel:
             # W2 = 1
         W = W1 # np.sqrt(W1 * W2)
 
-        if any_controls:
-            ## Control variables ##
-            C1 = {}
-            C2 = {}
-            for i, col in enumerate(cat_cols + cts_cols):
-                # Get subcolumns associated with col
-                subcols = to_list(sdata.col_reference_dict[col])
-                n_subcols = len(subcols)
-                if n_subcols == 1:
-                    # If column is constant over time
-                    subcol_1 = subcols[0]
-                    subcol_2 = subcols[0]
-                elif n_subcols == 2:
-                    # If column can change over time
-                    subcol_1 = subcols[0]
-                    subcol_2 = subcols[1]
-                else:
-                    raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
-                if i < len(cat_cols):
-                    # Categorical
-                    C1[col] = sdata.loc[:, subcol_1].to_numpy().astype(int, copy=False)
-                    C2[col] = sdata.loc[:, subcol_2].to_numpy().astype(int, copy=False)
-                else:
-                    # Continuous
-                    C1[col] = sdata.loc[:, subcol_1].to_numpy()
-                    C2[col] = sdata.loc[:, subcol_2].to_numpy()
+        ## Control variables ##
+        C1 = {}
+        C2 = {}
+        for i, col in enumerate(cat_cols + cts_cols):
+            # Get subcolumns associated with col
+            subcols = to_list(sdata.col_reference_dict[col])
+            n_subcols = len(subcols)
+            if n_subcols == 1:
+                # If column is constant over time
+                subcol_1 = subcols[0]
+                subcol_2 = subcols[0]
+            elif n_subcols == 2:
+                # If column can change over time
+                subcol_1 = subcols[0]
+                subcol_2 = subcols[1]
+            else:
+                raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
+            if i < len(cat_cols):
+                # Categorical
+                C1[col] = sdata.loc[:, subcol_1].to_numpy().astype(int, copy=False)
+                C2[col] = sdata.loc[:, subcol_2].to_numpy().astype(int, copy=False)
+            else:
+                # Continuous
+                C1[col] = sdata.loc[:, subcol_1].to_numpy()
+                C2[col] = sdata.loc[:, subcol_2].to_numpy()
 
         # Joint firm indicator
         KK = G1
@@ -2601,7 +2600,7 @@ class BLMModel:
         A1, A2, S1, S2 = self.A1, self.A2, self.S1, self.S2
         A1_cat, A2_cat, S1_cat, S2_cat = self.A1_cat, self.A2_cat, self.S1_cat, self.S2_cat
         A1_cts, A2_cts, S1_cts, S2_cts = self.A1_cts, self.A2_cts, self.S1_cts, self.S2_cts
-        pk1 = self.pk1
+        pk1, pk0 = self.pk1, self.pk0
         cat_cols, cts_cols = self.cat_cols, self.cts_cols
         any_controls = self.any_controls
 
@@ -2625,7 +2624,7 @@ class BLMModel:
             W1 = 1
             W2 = 1
 
-        # Control variables
+        ## Control variables ##
         C1 = {}
         C2 = {}
         for i, col in enumerate(cat_cols + cts_cols):
@@ -2715,36 +2714,36 @@ class BLMModel:
             W1 = 1
             # W2 = 1
 
-        if any_controls:
-            ## Control variables ##
-            C1 = {}
-            C2 = {}
-            for i, col in enumerate(cat_cols + cts_cols):
-                # Get subcolumns associated with col
-                subcols = to_list(sdata.col_reference_dict[col])
-                n_subcols = len(subcols)
-                if n_subcols == 1:
-                    # If column is constant over time
-                    subcol_1 = subcols[0]
-                    subcol_2 = subcols[0]
-                elif n_subcols == 2:
-                    # If column can change over time
-                    subcol_1 = subcols[0]
-                    subcol_2 = subcols[1]
-                else:
-                    raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
-                if i < len(cat_cols):
-                    # Categorical
-                    C1[col] = sdata.loc[:, subcol_1].to_numpy().astype(int, copy=False)
-                    C2[col] = sdata.loc[:, subcol_2].to_numpy().astype(int, copy=False)
-                else:
-                    # Continuous
-                    C1[col] = sdata.loc[:, subcol_1].to_numpy()
-                    C2[col] = sdata.loc[:, subcol_2].to_numpy()
+        ## Control variables ##
+        C1 = {}
+        C2 = {}
+        for i, col in enumerate(cat_cols + cts_cols):
+            # Get subcolumns associated with col
+            subcols = to_list(sdata.col_reference_dict[col])
+            n_subcols = len(subcols)
+            if n_subcols == 1:
+                # If column is constant over time
+                subcol_1 = subcols[0]
+                subcol_2 = subcols[0]
+            elif n_subcols == 2:
+                # If column can change over time
+                subcol_1 = subcols[0]
+                subcol_2 = subcols[1]
+            else:
+                raise NotImplementedError(f'Column names must have either one or two associated subcolumns, but {col!r} has {n_subcols!r} associated subcolumns.')
+            if i < len(cat_cols):
+                # Categorical
+                C1[col] = sdata.loc[:, subcol_1].to_numpy().astype(int, copy=False)
+                C2[col] = sdata.loc[:, subcol_2].to_numpy().astype(int, copy=False)
+            else:
+                # Continuous
+                C1[col] = sdata.loc[:, subcol_1].to_numpy()
+                C2[col] = sdata.loc[:, subcol_2].to_numpy()
 
         ## Compute log-likelihood ##
         # Log pdfs
         lp_adj = np.zeros(shape=(nk, nis, nl))
+        log_pk0 = np.log(pk0)
         if any_controls:
             ## Account for control variables ##
             A1_sum, A2_sum, S1_sum_sq, S2_sum_sq = self._sum_by_non_nl(ni=nis, C1=C1, C2=C2, A1_cat=A1_cat, A2_cat=A2_cat, S1_cat=S1_cat, S2_cat=S2_cat, A1_cts=A1_cts, A2_cts=A2_cts, S1_cts=S1_cts, S2_cts=S2_cts)
@@ -2757,7 +2756,7 @@ class BLMModel:
                     lp1_adj = lognormpdf(Y1, A1[l, k] + A1_sum + A1_sum_l, var=(S1[l, k] ** 2) + S1_sum_sq + S1_sum_sq_l, gpu=self.gpu)
                     # lp2_adj = lognormpdf(Y2, A2[l, k] + A2_sum + A2_sum_l, var=(S2[l, k] ** 2) + S2_sum_sq + S2_sum_sq_l, gpu=self.gpu)
                     ## Log probability ##
-                    lp_adj[k, :, l] = W1 * lp1_adj # + W2 * lp2_adj
+                    lp_adj[k, :, l] = log_pk0[k, l] + W1 * lp1_adj # + W2 * lp2_adj
         else:
             for l in range(nl):
                 for k in range(nk):
@@ -2765,7 +2764,7 @@ class BLMModel:
                     lp1_adj = fast_lognormpdf(Y1, A1[l, :], S1[l, :], k, gpu=self.gpu)
                     # lp2_adj = fast_lognormpdf(Y2, A2[l, :], S2[l, :], k, gpu=self.gpu)
                     ## Log probability ##
-                    lp_adj[k, :, l] = W1 * lp1_adj # + W2 * lp2_adj
+                    lp_adj[k, :, l] = log_pk0[k, l] + W1 * lp1_adj # + W2 * lp2_adj
         del lp1_adj # , lp2_adj
 
         ## Convert to log-sum-exp form ##
@@ -2776,7 +2775,6 @@ class BLMModel:
 
         ### Take firm-level argmax ###
         return np.argmax(firm_level_lp_adj_first + firm_level_lp_adj_second + firm_level_lp_adj_both, axis=1)
-
 
     def compute_connectedness_measure(self, all=False):
         '''
