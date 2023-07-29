@@ -302,7 +302,118 @@ continuous_control_params = ParamsDict({
         ''', None)
 })
 
-def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, pk0=None, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, reallocation_constraint_category=None, worker_types_as_ids=True, simulate_wages=True, return_long_df=True, store_worker_types=True, weighted=True, rng=None):
+def _optimal_reallocation(blm_model, jdata, sdata, Lm, Ls, method='max', reallocation_scaling_col=None, rng=None):
+    '''
+    Reallocate workers to firms in order to maximize total expected output.
+
+    Arguments:
+        blm_model (BLMModel): BLM model with estimated parameters
+        jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
+        sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
+        Lm (NumPy Array): simulated worker types for movers
+        Ls (NumPy Array): simulated worker types for stayers
+        method (str): reallocate workers to new firms to maximize ('max') or minimize ('min') total output
+        reallocation_scaling_col (str or None): specify column to use to scale outcomes when computing optimal reallocation (i.e. multiply outcomes by an observation-level factor); if None, don't scale outcomes
+        rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+
+    Returns:
+        (NumPy Array): optimally reallocated firm class for each observation
+    '''
+    if rng is None:
+        rng = np.random.default_rng(None)
+
+    ## Unpack parameters ##
+    nl, nk = blm_model.nl, blm_model.nk
+
+    ## Firm classes ##
+    gj = jdata.loc[:, ['g1', 'g2']].to_numpy().astype(int, copy=True)
+    gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
+
+    if reallocation_scaling_col is not None:
+        # Each observation is allocated
+        nl_adj = len(Lm) + len(Ls)
+        worker_sizes_1 = np.ones(nl_adj, dtype=int)
+    else:
+        # Worker-firm match groups are allocated
+        nl_adj = nl
+
+    ## Firm sizes ##
+    # NOTE: use minlength, since jdata/sdata might be subsets of the full data
+    firm_sizes_s = np.bincount(gs, minlength=nk)
+    firm_sizes_1 = np.bincount(gj[:, 0], minlength=nk) + firm_sizes_s
+    # firm_sizes_2 = np.bincount(gj[:, 1], minlength=nk) + firm_sizes_s
+
+    if reallocation_scaling_col is None:
+        ## Worker type sizes ##
+        worker_sizes_s = np.bincount(Ls)
+        worker_sizes_1 = np.bincount(Lm) + worker_sizes_s
+        # worker_sizes_2 = np.bincount(Lm) + worker_sizes_s
+    del firm_sizes_s
+    if reallocation_scaling_col is None:
+        del worker_sizes_s
+
+    ### Set up linear programming solver ###
+    # NOTE: Force everybody to become a stayer
+    ## Y ##
+    if method == 'max':
+        Y = blm_model.A1
+    elif method == 'min':
+        Y = -blm_model.A1
+    if reallocation_scaling_col is not None:
+        # Multiply Y by scaling factor
+        scaling_cols = to_list(sdata.col_reference_dict[reallocation_scaling_col])
+        scaling_col_1 = scaling_cols[0]
+        if len(scaling_cols) == 1:
+            scaling_col_2 = scaling_col_1
+        elif len(scaling_cols) == 2:
+            scaling_col_2 = scaling_cols[1]
+        scaling_col_s_1 = sdata.loc[:, scaling_col_1].to_numpy()
+        scaling_col_s_2 = sdata.loc[:, scaling_col_2].to_numpy()
+        scaling_col_j_1 = jdata.loc[:, scaling_col_1].to_numpy()
+        scaling_col_j_2 = jdata.loc[:, scaling_col_2].to_numpy()
+
+        Ys = scaling_col_s_1[:, None] * Y[Ls, :] + scaling_col_s_2[:, None] * Y[Ls, :]
+        Ym = scaling_col_j_1[:, None] * Y[Lm, :] + scaling_col_j_2[:, None] * Y[Lm, :]
+        Y = np.append(Ym, Ys, axis=0)
+    Y = Y.flatten()
+
+    ## Constraints ##
+    cons_a = cons.QPConstrained(nl_adj, nk)
+    cons_a.add_constraints(cons.FirmSum(b=firm_sizes_1, nt=1))
+    cons_a.add_constraints(cons.WorkerSum(b=worker_sizes_1, nt=1))
+    # Bound below at 0
+    cons_a.add_constraints(cons.BoundedBelow(lb=0, nt=1))
+
+    ### Solve ###
+    # NOTE: don't need to constrain to be integers, because will become integers anyway
+    cons_a.solve(Y, -Y, solver='linprog') # integrality=np.array([1])
+
+    ## Extract optimal allocations ##
+    alloc = np.reshape(np.round(cons_a.res, 0).astype(int, copy=False), (nl_adj, nk))
+
+    ### Apply optimal allocations (make everyone a stayer) ###
+    Ls = np.append(Lm, Ls)
+    Lm = np.array([], dtype=int)
+    if reallocation_scaling_col is None:
+        gs = np.zeros(len(Ls), dtype=int)
+        # gj = np.zeros((0, 0), dtype=int)
+        idx = np.arange(len(Ls))
+        for l in range(nl):
+            ## Iterate over worker types ##
+            idx_l = idx[Ls == l]
+            # Use a random index so that the same workers aren't always given the same firms (important with control variables)
+            rng.shuffle(idx_l)
+            cum_firms_l = 0
+            for k in range(nk):
+                ## Iterate over firm classes ##
+                gs[idx_l[cum_firms_l: cum_firms_l + alloc[l, k]]] = k
+                cum_firms_l += alloc[l, k]
+    else:
+        gs = np.argmax(alloc, axis=1)
+
+    return gs
+
+def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, pk0=None, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, reallocation_constraint_category=None, reallocation_scaling_col=None, worker_types_as_ids=True, simulate_wages=True, return_long_df=True, store_worker_types=True, weighted=True, rng=None):
     '''
     Using data and estimated BLM parameters, simulate worker types (and optionally wages).
 
@@ -320,6 +431,7 @@ def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, p
         qi_cum_s (NumPy Array or None): (use to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each stayer observation to be each worker type; None if pk0 or qi_s is not None
         optimal_reallocation (bool or str): if not False, reallocate workers to new firms to maximize ('max') or minimize ('min') total output
         reallocation_constraint_category (str or None): specify categorical column to constrain reallocation so that workers must reallocate within their own category; if None, no constraints on how workers can reallocate
+        reallocation_scaling_col (str or None): specify column to use to scale outcomes when computing optimal reallocation (i.e. multiply outcomes by an observation-level factor); if None, don't scale outcomes
         worker_types_as_ids (bool): if True, replace worker ids with simulated worker types
         simulate_wages (bool): if True, also simulate wages
         return_long_df (bool): if True, return data as a long-format BipartitePandas DataFrame; otherwise, return tuple of simulated types and wages
@@ -364,93 +476,49 @@ def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, p
 
     if optimal_reallocation:
         ### Reallocate workers ###
-        if reallocation_constraint_category is None:
-            nt = 1
-
-            ## Firm sizes ##
-            firm_sizes_s = np.bincount(gs)
-            firm_sizes_1 = np.bincount(gj[:, 0]) + firm_sizes_s
-            # firm_sizes_2 = np.bincount(gj[:, 1]) + firm_sizes_s
-
-            ## Worker type sizes ##
-            worker_sizes_s = np.bincount(Ls)
-            worker_sizes_1 = np.bincount(Lm) + worker_sizes_s
-            # worker_sizes_2 = np.bincount(Lm) + worker_sizes_s
-        else:
+        adata = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
+        # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
+        adata._set_attributes(jdata)
+        if reallocation_constraint_category is not None:
+            ## Reallocate within-category ##
+            # Categorical column name
             cat_cons_col = to_list(sdata.col_reference_dict[reallocation_constraint_category])[0]
+
+            # Number of categories
+            n_cat = adata.n_unique_ids(reallocation_constraint_category)
+
+            # Categorical column data
+            cat_cons_col_a = adata.loc[:, cat_cons_col].to_numpy()
             cat_cons_col_s = sdata.loc[:, cat_cons_col].to_numpy()
             cat_cons_col_j = jdata.loc[:, cat_cons_col].to_numpy()
-            # Number of categories (movers and stayers don't necessarily have the same categories)
-            n_cat = max(cat_cons_col_s.max(), cat_cons_col_j.max()) + 1
-            nt = n_cat
 
-            ## Firm sizes ##
-            firm_sizes_s = np.bincount(gs + nk * cat_cons_col_s, minlength=(nk * n_cat))
-            firm_sizes_1 = np.bincount(gj[:, 0] + nk * cat_cons_col_j, minlength=(nk * n_cat)) + firm_sizes_s
-            # firm_sizes_2 = np.bincount(gj[:, 1] + nk * cat_cons_col_j, minlength=(nk * n_cat)) + firm_sizes_s
-
-            ## Worker type sizes ##
-            worker_sizes_s = np.bincount(Ls + nl * cat_cons_col_s, minlength=(nl * n_cat))
-            worker_sizes_1 = np.bincount(Lm + nl * cat_cons_col_j, minlength=(nl * n_cat)) + worker_sizes_s
-            # worker_sizes_2 = np.bincount(Lm + nl * cat_cons_col_j, minlength=(nl * n_cat)) + worker_sizes_s
-            del cat_cons_col_s, cat_cons_col_j
-        del firm_sizes_s, worker_sizes_s
-
-        ### Set up linear programming solver ###
-        # NOTE: Force everybody to become a stayer
-        ## Y ##
-        if optimal_reallocation == 'max':
-            Y = blm_model.A1.flatten()
-        elif optimal_reallocation == 'min':
-            Y = -blm_model.A1.flatten()
-        if reallocation_constraint_category is not None:
-            Y = np.tile(Y, n_cat)
-
-        ## Constraints ##
-        cons_a = cons.QPConstrained(nl, nk)
-        cons_a.add_constraints(cons.FirmSum(b=firm_sizes_1, nt=nt))
-        cons_a.add_constraints(cons.WorkerSum(b=worker_sizes_1, nt=nt))
-        # Bound below at 0
-        cons_a.add_constraints(cons.BoundedBelow(lb=0, nt=nt))
-
-        ### Solve ###
-        # NOTE: don't need to constrain to be integers, because will become integers anyway
-        cons_a.solve(Y, -Y, solver='linprog') # integrality=np.array([1])
-
-        ## Extract optimal allocations ##
-        if reallocation_constraint_category is None:
-            alloc = np.reshape(np.round(cons_a.res, 0).astype(int, copy=False), (nl, nk))
+            for i in range(n_cat):
+                cat_i_s = (cat_cons_col_s == i)
+                cat_i_j = (cat_cons_col_j == i)
+                if (cat_i_s.any() or cat_i_j.any()):
+                    # Group might not show up in first period
+                    gs = _optimal_reallocation(blm_model, jdata.loc[cat_i_j, :], sdata.loc[cat_i_s, :], Lm[cat_i_j], Ls[cat_i_s], method=optimal_reallocation, reallocation_scaling_col=reallocation_scaling_col, rng=rng)
+                    # Set G1/G2 and J1/J2
+                    cat_i_a = (cat_cons_col_a == i)
+                    adata.loc[cat_i_a, 'g1'], adata.loc[cat_i_a, 'g2'] = (gs, gs)
+                    adata.loc[cat_i_a, 'j1'], adata.loc[cat_i_a, 'j2'] = (gs, gs)
+            del cat_cons_col, cat_cons_col_a, cat_cons_col_s, cat_cons_col_j, cat_i_a, cat_i_j, cat_i_s
         else:
-            alloc = np.reshape(np.round(cons_a.res, 0).astype(int, copy=False), (n_cat, nl, nk)).sum(axis=0)
-
-        ### Apply optimal allocations (make everyone a stayer) ###
-        Ls = np.append(Lm, Ls)
-        Lm = np.array([], dtype=int)
-        gs = np.zeros(len(Ls), dtype=int)
-        # gj = np.zeros((0, 0), dtype=int)
-        idx = np.arange(len(Ls))
-        for l in range(nl):
-            ## Iterate over worker types ##
-            idx_l = idx[Ls == l]
-            # Use a random index so that the same workers aren't always given the same firms (important with control variables)
-            rng.shuffle(idx_l)
-            cum_firms_l = 0
-            for k in range(nk):
-                ## Iterate over firm classes ##
-                gs[idx_l[cum_firms_l: cum_firms_l + alloc[l, k]]] = k
-                cum_firms_l += alloc[l, k]
-
+            gs = _optimal_reallocation(blm_model, jdata, sdata, Lm, Ls, method=optimal_reallocation, reallocation_scaling_col=reallocation_scaling_col, rng=rng)
+            # Set G1/G2 and J1/J2
+            adata.loc[:, 'g1'], adata.loc[:, 'g2'] = (gs, gs)
+            adata.loc[:, 'j1'], adata.loc[:, 'j2'] = (gs, gs)
         ## Convert everyone to stayers ##
-        sdata = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
-        # Set attributes from jdata, so that conversion to long works (since pd.concat drops attributes)
-        sdata._set_attributes(jdata)
-        # Set G1/G2 and J1/J2
-        sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
-        sdata.loc[:, 'j1'], sdata.loc[:, 'j2'] = (gs, gs)
+        sdata = adata
         # Set m
         sdata.loc[:, 'm'] = 0
         # Clear jdata
         jdata = pd.DataFrame()
+        # Update Ls/Lm
+        Ls = np.append(Lm, Ls)
+        Lm = np.array([], dtype=int)
+        # Update gs
+        gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
 
     if simulate_wages:
         ## Simulate wages ##
@@ -3865,7 +3933,7 @@ class BLMVarianceDecomposition:
 
 class BLMReallocation:
     '''
-    Class for estimating BLM reallocation exercise using bootstrapping. Results are stored in class attribute .res, which gives a dictionary with the following structure: baseline results are stored in key 'baseline'. Reallocation results are stored in key 'reallocation'. Within each sub-dictionary, primary outcome results are stored in the key 'outcome', categorical results are stored in the key 'cat', continuous results are stored in the key 'cts', type proportions for movers are stored in the key 'pk1', type proportions for stayers are stored in the key 'pk0', firm-level mover flow counts are stored in the key 'NNm', and firm-level stayer counts are stored in the key 'NNs'.
+    Class for estimating BLM reallocation exercise using bootstrapping. Results are stored in class attribute .res, which gives a dictionary with the following structure: baseline results are stored in key 'baseline'. Reallocation results are stored in key 'reallocation'. Within each sub-dictionary, primary outcome results are stored in the key 'outcome', means are stored in the key 'mean', categorical results are stored in the key 'cat', continuous results are stored in the key 'cts', type proportions for movers are stored in the key 'pk1', type proportions for stayers are stored in the key 'pk0', firm-level mover flow counts are stored in the key 'NNm', and firm-level stayer counts are stored in the key 'NNs'.
 
     Arguments:
         params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
@@ -3878,7 +3946,7 @@ class BLMReallocation:
         # No model
         self.model = None
 
-    def fit(self, jdata, sdata, quantiles=None, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, unresidualize_col=None, optimal_reallocation=False, reallocation_constraint_category=None, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, ncore=1, weighted=True, rng=None):
+    def fit(self, jdata, sdata, quantiles=None, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, unresidualize_col=None, optimal_reallocation=False, reallocation_constraint_category=None, reallocation_scaling_col=None, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, ncore=1, weighted=True, rng=None):
         '''
         Estimate reallocation exercise.
 
@@ -3894,9 +3962,10 @@ class BLMReallocation:
             reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
             categorical_sort_cols (dict or None): in addition to standard quantiles results, return average income grouped by the alternative column(s) given (which are represented by the dictionary {column: number of quantiles to compute}). For categorical variables, use each group as a bin and take the average income within that bin. None is equivalent to {}.
             continuous_sort_cols (dict or None): in addition to standard quantiles results, return average income grouped by the alternative column(s) given (which are represented by the dictionary {column: list of quantiles to compute}). For continuous variables, create bins based on the list of quantiles given in the dictionary. The list of quantiles must start at 0 and end at 1. None is equivalent to {}.
-            unresidualize_col (str or None): column with predicted values that are residualized out, which will be added back in before computing outcomes in order to unresidualize the values; None leaves outcome unchanged
+            unresidualize_col (str or None): column with predicted values that are residualized out, which will be added back in before computing outcomes in order to unresidualize the values; None leaves outcomes unchanged
             optimal_reallocation (bool or str): if not False, reallocate workers to new firms to maximize ('max') or minimize ('min') total output
             reallocation_constraint_category (str or None): specify categorical column to constrain reallocation so that workers must reallocate within their own category; if None, no constraints on how workers can reallocate
+            reallocation_scaling_col (str or None): specify column to use to scale outcomes when computing optimal reallocation (i.e. multiply outcomes by an observation-level factor); if None, don't scale outcomes
             qi_j (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if pk1 or qi_cum_j is not None
             qi_s (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each stayer observation to be each worker type; None if pk0 or qi_cum_s is not None
             qi_cum_j (NumPy Array or None): (use with optimal_reallocation to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if pk1 or qi_j is not None
@@ -3965,6 +4034,9 @@ class BLMReallocation:
         ## Baseline ##
         res_cat_baseline = {}
         res_cts_baseline = {}
+        if reallocation_scaling_col is not None:
+            res_scaled_cat_baseline = {}
+            res_scaled_cts_baseline = {}
 
         # Convert to BipartitePandas DataFrame
         bdf = bpd.BipartiteDataFrame(pd.concat([jdata, sdata], axis=0, copy=False))
@@ -3980,15 +4052,27 @@ class BLMReallocation:
         else:
             w = None
         res_baseline = weighted_quantile(values=y, quantiles=quantiles, sample_weight=w)
+        mean_baseline = weighted_mean(y, w)
+        if reallocation_scaling_col is not None:
+            scaling_col = to_list(bdf.col_reference_dict[reallocation_scaling_col])[0]
+            scale = bdf.loc[:, scaling_col].to_numpy()
+            y_scaled = scale * y
+            res_scaled_baseline = weighted_quantile(values=y_scaled, quantiles=quantiles, sample_weight=w)
+            mean_scaled_baseline = weighted_mean(y_scaled, w)
         if w is not None:
             # For sorting variables, use weighted y
             y = w * y
+            if reallocation_scaling_col is not None:
+                y_scaled = scale * y
         for col_cat in categorical_sort_cols.keys():
             ## Categorical sorting variables ##
             col = bdf.loc[:, col_cat].to_numpy()
             # Use categories as bins
             res_cat_baseline[col_cat] =\
                 np.bincount(col, weights=y) / np.bincount(col, weights=w)
+            if reallocation_scaling_col is not None:
+                res_scaled_cat_baseline[col_cat] =\
+                    np.bincount(col, weights=y_scaled) / np.bincount(col, weights=w)
         for col_cts, quantiles_cts in continuous_sort_cols.items():
             ## Continuous sorting variables ##
             col = bdf.loc[:, col_cts].to_numpy()
@@ -3997,18 +4081,27 @@ class BLMReallocation:
             quantile_groups = pd.cut(col, col_quantiles, include_lowest=True).codes
             res_cts_baseline[col_cts] =\
                 np.bincount(quantile_groups, weights=y) / np.bincount(quantile_groups, weights=w)
+            if reallocation_scaling_col is not None:
+                res_scaled_cts_baseline[col_cts] =\
+                    np.bincount(quantile_groups, weights=y_scaled) / np.bincount(quantile_groups, weights=w)
 
         ## Run bootstrap ##
         res = np.zeros([n_samples, len(quantiles)])
         res_cat = {col: np.zeros([n_samples, n_quantiles]) for col, n_quantiles in categorical_sort_cols.items()}
         res_cts = {col: np.zeros([n_samples, len(quantiles) - 1]) for col, quantiles in continuous_sort_cols.items()}
+        mean = np.zeros(n_samples)
+        if reallocation_scaling_col is not None:
+            res_scaled = np.zeros([n_samples, len(quantiles)])
+            res_scaled_cat = {col: np.zeros([n_samples, n_quantiles]) for col, n_quantiles in categorical_sort_cols.items()}
+            res_scaled_cts = {col: np.zeros([n_samples, len(quantiles) - 1]) for col, quantiles in continuous_sort_cols.items()}
+            mean_scaled = np.zeros(n_samples)
         pk1_res = np.zeros([n_samples, nk * nk, nl])
         pk0_res = np.zeros([n_samples, nk, nl])
         NNm_res = np.zeros([n_samples, nk, nk])
         NNs_res = np.zeros([n_samples, nk])
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
-            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=qi_j, qi_s=qi_s, qi_cum_j=qi_cum_j, qi_cum_s=qi_cum_s, optimal_reallocation=optimal_reallocation, reallocation_constraint_category=reallocation_constraint_category, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=True, weighted=weighted, rng=rng)
+            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=qi_j, qi_s=qi_s, qi_cum_j=qi_cum_j, qi_cum_s=qi_cum_s, optimal_reallocation=optimal_reallocation, reallocation_constraint_category=reallocation_constraint_category, reallocation_scaling_col=reallocation_scaling_col, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=True, weighted=weighted, rng=rng)
 
             ## Compute quantiles ##
             y = bdf.loc[:, 'y'].to_numpy()
@@ -4019,15 +4112,26 @@ class BLMReallocation:
             else:
                 w = None
             res[i, :] = weighted_quantile(values=y, quantiles=quantiles, sample_weight=w)
+            mean[i] = weighted_mean(y, w)
+            if reallocation_scaling_col is not None:
+                scale = bdf.loc[:, scaling_col].to_numpy()
+                y_scaled = scale * y
+                res_scaled[i, :] = weighted_quantile(values=y_scaled, quantiles=quantiles, sample_weight=w)
+                mean_scaled[i] = weighted_mean(y_scaled, w)
             if w is not None:
                 # For sorting variables, use weighted y
                 y = w * y
+                if reallocation_scaling_col is not None:
+                    y_scaled = scale * y
             for col_cat in categorical_sort_cols.keys():
                 ## Categorical sorting variables ##
                 col = bdf.loc[:, col_cat].to_numpy()
                 # Use categories as bins
                 res_cat[col_cat][i, :] =\
                     np.bincount(col, weights=y) / np.bincount(col, weights=w)
+                if reallocation_scaling_col is not None:
+                    res_scaled_cat[col_cat][i, :] =\
+                        np.bincount(col, weights=y_scaled) / np.bincount(col, weights=w)
             for col_cts, quantiles_cts in continuous_sort_cols.items():
                 ## Continuous sorting variables ##
                 col = bdf.loc[:, col_cts].to_numpy()
@@ -4036,6 +4140,9 @@ class BLMReallocation:
                 quantile_groups = pd.cut(col, col_quantiles, include_lowest=True).codes
                 res_cts[col_cts][i, :] =\
                     np.bincount(quantile_groups, weights=y) / np.bincount(quantile_groups, weights=w)
+                if reallocation_scaling_col is not None:
+                    res_scaled_cts[col_cts][i, :] =\
+                        np.bincount(quantile_groups, weights=y_scaled) / np.bincount(quantile_groups, weights=w)
 
             ## Compute type proportions ##
             bdf = bdf.to_eventstudy(is_sorted=True, copy=False)
@@ -4072,7 +4179,6 @@ class BLMReallocation:
             jdata.loc[:, ['g1', 'g2']] = gj
             sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
 
-
         # Drop time column
         if tj:
             jdata = jdata.drop('t', axis=1, inplace=True, allow_optional=True)
@@ -4083,11 +4189,13 @@ class BLMReallocation:
         self.res = {
             'baseline': {
                 'outcome': res_baseline,
+                'mean': mean_baseline,
                 'cat': res_cat_baseline,
                 'cts': res_cts_baseline
                 },
             'reallocation': {
                 'outcome': res,
+                'mean': mean,
                 'cat': res_cat,
                 'cts': res_cts,
                 'pk1': pk1_res,
@@ -4096,6 +4204,15 @@ class BLMReallocation:
                 'NNs': NNs_res
                 }
         }
+        if reallocation_scaling_col is not None:
+            self.res['baseline']['outcome_scaled'] = res_scaled_baseline
+            self.res['baseline']['mean_scaled'] = mean_scaled_baseline
+            self.res['baseline']['cat_scaled'] = res_scaled_cat_baseline
+            self.res['baseline']['cts_scaled'] = res_scaled_cts_baseline
+            self.res['reallocation']['outcome_scaled'] = res_scaled
+            self.res['reallocation']['mean_scaled'] = mean_scaled
+            self.res['reallocation']['cat_scaled'] = res_scaled_cat
+            self.res['reallocation']['cts_scaled'] = res_scaled_cts
 
     def plot_type_proportions(self, period='first', subset='stayers', xlabel='firm class k', ylabel='type proportions', title='Proportions of worker types', dpi=None):
         '''
