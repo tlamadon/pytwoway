@@ -25,7 +25,7 @@ def _plot_worker_types_over_time(bdf, subplot, nk, firm_order=None, subplot_titl
     t_col = bdf.loc[:, 't'].to_numpy()
     all_t = np.unique(t_col)
     class_proportions = np.zeros([len(all_t), nk])
-    for t_int, t_str in all_t:
+    for t_int, t_str in enumerate(all_t):
         bdf_t = bdf.loc[t_col == t_str, :]
         if weighted:
             w_t = bdf_t.loc[:, 'w'].to_numpy()

@@ -302,14 +302,16 @@ continuous_control_params = ParamsDict({
         ''', None)
 })
 
-def _optimal_reallocation(blm_model, jdata, sdata, Lm, Ls, method='max', reallocation_scaling_col=None, rng=None):
+def _optimal_reallocation(model, jdata, sdata, gj, gs, Lm, Ls, method='max', reallocation_scaling_col=None, rng=None):
     '''
     Reallocate workers to firms in order to maximize total expected output.
 
     Arguments:
-        blm_model (BLMModel): BLM model with estimated parameters
+        model (BLMModel): BLM model with estimated parameters
         jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
         sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
+        gj (NumPy Array or None): firm classes for movers in the first and second periods
+        gs (NumPy Array or None): firm classes for stayers
         Lm (NumPy Array): simulated worker types for movers
         Ls (NumPy Array): simulated worker types for stayers
         method (str): reallocate workers to new firms to maximize ('max') or minimize ('min') total output
@@ -323,11 +325,7 @@ def _optimal_reallocation(blm_model, jdata, sdata, Lm, Ls, method='max', realloc
         rng = np.random.default_rng(None)
 
     ## Unpack parameters ##
-    nl, nk = blm_model.nl, blm_model.nk
-
-    ## Firm classes ##
-    gj = jdata.loc[:, ['g1', 'g2']].to_numpy().astype(int, copy=True)
-    gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
+    nl, nk = model.nl, model.nk
 
     if reallocation_scaling_col is not None:
         # Each observation is allocated
@@ -342,23 +340,22 @@ def _optimal_reallocation(blm_model, jdata, sdata, Lm, Ls, method='max', realloc
     firm_sizes_s = np.bincount(gs, minlength=nk)
     firm_sizes_1 = np.bincount(gj[:, 0], minlength=nk) + firm_sizes_s
     # firm_sizes_2 = np.bincount(gj[:, 1], minlength=nk) + firm_sizes_s
+    del firm_sizes_s
 
     if reallocation_scaling_col is None:
         ## Worker type sizes ##
         worker_sizes_s = np.bincount(Ls)
         worker_sizes_1 = np.bincount(Lm) + worker_sizes_s
         # worker_sizes_2 = np.bincount(Lm) + worker_sizes_s
-    del firm_sizes_s
-    if reallocation_scaling_col is None:
         del worker_sizes_s
 
     ### Set up linear programming solver ###
     # NOTE: Force everybody to become a stayer
     ## Y ##
     if method == 'max':
-        Y = blm_model.A1
+        Y = model.A1
     elif method == 'min':
-        Y = -blm_model.A1
+        Y = -model.A1
     if reallocation_scaling_col is not None:
         # Multiply Y by scaling factor
         scaling_cols = to_list(sdata.col_reference_dict[reallocation_scaling_col])
@@ -372,8 +369,8 @@ def _optimal_reallocation(blm_model, jdata, sdata, Lm, Ls, method='max', realloc
         scaling_col_j_1 = jdata.loc[:, scaling_col_1].to_numpy()
         scaling_col_j_2 = jdata.loc[:, scaling_col_2].to_numpy()
 
-        Ys = scaling_col_s_1[:, None] * Y[Ls, :] + scaling_col_s_2[:, None] * Y[Ls, :]
-        Ym = scaling_col_j_1[:, None] * Y[Lm, :] + scaling_col_j_2[:, None] * Y[Lm, :]
+        Ys = (scaling_col_s_1 + scaling_col_s_2)[:, None] * Y[Ls, :]
+        Ym = (scaling_col_j_1 + scaling_col_j_2)[:, None] * Y[Lm, :]
         Y = np.append(Ym, Ys, axis=0)
     Y = Y.flatten()
 
@@ -413,12 +410,12 @@ def _optimal_reallocation(blm_model, jdata, sdata, Lm, Ls, method='max', realloc
 
     return gs
 
-def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, pk0=None, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, reallocation_constraint_category=None, reallocation_scaling_col=None, worker_types_as_ids=True, simulate_wages=True, return_long_df=True, store_worker_types=True, weighted=True, rng=None):
+def _simulate_types_wages(model, jdata, sdata, gj=None, gs=None, pk1=None, pk0=None, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, reallocation_constraint_category=None, reallocation_scaling_col=None, worker_types_as_ids=True, simulate_wages=True, return_long_df=True, store_worker_types=True, weighted=True, rng=None):
     '''
     Using data and estimated BLM parameters, simulate worker types (and optionally wages).
 
     Arguments:
-        blm_model (BLMModel): BLM model with estimated parameters
+        model (BLMModel): BLM model with estimated parameters
         jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
         sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
         gj (NumPy Array or None): firm classes for movers in the first and second periods; if None, extract from jdata
@@ -453,7 +450,7 @@ def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, p
         rng = np.random.default_rng(None)
 
     ## Unpack parameters ##
-    nl, nk = blm_model.nl, blm_model.nk
+    nl, nk = model.nl, model.nk
 
     ## Firm classes ##
     if gj is None:
@@ -497,14 +494,14 @@ def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, p
                 cat_i_j = (cat_cons_col_j == i)
                 if (cat_i_s.any() or cat_i_j.any()):
                     # Group might not show up in first period
-                    gs = _optimal_reallocation(blm_model, jdata.loc[cat_i_j, :], sdata.loc[cat_i_s, :], Lm[cat_i_j], Ls[cat_i_s], method=optimal_reallocation, reallocation_scaling_col=reallocation_scaling_col, rng=rng)
+                    gs_i = _optimal_reallocation(model, jdata.loc[cat_i_j, :], sdata.loc[cat_i_s, :], gj[cat_i_j, :], gs[cat_i_s], Lm[cat_i_j], Ls[cat_i_s], method=optimal_reallocation, reallocation_scaling_col=reallocation_scaling_col, rng=rng)
                     # Set G1/G2 and J1/J2
                     cat_i_a = (cat_cons_col_a == i)
-                    adata.loc[cat_i_a, 'g1'], adata.loc[cat_i_a, 'g2'] = (gs, gs)
-                    adata.loc[cat_i_a, 'j1'], adata.loc[cat_i_a, 'j2'] = (gs, gs)
-            del cat_cons_col, cat_cons_col_a, cat_cons_col_s, cat_cons_col_j, cat_i_a, cat_i_j, cat_i_s
+                    adata.loc[cat_i_a, 'g1'], adata.loc[cat_i_a, 'g2'] = (gs_i, gs_i)
+                    adata.loc[cat_i_a, 'j1'], adata.loc[cat_i_a, 'j2'] = (gs_i, gs_i)
+            del cat_cons_col, cat_cons_col_a, cat_cons_col_s, cat_cons_col_j, cat_i_a, cat_i_j, cat_i_s, gs_i
         else:
-            gs = _optimal_reallocation(blm_model, jdata, sdata, Lm, Ls, method=optimal_reallocation, reallocation_scaling_col=reallocation_scaling_col, rng=rng)
+            gs = _optimal_reallocation(model, jdata, sdata, gj, gs, Lm, Ls, method=optimal_reallocation, reallocation_scaling_col=reallocation_scaling_col, rng=rng)
             # Set G1/G2 and J1/J2
             adata.loc[:, 'g1'], adata.loc[:, 'g2'] = (gs, gs)
             adata.loc[:, 'j1'], adata.loc[:, 'j2'] = (gs, gs)
@@ -523,11 +520,11 @@ def _simulate_types_wages(blm_model, jdata, sdata, gj=None, gs=None, pk1=None, p
     if simulate_wages:
         ## Simulate wages ##
         if len(jdata) > 0:
-            yj = tw.simblm._simulate_wages_movers(jdata, Lm, blm_model=blm_model, G1=gj[:, 0], G2=gj[:, 1], w1=wj1, w2=wj2, rng=rng)
+            yj = tw.simblm._simulate_wages_movers(jdata, Lm, blm_model=model, G1=gj[:, 0], G2=gj[:, 1], w1=wj1, w2=wj2, rng=rng)
         else:
             yj = (np.array([]), np.array([]))
         if len(sdata) > 0:
-            ys = tw.simblm._simulate_wages_stayers(sdata, Ls, blm_model=blm_model, G=gs, w=ws, rng=rng)
+            ys = tw.simblm._simulate_wages_stayers(sdata, Ls, blm_model=model, G=gs, w=ws, rng=rng)
         else:
             ys = (np.array([]), np.array([]))
 
@@ -3357,21 +3354,22 @@ class BLMBootstrap:
 
     Arguments:
         params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
+        model (BLMModel or None): estimated BLM model. For use with parametric bootstrap. None if running standard bootstrap.
     '''
 
-    def __init__(self, params):
+    def __init__(self, params, model=None):
         self.params = params
+        self.model = model
         # No initial models
         self.models = None
 
-    def fit(self, jdata, sdata, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, frac_movers=0.1, frac_stayers=0.1, method='parametric', cluster_params=None, reallocate=False, reallocate_jointly=True, reallocate_period='first', ncore=1, verbose=True, rng=None):
+    def fit(self, jdata, sdata, n_samples=5, n_init_estimator=20, n_best=5, frac_movers=0.1, frac_stayers=0.1, method='parametric', cluster_params=None, reallocate=False, reallocate_jointly=True, reallocate_period='first', ncore=1, verbose=True, rng=None):
         '''
         Estimate bootstrap.
 
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
-            blm_model (BLMModel or None): estimated BLM model; if None, estimate model inside the method. For use with parametric bootstrap.
             n_samples (int): number of bootstrap samples to estimate
             n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
             n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
@@ -3409,38 +3407,18 @@ class BLMBootstrap:
             gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
 
             ## Unpack parameters ##
-            nl, nk = params.get_multiple(('nl', 'nk'))
-
-            if blm_model is None:
-                ## Run initial BLM estimator ##
-                blm_fit_init = BLMEstimator(params)
-                blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
-                blm_model = blm_fit_init.model
-
-                ## Update parameters ##
-                params = copy.deepcopy(self.params)
-                params['a1_mu'] = blm_model.A1
-                params['a1_sig'] = blm_model.A1.std() / nl
-                params['a2_mu'] = blm_model.A2
-                params['a2_sig'] = blm_model.A2.std() / nl
-                params['s1_low'] = blm_model.S1
-                params['s1_high'] = blm_model.S1
-                params['s2_low'] = blm_model.S2
-                params['s2_high'] = blm_model.S2
-                # TODO: add control variables
-
-            ## Unpack parameters ##
-            NNm, NNs = blm_model.NNm, blm_model.NNs
+            model = self.model
+            NNm, NNs = model.NNm, model.NNs
+            pk1, pk0 = model.pk1, model.pk0
 
             ## Reallocate ##
-            pk1, pk0 = blm_model.pk1, blm_model.pk0
             if reallocate:
                 pk1, pk0 = tw.simblm._reallocate(pk1=pk1, pk0=pk0, NNm=NNm, NNs=NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
 
             models = []
             for _ in trange(n_samples):
                 ## Simulate worker types and wages ##
-                bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, reallocation_constraint_category=None, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=True, rng=rng)
+                bdf = _simulate_types_wages(model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, reallocation_constraint_category=None, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=True, rng=rng)
 
                 ## Cluster ##
                 bdf = bdf.cluster(cluster_params, rng=rng)
@@ -3764,24 +3742,23 @@ class BLMVarianceDecomposition:
 
     Arguments:
         params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
+        model (BLMModel): estimated BLM model
     '''
 
-    def __init__(self, params):
+    def __init__(self, params, model):
         self.params = params
+        self.model = model
         # No initial results
         self.res = None
 
-    def fit(self, jdata, sdata, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', uncorrelated_errors=True, Q_var=None, Q_cov=None, complementarities=True, firm_clusters_as_ids=True, worker_types_as_ids=True, weighted=True, ncore=1, rng=None):
+    def fit(self, jdata, sdata, n_samples=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', uncorrelated_errors=False, Q_var=None, Q_cov=None, complementarities=True, firm_clusters_as_ids=True, worker_types_as_ids=True, weighted=True, ncore=1, rng=None):
         '''
         Estimate variance decomposition.
 
         Arguments:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
-            blm_model (BLMModel or None): estimated BLM model; if None, estimate model inside the method
             n_samples (int): number of bootstrap samples to estimate
-            n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
-            n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
             reallocate (bool): if True, draw worker type proportions independently of firm type; if False, uses worker type proportions that are conditional on firm type
             reallocate_jointly (bool): if True, worker type proportions take the average over movers and stayers (i.e. all workers use the same type proportions); if False, consider movers and stayers separately
             reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
@@ -3801,8 +3778,12 @@ class BLMVarianceDecomposition:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        # Parameter dictionary
+        ## Unpack parameters ##
         params = self.params
+        model = self.model
+        nl = model.nl
+        NNm, NNs = model.NNm, model.NNs
+        pk1, pk0 = model.pk1, model.pk0
 
         # FE parameters
         no_cat_controls = (params['categorical_controls'] is None) or (len(params['categorical_controls']) == 0)
@@ -3853,20 +3834,7 @@ class BLMVarianceDecomposition:
             sdata = sdata.construct_artificial_time(is_sorted=True, copy=False)
             ts = True
 
-        ## Unpack parameters ##
-        nl, nk = params.get_multiple(('nl', 'nk'))
-
-        if blm_model is None:
-            ## Run initial BLM estimator ##
-            blm_fit_init = BLMEstimator(params)
-            blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
-            blm_model = blm_fit_init.model
-
-        ## Unpack parameters ##
-        NNm, NNs = blm_model.NNm, blm_model.NNs
-
         ## Reallocate ##
-        pk1, pk0 = blm_model.pk1, blm_model.pk0
         if reallocate:
             pk1, pk0 = tw.simblm._reallocate(pk1=pk1, pk0=pk0, NNm=NNm, NNs=NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
 
@@ -3876,7 +3844,7 @@ class BLMVarianceDecomposition:
             res_lst_comp = []
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
-            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, reallocation_constraint_category=None, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=(weighted and uncorrelated_errors), rng=rng)
+            bdf = _simulate_types_wages(model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, reallocation_constraint_category=None, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, weighted=(weighted and uncorrelated_errors), rng=rng)
             ## Estimate OLS ##
             if no_controls:
                 fe_estimator = tw.FEEstimator(bdf, fe_params)
@@ -3936,17 +3904,15 @@ class BLMReallocation:
     Class for estimating BLM reallocation exercise using bootstrapping. Results are stored in class attribute .res, which gives a dictionary with the following structure: baseline results are stored in key 'baseline'. Reallocation results are stored in key 'reallocation'. Within each sub-dictionary, primary outcome results are stored in the key 'outcome', means are stored in the key 'mean', categorical results are stored in the key 'cat', continuous results are stored in the key 'cts', type proportions for movers are stored in the key 'pk1', type proportions for stayers are stored in the key 'pk0', firm-level mover flow counts are stored in the key 'NNm', and firm-level stayer counts are stored in the key 'NNs'.
 
     Arguments:
-        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
+        model (BLMModel): estimated BLM model
     '''
 
-    def __init__(self, params):
-        self.params = params
+    def __init__(self, model):
+        self.model = model
         # No initial results
         self.res = None
-        # No model
-        self.model = None
 
-    def fit(self, jdata, sdata, quantiles=None, blm_model=None, n_samples=5, n_init_estimator=20, n_best=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, unresidualize_col=None, optimal_reallocation=False, reallocation_constraint_category=None, reallocation_scaling_col=None, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, ncore=1, weighted=True, rng=None):
+    def fit(self, jdata, sdata, quantiles=None, n_samples=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, unresidualize_col=None, optimal_reallocation=False, reallocation_constraint_category=None, reallocation_scaling_col=None, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, ncore=1, weighted=True, rng=None):
         '''
         Estimate reallocation exercise.
 
@@ -3954,10 +3920,7 @@ class BLMReallocation:
             jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
             sdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for stayers
             quantiles (NumPy Array or None): income quantiles to compute; if None, computes percentiles from 1-100 (specifically, np.arange(101) / 100)
-            blm_model (BLMModel or None): estimated BLM model; if None, estimate model inside the method
             n_samples (int): number of bootstrap samples to estimate
-            n_init_estimator (int): number of starting guesses to estimate for each bootstrap sample
-            n_best (int): take the n_best estimates with the highest likelihoods, and then take the estimate with the highest connectedness, for each bootstrap sample
             reallocate_jointly (bool): if True, worker type proportions take the average over movers and stayers (i.e. all workers use the same type proportions); if False, consider movers and stayers separately
             reallocate_period (str): if 'first', compute type proportions based on first period parameters; if 'second', compute type proportions based on second period parameters; if 'all', compute type proportions based on average over first and second period parameters
             categorical_sort_cols (dict or None): in addition to standard quantiles results, return average income grouped by the alternative column(s) given (which are represented by the dictionary {column: number of quantiles to compute}). For categorical variables, use each group as a bin and take the average income within that bin. None is equivalent to {}.
@@ -3986,8 +3949,10 @@ class BLMReallocation:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        # Parameter dictionary
-        params = self.params
+        ## Unpack parameters ##
+        model = self.model
+        nl, nk = model.nl, model.nk
+        NNm, NNs = model.NNm, model.NNs
 
         # Make sure continuous quantiles start at 0 and end at 1
         for col_cts, quantiles_cts in continuous_sort_cols.items():
@@ -4012,24 +3977,11 @@ class BLMReallocation:
             sdata = sdata.construct_artificial_time(is_sorted=True, copy=False)
             ts = True
 
-        ## Unpack parameters ##
-        nl, nk = params.get_multiple(('nl', 'nk'))
-
-        if blm_model is None:
-            ## Run initial BLM estimator ##
-            blm_fit_init = BLMEstimator(params)
-            blm_fit_init.fit(jdata=jdata, sdata=sdata, n_init=n_init_estimator, n_best=n_best, ncore=ncore, rng=rng)
-            blm_model = blm_fit_init.model
-        self.model = blm_model
-
-        ## Unpack parameters ##
-        NNm, NNs = blm_model.NNm, blm_model.NNs
-
         ## Reallocate ##
         if optimal_reallocation:
             pk1, pk0 = None, None
         else:
-            pk1, pk0 = tw.simblm._reallocate(pk1=blm_model.pk1, pk0=blm_model.pk0, NNm=NNm, NNs=NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
+            pk1, pk0 = tw.simblm._reallocate(pk1=model.pk1, pk0=model.pk0, NNm=NNm, NNs=NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
 
         ## Baseline ##
         res_cat_baseline = {}
@@ -4087,21 +4039,21 @@ class BLMReallocation:
 
         ## Run bootstrap ##
         res = np.zeros([n_samples, len(quantiles)])
+        mean = np.zeros(n_samples)
         res_cat = {col: np.zeros([n_samples, n_quantiles]) for col, n_quantiles in categorical_sort_cols.items()}
         res_cts = {col: np.zeros([n_samples, len(quantiles) - 1]) for col, quantiles in continuous_sort_cols.items()}
-        mean = np.zeros(n_samples)
         if reallocation_scaling_col is not None:
             res_scaled = np.zeros([n_samples, len(quantiles)])
+            mean_scaled = np.zeros(n_samples)
             res_scaled_cat = {col: np.zeros([n_samples, n_quantiles]) for col, n_quantiles in categorical_sort_cols.items()}
             res_scaled_cts = {col: np.zeros([n_samples, len(quantiles) - 1]) for col, quantiles in continuous_sort_cols.items()}
-            mean_scaled = np.zeros(n_samples)
         pk1_res = np.zeros([n_samples, nk * nk, nl])
         pk0_res = np.zeros([n_samples, nk, nl])
         NNm_res = np.zeros([n_samples, nk, nk])
         NNs_res = np.zeros([n_samples, nk])
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
-            bdf = _simulate_types_wages(blm_model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=qi_j, qi_s=qi_s, qi_cum_j=qi_cum_j, qi_cum_s=qi_cum_s, optimal_reallocation=optimal_reallocation, reallocation_constraint_category=reallocation_constraint_category, reallocation_scaling_col=reallocation_scaling_col, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=True, weighted=weighted, rng=rng)
+            bdf = _simulate_types_wages(model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=qi_j, qi_s=qi_s, qi_cum_j=qi_cum_j, qi_cum_s=qi_cum_s, optimal_reallocation=optimal_reallocation, reallocation_constraint_category=reallocation_constraint_category, reallocation_scaling_col=reallocation_scaling_col, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=True, weighted=weighted, rng=rng)
 
             ## Compute quantiles ##
             y = bdf.loc[:, 'y'].to_numpy()
@@ -4229,8 +4181,8 @@ class BLMReallocation:
         if self.res is None:
             warnings.warn('Estimation has not yet been run.')
         else:
-            nl, nk = self.params.get_multiple(('nl', 'nk'))
             model = self.model
+            nl, nk = model.nl, model.nk
             pk1_res = self.res['reallocation']['pk1']
             pk0_res = self.res['reallocation']['pk0']
             NNm_res = self.res['reallocation']['NNm']
