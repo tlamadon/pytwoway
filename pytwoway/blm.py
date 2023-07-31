@@ -101,7 +101,7 @@ blm_params = ParamsDict({
         ''', '>= 0'),
     'pk1_prior': (None, 'array_of_type_constrained_none', (('float', 'int'), _min_gt0),
         '''
-            (default=None) Prior for pk1 (probability of being at each combination of firm types for movers). In particular, pk1 now generates as a convex combination of the prior plus a Dirichlet random variable. Must have shape (nk ** 2, nl). None puts all weight on the Dirichlet variable.
+            (default=None) Prior for pk1 (probability of being at each combination of firm types for movers). In particular, pk1 now generates as a convex combination of the prior plus a Dirichlet random variable. Must have shape (nk * nk, nl). None puts all weight on the Dirichlet variable.
         ''', 'min > 0'),
     'pk0_prior': (None, 'array_of_type_constrained_none', (('float', 'int'), _min_gt0),
         '''
@@ -1150,7 +1150,7 @@ class BLMModel:
         self.A2 = rng.normal(loc=a2_mu, scale=a2_sig, size=dims)
         self.S2 = rng.uniform(low=np.maximum(s2_low, s_lb), high=s2_high, size=dims)
         # Model for p(K | l, l') for movers
-        self.pk1 = rng.dirichlet(alpha=np.ones(nl), size=nk ** 2)
+        self.pk1 = rng.dirichlet(alpha=np.ones(nl), size=nk * nk)
         if pk1_prior is not None:
             self.pk1 = (self.pk1 + pk1_prior) / 2
         # Model for p(K | l, l') for stayers
@@ -1747,7 +1747,7 @@ class BLMModel:
         ## Joint firm indicator ##
         KK = G1 + nk * G2
         KK2 = np.tile(KK, (nl, 1)).T
-        KK3 = KK2 + nk ** 2 * np.arange(nl)
+        KK3 = KK2 + nk * nk * np.arange(nl)
         KK2 = KK3.flatten()
         del KK3
 
@@ -1854,7 +1854,7 @@ class BLMModel:
                 # NOTE: add dirichlet prior
                 # NOTE: this is equivalent to pk1 = GG12.T @ (qi + d_prior - 1)
                 # NOTE: don't use weights here, since type probabilities are unrelated to length of spell
-                pk1 = np.bincount(KK2, weights=(qi + d_prior - 1).flatten()).reshape(nl, nk ** 2).T
+                pk1 = np.bincount(KK2, weights=(qi + d_prior - 1).flatten()).reshape(nl, nk * nk).T
                 # Normalize rows to sum to 1
                 pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
 
@@ -4049,8 +4049,8 @@ class BLMReallocation:
             res_scaled_cts = {col: np.zeros([n_samples, len(quantiles) - 1]) for col, quantiles in continuous_sort_cols.items()}
         pk1_res = np.zeros([n_samples, nk * nk, nl])
         pk0_res = np.zeros([n_samples, nk, nl])
-        NNm_res = np.zeros([n_samples, nk, nk])
-        NNs_res = np.zeros([n_samples, nk])
+        NNm_res = np.zeros([n_samples, nk, nk], dtype=int)
+        NNs_res = np.zeros([n_samples, nk], dtype=int)
         for i in trange(n_samples):
             ## Simulate worker types and wages ##
             bdf = _simulate_types_wages(model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=qi_j, qi_s=qi_s, qi_cum_j=qi_cum_j, qi_cum_s=qi_cum_s, optimal_reallocation=optimal_reallocation, reallocation_constraint_category=reallocation_constraint_category, reallocation_scaling_col=reallocation_scaling_col, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=True, weighted=weighted, rng=rng)
@@ -4103,13 +4103,15 @@ class BLMReallocation:
 
             if not optimal_reallocation:
                 # Compute pk1
-                pk1_i = bdf.loc[m, ['g1', 'g2', 'l']].groupby(['g1', 'g2'])['l'].value_counts().unstack(fill_value=0).to_numpy().reshape((nk * nk, nl))
+                movers = bdf.loc[m, ['g1', 'g2', 'l']].to_numpy()
+                pk1_i = np.bincount(movers[:, 2] + nl * movers[:, 1] + nl * nk * movers[:, 0], minlength=nk * nk * nl).reshape((nk * nk, nl))
                 # Normalize rows to sum to 1
                 pk1_i = DxM(1 / np.sum(pk1_i, axis=1), pk1_i)
                 # Store
                 pk1_res[i, :, :] = pk1_i
             # Compute pk0
-            pk0_i = bdf.loc[~m, ['g1', 'l']].groupby('g1')['l'].value_counts().unstack(fill_value=0).to_numpy().reshape((nk, nl))
+            stayers = bdf.loc[~m, ['g1', 'l']].to_numpy()
+            pk0_i = np.bincount(stayers[:, 1] + nl * stayers[:, 0], minlength=nk * nl).reshape((nk, nl))
             # Normalize rows to sum to 1
             pk0_i = DxM(1 / np.sum(pk0_i, axis=1), pk0_i)
             # Store
@@ -4117,10 +4119,10 @@ class BLMReallocation:
 
             ## Compute firm-level worker counts ##
             if not optimal_reallocation:
-                NNm_res[i, :, :] = bdf.loc[m, ['g1', 'g2']].groupby('g1')['g2'].value_counts().unstack(fill_value=0).to_numpy()
-            NNs_i = bdf.loc[~m, 'g1'].value_counts(sort=False)
-            NNs_i.sort_index(inplace=True)
-            NNs_res[i, :] = NNs_i.to_numpy()
+                NNm_res[i, :, :] = np.bincount(movers[:, 1] + nk * movers[:, 0], minlength=nk * nk).reshape((nk, nk))
+                del movers
+            NNs_res[i, :] = np.bincount(stayers[:, 0], minlength=nk)
+            del stayers
 
         with bpd.util.ChainedAssignment():
             # Restore original wages, firm ids, and firm types
@@ -4186,7 +4188,7 @@ class BLMReallocation:
             pk1_res = self.res['reallocation']['pk1']
             pk0_res = self.res['reallocation']['pk0']
             NNm_res = self.res['reallocation']['NNm']
-            NNs_res = self.res['reallocation']['pk0']
+            NNs_res = self.res['reallocation']['NNs']
 
             ## Compute average type proportions ##
             pk_mean = np.zeros((nk, nl))
