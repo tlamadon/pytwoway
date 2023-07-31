@@ -6031,19 +6031,25 @@ class DynamicBLMReallocation:
         '''
         if self.res is None:
             warnings.warn('Estimation has not yet been run.')
+        elif (subset in ['movers', 'all']) and ('pk1' not in self.res['reallocation']):
+            warnings.warn("Cannot set `subset` as 'movers' or 'all' for optimal reallocation, since all observations are converted to stayers.")
         else:
             model = self.model
             nl, nk = model.nl, model.nk
-            pk1_res = self.res['reallocation']['pk1']
+            if 'pk1' in self.res['reallocation']:
+                pk1_res = self.res['reallocation']['pk1']
+                NNm_res = self.res['reallocation']['NNm']
             pk0_res = self.res['reallocation']['pk0']
-            NNm_res = self.res['reallocation']['NNm']
             NNs_res = self.res['reallocation']['NNs']
 
             ## Compute average type proportions ##
             pk_mean = np.zeros((nk, nl))
-            for i in range(pk1_res.shape[0]):
+            for i in range(pk0_res.shape[0]):
                 # Sort by firm effects
-                A, pk1, pk0, NNm, NNs = model._sort_parameters(model.A, pk1=pk1_res[i, :, :], pk0=pk0_res[i, :, :], NNm=NNm_res[i, :, :], NNs=NNs_res[i, :], sort_firm_types=True)
+                if 'pk1' in self.res['reallocation']:
+                    A, pk1, pk0, NNm, NNs = model._sort_parameters(model.A, pk1=pk1_res[i, :, :], pk0=pk0_res[i, :, :], NNm=NNm_res[i, :, :], NNs=NNs_res[i, :], sort_firm_types=True)
+                else:
+                    A, pk0, NNs = model._sort_parameters(model.A, pk1=None, pk0=pk0_res[i, :, :], NNm=None, NNs=NNs_res[i, :], sort_firm_types=True)
 
                 ## Extract subset(s) ##
                 if subset == 'movers':
@@ -6079,7 +6085,7 @@ class DynamicBLMReallocation:
                     raise ValueError(f"`period` must be one of 'first', 'second' or 'all', but input specifies {period!r}.")
 
             ## Take mean over all models ##
-            pk_mean /= pk1_res.shape[0]
+            pk_mean /= pk0_res.shape[0]
 
             ## Compute cumulative sum ##
             pk_cumsum = np.cumsum(pk_mean, axis=1)
