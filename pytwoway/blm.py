@@ -3841,7 +3841,6 @@ class BLMVarianceDecomposition:
         ## Unpack parameters ##
         params = self.params
         model = self.model
-        nl = model.nl
         pk1, pk0 = model.pk1, model.pk0
 
         # FE parameters

@@ -5622,6 +5622,62 @@ class DynamicBLMVarianceDecomposition:
         # No initial results
         self.res = None
 
+    def _fit(self, jdata, sdata, fe_params, fe_params_comp, no_controls, gj=None, gs=None, pk1=None, pk0=None, complementarities=True, worker_types_as_ids=True, rng=None):
+        '''
+        Interior method to fit().
+
+        Arguments:
+            jdata (BipartitePandas DataFrame): extended event study format labor data for movers
+            sdata (BipartitePandas DataFrame): extended event study format labor data for stayers
+            fe_params (ParamsDict): dictionary of parameters for FE estimation. Run tw.fe_params().describe_all() for descriptions of all valid parameters.
+            fe_params_comp (ParamsDict): dictionary of parameters for FE estimation with complementarities. Run tw.fe_params().describe_all() for descriptions of all valid parameters.
+            no_controls (bool): if True, model is estimated without control variables
+            gj (NumPy Array or None): firm classes for movers in the first and last periods; if None, extract from jdata
+            gs (NumPy Array or None): firm classes for stayers; if None, extract from sdata
+            pk1 (NumPy Array or None): (use to assign workers to worker types probabilistically based on dgp-level probabilities) probability of being at each combination of firm types for movers; None if qi_j or qi_cum_j is not None
+            pk0 (NumPy Array or None): (use to assign workers to worker types probabilistically based on dgp-level probabilities) probability of being at each firm type for stayers; None if qi_s or qi_cum_s is not None
+            complementarities (bool): if True, estimate R^2 of regression with complementarities (by adding in all worker-firm interactions). Only allowed when worker_types_as_ids=True.
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+
+        Returns:
+            (dict): dictionary of reallocation results
+        '''
+        if complementarities and (not worker_types_as_ids):
+            raise ValueError('If `complementarities=True`, then must also set `worker_types_as_ids=True`.')
+
+        if rng is None:
+            rng = np.random.default_rng(None)
+
+        ## Unpack parameters ##
+        model = self.model
+        nl = model.nl
+        pk1, pk0 = model.pk1, model.pk0
+
+        ## Results dictionary ##
+        res = {}
+
+        ## Simulate worker types and wages ##
+        bdf = _simulate_types_wages(model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, reallocation_constraint_category=None, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
+
+        ## Estimate OLS ##
+        if no_controls:
+            fe_estimator = tw.FEEstimator(bdf, fe_params)
+        else:
+            fe_estimator = tw.FEControlEstimator(bdf, fe_params)
+        fe_estimator.fit()
+        res['default'] = fe_estimator.summary
+        if complementarities:
+            ## Estimate OLS with complementarities ##
+            bdf.loc[:, 'i'] = pd.factorize(bdf.loc[:, 'i'].to_numpy() + nl * bdf.loc[:, 'j'].to_numpy())[0]
+            if no_controls:
+                fe_estimator = tw.FEEstimator(bdf, fe_params_comp)
+            else:
+                fe_estimator = tw.FEControlEstimator(bdf, fe_params_comp)
+            fe_estimator.fit()
+            res['comp'] = fe_estimator.summary
+
+        return res
+
     def fit(self, jdata, sdata, n_samples=5, reallocate=False, reallocate_jointly=True, reallocate_period='first', Q_var=None, Q_cov=None, complementarities=True, firm_clusters_as_ids=True, worker_types_as_ids=True, ncore=1, rng=None):
         '''
         Estimate variance decomposition.
@@ -5650,8 +5706,6 @@ class DynamicBLMVarianceDecomposition:
         ## Unpack parameters ##
         params = self.params
         model = self.model
-        nl = model.nl
-        NNm, NNs = model.NNm, model.NNs
         pk1, pk0 = model.pk1, model.pk0
 
         # FE parameters
@@ -5704,32 +5758,29 @@ class DynamicBLMVarianceDecomposition:
 
         ## Reallocate ##
         if reallocate:
-            pk1, pk0 = tw.simblm._reallocate(pk1=pk1, pk0=pk0, NNm=NNm, NNs=NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
+            pk1, pk0 = tw.simblm._reallocate(pk1=pk1, pk0=pk0, NNm=model.NNm, NNs=model.NNs, reallocate_period=reallocate_period, reallocate_jointly=reallocate_jointly)
 
         ## Run bootstrap ##
-        res_lst = []
+        # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
+        seeds = rng.bit_generator._seed_seq.spawn(n_samples)
+        if ncore > 1:
+            # Multiprocessing
+            with Pool(processes=ncore) as pool:
+                res_lst = list(tqdm(pool.imap(tw.util.f_star, [(self._fit, (jdata, sdata, fe_params, fe_params_comp, no_controls, gj, gs, pk1, pk0, complementarities, worker_types_as_ids, np.random.default_rng(seed))) for seed in seeds]), total=n_samples))
+                # sim_model_lst = pool.starmap(self._fit, tqdm([(jdata, sdata, fe_params, fe_params_comp, no_controls, gj, gs, pk1, pk0, complementarities, worker_types_as_ids, np.random.default_rng(seed)) for seed in seeds], total=n_samples))
+        else:
+            # No multiprocessing
+            res_lst = list(tqdm(map(tw.util.f_star, [(self._fit, (jdata, sdata, fe_params, fe_params_comp, no_controls, gj, gs, pk1, pk0, complementarities, worker_types_as_ids, np.random.default_rng(seed))) for seed in seeds]), total=n_samples))
+            # sim_model_lst = itertools.starmap(self._fit, tqdm([(jdata, sdata, fe_params, fe_params_comp, no_controls, gj, gs, pk1, pk0, complementarities, worker_types_as_ids, np.random.default_rng(seed)) for seed in seeds], total=n_samples))
+
+        ## Store results ##
+        res_lst_default = []
         if complementarities:
             res_lst_comp = []
-        for i in trange(n_samples):
-            ## Simulate worker types and wages ##
-            bdf = _simulate_types_wages(model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, reallocation_constraint_category=None, worker_types_as_ids=worker_types_as_ids, simulate_wages=True, return_long_df=True, store_worker_types=False, rng=rng)
-
-            ## Estimate OLS ##
-            if no_controls:
-                fe_estimator = tw.FEEstimator(bdf, fe_params)
-            else:
-                fe_estimator = tw.FEControlEstimator(bdf, fe_params)
-            fe_estimator.fit()
-            res_lst.append(fe_estimator.summary)
+        for res_i in res_lst:
+            res_lst_default.append(res_i['default'])
             if complementarities:
-                ## Estimate OLS with complementarities ##
-                bdf.loc[:, 'i'] = pd.factorize(bdf.loc[:, 'i'].to_numpy() + nl * bdf.loc[:, 'j'].to_numpy())[0]
-                if no_controls:
-                    fe_estimator = tw.FEEstimator(bdf, fe_params_comp)
-                else:
-                    fe_estimator = tw.FEControlEstimator(bdf, fe_params_comp)
-                fe_estimator.fit()
-                res_lst_comp.append(fe_estimator.summary)
+                res_lst_comp.append(res_i['comp'])
 
         with bpd.util.ChainedAssignment():
             # Restore original wages and optionally ids
@@ -5743,9 +5794,9 @@ class DynamicBLMVarianceDecomposition:
                 sdata.loc[:, 'i'] = is_
 
         ## Unpack results ##
-        res = {k: np.zeros(n_samples) for k in res_lst[0].keys()}
+        res = {k: np.zeros(n_samples) for k in res_lst_default[0].keys()}
         for i in range(n_samples):
-            for k, v in res_lst[i].items():
+            for k, v in res_lst_default[i].items():
                 res[k][i] = v
         if complementarities:
             res_comp = {k: np.zeros(n_samples) for k in res_lst_comp[0].keys()}

@@ -278,16 +278,16 @@ def ichol(
         if nnz >= 0:
             break
 
-        if nnz == -1:
-            print("PERFORMANCE WARNING:")
-            print(
-                "Thresholded incomplete Cholesky decomposition failed due to insufficient positive-definiteness of matrix A with parameters:"
-            )
-            print("    discard_threshold = %e" % discard_threshold)
-            print("    shift = %e" % shift)
-            print("Try decreasing discard_threshold or start with a larger shift")
-            print("")
-            print("NOTE: this is a warning, not an error")
+        # if nnz == -1:
+        #     print("PERFORMANCE WARNING:")
+        #     print(
+        #         "Thresholded incomplete Cholesky decomposition failed due to insufficient positive-definiteness of matrix A with parameters:"
+        #     )
+        #     print("    discard_threshold = %e" % discard_threshold)
+        #     print("    shift = %e" % shift)
+        #     print("Try decreasing discard_threshold or start with a larger shift")
+        #     print("")
+        #     print("NOTE: this is a warning, not an error")
 
         if nnz == -2:
             raise ValueError(
