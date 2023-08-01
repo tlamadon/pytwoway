@@ -14,7 +14,6 @@ import pandas as pd
 # from scipy.special import logsumexp
 from scipy.sparse import csc_matrix
 from matplotlib import pyplot as plt
-import plotly.graph_objects as go
 from paramsdict import ParamsDict, ParamsDictBase
 from paramsdict.util import col_type
 import bipartitepandas as bpd
@@ -995,6 +994,7 @@ def plot_type_flows_between_categories(jdata, qi_j, breakdown_category, method='
         plt.tight_layout()
         plt.show()
     elif method == 'sankey':
+        import plotly.graph_objects as go
         colors = np.array(
             [
                 [31, 119, 180],
@@ -3069,6 +3069,7 @@ class BLMModel:
             plt.tight_layout()
             plt.show()
         elif method == 'sankey':
+            import plotly.graph_objects as go
             colors = np.array(
                 [
                     [31, 119, 180],
@@ -3671,6 +3672,7 @@ class BLMBootstrap:
                 plt.tight_layout()
                 plt.show()
             elif method == 'sankey':
+                import plotly.graph_objects as go
                 colors = np.array(
                     [
                         [31, 119, 180],

@@ -6,7 +6,6 @@ import pandas as pd
 import bipartitepandas as bpd
 from pytwoway.util import DxM
 from matplotlib import pyplot as plt
-import plotly.graph_objects as go
 
 def _plot_worker_types_over_time(bdf, subplot, nk, firm_order=None, subplot_title=''):
     '''
@@ -267,6 +266,7 @@ def plot_class_flows(jdata, breakdown_category, method='stacked', category_label
         ax.grid()
         plt.show()
     elif method == 'sankey':
+        import plotly.graph_objects as go
         colors = np.array(
             [
                 [31, 119, 180],

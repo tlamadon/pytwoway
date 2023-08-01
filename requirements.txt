@@ -10,5 +10,4 @@ qpsolvers
 quadprog
 ConfigArgParse
 matplotlib
-plotly
 tqdm

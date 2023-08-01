@@ -15,7 +15,6 @@ import pandas as pd
 from scipy.sparse import csc_matrix, lil_matrix, hstack, vstack
 from scipy.optimize import minimize as opt
 from matplotlib import pyplot as plt
-import plotly.graph_objects as go
 from paramsdict import ParamsDict, ParamsDictBase
 from paramsdict.util import col_type
 import bipartitepandas as bpd
@@ -4932,6 +4931,7 @@ class DynamicBLMModel:
             plt.tight_layout()
             plt.show()
         elif method == 'sankey':
+            import plotly.graph_objects as go
             colors = np.array(
                 [
                     [31, 119, 180],
@@ -5541,6 +5541,7 @@ class DynamicBLMBootstrap:
                 plt.tight_layout()
                 plt.show()
             elif method == 'sankey':
+                import plotly.graph_objects as go
                 colors = np.array(
                     [
                         [31, 119, 180],

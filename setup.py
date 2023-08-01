@@ -26,7 +26,6 @@ setuptools.setup(
         'quadprog',
         'ConfigArgParse',
         'matplotlib',
-        'plotly',
         'tqdm'
       ],
     entry_points = {
