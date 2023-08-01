@@ -4022,6 +4022,11 @@ class BLMReallocation:
 
         ## Results dictionary ##
         res = {}
+        res['cat'] = {}
+        res['cts'] = {}
+        if reallocation_scaling_col is not None:
+            res['scaled_cat'] = {}
+            res['scaled_cts'] = {}
 
         ## Simulate worker types and wages ##
         bdf = _simulate_types_wages(model, jdata, sdata, gj=gj, gs=gs, pk1=pk1, pk0=pk0, qi_j=qi_j, qi_s=qi_s, qi_cum_j=qi_cum_j, qi_cum_s=qi_cum_s, optimal_reallocation=optimal_reallocation, reallocation_constraint_category=reallocation_constraint_category, reallocation_scaling_col=reallocation_scaling_col, worker_types_as_ids=False, simulate_wages=True, return_long_df=True, store_worker_types=True, weighted=weighted, rng=rng)
