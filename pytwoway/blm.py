@@ -4215,7 +4215,7 @@ class BLMReallocation:
         # No initial results
         self.res = None
 
-    def _fit(self, jdata, sdata, gj=None, gs=None, pk1=None, pk0=None, quantiles=None, categorical_sort_cols=None, continuous_sort_cols=None, unresidualize_col=None, optimal_reallocation=False, reallocation_constraint_category=None, reallocation_scaling_col=None, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, weighted=True, rng=None):
+    def _fit(self, jdata, sdata, gj=None, gs=None, pk1=None, pk0=None, quantiles=None, categorical_sort_cols=None, continuous_sort_cols=None, unresidualize_col=None, optimal_reallocation=False, reallocation_constraint_category=None, reallocation_scaling_col=None, lb=None, ub=None, lb_scaled=None, ub_scaled=None, bound_category=None, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, weighted=True, rng=None):
         '''
         Interior method to fit().
 
@@ -4233,6 +4233,11 @@ class BLMReallocation:
             optimal_reallocation (bool or str): if not False, reallocate workers to new firms to maximize ('max') or minimize ('min') total output
             reallocation_constraint_category (str or None): specify categorical column to constrain reallocation so that workers must reallocate within their own category; if None, no constraints on how workers can reallocate
             reallocation_scaling_col (str or None): specify column to use to scale outcomes when computing optimal reallocation (i.e. multiply outcomes by an observation-level factor); if None, don't scale outcomes
+            lb (float or list of float or None): if float, set lower bound on simulated data; if list of float, set lower bound on simulated data for each category specified in `bound_category`; if None, no lower bound
+            ub (float or list of float or None): if float, set upper bound on simulated data; if list of float, set lower bound on simulated data for each category specified in `bound_category`; if None, no upper bound
+            lb_scaled (float or list of float or None): if float, set lower bound on simulated scaled data; if list of float, set lower bound on simulated scaled data for each category specified in `bound_category`; if None, no lower bound
+            ub_scaled (float or list of float or None): if float, set upper bound on simulated scaled data; if list of float, set lower bound on simulated scaled data for each category specified in `bound_category`; if None, no upper bound
+            bound_category (str or None): specify categorical column such that bounds are set within each category; if None, bounds are the same for all data
             qi_j (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if pk1 or qi_cum_j is not None
             qi_s (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each stayer observation to be each worker type; None if pk0 or qi_cum_s is not None
             qi_cum_j (NumPy Array or None): (use with optimal_reallocation to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if pk1 or qi_j is not None
@@ -4285,12 +4290,48 @@ class BLMReallocation:
             w = bdf.loc[:, 'w'].to_numpy()
         else:
             w = None
+        if lb is not None:
+            ## Lower bound ##
+            if bound_category is None:
+                y[y < lb] = lb
+            else:
+                cat_col = bdf.loc[:, bound_category].to_numpy()
+                for i in range(len(lb)):
+                    y[(cat_col == i) & (y < lb[i])] = lb[i]
+                del cat_col
+        if ub is not None:
+            ## Upper bound ##
+            if bound_category is None:
+                y[y > ub] = ub
+            else:
+                cat_col = bdf.loc[:, bound_category].to_numpy()
+                for i in range(len(ub)):
+                    y[(cat_col == i) & (y > ub[i])] = ub[i]
+                del cat_col
         res['outcome'] = weighted_quantile(values=y, quantiles=quantiles, sample_weight=w)
         res['mean'] = weighted_mean(y, w)
         if reallocation_scaling_col is not None:
             scaling_col = to_list(bdf.col_reference_dict[reallocation_scaling_col])[0]
             scale = bdf.loc[:, scaling_col].to_numpy()
             y_scaled = scale * y
+            if lb_scaled is not None:
+                ## Lower bound ##
+                if bound_category is None:
+                    y_scaled[y_scaled < lb_scaled] = lb_scaled
+                else:
+                    cat_col = bdf.loc[:, bound_category].to_numpy()
+                    for i in range(len(lb_scaled)):
+                        y_scaled[(cat_col == i) & (y_scaled < lb_scaled[i])] = lb_scaled[i]
+                    del cat_col
+            if ub_scaled is not None:
+                ## Upper bound ##
+                if bound_category is None:
+                    y_scaled[y_scaled > ub_scaled] = ub_scaled
+                else:
+                    cat_col = bdf.loc[:, bound_category].to_numpy()
+                    for i in range(len(ub_scaled)):
+                        y_scaled[(cat_col == i) & (y_scaled > ub_scaled[i])] = ub_scaled[i]
+                    del cat_col
             res['scaled_outcome'] = weighted_quantile(values=y_scaled, quantiles=quantiles, sample_weight=w)
             res['scaled_mean'] = weighted_mean(y_scaled, w)
         if w is not None:
@@ -4347,7 +4388,7 @@ class BLMReallocation:
 
         return res
 
-    def fit(self, jdata, sdata, quantiles=None, n_samples=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, unresidualize_col=None, optimal_reallocation=False, reallocation_constraint_category=None, reallocation_scaling_col=None, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, ncore=1, weighted=True, rng=None):
+    def fit(self, jdata, sdata, quantiles=None, n_samples=5, reallocate_jointly=True, reallocate_period='first', categorical_sort_cols=None, continuous_sort_cols=None, unresidualize_col=None, optimal_reallocation=False, reallocation_constraint_category=None, reallocation_scaling_col=None, lb=True, ub=True, bound_category=None, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, ncore=1, weighted=True, rng=None):
         '''
         Estimate reallocation exercise.
 
@@ -4364,6 +4405,9 @@ class BLMReallocation:
             optimal_reallocation (bool or str): if not False, reallocate workers to new firms to maximize ('max') or minimize ('min') total output
             reallocation_constraint_category (str or None): specify categorical column to constrain reallocation so that workers must reallocate within their own category; if None, no constraints on how workers can reallocate
             reallocation_scaling_col (str or None): specify column to use to scale outcomes when computing optimal reallocation (i.e. multiply outcomes by an observation-level factor); if None, don't scale outcomes
+            lb (bool): if True, set minimum value in real data as lower bound on simulated data
+            ub (bool): if True, set maximum value in real data as lower bound on simulated data
+            bound_category (str or None): specify categorical column such that bounds are set within each category; if None, bounds are the same for all data
             qi_j (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if using pk1, or qi_cum_j is not None
             qi_s (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each stayer observation to be each worker type; None if using pk0, or qi_cum_s is not None
             qi_cum_j (NumPy Array or None): (use with optimal_reallocation to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if using pk1, or qi_j is not None
@@ -4394,6 +4438,7 @@ class BLMReallocation:
         ## Unpack parameters ##
         model = self.model
         nl, nk = model.nl, model.nk
+        lb1 = ub1 = lb2 = ub2 = None
 
         # Copy original wages, firm ids, and firm types
         yj = jdata.loc[:, ['y1', 'y2']].to_numpy().copy()
@@ -4437,12 +4482,48 @@ class BLMReallocation:
             w = bdf.loc[:, 'w'].to_numpy()
         else:
             w = None
+        if bound_category is None:
+            if lb is not None:
+                lb1 = y.min()
+            if ub is not None:
+                ub1 = y.max()
+        else:
+            if (lb is not None) and (ub is not None):
+                groupby_cat = bdf.groupby(bound_category)['y']
+                lb1 = groupby_cat.min().to_numpy()
+                ub1 = groupby_cat.max().to_numpy()
+                del groupby_cat
+            elif lb is not None:
+                lb1 = bdf.groupby(bound_category)['y'].min().to_numpy()
+            elif ub is not None:
+                ub1 = bdf.groupby(bound_category)['y'].max().to_numpy()
         res_baseline = weighted_quantile(values=y, quantiles=quantiles, sample_weight=w)
         mean_baseline = weighted_mean(y, w)
         if reallocation_scaling_col is not None:
             scaling_col = to_list(bdf.col_reference_dict[reallocation_scaling_col])[0]
             scale = bdf.loc[:, scaling_col].to_numpy()
             y_scaled = scale * y
+            if bound_category is None:
+                if lb is not None:
+                    lb2 = y_scaled.min()
+                if ub is not None:
+                    ub2 = y_scaled.max()
+            else:
+                if (lb is not None) and (ub is not None):
+                    bdf.loc[:, 'y'] = y_scaled
+                    groupby_cat = bdf.groupby(bound_category)['y']
+                    lb2 = groupby_cat.min().to_numpy()
+                    ub2 = groupby_cat.max().to_numpy()
+                    del groupby_cat
+                    bdf.loc[:, 'y'] = y
+                elif lb is not None:
+                    bdf.loc[:, 'y'] = y_scaled
+                    lb2 = bdf.groupby(bound_category)['y'].min().to_numpy()
+                    bdf.loc[:, 'y'] = y
+                elif ub is not None:
+                    bdf.loc[:, 'y'] = y_scaled
+                    ub2 = bdf.groupby(bound_category)['y'].max().to_numpy()
+                    bdf.loc[:, 'y'] = y
             res_scaled_baseline = weighted_quantile(values=y_scaled, quantiles=quantiles, sample_weight=w)
             scaled_mean_baseline = weighted_mean(y_scaled, w)
         if w is not None:
@@ -4477,12 +4558,12 @@ class BLMReallocation:
         if ncore > 1:
             # Multiprocessing
             with Pool(processes=ncore) as pool:
-                res_lst = list(tqdm(pool.imap(tw.util.f_star, [(self._fit, (jdata, sdata, gj, gs, pk1, pk0, quantiles, categorical_sort_cols, continuous_sort_cols, unresidualize_col, optimal_reallocation, reallocation_constraint_category, reallocation_scaling_col, qi_j, qi_s, qi_cum_j, qi_cum_s, weighted, np.random.default_rng(seed))) for seed in seeds]), total=n_samples))
-                # sim_model_lst = pool.starmap(self._fit, tqdm([(jdata, sdata, gj, gs, pk1, pk0, quantiles, categorical_sort_cols, continuous_sort_cols, unresidualize_col, optimal_reallocation, reallocation_constraint_category, reallocation_scaling_col, qi_j, qi_s, qi_cum_j, qi_cum_s, weighted, np.random.default_rng(seed)) for seed in seeds], total=n_samples))
+                res_lst = list(tqdm(pool.imap(tw.util.f_star, [(self._fit, (jdata, sdata, gj, gs, pk1, pk0, quantiles, categorical_sort_cols, continuous_sort_cols, unresidualize_col, optimal_reallocation, reallocation_constraint_category, reallocation_scaling_col, lb1, ub1, lb2, ub2, bound_category, qi_j, qi_s, qi_cum_j, qi_cum_s, weighted, np.random.default_rng(seed))) for seed in seeds]), total=n_samples))
+                # sim_model_lst = pool.starmap(self._fit, tqdm([(jdata, sdata, gj, gs, pk1, pk0, quantiles, categorical_sort_cols, continuous_sort_cols, unresidualize_col, optimal_reallocation, reallocation_constraint_category, reallocation_scaling_col, lb1, ub1, lb2, ub2, bound_category, qi_j, qi_s, qi_cum_j, qi_cum_s, weighted, np.random.default_rng(seed)) for seed in seeds], total=n_samples))
         else:
             # No multiprocessing
-            res_lst = list(tqdm(map(tw.util.f_star, [(self._fit, (jdata, sdata, gj, gs, pk1, pk0, quantiles, categorical_sort_cols, continuous_sort_cols, unresidualize_col, optimal_reallocation, reallocation_constraint_category, reallocation_scaling_col, qi_j, qi_s, qi_cum_j, qi_cum_s, weighted, np.random.default_rng(seed))) for seed in seeds]), total=n_samples))
-            # sim_model_lst = itertools.starmap(self._fit, tqdm([(jdata, sdata, gj, gs, pk1, pk0, quantiles, categorical_sort_cols, continuous_sort_cols, unresidualize_col, optimal_reallocation, reallocation_constraint_category, reallocation_scaling_col, qi_j, qi_s, qi_cum_j, qi_cum_s, weighted, np.random.default_rng(seed)) for seed in seeds], total=n_samples))
+            res_lst = list(tqdm(map(tw.util.f_star, [(self._fit, (jdata, sdata, gj, gs, pk1, pk0, quantiles, categorical_sort_cols, continuous_sort_cols, unresidualize_col, optimal_reallocation, reallocation_constraint_category, reallocation_scaling_col, lb1, ub1, lb2, ub2, bound_category, qi_j, qi_s, qi_cum_j, qi_cum_s, weighted, np.random.default_rng(seed))) for seed in seeds]), total=n_samples))
+            # sim_model_lst = itertools.starmap(self._fit, tqdm([(jdata, sdata, gj, gs, pk1, pk0, quantiles, categorical_sort_cols, continuous_sort_cols, unresidualize_col, optimal_reallocation, reallocation_constraint_category, reallocation_scaling_col, lb1, ub1, lb2, ub2, bound_category, qi_j, qi_s, qi_cum_j, qi_cum_s, weighted, np.random.default_rng(seed)) for seed in seeds], total=n_samples))
 
         with bpd.util.ChainedAssignment():
             # Restore original wages, firm ids, and firm types
