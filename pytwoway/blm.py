@@ -3738,6 +3738,250 @@ class BLMBootstrap:
                 fig.update_layout(title_text=title, font_size=font_size)
                 fig.show()
 
+class BLMCategoryMatchCorrelations:
+    '''
+    Class for estimating BLM within-category match-level (true outcome) error correlations using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'period1' gives the results for period 1, and the key 'period2' gives the results for period 2.
+
+    Arguments:
+        model (BLMModel): estimated BLM model
+        category (str): categorical column for computing within-category match-level effects
+    '''
+
+    def __init__(self, model, category):
+        self.model = model
+        self.category = category
+        # Haven't computed information about category
+        self.n_cat = None
+        # No initial results
+        self.res = None
+
+    def _fit(self, jdata, cat_cols, gj, pk1=None, qi_j=None, qi_cum_j=None, weighted=True, rng=None):
+        '''
+        Interior method to fit().
+
+        Arguments:
+            jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
+            cat_cols (list of str): list of categorical column names for each period, for computing within-category match-level effects
+            gj (NumPy Array): firm classes for movers in the first and second periods
+            pk1 (NumPy Array or None): (use to assign workers to worker types probabilistically based on dgp-level probabilities) probability of being at each combination of firm types for movers; None if qi_j or qi_cum_j is not None
+            qi_j (NumPy Array or None): (use to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if pk1 or qi_cum_j is not None
+            qi_cum_j (NumPy Array or None): (use to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if pk1 or qi_j is not None
+            weighted (bool): if True, use weighted estimators
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+
+        Returns:
+            (NumPy Array): within-category match-level mean outcome (using true outcomes)
+        '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
+        ## Unpack parameters ##
+        model = self.model
+        nl, nk, n_cat = model.nl, model.nk, self.n_cat
+
+        ## Simulate worker types ##
+        L = tw.simblm._simulate_worker_types_movers(nl=nl, nk=nk, NNm=None, G1=gj[:, 0], G2=gj[:, 1], pk1=pk1, qi=qi_j, qi_cum=qi_cum_j, simulating_data=False, rng=rng)
+
+        ## Relevant columns ##
+        y1, y2 = jdata.loc[:, 'y1'].to_numpy(), jdata.loc[:, 'y2'].to_numpy()
+        G1, G2 = gj[:, 0], gj[:, 1]
+        C1 = jdata.loc[:, cat_cols[0]].to_numpy()
+        if len(cat_cols) == 1:
+            C2 = C1
+        elif len(cat_cols) == 2:
+            C2 = jdata.loc[:, cat_cols[1]].to_numpy()
+        nkL = nk * L
+        del L
+        groupby1 = G1 + nkL + (nl * nk) * C1
+        groupby2 = G2 + nkL + (nl * nk) * C2
+        del G1, G2, C1, C2, nkL
+
+        if weighted and jdata._col_included('w'):
+            ## Weighted ##
+            w1 = jdata.loc[:, 'w1'].to_numpy()
+            outcome1 = np.bincount(groupby1, w1 * y1, minlength=(n_cat * nl * nk))
+            scale1 = np.bincount(groupby1, w1, minlength=(n_cat * nl * nk))
+            outcome1[scale1 != 0] /= scale1[scale1 != 0]
+            del w1, scale1
+            w2 = jdata.loc[:, 'w2'].to_numpy()
+            outcome2 = np.bincount(groupby2, w2 * y2, minlength=(n_cat * nl * nk))
+            scale2 = np.bincount(groupby2, w2, minlength=(n_cat * nl * nk))
+            outcome2[scale2 != 0] /= scale2[scale2 != 0]
+            del w2, scale2
+        else:
+            ## Unweighted ##
+            outcome1 = np.bincount(groupby1, y1, minlength=(n_cat * nl * nk))
+            scale1 = np.bincount(groupby1, minlength=(n_cat * nl * nk))
+            outcome1[scale1 != 0] /= scale1[scale1 != 0]
+            del scale1
+            outcome2 = np.bincount(groupby2, y2, minlength=(n_cat * nl * nk))
+            scale2 = np.bincount(groupby2, minlength=(n_cat * nl * nk))
+            outcome2[scale2 != 0] /= scale2[scale2 != 0]
+            del scale2
+
+        return outcome1.reshape(n_cat, nl, nk), outcome2.reshape(n_cat, nl, nk)
+
+    def fit(self, jdata, n_samples=5, qi_j=None, qi_cum_j=None, weighted=True, ncore=1, rng=None):
+        '''
+        Estimate within-category match-level (true outcome) error correlations using bootstrapping.
+
+        Arguments:
+            jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
+            n_samples (int): number of bootstrap samples to estimate
+            qi_j (NumPy Array or None): (use to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if using pk1, or qi_cum_j is not None
+            qi_cum_j (NumPy Array or None): (use to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if using pk1, or qi_j is not None
+            weighted (bool): if True, use weighted estimators
+            ncore (int): number of cores for multiprocessing
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+        '''
+        if (qi_j is None) + (qi_cum_j is None) == 0:
+            raise ValueError('Cannot specify both `qi_j` and `qi_cum_j`.')
+
+        if rng is None:
+            rng = np.random.default_rng(None)
+
+        ## Unpack parameters ##
+        model = self.model
+        nl, nk = model.nl, model.nk
+        if (qi_j is None) and (qi_cum_j is None):
+            # One of pk1, qi_j, or qi_cum_j must be specified
+            pk1 = model.pk1
+        else:
+            pk1 = None
+
+        # Number of categories
+        cat_cols = to_list(jdata.col_reference_dict[self.category])
+        n_cat = jdata.n_unique_ids(self.category)
+        self.n_cat = n_cat
+
+        # Copy original firm and worker ids
+        gj = jdata.loc[:, ['g1', 'g2']].to_numpy().astype(int, copy=True)
+        # Firm ids
+        jj = jdata.loc[:, ['j1', 'j2']].to_numpy().copy()
+        with bpd.util.ChainedAssignment():
+            jdata.loc[:, ['j1', 'j2']] = gj
+        # Worker ids
+        ij = jdata.loc[:, 'i'].to_numpy().copy()
+        # Time
+        tj = False
+        if not jdata._col_included('t'):
+            jdata = jdata.construct_artificial_time(is_sorted=True, copy=False)
+            tj = True
+
+        ## Run bootstrap ##
+        # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
+        seeds = rng.bit_generator._seed_seq.spawn(n_samples)
+        if ncore > 1:
+            # Multiprocessing
+            with Pool(processes=ncore) as pool:
+                res_lst = list(tqdm(pool.imap(tw.util.f_star, [(self._fit, (jdata, cat_cols, gj, pk1, qi_j, qi_cum_j, weighted, np.random.default_rng(seed))) for seed in seeds]), total=n_samples))
+                # sim_model_lst = pool.starmap(self._fit, tqdm([(jdata, cat_cols, gj, pk1, qi_j, qi_cum_j, weighted, np.random.default_rng(seed)) for seed in seeds], total=n_samples))
+        else:
+            # No multiprocessing
+            res_lst = list(tqdm(map(tw.util.f_star, [(self._fit, (jdata, cat_cols, gj, pk1, qi_j, qi_cum_j, weighted, np.random.default_rng(seed))) for seed in seeds]), total=n_samples))
+            # sim_model_lst = itertools.starmap(self._fit, tqdm([(jdata, cat_cols, gj, pk1, qi_j, qi_cum_j, weighted, np.random.default_rng(seed)) for seed in seeds], total=n_samples))
+
+        with bpd.util.ChainedAssignment():
+            # Restore original firm and worker ids
+            jdata.loc[:, ['j1', 'j2']] = jj
+            jdata.loc[:, 'i'] = ij
+
+        # Drop time column
+        if tj:
+            jdata = jdata.drop('t', axis=1, inplace=True, allow_optional=True)
+
+        ## Store results ##
+        res = {'period1': np.zeros([n_samples, n_cat, nl, nk]), 'period2': np.zeros([n_samples, n_cat, nl, nk])}
+        for i in range(n_samples):
+            res['period1'][i, :, :, :] = res_lst[i][0]
+            res['period2'][i, :, :, :] = res_lst[i][1]
+
+        self.res = res
+
+    def plot(self, n_cols=3, category_labels=None, firm_order=None, xlabel='firm class k', ylabel='log-earnings (true - model)', title='', subplot_title='', grid=True, fontsize=None, dpi=None):
+        '''
+        Plot within-category match-level (true outcome) error correlations.
+
+        Arguments:
+            n_cols (int): number of categories to include in each row of the subplot
+            category_labels (list or None): specify labels for each category, where label indices should be based on sorted categories; if None, use values stored in data
+            firm_order (NumPy Array or None): sorted firm class order; None keeps the original firm order
+            xlabel (str): label for x-axis
+            ylabel (str): label for y-axis
+            title (str): plot title
+            subplot_title (str): subplot title (subplots will be titled `subplot_title` + category, e.g. if `subplot_title`='k=', then subplots will be titled 'k=1', 'k=2', etc., or if `subplot_title`='', then subplots will be titled '1', '2', etc.)
+            grid (bool): if True, plot grid
+            fontsize (float or None): font size for plot
+            dpi (float or None): dpi for plot
+        '''
+        if self.res is None:
+            warnings.warn('Estimation has not yet been run.')
+        else:
+            ## Unpack parameters ##
+            res = self.res
+            model = self.model
+            nl, nk, n_cat = model.nl, model.nk, self.n_cat
+
+            ## Category labels ##
+            cat_groups = np.arange(n_cat)
+            if category_labels is None:
+                category_labels = cat_groups + 1
+            else:
+                cat_order = np.argsort(category_labels)
+                cat_groups = cat_groups[cat_order]
+                category_labels = np.array(category_labels)[cat_order]
+            if firm_order is None:
+                firm_order = np.arange(nk)
+
+            ## Plot dimensions ##
+            n_rows = n_cat // n_cols
+            if n_rows * n_cols < n_cat:
+                # If the bottom column won't be filled
+                n_rows += 1
+            x_axis = np.arange(1, nk + 1).astype(str)
+
+            ## Plot ##
+            # Source: https://matplotlib.org/devdocs/gallery/subplots_axes_and_figures/subfigures.html
+            fig = plt.figure(constrained_layout=True, dpi=dpi)
+            subfigs = fig.subfigures(nrows=1, ncols=2)
+
+            for k, subfig in enumerate(subfigs):
+                subfig.suptitle(f'period={k+1}', fontsize=fontsize)
+                ## Create subplots ##
+                axs = subfig.subplots(nrows=n_rows, ncols=n_cols, sharex=False, sharey=True)
+
+                ## Plot ##
+                n_plots = 0
+                for i, row in enumerate(axs):
+                    for j, ax in enumerate(row):
+                        if i * n_cols + j < n_cat:
+                            # Keep category i * n_cols + j
+                            cat_ij = cat_groups[i * n_cols + j]
+                            subplot_title_ij = subplot_title + str(category_labels[i * n_cols + j])
+                            if k == 0:
+                                diff = (res['period1'][:, cat_ij, :, :] - model.A1[None, :, :])[:, :, firm_order]
+                            elif k == 1:
+                                diff = (res['period2'][:, cat_ij, :, :] - model.A2[None, :, :])[:, :, firm_order]
+                            # Take mean over all models, and compute 2.5 and 97.5 percentiles
+                            diff_mean = np.mean(diff, axis=0)
+                            diff_lb = np.percentile(diff, 2.5, axis=0)
+                            diff_ub = np.percentile(diff, 97.5, axis=0)
+                            diff_ci = np.stack([diff_mean - diff_lb, diff_ub - diff_mean], axis=0)
+                            for l in range(nl):
+                                ax.errorbar(x_axis, diff_mean[l, :], yerr=diff_ci[:, l, :], ecolor='red', elinewidth=3, zorder=2, capsize=0.2, markeredgewidth=10)
+                            ax.set_title(subplot_title_ij, fontsize=fontsize)
+                            ax.tick_params(axis='x', labelsize=fontsize)
+                            ax.tick_params(axis='y', labelsize=fontsize)
+                            if grid:
+                                ax.grid()
+                            n_plots += 1
+                        else:
+                            subfig.delaxes(ax)
+            fig.supxlabel(xlabel, fontsize=fontsize)
+            fig.supylabel(ylabel, fontsize=fontsize)
+            fig.suptitle(title, fontsize=fontsize)
+            plt.show()
+
 class BLMVarianceDecomposition:
     '''
     Class for estimating BLM variance decomposition using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'var_decomp' gives the results for the variance decomposition, and the key 'var_decomp_comp' optionally gives the results for the variance decomposition with complementarities.
@@ -3909,15 +4153,6 @@ class BLMVarianceDecomposition:
             res_lst = list(tqdm(map(tw.util.f_star, [(self._fit, (jdata, sdata, fe_params, fe_params_comp, no_controls, gj, gs, pk1, pk0, uncorrelated_errors, complementarities, worker_types_as_ids, weighted, np.random.default_rng(seed))) for seed in seeds]), total=n_samples))
             # sim_model_lst = itertools.starmap(self._fit, tqdm([(jdata, sdata, fe_params, fe_params_comp, no_controls, gj, gs, pk1, pk0, uncorrelated_errors, complementarities, worker_types_as_ids, weighted, np.random.default_rng(seed)) for seed in seeds], total=n_samples))
 
-        ## Store results ##
-        res_lst_default = []
-        if complementarities:
-            res_lst_comp = []
-        for res_i in res_lst:
-            res_lst_default.append(res_i['default'])
-            if complementarities:
-                res_lst_comp.append(res_i['comp'])
-
         with bpd.util.ChainedAssignment():
             # Restore original wages and optionally ids
             jdata.loc[:, ['y1', 'y2']] = yj
@@ -3928,6 +4163,21 @@ class BLMVarianceDecomposition:
             if worker_types_as_ids:
                 jdata.loc[:, 'i'] = ij
                 sdata.loc[:, 'i'] = is_
+
+        # Drop time column
+        if tj:
+            jdata = jdata.drop('t', axis=1, inplace=True, allow_optional=True)
+        if ts:
+            sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
+
+        ## Store results ##
+        res_lst_default = []
+        if complementarities:
+            res_lst_comp = []
+        for res_i in res_lst:
+            res_lst_default.append(res_i['default'])
+            if complementarities:
+                res_lst_comp.append(res_i['comp'])
 
         ## Unpack results ##
         res = {k: np.zeros(n_samples) for k in res_lst_default[0].keys()}
@@ -3945,15 +4195,11 @@ class BLMVarianceDecomposition:
         if complementarities:
             res_comp = {k.replace('_fe', ''): v for k, v in res_comp.items()}
 
-        # Drop time column
-        if tj:
-            jdata = jdata.drop('t', axis=1, inplace=True, allow_optional=True)
-        if ts:
-            sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
-
-        self.res = {'var_decomp': res, 'var_decomp_comp': None}
+        res = {'var_decomp': res, 'var_decomp_comp': None}
         if complementarities:
-            self.res['var_decomp_comp'] = res_comp
+            res['var_decomp_comp'] = res_comp
+
+        self.res = res
 
 class BLMReallocation:
     '''
@@ -3996,8 +4242,8 @@ class BLMReallocation:
         Returns:
             (dict): dictionary of reallocation results
         '''
-        if optimal_reallocation and ((qi_j is None) + (qi_s is None) + (qi_cum_j is None) + (qi_cum_s is None) != 2):
-            raise ValueError('With `optimal_reallocation`, must specify one of `qi_j` or `qi_cum_j` for movers and `qi_s` or `qi_cum_s` for stayers.')
+        if optimal_reallocation and (((qi_j is None) + (qi_cum_j is None) != 1) or ((qi_s is None) + (qi_cum_s is None) != 1)):
+            raise ValueError('With `optimal_reallocation`, must specify one of `qi_j` and `qi_cum_j` for movers, and one of `qi_s` and `qi_cum_s` for stayers.')
 
         if quantiles is None:
             quantiles = np.arange(101) / 100
@@ -4117,16 +4363,16 @@ class BLMReallocation:
             optimal_reallocation (bool or str): if not False, reallocate workers to new firms to maximize ('max') or minimize ('min') total output
             reallocation_constraint_category (str or None): specify categorical column to constrain reallocation so that workers must reallocate within their own category; if None, no constraints on how workers can reallocate
             reallocation_scaling_col (str or None): specify column to use to scale outcomes when computing optimal reallocation (i.e. multiply outcomes by an observation-level factor); if None, don't scale outcomes
-            qi_j (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if pk1 or qi_cum_j is not None
-            qi_s (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each stayer observation to be each worker type; None if pk0 or qi_cum_s is not None
-            qi_cum_j (NumPy Array or None): (use with optimal_reallocation to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if pk1 or qi_j is not None
-            qi_cum_s (NumPy Array or None): (use with optimal_reallocation to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each stayer observation to be each worker type; None if pk0 or qi_s is not None
+            qi_j (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if using pk1, or qi_cum_j is not None
+            qi_s (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each stayer observation to be each worker type; None if using pk0, or qi_cum_s is not None
+            qi_cum_j (NumPy Array or None): (use with optimal_reallocation to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if using pk1, or qi_j is not None
+            qi_cum_s (NumPy Array or None): (use with optimal_reallocation to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each stayer observation to be each worker type; None if using pk0, or qi_s is not None
             ncore (int): number of cores for multiprocessing
             weighted (bool): if True, use weights
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
-        if optimal_reallocation and ((qi_j is None) + (qi_s is None) + (qi_cum_j is None) + (qi_cum_s is None) != 2):
-            raise ValueError('With `optimal_reallocation`, must specify one of `qi_j` or `qi_cum_j` for movers and `qi_s` or `qi_cum_s` for stayers.')
+        if optimal_reallocation and (((qi_j is None) + (qi_cum_j is None) != 1) or ((qi_s is None) + (qi_cum_s is None) != 1)):
+            raise ValueError('With `optimal_reallocation`, must specify one of `qi_j` and `qi_cum_j` for movers, and one of `qi_s` and `qi_cum_s` for stayers.')
 
         if quantiles is None:
             quantiles = np.arange(101) / 100
@@ -4237,6 +4483,21 @@ class BLMReallocation:
             res_lst = list(tqdm(map(tw.util.f_star, [(self._fit, (jdata, sdata, gj, gs, pk1, pk0, quantiles, categorical_sort_cols, continuous_sort_cols, unresidualize_col, optimal_reallocation, reallocation_constraint_category, reallocation_scaling_col, qi_j, qi_s, qi_cum_j, qi_cum_s, weighted, np.random.default_rng(seed))) for seed in seeds]), total=n_samples))
             # sim_model_lst = itertools.starmap(self._fit, tqdm([(jdata, sdata, gj, gs, pk1, pk0, quantiles, categorical_sort_cols, continuous_sort_cols, unresidualize_col, optimal_reallocation, reallocation_constraint_category, reallocation_scaling_col, qi_j, qi_s, qi_cum_j, qi_cum_s, weighted, np.random.default_rng(seed)) for seed in seeds], total=n_samples))
 
+        with bpd.util.ChainedAssignment():
+            # Restore original wages, firm ids, and firm types
+            jdata.loc[:, ['y1', 'y2']] = yj
+            sdata.loc[:, ['y1', 'y2']] = ys
+            jdata.loc[:, ['j1', 'j2']] = jj
+            sdata.loc[:, 'j1'], sdata.loc[:, 'j2'] = (js, js)
+            jdata.loc[:, ['g1', 'g2']] = gj
+            sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
+
+        # Drop time column
+        if tj:
+            jdata = jdata.drop('t', axis=1, inplace=True, allow_optional=True)
+        if ts:
+            sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
+
         ## Store results ##
         res = np.zeros([n_samples, len(quantiles)])
         mean = np.zeros(n_samples)
@@ -4271,21 +4532,6 @@ class BLMReallocation:
                 NNm_res[i, :, :] = res_i['NNm']
             pk0_res[i, :, :] = res_i['pk0']
             NNs_res[i, :] = res_i['NNs']
-
-        with bpd.util.ChainedAssignment():
-            # Restore original wages, firm ids, and firm types
-            jdata.loc[:, ['y1', 'y2']] = yj
-            sdata.loc[:, ['y1', 'y2']] = ys
-            jdata.loc[:, ['j1', 'j2']] = jj
-            sdata.loc[:, 'j1'], sdata.loc[:, 'j2'] = (js, js)
-            jdata.loc[:, ['g1', 'g2']] = gj
-            sdata.loc[:, 'g1'], sdata.loc[:, 'g2'] = (gs, gs)
-
-        # Drop time column
-        if tj:
-            jdata = jdata.drop('t', axis=1, inplace=True, allow_optional=True)
-        if ts:
-            sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
 
         # Store results
         self.res = {

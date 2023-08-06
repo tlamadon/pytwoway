@@ -5773,15 +5773,6 @@ class DynamicBLMVarianceDecomposition:
             res_lst = list(tqdm(map(tw.util.f_star, [(self._fit, (jdata, sdata, fe_params, fe_params_comp, no_controls, gj, gs, pk1, pk0, complementarities, worker_types_as_ids, np.random.default_rng(seed))) for seed in seeds]), total=n_samples))
             # sim_model_lst = itertools.starmap(self._fit, tqdm([(jdata, sdata, fe_params, fe_params_comp, no_controls, gj, gs, pk1, pk0, complementarities, worker_types_as_ids, np.random.default_rng(seed)) for seed in seeds], total=n_samples))
 
-        ## Store results ##
-        res_lst_default = []
-        if complementarities:
-            res_lst_comp = []
-        for res_i in res_lst:
-            res_lst_default.append(res_i['default'])
-            if complementarities:
-                res_lst_comp.append(res_i['comp'])
-
         with bpd.util.ChainedAssignment():
             # Restore original wages and optionally ids
             jdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = yj
@@ -5792,6 +5783,21 @@ class DynamicBLMVarianceDecomposition:
             if worker_types_as_ids:
                 jdata.loc[:, 'i'] = ij
                 sdata.loc[:, 'i'] = is_
+
+        # Drop time column
+        if tj:
+            jdata = jdata.drop('t', axis=1, inplace=True, allow_optional=True)
+        if ts:
+            sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
+
+        ## Store results ##
+        res_lst_default = []
+        if complementarities:
+            res_lst_comp = []
+        for res_i in res_lst:
+            res_lst_default.append(res_i['default'])
+            if complementarities:
+                res_lst_comp.append(res_i['comp'])
 
         ## Unpack results ##
         res = {k: np.zeros(n_samples) for k in res_lst_default[0].keys()}
@@ -5809,15 +5815,11 @@ class DynamicBLMVarianceDecomposition:
         if complementarities:
             res_comp = {k.replace('_fe', ''): v for k, v in res_comp.items()}
 
-        # Drop time column
-        if tj:
-            jdata = jdata.drop('t', axis=1, inplace=True, allow_optional=True)
-        if ts:
-            sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
-
-        self.res = {'var_decomp': res, 'var_decomp_comp': None}
+        res = {'var_decomp': res, 'var_decomp_comp': None}
         if complementarities:
-            self.res['var_decomp_comp'] = res_comp
+            res['var_decomp_comp'] = res_comp
+
+        self.res = res
 
 class DynamicBLMReallocation:
     '''
@@ -5860,8 +5862,8 @@ class DynamicBLMReallocation:
         Returns:
             (dict): dictionary of reallocation results
         '''
-        if optimal_reallocation and ((qi_j is None) + (qi_s is None) + (qi_cum_j is None) + (qi_cum_s is None) != 2):
-            raise ValueError('With `optimal_reallocation`, must specify one of `qi_j` or `qi_cum_j` for movers and `qi_s` or `qi_cum_s` for stayers.')
+        if optimal_reallocation and (((qi_j is None) + (qi_cum_j is None) != 1) or ((qi_s is None) + (qi_cum_s is None) != 1)):
+            raise ValueError('With `optimal_reallocation`, must specify one of `qi_j` and `qi_cum_j` for movers, and one of `qi_s` and `qi_cum_s` for stayers.')
 
         if quantiles is None:
             quantiles = np.arange(101) / 100
@@ -5972,15 +5974,15 @@ class DynamicBLMReallocation:
             optimal_reallocation (bool or str): if not False, reallocate workers to new firms to maximize ('max') or minimize ('min') total output
             reallocation_constraint_category (str or None): specify categorical column to constrain reallocation so that workers must reallocate within their own category; if None, no constraints on how workers can reallocate
             reallocation_scaling_col (str or None): specify column to use to scale outcomes when computing optimal reallocation (i.e. multiply outcomes by an observation-level factor); if None, don't scale outcomes
-            qi_j (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if pk1 or qi_cum_j is not None
-            qi_s (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each stayer observation to be each worker type; None if pk0 or qi_cum_s is not None
-            qi_cum_j (NumPy Array or None): (use with optimal_reallocation to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if pk1 or qi_j is not None
-            qi_cum_s (NumPy Array or None): (use with optimal_reallocation to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each stayer observation to be each worker type; None if pk0 or qi_s is not None
+            qi_j (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if using pk1, or qi_cum_j is not None
+            qi_s (NumPy Array or None): (use with optimal_reallocation to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each stayer observation to be each worker type; None if using pk0, or qi_cum_s is not None
+            qi_cum_j (NumPy Array or None): (use with optimal_reallocation to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if using pk1, or qi_j is not None
+            qi_cum_s (NumPy Array or None): (use with optimal_reallocation to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each stayer observation to be each worker type; None if using pk0, or qi_s is not None
             ncore (int): number of cores for multiprocessing
             rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
         '''
-        if optimal_reallocation and ((qi_j is None) + (qi_s is None) + (qi_cum_j is None) + (qi_cum_s is None) != 2):
-            raise ValueError('With `optimal_reallocation`, must specify one of `qi_j` or `qi_cum_j` for movers and `qi_s` or `qi_cum_s` for stayers.')
+        if optimal_reallocation and (((qi_j is None) + (qi_cum_j is None) != 1) or ((qi_s is None) + (qi_cum_s is None) != 1)):
+            raise ValueError('With `optimal_reallocation`, must specify one of `qi_j` and `qi_cum_j` for movers, and one of `qi_s` and `qi_cum_s` for stayers.')
 
         if quantiles is None:
             quantiles = np.arange(101) / 100
@@ -6082,6 +6084,21 @@ class DynamicBLMReallocation:
             res_lst = list(tqdm(map(tw.util.f_star, [(self._fit, (jdata, sdata, gj, gs, pk1, pk0, quantiles, categorical_sort_cols, continuous_sort_cols, unresidualize_col, optimal_reallocation, reallocation_constraint_category, reallocation_scaling_col, qi_j, qi_s, qi_cum_j, qi_cum_s, np.random.default_rng(seed))) for seed in seeds]), total=n_samples))
             # sim_model_lst = itertools.starmap(self._fit, tqdm([(jdata, sdata, gj, gs, pk1, pk0, quantiles, categorical_sort_cols, continuous_sort_cols, unresidualize_col, optimal_reallocation, reallocation_constraint_category, reallocation_scaling_col, qi_j, qi_s, qi_cum_j, qi_cum_s, np.random.default_rng(seed)) for seed in seeds], total=n_samples))
 
+        with bpd.util.ChainedAssignment():
+            # Restore original wages, firm ids, and firm types
+            jdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = yj
+            sdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = ys
+            jdata.loc[:, ['j1', 'j3']], jdata.loc[:, ['j2', 'j4']] = (jj, jj)
+            sdata.loc[:, 'j1'], sdata.loc[:, 'j2'], sdata.loc[:, 'j3'], sdata.loc[:, 'j4'] = (js, js, js, js)
+            jdata.loc[:, ['g1', 'g3']], jdata.loc[:, ['g2', 'g4']] = (gj, gj)
+            sdata.loc[:, 'g1'], sdata.loc[:, 'g2'], sdata.loc[:, 'g3'], sdata.loc[:, 'g4'] = (gs, gs, gs, gs)
+
+        # Drop time column
+        if tj:
+            jdata = jdata.drop('t', axis=1, inplace=True, allow_optional=True)
+        if ts:
+            sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
+
         ## Store results ##
         res = np.zeros([n_samples, len(quantiles)])
         mean = np.zeros(n_samples)
@@ -6116,21 +6133,6 @@ class DynamicBLMReallocation:
                 NNm_res[i, :, :] = res_i['NNm']
             pk0_res[i, :, :] = res_i['pk0']
             NNs_res[i, :] = res_i['NNs']
-
-        with bpd.util.ChainedAssignment():
-            # Restore original wages, firm ids, and firm types
-            jdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = yj
-            sdata.loc[:, ['y1', 'y2', 'y3', 'y4']] = ys
-            jdata.loc[:, ['j1', 'j3']], jdata.loc[:, ['j2', 'j4']] = (jj, jj)
-            sdata.loc[:, 'j1'], sdata.loc[:, 'j2'], sdata.loc[:, 'j3'], sdata.loc[:, 'j4'] = (js, js, js, js)
-            jdata.loc[:, ['g1', 'g3']], jdata.loc[:, ['g2', 'g4']] = (gj, gj)
-            sdata.loc[:, 'g1'], sdata.loc[:, 'g2'], sdata.loc[:, 'g3'], sdata.loc[:, 'g4'] = (gs, gs, gs, gs)
-
-        # Drop time column
-        if tj:
-            jdata = jdata.drop('t', axis=1, inplace=True, allow_optional=True)
-        if ts:
-            sdata = sdata.drop('t', axis=1, inplace=True, allow_optional=True)
 
         # Store results
         self.res = {
