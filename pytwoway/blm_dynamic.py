@@ -71,6 +71,15 @@ dynamic_blm_params = ParamsDict({
             (default=1) If 0, print no output; if 1, print each major step in estimation; if 2, print warnings during estimation; if 3, print likelihoods at each iteration.
         ''', None),
     ### Starting values ###
+    ## rho ##
+    'rho_32m': (0.6, 'type', (float, int),
+        '''
+            (default=0.6) Persistence parameter between the second and third periods for movers.
+        ''', None),
+    'rho_32s': (0.6, 'type', (float, int),
+        '''
+            (default=0.6) Persistence parameter between the second and third periods for stayers.
+        ''', None),
     ## A ##
     'a12_mu': (1, 'type', (float, int, list, col_type),
         '''
@@ -797,8 +806,8 @@ def _var_stayers(sdata, rho_1, rho_4, rho_t, weights=None, diff=False):
     nu4_sd = np.sqrt(np.maximum(beta_hat_full[4 * nk: 5 * nk], 0))
 
     return {
-        'rho_1': rho_1,
-        'rho_4': rho_4,
+        'rho_12': rho_1,
+        'rho_43': rho_4,
         'rho_t': rho_t,
         'BE_sd': BE_sd,
         'nu1_sd': nu1_sd,
@@ -1109,10 +1118,11 @@ class DynamicBLMModel:
 
     Arguments:
         params (ParamsDict): dictionary of parameters for dynamic BLM estimation. Run tw.dynamic_blm_params().describe_all() for descriptions of all valid parameters.
-        rhos (dict of floats): rho values (persistance parameters) estimated using stayers; must contain keys 'rho_1' and 'rho_4'
+        rho_12 (float): persistence parameter between the first and second periods
+        rho_43 (float): persistence parameter between the third and fourth periods
         rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
     '''
-    def __init__(self, params, rhos, rng=None):
+    def __init__(self, params, rho_12=0.6, rho_43=0.6, rng=None):
         if rng is None:
             rng = np.random.default_rng(None)
 
@@ -1200,10 +1210,10 @@ class DynamicBLMModel:
         ## Generate starting values ##
         s_lb = params['s_lower_bound']
         # rho is already computed
-        self.R12 = rhos['rho_1']
-        self.R43 = rhos['rho_4']
-        self.R32m = 0.6
-        self.R32s = 0.6
+        self.R12 = rho_12
+        self.R43 = rho_43
+        self.R32m = params['rho_32m']
+        self.R32s = params['rho_32s']
         # We simulate starting values for everything else
         self.A = {
             period:
@@ -1920,10 +1930,11 @@ class DynamicBLMModel:
                 pk1 = copy.deepcopy(self.pk1)
 
                 ## Estimate with min_firm_type == k ##
-                blm_k = DynamicBLMModel(params)
+                blm_k = DynamicBLMModel(params, rho_12=self.R12, rho_43=self.R43)
                 # Set initial guesses
                 blm_k.A, blm_k.A_cat, blm_k.A_cts = A, A_cat, A_cts
                 blm_k.S, blm_k.S_cat, blm_k.S_cts = S, S_cat, S_cts
+                blm_k.R32m = self.R32m
                 blm_k.pk1 = pk1
                 # Fit estimator
                 blm_k._fit_movers(jdata=jdata, compute_NNm=False, min_firm_type=k)
@@ -5029,7 +5040,7 @@ class DynamicBLMEstimator:
         if rng is None:
             rng = np.random.default_rng(None)
 
-        model = DynamicBLMModel(self.params, self.rho_0, rng)
+        model = DynamicBLMModel(self.params, rho_12=self.rho_0['rho_12'], rho_43=self.rho_0['rho_43'], rng=rng)
         if iter % 4 == 0:
             # Constrained-unconstrained with static BLM as baseline
             model.fit_movers_cstr_uncstr(jdata, linear_additivity=True, blm_model=blm_model, initialize_all=(iter == 0))
