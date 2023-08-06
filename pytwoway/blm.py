@@ -3740,7 +3740,7 @@ class BLMBootstrap:
 
 class BLMCategoryMatchCorrelations:
     '''
-    Class for estimating BLM within-category match-level (true outcome) error correlations using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'period1' gives the results for period 1, and the key 'period2' gives the results for period 2.
+    Class for estimating BLM within-category match-level (true outcome) error correlations using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'period1' gives the results for the first period, and the key 'period2' gives the results for the second period.
 
     Arguments:
         model (BLMModel): estimated BLM model
@@ -3946,7 +3946,8 @@ class BLMCategoryMatchCorrelations:
             subfigs = fig.subfigures(nrows=1, ncols=2)
 
             for k, subfig in enumerate(subfigs):
-                subfig.suptitle(f'period={k+1}', fontsize=fontsize)
+                period_label = {0: 'first', 1: 'second'}
+                subfig.suptitle(f'period={period_label[k]}', fontsize=fontsize)
                 ## Create subplots ##
                 axs = subfig.subplots(nrows=n_rows, ncols=n_cols, sharex=False, sharey=True)
 
@@ -3968,7 +3969,7 @@ class BLMCategoryMatchCorrelations:
                             diff_ub = np.percentile(diff, 97.5, axis=0)
                             diff_ci = np.stack([diff_mean - diff_lb, diff_ub - diff_mean], axis=0)
                             for l in range(nl):
-                                ax.errorbar(x_axis, diff_mean[l, :], yerr=diff_ci[:, l, :], ecolor='red', elinewidth=3, zorder=2, capsize=0.2, markeredgewidth=10)
+                                ax.errorbar(x_axis, diff_mean[l, :], yerr=diff_ci[:, l, :], ecolor='red', elinewidth=1, zorder=2, capsize=2)
                             ax.set_title(subplot_title_ij, fontsize=fontsize)
                             ax.tick_params(axis='x', labelsize=fontsize)
                             ax.tick_params(axis='y', labelsize=fontsize)
@@ -3987,13 +3988,13 @@ class BLMVarianceDecomposition:
     Class for estimating BLM variance decomposition using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'var_decomp' gives the results for the variance decomposition, and the key 'var_decomp_comp' optionally gives the results for the variance decomposition with complementarities.
 
     Arguments:
-        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
         model (BLMModel): estimated BLM model
+        params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
     '''
 
-    def __init__(self, params, model):
-        self.params = params
+    def __init__(self, model, params):
         self.model = model
+        self.params = params
         # No initial results
         self.res = None
 

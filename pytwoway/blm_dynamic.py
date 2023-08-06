@@ -5607,18 +5607,249 @@ class DynamicBLMBootstrap:
                 fig.update_layout(title_text=title, font_size=font_size)
                 fig.show()
 
+class DynamicBLMCategoryMatchCorrelations:
+    '''
+    Class for estimating dynamic BLM within-category match-level (true outcome) error correlations using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'period1' gives the results for the first period, and the key 'period4' gives the results for the last period.
+
+    Arguments:
+        model (DynamicBLMModel): estimated dynamic BLM model
+        category (str): categorical column for computing within-category match-level effects
+    '''
+
+    def __init__(self, model, category):
+        self.model = model
+        self.category = category
+        # Haven't computed information about category
+        self.n_cat = None
+        # No initial results
+        self.res = None
+
+    def _fit(self, jdata, cat_cols, gj, pk1=None, qi_j=None, qi_cum_j=None, rng=None):
+        '''
+        Interior method to fit().
+
+        Arguments:
+            jdata (BipartitePandas DataFrame): extended event study format labor data for movers
+            cat_cols (list of str): list of categorical column names for each period, for computing within-category match-level effects
+            gj (NumPy Array): firm classes for movers in the first and last periods
+            pk1 (NumPy Array or None): (use to assign workers to worker types probabilistically based on dgp-level probabilities) probability of being at each combination of firm types for movers; None if qi_j or qi_cum_j is not None
+            qi_j (NumPy Array or None): (use to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if pk1 or qi_cum_j is not None
+            qi_cum_j (NumPy Array or None): (use to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if pk1 or qi_j is not None
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+
+        Returns:
+            (NumPy Array): within-category match-level mean error (using true outcomes)
+        '''
+        if rng is None:
+            rng = np.random.default_rng(None)
+
+        ## Unpack parameters ##
+        model = self.model
+        nl, nk, n_cat = model.nl, model.nk, self.n_cat
+
+        ## Simulate worker types ##
+        L = tw.simblm._simulate_worker_types_movers(nl=nl, nk=nk, NNm=None, G1=gj[:, 0], G2=gj[:, 1], pk1=pk1, qi=qi_j, qi_cum=qi_cum_j, simulating_data=False, rng=rng)
+
+        ## Relevant columns ##
+        y1, y2, y3, y4 = jdata.loc[:, 'y1'].to_numpy(), jdata.loc[:, 'y2'].to_numpy(), jdata.loc[:, 'y3'].to_numpy(), jdata.loc[:, 'y4'].to_numpy()
+        G1, G2 = gj[:, 0], gj[:, 1]
+        C1 = jdata.loc[:, cat_cols[0]].to_numpy()
+        if len(cat_cols) == 1:
+            C2 = C1
+        elif len(cat_cols) == 4:
+            C2 = jdata.loc[:, cat_cols[3]].to_numpy()
+        nkL = nk * L
+        groupby1 = G1 + nkL + (nl * nk) * C1
+        groupby2 = G2 + nkL + (nl * nk) * C2
+        del C1, C2, nkL
+
+        ## Groupby mean-error ##
+        outcome1 = np.bincount(groupby1, y1 - model.R12 * y2 - (model.A['12'] - model.R12 * model.A['2ma'])[L, G1], minlength=(n_cat * nl * nk))
+        del G1
+        scale1 = np.bincount(groupby1, minlength=(n_cat * nl * nk))
+        outcome1[scale1 != 0] /= scale1[scale1 != 0]
+        del scale1
+        outcome2 = np.bincount(groupby2, y4 - model.R43 * y3 - (model.A['43'] - model.R43 * model.A['3ma'])[L, G2], minlength=(n_cat * nl * nk))
+        del L, G2
+        scale2 = np.bincount(groupby2, minlength=(n_cat * nl * nk))
+        outcome2[scale2 != 0] /= scale2[scale2 != 0]
+        del scale2
+
+        return outcome1.reshape(n_cat, nl, nk), outcome2.reshape(n_cat, nl, nk)
+
+    def fit(self, jdata, n_samples=5, qi_j=None, qi_cum_j=None, ncore=1, rng=None):
+        '''
+        Estimate within-category match-level (true outcome) error correlations using bootstrapping.
+
+        Arguments:
+            jdata (BipartitePandas DataFrame): event study or collapsed event study format labor data for movers
+            n_samples (int): number of bootstrap samples to estimate
+            qi_j (NumPy Array or None): (use to assign workers to maximum probability worker type based on observation-level probabilities) probabilities for each mover observation to be each worker type; None if using pk1, or qi_cum_j is not None
+            qi_cum_j (NumPy Array or None): (use to assign workers to worker types probabilistically based on observation-level probabilities) cumulative probabilities for each mover observation to be each worker type; None if using pk1, or qi_j is not None
+            ncore (int): number of cores for multiprocessing
+            rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
+        '''
+        if (qi_j is None) + (qi_cum_j is None) == 0:
+            raise ValueError('Cannot specify both `qi_j` and `qi_cum_j`.')
+
+        if rng is None:
+            rng = np.random.default_rng(None)
+
+        ## Unpack parameters ##
+        model = self.model
+        nl, nk = model.nl, model.nk
+        if (qi_j is None) and (qi_cum_j is None):
+            # One of pk1, qi_j, or qi_cum_j must be specified
+            pk1 = model.pk1
+        else:
+            pk1 = None
+
+        # Number of categories
+        cat_cols = to_list(jdata.col_reference_dict[self.category])
+        n_cat = jdata.n_unique_ids(self.category)
+        self.n_cat = n_cat
+
+        # Copy original firm and worker ids
+        gj = jdata.loc[:, ['g1', 'g4']].to_numpy().astype(int, copy=True)
+        # Firm ids
+        jj = jdata.loc[:, ['j1', 'j4']].to_numpy().copy()
+        with bpd.util.ChainedAssignment():
+            jdata.loc[:, ['j1', 'j4']], jdata.loc[:, ['j2', 'j3']] = (gj, gj)
+        # Worker ids
+        ij = jdata.loc[:, 'i'].to_numpy().copy()
+        # Time
+        tj = False
+        if not jdata._col_included('t'):
+            jdata = jdata.construct_artificial_time(is_sorted=True, copy=False)
+            tj = True
+
+        ## Run bootstrap ##
+        # Multiprocessing rng source: https://albertcthomas.github.io/good-practices-random-number-generators/
+        seeds = rng.bit_generator._seed_seq.spawn(n_samples)
+        if ncore > 1:
+            # Multiprocessing
+            with Pool(processes=ncore) as pool:
+                res_lst = list(tqdm(pool.imap(tw.util.f_star, [(self._fit, (jdata, cat_cols, gj, pk1, qi_j, qi_cum_j, np.random.default_rng(seed))) for seed in seeds]), total=n_samples))
+                # sim_model_lst = pool.starmap(self._fit, tqdm([(jdata, cat_cols, gj, pk1, qi_j, qi_cum_j, np.random.default_rng(seed)) for seed in seeds], total=n_samples))
+        else:
+            # No multiprocessing
+            res_lst = list(tqdm(map(tw.util.f_star, [(self._fit, (jdata, cat_cols, gj, pk1, qi_j, qi_cum_j, np.random.default_rng(seed))) for seed in seeds]), total=n_samples))
+            # sim_model_lst = itertools.starmap(self._fit, tqdm([(jdata, cat_cols, gj, pk1, qi_j, qi_cum_j, np.random.default_rng(seed)) for seed in seeds], total=n_samples))
+
+        with bpd.util.ChainedAssignment():
+            # Restore original firm and worker ids
+            jdata.loc[:, ['j1', 'j4']], jdata.loc[:, ['j2', 'j3']] = (jj, jj)
+            jdata.loc[:, 'i'] = ij
+
+        # Drop time column
+        if tj:
+            jdata = jdata.drop('t', axis=1, inplace=True, allow_optional=True)
+
+        ## Store results ##
+        res = {'period1': np.zeros([n_samples, n_cat, nl, nk]), 'period4': np.zeros([n_samples, n_cat, nl, nk])}
+        for i in range(n_samples):
+            res['period1'][i, :, :, :] = res_lst[i][0]
+            res['period4'][i, :, :, :] = res_lst[i][1]
+
+        self.res = res
+
+    def plot(self, n_cols=3, category_labels=None, firm_order=None, xlabel='firm class k', ylabel='log-earnings (true - model)', title='', subplot_title='', grid=True, fontsize=None, dpi=None):
+        '''
+        Plot within-category match-level (true outcome) error correlations.
+
+        Arguments:
+            n_cols (int): number of categories to include in each row of the subplot
+            category_labels (list or None): specify labels for each category, where label indices should be based on sorted categories; if None, use values stored in data
+            firm_order (NumPy Array or None): sorted firm class order; None keeps the original firm order
+            xlabel (str): label for x-axis
+            ylabel (str): label for y-axis
+            title (str): plot title
+            subplot_title (str): subplot title (subplots will be titled `subplot_title` + category, e.g. if `subplot_title`='k=', then subplots will be titled 'k=1', 'k=2', etc., or if `subplot_title`='', then subplots will be titled '1', '2', etc.)
+            grid (bool): if True, plot grid
+            fontsize (float or None): font size for plot
+            dpi (float or None): dpi for plot
+        '''
+        if self.res is None:
+            warnings.warn('Estimation has not yet been run.')
+        else:
+            ## Unpack parameters ##
+            res = self.res
+            model = self.model
+            nl, nk, n_cat = model.nl, model.nk, self.n_cat
+
+            ## Category labels ##
+            cat_groups = np.arange(n_cat)
+            if category_labels is None:
+                category_labels = cat_groups + 1
+            else:
+                cat_order = np.argsort(category_labels)
+                cat_groups = cat_groups[cat_order]
+                category_labels = np.array(category_labels)[cat_order]
+            if firm_order is None:
+                firm_order = np.arange(nk)
+
+            ## Plot dimensions ##
+            n_rows = n_cat // n_cols
+            if n_rows * n_cols < n_cat:
+                # If the bottom column won't be filled
+                n_rows += 1
+            x_axis = np.arange(1, nk + 1).astype(str)
+
+            ## Plot ##
+            # Source: https://matplotlib.org/devdocs/gallery/subplots_axes_and_figures/subfigures.html
+            fig = plt.figure(constrained_layout=True, dpi=dpi)
+            subfigs = fig.subfigures(nrows=1, ncols=2)
+
+            for k, subfig in enumerate(subfigs):
+                period_label = {0: 'first', 1: 'last'}
+                subfig.suptitle(f'period={period_label[k]}', fontsize=fontsize)
+                ## Create subplots ##
+                axs = subfig.subplots(nrows=n_rows, ncols=n_cols, sharex=False, sharey=True)
+
+                ## Plot ##
+                n_plots = 0
+                for i, row in enumerate(axs):
+                    for j, ax in enumerate(row):
+                        if i * n_cols + j < n_cat:
+                            # Keep category i * n_cols + j
+                            cat_ij = cat_groups[i * n_cols + j]
+                            subplot_title_ij = subplot_title + str(category_labels[i * n_cols + j])
+                            if k == 0:
+                                diff = res['period1'][:, cat_ij, :, :][:, :, firm_order]
+                            elif k == 1:
+                                diff = res['period4'][:, cat_ij, :, :][:, :, firm_order]
+                            # Take mean over all models, and compute 2.5 and 97.5 percentiles
+                            diff_mean = np.mean(diff, axis=0)
+                            diff_lb = np.percentile(diff, 2.5, axis=0)
+                            diff_ub = np.percentile(diff, 97.5, axis=0)
+                            diff_ci = np.stack([diff_mean - diff_lb, diff_ub - diff_mean], axis=0)
+                            for l in range(nl):
+                                ax.errorbar(x_axis, diff_mean[l, :], yerr=diff_ci[:, l, :], ecolor='red', elinewidth=1, zorder=2, capsize=2)
+                            ax.set_title(subplot_title_ij, fontsize=fontsize)
+                            ax.tick_params(axis='x', labelsize=fontsize)
+                            ax.tick_params(axis='y', labelsize=fontsize)
+                            if grid:
+                                ax.grid()
+                            n_plots += 1
+                        else:
+                            subfig.delaxes(ax)
+            fig.supxlabel(xlabel, fontsize=fontsize)
+            fig.supylabel(ylabel, fontsize=fontsize)
+            fig.suptitle(title, fontsize=fontsize)
+            plt.show()
+
 class DynamicBLMVarianceDecomposition:
     '''
     Class for estimating dynamic BLM variance decomposition using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'var_decomp' gives the results for the variance decomposition, and the key 'var_decomp_comp' optionally gives the results for the variance decomposition with complementarities.
 
     Arguments:
+        model (DynamicBLMModel): estimated dynamic BLM model
         params (ParamsDict): dictionary of parameters for dynamic BLM estimation. Run tw.dynamic_blm_params().describe_all() for descriptions of all valid parameters.
-        model (DynamicBLMModel or None): estimated dynamic BLM model
     '''
 
-    def __init__(self, params, model):
-        self.params = params
+    def __init__(self, model, params):
         self.model = model
+        self.params = params
         # No initial results
         self.res = None
 
@@ -5826,7 +6057,7 @@ class DynamicBLMReallocation:
     Class for estimating dynamic BLM reallocation exercise using bootstrapping. Results are stored in class attribute .res, which gives a dictionary with the following structure: baseline results are stored in key 'baseline'. Reallocation results are stored in key 'reallocation'. Within each sub-dictionary, primary outcome results are stored in the key 'outcome', means are stored in the key 'mean', categorical results are stored in the key 'cat', continuous results are stored in the key 'cts', type proportions for movers are stored in the key 'pk1', type proportions for stayers are stored in the key 'pk0', firm-level mover flow counts are stored in the key 'NNm', and firm-level stayer counts are stored in the key 'NNs'.
 
     Arguments:
-        model (DynamicBLMModel or None): estimated dynamic BLM model
+        model (DynamicBLMModel): estimated dynamic BLM model
     '''
 
     def __init__(self, model):
@@ -6253,7 +6484,7 @@ class DynamicBLMTransitions:
     Class for estimating dynamic BLM transition probability exercise using bootstrapping. Results are stored in class attribute .res, which gives a 4-D NumPy Array where the first dimension gives each particular simulation; the second dimension gives the subset of data considered (index 0 gives the full data; index 1 gives the first conditional decile of earnings; and index 2 gives the tenth conditional decile of earnings); the third dimension gives the starting group of clusters being considered; and the fourth dimension gives the destination group of clusters being considered (where the first index of the fourth dimension considers all destinations).
 
     Arguments:
-        model (DynamicBLMModel or None): estimated dynamic BLM model
+        model (DynamicBLMModel): estimated dynamic BLM model
     '''
 
     def __init__(self, model):
