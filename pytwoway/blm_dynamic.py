@@ -860,7 +860,7 @@ def _optimal_reallocation(model, jdata, sdata, gj, gs, Lm, Ls, method='max', rea
         rng (np.random.Generator or None): NumPy random number generator; None is equivalent to np.random.default_rng(None)
 
     Returns:
-        (NumPy Array): optimally reallocated firm class for each observation
+        (NumPy Array): optimally reallocated worker type for each observation
     '''
     if rng is None:
         rng = np.random.default_rng(None)
@@ -870,25 +870,26 @@ def _optimal_reallocation(model, jdata, sdata, gj, gs, Lm, Ls, method='max', rea
 
     if reallocation_scaling_col is not None:
         # Each observation is allocated
-        nl_adj = len(Lm) + len(Ls)
-        worker_sizes_1 = np.ones(nl_adj, dtype=int)
+        nk_adj = len(gj) + len(gs)
+        firm_sizes_1 = np.ones(nk_adj, dtype=int)
     else:
         # Worker-firm match groups are allocated
-        nl_adj = nl
+        nk_adj = nk
 
     ## Firm sizes ##
-    # NOTE: use minlength, since jdata/sdata might be subsets of the full data
-    firm_sizes_s = np.bincount(gs, minlength=nk)
-    firm_sizes_1 = np.bincount(gj[:, 0], minlength=nk) + firm_sizes_s
-    # firm_sizes_2 = np.bincount(gj[:, 1], minlength=nk) + firm_sizes_s
-    del firm_sizes_s
-
     if reallocation_scaling_col is None:
-        ## Worker type sizes ##
-        worker_sizes_s = np.bincount(Ls)
-        worker_sizes_1 = np.bincount(Lm) + worker_sizes_s
-        # worker_sizes_2 = np.bincount(Lm) + worker_sizes_s
-        del worker_sizes_s
+        # NOTE: use minlength, since jdata/sdata might be subsets of the full data
+        firm_sizes_s = np.bincount(gs, minlength=nk)
+        firm_sizes_1 = np.bincount(gj[:, 0], minlength=nk) + firm_sizes_s
+        # firm_sizes_2 = np.bincount(gj[:, 1], minlength=nk) + firm_sizes_s
+        del firm_sizes_s
+
+    ## Worker type sizes ##
+    # NOTE: use minlength, since jdata/sdata might be subsets of the full data
+    worker_sizes_s = np.bincount(Ls, minlength=nl)
+    worker_sizes_1 = np.bincount(Lm, minlength=nl) + worker_sizes_s
+    # worker_sizes_2 = np.bincount(Lm, minlength=nl) + worker_sizes_s
+    del worker_sizes_s
 
     ### Set up linear programming solver ###
     # NOTE: Force everybody to become a stayer
@@ -921,21 +922,21 @@ def _optimal_reallocation(model, jdata, sdata, gj, gs, Lm, Ls, method='max', rea
         scaling_col_j_3 = jdata.loc[:, scaling_col_3].to_numpy()
         scaling_col_j_4 = jdata.loc[:, scaling_col_4].to_numpy()
 
-        Ys = scaling_col_s_1[:, None] * (model.A['12'] + model.R12 * (model.A['2s'] - model.A['2ma']))[Ls, :] \
-            + scaling_col_s_2[:, None] * model.A['2s'][Ls, :] \
-            + scaling_col_s_3[:, None] * model.A['3s'][Ls, :] \
-            + scaling_col_s_4[:, None] * (model.A['43'] + model.R43 * (model.A['3s'] - model.A['3ma']))[Ls, :]
-        Ym = scaling_col_j_1[:, None] * (model.A['12'] + model.R12 * (model.A['2s'] - model.A['2ma']))[Lm, :] \
-            + scaling_col_j_2[:, None] * model.A['2s'][Lm, :] \
-            + scaling_col_j_3[:, None] * model.A['3s'][Lm, :] \
-            + scaling_col_j_4[:, None] * (model.A['43'] + model.R43 * (model.A['3s'] - model.A['3ma']))[Lm, :]
-        Y = np.append(Ym, Ys, axis=0)
+        Ys = scaling_col_s_1[None, :] * (model.A['12'] + model.R12 * (model.A['2s'] - model.A['2ma']))[:, gs] \
+            + scaling_col_s_2[None, :] * model.A['2s'][:, gs] \
+            + scaling_col_s_3[None, :] * model.A['3s'][:, gs] \
+            + scaling_col_s_4[None, :] * (model.A['43'] + model.R43 * (model.A['3s'] - model.A['3ma']))[:, gs]
+        Ym = scaling_col_j_1[None, :] * (model.A['12'] + model.R12 * (model.A['2s'] - model.A['2ma']))[:, gj[:, 0]] \
+            + scaling_col_j_2[None, :] * model.A['2s'][:, gj[:, 0]] \
+            + scaling_col_j_3[None, :] * model.A['3s'][:, gj[:, 0]] \
+            + scaling_col_j_4[None, :] * (model.A['43'] + model.R43 * (model.A['3s'] - model.A['3ma']))[:, gj[:, 0]]
+        Y = np.append(Ym, Ys, axis=1)
     if method == 'min':
         Y *= -1
     Y = Y.flatten()
 
     ## Constraints ##
-    cons_a = cons.QPConstrained(nl_adj, nk)
+    cons_a = cons.QPConstrained(nl, nk_adj)
     cons_a.add_constraints(cons.FirmSum(b=firm_sizes_1, nt=1))
     cons_a.add_constraints(cons.WorkerSum(b=worker_sizes_1, nt=1))
     # Bound below at 0
@@ -946,29 +947,29 @@ def _optimal_reallocation(model, jdata, sdata, gj, gs, Lm, Ls, method='max', rea
     cons_a.solve(Y, -Y, solver='linprog') # integrality=np.array([1])
 
     ## Extract optimal allocations ##
-    alloc = np.reshape(np.round(cons_a.res, 0).astype(int, copy=False), (nl_adj, nk))
+    alloc = np.reshape(np.round(cons_a.res, 0).astype(int, copy=False), (nl, nk_adj))
 
     ### Apply optimal allocations (make everyone a stayer) ###
-    Ls = np.append(Lm, Ls)
-    Lm = np.array([], dtype=int)
+    gs = np.append(gj[:, 0], gs)
+    gj = np.array([], dtype=int)
     if reallocation_scaling_col is None:
-        gs = np.zeros(len(Ls), dtype=int)
-        # gj = np.zeros((0, 0), dtype=int)
-        idx = np.arange(len(Ls))
-        for l in range(nl):
-            ## Iterate over worker types ##
-            idx_l = idx[Ls == l]
+        Ls = np.zeros(len(gs), dtype=int)
+        # Lm = np.zeros((0, 0), dtype=int)
+        idx = np.arange(len(gs))
+        for k in range(nk):
+            ## Iterate over firm classes ##
+            idx_k = idx[gs == k]
             # Use a random index so that the same workers aren't always given the same firms (important with control variables)
-            rng.shuffle(idx_l)
-            cum_firms_l = 0
-            for k in range(nk):
-                ## Iterate over firm classes ##
-                gs[idx_l[cum_firms_l: cum_firms_l + alloc[l, k]]] = k
-                cum_firms_l += alloc[l, k]
+            rng.shuffle(idx_k)
+            cum_firms_k = 0
+            for l in range(nl):
+                ## Iterate over worker types ##
+                Ls[idx_k[cum_firms_k: cum_firms_k + alloc[l, k]]] = l
+                cum_firms_k += alloc[l, k]
     else:
-        gs = np.argmax(alloc, axis=1)
+        Ls = np.argmax(alloc, axis=0)
 
-    return gs
+    return Ls
 
 def _simulate_types_wages(model, jdata, sdata, gj=None, gs=None, pk1=None, pk0=None, qi_j=None, qi_s=None, qi_cum_j=None, qi_cum_s=None, optimal_reallocation=False, reallocation_constraint_category=None, reallocation_scaling_col=None, worker_types_as_ids=True, simulate_wages=True, return_long_df=True, store_worker_types=True, rng=None):
     '''
@@ -1042,17 +1043,14 @@ def _simulate_types_wages(model, jdata, sdata, gj=None, gs=None, pk1=None, pk0=N
                 cat_i_j = (cat_cons_col_j == i)
                 if (cat_i_s.any() or cat_i_j.any()):
                     # Group might not show up in first period
-                    gs_i = _optimal_reallocation(model, jdata.loc[cat_i_j, :], sdata.loc[cat_i_s, :], gj[cat_i_j, :], gs[cat_i_s], Lm[cat_i_j], Ls[cat_i_s], method=optimal_reallocation, reallocation_scaling_col=reallocation_scaling_col, rng=rng)
-                    # Set G1/G2 and J1/J2
-                    cat_i_a = (cat_cons_col_a == i)
-                    adata.loc[cat_i_a, 'g1'], adata.loc[cat_i_a, 'g2'], adata.loc[cat_i_a, 'g3'], adata.loc[cat_i_a, 'g4'] = (gs_i, gs_i, gs_i, gs_i)
-                    adata.loc[cat_i_a, 'j1'], adata.loc[cat_i_a, 'j2'], adata.loc[cat_i_a, 'j3'], adata.loc[cat_i_a, 'j4'] = (gs_i, gs_i, gs_i, gs_i)
-            del cat_cons_col, cat_cons_col_a, cat_cons_col_s, cat_cons_col_j, cat_i_a, cat_i_j, cat_i_s, gs_i
+                    Ls_i = _optimal_reallocation(model, jdata.loc[cat_i_j, :], sdata.loc[cat_i_s, :], gj[cat_i_j, :], gs[cat_i_s], Lm[cat_i_j], Ls[cat_i_s], method=optimal_reallocation, reallocation_scaling_col=reallocation_scaling_col, rng=rng)
+                    # Set i
+                    adata.loc[(cat_cons_col_a == i), 'i'] = Ls_i
+            del cat_cons_col, cat_cons_col_a, cat_cons_col_s, cat_cons_col_j, cat_i_j, cat_i_s
         else:
-            gs = _optimal_reallocation(model, jdata, sdata, gj, gs, Lm, Ls, method=optimal_reallocation, reallocation_scaling_col=reallocation_scaling_col, rng=rng)
-            # Set G1/G2 and J1/J2
-            adata.loc[:, 'g1'], adata.loc[:, 'g2'], adata.loc[:, 'g3'], adata.loc[:, 'g4'] = (gs, gs, gs, gs)
-            adata.loc[:, 'j1'], adata.loc[:, 'j2'], adata.loc[:, 'j3'], adata.loc[:, 'j4'] = (gs, gs, gs, gs)
+            Ls = _optimal_reallocation(model, jdata, sdata, gj, gs, Lm, Ls, method=optimal_reallocation, reallocation_scaling_col=reallocation_scaling_col, rng=rng)
+            # Set i
+            adata.loc[:, 'i'] = Ls
         ## Convert everyone to stayers ##
         sdata = adata
         # Set m
@@ -1060,10 +1058,11 @@ def _simulate_types_wages(model, jdata, sdata, gj=None, gs=None, pk1=None, pk0=N
         # Clear jdata
         jdata = pd.DataFrame()
         # Update Ls/Lm
-        Ls = np.append(Lm, Ls)
+        Ls = adata.loc[:, 'i'].to_numpy()
         Lm = np.array([], dtype=int)
-        # Update gs
+        # Update gs/gj
         gs = sdata.loc[:, 'g1'].to_numpy().astype(int, copy=True)
+        gj = np.array([], dtype=int)
 
     if simulate_wages:
         ## Simulate wages ##
