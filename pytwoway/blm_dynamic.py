@@ -6212,13 +6212,14 @@ class DynamicBLMReallocation:
                     np.bincount(quantile_groups, weights=y_scaled) / np.bincount(quantile_groups)
 
         ## Compute type proportions ##
-        bdf = bdf.to_eventstudy(is_sorted=True, copy=False)
+        bdf = bdf.collapse(is_sorted=True, copy=False).to_eventstudy(is_sorted=True, copy=False)
         # NOTE: unweighted
         m = (bdf.loc[:, 'm'] > 0)
 
         if not optimal_reallocation:
             # Compute pk1
-            movers = bdf.loc[m, ['g1', 'g4', 'l']].to_numpy()
+            # NOTE: since data is collapsed event-study, use g2 instead of g4
+            movers = bdf.loc[m, ['g1', 'g2', 'l']].to_numpy()
             pk1 = np.bincount(movers[:, 2] + nl * movers[:, 1] + nl * nk * movers[:, 0], minlength=nk * nk * nl).reshape((nk * nk, nl))
             # Normalize rows to sum to 1
             pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
