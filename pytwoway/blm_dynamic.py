@@ -862,6 +862,9 @@ def _optimal_reallocation(model, jdata, sdata, gj, gs, Lm, Ls, method='max', rea
     Returns:
         (NumPy Array): optimally reallocated worker type for each observation
     '''
+    if method not in ['max', 'min']:
+        raise ValueError(f"`method` must be one of 'max' or 'min', but input specifies {method!r}")
+
     if rng is None:
         rng = np.random.default_rng(None)
 
@@ -934,11 +937,15 @@ def _optimal_reallocation(model, jdata, sdata, gj, gs, Lm, Ls, method='max', rea
     if method == 'min':
         Y *= -1
     Y = Y.flatten()
+    # min_Y = Y.min()
+    # if min_Y <= 0:
+    #     # Optimization problem is equivalent if we add a constant to all terms, but this ensures all terms are positive (so that inequality constraints can be used instead of equality constraints)
+    #     Y = Y - min_Y + 1
 
     ## Constraints ##
     cons_a = cons.QPConstrained(nl, nk_adj)
-    cons_a.add_constraints(cons.FirmSum(b=firm_sizes_1, nt=1))
-    cons_a.add_constraints(cons.WorkerSum(b=worker_sizes_1, nt=1))
+    cons_a.add_constraints(cons.FirmSum(b=firm_sizes_1, nt=1)) # bound='upper'
+    cons_a.add_constraints(cons.WorkerSum(b=worker_sizes_1, nt=1)) # bound='upper'
     # Bound below at 0
     cons_a.add_constraints(cons.BoundedBelow(lb=0, nt=1))
 
@@ -948,6 +955,8 @@ def _optimal_reallocation(model, jdata, sdata, gj, gs, Lm, Ls, method='max', rea
 
     ## Extract optimal allocations ##
     alloc = np.reshape(np.round(cons_a.res, 0).astype(int, copy=False), (nl, nk_adj))
+    # if alloc.sum() != (len(jdata) + len(sdata)):
+    #     raise ValueError('Optimal reallocation converged to an invalid vector.')
 
     ### Apply optimal allocations (make everyone a stayer) ###
     gs = np.append(gj[:, 0], gs)

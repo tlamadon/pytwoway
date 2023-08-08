@@ -228,8 +228,9 @@ class QPConstrained:
         lb, ub = self.lb, self.ub
         drop_cols, drop_cols_mask = self.drop_cols, self.drop_cols_mask
 
-        if solver in ['ecos', 'gurobi', 'mosek', 'osqp', 'qpswift', 'scs']:
+        if solver in ['ecos', 'gurobi', 'mosek', 'osqp', 'qpswift', 'scs', 'linprog']:
             ## Make matrices sparse (if using sparse solver) ##
+            # NOTE: linprog is faster with sparse matrices, although they are not necessary
             if (G is not None) and not isinstance(G, csc_matrix):
                 G = csc_matrix(G)
                 self.G = G
@@ -1076,14 +1077,16 @@ class FirmSum():
     Generate BLM constraints that constrain the sum of all firm effects.
 
     Arguments:
-        b (float): equality bound
+        b (float): bound
+        bound (str): 'equality' for equality bound; 'upper' for upper bound; 'lower' for lower bound
         cross_period_sum (bool): if True, rather than constraining sums for each period separately, constrain the sum over all periods jointly
         nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
         nt (int): number of time periods
     '''
 
-    def __init__(self, b=0, cross_period_sum=False, nnt=None, nt=2):
+    def __init__(self, b=0, bound='equality', cross_period_sum=False, nnt=None, nt=2):
         self.b = b
+        self.bound = bound
         self.cross_period_sum = cross_period_sum
         if nnt is None:
             self.nnt = range(nt)
@@ -1100,10 +1103,10 @@ class FirmSum():
             nk (int): number of firm types
 
         Returns:
-            (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
+            (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b} or {'G': G, 'h': h, 'A': None, 'b': None}, where G, h, A, and b are defined in the quadratic programming model
         '''
         ## Unpack parameters ##
-        b, cross_period_sum, nnt, nt = self.b, self.cross_period_sum, self.nnt, self.nt
+        b, bound, cross_period_sum, nnt, nt = self.b, self.bound, self.cross_period_sum, self.nnt, self.nt
 
         ## Initialize variables ##
         # A starts with 4 dimensions
@@ -1132,7 +1135,12 @@ class FirmSum():
         else:
             A = A.reshape((len(nnt) * nk, nt * nl * nk))
 
-        return {'G': None, 'h': None, 'A': A, 'b': b}
+        if bound == 'equality':
+            return {'G': None, 'h': None, 'A': A, 'b': b}
+        elif bound == 'upper':
+            return {'G': A, 'h': b, 'A': None, 'b': None}
+        elif bound == 'lower':
+            return {'G': -A, 'h': -b, 'A': None, 'b': None}
 
 class WorkerSum():
     '''
@@ -1140,13 +1148,15 @@ class WorkerSum():
 
     Arguments:
         b (float): equality bound
+        bound (str): 'equality' for equality bound; 'upper' for upper bound; 'lower' for lower bound
         cross_period_sum (bool): if True, rather than constraining sums for each period separately, constrain the sum over all periods jointly
         nnt (int or list of ints or None): time periods to constrain; None is equivalent to range(nt)
         nt (int): number of time periods
     '''
 
-    def __init__(self, b=0, cross_period_sum=False, nnt=None, nt=2):
+    def __init__(self, b=0, bound='equality', cross_period_sum=False, nnt=None, nt=2):
         self.b = b
+        self.bound = bound
         self.cross_period_sum = cross_period_sum
         if nnt is None:
             self.nnt = range(nt)
@@ -1163,10 +1173,10 @@ class WorkerSum():
             nk (int): number of firm types
 
         Returns:
-            (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b}, where G, h, A, and b are defined in the quadratic programming model
+            (dict of NumPy Arrays): {'G': None, 'h': None, 'A': A, 'b': b} or {'G': G, 'h': h, 'A': None, 'b': None}, where G, h, A, and b are defined in the quadratic programming model
         '''
         ## Unpack parameters ##
-        b, cross_period_sum, nnt, nt = self.b, self.cross_period_sum, self.nnt, self.nt
+        b, bound, cross_period_sum, nnt, nt = self.b, self.bound, self.cross_period_sum, self.nnt, self.nt
 
         ## Initialize variables ##
         # A starts with 4 dimensions
@@ -1195,7 +1205,12 @@ class WorkerSum():
         else:
             A = A.reshape((len(nnt) * nl, nt * nl * nk))
 
-        return {'G': None, 'h': None, 'A': A, 'b': b}
+        if bound == 'equality':
+            return {'G': None, 'h': None, 'A': A, 'b': b}
+        elif bound == 'upper':
+            return {'G': A, 'h': b, 'A': None, 'b': None}
+        elif bound == 'lower':
+            return {'G': -A, 'h': -b, 'A': None, 'b': None}
 
 class BoundedBelow():
     '''
