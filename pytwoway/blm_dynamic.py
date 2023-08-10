@@ -2196,7 +2196,7 @@ class DynamicBLMModel:
             if params['update_pk1']:
                 # NOTE: add dirichlet prior
                 # NOTE: this is equivalent to pk1 = GG12.T @ (qi + d_prior - 1)
-                pk1 = np.bincount(KK2, weights=(qi + d_prior - 1).flatten()).reshape(nl, nk * nk).T
+                pk1 = np.bincount(KK2, weights=(qi + d_prior - 1).flatten(), minlength=nl * (nk ** 2)).reshape(nl, nk * nk).T
                 # Normalize rows to sum to 1
                 pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
 
@@ -3548,7 +3548,7 @@ class DynamicBLMModel:
             if params['update_pk0']:
                 # NOTE: add dirichlet prior
                 # NOTE: this is equivalent to pk0 = GG1.T @ (qi + d_prior - 1)
-                pk0 = np.bincount(KK, (qi + d_prior - 1).flatten()).reshape(nl, nk).T
+                pk0 = np.bincount(KK, (qi + d_prior - 1).flatten(), minlength=nl * nk).reshape(nl, nk).T
                 # Normalize rows to sum to 1
                 pk0 = DxM(1 / np.sum(pk0, axis=1), pk0)
 

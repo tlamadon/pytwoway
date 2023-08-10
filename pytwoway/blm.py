@@ -953,7 +953,7 @@ def plot_type_flows_between_categories(jdata, qi_j, breakdown_category, method='
     KK2 = KK3.flatten()
     del KK3
     ## pk1 ##
-    pk1 = np.bincount(KK2, weights=qi_j.flatten()).reshape(nl, n_cat ** 2).T
+    pk1 = np.bincount(KK2, weights=qi_j.flatten(), minlength=nl * (n_cat ** 2)).reshape(nl, n_cat ** 2).T
     # Normalize rows to sum to 1
     pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
 
@@ -1069,7 +1069,7 @@ def plot_type_flows_between_categories(jdata, qi_j, breakdown_category, method='
 
 class BLMModel:
     '''
-    Class for estimating BLM using a single set of starting values.
+    Class for estimating static BLM using a single set of starting values.
 
     Arguments:
         params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
@@ -1861,7 +1861,7 @@ class BLMModel:
                 # NOTE: add dirichlet prior
                 # NOTE: this is equivalent to pk1 = GG12.T @ (qi + d_prior - 1)
                 # NOTE: don't use weights here, since type probabilities are unrelated to length of spell
-                pk1 = np.bincount(KK2, weights=(qi + d_prior - 1).flatten()).reshape(nl, nk * nk).T
+                pk1 = np.bincount(KK2, weights=(qi + d_prior - 1).flatten(), minlength=nl * (nk ** 2)).reshape(nl, nk * nk).T
                 # Normalize rows to sum to 1
                 pk1 = DxM(1 / np.sum(pk1, axis=1), pk1)
 
@@ -2538,7 +2538,7 @@ class BLMModel:
             # NOTE: add dirichlet prior
             # NOTE: this is equivalent to pk0 = GG1.T @ (qi + d_prior - 1)
             # NOTE: don't use weights here, since type probabilities are unrelated to length of spell
-            pk0 = np.bincount(KK, (qi + d_prior - 1).flatten()).reshape(nl, nk).T
+            pk0 = np.bincount(KK, (qi + d_prior - 1).flatten(), minlength=nl * nk).reshape(nl, nk).T
             # Normalize rows to sum to 1
             pk0 = DxM(1 / np.sum(pk0, axis=1), pk0)
 
@@ -3144,7 +3144,7 @@ class BLMModel:
 
 class BLMEstimator:
     '''
-    Class for estimating BLM using multiple sets of starting values.
+    Class for estimating static BLM using multiple sets of starting values.
 
     Arguments:
         params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
@@ -3358,7 +3358,7 @@ class BLMEstimator:
 
 class BLMBootstrap:
     '''
-    Class for estimating BLM using bootstrapping.
+    Class for estimating static BLM using bootstrapping.
 
     Arguments:
         params (ParamsDict): dictionary of parameters for BLM estimation. Run tw.blm_params().describe_all() for descriptions of all valid parameters.
@@ -3747,7 +3747,7 @@ class BLMBootstrap:
 
 class BLMCategoryMatchCorrelations:
     '''
-    Class for estimating BLM within-category match-level (true outcome) error correlations using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'period1' gives the results for the first period, and the key 'period2' gives the results for the second period.
+    Class for estimating static BLM within-category match-level (true outcome) error correlations using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'period1' gives the results for the first period, and the key 'period2' gives the results for the second period.
 
     Arguments:
         model (BLMModel): estimated BLM model
@@ -3992,7 +3992,7 @@ class BLMCategoryMatchCorrelations:
 
 class BLMVarianceDecomposition:
     '''
-    Class for estimating BLM variance decomposition using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'var_decomp' gives the results for the variance decomposition, and the key 'var_decomp_comp' optionally gives the results for the variance decomposition with complementarities.
+    Class for estimating static BLM variance decomposition using bootstrapping. Results are stored in class attribute .res, which gives a dictionary where the key 'var_decomp' gives the results for the variance decomposition, and the key 'var_decomp_comp' optionally gives the results for the variance decomposition with complementarities.
 
     Arguments:
         model (BLMModel): estimated BLM model
@@ -4211,7 +4211,7 @@ class BLMVarianceDecomposition:
 
 class BLMReallocation:
     '''
-    Class for estimating BLM reallocation exercise using bootstrapping. Results are stored in class attribute .res, which gives a dictionary with the following structure: baseline results are stored in key 'baseline'. Reallocation results are stored in key 'reallocation'. Within each sub-dictionary, primary outcome results are stored in the key 'outcome', means are stored in the key 'mean', categorical results are stored in the key 'cat', continuous results are stored in the key 'cts', type proportions for movers are stored in the key 'pk1', type proportions for stayers are stored in the key 'pk0', firm-level mover flow counts are stored in the key 'NNm', and firm-level stayer counts are stored in the key 'NNs'.
+    Class for estimating static BLM reallocation exercise using bootstrapping. Results are stored in class attribute .res, which gives a dictionary with the following structure: baseline results are stored in key 'baseline'. Reallocation results are stored in key 'reallocation'. Within each sub-dictionary, primary outcome results are stored in the key 'outcome', means are stored in the key 'mean', categorical results are stored in the key 'cat', continuous results are stored in the key 'cts', type proportions for movers are stored in the key 'pk1', type proportions for stayers are stored in the key 'pk0', firm-level mover flow counts are stored in the key 'NNm', and firm-level stayer counts are stored in the key 'NNs'.
 
     Arguments:
         model (BLMModel): estimated BLM model
