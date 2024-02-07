@@ -9,7 +9,7 @@ authors = ["Thibaut Lamadon <thibaut.lamadon@gmail.com>"]
 readme = "README.rst"
 
 [tool.poetry.dependencies]
-python = ">=3.7"
+python = ">=3.8"
 numpy = "*"
 pandas = ">=1.0"
 numba = "*"
@@ -24,3 +24,4 @@ ConfigArgParse = "*"
 matplotlib = "*"
 tqdm = "*"
 pytest = "*"
+ipykernel = "^6.29.1"

@@ -10,6 +10,10 @@ pytwoway/preconditioners/__pycache__/
 pytwoway/Q/__pycache__/
 tests/__pycache__/
 .pytest_cache/
+.cache/
+.local/
+.vscode-server/
+.gnugpg
 .eggs
 docs/source/notebooks/.ipynb_checkpoints/
 tests/.ipynb_checkpoints/

@@ -1,22 +1,61 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
+// README at: https://github.com/devcontainers-community/templates/tree/main/src/jupyter-datascience-notebooks
 {
-	"name": "Ubuntu",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/vscode/devcontainers/python:3.9",
-	"features": {
-		"ghcr.io/devcontainers-contrib/features/poetry:2": {}
-	}
-	
+	"name": "PyTwoWay",
+
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+
+	"workspaceMount": "source=${localWorkspaceFolder},target=/home/jovyan,type=bind",
+	"workspaceFolder": "/home/jovyan",
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
+	"features": {
+		"ghcr.io/devcontainers/features/common-utils:2": {
+			"installZsh": "true",
+			"username": "jovyan",
+			"userUid": "1000",
+			"userGid": "1000",
+			"upgradePackages": "true"
+		}
+	},
 
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
+	// Use base images default CMD.
+	"overrideCommand": false,
+
+	// Forward Jupyter port locally, mark required.
+	"forwardPorts": [8888],
+	
+	"portsAttributes": {
+		"8888": {
+			"label": "Jupyter",
+			"requireLocalPort": true,
+			"onAutoForward": "ignore"
+		}
+	},
+
+	// Configure tool-specific properties.
+	"customizations": {
+		// Configure properties specific to VS Code.
+		"vscode": {
+			// Set *default* container specific settings.json values on container create.
+			"settings": {
+				"python.defaultInterpreterPath": "/opt/conda/bin/python"
+			},
+			// Add the IDs of extensions you want installed when the container is created.
+			"extensions": ["ms-python.python", "ms-toolsai.jupyter","julialang.language-julia"]
+		}
+	},
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "apt-get install libblas-dev liblapack-dev"
+	// "postCreateCommand": "pip3 install --user -r requirements.txt",
+
+	// "postCreateCommand": "cp -rn .depot-cache/artifacts/** /opt/julia/artifacts; julia -e 'using Pkg; Pkg.activate(\".\"); Pkg.instantiate(); Pkg.precompile()'"
+	"postCreateCommand": "dos2unix .devcontainer/postcreate.sh && sh .devcontainer/postcreate.sh"
+
+	// "postCreateCommand": "\"sed -i '$s/\\r//' .devcontainer/postcreate.sh;sh .devcontainer/postcreate.sh\""
+	// "postCreateCommand": "\"cat .devcontainer/postcreate.sh | tr -d '\\r'  | sh - \""
 
 	// Configure tool-specific properties.
 	// "customizations": {},
