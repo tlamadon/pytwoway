@@ -35,7 +35,7 @@ def _ichol(
     a = np.zeros(n, np.float64)  # Values of column j
     r = np.zeros(n, np.float64)  # r[j] = sum(abs(A[j:, j])) for relative threshold
     b = np.zeros(
-        n, np.bool8
+        n, np.bool
     )  # b[i] indicates if the i-th element of column j is non-zero
     c = np.empty(n, np.int64)  # Row indices of non-zero elements in column j
     d = np.full(n, shift, np.float64)  # Diagonal elements of A
@@ -206,7 +206,7 @@ def ichol(
     relative_discard_threshold: float
         Values with an absolute value of less than :code:`relative_discard_threshold * sum(abs(A[j:, j]))` will be discarded.
         A dense ichol implementation with relative threshold would look like this::
-        
+
             L = np.tril(A)
             for j in range(n):
                 col = L[j:, j]
@@ -218,7 +218,7 @@ def ichol(
 
     diag_keep_discarded: bool
         Whether to update the diagonal with the discarded values. Usually better if :code:`True`.
-    
+
     Returns
     -------
     chol: CholeskyDecomposition
